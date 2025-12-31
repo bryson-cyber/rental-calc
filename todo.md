@@ -136,3 +136,13 @@
 - [x] Make complexity clear to drive service purchases
 - [x] Filter to only show market leaders meeting 2x revenue threshold
 - [x] Fix "Unknown Location" bug - now shows correct market name (St. Louis with 5,597 active rentals)
+
+
+## Super App Research & Development Sprint
+- [x] Research AirDNA API for unused capabilities (found: Future Daily forecasts, Market Score, Historical data, Listings endpoint)
+- [x] Research user pain points with existing STR analysis tools (found: data accuracy, expensive pricing, overwhelming complexity)
+- [x] Research Gemini AI advanced capabilities for STR use cases (found: structured outputs, function calling, multi-turn conversations)
+- [x] Synthesize research into actionable super app features (saved to research/super-app-roadmap.md)
+- [x] Fix distance to competition display (code in place, API returns distance_meters)
+- [x] Build property comparison tool (2-3 properties side-by-side)
+- [ ] Implement top research-driven features (AI Advisor, Scenario Planner, etc.)

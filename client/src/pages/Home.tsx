@@ -642,18 +642,29 @@ export default function RentalEstimator() {
               </div>
               
               {/* Market Research Link */}
-              <div className="mt-6 pt-6 border-t border-[#0F172A]/10 text-center">
+              <div className="mt-6 pt-6 border-t border-[#0F172A]/10 text-center space-y-3">
                 <p className="text-sm text-[#0F172A]/60 font-sans mb-2">
                   Don't have a specific property yet?
                 </p>
-                <a 
-                  href="/market"
-                  className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
-                >
-                  <Building className="w-4 h-4" />
-                  Explore Markets by City or Zip Code
-                  <ChevronRight className="w-4 h-4" />
-                </a>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <a 
+                    href="/market"
+                    className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
+                  >
+                    <Building className="w-4 h-4" />
+                    Explore Markets
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
+                  <span className="hidden sm:inline text-[#0F172A]/30">|</span>
+                  <a 
+                    href="/compare-properties"
+                    className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Compare Properties
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
             </motion.form>
           </motion.div>

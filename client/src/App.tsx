@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import MarketReport from "./pages/MarketReport";
 import MarketComparison from "./pages/MarketComparison";
+import PropertyComparison from "./pages/PropertyComparison";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +16,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/market"} component={MarketReport} />
       <Route path={"/compare"} component={MarketComparison} />
+      <Route path={"/compare-properties"} component={PropertyComparison} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
