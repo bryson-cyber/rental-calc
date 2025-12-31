@@ -633,7 +633,7 @@ export default function RentalEstimator() {
               <div className="mt-6 flex items-center justify-center gap-4 text-sm text-[#0F172A]/50 font-sans">
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-[#C9A962] rounded-full" />
-                  Powered by AirDNA market data
+                  Powered by Coach Inayah market data
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-[#C9A962] rounded-full" />
@@ -800,7 +800,7 @@ export default function RentalEstimator() {
   if (step === 'loading') {
     const loadingSteps = [
       { text: 'Analyzing property details', delay: 0 },
-      { text: 'Pulling market data from AirDNA', delay: 1.5 },
+      { text: 'Pulling proprietary market data', delay: 1.5 },
       { text: 'Finding same-bedroom comparables', delay: 3 },
       { text: 'Calculating revenue projections', delay: 4.5 },
       { text: 'Running AI profitability analysis', delay: 6 },

@@ -146,3 +146,14 @@
 - [x] Fix distance to competition display (code in place, API returns distance_meters)
 - [x] Build property comparison tool (2-3 properties side-by-side)
 - [ ] Implement top research-driven features (AI Advisor, Scenario Planner, etc.)
+
+
+## Rebranding & Super App Enhancement Sprint
+- [x] Replace all "AirDNA" references with "Coach Inayah market data"
+- [x] Research additional super app features for competitive advantage
+- [x] Identify features that make clients say "I need your team to build this"
+- [x] Implement "What It Really Takes" chapter (time investment, hidden costs, skills required)
+- [x] Add DIY vs Professional comparison section
+- [ ] Implement AI Investment Advisor chat feature
+- [ ] Add Break-Even Calculator
+- [ ] Add Investment Readiness Score
