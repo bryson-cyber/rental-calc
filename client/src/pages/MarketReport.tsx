@@ -31,6 +31,7 @@ import {
 import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { Link } from 'wouter';
+import ChapterMarketReport from '@/components/ChapterMarketReport';
 
 // Types
 interface MarketSearchResult {
@@ -211,6 +212,8 @@ export default function MarketReport() {
   const [reportData, setReportData] = useState<MarketReportData | SubmarketReportData | null>(null);
   const [reportType, setReportType] = useState<'market' | 'submarket'>('market');
   const [isSearching, setIsSearching] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // tRPC queries and mutations
   const searchMarketsQuery = trpc.rental.searchMarkets.useQuery(
@@ -219,6 +222,43 @@ export default function MarketReport() {
   );
   const getMarketReportMutation = trpc.rental.getMarketReport.useMutation();
   const getSubmarketReportMutation = trpc.rental.getSubmarketReport.useMutation();
+
+  // Debounced autocomplete - search as user types
+  useEffect(() => {
+    // Clear previous timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Only search if query is at least 2 characters
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setShowAutocomplete(false);
+      return;
+    }
+
+    // Debounce the search by 300ms
+    debounceTimerRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const result = await searchMarketsQuery.refetch();
+        if (result.data?.success && result.data.data) {
+          setSearchResults(result.data.data);
+          setShowAutocomplete(result.data.data.length > 0);
+        }
+      } catch (err) {
+        console.error('Autocomplete error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   // Handle search
   const handleSearch = async () => {
@@ -372,71 +412,95 @@ export default function MarketReport() {
                 </div>
               )}
 
-              {/* Search Input */}
+              {/* Search Input with Autocomplete */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
                   Search Markets
                 </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0F172A]/40" />
+                <div className="relative">
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0F172A]/40 z-10" />
                     <input
                       type="text"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                      placeholder="Enter city, neighborhood, or zip code..."
-                      className="w-full pl-12 pr-4 py-4 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowAutocomplete(true);
+                      }}
+                      onFocus={() => searchResults.length > 0 && setShowAutocomplete(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchResults.length > 0) {
+                          handleSelectMarket(searchResults[0]);
+                        } else if (e.key === 'Escape') {
+                          setShowAutocomplete(false);
+                        }
+                      }}
+                      placeholder="Start typing a city, neighborhood, or zip code..."
+                      className="w-full pl-12 pr-12 py-4 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
                     />
-                  </div>
-                  <button
-                    onClick={handleSearch}
-                    disabled={isSearching || !searchQuery.trim()}
-                    className="px-6 py-4 bg-[#0F172A] text-white rounded-xl font-semibold hover:bg-[#1e293b] transition-all duration-300 flex items-center gap-2 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSearching ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Search className="w-5 h-5" />
+                    {isSearching && (
+                      <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#C9A962] animate-spin" />
                     )}
-                  </button>
+                  </div>
+                  
+                  {/* Autocomplete Dropdown */}
+                  {showAutocomplete && searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-[#0F172A]/10 overflow-hidden z-50 max-h-80 overflow-y-auto">
+                      {searchResults.map((result, index) => (
+                        <button
+                          key={result.id}
+                          onClick={() => {
+                            setShowAutocomplete(false);
+                            handleSelectMarket(result);
+                          }}
+                          className={`w-full p-4 hover:bg-[#C9A962]/10 transition-all duration-200 flex items-center justify-between group text-left ${
+                            index !== searchResults.length - 1 ? 'border-b border-[#0F172A]/5' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {result.type === 'market' ? (
+                              <div className="w-10 h-10 bg-[#C9A962]/20 rounded-lg flex items-center justify-center">
+                                <Building className="w-5 h-5 text-[#C9A962]" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 bg-[#0F172A]/5 rounded-lg flex items-center justify-center">
+                                <MapPin className="w-5 h-5 text-[#0F172A]/50" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-[#0F172A] font-sans">{result.name}</p>
+                              <p className="text-sm text-[#0F172A]/60 font-sans">
+                                {result.type === 'market' ? 'Market' : 'Neighborhood'} • {result.listing_count.toLocaleString()} listings
+                                {result.parent_market && ` • ${result.parent_market.name}`}
+                              </p>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-[#0F172A]/20 group-hover:text-[#C9A962] transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
-                  Examples: "Denver", "Miami Beach", "80202", "Austin, TX"
+                  Start typing and select from suggestions • Examples: "Denver", "Miami Beach", "80202"
                 </p>
               </div>
 
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#0F172A]/70 font-sans mb-3">
-                    Select a market:
-                  </p>
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      onClick={() => handleSelectMarket(result)}
-                      className="w-full p-4 bg-[#0F172A]/5 hover:bg-[#0F172A]/10 rounded-xl transition-all duration-300 flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-3">
-                        {result.type === 'market' ? (
-                          <Building className="w-5 h-5 text-[#C9A962]" />
-                        ) : (
-                          <MapPin className="w-5 h-5 text-[#0F172A]/40" />
-                        )}
-                        <div className="text-left">
-                          <p className="font-medium text-[#0F172A] font-sans">{result.name}</p>
-                          <p className="text-sm text-[#0F172A]/60 font-sans">
-                            {result.type === 'market' ? 'Market' : 'Neighborhood'} • {result.listing_count.toLocaleString()} listings
-                            {result.parent_market && ` • ${result.parent_market.name}`}
-                          </p>
-                        </div>
-                      </div>
-                      <ArrowLeft className="w-5 h-5 text-[#0F172A]/30 group-hover:text-[#C9A962] transition-colors rotate-180" />
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Compare Markets Link */}
+              <div className="mt-6 p-4 bg-gradient-to-r from-[#0F172A]/5 to-[#C9A962]/10 rounded-xl border border-[#C9A962]/20">
+                <Link href="/compare" className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#C9A962]/20 rounded-lg flex items-center justify-center">
+                      <BarChart3 className="w-5 h-5 text-[#C9A962]" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#0F172A] font-sans">Compare Markets</p>
+                      <p className="text-sm text-[#0F172A]/60 font-sans">Compare up to 3 markets side-by-side</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-[#0F172A]/30 group-hover:text-[#C9A962] transition-colors" />
+                </Link>
+              </div>
 
               {/* Educational Content */}
               <div className="mt-8 pt-6 border-t border-[#0F172A]/10">
@@ -502,415 +566,22 @@ export default function MarketReport() {
     );
   }
 
-  // Results Page
+  // Results Page - Use ChapterMarketReport component
   if (step === 'results' && reportData) {
-    const isSubmarket = reportType === 'submarket';
-    const data = isSubmarket 
-      ? (reportData as SubmarketReportData)
-      : (reportData as MarketReportData);
-    
-    const marketInfo = isSubmarket 
-      ? (data as SubmarketReportData).submarket 
-      : (data as MarketReportData).market;
-    
-    const insights = isSubmarket 
-      ? (data as SubmarketReportData).insights 
-      : (data as MarketReportData).insights;
-
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
-        {/* Header */}
-        <div className="bg-[#0F172A] text-white">
-          <div className="container mx-auto px-4 py-8">
-            <button
-              onClick={() => {
-                setStep('search');
-                setReportData(null);
-                setSearchResults([]);
-              }}
-              className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors font-sans text-sm mb-6"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Search
-            </button>
-            
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  {isSubmarket ? (
-                    <MapPin className="w-6 h-6 text-[#C9A962]" />
-                  ) : (
-                    <Building className="w-6 h-6 text-[#C9A962]" />
-                  )}
-                  <span className="text-sm font-medium text-[#C9A962] uppercase tracking-wider font-sans">
-                    {isSubmarket ? 'Neighborhood Report' : 'Market Report'}
-                  </span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-serif font-semibold mb-2">
-                  {marketInfo.name}
-                </h1>
-                {isSubmarket && (data as SubmarketReportData).submarket.parent_market && (
-                  <p className="text-white/70 font-sans">
-                    Part of {(data as SubmarketReportData).submarket.parent_market} market
-                  </p>
-                )}
-              </div>
-              
-              {marketInfo.metrics.market_score && (
-                <div className="text-right">
-                  <p className="text-sm text-white/60 font-sans mb-1">Market Score</p>
-                  <p className="text-4xl font-serif font-bold text-[#C9A962]">
-                    {Math.round(marketInfo.metrics.market_score)}
-                  </p>
-                  <p className="text-xs text-white/50 font-sans">out of 100</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="container mx-auto px-4 -mt-6">
-          <motion.div 
-            className="grid grid-cols-2 md:grid-cols-4 gap-4"
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-          >
-            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Percent className="w-4 h-4 text-[#166534]" />
-                <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Occupancy</span>
-              </div>
-              <p className="text-3xl font-serif font-bold text-[#0F172A]">
-                <AnimatedNumber value={Math.round(marketInfo.metrics.occupancy)} suffix="%" />
-              </p>
-            </motion.div>
-            
-            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-[#C9A962]" />
-                <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Avg. Daily Rate</span>
-              </div>
-              <p className="text-3xl font-serif font-bold text-[#0F172A]">
-                <AnimatedNumber value={Math.round(marketInfo.metrics.adr)} prefix="$" />
-              </p>
-            </motion.div>
-            
-            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-[#0F172A]" />
-                <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Avg. Revenue</span>
-              </div>
-              <p className="text-3xl font-serif font-bold text-[#0F172A]">
-                <AnimatedNumber value={Math.round(marketInfo.metrics.revenue)} prefix="$" />
-              </p>
-            </motion.div>
-            
-            <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Building className="w-4 h-4 text-[#0F172A]/60" />
-                <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Active Listings</span>
-              </div>
-              <p className="text-3xl font-serif font-bold text-[#0F172A]">
-                <AnimatedNumber value={marketInfo.metrics.active_listings || marketInfo.listing_count} />
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Main Content */}
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - Insights */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Market Insights */}
-              {insights && (
-                <motion.div 
-                  className="bg-white rounded-xl shadow-lg p-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <h2 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-[#C9A962]" />
-                    Market Insights
-                  </h2>
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Professional Management */}
-                    <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-[#0F172A]/70 font-sans">Professionally Managed</span>
-                        <span className="text-lg font-bold text-[#0F172A]">{insights.professionally_managed_pct}%</span>
-                      </div>
-                      <div className="w-full bg-[#0F172A]/10 rounded-full h-2">
-                        <div 
-                          className="bg-[#C9A962] h-2 rounded-full transition-all duration-1000"
-                          style={{ width: `${insights.professionally_managed_pct}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
-                        {insights.professionally_managed_count} of {insights.total_listings} listings
-                      </p>
-                    </div>
-                    
-                    {/* Superhosts */}
-                    <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-[#0F172A]/70 font-sans">Superhosts</span>
-                        <span className="text-lg font-bold text-[#0F172A]">{insights.superhost_pct}%</span>
-                      </div>
-                      <div className="w-full bg-[#0F172A]/10 rounded-full h-2">
-                        <div 
-                          className="bg-[#166534] h-2 rounded-full transition-all duration-1000"
-                          style={{ width: `${insights.superhost_pct}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
-                        {insights.superhost_count} of {insights.total_listings} listings
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Revenue Percentiles */}
-                  <div className="mt-6">
-                    <h3 className="text-sm font-semibold text-[#0F172A] mb-4 font-sans">Revenue Distribution</h3>
-                    <div className="flex items-end justify-between h-32 px-4">
-                      {[
-                        { label: '10th', value: insights.revenue_percentiles.p10 },
-                        { label: '25th', value: insights.revenue_percentiles.p25 },
-                        { label: '50th', value: insights.revenue_percentiles.p50 },
-                        { label: '75th', value: insights.revenue_percentiles.p75 },
-                        { label: '90th', value: insights.revenue_percentiles.p90 },
-                      ].map((p, idx) => {
-                        const maxVal = insights.revenue_percentiles.p90;
-                        const height = maxVal > 0 ? (p.value / maxVal * 100) : 0;
-                        return (
-                          <div key={p.label} className="flex flex-col items-center gap-2 flex-1">
-                            <div className="relative w-full max-w-[40px] group">
-                              <div 
-                                className={`w-full rounded-t transition-all ${idx === 2 ? 'bg-[#C9A962]' : 'bg-[#0F172A]/20'}`}
-                                style={{ height: `${height}%`, minHeight: '8px' }}
-                              />
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                                {formatCurrency(p.value)}
-                              </div>
-                            </div>
-                            <span className="text-xs text-[#0F172A]/50 font-sans">{p.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-[#0F172A]/50 mt-2 text-center font-sans">
-                      Median revenue: {formatCurrency(insights.revenue_percentiles.p50)}
-                    </p>
-                  </div>
-
-                  {/* Property Type Breakdown */}
-                  {insights.property_type_breakdown.length > 0 && (
-                    <div className="mt-6">
-                      <h3 className="text-sm font-semibold text-[#0F172A] mb-4 font-sans">Property Types</h3>
-                      <div className="space-y-2">
-                        {insights.property_type_breakdown.slice(0, 5).map((pt) => (
-                          <div key={pt.type} className="flex items-center justify-between p-3 bg-[#0F172A]/5 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Home className="w-4 h-4 text-[#0F172A]/40" />
-                              <span className="font-medium text-[#0F172A] font-sans capitalize">{pt.type}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-[#0F172A]">{pt.pct}%</span>
-                              <span className="text-xs text-[#0F172A]/50 ml-2 font-sans">
-                                ({formatCurrency(pt.avg_revenue)} avg)
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* Bedroom Performance */}
-              {data.bedroom_performance && data.bedroom_performance.length > 0 && (
-                <motion.div 
-                  className="bg-white rounded-xl shadow-lg p-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <h2 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-[#C9A962]" />
-                    Performance by Bedroom Count
-                  </h2>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-[#0F172A]/10">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-[#0F172A]/60 font-sans">Bedrooms</th>
-                          <th className="text-right py-3 px-4 text-sm font-medium text-[#0F172A]/60 font-sans">Avg Revenue</th>
-                          <th className="text-right py-3 px-4 text-sm font-medium text-[#0F172A]/60 font-sans">Avg ADR</th>
-                          <th className="text-right py-3 px-4 text-sm font-medium text-[#0F172A]/60 font-sans">Occupancy</th>
-                          <th className="text-right py-3 px-4 text-sm font-medium text-[#0F172A]/60 font-sans">Count</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.bedroom_performance.map((br) => (
-                          <tr key={br.bedrooms} className="border-b border-[#0F172A]/5 hover:bg-[#0F172A]/5 transition-colors">
-                            <td className="py-3 px-4 font-medium text-[#0F172A] font-sans">{br.bedrooms} BR</td>
-                            <td className="py-3 px-4 text-right text-[#0F172A] font-sans">{formatCurrency(br.avg_revenue)}</td>
-                            <td className="py-3 px-4 text-right text-[#0F172A] font-sans">{formatCurrency(br.avg_adr)}</td>
-                            <td className="py-3 px-4 text-right text-[#0F172A] font-sans">{br.avg_occupancy}%</td>
-                            <td className="py-3 px-4 text-right text-[#0F172A]/60 font-sans">{br.count}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Right Column - Top Listings */}
-            <div className="space-y-8">
-              {/* Top Performers */}
-              <motion.div 
-                className="bg-white rounded-xl shadow-lg p-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <h2 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-[#C9A962]" />
-                  Top Performers
-                </h2>
-                
-                <div className="space-y-4">
-                  {data.top_listings.slice(0, 5).map((listing, idx) => (
-                    <div 
-                      key={listing.id}
-                      className="p-4 bg-[#0F172A]/5 rounded-xl hover:bg-[#0F172A]/10 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 bg-[#C9A962]/20 rounded-full flex items-center justify-center text-xs font-bold text-[#C9A962]">
-                            {idx + 1}
-                          </span>
-                          <span className="text-sm font-medium text-[#0F172A] font-sans line-clamp-1">
-                            {listing.title}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs text-[#0F172A]/60 font-sans mb-2">
-                        <span>{listing.bedrooms} BR • {listing.property_type}</span>
-                        <span className="text-right">{formatPercent(listing.occupancy)} occ.</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-[#0F172A]">
-                          {formatCurrency(listing.annual_revenue)}
-                        </span>
-                        {listing.rating && (
-                          <span className="flex items-center gap-1 text-sm text-[#0F172A]/60">
-                            <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
-                            {listing.rating.toFixed(1)}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {listing.airbnb_url && (
-                        <a 
-                          href={listing.airbnb_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-[#C9A962] hover:underline mt-2"
-                        >
-                          View on Airbnb <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Educational Tips */}
-              <motion.div 
-                className="bg-white rounded-xl shadow-lg p-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-[#C9A962]" />
-                  What This Means
-                </h3>
-                <div className="space-y-4 text-sm text-[#0F172A]/70 font-sans">
-                  <div className="p-3 bg-[#166534]/5 rounded-lg border-l-3 border-[#166534]">
-                    <p><strong>Occupancy {marketInfo.metrics.occupancy}%</strong> means properties are booked about {Math.round(marketInfo.metrics.occupancy * 3.65)} nights/year on average.</p>
-                  </div>
-                  <div className="p-3 bg-[#C9A962]/5 rounded-lg border-l-3 border-[#C9A962]">
-                    <p><strong>ADR ${marketInfo.metrics.adr}</strong> is the average nightly rate. Top performers often charge 20-40% more.</p>
-                  </div>
-                  <div className="p-3 bg-[#0F172A]/5 rounded-lg border-l-3 border-[#0F172A]">
-                    <p><strong>{insights?.professionally_managed_pct || 0}% professionally managed</strong> — professional hosts typically earn 15-25% more revenue.</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* CTA */}
-              <motion.div 
-                className="bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-xl shadow-lg p-6 text-white"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-3 py-1 rounded-full text-xs font-medium mb-3">
-                  <Award className="w-3 h-3" />
-                  Turnkey Solution
-                </div>
-                <h3 className="text-lg font-serif font-semibold mb-2">
-                  Skip the Learning Curve
-                </h3>
-                <p className="text-white/70 text-sm font-sans mb-4">
-                  New to short-term rentals? Our done-for-you program handles everything — 
-                  from property setup to guest management. Start earning without the hassle.
-                </p>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-white/80 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span>Professional photography & listing</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span>Dynamic pricing optimization</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span>24/7 guest communication</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <button className="w-full bg-[#C9A962] text-[#0F172A] px-4 py-3 rounded-lg font-semibold text-sm hover:bg-[#d4b876] transition-colors flex items-center justify-center gap-2">
-                    Schedule Free Consultation
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  <Link 
-                    href="/"
-                    className="w-full inline-flex items-center justify-center gap-2 bg-white/10 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-white/20 transition-colors border border-white/20"
-                  >
-                    <Target className="w-4 h-4" />
-                    Analyze a Property
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ChapterMarketReport
+        data={reportData}
+        reportType={reportType}
+        onBack={() => {
+          setStep('search');
+          setReportData(null);
+          setSearchResults([]);
+          setSearchQuery('');
+        }}
+      />
     );
   }
+
 
   return null;
 }

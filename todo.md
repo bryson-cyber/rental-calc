@@ -76,3 +76,20 @@
 - [x] Add educational content explaining what metrics mean
 - [x] Position turnkey service as solution throughout the report
 - [x] Add "What Top Performers Do Differently" analysis section
+
+## Report Redesign Sprint - Match Client Templates
+- [x] Add city autocomplete to market search (suggestions as user types)
+- [x] Redesign market report to chapter-based format (like Marietta guide)
+  - [x] Chapter 1: The Big Picture (market highlights)
+  - [x] Chapter 2: What Guests Want (amenities, property types)
+  - [x] Chapter 3: Understanding the Seasons (seasonality, peak/off-peak)
+  - [x] Chapter 4: Best Neighborhoods to Invest In (tier rankings)
+  - [x] Chapter 5: Property Size Matters (bedroom performance)
+  - [x] Chapter 6: Deeper Insights (growth, professional host landscape)
+  - [x] Chapter 7: Your Action Plan (recommendations by investor profile)
+- [x] Redesign property report to match Airbnb Arbitrage format
+  - [x] Section 1: The Property Itself (details, what makes it attractive)
+  - [x] Section 2: Local Market Analysis (same-bedroom comps, revenue tiers)
+  - [x] Section 3: Study the Competition (top performers with Airbnb links)
+  - [x] Section 4: Project the Profit (startup costs, monthly expenses, profit scenarios)
+- [x] Build market comparison feature (compare 2-3 markets side-by-side)

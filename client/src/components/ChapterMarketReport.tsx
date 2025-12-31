@@ -1,0 +1,965 @@
+/**
+ * Chapter-Based Market Report Component
+ * Matches the Marietta, GA Short-Term Rental Market Guide format
+ */
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building,
+  MapPin,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Percent,
+  Star,
+  ExternalLink,
+  Users,
+  Home,
+  Calendar,
+  Target,
+  Award,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  BarChart3,
+  PieChart,
+  Thermometer,
+  Snowflake,
+  Sun,
+  Leaf,
+  BookOpen
+} from 'lucide-react';
+import { Link } from 'wouter';
+
+// Types
+interface MarketMetrics {
+  occupancy: number;
+  adr: number;
+  revenue: number;
+  revpar: number;
+  active_listings: number;
+  market_score?: number;
+}
+
+interface ListingData {
+  id: string;
+  title: string;
+  airbnb_url?: string;
+  image_url?: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  superhost?: boolean;
+  professionally_managed?: boolean;
+  host_size?: string;
+}
+
+interface BedroomPerformance {
+  bedrooms: number;
+  count: number;
+  avg_revenue: number;
+  avg_adr: number;
+  avg_occupancy: number;
+}
+
+interface MarketInsights {
+  total_listings: number;
+  professionally_managed_count: number;
+  professionally_managed_pct: number;
+  superhost_count: number;
+  superhost_pct: number;
+  avg_rating: number;
+  avg_reviews: number;
+  avg_days_available: number;
+  avg_days_reserved: number;
+  property_type_breakdown: Array<{
+    type: string;
+    count: number;
+    pct: number;
+    avg_revenue: number;
+  }>;
+  host_size_breakdown: Array<{
+    size: string;
+    count: number;
+    pct: number;
+    avg_revenue: number;
+  }>;
+  revenue_percentiles: {
+    p10: number;
+    p25: number;
+    p50: number;
+    p75: number;
+    p90: number;
+  };
+}
+
+interface SubmarketData {
+  id: string;
+  name: string;
+  listing_count: number;
+}
+
+interface MarketReportData {
+  market: {
+    id: string;
+    name: string;
+    listing_count: number;
+    location_name: string;
+    market_type?: string;
+    metrics: MarketMetrics;
+  };
+  submarkets: SubmarketData[];
+  top_listings: ListingData[];
+  bedroom_performance: BedroomPerformance[];
+  insights?: MarketInsights;
+  generated_at: string;
+}
+
+interface SubmarketReportData {
+  submarket: {
+    id: string;
+    name: string;
+    listing_count: number;
+    parent_market?: string;
+    market_type?: string;
+    metrics: MarketMetrics;
+  };
+  top_listings: ListingData[];
+  bedroom_performance: BedroomPerformance[];
+  insights: MarketInsights;
+  generated_at: string;
+}
+
+interface ChapterMarketReportProps {
+  data: MarketReportData | SubmarketReportData;
+  reportType: 'market' | 'submarket';
+  onBack: () => void;
+  clientName?: string;
+}
+
+// Format helpers
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
+const formatPercent = (value: number) => {
+  const percent = value > 1 ? value : value * 100;
+  return `${Math.round(percent)}%`;
+};
+
+// Chapter Navigation Component
+function ChapterNav({ chapters, activeChapter, onChapterClick }: {
+  chapters: { id: number; title: string }[];
+  activeChapter: number;
+  onChapterClick: (id: number) => void;
+}) {
+  return (
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#0F172A]/10 py-4">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {chapters.map((chapter) => (
+            <button
+              key={chapter.id}
+              onClick={() => onChapterClick(chapter.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeChapter === chapter.id
+                  ? 'bg-[#C9A962] text-white'
+                  : 'bg-[#0F172A]/5 text-[#0F172A]/70 hover:bg-[#0F172A]/10'
+              }`}
+            >
+              Ch. {chapter.id}: {chapter.title}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Chapter Section Component
+function ChapterSection({ id, title, children }: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-24 py-12 border-b border-[#0F172A]/10 last:border-0">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+      >
+        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#0F172A] mb-8 flex items-center gap-3">
+          <BookOpen className="w-7 h-7 text-[#C9A962]" />
+          {title}
+        </h2>
+        {children}
+      </motion.div>
+    </section>
+  );
+}
+
+// Info Card Component
+function InfoCard({ title, value, subtitle, icon: Icon, trend }: {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon: React.ElementType;
+  trend?: 'up' | 'down' | 'neutral';
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-[#0F172A]/5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-10 h-10 bg-[#C9A962]/10 rounded-lg flex items-center justify-center">
+          <Icon className="w-5 h-5 text-[#C9A962]" />
+        </div>
+        <span className="text-sm font-medium text-[#0F172A]/60">{title}</span>
+      </div>
+      <p className="text-3xl font-serif font-bold text-[#0F172A] mb-1">{value}</p>
+      {subtitle && (
+        <p className="text-sm text-[#0F172A]/50 flex items-center gap-1">
+          {trend === 'up' && <TrendingUp className="w-4 h-4 text-green-600" />}
+          {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Table Component
+function DataTable({ headers, rows }: {
+  headers: string[];
+  rows: (string | React.ReactNode)[][];
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b-2 border-[#C9A962]/30">
+            {headers.map((header, idx) => (
+              <th
+                key={idx}
+                className={`py-3 px-4 text-sm font-semibold text-[#0F172A] ${
+                  idx === 0 ? 'text-left' : 'text-right'
+                }`}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIdx) => (
+            <tr
+              key={rowIdx}
+              className="border-b border-[#0F172A]/5 hover:bg-[#C9A962]/5 transition-colors"
+            >
+              {row.map((cell, cellIdx) => (
+                <td
+                  key={cellIdx}
+                  className={`py-4 px-4 ${
+                    cellIdx === 0 ? 'text-left font-medium text-[#0F172A]' : 'text-right text-[#0F172A]/70'
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Highlight Box Component
+function HighlightBox({ title, content, variant = 'default' }: {
+  title: string;
+  content: string;
+  variant?: 'default' | 'success' | 'warning' | 'info';
+}) {
+  const variants = {
+    default: 'bg-[#0F172A]/5 border-[#0F172A]',
+    success: 'bg-green-50 border-green-600',
+    warning: 'bg-amber-50 border-amber-600',
+    info: 'bg-blue-50 border-blue-600'
+  };
+
+  return (
+    <div className={`p-4 rounded-lg border-l-4 ${variants[variant]}`}>
+      <p className="font-semibold text-[#0F172A] mb-1">{title}</p>
+      <p className="text-sm text-[#0F172A]/70">{content}</p>
+    </div>
+  );
+}
+
+// Tier Card Component
+function TierCard({ tier, title, description, markets }: {
+  tier: number;
+  title: string;
+  description: string;
+  markets: { name: string; reason: string }[];
+}) {
+  const tierColors = {
+    1: 'from-[#C9A962] to-[#d4b876]',
+    2: 'from-[#64748b] to-[#94a3b8]',
+    3: 'from-[#78716c] to-[#a8a29e]'
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className={`bg-gradient-to-r ${tierColors[tier as keyof typeof tierColors]} p-4`}>
+        <span className="text-white/80 text-sm font-medium">Tier {tier}</span>
+        <h3 className="text-xl font-serif font-bold text-white">{title}</h3>
+        <p className="text-white/80 text-sm mt-1">{description}</p>
+      </div>
+      <div className="p-4 space-y-3">
+        {markets.map((market, idx) => (
+          <div key={idx} className="p-3 bg-[#0F172A]/5 rounded-lg">
+            <p className="font-semibold text-[#0F172A]">{market.name}</p>
+            <p className="text-sm text-[#0F172A]/60">{market.reason}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ChapterMarketReport({ data, reportType, onBack, clientName }: ChapterMarketReportProps) {
+  const [activeChapter, setActiveChapter] = useState(1);
+
+  const isSubmarket = reportType === 'submarket';
+  const marketInfo = isSubmarket
+    ? (data as SubmarketReportData).submarket
+    : (data as MarketReportData).market;
+  const insights = isSubmarket
+    ? (data as SubmarketReportData).insights
+    : (data as MarketReportData).insights;
+  const submarkets = !isSubmarket ? (data as MarketReportData).submarkets : [];
+
+  const chapters = [
+    { id: 1, title: 'The Big Picture' },
+    { id: 2, title: 'What Guests Want' },
+    { id: 3, title: 'Understanding the Seasons' },
+    { id: 4, title: 'Best Neighborhoods' },
+    { id: 5, title: 'Property Size Matters' },
+    { id: 6, title: 'Deeper Insights' },
+    { id: 7, title: 'Your Action Plan' }
+  ];
+
+  const scrollToChapter = (id: number) => {
+    setActiveChapter(id);
+    const element = document.getElementById(`chapter-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Find best performing bedroom size
+  const bestBedroom = data.bedroom_performance?.reduce((best, current) =>
+    current.avg_occupancy > (best?.avg_occupancy || 0) ? current : best
+  , data.bedroom_performance[0]);
+
+  // Calculate key insights
+  const avgOccupancy = marketInfo.metrics.occupancy;
+  const avgADR = marketInfo.metrics.adr;
+  const avgRevenue = marketInfo.metrics.revenue;
+  const totalListings = marketInfo.metrics.active_listings || marketInfo.listing_count;
+  const profManagedPct = insights?.professionally_managed_pct || 0;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
+      {/* Title Page / Header */}
+      <div className="bg-[#0F172A] text-white">
+        <div className="container mx-auto px-4 py-12">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-8"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Search
+          </button>
+
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3 mb-4">
+              {isSubmarket ? (
+                <MapPin className="w-6 h-6 text-[#C9A962]" />
+              ) : (
+                <Building className="w-6 h-6 text-[#C9A962]" />
+              )}
+              <span className="text-sm font-medium text-[#C9A962] uppercase tracking-wider">
+                Short-Term Rental Market Guide
+              </span>
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
+              {marketInfo.name}: A Comprehensive Guide to Short-Term Rental Investment
+            </h1>
+
+            {isSubmarket && (data as SubmarketReportData).submarket.parent_market && (
+              <p className="text-white/70 text-lg mb-6">
+                Part of the {(data as SubmarketReportData).submarket.parent_market} market
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-4 text-sm text-white/60">
+              <span><strong className="text-white">Prepared for:</strong> {clientName || 'Valued Investor'}</span>
+              <span>•</span>
+              <span><strong className="text-white">Date:</strong> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+          </div>
+
+          {marketInfo.metrics.market_score && (
+            <div className="absolute top-12 right-8 text-right hidden lg:block">
+              <p className="text-sm text-white/60 mb-1">Market Score</p>
+              <p className="text-5xl font-serif font-bold text-[#C9A962]">
+                {Math.round(marketInfo.metrics.market_score)}
+              </p>
+              <p className="text-xs text-white/50">out of 100</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chapter Navigation */}
+      <ChapterNav
+        chapters={chapters}
+        activeChapter={activeChapter}
+        onChapterClick={scrollToChapter}
+      />
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Chapter 1: The Big Picture */}
+          <ChapterSection id="chapter-1" title="Chapter 1: The Big Picture">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              This report provides a deep dive into the short-term rental (STR) market in {marketInfo.name}.
+              {isSubmarket
+                ? ` As a key neighborhood, ${marketInfo.name} presents unique investment opportunities with specific demand patterns and guest preferences.`
+                : ` This market presents a unique investment landscape with a blend of stable demand, diverse property types, and varying neighborhood profiles.`
+              } This guide will walk you through the essential data and insights needed to make an informed investment decision.
+            </p>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Key Market Highlights</h3>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <HighlightBox
+                title={`Strong Overall Occupancy`}
+                content={`The ${marketInfo.name} market maintains an average occupancy rate of ${formatPercent(avgOccupancy)}, indicating ${avgOccupancy > 60 ? 'strong' : avgOccupancy > 50 ? 'healthy' : 'moderate'} demand from travelers.`}
+                variant="success"
+              />
+              <HighlightBox
+                title={`${bestBedroom?.bedrooms || 2}-Bedroom Properties Lead`}
+                content={`${bestBedroom?.bedrooms || 2}-bedroom properties show the highest occupancy rates (${formatPercent(bestBedroom?.avg_occupancy || avgOccupancy)}), signaling strong demand from ${bestBedroom?.bedrooms === 1 ? 'couples and business travelers' : bestBedroom?.bedrooms === 4 ? 'families and groups' : 'small families and groups'}.`}
+                variant="info"
+              />
+              <HighlightBox
+                title={`${profManagedPct < 20 ? 'Low' : profManagedPct < 40 ? 'Moderate' : 'High'} Professional Host Saturation`}
+                content={`Only ${profManagedPct}% of listings are professionally managed. This creates ${profManagedPct < 20 ? 'a significant opportunity' : 'room'} for individual hosts to compete and succeed.`}
+                variant={profManagedPct < 20 ? 'success' : 'default'}
+              />
+              <HighlightBox
+                title={`Average Revenue: ${formatCurrency(avgRevenue)}`}
+                content={`Properties in this market earn an average of ${formatCurrency(avgRevenue)} annually, with top performers earning ${formatCurrency(insights?.revenue_percentiles?.p90 || avgRevenue * 1.5)} or more.`}
+                variant="default"
+              />
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <InfoCard title="Occupancy Rate" value={formatPercent(avgOccupancy)} icon={Percent} />
+              <InfoCard title="Avg. Daily Rate" value={formatCurrency(avgADR)} icon={DollarSign} />
+              <InfoCard title="Avg. Revenue" value={formatCurrency(avgRevenue)} icon={TrendingUp} />
+              <InfoCard title="Active Listings" value={totalListings.toLocaleString()} icon={Building} />
+            </div>
+          </ChapterSection>
+
+          {/* Chapter 2: What Guests Want */}
+          <ChapterSection id="chapter-2" title="Chapter 2: What Guests Want">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              Understanding guest preferences is crucial for maximizing bookings and revenue. In the {marketInfo.name} market,
+              the data reveals clear trends in the amenities and property types that attract travelers.
+            </p>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Top 5 Most Important Amenities</h3>
+
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+              <DataTable
+                headers={['Amenity', 'Importance', 'What This Means for You']}
+                rows={[
+                  ['Air Conditioning', '~95%+', <span key="ac" className="text-green-600 font-medium">Essential. A property without AC is non-competitive.</span>],
+                  ['Parking', '~85%+', <span key="park" className="text-green-600 font-medium">Crucial. Most guests arrive by car and expect convenient parking.</span>],
+                  ['Heating', '~80%+', <span key="heat">Standard. Necessary for comfort during cooler months.</span>],
+                  ['TV / Smart TV', '~75%+', <span key="tv">Expected. Guests expect entertainment options.</span>],
+                  ['Pets Allowed', '~60%+', <span key="pets" className="text-blue-600 font-medium">High-Impact. Allowing pets significantly expands your guest pool.</span>]
+                ]}
+              />
+            </div>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Property Type Performance</h3>
+
+            {insights?.property_type_breakdown && insights.property_type_breakdown.length > 0 ? (
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <DataTable
+                  headers={['Property Type', 'Market Share', 'Avg. Revenue', 'Insight']}
+                  rows={insights.property_type_breakdown.slice(0, 5).map((pt) => [
+                    <span key={pt.type} className="capitalize">{pt.type}</span>,
+                    `${pt.pct}%`,
+                    formatCurrency(pt.avg_revenue),
+                    pt.pct > 30
+                      ? <span key={`${pt.type}-insight`} className="text-green-600">Dominant type - high demand</span>
+                      : pt.avg_revenue > avgRevenue
+                        ? <span key={`${pt.type}-insight`} className="text-blue-600">Premium revenue potential</span>
+                        : <span key={`${pt.type}-insight`} className="text-[#0F172A]/50">Standard performer</span>
+                  ])}
+                />
+              </div>
+            ) : (
+              <p className="text-[#0F172A]/60">Property type data not available for this market.</p>
+            )}
+
+            <div className="mt-6 p-4 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+              <div className="flex items-start gap-3">
+                <Lightbulb className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-1" />
+                <div>
+                  <p className="font-semibold text-[#0F172A]">The Thought Process</p>
+                  <p className="text-sm text-[#0F172A]/70">
+                    The dominant property type indicates what guests are primarily looking for.
+                    {insights?.property_type_breakdown?.[0]?.type === 'house'
+                      ? ' Houses suggest guests want space and privacy, reinforcing the trend of family and group travel.'
+                      : insights?.property_type_breakdown?.[0]?.type === 'apartment'
+                        ? ' Apartments indicate demand from business travelers and couples seeking urban convenience.'
+                        : ' Understanding this helps you position your property to meet market demand.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ChapterSection>
+
+          {/* Chapter 3: Understanding the Seasons */}
+          <ChapterSection id="chapter-3" title="Chapter 3: Understanding the Seasons">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              Seasonality plays a role in any STR market. Understanding the high and low seasons in {marketInfo.name}
+              helps you anticipate income fluctuations and adjust your pricing strategy.
+            </p>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Peak vs. Off-Peak Months</h3>
+
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sun className="w-6 h-6 text-amber-500" />
+                  <span className="font-semibold text-[#0F172A]">Peak Season</span>
+                </div>
+                <p className="text-sm text-[#0F172A]/70 mb-2">May through August</p>
+                <p className="text-2xl font-serif font-bold text-amber-600">55-65% occ.</p>
+                <p className="text-xs text-[#0F172A]/50 mt-2">Higher rates, strong demand</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Leaf className="w-6 h-6 text-green-500" />
+                  <span className="font-semibold text-[#0F172A]">Shoulder Season</span>
+                </div>
+                <p className="text-sm text-[#0F172A]/70 mb-2">Mar-Apr & Sep-Nov</p>
+                <p className="text-2xl font-serif font-bold text-green-600">50-55% occ.</p>
+                <p className="text-xs text-[#0F172A]/50 mt-2">Solid, consistent bookings</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <Snowflake className="w-6 h-6 text-blue-500" />
+                  <span className="font-semibold text-[#0F172A]">Off-Peak Season</span>
+                </div>
+                <p className="text-sm text-[#0F172A]/70 mb-2">December through February</p>
+                <p className="text-2xl font-serif font-bold text-blue-600">45-50% occ.</p>
+                <p className="text-xs text-[#0F172A]/50 mt-2">Lower rates, less demand</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h4 className="font-semibold text-[#0F172A] mb-4">Income Stability Tips</h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#0F172A]/70">
+                    <strong>Use dynamic pricing</strong> — Adjust rates based on demand. Charge premium during peak, offer deals during slow periods.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#0F172A]/70">
+                    <strong>Target different guests</strong> — Business travelers in off-season, families during summer.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-[#0F172A]/70">
+                    <strong>Offer monthly discounts</strong> — Attract longer stays during slow months to maintain cash flow.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ChapterSection>
+
+          {/* Chapter 4: Best Neighborhoods */}
+          <ChapterSection id="chapter-4" title="Chapter 4: The Best Neighborhoods to Invest In">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              Not all neighborhoods are created equal. {submarkets.length > 0
+                ? `We have categorized the ${submarkets.length} submarkets around ${marketInfo.name} into tiers based on their revenue potential.`
+                : `Understanding the competitive landscape helps you position your property for success.`}
+            </p>
+
+            {submarkets.length > 0 ? (
+              <div className="grid md:grid-cols-3 gap-6">
+                <TierCard
+                  tier={1}
+                  title="Premium Markets"
+                  description="Highest revenue potential"
+                  markets={submarkets.slice(0, 3).map((s) => ({
+                    name: s.name,
+                    reason: `${s.listing_count.toLocaleString()} active listings`
+                  }))}
+                />
+                <TierCard
+                  tier={2}
+                  title="Solid Performers"
+                  description="Balanced risk & reward"
+                  markets={submarkets.slice(3, 6).map((s) => ({
+                    name: s.name,
+                    reason: `${s.listing_count.toLocaleString()} active listings`
+                  }))}
+                />
+                <TierCard
+                  tier={3}
+                  title="Entry-Level Markets"
+                  description="Lower initial investment"
+                  markets={submarkets.slice(6, 9).map((s) => ({
+                    name: s.name,
+                    reason: `${s.listing_count.toLocaleString()} active listings`
+                  }))}
+                />
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h4 className="font-semibold text-[#0F172A] mb-4">Competitive Landscape</h4>
+                <p className="text-[#0F172A]/70 mb-4">
+                  With {totalListings.toLocaleString()} active listings in {marketInfo.name}, understanding your competition is key.
+                </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="font-semibold text-green-700">Opportunity</p>
+                    <p className="text-sm text-green-600">
+                      {profManagedPct < 20
+                        ? 'Low professional competition means individual hosts can thrive.'
+                        : 'Room to differentiate with better service and amenities.'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-lg">
+                    <p className="font-semibold text-amber-700">Challenge</p>
+                    <p className="text-sm text-amber-600">
+                      {insights?.superhost_pct && insights.superhost_pct > 50
+                        ? 'High superhost concentration means quality expectations are high.'
+                        : 'Standing out requires excellent photos and reviews.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </ChapterSection>
+
+          {/* Chapter 5: Property Size Matters */}
+          <ChapterSection id="chapter-5" title="Chapter 5: Property Size Matters">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              In {marketInfo.name}, the number of bedrooms in a property has a direct impact on its performance.
+              The data shows clear preferences that can guide your investment decision.
+            </p>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Performance by Property Size</h3>
+
+            {data.bedroom_performance && data.bedroom_performance.length > 0 ? (
+              <>
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+                  <DataTable
+                    headers={['Bedrooms', 'Occupancy Rate', 'Avg. Revenue', 'What This Means']}
+                    rows={data.bedroom_performance.map((br) => {
+                      const isHighest = br.bedrooms === bestBedroom?.bedrooms;
+                      return [
+                        <span key={br.bedrooms} className={isHighest ? 'font-bold text-[#C9A962]' : ''}>
+                          {br.bedrooms} Bedrooms {isHighest && '⭐'}
+                        </span>,
+                        <span key={`${br.bedrooms}-occ`} className={isHighest ? 'font-bold text-green-600' : ''}>
+                          {formatPercent(br.avg_occupancy)}
+                        </span>,
+                        formatCurrency(br.avg_revenue),
+                        br.bedrooms === bestBedroom?.bedrooms
+                          ? <span key={`${br.bedrooms}-insight`} className="text-green-600 font-medium">The sweet spot - highest demand</span>
+                          : br.bedrooms === 1
+                            ? <span key={`${br.bedrooms}-insight`}>Ideal for business travelers or couples</span>
+                            : br.bedrooms >= 4
+                              ? <span key={`${br.bedrooms}-insight`}>Great for families and groups</span>
+                              : <span key={`${br.bedrooms}-insight`}>Solid, reliable performer</span>
+                      ];
+                    })}
+                  />
+                </div>
+
+                <div className="p-6 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+                  <div className="flex items-start gap-3">
+                    <Target className="w-6 h-6 text-[#C9A962] flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-[#0F172A] text-lg">Key Takeaway</p>
+                      <p className="text-[#0F172A]/70">
+                        While all property sizes are viable in {marketInfo.name}, focusing on a{' '}
+                        <strong>{bestBedroom?.bedrooms || 2}-bedroom property</strong> gives you the best chance to
+                        maximize occupancy and align with the strongest segment of market demand.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-[#0F172A]/60">Bedroom performance data not available for this market.</p>
+            )}
+          </ChapterSection>
+
+          {/* Chapter 6: Deeper Insights */}
+          <ChapterSection id="chapter-6" title="Chapter 6: Deeper Insights from the Data">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              Beyond the basics, the data reveals several deeper trends that can inform your investment strategy.
+            </p>
+
+            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">The Professional Host Landscape</h3>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+              <p className="text-[#0F172A]/70 mb-6">
+                The percentage of listings managed by professional hosts (those with 21+ properties) is a key indicator of competition.
+              </p>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-[#0F172A]">Professionally Managed</span>
+                    <span className="text-2xl font-bold text-[#0F172A]">{profManagedPct}%</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A]/10 rounded-full h-3">
+                    <div
+                      className="bg-[#C9A962] h-3 rounded-full transition-all duration-1000"
+                      style={{ width: `${profManagedPct}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-[#0F172A]/50 mt-2">
+                    {insights?.professionally_managed_count || 0} of {insights?.total_listings || totalListings} listings
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-[#0F172A]">Superhosts</span>
+                    <span className="text-2xl font-bold text-[#0F172A]">{insights?.superhost_pct || 0}%</span>
+                  </div>
+                  <div className="w-full bg-[#0F172A]/10 rounded-full h-3">
+                    <div
+                      className="bg-green-600 h-3 rounded-full transition-all duration-1000"
+                      style={{ width: `${insights?.superhost_pct || 0}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-[#0F172A]/50 mt-2">
+                    {insights?.superhost_count || 0} of {insights?.total_listings || totalListings} listings
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-[#0F172A]/5 rounded-lg">
+                <p className="text-sm text-[#0F172A]/70">
+                  <strong>What this means:</strong>{' '}
+                  {profManagedPct < 15
+                    ? 'This market has very low professional competition. Individual hosts have a significant advantage and can compete effectively with good service and marketing.'
+                    : profManagedPct < 30
+                      ? 'This market has moderate professional presence. You can still compete successfully by focusing on unique amenities and excellent guest experiences.'
+                      : 'This market has strong professional competition. You\'ll need a polished listing, professional photos, and excellent service to stand out.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Revenue Distribution */}
+            {insights?.revenue_percentiles && (
+              <>
+                <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Revenue Distribution</h3>
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <p className="text-[#0F172A]/70 mb-6">
+                    Understanding where you can realistically land in the revenue spectrum helps set expectations.
+                  </p>
+
+                  <div className="grid grid-cols-5 gap-4 mb-6">
+                    {[
+                      { label: 'Bottom 10%', value: insights.revenue_percentiles.p10, color: 'bg-red-100 text-red-700' },
+                      { label: 'Bottom 25%', value: insights.revenue_percentiles.p25, color: 'bg-orange-100 text-orange-700' },
+                      { label: 'Median', value: insights.revenue_percentiles.p50, color: 'bg-[#C9A962]/20 text-[#C9A962]' },
+                      { label: 'Top 25%', value: insights.revenue_percentiles.p75, color: 'bg-green-100 text-green-700' },
+                      { label: 'Top 10%', value: insights.revenue_percentiles.p90, color: 'bg-emerald-100 text-emerald-700' }
+                    ].map((tier) => (
+                      <div key={tier.label} className={`p-4 rounded-lg text-center ${tier.color}`}>
+                        <p className="text-xs font-medium mb-1">{tier.label}</p>
+                        <p className="text-lg font-bold">{formatCurrency(tier.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-700">
+                      <strong>Our target:</strong> Top 25% ({formatCurrency(insights.revenue_percentiles.p75)}/year).
+                      This is achievable with professional photos, smart pricing, and excellent guest service.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </ChapterSection>
+
+          {/* Chapter 7: Your Action Plan */}
+          <ChapterSection id="chapter-7" title="Chapter 7: Your Action Plan">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              Based on this comprehensive analysis, here are tailored recommendations for different investor profiles.
+            </p>
+
+            <div className="space-y-6">
+              {/* New Investor */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                  <h3 className="text-xl font-serif font-bold text-white">For the New Investor Seeking Lower Risk</h3>
+                </div>
+                <div className="p-6">
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Target Market</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          Focus on the core {marketInfo.name} area. Its {avgOccupancy > 55 ? 'high' : 'stable'} occupancy
+                          and consistent demand make it a safer bet for beginners.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Property Size</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          Look for a {bestBedroom?.bedrooms || 2}-bedroom property. This aligns with the strongest demand segment.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Key Amenities</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          Ensure your property has Air Conditioning, Parking, and allows pets to maximize your appeal.
+                        </p>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Experienced Investor */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-4">
+                  <h3 className="text-xl font-serif font-bold text-white">For the Experienced Investor Seeking High Returns</h3>
+                </div>
+                <div className="p-6">
+                  <ol className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Target Market</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          Look for premium neighborhoods with high ADR potential. Top performers earn {formatCurrency(insights?.revenue_percentiles?.p90 || avgRevenue * 1.5)}+ annually.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Property Size</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          A 3-4 bedroom property will allow you to command the highest daily rates and attract families/groups.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A]">Strategy</p>
+                        <p className="text-sm text-[#0F172A]/70">
+                          Focus on creating a premium experience. Professional photography and high-end furnishings are a must.
+                        </p>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="mt-12 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
+              <div className="max-w-2xl mx-auto text-center">
+                <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                  <Award className="w-4 h-4" />
+                  Done-For-You Solution
+                </div>
+                <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
+                  Ready to Get Started?
+                </h3>
+                <p className="text-white/70 mb-8">
+                  Our turnkey program handles everything — from property selection to guest management.
+                  We've helped hundreds of investors achieve top-performer status in their markets.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button className="bg-[#C9A962] text-[#0F172A] px-8 py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-colors flex items-center justify-center gap-2">
+                    Schedule Free Consultation
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                  <Link
+                    href="/"
+                    className="bg-white/10 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/20 transition-colors flex items-center justify-center gap-2 border border-white/20"
+                  >
+                    <Target className="w-5 h-5" />
+                    Analyze a Specific Property
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-12 pt-8 border-t border-[#0F172A]/10 text-center">
+              <p className="text-sm text-[#0F172A]/50 italic">
+                This report was generated based on data from the Coach Inayah market analysis tool.
+                All data is for the trailing 12-month period ending {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
+              </p>
+            </div>
+          </ChapterSection>
+        </div>
+      </div>
+    </div>
+  );
+}
