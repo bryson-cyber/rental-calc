@@ -22,8 +22,8 @@ import {
   getTopPerformers,
   calculateArbitrageFeasibility,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport, getInvestmentAdvice } from "./gemini";
-import type { ChatMessage } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
+import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 
 // Input validation schema for rental estimate
@@ -1017,33 +1017,13 @@ export const appRouter = router({
           role: z.enum(["user", "assistant"]),
           content: z.string(),
         })).default([]),
-        marketContext: z.object({
-          markets: z.array(z.object({
-            name: z.string(),
-            scores: z.object({
-              market_score: z.number(),
-              investability: z.number(),
-              rental_demand: z.number(),
-              revenue_growth: z.number(),
-              seasonality: z.number(),
-              regulation: z.number(),
-            }),
-            metrics: z.object({
-              occupancy: z.number(),
-              adr: z.number(),
-              revenue: z.number(),
-            }),
-            listing_count: z.number(),
-          })).optional(),
-          currentMarket: z.string().optional(),
-        }).optional(),
       }))
       .mutation(async ({ input }) => {
         try {
-          const response = await getInvestmentAdvice(
+          // Use the new AI advisor with dynamic function calling
+          const response = await getAIAdvisorResponse(
             input.question,
-            input.conversationHistory as ChatMessage[],
-            input.marketContext
+            input.conversationHistory as ChatMessage[]
           );
           
           return {

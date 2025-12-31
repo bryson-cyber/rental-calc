@@ -272,3 +272,30 @@
 - [ ] Fix Seasonality Calendar data loading (showing $0K for all months)
 - [ ] Fix Market Map markers not appearing
 
+
+## Bug Fix - AI Advisor Limit Error
+- [x] Fix AI Advisor limit error (limit > 25 not allowed)
+
+
+## Major Simplification Sprint - Single Smart Input
+- [ ] Redesign homepage with single smart input bar
+  - [ ] One input field: "Enter an address, Zillow link, zip code, or city"
+  - [ ] Auto-detect input type (address, Zillow URL, zip code, city/market)
+  - [ ] Remove all separate tool links from homepage
+- [ ] Build input type detection logic
+  - [ ] Detect Zillow URL (contains zillow.com)
+  - [ ] Detect zip code (5 digits)
+  - [ ] Detect address (contains street number + name)
+  - [ ] Detect city/market name (everything else)
+- [x] Update AI Advisor to make dynamic API calls
+  - [x] Fetch fresh AirDNA data for any market mentioned
+  - [x] No pre-loaded data - always query API in real-time
+  - [x] Parse user question to extract market names
+- [ ] Create unified report output
+  - [ ] Property search → Property Report + Market Report
+  - [ ] Zillow link → Parse address → Property Report + Market Report
+  - [ ] Zip code → Market Report for that zip
+  - [ ] City/Market → Market Report for that market
+- [ ] Clean up unused pages/routes
+  - [ ] Remove or consolidate duplicate tools
+  - [ ] Streamline navigation
