@@ -157,3 +157,16 @@
 - [ ] Implement AI Investment Advisor chat feature
 - [ ] Add Break-Even Calculator
 - [ ] Add Investment Readiness Score
+
+
+## Done-For-You Setup Service Sprint
+- [x] Rewrite Chapter 5 to focus on SETUP complexity (not ongoing management)
+- [x] Remove "time per week" messaging - we're not selling management
+- [x] Position service as "We handle the setup so you can start earning"
+- [x] Fix "Unknown Location" bug - now shows Nashville, Austin, etc. correctly
+- [x] Increase number of competitors returned (now shows top 10 sorted by revenue)
+- [x] Add "Meets 2x Rule" badges to highlight profitable properties
+- [x] Reframe CTAs for done-for-you setup service ("Listing optimization & launch")
+- [ ] Add Airbnb listing thumbnail photos for each competitor (code in place, awaiting API data)
+- [ ] Add photo gallery to browse listing photos without leaving page
+- [ ] Paint positive picture of Airbnb opportunity, not scare tactics

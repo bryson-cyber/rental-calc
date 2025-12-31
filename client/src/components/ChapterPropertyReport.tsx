@@ -279,14 +279,16 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
   const { property, revenue_estimate, monthly_forecast, comps, same_bedroom_comps, market_data, bedroom_performance, revenue_percentiles } = data;
 
   // Use same-bedroom comps if available, otherwise use all comps
-  const displayComps = same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps;
+  // Sort by annual revenue descending to show top performers first
+  const allComps = same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps;
+  const displayComps = [...allComps].sort((a, b) => b.annual_revenue - a.annual_revenue);
 
   const chapters = [
     { id: 1, title: 'The Property' },
     { id: 2, title: 'Local Market Analysis' },
     { id: 3, title: 'Study the Competition' },
     { id: 4, title: 'Project the Profit' },
-    { id: 5, title: 'What It Really Takes' }
+    { id: 5, title: 'Setting Up for Success' }
   ];
 
   const scrollToChapter = (id: number) => {
@@ -690,30 +692,56 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
             <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">What Do the Top Competitors Have in Common?</h3>
 
             <p className="text-[#0F172A]/70 mb-4">
-              {hasViableComps 
-                ? `Here are the ${property.bedrooms}-bedroom properties in ${property.city} that meet the profitability threshold. These are the "winners" you'll be competing against.`
-                : `Even though no properties meet the threshold, here are the top ${property.bedrooms}-bedroom performers in the area for reference.`
-              }
+              Here are the top-earning {property.bedrooms}-bedroom properties in {property.city}. 
+              Properties marked with <span className="text-green-600 font-semibold">"✓ Meets 2x Rule"</span> are earning above the {formatCurrency(minRevenueThreshold)} threshold.
             </p>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-              <div className={`p-4 ${hasViableComps ? 'bg-[#0F172A]' : 'bg-red-700'}`}>
+              <div className="p-4 bg-[#0F172A]">
                 <p className="text-white font-semibold">
-                  {hasViableComps 
-                    ? `Winners: ${property.bedrooms}-BR Properties Earning ${formatCurrency(minRevenueThreshold)}+/year`
-                    : `Top ${property.bedrooms}-BR Performers (Below Threshold)`
-                  }
+                  Top {property.bedrooms}-BR Performers in {property.city}
                 </p>
               </div>
               <div className="divide-y divide-[#0F172A]/5">
-                {(hasViableComps ? winningComps : displayComps).slice(0, 5).map((comp, idx) => (
+                {displayComps.slice(0, 10).map((comp, idx) => (
+                // Show all top performers, highlight those meeting threshold
                   <div key={comp.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      {/* Listing Photo */}
+                      {comp.image_url ? (
+                        <div className="flex-shrink-0">
+                          <a
+                            href={comp.airbnb_url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <img
+                              src={comp.image_url}
+                              alt={comp.title}
+                              className="w-24 h-20 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="flex-shrink-0 w-24 h-20 bg-[#0F172A]/10 rounded-lg flex items-center justify-center">
+                          <Home className="w-8 h-8 text-[#0F172A]/30" />
+                        </div>
+                      )}
+                      
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-6 h-6 bg-[#C9A962]/20 rounded-full flex items-center justify-center text-xs font-bold text-[#C9A962]">
                             {idx + 1}
                           </span>
+                          {comp.annual_revenue >= minRevenueThreshold && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                              ✓ Meets 2x Rule
+                            </span>
+                          )}
                           {comp.airbnb_url ? (
                             <a
                               href={comp.airbnb_url}
@@ -752,7 +780,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                                 : 'Solid performer with consistent bookings.'}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(comp.annual_revenue)}</p>
                         <p className="text-sm text-[#0F172A]/50">/year</p>
                         <p className="text-sm text-[#0F172A]/60 mt-1">{formatCurrency(comp.adr)}/night</p>
@@ -936,7 +964,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                   </div>
                   <div className="bg-white/10 rounded-lg p-4">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Full-service guest management</p>
+                    <p className="text-sm">Listing optimization & launch</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -958,284 +986,258 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
           </ChapterSection>
 
           {/* Chapter 5: What It Really Takes */}
-          <ChapterSection id="chapter-5" title="5. What It Really Takes (The Truth)">
+          <ChapterSection id="chapter-5" title="5. Setting Up for Success">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
-              Here's what nobody tells you: Running a successful Airbnb is a <strong>real business</strong> that requires 
-              significant time, expertise, and ongoing management. Let's break down exactly what it takes.
+              The difference between average and top-performing Airbnbs comes down to <strong>how they're set up from day one</strong>. 
+              The right property selection, design choices, and listing optimization can mean the difference between $34K and $67K in annual revenue.
             </p>
 
-            {/* Time Investment Calculator */}
+            {/* Setup Essentials */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4">
+              <div className="bg-gradient-to-r from-[#C9A962] to-amber-500 p-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Weekly Time Investment Required
+                  <Sparkles className="w-5 h-5" />
+                  What Separates Top Performers from the Rest
                 </h3>
               </div>
               <div className="p-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-semibold text-[#0F172A] mb-4">Guest Management</h4>
+                    <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
+                      <Home className="w-4 h-4 text-[#C9A962]" />
+                      Property Selection
+                    </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Responding to inquiries</span>
-                        <span className="font-medium">3-5 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Location analysis (walkability, attractions, parking)</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Check-in/check-out coordination</span>
-                        <span className="font-medium">2-3 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Lease negotiation for STR approval</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Guest issues & emergencies</span>
-                        <span className="font-medium">1-3 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Market demand validation</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Review management</span>
-                        <span className="font-medium">1-2 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Revenue potential verification</span>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-[#0F172A] mb-4">Operations & Optimization</h4>
+                    <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#C9A962]" />
+                      Design & Staging
+                    </h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Cleaning coordination</span>
-                        <span className="font-medium">2-4 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Interior design that photographs beautifully</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Pricing adjustments</span>
-                        <span className="font-medium">2-3 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Furniture selection for durability & style</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Maintenance & repairs</span>
-                        <span className="font-medium">1-3 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2 border-b border-[#0F172A]/10">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Professional photography & virtual tour</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Supply restocking</span>
-                        <span className="font-medium">1-2 hrs/week</span>
+                      <div className="flex items-start gap-3 py-2">
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-[#0F172A]/70">Amenity packages guests love</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 bg-red-50 rounded-xl p-4 border border-red-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-red-800">Total Weekly Time Commitment:</span>
-                    <span className="text-2xl font-bold text-red-600">15-25 hours/week</span>
-                  </div>
-                  <p className="text-sm text-red-700 mt-2">
-                    That's equivalent to a <strong>part-time job</strong>. And this doesn't include the initial setup phase.
+                <div className="mt-6 bg-[#C9A962]/10 rounded-xl p-4 border border-[#C9A962]/30">
+                  <p className="text-[#0F172A] text-center">
+                    <strong>The Secret:</strong> Top performers invest in <span className="text-[#C9A962] font-bold">professional setup</span> from day one. 
+                    The right design and listing optimization can add <span className="font-bold">$10,000-20,000</span> to your annual revenue.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Hidden Costs Reveal */}
+            {/* Listing Optimization */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-              <div className="bg-gradient-to-r from-red-500 to-pink-500 p-4">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Hidden Costs Nobody Mentions
+                  <TrendingUp className="w-5 h-5" />
+                  What Makes a Listing Stand Out
                 </h3>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
-                    <div>
-                      <span className="font-medium text-[#0F172A]">Dynamic Pricing Software</span>
-                      <p className="text-sm text-[#0F172A]/60">PriceLabs, Beyond, Wheelhouse</p>
+                  <div className="flex items-start gap-4 py-3 border-b border-[#0F172A]/10">
+                    <div className="bg-blue-100 rounded-full p-2">
+                      <Star className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$20-50/month</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
                     <div>
                       <span className="font-medium text-[#0F172A]">Professional Photography</span>
-                      <p className="text-sm text-[#0F172A]/60">Initial shoot + seasonal updates</p>
+                      <p className="text-sm text-[#0F172A]/60">Listings with pro photos get 40% more bookings and can charge 20% higher rates</p>
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$300-500/year</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
-                    <div>
-                      <span className="font-medium text-[#0F172A]">Smart Locks & Tech</span>
-                      <p className="text-sm text-[#0F172A]/60">Keyless entry, noise monitors, thermostats</p>
+                  <div className="flex items-start gap-4 py-3 border-b border-[#0F172A]/10">
+                    <div className="bg-blue-100 rounded-full p-2">
+                      <BookOpen className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$500-1,000 upfront</span>
+                    <div>
+                      <span className="font-medium text-[#0F172A]">Compelling Description</span>
+                      <p className="text-sm text-[#0F172A]/60">Story-driven copy that sells the experience, not just the space</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
-                    <div>
-                      <span className="font-medium text-[#0F172A]">STR Insurance Premium</span>
-                      <p className="text-sm text-[#0F172A]/60">Above standard renter's insurance</p>
+                  <div className="flex items-start gap-4 py-3 border-b border-[#0F172A]/10">
+                    <div className="bg-blue-100 rounded-full p-2">
+                      <Target className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$100-200/month</span>
+                    <div>
+                      <span className="font-medium text-[#0F172A]">Strategic Pricing</span>
+                      <p className="text-sm text-[#0F172A]/60">Launch pricing strategy to build reviews quickly, then optimize for revenue</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
-                    <div>
-                      <span className="font-medium text-[#0F172A]">Guest Damages & Wear</span>
-                      <p className="text-sm text-[#0F172A]/60">Furniture replacement, repairs</p>
+                  <div className="flex items-start gap-4 py-3">
+                    <div className="bg-blue-100 rounded-full p-2">
+                      <Wifi className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$100-300/month avg</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-[#0F172A]/10">
                     <div>
-                      <span className="font-medium text-[#0F172A]">Cleaning Premium</span>
-                      <p className="text-sm text-[#0F172A]/60">STR cleaning costs 2-3x regular cleaning</p>
+                      <span className="font-medium text-[#0F172A]">Must-Have Amenities</span>
+                      <p className="text-sm text-[#0F172A]/60">Fast WiFi, smart TV, quality linens, coffee station, and local guidebook</p>
                     </div>
-                    <span className="font-semibold text-[#0F172A]">$80-150/turnover</span>
                   </div>
                 </div>
-                <div className="mt-6 bg-amber-50 rounded-xl p-4 border border-amber-200">
-                  <p className="text-amber-800 font-medium">
-                    <strong>Reality Check:</strong> These hidden costs can add <span className="text-amber-600 font-bold">$500-800/month</span> to your operating expenses that basic calculators don't show.
+                <div className="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-200">
+                  <p className="text-blue-800 font-medium text-center">
+                    <strong>The Opportunity:</strong> Most hosts skip these details. That's why <span className="text-blue-600 font-bold">top 25% performers earn 2-3x more</span> than average hosts in the same market.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Skills Required */}
+            {/* Our Setup Process */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-4">
+              <div className="bg-gradient-to-r from-[#C9A962] to-amber-600 p-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Award className="w-5 h-5" />
-                  Skills You Need to Succeed
+                  Our Done-For-You Setup Process
                 </h3>
               </div>
               <div className="p-6">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Marketing & Sales</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Listing optimization</li>
-                      <li>• Photography direction</li>
-                      <li>• Copywriting</li>
-                      <li>• SEO for Airbnb</li>
-                    </ul>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="bg-[#C9A962]/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-[#C9A962]">1</span>
+                    </div>
+                    <h4 className="font-semibold text-[#0F172A] mb-2">Market Analysis</h4>
+                    <p className="text-sm text-[#0F172A]/70">We analyze the market, find the best property, and negotiate the lease</p>
                   </div>
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Revenue Management</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Dynamic pricing</li>
-                      <li>• Seasonal strategy</li>
-                      <li>• Competitor analysis</li>
-                      <li>• Yield optimization</li>
-                    </ul>
+                  <div className="text-center">
+                    <div className="bg-[#C9A962]/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-[#C9A962]">2</span>
+                    </div>
+                    <h4 className="font-semibold text-[#0F172A] mb-2">Design & Furnish</h4>
+                    <p className="text-sm text-[#0F172A]/70">Professional interior design, furniture procurement, and complete setup</p>
                   </div>
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Hospitality</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Guest communication</li>
-                      <li>• Problem resolution</li>
-                      <li>• Review management</li>
-                      <li>• Experience design</li>
-                    </ul>
+                  <div className="text-center">
+                    <div className="bg-[#C9A962]/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-[#C9A962]">3</span>
+                    </div>
+                    <h4 className="font-semibold text-[#0F172A] mb-2">Launch & Optimize</h4>
+                    <p className="text-sm text-[#0F172A]/70">Professional photos, listing creation, and pricing strategy setup</p>
                   </div>
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Operations</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Vendor management</li>
-                      <li>• Quality control</li>
-                      <li>• Inventory systems</li>
-                      <li>• Process automation</li>
-                    </ul>
+                  <div className="text-center">
+                    <div className="bg-[#C9A962]/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl font-bold text-[#C9A962]">4</span>
+                    </div>
+                    <h4 className="font-semibold text-[#0F172A] mb-2">Go Live</h4>
+                    <p className="text-sm text-[#0F172A]/70">Your property goes live and starts earning within 2-4 weeks</p>
                   </div>
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Finance & Legal</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Tax optimization</li>
-                      <li>• Regulation compliance</li>
-                      <li>• Insurance management</li>
-                      <li>• Financial tracking</li>
-                    </ul>
-                  </div>
-                  <div className="bg-[#0F172A]/5 rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0F172A] mb-2">Interior Design</h4>
-                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
-                      <li>• Space planning</li>
-                      <li>• Furniture selection</li>
-                      <li>• Staging for photos</li>
-                      <li>• Guest flow design</li>
-                    </ul>
-                  </div>
+                </div>
+                <div className="mt-6 bg-green-50 rounded-xl p-4 border border-green-200">
+                  <p className="text-green-800 font-medium text-center">
+                    <strong>Result:</strong> A fully optimized, professionally designed Airbnb ready to compete with top performers from <span className="text-green-600 font-bold">day one</span>.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* DIY vs Professional Comparison */}
+            {/* Setup Comparison */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
               <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] p-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Target className="w-5 h-5" />
-                  DIY vs Professional Management: The Real Numbers
+                  DIY Setup vs Professional Setup
                 </h3>
               </div>
               <div className="p-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="border-2 border-[#0F172A]/20 rounded-xl p-6">
-                    <h4 className="text-xl font-bold text-[#0F172A] mb-4 text-center">DIY Approach</h4>
+                    <h4 className="text-xl font-bold text-[#0F172A] mb-4 text-center">DIY Setup</h4>
                     <div className="space-y-3">
                       <div className="flex justify-between py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Projected Revenue</span>
+                        <span className="text-[#0F172A]/70">Revenue Potential</span>
                         <span className="font-medium">{formatCurrency(conservativeRevenue)}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Time Investment</span>
-                        <span className="font-medium text-red-600">15-25 hrs/week</span>
+                        <span className="text-[#0F172A]/70">Time to Launch</span>
+                        <span className="font-medium text-amber-600">2-3 months</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Learning Curve</span>
-                        <span className="font-medium text-red-600">6-12 months</span>
+                        <span className="text-[#0F172A]/70">Design Quality</span>
+                        <span className="font-medium text-amber-600">Variable</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#0F172A]/10">
-                        <span className="text-[#0F172A]/70">Costly Mistakes</span>
-                        <span className="font-medium text-red-600">Likely</span>
+                        <span className="text-[#0F172A]/70">Listing Optimization</span>
+                        <span className="font-medium text-amber-600">Learning curve</span>
                       </div>
                       <div className="flex justify-between py-2">
-                        <span className="text-[#0F172A]/70">Stress Level</span>
-                        <span className="font-medium text-red-600">High</span>
+                        <span className="text-[#0F172A]/70">Photography</span>
+                        <span className="font-medium text-amber-600">Self or basic</span>
                       </div>
                     </div>
                   </div>
                   <div className="border-2 border-[#C9A962] rounded-xl p-6 bg-[#C9A962]/5">
                     <h4 className="text-xl font-bold text-[#0F172A] mb-4 text-center flex items-center justify-center gap-2">
                       <Award className="w-5 h-5 text-[#C9A962]" />
-                      Professional Management
+                      Professional Setup
                     </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between py-2 border-b border-[#C9A962]/30">
-                        <span className="text-[#0F172A]/70">Projected Revenue</span>
+                        <span className="text-[#0F172A]/70">Revenue Potential</span>
                         <span className="font-bold text-green-600">{formatCurrency(optimisticRevenue)}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#C9A962]/30">
-                        <span className="text-[#0F172A]/70">Time Investment</span>
-                        <span className="font-medium text-green-600">0 hrs/week</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-[#C9A962]/30">
-                        <span className="text-[#0F172A]/70">Time to Optimize</span>
+                        <span className="text-[#0F172A]/70">Time to Launch</span>
                         <span className="font-medium text-green-600">2-4 weeks</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#C9A962]/30">
-                        <span className="text-[#0F172A]/70">Costly Mistakes</span>
-                        <span className="font-medium text-green-600">Avoided</span>
+                        <span className="text-[#0F172A]/70">Design Quality</span>
+                        <span className="font-medium text-green-600">Top 10% standard</span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-[#C9A962]/30">
+                        <span className="text-[#0F172A]/70">Listing Optimization</span>
+                        <span className="font-medium text-green-600">Expert from day 1</span>
                       </div>
                       <div className="flex justify-between py-2">
-                        <span className="text-[#0F172A]/70">Stress Level</span>
-                        <span className="font-medium text-green-600">Minimal</span>
+                        <span className="text-[#0F172A]/70">Photography</span>
+                        <span className="font-medium text-green-600">Professional shoot</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="mt-6 bg-[#C9A962]/10 rounded-xl p-4 border border-[#C9A962]/30">
                   <p className="text-center text-[#0F172A]">
-                    <strong>The Math:</strong> Professional management typically increases revenue by 15-25% while 
-                    saving you <span className="text-[#C9A962] font-bold">800+ hours per year</span>. 
-                    Even after management fees, most investors come out ahead.
+                    <strong>The Difference:</strong> Professional setup typically generates <span className="text-[#C9A962] font-bold">20-35% higher revenue</span> from day one. 
+                    That's {formatCurrency(optimisticRevenue - conservativeRevenue)} more per year in this market.
                   </p>
                 </div>
               </div>
             </div>
 
             <ThoughtProcess>
-              This is the reality that most "gurus" don't tell you. Running a successful Airbnb is a <strong>real business</strong> 
-              that requires significant time, multiple skill sets, and ongoing optimization. The question isn't whether you 
-              <em>can</em> do it yourself—it's whether your time is better spent elsewhere while professionals handle the execution.
+              The top performers in this market didn't get there by accident. They invested in <strong>professional setup</strong> from the start—the right design, 
+              the right photos, the right listing strategy. That's exactly what we do for our clients.
             </ThoughtProcess>
 
             {/* Final CTA */}
@@ -1243,31 +1245,31 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               <div className="max-w-2xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
                   <Award className="w-4 h-4" />
-                  Turnkey Solution
+                  Done-For-You Setup
                 </div>
                 <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
-                  Let Us Handle Everything
+                  Ready to Launch Like a Top Performer?
                 </h3>
                 <p className="text-white/70 mb-6">
-                  You've seen what it takes. Now imagine having all of this handled for you—from property setup 
-                  to daily operations—while you collect passive income.
+                  We handle the entire setup process—from finding the right property to designing a space that photographs beautifully 
+                  and earns top-dollar. You get a turnkey Airbnb ready to compete from day one.
                 </p>
                 <div className="grid md:grid-cols-4 gap-4 mb-8 text-left">
                   <div className="bg-white/10 rounded-lg p-4">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Property sourcing & lease negotiation</p>
+                    <p className="text-sm">Market analysis & property sourcing</p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-4">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Professional design & furnishing</p>
+                    <p className="text-sm">Interior design & furnishing</p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-4">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">24/7 guest management</p>
+                    <p className="text-sm">Professional photography</p>
                   </div>
                   <div className="bg-white/10 rounded-lg p-4">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Revenue optimization & reporting</p>
+                    <p className="text-sm">Listing creation & launch</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">

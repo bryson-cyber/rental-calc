@@ -884,10 +884,23 @@ export default function RentalEstimator() {
     const { property: propertyInfo, estimates, monthly_forecast, comps } = property;
 
     // Transform data for ChapterPropertyReport component
+    // Extract city from market name or address
+    const extractCity = () => {
+      if (market?.name && market.name !== 'Unknown') {
+        return market.name.split(',')[0].trim();
+      }
+      // Fallback: extract from address (format: "123 Main St, City, ST 12345")
+      const addressParts = propertyInfo.address.split(',');
+      if (addressParts.length >= 2) {
+        return addressParts[1].trim();
+      }
+      return 'Local Area';
+    };
+    
     const chapterReportData = {
       property: {
         address: propertyInfo.address,
-        city: market?.name?.split(',')[0] || 'Unknown',
+        city: extractCity(),
         state: propertyInfo.address.split(',').slice(-1)[0]?.trim().split(' ')[0] || '',
         zipCode: propertyInfo.address.match(/\d{5}/)?.[0] || '',
         bedrooms: propertyInfo.bedrooms,
