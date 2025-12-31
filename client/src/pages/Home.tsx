@@ -30,7 +30,9 @@ import {
   ExternalLink,
   Percent,
   Clock,
-  TrendingDown
+  TrendingDown,
+  Lightbulb,
+  Award
 } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { motion } from 'framer-motion';
@@ -99,8 +101,9 @@ interface MarketData {
     revenue: number;
     revpar: number;
     active_listings: number;
+    market_score?: number;
   };
-  historical: {
+  historical?: {
     occupancy: HistoricalDataPoint[];
     adr: HistoricalDataPoint[];
     revenue: HistoricalDataPoint[];
@@ -599,6 +602,21 @@ export default function RentalEstimator() {
                   Trusted by 100,000+ hosts
                 </span>
               </div>
+              
+              {/* Market Research Link */}
+              <div className="mt-6 pt-6 border-t border-[#0F172A]/10 text-center">
+                <p className="text-sm text-[#0F172A]/60 font-sans mb-2">
+                  Don't have a specific property yet?
+                </p>
+                <a 
+                  href="/market"
+                  className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
+                >
+                  <Building className="w-4 h-4" />
+                  Explore Markets by City or Zip Code
+                  <ChevronRight className="w-4 h-4" />
+                </a>
+              </div>
             </motion.form>
           </motion.div>
         </div>
@@ -779,8 +797,11 @@ export default function RentalEstimator() {
 
   // Results View
   if (step === 'results' && reportData) {
-    const { property, market, bedroom_performance, submarkets } = reportData;
+    const { property, market, bedroom_performance, submarkets, same_bedroom_comps } = reportData;
     const { property: propertyInfo, estimates, monthly_forecast, comps } = property;
+    
+    // Use same_bedroom_comps for apples-to-apples comparisons, fall back to general comps
+    const displayComps = same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps;
     
     const maxRevenue = Math.max(...monthly_forecast.map(m => m.revenue));
     
@@ -1026,7 +1047,7 @@ export default function RentalEstimator() {
                         </div>
                         <div className="flex items-end gap-1 h-16">
                           {market.historical.adr.map((point, idx) => {
-                            const maxVal = Math.max(...market.historical.adr.map(p => p.value));
+                            const maxVal = Math.max(...(market.historical?.adr || []).map(p => p.value));
                             const height = maxVal > 0 ? (point.value / maxVal * 100) : 0;
                             return (
                               <div key={idx} className="flex-1 group relative">
@@ -1101,7 +1122,7 @@ export default function RentalEstimator() {
                         </div>
                         <div className="flex items-end gap-1 h-16">
                           {market.historical.active_listings.map((point, idx) => {
-                            const maxVal = Math.max(...market.historical.active_listings.map(p => p.value));
+                            const maxVal = Math.max(...(market.historical?.active_listings || []).map(p => p.value));
                             const height = maxVal > 0 ? (point.value / maxVal * 100) : 0;
                             return (
                               <div key={idx} className="flex-1 group relative">
@@ -1225,8 +1246,8 @@ export default function RentalEstimator() {
             </motion.section>
           )}
 
-          {/* Section 6: Comparable Properties */}
-          {comps.length > 0 && (
+          {/* Section 6: Comparable Properties - Apples to Apples */}
+          {displayComps.length > 0 && (
             <motion.section
               className="mb-8"
               initial={{ opacity: 0, y: 20 }}
@@ -1237,15 +1258,21 @@ export default function RentalEstimator() {
                 <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] p-6 text-white">
                   <h2 className="text-xl font-serif font-semibold flex items-center gap-3">
                     <Building className="w-6 h-6" />
-                    Top Performing Properties Nearby
+                    {same_bedroom_comps && same_bedroom_comps.length > 0 
+                      ? `Top ${propertyInfo.bedrooms}-Bedroom Properties Nearby`
+                      : 'Top Performing Properties Nearby'
+                    }
                   </h2>
                   <p className="text-white/60 text-sm mt-1 font-sans">
-                    These are real listings in your area, sorted by revenue
+                    {same_bedroom_comps && same_bedroom_comps.length > 0 
+                      ? `Apples-to-apples comparison: Only ${propertyInfo.bedrooms}-bedroom properties like yours`
+                      : 'These are real listings in your area, sorted by revenue'
+                    }
                   </p>
                 </div>
                 <div className="p-6 md:p-8">
                   <div className="space-y-4">
-                    {comps.slice(0, 8).map((comp, idx) => (
+                    {displayComps.slice(0, 8).map((comp, idx) => (
                       <motion.div 
                         key={idx}
                         className="flex items-start gap-4 p-4 border border-[#0F172A]/10 rounded-xl hover:border-[#C9A962]/30 hover:shadow-md transition-all duration-300"
@@ -1304,6 +1331,85 @@ export default function RentalEstimator() {
             </motion.section>
           )}
 
+          {/* Educational Section - What This Data Means */}
+          <motion.section
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+          >
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] p-6 text-white">
+                <h2 className="text-xl font-serif font-semibold flex items-center gap-3">
+                  <Lightbulb className="w-6 h-6" />
+                  What This Data Means For You
+                </h2>
+                <p className="text-white/60 text-sm mt-1 font-sans">
+                  Understanding the numbers behind successful short-term rentals
+                </p>
+              </div>
+              <div className="p-6 md:p-8">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Revenue Insight */}
+                  <div className="p-4 bg-[#166534]/5 rounded-xl border border-[#166534]/10">
+                    <h3 className="font-semibold text-[#0F172A] mb-2 font-sans flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-[#166534]" />
+                      Revenue Potential
+                    </h3>
+                    <p className="text-sm text-[#0F172A]/70 font-sans leading-relaxed">
+                      Your estimated <strong>{formatCurrency(estimates.annual_revenue)}/year</strong> puts you 
+                      {estimates.annual_revenue > (market?.metrics.revenue || 0) 
+                        ? <span className="text-[#166534]"> above the market average</span>
+                        : <span className="text-[#C9A962]"> near the market average</span>
+                      }. Top performers in this area earn 2-3x the average through professional management, 
+                      optimized pricing, and exceptional guest experiences.
+                    </p>
+                  </div>
+                  
+                  {/* Occupancy Insight */}
+                  <div className="p-4 bg-[#C9A962]/5 rounded-xl border border-[#C9A962]/10">
+                    <h3 className="font-semibold text-[#0F172A] mb-2 font-sans flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#C9A962]" />
+                      Occupancy Rate
+                    </h3>
+                    <p className="text-sm text-[#0F172A]/70 font-sans leading-relaxed">
+                      At <strong>{formatPercent(estimates.occupancy_rate)}</strong> projected occupancy, 
+                      your property would be booked approximately <strong>{Math.round(estimates.occupancy_rate * 3.65)} nights/year</strong>. 
+                      Professional hosts typically achieve 10-15% higher occupancy through dynamic pricing and marketing.
+                    </p>
+                  </div>
+                  
+                  {/* Competition Insight */}
+                  <div className="p-4 bg-[#0F172A]/5 rounded-xl border border-[#0F172A]/10">
+                    <h3 className="font-semibold text-[#0F172A] mb-2 font-sans flex items-center gap-2">
+                      <Building className="w-4 h-4 text-[#0F172A]" />
+                      Competition Level
+                    </h3>
+                    <p className="text-sm text-[#0F172A]/70 font-sans leading-relaxed">
+                      With <strong>{(market?.metrics.active_listings || 0).toLocaleString()}</strong> active listings in {market?.name || 'this market'}, 
+                      standing out requires professional photos, compelling descriptions, and 5-star service. 
+                      {displayComps.length > 0 && ` The top ${propertyInfo.bedrooms}-bedroom properties nearby earn ${formatCurrency(displayComps[0]?.annual_revenue || 0)}/year.`}
+                    </p>
+                  </div>
+                  
+                  {/* Success Factor */}
+                  <div className="p-4 bg-[#166534]/5 rounded-xl border border-[#166534]/10">
+                    <h3 className="font-semibold text-[#0F172A] mb-2 font-sans flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[#166534]" />
+                      Success Factors
+                    </h3>
+                    <p className="text-sm text-[#0F172A]/70 font-sans leading-relaxed">
+                      Top earners share common traits: <strong>professional photography</strong>, 
+                      <strong>dynamic pricing</strong>, <strong>instant booking</strong>, and 
+                      <strong>5-star reviews</strong>. Most successful hosts either dedicate 15+ hours/week 
+                      or partner with professional management.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+
           {/* CTA Section */}
           <motion.section
             className="mb-8"
@@ -1319,16 +1425,34 @@ export default function RentalEstimator() {
               <div className="absolute inset-0 bg-gradient-to-r from-[#0F172A]/95 to-[#0F172A]/80" />
               <div className="relative z-10 p-8 md:p-12">
                 <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                    <Award className="w-4 h-4" />
+                    Done-For-You Solution
+                  </div>
                   <h2 className="text-2xl md:text-3xl font-serif font-semibold text-white mb-4">
-                    Ready to Turn This Into Reality?
+                    Skip the Learning Curve. Start Earning.
                   </h2>
                   <p className="text-white/70 mb-6 font-sans leading-relaxed">
-                    We handle everything for you — from finding the right property to getting it fully furnished and listed. 
-                    You just collect the income. Let's talk about making this property work for you.
+                    Most new hosts spend 6-12 months figuring out pricing, photography, guest communication, and operations. 
+                    Our turnkey program handles everything — so you can start earning from day one while we manage the details.
                   </p>
+                  <div className="grid sm:grid-cols-3 gap-4 mb-8">
+                    <div className="flex items-center gap-3 text-white/80">
+                      <CheckCircle2 className="w-5 h-5 text-[#C9A962]" />
+                      <span className="text-sm font-sans">Professional setup</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-white/80">
+                      <CheckCircle2 className="w-5 h-5 text-[#C9A962]" />
+                      <span className="text-sm font-sans">Dynamic pricing</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-white/80">
+                      <CheckCircle2 className="w-5 h-5 text-[#C9A962]" />
+                      <span className="text-sm font-sans">24/7 guest support</span>
+                    </div>
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button className="bg-[#C9A962] text-[#0F172A] px-8 py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-all duration-300 font-sans shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                      Schedule a Call
+                      Schedule a Free Consultation
                       <ArrowRight className="w-5 h-5" />
                     </button>
                     <button 

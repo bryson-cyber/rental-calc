@@ -10,6 +10,8 @@ import {
   searchMarkets,
   getComprehensivePropertyReport,
   getComprehensiveMarketReport,
+  getComprehensiveSubmarketReport,
+  detectSearchType,
 } from "./airdna";
 
 // Input validation schema for rental estimate
@@ -50,6 +52,16 @@ const marketSearchInputSchema = z.object({
 // Market report schema
 const marketReportInputSchema = z.object({
   marketId: z.string().min(1, "Market ID is required"),
+});
+
+// Submarket/zip code report schema
+const submarketReportInputSchema = z.object({
+  submarketId: z.string().min(1, "Submarket ID is required"),
+});
+
+// Smart search schema
+const smartSearchInputSchema = z.object({
+  query: z.string().min(1, "Search query is required"),
 });
 
 export const appRouter = router({
@@ -175,6 +187,65 @@ export const appRouter = router({
           return {
             success: false,
             error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get comprehensive submarket/zip code report
+    getSubmarketReport: publicProcedure
+      .input(submarketReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          const report = await getComprehensiveSubmarketReport(input.submarketId);
+
+          if (!report) {
+            return {
+              success: false,
+              error: "Could not generate submarket report",
+              data: null,
+            };
+          }
+
+          return {
+            success: true,
+            data: report,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting submarket report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate submarket report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Smart search - detects input type and returns appropriate results
+    smartSearch: publicProcedure
+      .input(smartSearchInputSchema)
+      .query(async ({ input }) => {
+        try {
+          const searchType = detectSearchType(input.query);
+          const results = await searchMarkets(input.query, 10);
+          
+          return {
+            success: true,
+            data: {
+              search_type: searchType,
+              query: input.query,
+              results: results.map(r => ({
+                ...r,
+                search_type: searchType,
+              })),
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error in smart search:", error);
+          return {
+            success: false,
+            error: "Failed to search",
             data: null,
           };
         }
