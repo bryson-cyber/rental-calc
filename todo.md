@@ -12,3 +12,4 @@
 - [x] Connect frontend to real API data
 - [x] Write vitest tests for API integration
 - [ ] Store leads in database
+- [x] Integrate Google Places API for address autocomplete

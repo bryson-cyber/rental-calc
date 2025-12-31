@@ -22,6 +22,7 @@ import {
   Bath,
   AlertCircle
 } from 'lucide-react';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 
@@ -258,21 +259,18 @@ export default function RentalEstimator() {
               className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 md:p-10"
               variants={itemVariants}
             >
-              {/* Address Input */}
+              {/* Address Input with Autocomplete */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
                   Property Address
                 </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#C9A962]" />
-                  <input
-                    type="text"
-                    placeholder="Enter your property address..."
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full pl-12 pr-4 py-4 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
-                  />
-                </div>
+                <AddressAutocomplete
+                  value={formData.address}
+                  onChange={(value) => setFormData({ ...formData, address: value })}
+                  onSelect={(address) => setFormData({ ...formData, address })}
+                  placeholder="Enter your property address..."
+                  inputClassName="border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                />
               </div>
               
               {/* Property Details Grid */}
