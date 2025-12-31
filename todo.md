@@ -1,15 +1,27 @@
 # Project TODO
 
+## Completed
 - [x] Basic search form with property details
-- [x] Lead capture form with validation
-- [x] Results display with annual revenue estimates
-- [x] Monthly revenue forecast with animated bar charts
-- [x] Comparable properties section
-- [x] Premium "Luxe Real Estate" design theme
-- [x] Smooth animations with Framer Motion
-- [x] Integrate AirDNA API with provided API key
+- [x] Lead capture form
+- [x] Results display with revenue estimates
+- [x] Monthly forecast chart
+- [x] Comparable properties display
+- [x] Integrate AirDNA API for real rental estimates
 - [x] Create backend endpoint for rental estimates
 - [x] Connect frontend to real API data
 - [x] Write vitest tests for API integration
-- [ ] Store leads in database
 - [x] Integrate Google Places API for address autocomplete
+
+## Client-Friendly Report Rebuild
+- [x] Add Zillow link input option (parse address from URL)
+- [x] Auto-extract property details from Zillow link
+- [x] Expand backend to fetch market-level data
+- [ ] Expand backend to fetch submarket data
+- [x] Create clean, easy-to-read results report
+- [x] Add market overview section
+- [x] Add comparable properties section (simplified)
+- [x] Add seasonality/monthly forecast visualization
+- [x] Add PDF download functionality
+- [x] Add CTA for turnkey program
+- [x] Store leads in database
+- [x] Fix Active Listings showing 0 in market overview
