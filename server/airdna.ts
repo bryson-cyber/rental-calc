@@ -1526,3 +1526,125 @@ export async function getComprehensiveSubmarketReport(
     generated_at: new Date().toISOString(),
   };
 }
+
+
+// ============================================
+// FETCH ALL MARKET LISTINGS (Paginated)
+// ============================================
+
+export async function getAllMarketListings(
+  marketId: string,
+  options?: {
+    bedrooms?: number;
+    minRevenue?: number;
+    maxListings?: number;
+  }
+): Promise<ListingData[]> {
+  const allListings: ListingData[] = [];
+  const pageSize = 25; // API max
+  let offset = 0;
+  let totalCount = 0;
+  const maxListings = options?.maxListings || 500; // Safety limit
+  
+  console.log(`[getAllMarketListings] Fetching listings for market ${marketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}`);
+  
+  try {
+    // First request to get total count
+    const firstResult = await getMarketListings(marketId, {
+      limit: pageSize,
+      offset: 0,
+      orderBy: "revenue",
+      orderDirection: "desc",
+    });
+    
+    totalCount = firstResult.total_count;
+    console.log(`[getAllMarketListings] Total listings in market: ${totalCount}`);
+    
+    // Add first batch
+    allListings.push(...firstResult.listings);
+    offset += pageSize;
+    
+    // Fetch remaining pages (up to maxListings)
+    while (offset < totalCount && allListings.length < maxListings) {
+      const result = await getMarketListings(marketId, {
+        limit: pageSize,
+        offset,
+        orderBy: "revenue",
+        orderDirection: "desc",
+      });
+      
+      if (result.listings.length === 0) break;
+      
+      allListings.push(...result.listings);
+      offset += pageSize;
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`[getAllMarketListings] Fetched ${allListings.length} total listings`);
+    
+    // Filter by bedroom count if specified
+    let filtered = allListings;
+    if (options?.bedrooms !== undefined) {
+      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
+      console.log(`[getAllMarketListings] After bedroom filter (${options.bedrooms}BR): ${filtered.length} listings`);
+      // Log image availability
+      const withImages = filtered.filter(l => l.image_url && l.image_url.length > 0).length;
+      console.log(`[getAllMarketListings] Listings with images: ${withImages}/${filtered.length}`);
+    }
+    
+    // Filter by minimum revenue if specified
+    if (options?.minRevenue !== undefined) {
+      filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
+      console.log(`[getAllMarketListings] After revenue filter (>=$${options.minRevenue}): ${filtered.length} listings`);
+    }
+    
+    // Sort by revenue (highest first)
+    filtered.sort((a, b) => b.annual_revenue - a.annual_revenue);
+    
+    return filtered;
+  } catch (error) {
+    console.error("[getAllMarketListings] Error:", error);
+    return [];
+  }
+}
+
+// ============================================
+// GET QUALIFYING COMPETITORS FOR ARBITRAGE
+// ============================================
+
+export async function getQualifyingCompetitors(
+  marketId: string,
+  bedrooms: number,
+  monthlyRent: number
+): Promise<{
+  qualifyingListings: ListingData[];
+  allSameBedroomListings: ListingData[];
+  revenueThreshold: number;
+  totalInMarket: number;
+}> {
+  const revenueThreshold = monthlyRent * 12 * 2; // 2x annual rent
+  
+  console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}`);
+  
+  // Get all listings for this bedroom count
+  const allSameBedroomListings = await getAllMarketListings(marketId, {
+    bedrooms,
+    maxListings: 200, // Get up to 200 same-bedroom listings
+  });
+  
+  // Filter to those meeting revenue threshold
+  const qualifyingListings = allSameBedroomListings.filter(
+    l => l.annual_revenue >= revenueThreshold
+  );
+  
+  console.log(`[getQualifyingCompetitors] Found ${qualifyingListings.length} qualifying listings out of ${allSameBedroomListings.length} same-bedroom listings`);
+  
+  return {
+    qualifyingListings,
+    allSameBedroomListings,
+    revenueThreshold,
+    totalInMarket: allSameBedroomListings.length,
+  };
+}

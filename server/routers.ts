@@ -12,6 +12,7 @@ import {
   getComprehensiveMarketReport,
   getComprehensiveSubmarketReport,
   detectSearchType,
+  getQualifyingCompetitors,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 
@@ -204,13 +205,34 @@ export const appRouter = router({
           const addressParts = input.address.split(',');
           const neighborhood = addressParts.length >= 2 ? addressParts[1].trim() : 'Local Area';
 
+          // Get the market ID from the base report
+          const marketId = baseReport.market?.id || baseReport.property.property?.market_id;
+          const bedrooms = input.bedrooms || baseReport.property.property?.bedrooms || 2;
+          
+          // Fetch ALL qualifying competitors from Market Charts API
+          let allCompetitors: typeof baseReport.same_bedroom_comps = [];
+          let qualifyingCompetitors: typeof baseReport.same_bedroom_comps = [];
+          const minRevenueThreshold = input.monthlyRent * 12 * 2;
+          
+          if (marketId) {
+            console.log(`[getAIPropertyReport] Fetching all competitors for market ${marketId}, ${bedrooms}BR, threshold $${minRevenueThreshold}`);
+            const competitorData = await getQualifyingCompetitors(marketId, bedrooms, input.monthlyRent);
+            allCompetitors = competitorData.allSameBedroomListings;
+            qualifyingCompetitors = competitorData.qualifyingListings;
+            console.log(`[getAIPropertyReport] Found ${allCompetitors.length} same-bedroom listings, ${qualifyingCompetitors.length} meet threshold`);
+          } else {
+            // Fallback to original comps if no market ID
+            allCompetitors = baseReport.same_bedroom_comps || [];
+            qualifyingCompetitors = allCompetitors.filter(c => c.annual_revenue >= minRevenueThreshold);
+          }
+
           // Generate AI-enhanced analysis
           const aiAnalysis = await generateEnhancedPropertyReport({
             property: {
               address: input.address,
               neighborhood,
               propertyType: input.propertyType || 'House',
-              bedrooms: input.bedrooms || baseReport.property.property?.bedrooms || 2,
+              bedrooms,
               bathrooms: input.bathrooms || baseReport.property.property?.bathrooms || 1,
               squareFootage: input.squareFootage,
               monthlyRent: input.monthlyRent,
@@ -221,7 +243,7 @@ export const appRouter = router({
               revenue: baseReport.market?.metrics?.revenue || 0,
               listingCount: baseReport.market?.listing_count || 0,
             },
-            competitors: (baseReport.same_bedroom_comps || []).slice(0, 5).map(c => ({
+            competitors: allCompetitors.slice(0, 10).map(c => ({
               name: c.title || 'Competitor',
               revenue: c.annual_revenue || 0,
               adr: c.adr || 0,
@@ -238,13 +260,15 @@ export const appRouter = router({
           // Calculate profitability
           const monthlyExpenses = input.monthlyRent + 780; // Rent + utilities/supplies
           const annualExpenses = monthlyExpenses * 12;
-          const minRevenueThreshold = input.monthlyRent * 12 * 2;
-          const meetsThreshold = top25Revenue >= minRevenueThreshold;
+          const meetsThreshold = qualifyingCompetitors.length > 0;
 
           return {
             success: true,
             data: {
               ...baseReport,
+              // Override same_bedroom_comps with ALL competitors from Market Charts API
+              same_bedroom_comps: allCompetitors,
+              qualifying_comps: qualifyingCompetitors,
               ai_analysis: aiAnalysis,
               profitability: {
                 monthly_rent: input.monthlyRent,
@@ -253,6 +277,8 @@ export const appRouter = router({
                 startup_costs: 20000,
                 min_revenue_threshold: minRevenueThreshold,
                 meets_threshold: meetsThreshold,
+                qualifying_count: qualifyingCompetitors.length,
+                total_same_bedroom_count: allCompetitors.length,
                 revenue_projections: {
                   conservative: medianRevenue,
                   realistic: top25Revenue,

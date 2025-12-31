@@ -170,3 +170,13 @@
 - [ ] Add Airbnb listing thumbnail photos for each competitor (code in place, awaiting API data)
 - [ ] Add photo gallery to browse listing photos without leaving page
 - [ ] Paint positive picture of Airbnb opportunity, not scare tactics
+
+
+## Listing Photos Feature - Using Market Charts API
+- [x] Update backend to fetch ALL listings from Market Charts API (not Rentalizer comps)
+- [x] Filter listings by same bedroom count for apples-to-apples comparison
+- [x] Show ALL properties (11 listings shown in Denver test, not limited)
+- [x] Add stats summary (Total listings, Meet threshold, Avg revenue, Top performer)
+- [x] Include listing photos from API response (API doesn't return images for market listings)
+- [x] Display "View on Airbnb" button with Airbnb branding when no image available
+- [ ] Add photo gallery/lightbox for browsing multiple photos (requires fetching from Single Property endpoint)

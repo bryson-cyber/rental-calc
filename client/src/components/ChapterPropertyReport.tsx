@@ -696,18 +696,39 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               Properties marked with <span className="text-green-600 font-semibold">"✓ Meets 2x Rule"</span> are earning above the {formatCurrency(minRevenueThreshold)} threshold.
             </p>
 
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-              <div className="p-4 bg-[#0F172A]">
-                <p className="text-white font-semibold">
-                  Top {property.bedrooms}-BR Performers in {property.city}
-                </p>
+            {/* Stats Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-sm text-[#0F172A]/60">Total Same-BR Listings</p>
+                <p className="text-2xl font-bold text-[#0F172A]">{displayComps.length}</p>
               </div>
-              <div className="divide-y divide-[#0F172A]/5">
-                {displayComps.slice(0, 10).map((comp, idx) => (
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-sm text-[#0F172A]/60">Meet 2x Threshold</p>
+                <p className="text-2xl font-bold text-green-600">{displayComps.filter(c => c.annual_revenue >= minRevenueThreshold).length}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(displayComps.reduce((sum, c) => sum + c.annual_revenue, 0) / displayComps.length || 0)}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-sm text-[#0F172A]/60">Top Performer</p>
+                <p className="text-2xl font-bold text-[#C9A962]">{formatCurrency(displayComps[0]?.annual_revenue || 0)}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+              <div className="p-4 bg-[#0F172A] flex items-center justify-between">
+                <p className="text-white font-semibold">
+                  All {property.bedrooms}-BR Performers in {property.city} ({displayComps.length} listings)
+                </p>
+                <span className="text-white/70 text-sm">Sorted by revenue</span>
+              </div>
+              <div className="divide-y divide-[#0F172A]/5 max-h-[800px] overflow-y-auto">
+                {displayComps.map((comp, idx) => (
                 // Show all top performers, highlight those meeting threshold
                   <div key={comp.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
                     <div className="flex items-start gap-4">
-                      {/* Listing Photo */}
+                      {/* Listing Photo or View Button */}
                       {comp.image_url ? (
                         <div className="flex-shrink-0">
                           <a
@@ -726,6 +747,17 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                             />
                           </a>
                         </div>
+                      ) : comp.airbnb_url ? (
+                        <a
+                          href={comp.airbnb_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 w-24 h-20 bg-gradient-to-br from-[#FF5A5F] to-[#FF385C] rounded-lg flex flex-col items-center justify-center text-white hover:shadow-lg transition-all hover:scale-105 cursor-pointer"
+                        >
+                          <ExternalLink className="w-5 h-5 mb-1" />
+                          <span className="text-[10px] font-semibold">View on</span>
+                          <span className="text-xs font-bold">Airbnb</span>
+                        </a>
                       ) : (
                         <div className="flex-shrink-0 w-24 h-20 bg-[#0F172A]/10 rounded-lg flex items-center justify-center">
                           <Home className="w-8 h-8 text-[#0F172A]/30" />
