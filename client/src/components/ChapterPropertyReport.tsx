@@ -41,6 +41,21 @@ import {
 } from 'lucide-react';
 import { Link } from 'wouter';
 
+// Helper function to extract Airbnb listing ID and construct image URL
+const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
+  if (!airbnbUrl) return null;
+  
+  // Extract listing ID from URL like https://www.airbnb.com/rooms/12345
+  const match = airbnbUrl.match(/\/rooms\/(\d+)/);
+  if (!match) return null;
+  
+  const listingId = match[1];
+  // Airbnb image CDN pattern - this constructs a thumbnail URL
+  // Note: This may not work for all listings as Airbnb's CDN requires authentication
+  // But we can try the public pattern first
+  return `https://a0.muscache.com/im/pictures/miso/Hosting-${listingId}/original/listing-photo.jpg`;
+};
+
 // Types
 interface PropertyData {
   address: string;
@@ -729,7 +744,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                   <div key={comp.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
                     <div className="flex items-start gap-4">
                       {/* Listing Photo or View Button */}
-                      {comp.image_url ? (
+                      {(comp.image_url || getAirbnbImageUrl(comp.airbnb_url)) ? (
                         <div className="flex-shrink-0">
                           <a
                             href={comp.airbnb_url || '#'}
@@ -738,7 +753,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                             className="block"
                           >
                             <img
-                              src={comp.image_url}
+                              src={comp.image_url || getAirbnbImageUrl(comp.airbnb_url) || ''}
                               alt={comp.title}
                               className="w-24 h-20 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow"
                               onError={(e) => {

@@ -136,6 +136,7 @@ export interface ListingData {
   title: string;
   airbnb_url?: string;
   image_url?: string;
+  images?: string[]; // Array of all listing images for gallery
   bedrooms: number;
   bathrooms: number;
   accommodates: number;
@@ -155,6 +156,7 @@ export interface ListingData {
   zipcode?: string;
   days_available?: number;
   days_reserved?: number;
+  distance_meters?: number;
 }
 
 export interface MarketInsights {
@@ -1456,12 +1458,37 @@ export async function getComprehensiveSubmarketReport(
     return null;
   }
   
-  // Step 2: Get listings
-  const listingsResult = await getSubmarketListings(submarketId, {
+  // Step 2: Get listings - fetch more to get better bedroom representation
+  // First fetch by revenue for top performers
+  const topListingsResult = await getSubmarketListings(submarketId, {
     limit: 25,
     orderBy: "revenue",
     orderDirection: "desc",
   });
+  
+  // Also fetch a broader sample for bedroom statistics
+  const allListingsResult = await getSubmarketListings(submarketId, {
+    limit: 25,
+    offset: 0,
+    orderBy: "occupancy",
+    orderDirection: "desc",
+  });
+  
+  // Combine unique listings for bedroom analysis
+  const listingIds = new Set<string>();
+  const combinedListings = [...topListingsResult.listings];
+  allListingsResult.listings.forEach(l => {
+    if (!listingIds.has(l.id)) {
+      listingIds.add(l.id);
+      combinedListings.push(l);
+    }
+  });
+  topListingsResult.listings.forEach(l => listingIds.add(l.id));
+  
+  const listingsResult = {
+    listings: combinedListings,
+    total_count: topListingsResult.total_count,
+  };
   
   // Calculate metrics from submarket details
   let occupancy = 0;
@@ -1520,7 +1547,7 @@ export async function getComprehensiveSubmarketReport(
         market_score: marketScore,
       },
     },
-    top_listings: listingsResult.listings,
+    top_listings: topListingsResult.listings,
     bedroom_performance: bedroomPerformance,
     insights,
     generated_at: new Date().toISOString(),
@@ -1647,4 +1674,156 @@ export async function getQualifyingCompetitors(
     revenueThreshold,
     totalInMarket: allSameBedroomListings.length,
   };
+}
+
+
+// ============================================
+// SINGLE PROPERTY IMAGE FETCHING
+// ============================================
+
+interface SinglePropertyResponse {
+  property_id: string;
+  title: string;
+  images: string[];
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+}
+
+/**
+ * Fetch single property details including images from AirDNA
+ */
+export async function getSinglePropertyDetails(propertyId: string): Promise<SinglePropertyResponse | null> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        property_id: string;
+        title: string;
+        images?: string[];
+        bedrooms: number;
+        bathrooms: number;
+        accommodates: number;
+        property_type: string;
+        rating?: number;
+        reviews?: number;
+        stats?: {
+          summary?: {
+            annual_revenue?: number;
+            adr?: number;
+            occupancy?: number;
+          };
+        };
+      };
+    }>(`/listing/${propertyId}`, "GET");
+    
+    const p = response.payload;
+    return {
+      property_id: p.property_id,
+      title: p.title,
+      images: p.images || [],
+      bedrooms: p.bedrooms,
+      bathrooms: p.bathrooms,
+      accommodates: p.accommodates,
+      property_type: p.property_type,
+      rating: p.rating || null,
+      reviews: p.reviews || 0,
+      annual_revenue: p.stats?.summary?.annual_revenue || 0,
+      adr: p.stats?.summary?.adr || 0,
+      occupancy: p.stats?.summary?.occupancy || 0,
+    };
+  } catch (error) {
+    console.error(`[getSinglePropertyDetails] Error fetching property ${propertyId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Batch fetch images for multiple properties
+ * Returns a map of property_id -> image_url
+ */
+export async function batchFetchPropertyImages(
+  propertyIds: string[],
+  maxConcurrent: number = 5
+): Promise<Map<string, string[]>> {
+  const imageMap = new Map<string, string[]>();
+  
+  console.log(`[batchFetchPropertyImages] Starting with ${propertyIds.length} property IDs`);
+  console.log(`[batchFetchPropertyImages] Sample IDs: ${propertyIds.slice(0, 3).join(', ')}`);
+  
+  // Process in batches to avoid overwhelming the API
+  for (let i = 0; i < propertyIds.length; i += maxConcurrent) {
+    const batch = propertyIds.slice(i, i + maxConcurrent);
+    console.log(`[batchFetchPropertyImages] Processing batch ${i / maxConcurrent + 1}: ${batch.join(', ')}`);
+    
+    const results = await Promise.all(
+      batch.map(id => getSinglePropertyDetails(id))
+    );
+    
+    results.forEach((result, index) => {
+      if (result) {
+        console.log(`[batchFetchPropertyImages] Property ${batch[index]}: ${result.images.length} images`);
+        if (result.images.length > 0) {
+          imageMap.set(batch[index], result.images);
+        }
+      } else {
+        console.log(`[batchFetchPropertyImages] Property ${batch[index]}: FAILED to fetch`);
+      }
+    });
+  }
+  
+  console.log(`[batchFetchPropertyImages] Fetched images for ${imageMap.size}/${propertyIds.length} properties`);
+  return imageMap;
+}
+
+/**
+ * Enrich listings with images from single property endpoint
+ */
+export async function enrichListingsWithImages(
+  listings: ListingData[],
+  maxListings: number = 20
+): Promise<ListingData[]> {
+  console.log(`[enrichListingsWithImages] Starting with ${listings.length} listings, maxListings: ${maxListings}`);
+  
+  // Only fetch images for listings that don't already have them
+  const listingsNeedingImages = listings
+    .slice(0, maxListings)
+    .filter(l => !l.image_url || l.image_url.length === 0);
+  
+  console.log(`[enrichListingsWithImages] Listings needing images: ${listingsNeedingImages.length}`);
+  
+  if (listingsNeedingImages.length === 0) {
+    console.log('[enrichListingsWithImages] All listings already have images');
+    return listings;
+  }
+  
+  const propertyIds = listingsNeedingImages
+    .map(l => l.id)
+    .filter(id => id && id.length > 0);
+  
+  if (propertyIds.length === 0) {
+    console.log('[enrichListingsWithImages] No valid property IDs to fetch images for');
+    return listings;
+  }
+  
+  console.log(`[enrichListingsWithImages] Fetching images for ${propertyIds.length} listings`);
+  const imageMap = await batchFetchPropertyImages(propertyIds);
+  
+  // Update listings with fetched images
+  return listings.map(l => {
+    if ((!l.image_url || l.image_url.length === 0) && imageMap.has(l.id)) {
+      const images = imageMap.get(l.id)!;
+      return {
+        ...l,
+        image_url: images[0],
+        images: images, // Store all images for gallery
+      };
+    }
+    return l;
+  });
 }

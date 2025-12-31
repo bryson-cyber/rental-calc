@@ -138,7 +138,18 @@ export default function MarketComparison() {
       });
 
       if (!report.success || !report.data) {
-        throw new Error('Failed to load market data');
+        // Show user-friendly error for markets that can't be found
+        console.error('Market not found:', market.id, market.name, report.error);
+        // Use the server's error message if available, otherwise show a generic message
+        const errorMessage = report.error || `Unable to load data for "${market.name}". This market may not have sufficient data available. Please try a different market.`;
+        alert(errorMessage);
+        return;
+      }
+      
+      // Check if the market has any listings
+      if (report.data.submarket?.listing_count === 0 || report.data.submarket?.metrics?.active_listings === 0) {
+        alert(`"${market.name}" shows 0 active rentals. This market may not have sufficient data. Please try a different market.`);
+        return;
       }
 
       const reportData = report.data;
@@ -174,6 +185,9 @@ export default function MarketComparison() {
       });
     } catch (error) {
       console.error('Error loading market:', error);
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while loading market data.';
+      alert(`Error loading "${market.name}": ${errorMessage}`);
     } finally {
       setLoadingMarket(null);
     }
@@ -571,7 +585,7 @@ export default function MarketComparison() {
                         
                         {market.bedroom_performance && market.bedroom_performance.length > 0 ? (
                           <div className="space-y-2">
-                            {market.bedroom_performance.slice(0, 5).map((bp) => (
+                            {[...market.bedroom_performance].sort((a, b) => a.bedrooms - b.bedrooms).slice(0, 5).map((bp) => (
                               <div key={bp.bedrooms} className="flex items-center justify-between text-sm font-sans">
                                 <span className="text-[#0F172A]/70">{bp.bedrooms} BR</span>
                                 <span className="font-medium text-[#0F172A]">{formatCurrency(bp.revenue)}</span>

@@ -13,6 +13,7 @@ import {
   getComprehensiveSubmarketReport,
   detectSearchType,
   getQualifyingCompetitors,
+  enrichListingsWithImages,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 
@@ -220,6 +221,9 @@ export const appRouter = router({
             allCompetitors = competitorData.allSameBedroomListings;
             qualifyingCompetitors = competitorData.qualifyingListings;
             console.log(`[getAIPropertyReport] Found ${allCompetitors.length} same-bedroom listings, ${qualifyingCompetitors.length} meet threshold`);
+            
+            // Note: AirDNA Enterprise API v2 does not provide listing images
+            // The UI will show "View on Airbnb" buttons for listings without images
           } else {
             // Fallback to original comps if no market ID
             allCompetitors = baseReport.same_bedroom_comps || [];
@@ -308,12 +312,24 @@ export const appRouter = router({
       .input(marketReportInputSchema)
       .mutation(async ({ input }) => {
         try {
+          console.log(`[getMarketReport] Fetching report for market: ${input.marketId}`);
           const report = await getComprehensiveMarketReport(input.marketId);
 
           if (!report) {
+            console.log(`[getMarketReport] No report returned for market: ${input.marketId}`);
             return {
               success: false,
-              error: "Could not generate market report",
+              error: `Could not find market data for ID: ${input.marketId}. This market may not exist or may not have sufficient data available. Please try searching for a different market.`,
+              data: null,
+            };
+          }
+          
+          // Validate that we have meaningful data
+          if (!report.market?.listing_count || report.market.listing_count === 0) {
+            console.log(`[getMarketReport] Market ${input.marketId} has 0 listings`);
+            return {
+              success: false,
+              error: `The market "${report.market?.name || input.marketId}" shows 0 active rentals. This market may not have sufficient short-term rental data available. Please try a different market.`,
               data: null,
             };
           }
@@ -375,12 +391,24 @@ export const appRouter = router({
       .input(submarketReportInputSchema)
       .mutation(async ({ input }) => {
         try {
+          console.log(`[getSubmarketReport] Fetching report for submarket: ${input.submarketId}`);
           const report = await getComprehensiveSubmarketReport(input.submarketId);
 
           if (!report) {
+            console.log(`[getSubmarketReport] No report returned for submarket: ${input.submarketId}`);
             return {
               success: false,
-              error: "Could not generate submarket report",
+              error: `Could not find data for this market/neighborhood. The ID "${input.submarketId}" may not exist or may not have sufficient data available. Please try searching for a different location.`,
+              data: null,
+            };
+          }
+          
+          // Validate that we have meaningful data
+          if (!report.submarket?.listing_count || report.submarket.listing_count === 0) {
+            console.log(`[getSubmarketReport] Submarket ${input.submarketId} has 0 listings`);
+            return {
+              success: false,
+              error: `"${report.submarket?.name || input.submarketId}" shows 0 active rentals. This area may not have sufficient short-term rental data available. Please try a different neighborhood or city.`,
               data: null,
             };
           }

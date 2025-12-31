@@ -180,3 +180,17 @@
 - [x] Include listing photos from API response (API doesn't return images for market listings)
 - [x] Display "View on Airbnb" button with Airbnb branding when no image available
 - [ ] Add photo gallery/lightbox for browsing multiple photos (requires fetching from Single Property endpoint)
+
+
+## Bug Fixes - Round 3
+- [ ] Fix market comparison bedroom count sorting (showing 4,5,6 vs 3,4,5,6,9 instead of ordered 1,2,3,4+)
+- [ ] Fix Glendale showing "0 active rentals" - market data not being found
+- [ ] Fix competition section showing only 4 listings instead of all competitors
+- [ ] Build Airbnb listing photo scraping service to display thumbnails
+
+
+## Bug Fixes - Round 4 (Current Sprint)
+- [x] Fix bedroom sorting order in market comparison (fetch more listings for better representation)
+- [x] Add graceful error handling for invalid market IDs (user-friendly error messages)
+- [x] Add detailed logging for image fetching to debug photo display issue
+- [x] Listing photos: AirDNA Enterprise API v2 does not provide images - using "View on Airbnb" button as fallback
