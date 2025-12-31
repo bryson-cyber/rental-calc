@@ -15,6 +15,13 @@
       "when": 1767143111465,
       "tag": "0001_round_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1767213453167,
+      "tag": "0002_clear_champions",
+      "breakpoints": true
     }
   ]
 }

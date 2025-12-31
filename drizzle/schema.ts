@@ -63,3 +63,46 @@ export const leads = mysqlTable("leads", {
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
+
+/**
+ * Saved searches table for storing user's favorite markets and properties
+ */
+export const savedSearches = mysqlTable("saved_searches", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous saves via cookie)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Search type: 'market' for market analysis, 'property' for property estimates
+  searchType: mysqlEnum("searchType", ["market", "property"]).notNull(),
+  
+  // For market searches
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  submarketId: varchar("submarketId", { length: 64 }),
+  submarketName: varchar("submarketName", { length: 255 }),
+  
+  // For property searches
+  address: text("address"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  
+  // Cached results (to show in saved list without re-fetching)
+  cachedRevenue: int("cachedRevenue"),
+  cachedOccupancy: decimal("cachedOccupancy", { precision: 5, scale: 2 }),
+  cachedAdr: int("cachedAdr"),
+  
+  // User-defined label/notes
+  label: varchar("label", { length: 255 }),
+  notes: text("notes"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SavedSearch = typeof savedSearches.$inferSelect;
+export type InsertSavedSearch = typeof savedSearches.$inferInsert;

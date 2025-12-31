@@ -29,6 +29,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { Link } from 'wouter';
+import { useSaveSearch } from '@/components/SavedSearches';
+import { SubmarketExplorer } from '@/components/SubmarketExplorer';
+import { Bookmark, BookmarkCheck, MapPinned } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MarketSearchResult {
   id: string;
@@ -76,6 +80,8 @@ export default function MarketComparison() {
   const [selectedMarkets, setSelectedMarkets] = useState<MarketData[]>([]);
   const [loadingMarket, setLoadingMarket] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [savedMarketIds, setSavedMarketIds] = useState<Set<string>>(new Set());
+  const { saveMarket, isSaving } = useSaveSearch();
 
   // tRPC queries
   const marketReportMutation = trpc.rental.getSubmarketReport.useMutation();
@@ -115,8 +121,10 @@ export default function MarketComparison() {
   }, [searchQuery]);
 
   const addMarket = async (market: MarketSearchResult) => {
+    console.log('[addMarket] Called with:', market.name, market.id);
     // Prevent race conditions - don't add if already loading
     if (loadingMarket !== null) {
+      console.log('[addMarket] Already loading, skipping');
       return;
     }
     
@@ -128,11 +136,13 @@ export default function MarketComparison() {
       return; // Already added
     }
 
+    console.log('[addMarket] Starting for:', market.name, market.id);
     setLoadingMarket(market.id);
     setShowDropdown(false);
     setSearchQuery('');
 
     try {
+      console.log('[addMarket] Calling mutation...');
       const report = await marketReportMutation.mutateAsync({
         submarketId: market.id
       });
@@ -286,7 +296,14 @@ export default function MarketComparison() {
                   {searchResults.map((result) => (
                     <button
                       key={result.id}
-                      onClick={() => addMarket(result)}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('[SearchResult] Clicked:', result.name, result.id);
+                        // Call addMarket directly without any checks first
+                        addMarket(result);
+                      }}
                       disabled={selectedMarkets.find(m => m.name === result.name) !== undefined || loadingMarket !== null}
                       className="w-full px-4 py-3 text-left hover:bg-[#f8f7f4] transition-colors border-b border-[#0F172A]/5 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -311,7 +328,7 @@ export default function MarketComparison() {
             <div className="flex flex-wrap gap-2 mt-4">
               {selectedMarkets.map((market, index) => (
                 <div
-                  key={`${market.name}-${index}`}
+                  key={market.id}
                   className="inline-flex items-center gap-2 bg-[#0F172A] text-white px-3 py-2 rounded-lg font-sans text-sm"
                 >
                   <span className="w-5 h-5 bg-[#C9A962] rounded-full flex items-center justify-center text-[#0F172A] text-xs font-bold">
@@ -319,8 +336,34 @@ export default function MarketComparison() {
                   </span>
                   {market.name}
                   <button
-                    onClick={() => removeMarket(market.id)}
+                    onClick={() => {
+                      if (savedMarketIds.has(market.id)) {
+                        toast.info('Market already saved');
+                        return;
+                      }
+                      saveMarket({
+                        marketId: market.id,
+                        marketName: market.name,
+                        cachedRevenue: market.metrics.revenue,
+                        cachedOccupancy: market.metrics.occupancy,
+                        cachedAdr: market.metrics.adr,
+                      });
+                      setSavedMarketIds(prev => new Set(Array.from(prev).concat(market.id)));
+                    }}
                     className="hover:text-[#C9A962] transition-colors"
+                    title="Save this market"
+                    disabled={isSaving}
+                  >
+                    {savedMarketIds.has(market.id) ? (
+                      <BookmarkCheck className="w-4 h-4 text-[#C9A962]" />
+                    ) : (
+                      <Bookmark className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => removeMarket(market.id)}
+                    className="hover:text-red-400 transition-colors"
+                    title="Remove from comparison"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -655,6 +698,40 @@ export default function MarketComparison() {
                 <ArrowRight className="w-5 h-5" />
               </a>
             </div>
+          </motion.div>
+        )}
+
+        {/* Submarket Explorer - Show for each selected market */}
+        {selectedMarkets.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6 mt-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <MapPinned className="w-5 h-5 text-[#C9A962]" />
+              <h2 className="text-xl font-serif font-semibold text-[#0F172A]">
+                Drill Down: Where to Invest
+              </h2>
+            </div>
+            <p className="text-[#0F172A]/70 font-sans -mt-2 mb-4">
+              Explore neighborhoods and zip codes within each market to find the best investment opportunities
+            </p>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {selectedMarkets.slice(0, 2).map((market) => (
+                <SubmarketExplorer
+                  key={market.id}
+                  marketId={market.id}
+                  marketName={market.name}
+                />
+              ))}
+            </div>
+            {selectedMarkets.length > 2 && (
+              <SubmarketExplorer
+                marketId={selectedMarkets[2].id}
+                marketName={selectedMarkets[2].name}
+              />
+            )}
           </motion.div>
         )}
 

@@ -512,22 +512,128 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
 
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketData[]> {
   try {
-    // First, get the market name to search for its submarkets
-    const marketDetails = await getMarketDetails(marketId);
+    // First, get the market/submarket details
+    // Check if this is a submarket ID (starts with 'submarket-') or a market ID
+    const isSubmarket = marketId.startsWith('submarket-');
+    
+    let marketDetails: { id: string; name: string; listing_count: number; location_name: string } | null = null;
+    
+    if (isSubmarket) {
+      // Use getSubmarketDetails for submarket IDs
+      const submarketDetails = await getSubmarketDetails(marketId);
+      if (submarketDetails) {
+        marketDetails = {
+          id: submarketDetails.id,
+          name: submarketDetails.name,
+          listing_count: submarketDetails.listing_count || 0,
+          location_name: submarketDetails.parent_market_name || submarketDetails.name,
+        };
+      }
+    } else {
+      // Use getMarketDetails for market IDs
+      marketDetails = await getMarketDetails(marketId);
+    }
+    
     if (!marketDetails) {
+      console.log(`[getSubmarketsInMarket] No market details found for ${marketId}`);
       return [];
     }
     
-    // Search for markets with the same name - this returns both the market and its submarkets
-    const searchResults = await searchMarkets(marketDetails.name, 50);
+    console.log(`[getSubmarketsInMarket] Looking for submarkets of ${marketDetails.name} (${marketId})`);
+    console.log(`[getSubmarketsInMarket] Market details:`, JSON.stringify(marketDetails, null, 2));
     
-    // Filter to only submarkets (neighborhoods) that are related to this market
-    // Submarkets typically have the parent market name in their location_name or are of type 'submarket'
-    const submarkets = searchResults.filter(m => 
-      m.type === 'submarket' && 
-      m.id !== marketId &&
-      m.listing_count > 0
-    );
+    // Extract the base city name for searching related neighborhoods
+    // For "Austin", "East Austin", "Downtown Austin", etc.
+    const fullName = marketDetails.name;
+    const nameParts = fullName.split(' ');
+    
+    // Try to identify the city name - usually the last word or the whole name
+    // "Austin" -> "Austin", "East Austin" -> "Austin", "Downtown Austin" -> "Austin"
+    let baseName = nameParts[nameParts.length - 1]; // Last word
+    
+    // If the name is a single word, use it as-is
+    if (nameParts.length === 1) {
+      baseName = fullName;
+    }
+    
+    console.log(`[getSubmarketsInMarket] Base name: ${baseName}, Full name: ${fullName}`);
+    
+    // Search using multiple strategies to find related neighborhoods
+    const searchTerms = [
+      baseName, // "Austin" - most likely to find related neighborhoods
+      fullName, // "Austin" or "East Austin"
+    ].filter((term, index, arr) => arr.indexOf(term) === index); // Remove duplicates
+    
+    console.log(`[getSubmarketsInMarket] Search terms:`, searchTerms);
+    
+    let allResults: MarketSearchResult[] = [];
+    
+    for (const term of searchTerms) {
+      console.log(`[getSubmarketsInMarket] Searching for: ${term}`);
+      const results = await searchMarkets(term, 50); // Increased limit
+      console.log(`[getSubmarketsInMarket] Found ${results.length} results for "${term}"`);
+      allResults.push(...results);
+    }
+    
+    // Deduplicate by ID
+    const uniqueResults = Array.from(new Map(allResults.map(r => [r.id, r])).values());
+    
+    console.log(`[getSubmarketsInMarket] Found ${uniqueResults.length} unique results from searches`);
+    console.log(`[getSubmarketsInMarket] Sample results:`, uniqueResults.slice(0, 5).map(r => ({ id: r.id, name: r.name, type: r.type, listings: r.listing_count })));
+    
+    // Filter to find related submarkets/neighborhoods
+    const submarkets = uniqueResults.filter(m => {
+      // Exclude the current market
+      if (m.id === marketId) {
+        console.log(`[getSubmarketsInMarket] Excluding ${m.name} - same as current market`);
+        return false;
+      }
+      
+      // Must have some listings (lowered threshold)
+      if (m.listing_count < 50) {
+        return false; // Minimum 50 listings for meaningful data
+      }
+      
+      // Check if this is a related neighborhood:
+      const mNameLower = m.name.toLowerCase();
+      const baseNameLower = baseName.toLowerCase();
+      const fullNameLower = fullName.toLowerCase();
+      
+      // 1. Name contains the base city name (e.g., "East Austin" contains "Austin")
+      if (mNameLower.includes(baseNameLower)) {
+        console.log(`[getSubmarketsInMarket] Including ${m.name} - contains base name`);
+        return true;
+      }
+      
+      // 2. Base name contains this market's name
+      if (baseNameLower.includes(mNameLower)) {
+        console.log(`[getSubmarketsInMarket] Including ${m.name} - base name contains this`);
+        return true;
+      }
+      
+      // 3. Same parent market (if available)
+      if (m.parent_market?.name?.toLowerCase().includes(baseNameLower)) {
+        console.log(`[getSubmarketsInMarket] Including ${m.name} - same parent market`);
+        return true;
+      }
+      
+      // 4. Check location_name similarity
+      const mLocation = m.location_name?.toLowerCase() || '';
+      const marketLocation = marketDetails.location_name?.toLowerCase() || '';
+      if (mLocation && marketLocation) {
+        // Extract city/state from location (e.g., "Austin, TX" -> "austin")
+        const mCity = mLocation.split(',')[0].trim();
+        const marketCity = marketLocation.split(',')[0].trim();
+        if (mCity === marketCity || mCity.includes(baseNameLower) || baseNameLower.includes(mCity)) {
+          console.log(`[getSubmarketsInMarket] Including ${m.name} - same location`);
+          return true;
+        }
+      }
+      
+      return false;
+    });
+    
+    console.log(`[getSubmarketsInMarket] Filtered to ${submarkets.length} related submarkets`);
     
     // Sort by listing count descending (most active first)
     submarkets.sort((a, b) => b.listing_count - a.listing_count);
@@ -550,18 +656,20 @@ export async function getSubmarketMetrics(submarketId: string): Promise<{
   revpar: number;
 } | null> {
   try {
-    const [occupancyData, adrData, revenueData, revparData] = await Promise.all([
-      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "occupancy", 1),
-      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "adr", 1),
-      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "avg_revenue", 1),
-      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "revpar", 1),
-    ]);
+    // Use getSubmarketDetails which calls the correct /submarket/{id} endpoint
+    // The /market/{id}/metrics endpoint doesn't work with submarket IDs
+    const details = await getSubmarketDetails(submarketId);
+    
+    if (!details || !details.metrics) {
+      console.log(`[getSubmarketMetrics] No metrics found for submarket ${submarketId}`);
+      return null;
+    }
     
     return {
-      occupancy: occupancyData[0]?.value || 0,
-      adr: adrData[0]?.value || 0,
-      revenue: revenueData[0]?.value || 0,
-      revpar: revparData[0]?.value || 0,
+      occupancy: details.metrics.booked || 0, // 'booked' is the occupancy percentage
+      adr: details.metrics.daily_rate || 0,
+      revenue: details.metrics.revenue || 0,
+      revpar: details.metrics.revpar || 0,
     };
   } catch (error) {
     console.error("Error fetching submarket metrics:", error);
@@ -1826,4 +1934,217 @@ export async function enrichListingsWithImages(
     }
     return l;
   });
+}
+
+
+// ============================================
+// SUBMARKET EXPLORATION (for market → submarket → zip code recommendations)
+// ============================================
+
+export interface SubmarketExplorationResult {
+  id: string;
+  name: string;
+  type: 'submarket';
+  listing_count: number;
+  metrics: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
+  };
+  ranking: {
+    revenue_rank: number;
+    occupancy_rank: number;
+    revpar_rank: number;
+    overall_score: number;
+  };
+  recommendation?: string;
+}
+
+export async function exploreSubmarketsWithMetrics(
+  marketId: string,
+  options?: {
+    sortBy?: 'revenue' | 'occupancy' | 'revpar' | 'overall';
+    limit?: number;
+  }
+): Promise<{
+  market: {
+    id: string;
+    name: string;
+    metrics: MarketMetrics;
+  };
+  submarkets: SubmarketExplorationResult[];
+  topRecommendation?: SubmarketExplorationResult;
+}> {
+  const sortBy = options?.sortBy || 'overall';
+  const limit = options?.limit || 15;
+
+  console.log(`[exploreSubmarketsWithMetrics] Exploring submarkets for market ${marketId}`);
+
+  // Get market details first
+  const marketDetails = await getMarketDetails(marketId);
+  if (!marketDetails) {
+    throw new Error(`Market ${marketId} not found`);
+  }
+
+  // Get market metrics
+  const marketMetrics = await getMarketMetrics(marketId);
+
+  // Get all submarkets in this market
+  const submarkets = await getSubmarketsInMarket(marketId);
+  console.log(`[exploreSubmarketsWithMetrics] Found ${submarkets.length} submarkets`);
+
+  if (submarkets.length === 0) {
+    return {
+      market: {
+        id: marketId,
+        name: marketDetails.name,
+        metrics: marketMetrics || {
+          occupancy: 0,
+          adr: 0,
+          revenue: 0,
+          revpar: 0,
+          active_listings: 0,
+        },
+      },
+      submarkets: [],
+    };
+  }
+
+  // Fetch metrics for each submarket in parallel (with rate limiting)
+  const submarketResults: SubmarketExplorationResult[] = [];
+  
+  // Process in batches of 5 to avoid rate limiting
+  const batchSize = 5;
+  for (let i = 0; i < submarkets.length && submarketResults.length < limit; i += batchSize) {
+    const batch = submarkets.slice(i, Math.min(i + batchSize, submarkets.length));
+    
+    const batchResults = await Promise.all(
+      batch.map(async (submarket) => {
+        try {
+          const metrics = await getSubmarketMetrics(submarket.id);
+          if (!metrics || metrics.revenue === 0) {
+            return null;
+          }
+          
+          return {
+            id: submarket.id,
+            name: submarket.name,
+            type: 'submarket' as const,
+            listing_count: submarket.listing_count,
+            metrics: {
+              occupancy: metrics.occupancy,
+              adr: metrics.adr,
+              revenue: metrics.revenue,
+              revpar: metrics.revpar,
+            },
+            ranking: {
+              revenue_rank: 0,
+              occupancy_rank: 0,
+              revpar_rank: 0,
+              overall_score: 0,
+            },
+          };
+        } catch (error) {
+          console.error(`Error fetching metrics for submarket ${submarket.id}:`, error);
+          return null;
+        }
+      })
+    );
+    
+    submarketResults.push(...batchResults.filter((r): r is SubmarketExplorationResult => r !== null));
+    
+    // Small delay between batches to avoid rate limiting
+    if (i + batchSize < submarkets.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  // Calculate rankings
+  const sortedByRevenue = [...submarketResults].sort((a, b) => b.metrics.revenue - a.metrics.revenue);
+  const sortedByOccupancy = [...submarketResults].sort((a, b) => b.metrics.occupancy - a.metrics.occupancy);
+  const sortedByRevpar = [...submarketResults].sort((a, b) => b.metrics.revpar - a.metrics.revpar);
+
+  submarketResults.forEach(submarket => {
+    submarket.ranking.revenue_rank = sortedByRevenue.findIndex(s => s.id === submarket.id) + 1;
+    submarket.ranking.occupancy_rank = sortedByOccupancy.findIndex(s => s.id === submarket.id) + 1;
+    submarket.ranking.revpar_rank = sortedByRevpar.findIndex(s => s.id === submarket.id) + 1;
+    
+    // Calculate overall score (lower is better - average of ranks)
+    const avgRank = (submarket.ranking.revenue_rank + submarket.ranking.occupancy_rank + submarket.ranking.revpar_rank) / 3;
+    submarket.ranking.overall_score = Math.round((1 - (avgRank - 1) / submarketResults.length) * 100);
+  });
+
+  // Sort by selected criteria
+  let sortedResults: SubmarketExplorationResult[];
+  switch (sortBy) {
+    case 'revenue':
+      sortedResults = sortedByRevenue;
+      break;
+    case 'occupancy':
+      sortedResults = sortedByOccupancy;
+      break;
+    case 'revpar':
+      sortedResults = sortedByRevpar;
+      break;
+    case 'overall':
+    default:
+      sortedResults = [...submarketResults].sort((a, b) => b.ranking.overall_score - a.ranking.overall_score);
+  }
+
+  // Add recommendations to top performers
+  sortedResults.slice(0, 3).forEach((submarket, index) => {
+    if (index === 0) {
+      submarket.recommendation = 'Top Pick - Best overall performance across all metrics';
+    } else if (submarket.ranking.revenue_rank === 1) {
+      submarket.recommendation = 'Highest Revenue - Best earning potential';
+    } else if (submarket.ranking.occupancy_rank === 1) {
+      submarket.recommendation = 'Highest Occupancy - Most consistent bookings';
+    } else if (submarket.ranking.revpar_rank === 1) {
+      submarket.recommendation = 'Best RevPAR - Optimal price/occupancy balance';
+    }
+  });
+
+  const topRecommendation = sortedResults[0];
+
+  return {
+    market: {
+      id: marketId,
+      name: marketDetails.name,
+      metrics: marketMetrics || {
+        occupancy: 0,
+        adr: 0,
+        revenue: 0,
+        revpar: 0,
+        active_listings: 0,
+      },
+    },
+    submarkets: sortedResults.slice(0, limit),
+    topRecommendation,
+  };
+}
+
+// Helper to get market metrics
+async function getMarketMetrics(marketId: string): Promise<MarketMetrics | null> {
+  try {
+    // API requires minimum 12 months, so we fetch 12 and take the latest
+    const [occupancyData, adrData, revenueData, revparData, listingCountData] = await Promise.all([
+      getMarketMetric(marketId, "occupancy", 12),
+      getMarketMetric(marketId, "adr", 12),
+      getMarketMetric(marketId, "avg_revenue", 12),
+      getMarketMetric(marketId, "revpar", 12),
+      getMarketMetric(marketId, "active_listings_count", 12),
+    ]);
+    
+    return {
+      occupancy: occupancyData[0]?.value || 0,
+      adr: adrData[0]?.value || 0,
+      revenue: revenueData[0]?.value || 0,
+      revpar: revparData[0]?.value || 0,
+      active_listings: listingCountData[0]?.value || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching market metrics:", error);
+    return null;
+  }
 }

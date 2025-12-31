@@ -204,3 +204,18 @@
 - [x] Apply filters to competitor listings in real-time
 - [x] Test image scraping with various Airbnb URLs
 - [x] Test filtering functionality across different markets
+
+
+## Feature Sprint - Saved Searches & Submarket Exploration
+- [x] Database schema for saved_searches table
+- [x] API endpoints for save/list/delete/update saved searches
+- [x] SavedSearches component with list and compact views
+- [x] Saved searches page at /saved
+- [x] Save button on market comparison cards
+- [x] Session-based saving for anonymous users
+- [x] Submarket exploration API endpoint (exploreSubmarketsWithMetrics)
+- [x] SubmarketExplorer component with ranking and recommendations
+- [x] Integration into MarketComparison page ("Drill Down: Where to Invest")
+- [x] Sort by revenue/occupancy/revpar/overall
+- [x] Top recommendation highlight with "Top Pick" badge
+- [x] Comprehensive AirDNA API audit (saved to research/airdna-api-audit.md)
