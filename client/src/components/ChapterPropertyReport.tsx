@@ -296,15 +296,31 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
     }
   };
 
-  // Calculate startup costs estimate
-  const estimatedStartupCosts = 20000;
-  const monthlyRent = property.monthlyRent || Math.round(revenue_estimate.annual * 0.04); // Estimate 4% of annual revenue
+  // Calculate startup costs based on bedroom count
+  // Base: $8,000 for 1BR, +$4,000 per additional bedroom for furniture/decor
+  const baseStartupCost = 8000;
+  const perBedroomCost = 4000;
+  const estimatedStartupCosts = baseStartupCost + (property.bedrooms * perBedroomCost);
+  
+  // Monthly rent from user input or estimate
+  const monthlyRent = property.monthlyRent || Math.round(revenue_estimate.annual * 0.04);
+  
+  // Calculate minimum revenue threshold (Rent × 12 × 2)
+  const minRevenueThreshold = monthlyRent * 12 * 2;
+  
+  // Filter competitors to only show winners (meeting threshold)
+  const winningComps = (same_bedroom_comps || comps).filter(
+    comp => comp.annual_revenue >= minRevenueThreshold
+  );
+  const hasViableComps = winningComps.length > 0;
+  
+  // Monthly expenses scale with property size
   const monthlyExpenses = {
     rent: monthlyRent,
-    utilities: 250,
+    utilities: 150 + (property.bedrooms * 50), // Base + per bedroom
     internet: 80,
-    supplies: 250,
-    maintenance: 200
+    supplies: 150 + (property.bedrooms * 50), // Base + per bedroom
+    maintenance: 100 + (property.bedrooms * 50) // Base + per bedroom
   };
   const totalMonthlyExpenses = Object.values(monthlyExpenses).reduce((a, b) => a + b, 0);
   const annualExpenses = totalMonthlyExpenses * 12;
@@ -631,19 +647,65 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               {property.bedrooms}-bedroom Airbnbs in the area to learn their secrets.
             </p>
 
+            {/* Minimum Revenue Threshold Explanation */}
+            <div className="bg-[#C9A962]/10 border border-[#C9A962]/30 rounded-xl p-6 mb-8">
+              <h4 className="font-semibold text-[#0F172A] mb-2 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#C9A962]" />
+                The "2x Rule" for Arbitrage Success
+              </h4>
+              <p className="text-[#0F172A]/70 mb-3">
+                For arbitrage to be profitable, competitors should earn at least <strong>2x your annual rent</strong>.
+                With {formatCurrency(monthlyRent)}/month rent, the minimum threshold is:
+              </p>
+              <p className="text-2xl font-bold text-[#0F172A]">
+                {formatCurrency(minRevenueThreshold)}/year
+              </p>
+              <p className="text-sm text-[#0F172A]/60 mt-1">
+                ({formatCurrency(monthlyRent)} × 12 months × 2 = {formatCurrency(minRevenueThreshold)})
+              </p>
+            </div>
+
+            {/* RED FLAG Warning if no viable comps */}
+            {!hasViableComps && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mb-8">
+                <h4 className="font-bold text-red-700 mb-2 flex items-center gap-2 text-lg">
+                  ⚠️ RED FLAG: Potential Viability Concern
+                </h4>
+                <p className="text-red-700 mb-3">
+                  No {property.bedrooms}-bedroom competitors in this area are earning above the {formatCurrency(minRevenueThreshold)} threshold.
+                  This could indicate:
+                </p>
+                <ul className="list-disc list-inside text-red-700 space-y-1 mb-4">
+                  <li>The rent may be too high for this market</li>
+                  <li>This property type may not perform well as a short-term rental here</li>
+                  <li>You may need to negotiate a lower rent or find a different property</li>
+                </ul>
+                <p className="text-red-700 font-medium">
+                  We recommend consulting with a professional before proceeding with this property.
+                </p>
+              </div>
+            )}
+
             <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">What Do the Top Competitors Have in Common?</h3>
 
             <p className="text-[#0F172A]/70 mb-4">
-              Here's a look at the top-performing {property.bedrooms}-bedroom properties in {property.city}.
-              We analyze their design, features, and what makes them successful.
+              {hasViableComps 
+                ? `Here are the ${property.bedrooms}-bedroom properties in ${property.city} that meet the profitability threshold. These are the "winners" you'll be competing against.`
+                : `Even though no properties meet the threshold, here are the top ${property.bedrooms}-bedroom performers in the area for reference.`
+              }
             </p>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-              <div className="bg-[#0F172A] p-4">
-                <p className="text-white font-semibold">Top {property.bedrooms}-Bedroom Competitors in {property.city}</p>
+              <div className={`p-4 ${hasViableComps ? 'bg-[#0F172A]' : 'bg-red-700'}`}>
+                <p className="text-white font-semibold">
+                  {hasViableComps 
+                    ? `Winners: ${property.bedrooms}-BR Properties Earning ${formatCurrency(minRevenueThreshold)}+/year`
+                    : `Top ${property.bedrooms}-BR Performers (Below Threshold)`
+                  }
+                </p>
               </div>
               <div className="divide-y divide-[#0F172A]/5">
-                {displayComps.slice(0, 5).map((comp, idx) => (
+                {(hasViableComps ? winningComps : displayComps).slice(0, 5).map((comp, idx) => (
                   <div key={comp.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">

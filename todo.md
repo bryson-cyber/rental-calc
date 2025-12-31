@@ -100,12 +100,22 @@
 - [x] Create AI service for competitor success factor analysis
 - [x] Create AI service for market insights synthesis
 - [x] Add rent input field (required for arbitrage calculation)
-- [ ] Calculate Minimum Competitor Revenue Threshold (Rent × 12 × 2)
-- [ ] Filter competitors to only those meeting threshold
-- [ ] Add RED FLAG warning if no competitors meet threshold
+- [x] Calculate Minimum Competitor Revenue Threshold (Rent × 12 × 2)
+- [x] Filter competitors to only those meeting threshold
+- [x] Add RED FLAG warning if no competitors meet threshold
 - [x] Calculate profitability scenarios (Conservative/Realistic/Optimistic)
 - [x] Simplify UI - single input field, hide all technical details
 - [x] Add polished loading experience ("Analyzing your property...")
 - [x] Update property report to match SOP template exactly
 - [x] Write in elementary language - no jargon
 - [x] Add "What This Means For You" explanations throughout
+
+## Critical Bug Fixes - Client Experience
+- [x] Fix "Unknown location, 0 active rentals" bug in property report
+- [x] Auto-calculate guests as 2 per bedroom
+- [ ] Add Zillow rent estimate auto-fetch integration (API not publicly available)
+- [x] Add minimum revenue threshold filter (Rent × 12 × 2) for competitors
+- [x] Show RED FLAG warning if no competitors meet threshold
+- [x] Scale startup costs based on bedroom count (not flat $20K)
+- [x] Fix Chapter 4 "Best Neighborhoods" to show actual neighborhood data
+- [x] Filter competitors to only show winners (meeting revenue threshold)

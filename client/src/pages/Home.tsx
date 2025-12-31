@@ -284,10 +284,19 @@ export default function RentalEstimator() {
     address: '',
     bedrooms: 2,
     bathrooms: 1,
-    accommodates: 4,
+    accommodates: 4, // Auto-calculated as 2 per bedroom
     monthlyRent: 0,
     propertyType: 'House'
   });
+
+  // Auto-calculate guests as 2 per bedroom when bedrooms change
+  const updateBedrooms = (bedrooms: number) => {
+    setFormData(prev => ({
+      ...prev,
+      bedrooms,
+      accommodates: bedrooms * 2 // 2 guests per bedroom
+    }));
+  };
   const [leadData, setLeadData] = useState({
     name: '',
     email: '',
@@ -357,7 +366,8 @@ export default function RentalEstimator() {
       });
 
       if (result.success && result.data) {
-        setReportData(result.data);
+        // The API returns { success, data: { property, market, ... } }
+        setReportData(result.data as ComprehensiveReportData);
         setStep('results');
       } else {
         setError(result.error || 'Failed to generate report. Please try again.');
@@ -564,7 +574,7 @@ export default function RentalEstimator() {
                     <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F172A]/40" />
                     <select
                       value={formData.bedrooms}
-                      onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
+                      onChange={(e) => updateBedrooms(parseInt(e.target.value))}
                       className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (

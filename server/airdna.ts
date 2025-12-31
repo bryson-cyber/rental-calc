@@ -510,25 +510,30 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
 
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketData[]> {
   try {
-    const response = await makeApiRequest<{
-      payload: {
-        results: Array<{
-          id: string;
-          name: string;
-          listing_count: number;
-        }>;
-      };
-    }>(`/submarket/explore/market/${marketId}`, "POST", {
-      pagination: {
-        page_size: 100,
-        offset: 0,
-      },
-    });
+    // First, get the market name to search for its submarkets
+    const marketDetails = await getMarketDetails(marketId);
+    if (!marketDetails) {
+      return [];
+    }
     
-    return response.payload.results.map((r) => ({
-      id: r.id,
-      name: r.name,
-      listing_count: r.listing_count,
+    // Search for markets with the same name - this returns both the market and its submarkets
+    const searchResults = await searchMarkets(marketDetails.name, 50);
+    
+    // Filter to only submarkets (neighborhoods) that are related to this market
+    // Submarkets typically have the parent market name in their location_name or are of type 'submarket'
+    const submarkets = searchResults.filter(m => 
+      m.type === 'submarket' && 
+      m.id !== marketId &&
+      m.listing_count > 0
+    );
+    
+    // Sort by listing count descending (most active first)
+    submarkets.sort((a, b) => b.listing_count - a.listing_count);
+    
+    return submarkets.slice(0, 20).map(s => ({
+      id: s.id,
+      name: s.name,
+      listing_count: s.listing_count,
     }));
   } catch (error) {
     console.error("Error fetching submarkets:", error);
