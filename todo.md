@@ -93,3 +93,19 @@
   - [x] Section 3: Study the Competition (top performers with Airbnb links)
   - [x] Section 4: Project the Profit (startup costs, monthly expenses, profit scenarios)
 - [x] Build market comparison feature (compare 2-3 markets side-by-side)
+
+## AI-Powered Analysis Sprint - Fully Automated Reports
+- [x] Add Gemini API integration
+- [x] Create AI service for property feature analysis
+- [x] Create AI service for competitor success factor analysis
+- [x] Create AI service for market insights synthesis
+- [x] Add rent input field (required for arbitrage calculation)
+- [ ] Calculate Minimum Competitor Revenue Threshold (Rent × 12 × 2)
+- [ ] Filter competitors to only those meeting threshold
+- [ ] Add RED FLAG warning if no competitors meet threshold
+- [x] Calculate profitability scenarios (Conservative/Realistic/Optimistic)
+- [x] Simplify UI - single input field, hide all technical details
+- [x] Add polished loading experience ("Analyzing your property...")
+- [x] Update property report to match SOP template exactly
+- [x] Write in elementary language - no jargon
+- [x] Add "What This Means For You" explanations throughout

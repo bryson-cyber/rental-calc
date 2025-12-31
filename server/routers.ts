@@ -13,6 +13,7 @@ import {
   getComprehensiveSubmarketReport,
   detectSearchType,
 } from "./airdna";
+import { generateEnhancedPropertyReport } from "./gemini";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -41,6 +42,17 @@ const propertyReportInputSchema = z.object({
   bedrooms: z.number().int().min(1).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
+});
+
+// AI-enhanced property report schema (includes rent for arbitrage calculation)
+const aiPropertyReportInputSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  monthlyRent: z.number().min(0, "Monthly rent is required"),
+  bedrooms: z.number().int().min(1).max(20).optional(),
+  bathrooms: z.number().min(0.5).max(20).optional(),
+  accommodates: z.number().int().min(1).max(50).optional(),
+  propertyType: z.string().optional(),
+  squareFootage: z.number().optional(),
 });
 
 // Market search schema
@@ -154,6 +166,109 @@ export const appRouter = router({
         } catch (error) {
           console.error("[Rental] Error getting property report:", error);
           const message = error instanceof Error ? error.message : "Failed to generate property report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get AI-enhanced property report with profitability analysis
+    getAIPropertyReport: publicProcedure
+      .input(aiPropertyReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          // First get the comprehensive property report from AirDNA
+          const baseReport = await getComprehensivePropertyReport(
+            input.address,
+            input.bedrooms,
+            input.bathrooms,
+            input.accommodates
+          );
+
+          if (!baseReport) {
+            return {
+              success: false,
+              error: "Could not generate property report for this address",
+              data: null,
+            };
+          }
+
+          // Calculate revenue projections based on market data
+          const medianRevenue = baseReport.property.estimates?.annual_revenue || 0;
+          const top25Revenue = Math.round(medianRevenue * 1.25);
+          const top10Revenue = Math.round(medianRevenue * 1.5);
+
+          // Get neighborhood from address (last part before state/zip)
+          const addressParts = input.address.split(',');
+          const neighborhood = addressParts.length >= 2 ? addressParts[1].trim() : 'Local Area';
+
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedPropertyReport({
+            property: {
+              address: input.address,
+              neighborhood,
+              propertyType: input.propertyType || 'House',
+              bedrooms: input.bedrooms || baseReport.property.property?.bedrooms || 2,
+              bathrooms: input.bathrooms || baseReport.property.property?.bathrooms || 1,
+              squareFootage: input.squareFootage,
+              monthlyRent: input.monthlyRent,
+            },
+            marketData: {
+              occupancy: baseReport.market?.metrics?.occupancy || 0,
+              adr: baseReport.market?.metrics?.adr || 0,
+              revenue: baseReport.market?.metrics?.revenue || 0,
+              listingCount: baseReport.market?.listing_count || 0,
+            },
+            competitors: (baseReport.same_bedroom_comps || []).slice(0, 5).map(c => ({
+              name: c.title || 'Competitor',
+              revenue: c.annual_revenue || 0,
+              adr: c.adr || 0,
+              occupancy: c.occupancy || 0,
+              rating: c.rating ?? undefined,
+            })),
+            revenueProjections: {
+              conservative: medianRevenue,
+              realistic: top25Revenue,
+              optimistic: top10Revenue,
+            },
+          });
+
+          // Calculate profitability
+          const monthlyExpenses = input.monthlyRent + 780; // Rent + utilities/supplies
+          const annualExpenses = monthlyExpenses * 12;
+          const minRevenueThreshold = input.monthlyRent * 12 * 2;
+          const meetsThreshold = top25Revenue >= minRevenueThreshold;
+
+          return {
+            success: true,
+            data: {
+              ...baseReport,
+              ai_analysis: aiAnalysis,
+              profitability: {
+                monthly_rent: input.monthlyRent,
+                monthly_expenses: monthlyExpenses,
+                annual_expenses: annualExpenses,
+                startup_costs: 20000,
+                min_revenue_threshold: minRevenueThreshold,
+                meets_threshold: meetsThreshold,
+                revenue_projections: {
+                  conservative: medianRevenue,
+                  realistic: top25Revenue,
+                  optimistic: top10Revenue,
+                },
+                profit_projections: {
+                  conservative: medianRevenue - annualExpenses,
+                  realistic: top25Revenue - annualExpenses,
+                  optimistic: top10Revenue - annualExpenses,
+                },
+              },
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting AI property report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate AI property report";
           return {
             success: false,
             error: message,

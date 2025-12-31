@@ -284,7 +284,9 @@ export default function RentalEstimator() {
     address: '',
     bedrooms: 2,
     bathrooms: 1,
-    accommodates: 4
+    accommodates: 4,
+    monthlyRent: 0,
+    propertyType: 'House'
   });
   const [leadData, setLeadData] = useState({
     name: '',
@@ -312,6 +314,10 @@ export default function RentalEstimator() {
     e.preventDefault();
     if (!formData.address) {
       setError('Please enter a property address');
+      return;
+    }
+    if (!formData.monthlyRent || formData.monthlyRent <= 0) {
+      setError('Please enter the monthly rent for this property');
       return;
     }
     setError(null);
@@ -528,6 +534,26 @@ export default function RentalEstimator() {
                 />
               </div>
               
+              {/* Monthly Rent Input - Critical for Arbitrage Analysis */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
+                  Monthly Rent (Required for Profit Analysis)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0F172A]/40" />
+                  <input
+                    type="number"
+                    value={formData.monthlyRent || ''}
+                    onChange={(e) => setFormData({ ...formData, monthlyRent: parseInt(e.target.value) || 0 })}
+                    placeholder="e.g., 2500"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                  />
+                </div>
+                <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
+                  Enter the monthly rent you would pay to lease this property
+                </p>
+              </div>
+
               {/* Property Details Grid */}
               <div className="grid grid-cols-3 gap-4 mb-8">
                 <div>
@@ -748,48 +774,82 @@ export default function RentalEstimator() {
     );
   }
 
-  // Loading State
+  // Loading State - Polished step-by-step animation
   if (step === 'loading') {
+    const loadingSteps = [
+      { text: 'Analyzing property details', delay: 0 },
+      { text: 'Pulling market data from AirDNA', delay: 1.5 },
+      { text: 'Finding same-bedroom comparables', delay: 3 },
+      { text: 'Calculating revenue projections', delay: 4.5 },
+      { text: 'Running AI profitability analysis', delay: 6 },
+      { text: 'Generating your personalized report', delay: 7.5 },
+    ];
+
     return (
       <div className="min-h-screen relative overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: 'url(/images/hero-property.jpg)' }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1e293b]/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0F172A]/95 via-[#0F172A]/90 to-[#1e293b]/85" />
         </div>
         
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <motion.div 
-            className="text-center"
+            className="text-center max-w-lg"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-[#C9A962]/20 rounded-2xl mb-8 backdrop-blur-sm border border-[#C9A962]/30">
-              <Loader2 className="w-10 h-10 text-[#C9A962] animate-spin" />
+            {/* Animated Icon */}
+            <div className="relative inline-flex items-center justify-center w-24 h-24 mb-8">
+              <motion.div
+                className="absolute inset-0 bg-[#C9A962]/20 rounded-2xl backdrop-blur-sm border border-[#C9A962]/30"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <Loader2 className="w-12 h-12 text-[#C9A962] animate-spin" />
             </div>
-            <h2 className="text-2xl font-serif font-semibold text-white mb-3">
-              Analyzing Your Property
+
+            {/* Title */}
+            <h2 className="text-3xl font-serif font-semibold text-white mb-3">
+              Building Your Analysis
             </h2>
-            <p className="text-white/60 font-sans max-w-md">
-              We're pulling real market data and comparable properties to build your personalized report...
+            <p className="text-white/60 font-sans mb-2">
+              {formData.address}
+            </p>
+            <p className="text-[#C9A962] font-sans text-sm mb-8">
+              Monthly Rent: ${formData.monthlyRent.toLocaleString()}
             </p>
             
-            <div className="mt-8 space-y-3 max-w-xs mx-auto">
-              {['Fetching property data', 'Analyzing market trends', 'Finding comparable properties'].map((text, idx) => (
-                <motion.div
-                  key={idx}
-                  className="flex items-center gap-3 text-white/70 text-sm font-sans"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.5 }}
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                  {text}
-                </motion.div>
-              ))}
+            {/* Progress Steps */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+              <div className="space-y-4">
+                {loadingSteps.map((step, idx) => (
+                  <motion.div
+                    key={idx}
+                    className="flex items-center gap-3"
+                    initial={{ opacity: 0.3 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: step.delay, duration: 0.5 }}
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: step.delay + 0.2, type: 'spring' }}
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-[#C9A962]" />
+                    </motion.div>
+                    <span className="text-white/80 text-sm font-sans text-left">{step.text}</span>
+                  </motion.div>
+                ))}
+              </div>
             </div>
+
+            {/* Reassurance */}
+            <p className="mt-6 text-white/40 text-xs font-sans">
+              This usually takes 15-30 seconds. Please don't refresh the page.
+            </p>
           </motion.div>
         </div>
       </div>
@@ -811,7 +871,8 @@ export default function RentalEstimator() {
         bedrooms: propertyInfo.bedrooms,
         bathrooms: propertyInfo.bathrooms,
         accommodates: propertyInfo.accommodates,
-        propertyType: 'Residential'
+        propertyType: 'Residential',
+        monthlyRent: formData.monthlyRent
       },
       revenue_estimate: {
         annual: estimates.annual_revenue,
