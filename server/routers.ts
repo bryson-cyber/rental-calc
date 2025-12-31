@@ -13,7 +13,7 @@ import {
   getComprehensiveSubmarketReport,
   detectSearchType,
 } from "./airdna";
-import { generateEnhancedPropertyReport } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -277,7 +277,7 @@ export const appRouter = router({
         }
       }),
 
-    // Get comprehensive market report
+    // Get comprehensive market report with AI analysis
     getMarketReport: publicProcedure
       .input(marketReportInputSchema)
       .mutation(async ({ input }) => {
@@ -292,9 +292,46 @@ export const appRouter = router({
             };
           }
 
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedMarketReport({
+            market: {
+              name: report.market.name,
+              listingCount: report.market.listing_count,
+            },
+            metrics: {
+              occupancy: report.market.metrics.occupancy,
+              adr: report.market.metrics.adr,
+              revenue: report.market.metrics.revenue,
+              revpar: report.market.metrics.revpar,
+            },
+            topListings: (report.top_listings || []).slice(0, 5).map(l => ({
+              title: l.title,
+              revenue: l.annual_revenue,
+              adr: l.adr,
+              occupancy: l.occupancy,
+              rating: l.rating,
+              bedrooms: l.bedrooms,
+              propertyType: l.property_type,
+            })),
+            bedroomPerformance: (report.bedroom_performance || []).map(b => ({
+              bedrooms: b.bedrooms,
+              count: b.count,
+              avgRevenue: b.avg_revenue,
+              avgOccupancy: b.avg_occupancy,
+            })),
+            insights: report.insights ? {
+              professionallyManagedPct: report.insights.professionally_managed_pct,
+              superhostPct: report.insights.superhost_pct,
+              revenuePercentiles: report.insights.revenue_percentiles,
+            } : undefined,
+          });
+
           return {
             success: true,
-            data: report,
+            data: {
+              ...report,
+              ai_analysis: aiAnalysis,
+            },
           };
         } catch (error) {
           console.error("[Rental] Error getting market report:", error);
@@ -307,7 +344,7 @@ export const appRouter = router({
         }
       }),
 
-    // Get comprehensive submarket/zip code report
+    // Get comprehensive submarket/zip code report with AI analysis
     getSubmarketReport: publicProcedure
       .input(submarketReportInputSchema)
       .mutation(async ({ input }) => {
@@ -322,9 +359,46 @@ export const appRouter = router({
             };
           }
 
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedMarketReport({
+            market: {
+              name: report.submarket.name,
+              listingCount: report.submarket.listing_count,
+            },
+            metrics: {
+              occupancy: report.submarket.metrics.occupancy,
+              adr: report.submarket.metrics.adr,
+              revenue: report.submarket.metrics.revenue,
+              revpar: report.submarket.metrics.revpar,
+            },
+            topListings: (report.top_listings || []).slice(0, 5).map(l => ({
+              title: l.title,
+              revenue: l.annual_revenue,
+              adr: l.adr,
+              occupancy: l.occupancy,
+              rating: l.rating,
+              bedrooms: l.bedrooms,
+              propertyType: l.property_type,
+            })),
+            bedroomPerformance: (report.bedroom_performance || []).map(b => ({
+              bedrooms: b.bedrooms,
+              count: b.count,
+              avgRevenue: b.avg_revenue,
+              avgOccupancy: b.avg_occupancy,
+            })),
+            insights: report.insights ? {
+              professionallyManagedPct: report.insights.professionally_managed_pct,
+              superhostPct: report.insights.superhost_pct,
+              revenuePercentiles: report.insights.revenue_percentiles,
+            } : undefined,
+          });
+
           return {
             success: true,
-            data: report,
+            data: {
+              ...report,
+              ai_analysis: aiAnalysis,
+            },
           };
         } catch (error) {
           console.error("[Rental] Error getting submarket report:", error);

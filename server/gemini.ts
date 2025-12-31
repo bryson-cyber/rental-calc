@@ -439,3 +439,159 @@ export async function generateEnhancedPropertyReport(data: {
     profitabilityAnalysis
   };
 }
+
+
+/**
+ * Generate AI-enhanced market report analysis
+ * Similar to property reports but focused on market-level insights
+ */
+export async function generateEnhancedMarketReport(data: {
+  market: {
+    name: string;
+    listingCount: number;
+  };
+  metrics: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
+  };
+  topListings: Array<{
+    title: string;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    bedrooms: number;
+    propertyType: string;
+  }>;
+  bedroomPerformance: Array<{
+    bedrooms: number;
+    count: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }>;
+  insights?: {
+    professionallyManagedPct: number;
+    superhostPct: number;
+    revenuePercentiles?: {
+      p10: number;
+      p25: number;
+      p50: number;
+      p75: number;
+      p90: number;
+    };
+  };
+}): Promise<{
+  marketSummary: string;
+  investmentThesis: string;
+  topPerformersAnalysis: string;
+  bedroomRecommendation: string;
+  competitiveLandscape: string;
+  actionItems: string[];
+  riskAssessment: string;
+}> {
+  const topListingsSummary = data.topListings.slice(0, 5).map((l, i) => 
+    `${i + 1}. "${l.title}" - ${l.bedrooms}BR ${l.propertyType}, $${l.revenue.toLocaleString()}/yr, ${Math.round(l.occupancy)}% occ, ${l.rating ? `${l.rating} rating` : 'no rating'}`
+  ).join('\n');
+
+  const bedroomSummary = data.bedroomPerformance.map(b => 
+    `${b.bedrooms}BR: ${b.count} listings, $${b.avgRevenue.toLocaleString()}/yr avg, ${Math.round(b.avgOccupancy)}% occ`
+  ).join('\n');
+
+  const bestBedroom = data.bedroomPerformance.reduce((best, current) => 
+    current.avgOccupancy > (best?.avgOccupancy || 0) ? current : best
+  , data.bedroomPerformance[0]);
+
+  const prompt = `You are a short-term rental investment advisor creating a comprehensive market analysis for ${data.market.name}.
+
+MARKET OVERVIEW:
+- Market: ${data.market.name}
+- Total Active Listings: ${data.market.listingCount.toLocaleString()}
+- Average Occupancy: ${Math.round(data.metrics.occupancy)}%
+- Average Daily Rate: $${Math.round(data.metrics.adr)}
+- Average Annual Revenue: $${Math.round(data.metrics.revenue).toLocaleString()}
+- RevPAR: $${Math.round(data.metrics.revpar)}
+
+TOP 5 PERFORMERS:
+${topListingsSummary}
+
+PERFORMANCE BY BEDROOM COUNT:
+${bedroomSummary}
+
+COMPETITIVE INSIGHTS:
+- Professionally Managed: ${data.insights?.professionallyManagedPct || 0}%
+- Superhosts: ${data.insights?.superhostPct || 0}%
+${data.insights?.revenuePercentiles ? `
+- Bottom 10% earn: $${data.insights.revenuePercentiles.p10.toLocaleString()}/yr
+- Median earns: $${data.insights.revenuePercentiles.p50.toLocaleString()}/yr
+- Top 25% earn: $${data.insights.revenuePercentiles.p75.toLocaleString()}/yr
+- Top 10% earn: $${data.insights.revenuePercentiles.p90.toLocaleString()}/yr` : ''}
+
+Write a comprehensive, educational analysis in simple language that a beginner investor would understand:
+
+1. MARKET_SUMMARY: 3-4 sentences providing an executive summary of this market. Is it a good market to invest in? What's the overall opportunity?
+
+2. INVESTMENT_THESIS: 2-3 sentences explaining WHY someone should (or shouldn't) invest in this market. Be specific about the opportunity.
+
+3. TOP_PERFORMERS_ANALYSIS: 3-4 sentences analyzing what the top performers have in common. What can we learn from them? What makes them successful?
+
+4. BEDROOM_RECOMMENDATION: 2-3 sentences recommending the optimal property size for this market. The data shows ${bestBedroom?.bedrooms || 2}-bedroom properties perform best - explain why.
+
+5. COMPETITIVE_LANDSCAPE: 2-3 sentences about the competition. Is it crowded? Can individual hosts compete? What does the professional management percentage tell us?
+
+6. ACTION_ITEMS: 5 specific, actionable steps for someone wanting to invest in this market. Format as a JSON array.
+
+7. RISK_ASSESSMENT: 2-3 sentences about the key risks to consider in this market.
+
+Respond in this exact JSON format:
+{
+  "marketSummary": "Your summary here",
+  "investmentThesis": "Your thesis here",
+  "topPerformersAnalysis": "Your analysis here",
+  "bedroomRecommendation": "Your recommendation here",
+  "competitiveLandscape": "Your analysis here",
+  "actionItems": ["action1", "action2", "action3", "action4", "action5"],
+  "riskAssessment": "Your assessment here"
+}`;
+
+  try {
+    const response = await callGemini(prompt);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return getDefaultMarketReportAnalysis(data, bestBedroom);
+  } catch (error) {
+    console.error('Error generating enhanced market report:', error);
+    return getDefaultMarketReportAnalysis(data, bestBedroom);
+  }
+}
+
+function getDefaultMarketReportAnalysis(
+  data: {
+    market: { name: string; listingCount: number };
+    metrics: { occupancy: number; adr: number; revenue: number };
+    insights?: { professionallyManagedPct: number };
+  },
+  bestBedroom?: { bedrooms: number; avgOccupancy: number; avgRevenue: number }
+) {
+  const isStrongMarket = data.metrics.occupancy >= 55 && data.metrics.revenue >= 25000;
+  const profManagedPct = data.insights?.professionallyManagedPct || 0;
+  
+  return {
+    marketSummary: `${data.market.name} is ${isStrongMarket ? 'a strong' : 'a moderate'} short-term rental market with ${data.market.listingCount.toLocaleString()} active listings. Properties earn an average of $${Math.round(data.metrics.revenue).toLocaleString()} per year with ${Math.round(data.metrics.occupancy)}% occupancy. ${isStrongMarket ? 'The combination of solid occupancy and revenue indicates healthy demand from travelers.' : 'There may be opportunities to outperform the average with the right strategy.'}`,
+    investmentThesis: `${isStrongMarket ? 'This market presents a compelling investment opportunity.' : 'This market requires careful property selection.'} With average nightly rates of $${Math.round(data.metrics.adr)}, there's ${data.metrics.adr >= 100 ? 'strong pricing power' : 'room to optimize pricing'} for well-positioned properties.`,
+    topPerformersAnalysis: `The top performers in ${data.market.name} share common traits: professional presentation, strategic pricing, and excellent guest experiences. They consistently earn well above the market average by focusing on quality over quantity. Their success demonstrates that with the right approach, significant returns are achievable.`,
+    bedroomRecommendation: `Based on the data, ${bestBedroom?.bedrooms || 2}-bedroom properties show the strongest performance with ${Math.round(bestBedroom?.avgOccupancy || data.metrics.occupancy)}% occupancy. This size hits the sweet spot between accommodating groups and maintaining high booking rates.`,
+    competitiveLandscape: `With ${profManagedPct}% professionally managed listings, ${profManagedPct < 25 ? 'individual hosts have a significant opportunity to compete' : 'you\'ll be competing with experienced operators'}. ${data.market.listingCount > 1000 ? 'The market is established with strong demand' : 'The market has room for quality new listings'}.`,
+    actionItems: [
+      `Target ${bestBedroom?.bedrooms || 2}-bedroom properties for optimal occupancy`,
+      'Invest in professional photography to stand out from competition',
+      'Use dynamic pricing tools to maximize revenue during peak seasons',
+      'Focus on earning Superhost status within your first year',
+      'Build relationships with local service providers for reliable cleaning and maintenance'
+    ],
+    riskAssessment: `Key risks include seasonal fluctuations in demand, potential regulatory changes affecting short-term rentals, and competition from new listings. ${profManagedPct >= 30 ? 'The high percentage of professional managers means you\'ll need to maintain high standards to compete.' : 'The market is still accessible to individual hosts who provide quality experiences.'}`
+  };
+}

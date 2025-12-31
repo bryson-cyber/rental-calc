@@ -25,3 +25,46 @@
 1. Fix market data API integration
 2. Implement PDF download functionality
 3. Add bedroom performance comparison section
+
+
+---
+
+## Test Date: Dec 31, 2025
+## Test Property: 3456 Arsenal St, St. Louis, MO 63118, USA
+
+### Issues Found
+
+#### 1. "Unknown Location" Bug - STILL PRESENT
+- The property report shows "Unknown Location" in the property details section
+- Shows "Located in Unknown, USA - a market with 0 active rentals"
+- This needs to be fixed - the market name should be "St. Louis" not "Unknown"
+
+#### 2. Formatting Issues - FIXED
+- The occupancy percentage now displays correctly with proper spacing
+- Example: "91% occupancy" shows correctly
+
+#### 3. Distance to Competition - NOT VISIBLE
+- The distance display was added to the code but not showing in the UI
+- Need to verify if the distance_meters data is being passed correctly
+
+#### 4. Top Winners Section - WORKING
+- The competition section shows top performers with:
+  - Revenue per year
+  - Nightly rate
+  - Occupancy percentage
+  - Ratings
+  - Superhost badges
+
+#### 5. CTA Sections - WORKING
+- "What It Takes to Reach Top-Performer Status" section is visible
+- Shows "Common Mistakes That Kill Profits" vs "What Top Performers Do Differently"
+
+### Market Report Test - St. Louis
+- ✅ Chapter 2: Top Winners section showing correctly
+- ✅ AI-powered analysis integrated
+- ✅ Decision-driving CTAs working
+- ✅ All 8 chapters displaying properly
+
+### Root Cause of "Unknown Location" Bug
+The market_data.name is not being populated correctly from the AirDNA API response.
+Need to investigate the backend to see where the market name is being set.

@@ -356,12 +356,13 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
   const chapters = [
     { id: 1, title: 'The Big Picture' },
-    { id: 2, title: 'What Guests Want' },
-    { id: 3, title: 'Understanding the Seasons' },
-    { id: 4, title: 'Best Neighborhoods' },
-    { id: 5, title: 'Property Size Matters' },
-    { id: 6, title: 'Deeper Insights' },
-    { id: 7, title: 'Your Action Plan' }
+    { id: 2, title: 'Top Winners' },
+    { id: 3, title: 'What Guests Want' },
+    { id: 4, title: 'Understanding the Seasons' },
+    { id: 5, title: 'Best Neighborhoods' },
+    { id: 6, title: 'Property Size Matters' },
+    { id: 7, title: 'Deeper Insights' },
+    { id: 8, title: 'Your Action Plan' }
   ];
 
   const scrollToChapter = (id: number) => {
@@ -492,8 +493,132 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
           </ChapterSection>
 
-          {/* Chapter 2: What Guests Want */}
-          <ChapterSection id="chapter-2" title="Chapter 2: What Guests Want">
+          {/* Chapter 2: Top Winners */}
+          <ChapterSection id="chapter-2" title="Chapter 2: Meet the Top Winners">
+            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+              These are the highest-earning properties in {marketInfo.name}. Studying what makes them successful 
+              gives us a blueprint for achieving top-performer status. Notice their pricing strategies, 
+              property types, and occupancy rates.
+            </p>
+
+            {data.top_listings && data.top_listings.length > 0 ? (
+              <>
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+                  <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-4">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-white" />
+                      <p className="text-white font-semibold">Top Performers in {marketInfo.name}</p>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-[#0F172A]/5">
+                    {data.top_listings.slice(0, 5).map((listing, idx) => (
+                      <div key={listing.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                idx === 0 ? 'bg-[#C9A962] text-white' : 
+                                idx === 1 ? 'bg-gray-400 text-white' : 
+                                idx === 2 ? 'bg-amber-600 text-white' : 'bg-[#0F172A]/10 text-[#0F172A]'
+                              }`}>
+                                {idx + 1}
+                              </span>
+                              {listing.airbnb_url ? (
+                                <a
+                                  href={listing.airbnb_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-semibold text-[#0F172A] hover:text-[#C9A962] transition-colors flex items-center gap-1"
+                                >
+                                  {listing.title}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="font-semibold text-[#0F172A]">{listing.title}</span>
+                              )}
+                            </div>
+                            <p className="text-sm text-[#0F172A]/60 mb-2">
+                              {listing.bedrooms} BR • {listing.property_type} • {formatPercent(listing.occupancy)} occupancy
+                              {listing.rating && (
+                                <span className="ml-2 inline-flex items-center gap-1">
+                                  <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
+                                  {listing.rating.toFixed(1)}
+                                </span>
+                              )}
+                              {listing.superhost && (
+                                <span className="ml-2 text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-0.5 rounded-full">
+                                  Superhost
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-sm text-[#0F172A]/70">
+                              {listing.occupancy > 70
+                                ? 'High occupancy indicates strong demand and excellent guest experience.'
+                                : listing.rating && listing.rating >= 4.9
+                                  ? 'Near-perfect reviews drive premium pricing and repeat bookings.'
+                                  : listing.adr > avgADR * 1.3
+                                    ? 'Premium pricing suggests unique features or exceptional design.'
+                                    : 'Consistent performer with solid bookings.'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(listing.annual_revenue)}</p>
+                            <p className="text-sm text-[#0F172A]/50">/year</p>
+                            <p className="text-sm text-[#0F172A]/60 mt-1">{formatCurrency(listing.adr)}/night</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4 mb-8">
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <p className="text-sm text-[#0F172A]/60 mb-1">Top Performer Revenue</p>
+                    <p className="text-2xl font-serif font-bold text-[#C9A962]">
+                      {formatCurrency(data.top_listings[0]?.annual_revenue || 0)}
+                    </p>
+                    <p className="text-xs text-[#0F172A]/50">per year</p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <p className="text-sm text-[#0F172A]/60 mb-1">Avg. Top 5 Revenue</p>
+                    <p className="text-2xl font-serif font-bold text-[#0F172A]">
+                      {formatCurrency(data.top_listings.slice(0, 5).reduce((sum, l) => sum + l.annual_revenue, 0) / Math.min(5, data.top_listings.length))}
+                    </p>
+                    <p className="text-xs text-[#0F172A]/50">per year</p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <p className="text-sm text-[#0F172A]/60 mb-1">vs. Market Average</p>
+                    <p className="text-2xl font-serif font-bold text-green-600">
+                      +{Math.round(((data.top_listings[0]?.annual_revenue || avgRevenue) / avgRevenue - 1) * 100)}%
+                    </p>
+                    <p className="text-xs text-[#0F172A]/50">higher revenue</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-1" />
+                    <div>
+                      <p className="font-semibold text-[#0F172A]">The Thought Process</p>
+                      <p className="text-sm text-[#0F172A]/70">
+                        The top performers in {marketInfo.name} earn {Math.round(((data.top_listings[0]?.annual_revenue || avgRevenue) / avgRevenue - 1) * 100)}% more than the market average.
+                        This shows what's possible when you combine the right property with professional management.
+                        Our goal is to position your property to compete with these winners.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <p className="text-[#0F172A]/60">Top performer data not available for this market.</p>
+              </div>
+            )}
+          </ChapterSection>
+
+          {/* Chapter 3: What Guests Want */}
+          <ChapterSection id="chapter-3" title="Chapter 3: What Guests Want">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               Understanding guest preferences is crucial for maximizing bookings and revenue. In the {marketInfo.name} market,
               the data reveals clear trends in the amenities and property types that attract travelers.
@@ -554,8 +679,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
           </ChapterSection>
 
-          {/* Chapter 3: Understanding the Seasons */}
-          <ChapterSection id="chapter-3" title="Chapter 3: Understanding the Seasons">
+          {/* Chapter 4: Understanding the Seasons */}
+          <ChapterSection id="chapter-4" title="Chapter 4: Understanding the Seasons">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               Seasonality plays a role in any STR market. Understanding the high and low seasons in {marketInfo.name}
               helps you anticipate income fluctuations and adjust your pricing strategy.
@@ -620,8 +745,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
           </ChapterSection>
 
-          {/* Chapter 4: Best Neighborhoods */}
-          <ChapterSection id="chapter-4" title="Chapter 4: The Best Neighborhoods to Invest In">
+          {/* Chapter 5: Best Neighborhoods */}
+          <ChapterSection id="chapter-5" title="Chapter 5: The Best Neighborhoods to Invest In">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               Not all neighborhoods are created equal. {submarkets.length > 0
                 ? `We have categorized the ${submarkets.length} submarkets around ${marketInfo.name} into tiers based on their revenue potential.`
@@ -686,8 +811,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             )}
           </ChapterSection>
 
-          {/* Chapter 5: Property Size Matters */}
-          <ChapterSection id="chapter-5" title="Chapter 5: Property Size Matters">
+          {/* Chapter 6: Property Size Matters */}
+          <ChapterSection id="chapter-6" title="Chapter 6: Property Size Matters">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               In {marketInfo.name}, the number of bedrooms in a property has a direct impact on its performance.
               The data shows clear preferences that can guide your investment decision.
@@ -741,8 +866,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             )}
           </ChapterSection>
 
-          {/* Chapter 6: Deeper Insights */}
-          <ChapterSection id="chapter-6" title="Chapter 6: Deeper Insights from the Data">
+          {/* Chapter 7: Deeper Insights */}
+          <ChapterSection id="chapter-7" title="Chapter 7: Deeper Insights from the Data">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               Beyond the basics, the data reveals several deeper trends that can inform your investment strategy.
             </p>
@@ -835,8 +960,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             )}
           </ChapterSection>
 
-          {/* Chapter 7: Your Action Plan */}
-          <ChapterSection id="chapter-7" title="Chapter 7: Your Action Plan">
+          {/* Chapter 8: Your Action Plan */}
+          <ChapterSection id="chapter-8" title="Chapter 8: Your Action Plan">
             <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
               Based on this comprehensive analysis, here are tailored recommendations for different investor profiles.
             </p>
@@ -920,23 +1045,80 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               </div>
             </div>
 
+            {/* Why You Need Professional Help Section */}
+            <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
+              <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 text-center">
+                Why This Complexity Requires Expert Execution
+              </h3>
+              <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="text-center p-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-2xl">1</span>
+                  </div>
+                  <p className="font-semibold text-[#0F172A] mb-2">Market Timing</p>
+                  <p className="text-sm text-[#0F172A]/70">
+                    Seasonal pricing, competitor analysis, and demand forecasting require constant monitoring and adjustment.
+                  </p>
+                </div>
+                <div className="text-center p-4">
+                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-2xl">2</span>
+                  </div>
+                  <p className="font-semibold text-[#0F172A] mb-2">Property Setup</p>
+                  <p className="text-sm text-[#0F172A]/70">
+                    Professional photography, strategic furnishing, and amenity selection directly impact your revenue potential.
+                  </p>
+                </div>
+                <div className="text-center p-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-2xl">3</span>
+                  </div>
+                  <p className="font-semibold text-[#0F172A] mb-2">Guest Management</p>
+                  <p className="text-sm text-[#0F172A]/70">
+                    24/7 communication, cleaning coordination, and review management are full-time responsibilities.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-[#0F172A]/5 rounded-xl p-6">
+                <p className="text-center text-[#0F172A]/80">
+                  <strong>The Bottom Line:</strong> The difference between average performers ({formatCurrency(avgRevenue)}/year) 
+                  and top performers ({formatCurrency(insights?.revenue_percentiles?.p90 || avgRevenue * 1.5)}/year) is 
+                  <span className="text-[#C9A962] font-bold"> {formatCurrency((insights?.revenue_percentiles?.p90 || avgRevenue * 1.5) - avgRevenue)}</span> in annual revenue. 
+                  That gap is closed through professional execution.
+                </p>
+              </div>
+            </div>
+
             {/* CTA Section */}
-            <div className="mt-12 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
+            <div className="mt-8 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
               <div className="max-w-2xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
                   <Award className="w-4 h-4" />
                   Done-For-You Solution
                 </div>
                 <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
-                  Ready to Get Started?
+                  Ready to Turn This Data Into Profit?
                 </h3>
-                <p className="text-white/70 mb-8">
-                  Our turnkey program handles everything — from property selection to guest management.
-                  We've helped hundreds of investors achieve top-performer status in their markets.
+                <p className="text-white/70 mb-6">
+                  You've seen the numbers. You understand the market. Now let our team handle the execution.
                 </p>
+                <div className="grid md:grid-cols-3 gap-4 mb-8 text-left">
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Property sourcing & lease negotiation</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Professional design & furnishing</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Full-service guest management</p>
+                  </div>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button className="bg-[#C9A962] text-[#0F172A] px-8 py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-colors flex items-center justify-center gap-2">
-                    Schedule Free Consultation
+                    Schedule Free Strategy Call
                     <ArrowRight className="w-5 h-5" />
                   </button>
                   <Link

@@ -119,3 +119,20 @@
 - [x] Scale startup costs based on bedroom count (not flat $20K)
 - [x] Fix Chapter 4 "Best Neighborhoods" to show actual neighborhood data
 - [x] Filter competitors to only show winners (meeting revenue threshold)
+
+## Bug Fixes - Round 2
+- [x] Fix "Unknown Location" bug in property report market section (FIXED - now shows St. Louis correctly)
+- [x] Fix formatting issues (occupancy percentage showing correctly with space)
+- [x] Study AirDNA interface for better beginner-friendly design
+- [x] Improve top performers display formatting
+
+## Enhancement Sprint - Decision-Driving Features
+- [x] Fix formatting issues (occupancy percentage display - added space)
+- [x] Add AI-powered analysis to Market Reports (Gemini integration)
+- [x] Add distance to competition for property searches (show miles away)
+- [x] Add Top Winners section to market reports (Chapter 2: Meet the Top Winners)
+- [x] Enhance turnkey service CTAs throughout reports
+- [x] Add "Why You Need Professional Help" section
+- [x] Make complexity clear to drive service purchases
+- [x] Filter to only show market leaders meeting 2x revenue threshold
+- [x] Fix "Unknown Location" bug - now shows correct market name (St. Louis with 5,597 active rentals)

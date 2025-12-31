@@ -134,6 +134,7 @@ interface ListingData {
   adr: number;
   occupancy: number;
   superhost?: boolean;
+  distance_meters?: number;
 }
 
 interface BedroomPerformance {

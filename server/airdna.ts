@@ -1184,7 +1184,7 @@ export async function getComprehensivePropertyReport(
     const searchTerm = cityMatch ? cityMatch[1].trim() : address.split(',')[1]?.trim() || address;
     
     if (searchTerm) {
-      const markets = await searchMarkets(searchTerm, 10);
+      const markets = await searchMarkets(searchTerm, 20); // Increased limit for better matching
       if (markets.length > 0) {
         console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
         // Find a market (not submarket) that matches the state
@@ -1193,10 +1193,25 @@ export async function getComprehensivePropertyReport(
         console.log('[Market Search] Looking for state:', state);
         
         // First try to find a parent market in the same state
-        const parentMarket = markets.find(m => 
+        let parentMarket = markets.find(m => 
           m.type === 'market' && 
           (!state || m.state?.toLowerCase().includes(state.toLowerCase()) || m.location_name?.includes(state))
         );
+        
+        // If no parent market found, try to find any market (not submarket) that matches the search term
+        if (!parentMarket) {
+          parentMarket = markets.find(m => m.type === 'market');
+        }
+        
+        // If still no market, use the first result regardless of type
+        if (!parentMarket && markets.length > 0) {
+          // Use the first market-type result, or first submarket if no markets
+          const anyMarket = markets.find(m => m.type === 'market') || markets[0];
+          if (anyMarket) {
+            parentMarket = anyMarket;
+          }
+        }
+        
         console.log('[Market Search] Found parent market:', parentMarket);
         
         if (parentMarket) {

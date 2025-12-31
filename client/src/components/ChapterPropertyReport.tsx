@@ -735,6 +735,11 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                               {comp.rating.toFixed(1)}
                             </span>
                           )}
+                          {comp.distance_meters && (
+                            <span className="ml-2 text-blue-600">
+                              • {(comp.distance_meters / 1609.34).toFixed(1)} mi away
+                            </span>
+                          )}
                         </p>
                         <p className="text-sm text-[#0F172A]/70">
                           {comp.occupancy > 80
@@ -760,8 +765,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
             <ThoughtProcess>
               We are not just providing a place to sleep; we are selling an <strong>experience</strong>.
               The most successful Airbnbs have a unique personality or a special feature that makes them memorable.
-              Our job is to create that for our property. Notice how the top performers in {property.city} achieve
-              {formatPercent(displayComps[0]?.occupancy || revenue_estimate.occupancy)} occupancy or higher.
+              Our job is to create that for our property. Notice how the top performers in {property.city} achieve {formatPercent(displayComps[0]?.occupancy || revenue_estimate.occupancy)} occupancy or higher.
             </ThoughtProcess>
           </ChapterSection>
 
@@ -864,8 +868,51 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               This entire process, from property selection to competitive analysis, is designed to give us the confidence to invest.
             </ThoughtProcess>
 
+            {/* Why You Need Professional Help Section */}
+            <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
+              <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 text-center">
+                What It Takes to Reach Top-Performer Status
+              </h3>
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-red-50 rounded-xl p-6 border border-red-100">
+                  <h4 className="font-semibold text-red-800 mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 bg-red-200 rounded-full flex items-center justify-center text-sm">!</span>
+                    Common Mistakes That Kill Profits
+                  </h4>
+                  <ul className="space-y-2 text-sm text-red-700">
+                    <li>• Wrong furniture choices that don't photograph well</li>
+                    <li>• Pricing too high during slow seasons</li>
+                    <li>• Slow response times that lose bookings</li>
+                    <li>• Poor listing descriptions and photos</li>
+                    <li>• Inconsistent cleaning standards</li>
+                  </ul>
+                </div>
+                <div className="bg-green-50 rounded-xl p-6 border border-green-100">
+                  <h4 className="font-semibold text-green-800 mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    What Top Performers Do Differently
+                  </h4>
+                  <ul className="space-y-2 text-sm text-green-700">
+                    <li>• Professional photography and staging</li>
+                    <li>• Dynamic pricing adjusted daily</li>
+                    <li>• Response times under 15 minutes</li>
+                    <li>• Optimized listings with A/B testing</li>
+                    <li>• Hotel-quality turnover processes</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="bg-[#0F172A]/5 rounded-xl p-6">
+                <p className="text-center text-[#0F172A]/80">
+                  <strong>The Reality:</strong> The difference between earning {formatCurrency(conservativeRevenue)} (average) 
+                  and {formatCurrency(optimisticRevenue)} (top performer) is 
+                  <span className="text-[#C9A962] font-bold"> {formatCurrency(optimisticRevenue - conservativeRevenue)}</span> per year. 
+                  That's the value of professional execution.
+                </p>
+              </div>
+            </div>
+
             {/* CTA Section */}
-            <div className="mt-12 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
+            <div className="mt-8 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
               <div className="max-w-2xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
                   <Award className="w-4 h-4" />
@@ -874,13 +921,26 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                 <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
                   Ready to Turn This Analysis Into Reality?
                 </h3>
-                <p className="text-white/70 mb-8">
-                  Our turnkey program handles everything — from lease negotiation to property setup to guest management.
-                  We've helped hundreds of investors launch profitable Airbnb businesses.
+                <p className="text-white/70 mb-6">
+                  You've seen the numbers. You understand the competition. Now let our team handle the execution.
                 </p>
+                <div className="grid md:grid-cols-3 gap-4 mb-8 text-left">
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Lease negotiation & property setup</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Professional design & furnishing</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
+                    <p className="text-sm">Full-service guest management</p>
+                  </div>
+                </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <button className="bg-[#C9A962] text-[#0F172A] px-8 py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-colors flex items-center justify-center gap-2">
-                    Schedule Free Consultation
+                    Schedule Free Strategy Call
                     <ArrowRight className="w-5 h-5" />
                   </button>
                   <Link
