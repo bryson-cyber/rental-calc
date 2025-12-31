@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
@@ -10,13 +12,13 @@ import {
   Sparkles,
   TrendingUp,
   MapPin,
-  HelpCircle,
-  MessageSquare
+  BarChart3,
+  DollarSign,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -24,12 +26,12 @@ interface ChatMessage {
 }
 
 const suggestedQuestions = [
-  "Is Austin better than Nashville for a 3BR investment?",
-  "What markets have the best ROI for beginners?",
-  "How do I evaluate seasonality risk?",
-  "What's the difference between ADR and RevPAR?",
-  "Which coastal markets have the best regulations?",
-  "How much should I budget for my first STR?",
+  "Is Austin better than Nashville for investing?",
+  "Which markets have the highest ROI potential?",
+  "Tell me about Miami's rental market",
+  "How does seasonality affect my revenue?",
+  "What's the best market for beginners?",
+  "Compare Denver and Boulder for me",
 ];
 
 function MessageBubble({ message }: { message: ChatMessage }) {
@@ -66,10 +68,10 @@ export default function AIAdvisor() {
 
   const advisorMutation = trpc.advanced.getInvestmentAdvice.useMutation();
 
-  // Fetch some market data for context
+  // Fetch market data for context - this will be automatically used by the advisor
   const { data: marketsData } = trpc.advanced.getCountryMarkets.useQuery({
     countryCode: 'us',
-    limit: 20,
+    limit: 50,
     sort_by: 'market_score',
     sort_direction: 'desc',
   });
@@ -92,9 +94,9 @@ export default function AIAdvisor() {
     setIsLoading(true);
 
     try {
-      // Prepare market context
+      // Prepare market context - AI will use this data to answer questions
       const marketContext = marketsData?.data?.markets ? {
-        markets: marketsData.data.markets.slice(0, 10).map(m => ({
+        markets: marketsData.data.markets.slice(0, 50).map(m => ({
           name: m.name,
           scores: m.scores,
           metrics: m.metrics,
@@ -155,8 +157,8 @@ export default function AIAdvisor() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-serif font-semibold">AI Investment Advisor</h1>
-              <p className="text-white/60 text-sm">Ask me anything about STR markets and investments</p>
+              <h1 className="text-2xl font-serif font-semibold">STR Investment Advisor</h1>
+              <p className="text-white/60 text-sm">AI-powered market analysis powered by real AirDNA data</p>
             </div>
           </div>
         </div>
@@ -170,55 +172,51 @@ export default function AIAdvisor() {
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#a88b4a] flex items-center justify-center mb-6">
               <Bot className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-serif font-semibold text-[#0F172A] mb-2">
-              How can I help you today?
+            <h2 className="text-3xl font-serif font-semibold text-[#0F172A] mb-2">
+              Ask me anything about STR markets
             </h2>
             <p className="text-[#0F172A]/60 max-w-md mb-8">
-              I'm your AI-powered short-term rental investment advisor. Ask me about markets, 
-              ROI calculations, pricing strategies, or anything else related to STR investing.
+              I analyze real AirDNA data to help you make smarter investment decisions. 
+              Compare markets, understand trends, and find your next opportunity.
             </p>
 
             {/* Suggested Questions */}
-            <div className="w-full max-w-2xl">
-              <p className="text-sm text-[#0F172A]/50 mb-3 flex items-center justify-center gap-2">
-                <HelpCircle className="w-4 h-4" />
-                Try asking:
-              </p>
+            <div className="w-full max-w-2xl mb-8">
+              <p className="text-sm text-[#0F172A]/50 mb-3 font-medium">Try asking:</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {suggestedQuestions.map((question, index) => (
                   <button
                     key={index}
                     onClick={() => handleSend(question)}
-                    className="text-left p-3 bg-white border border-[#0F172A]/10 rounded-lg hover:border-[#C9A962] hover:shadow-sm transition-all text-sm text-[#0F172A]/80"
+                    className="text-left p-3 bg-white border border-[#0F172A]/10 rounded-lg hover:border-[#C9A962] hover:shadow-md hover:bg-[#FAF9F6] transition-all text-sm text-[#0F172A]/80 font-medium"
                   >
-                    <MessageSquare className="w-4 h-4 inline-block mr-2 text-[#C9A962]" />
                     {question}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Feature Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 w-full max-w-2xl">
-              <Card className="bg-white/50">
+            {/* Capabilities */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
+              <Card className="bg-white/50 border-[#0F172A]/10">
                 <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-6 h-6 mx-auto mb-2 text-green-500" />
-                  <h3 className="font-medium text-[#0F172A] text-sm">Market Analysis</h3>
-                  <p className="text-xs text-[#0F172A]/60">Compare markets and find opportunities</p>
+                  <TrendingUp className="w-6 h-6 mx-auto mb-2 text-[#C9A962]" />
+                  <h3 className="font-medium text-[#0F172A] text-sm">Market Comparison</h3>
+                  <p className="text-xs text-[#0F172A]/60 mt-1">Compare any markets side-by-side</p>
                 </CardContent>
               </Card>
-              <Card className="bg-white/50">
+              <Card className="bg-white/50 border-[#0F172A]/10">
                 <CardContent className="p-4 text-center">
-                  <MapPin className="w-6 h-6 mx-auto mb-2 text-blue-500" />
-                  <h3 className="font-medium text-[#0F172A] text-sm">Location Insights</h3>
-                  <p className="text-xs text-[#0F172A]/60">Get data on 500+ US markets</p>
+                  <BarChart3 className="w-6 h-6 mx-auto mb-2 text-blue-500" />
+                  <h3 className="font-medium text-[#0F172A] text-sm">Real Data</h3>
+                  <p className="text-xs text-[#0F172A]/60 mt-1">500+ US markets analyzed</p>
                 </CardContent>
               </Card>
-              <Card className="bg-white/50">
+              <Card className="bg-white/50 border-[#0F172A]/10">
                 <CardContent className="p-4 text-center">
-                  <Sparkles className="w-6 h-6 mx-auto mb-2 text-[#C9A962]" />
-                  <h3 className="font-medium text-[#0F172A] text-sm">Expert Advice</h3>
-                  <p className="text-xs text-[#0F172A]/60">Personalized recommendations</p>
+                  <Zap className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
+                  <h3 className="font-medium text-[#0F172A] text-sm">Instant Insights</h3>
+                  <p className="text-xs text-[#0F172A]/60 mt-1">Get answers in seconds</p>
                 </CardContent>
               </Card>
             </div>
@@ -237,7 +235,7 @@ export default function AIAdvisor() {
                 <div className="bg-white border border-[#0F172A]/10 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-2 text-[#0F172A]/60">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Thinking...</span>
+                    <span className="text-sm">Analyzing markets...</span>
                   </div>
                 </div>
               </div>
@@ -251,28 +249,21 @@ export default function AIAdvisor() {
           <div className="flex gap-2">
             <Input
               ref={inputRef}
-              placeholder="Ask about markets, ROI, pricing strategies..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              placeholder="Ask about markets, ROI, seasonality, or anything STR-related..."
               disabled={isLoading}
-              className="flex-1 bg-white"
+              className="flex-1 rounded-full border-[#0F172A]/20 focus:border-[#C9A962] focus:ring-[#C9A962]/20"
             />
-            <Button 
+            <Button
               onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              className="bg-[#C9A962] hover:bg-[#b89a55] text-white px-6"
+              disabled={isLoading || !input.trim()}
+              className="rounded-full bg-[#C9A962] hover:bg-[#a88b4a] text-white px-6"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+              <Send className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-xs text-[#0F172A]/40 text-center mt-2">
-            AI responses are for informational purposes only. Always do your own research before investing.
-          </p>
         </div>
       </div>
     </div>

@@ -2369,9 +2369,13 @@ export async function getListingsInRadius(
     };
 
     if (options?.bedrooms) {
-      requestBody.filters = {
-        bedrooms: options.bedrooms,
-      };
+      requestBody.filters = [
+        {
+          field: 'bedrooms',
+          operator: 'eq',
+          value: options.bedrooms,
+        }
+      ];
     }
 
     if (options?.sort_by) {

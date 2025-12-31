@@ -22,7 +22,7 @@ import {
   getTopPerformers,
   calculateArbitrageFeasibility,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport, getInvestmentAdvice, compareMarketsForInvestment } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport, getInvestmentAdvice } from "./gemini";
 import type { ChatMessage } from "./gemini";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 
@@ -267,7 +267,7 @@ export const appRouter = router({
           }
 
           // Generate AI-enhanced analysis
-          const aiAnalysis = await generateEnhancedPropertyReport({
+          const aiAnalysis = await generateEnhancedPropertyReport(input.address, {
             property: {
               address: input.address,
               neighborhood,
@@ -371,7 +371,7 @@ export const appRouter = router({
           }
 
           // Generate AI-enhanced analysis
-          const aiAnalysis = await generateEnhancedMarketReport({
+          const aiAnalysis = await generateEnhancedMarketReport(report.market.name, {
             market: {
               name: report.market.name,
               listingCount: report.market.listing_count,
@@ -450,7 +450,7 @@ export const appRouter = router({
           }
 
           // Generate AI-enhanced analysis
-          const aiAnalysis = await generateEnhancedMarketReport({
+          const aiAnalysis = await generateEnhancedMarketReport(report.submarket.name, {
             market: {
               name: report.submarket.name,
               listingCount: report.submarket.listing_count,
@@ -1060,53 +1060,7 @@ export const appRouter = router({
         }
       }),
 
-    // Compare Markets for Investment
-    compareMarkets: publicProcedure
-      .input(z.object({
-        markets: z.array(z.object({
-          name: z.string(),
-          scores: z.object({
-            market_score: z.number(),
-            investability: z.number(),
-            rental_demand: z.number(),
-            revenue_growth: z.number(),
-            seasonality: z.number(),
-            regulation: z.number(),
-          }),
-          metrics: z.object({
-            occupancy: z.number(),
-            adr: z.number(),
-            revenue: z.number(),
-          }),
-          listing_count: z.number(),
-        })).min(2, "At least 2 markets required"),
-        investorProfile: z.object({
-          budget: z.string().optional(),
-          experience: z.enum(["beginner", "intermediate", "experienced"]).optional(),
-          goals: z.string().optional(),
-          riskTolerance: z.enum(["low", "medium", "high"]).optional(),
-        }).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        try {
-          const result = await compareMarketsForInvestment(
-            input.markets,
-            input.investorProfile
-          );
-          
-          return {
-            success: true,
-            data: result,
-          };
-        } catch (error) {
-          console.error("[Advanced] Error comparing markets:", error);
-          return {
-            success: false,
-            error: "Failed to compare markets",
-            data: null,
-          };
-        }
-      }),
+
   }),
 });
 

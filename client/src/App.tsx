@@ -14,7 +14,7 @@ import MarketMap from "./pages/MarketMap";
 import RadiusSearch from "./pages/RadiusSearch";
 import SeasonalityCalendar from "./pages/SeasonalityCalendar";
 import AIAdvisor from "./pages/AIAdvisor";
-import ArbitrageTool from "./pages/ArbitrageTool";
+
 import TopPerformers from "./pages/TopPerformers";
 
 function Router() {
@@ -31,7 +31,7 @@ function Router() {
       <Route path={"/radius"} component={RadiusSearch} />
       <Route path={"/seasonality"} component={SeasonalityCalendar} />
       <Route path={"/advisor"} component={AIAdvisor} />
-      <Route path={"/arbitrage"} component={ArbitrageTool} />
+
       <Route path={"/top-performers"} component={TopPerformers} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

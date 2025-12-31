@@ -130,7 +130,7 @@ function ListingCard({ listing, rank }: { listing: ListingData; rank: number }) 
             </div>
             <div className="text-center p-2 bg-purple-50 rounded-lg">
               <div className="text-lg font-bold text-purple-600">
-                {Math.round(listing.occupancy * 100)}%
+                {Math.round(listing.occupancy)}%
               </div>
               <div className="text-xs text-purple-700">Occupancy</div>
             </div>

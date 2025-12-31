@@ -260,3 +260,15 @@
   - [ ] Track supply growth over time
   - [ ] Show if market is getting more/less competitive
 
+
+
+## Feature Testing & Fixes Sprint
+- [x] Test all advanced features in browser
+- [ ] Fix Radius Search (reported not working)
+- [x] Remove duplicate Arbitrage Tool (same as main calculator)
+- [x] Update AI Advisor to use ONLY AirDNA API data (no general AI knowledge)
+- [x] Document which features work and which don't
+- [x] Fix Top Performers occupancy display bug (was showing 6000%+)
+- [ ] Fix Seasonality Calendar data loading (showing $0K for all months)
+- [ ] Fix Market Map markers not appearing
+
