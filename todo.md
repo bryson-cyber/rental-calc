@@ -219,3 +219,44 @@
 - [x] Sort by revenue/occupancy/revpar/overall
 - [x] Top recommendation highlight with "Top Pick" badge
 - [x] Comprehensive AirDNA API audit (saved to research/airdna-api-audit.md)
+
+
+## Advanced Features Sprint - AirDNA API Power Features
+- [x] Market Scorecard / Market Comparison Tool
+  - [x] Use /country/{countryCode}/markets endpoint
+  - [x] Filter/rank by Market Score, Investability, Rental Demand, Revenue Growth
+  - [x] Filter by Seasonality score, Regulation score, Listing count
+  - [x] Filter by Market type (coastal, urban_metro, mountains_lakes, suburban, rural, mid_size_city)
+- [x] Interactive Market Map
+  - [x] Use include_geoms: true for geometric boundaries
+  - [x] Clickable map to explore markets visually
+  - [x] Show submarkets within selected market
+- [x] Radius-Based Opportunity Finder
+  - [x] Use /listing/comps/area with custom radius (meters)
+  - [x] "Show all listings within X km of address"
+  - [x] Sort by Revenue, Proximity, ADR, Review count
+- [ ] Bounding Box Market Explorer
+  - [ ] Use bounding_box parameter with NE/SW coordinates
+  - [ ] Let users draw box on map to get listings/submarkets
+- [x] Seasonality Calendar / Heatmap
+  - [x] Use monthly occupancy, ADR, revenue data
+  - [x] Visual 12-month heatmap showing peak/shoulder/off-season
+  - [x] Pricing strategy recommendations by month
+- [x] AI Investment Advisor Chat
+  - [x] Gemini-powered chat feature
+  - [x] Answer questions like "Is Austin better than Nashville for 3BR?"
+  - [x] Context-aware responses using real market data
+- [x] Rental Arbitrage Feasibility Tool
+  - [x] Input: Address + monthly rent
+  - [x] Output: Projected STR revenue, break-even occupancy
+  - [x] Monthly profit/loss projection
+  - [x] Risk assessment (seasonality, regulation score)
+- [x] Top Performers Finder
+  - [x] Use /market/{marketId}/listings with sorting
+  - [x] Sort by Revenue, Occupancy, ADR, Review count
+  - [x] Filter: Superhosts, Professionally managed, Bedroom count, Rating, Instant book
+- [ ] Market Saturation Tracker
+  - [ ] Use /market/{marketId}/metrics/active_listings_count
+  - [ ] Track supply growth over time
+  - [ ] Show if market is getting more/less competitive
+

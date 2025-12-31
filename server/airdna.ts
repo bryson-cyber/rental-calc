@@ -2148,3 +2148,658 @@ async function getMarketMetrics(marketId: string): Promise<MarketMetrics | null>
     return null;
   }
 }
+
+
+// ============================================
+// COUNTRY-LEVEL MARKET DATA (Market Scorecard)
+// ============================================
+
+export interface CountryMarket {
+  id: string;
+  name: string;
+  market_type: string;
+  listing_count: number;
+  location: {
+    state?: string;
+    country?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  scores: {
+    market_score: number;
+    investability: number;
+    rental_demand: number;
+    revenue_growth: number;
+    seasonality: number;
+    regulation: number;
+  };
+  metrics: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
+  };
+  geometry?: {
+    type: string;
+    coordinates: number[][][] | number[][][][];
+  };
+}
+
+export interface CountryMarketsResponse {
+  markets: CountryMarket[];
+  total_count: number;
+}
+
+export async function getCountryMarkets(
+  countryCode: string = "us",
+  options?: {
+    limit?: number;
+    offset?: number;
+    market_type?: "coastal" | "urban_metro" | "mountains_lakes" | "suburban" | "rural" | "mid_size_city";
+    min_market_score?: number;
+    min_investability?: number;
+    min_rental_demand?: number;
+    min_revenue_growth?: number;
+    min_seasonality?: number;
+    min_regulation?: number;
+    sort_by?: "market_score" | "investability" | "rental_demand" | "revenue_growth" | "seasonality" | "regulation" | "listing_count" | "revenue";
+    sort_direction?: "asc" | "desc";
+    include_geoms?: boolean;
+  }
+): Promise<CountryMarketsResponse> {
+  try {
+    const filters: Record<string, unknown> = {};
+    
+    if (options?.market_type) {
+      filters.market_type = options.market_type;
+    }
+    if (options?.min_market_score) {
+      filters.min_market_score = options.min_market_score;
+    }
+    if (options?.min_investability) {
+      filters.min_investability = options.min_investability;
+    }
+    if (options?.min_rental_demand) {
+      filters.min_rental_demand = options.min_rental_demand;
+    }
+    if (options?.min_revenue_growth) {
+      filters.min_revenue_growth = options.min_revenue_growth;
+    }
+    if (options?.min_seasonality) {
+      filters.min_seasonality = options.min_seasonality;
+    }
+    if (options?.min_regulation) {
+      filters.min_regulation = options.min_regulation;
+    }
+
+    const requestBody: Record<string, unknown> = {
+      pagination: {
+        page_size: Math.min(options?.limit || 25, 25),
+        offset: options?.offset || 0,
+      },
+    };
+
+    if (Object.keys(filters).length > 0) {
+      requestBody.filters = filters;
+    }
+
+    if (options?.sort_by) {
+      requestBody.order_by = {
+        field: options.sort_by,
+        method: options.sort_direction || "desc",
+      };
+    }
+
+    if (options?.include_geoms) {
+      requestBody.include_geoms = true;
+    }
+
+    const response = await makeApiRequest<{
+      payload: {
+        markets: Array<{
+          id: string;
+          name: string;
+          market_type?: string;
+          listing_count?: number;
+          location?: {
+            state?: string;
+            country?: string;
+            lat?: number;
+            lng?: number;
+          };
+          metrics?: {
+            market_score?: number;
+            investability_score?: number;
+            rental_demand_score?: number;
+            revenue_growth_score?: number;
+            seasonality_score?: number;
+            regulation_score?: number;
+            booked?: number;
+            daily_rate?: number;
+            revenue?: number;
+            revpar?: number;
+          };
+          geom?: {
+            type: string;
+            coordinates: number[][][] | number[][][][];
+          };
+        }>;
+        page_info: {
+          total_count: number;
+        };
+      };
+    }>(`/country/${countryCode}/markets`, "POST", requestBody);
+
+    const markets: CountryMarket[] = response.payload.markets.map(m => ({
+      id: m.id,
+      name: m.name,
+      market_type: m.market_type || "unknown",
+      listing_count: m.listing_count || 0,
+      location: {
+        state: m.location?.state,
+        country: m.location?.country,
+        latitude: m.location?.lat,
+        longitude: m.location?.lng,
+      },
+      scores: {
+        market_score: m.metrics?.market_score || 0,
+        investability: m.metrics?.investability_score || 0,
+        rental_demand: m.metrics?.rental_demand_score || 0,
+        revenue_growth: m.metrics?.revenue_growth_score || 0,
+        seasonality: m.metrics?.seasonality_score || 0,
+        regulation: m.metrics?.regulation_score || 0,
+      },
+      metrics: {
+        occupancy: m.metrics?.booked || 0,
+        adr: m.metrics?.daily_rate || 0,
+        revenue: m.metrics?.revenue || 0,
+        revpar: m.metrics?.revpar || 0,
+      },
+      geometry: m.geom,
+    }));
+
+    return {
+      markets,
+      total_count: response.payload.page_info.total_count,
+    };
+  } catch (error) {
+    console.error("Error fetching country markets:", error);
+    return { markets: [], total_count: 0 };
+  }
+}
+
+// ============================================
+// RADIUS-BASED LISTING SEARCH
+// ============================================
+
+export interface RadiusSearchResult {
+  listings: ListingData[];
+  total_count: number;
+  center: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  radius_meters: number;
+}
+
+export async function getListingsInRadius(
+  latitude: number,
+  longitude: number,
+  radiusMeters: number = 2000,
+  options?: {
+    limit?: number;
+    offset?: number;
+    bedrooms?: number;
+    sort_by?: "revenue" | "adr" | "occupancy" | "rating" | "distance";
+    sort_direction?: "asc" | "desc";
+  }
+): Promise<RadiusSearchResult> {
+  try {
+    const requestBody: Record<string, unknown> = {
+      location: {
+        lat: latitude,
+        lng: longitude,
+      },
+      radius: radiusMeters,
+      pagination: {
+        page_size: Math.min(options?.limit || 25, 25),
+        offset: options?.offset || 0,
+      },
+    };
+
+    if (options?.bedrooms) {
+      requestBody.filters = {
+        bedrooms: options.bedrooms,
+      };
+    }
+
+    if (options?.sort_by) {
+      requestBody.order_by = {
+        field: options.sort_by === "distance" ? "distance" : options.sort_by,
+        method: options.sort_direction || (options.sort_by === "distance" ? "asc" : "desc"),
+      };
+    }
+
+    const response = await makeApiRequest<{
+      payload: {
+        listings: Array<{
+          property_id: string;
+          title: string;
+          airbnb_property_id?: string;
+          airbnb_property_url?: string;
+          bedrooms: number;
+          bathrooms: number;
+          accommodates: number;
+          property_type: string;
+          rating: number | null;
+          reviews: number;
+          revenue_ltm: number;
+          average_daily_rate_ltm: number;
+          occupancy_rate_ltm: number;
+          superhost?: boolean;
+          professionally_managed?: boolean;
+          location?: { lat?: number; lng?: number };
+          distance_meters?: number;
+        }>;
+        page_info: {
+          total_count: number;
+        };
+      };
+    }>("/listing/comps/area", "POST", requestBody);
+
+    const listings: ListingData[] = response.payload.listings.map(r => ({
+      id: r.property_id || '',
+      title: r.title || 'Untitled Listing',
+      airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
+      bedrooms: r.bedrooms || 0,
+      bathrooms: r.bathrooms || 0,
+      accommodates: r.accommodates || 0,
+      property_type: r.property_type || 'Unknown',
+      rating: r.rating ?? null,
+      reviews: r.reviews || 0,
+      annual_revenue: r.revenue_ltm || 0,
+      adr: r.average_daily_rate_ltm || 0,
+      occupancy: r.occupancy_rate_ltm || 0,
+      superhost: r.superhost ?? false,
+      professionally_managed: r.professionally_managed ?? false,
+      latitude: r.location?.lat ?? 0,
+      longitude: r.location?.lng ?? 0,
+      distance_meters: r.distance_meters,
+    }));
+
+    return {
+      listings,
+      total_count: response.payload.page_info.total_count,
+      center: {
+        latitude,
+        longitude,
+      },
+      radius_meters: radiusMeters,
+    };
+  } catch (error) {
+    console.error("Error fetching listings in radius:", error);
+    return {
+      listings: [],
+      total_count: 0,
+      center: { latitude, longitude },
+      radius_meters: radiusMeters,
+    };
+  }
+}
+
+// ============================================
+// SEASONALITY DATA
+// ============================================
+
+export interface SeasonalityData {
+  month: string;
+  month_name: string;
+  occupancy: number;
+  adr: number;
+  revenue: number;
+  season_type: "peak" | "shoulder" | "off";
+  pricing_recommendation?: string;
+}
+
+export async function getMarketSeasonality(
+  marketId: string
+): Promise<SeasonalityData[]> {
+  try {
+    // Fetch 12 months of historical data
+    const [occupancyData, adrData, revenueData] = await Promise.all([
+      getMarketMetric(marketId, "occupancy", 12),
+      getMarketMetric(marketId, "adr", 12),
+      getMarketMetric(marketId, "avg_revenue", 12),
+    ]);
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    // Calculate average values for season classification
+    const avgOccupancy = occupancyData.reduce((sum, d) => sum + d.value, 0) / occupancyData.length;
+    const avgRevenue = revenueData.reduce((sum, d) => sum + d.value, 0) / revenueData.length;
+
+    const seasonalityData: SeasonalityData[] = [];
+
+    for (let i = 0; i < 12; i++) {
+      const monthOccupancy = occupancyData[i]?.value || 0;
+      const monthAdr = adrData[i]?.value || 0;
+      const monthRevenue = revenueData[i]?.value || 0;
+
+      // Classify season based on occupancy and revenue
+      let seasonType: "peak" | "shoulder" | "off";
+      let pricingRecommendation: string;
+
+      if (monthOccupancy > avgOccupancy * 1.15 && monthRevenue > avgRevenue * 1.15) {
+        seasonType = "peak";
+        pricingRecommendation = "Premium pricing - high demand period. Consider 15-25% above base rate.";
+      } else if (monthOccupancy < avgOccupancy * 0.85 || monthRevenue < avgRevenue * 0.85) {
+        seasonType = "off";
+        pricingRecommendation = "Discount pricing - lower demand. Consider 10-20% below base rate or longer minimum stays.";
+      } else {
+        seasonType = "shoulder";
+        pricingRecommendation = "Standard pricing - moderate demand. Maintain base rates with flexibility.";
+      }
+
+      const date = occupancyData[i]?.date || '';
+      const monthIndex = date ? new Date(date).getMonth() : i;
+
+      seasonalityData.push({
+        month: date,
+        month_name: monthNames[monthIndex],
+        occupancy: monthOccupancy,
+        adr: monthAdr,
+        revenue: monthRevenue,
+        season_type: seasonType,
+        pricing_recommendation: pricingRecommendation,
+      });
+    }
+
+    return seasonalityData;
+  } catch (error) {
+    console.error("Error fetching market seasonality:", error);
+    return [];
+  }
+}
+
+// ============================================
+// TOP PERFORMERS FINDER
+// ============================================
+
+export interface TopPerformersOptions {
+  marketId: string;
+  limit?: number;
+  sort_by?: "revenue" | "adr" | "occupancy" | "rating" | "reviews";
+  filters?: {
+    superhost_only?: boolean;
+    professionally_managed?: boolean;
+    bedrooms?: number;
+    min_rating?: number;
+    instant_book?: boolean;
+  };
+}
+
+export async function getTopPerformers(
+  options: TopPerformersOptions
+): Promise<{ listings: ListingData[]; total_count: number }> {
+  try {
+    const requestBody: Record<string, unknown> = {
+      pagination: {
+        page_size: Math.min(options.limit || 25, 25),
+        offset: 0,
+      },
+      order_by: {
+        field: options.sort_by || "revenue",
+        method: "desc",
+      },
+    };
+
+    if (options.filters) {
+      const filters: Record<string, unknown> = {};
+      if (options.filters.superhost_only) filters.superhost = true;
+      if (options.filters.professionally_managed) filters.professionally_managed = true;
+      if (options.filters.bedrooms) filters.bedrooms = options.filters.bedrooms;
+      if (options.filters.min_rating) filters.min_rating = options.filters.min_rating;
+      if (options.filters.instant_book !== undefined) filters.instant_book = options.filters.instant_book;
+      
+      if (Object.keys(filters).length > 0) {
+        requestBody.filters = filters;
+      }
+    }
+
+    const response = await makeApiRequest<{
+      payload: {
+        listings: Array<{
+          property_id: string;
+          title: string;
+          airbnb_property_id?: string;
+          airbnb_property_url?: string;
+          bedrooms: number;
+          bathrooms: number;
+          accommodates: number;
+          property_type: string;
+          rating: number | null;
+          reviews: number;
+          revenue_ltm: number;
+          average_daily_rate_ltm: number;
+          occupancy_rate_ltm: number;
+          superhost?: boolean;
+          professionally_managed?: boolean;
+          host_size?: string;
+          location?: { lat?: number; lng?: number };
+          zipcode?: string;
+        }>;
+        page_info: {
+          total_count: number;
+        };
+      };
+    }>(`/market/${options.marketId}/listings`, "POST", requestBody);
+
+    const listings: ListingData[] = response.payload.listings.map(r => ({
+      id: r.property_id || '',
+      title: r.title || 'Untitled Listing',
+      airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
+      bedrooms: r.bedrooms || 0,
+      bathrooms: r.bathrooms || 0,
+      accommodates: r.accommodates || 0,
+      property_type: r.property_type || 'Unknown',
+      rating: r.rating ?? null,
+      reviews: r.reviews || 0,
+      annual_revenue: r.revenue_ltm || 0,
+      adr: r.average_daily_rate_ltm || 0,
+      occupancy: r.occupancy_rate_ltm || 0,
+      superhost: r.superhost ?? false,
+      professionally_managed: r.professionally_managed ?? false,
+      host_size: r.host_size || 'unknown',
+      latitude: r.location?.lat ?? 0,
+      longitude: r.location?.lng ?? 0,
+      zipcode: r.zipcode || '',
+    }));
+
+    return {
+      listings,
+      total_count: response.payload.page_info.total_count,
+    };
+  } catch (error) {
+    console.error("Error fetching top performers:", error);
+    return { listings: [], total_count: 0 };
+  }
+}
+
+// ============================================
+// RENTAL ARBITRAGE FEASIBILITY
+// ============================================
+
+export interface ArbitrageFeasibility {
+  property: {
+    address: string;
+    bedrooms: number;
+    bathrooms: number;
+    monthly_rent: number;
+  };
+  projections: {
+    annual_str_revenue: number;
+    annual_str_revenue_low: number;
+    annual_str_revenue_high: number;
+    monthly_str_revenue: number;
+    break_even_occupancy: number;
+    projected_monthly_profit: number;
+    projected_annual_profit: number;
+    roi_percentage: number;
+  };
+  risk_assessment: {
+    overall_risk: "low" | "medium" | "high";
+    seasonality_risk: "low" | "medium" | "high";
+    regulation_risk: "low" | "medium" | "high";
+    market_saturation: "low" | "medium" | "high";
+    factors: string[];
+  };
+  recommendation: string;
+  market_context: {
+    market_name: string;
+    avg_occupancy: number;
+    avg_adr: number;
+    avg_revenue: number;
+    seasonality_score?: number;
+    regulation_score?: number;
+  };
+}
+
+export async function calculateArbitrageFeasibility(
+  address: string,
+  monthlyRent: number,
+  bedrooms?: number,
+  bathrooms?: number
+): Promise<ArbitrageFeasibility | null> {
+  try {
+    // Get property estimate from Rentalizer
+    const estimate = await getRentalizerEstimate({
+      address,
+      bedrooms,
+      bathrooms,
+    });
+
+    if (!estimate) {
+      return null;
+    }
+
+    const annualRent = monthlyRent * 12;
+    const annualRevenue = estimate.estimates.annual_revenue;
+    const annualRevenueLow = estimate.estimates.annual_revenue_low;
+    const annualRevenueHigh = estimate.estimates.annual_revenue_high;
+    const monthlyRevenue = annualRevenue / 12;
+    const occupancyRate = estimate.estimates.occupancy_rate;
+    const adr = estimate.estimates.average_daily_rate;
+
+    // Calculate break-even occupancy (what occupancy needed to cover rent)
+    const daysPerYear = 365;
+    const breakEvenOccupancy = (annualRent / (adr * daysPerYear)) * 100;
+
+    // Calculate profit projections (assuming 30% operating expenses)
+    const operatingExpenses = annualRevenue * 0.30;
+    const annualProfit = annualRevenue - annualRent - operatingExpenses;
+    const monthlyProfit = annualProfit / 12;
+    const roiPercentage = ((annualProfit / annualRent) * 100);
+
+    // Risk assessment
+    const factors: string[] = [];
+    let seasonalityRisk: "low" | "medium" | "high" = "low";
+    let regulationRisk: "low" | "medium" | "high" = "medium"; // Default to medium without specific data
+    let saturationRisk: "low" | "medium" | "high" = "low";
+
+    // Assess seasonality risk based on monthly forecast variance
+    if (estimate.monthly_forecast.length > 0) {
+      const revenues = estimate.monthly_forecast.map(m => m.revenue);
+      const maxRev = Math.max(...revenues);
+      const minRev = Math.min(...revenues);
+      const variance = (maxRev - minRev) / maxRev;
+      
+      if (variance > 0.5) {
+        seasonalityRisk = "high";
+        factors.push("High seasonal variance - revenue drops significantly in off-season");
+      } else if (variance > 0.3) {
+        seasonalityRisk = "medium";
+        factors.push("Moderate seasonal variance - plan for slower months");
+      } else {
+        factors.push("Stable year-round demand");
+      }
+    }
+
+    // Assess profitability risk
+    if (annualProfit < 0) {
+      factors.push("WARNING: Projected annual loss - property may not be viable for arbitrage");
+    } else if (roiPercentage < 20) {
+      factors.push("Low ROI - consider negotiating lower rent or finding higher-revenue property");
+    } else if (roiPercentage > 50) {
+      factors.push("Strong ROI potential - property appears well-suited for arbitrage");
+    }
+
+    // Break-even assessment
+    if (breakEvenOccupancy > occupancyRate * 100) {
+      factors.push("WARNING: Break-even occupancy exceeds market average - high risk");
+    } else if (breakEvenOccupancy > 50) {
+      factors.push("Break-even requires above-average occupancy");
+    } else {
+      factors.push("Comfortable break-even point below market average");
+    }
+
+    // Overall risk calculation
+    let overallRisk: "low" | "medium" | "high";
+    if (annualProfit < 0 || breakEvenOccupancy > occupancyRate * 100) {
+      overallRisk = "high";
+    } else if (roiPercentage < 20 || seasonalityRisk === "high") {
+      overallRisk = "medium";
+    } else {
+      overallRisk = "low";
+    }
+
+    // Generate recommendation
+    let recommendation: string;
+    if (overallRisk === "high") {
+      recommendation = "This property presents significant risk for rental arbitrage. Consider negotiating a lower rent, finding a different property, or exploring other investment strategies.";
+    } else if (overallRisk === "medium") {
+      recommendation = "This property has moderate potential for rental arbitrage. Success will depend on achieving above-average occupancy and managing seasonal fluctuations carefully.";
+    } else {
+      recommendation = "This property shows strong potential for rental arbitrage. The numbers suggest a viable investment with good profit margins and manageable risk.";
+    }
+
+    return {
+      property: {
+        address: estimate.property.address,
+        bedrooms: estimate.property.bedrooms,
+        bathrooms: estimate.property.bathrooms,
+        monthly_rent: monthlyRent,
+      },
+      projections: {
+        annual_str_revenue: annualRevenue,
+        annual_str_revenue_low: annualRevenueLow,
+        annual_str_revenue_high: annualRevenueHigh,
+        monthly_str_revenue: monthlyRevenue,
+        break_even_occupancy: breakEvenOccupancy,
+        projected_monthly_profit: monthlyProfit,
+        projected_annual_profit: annualProfit,
+        roi_percentage: roiPercentage,
+      },
+      risk_assessment: {
+        overall_risk: overallRisk,
+        seasonality_risk: seasonalityRisk,
+        regulation_risk: regulationRisk,
+        market_saturation: saturationRisk,
+        factors,
+      },
+      recommendation,
+      market_context: {
+        market_name: estimate.property.address_lookup || address,
+        avg_occupancy: occupancyRate,
+        avg_adr: adr,
+        avg_revenue: annualRevenue,
+      },
+    };
+  } catch (error) {
+    console.error("Error calculating arbitrage feasibility:", error);
+    return null;
+  }
+}

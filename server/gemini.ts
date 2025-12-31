@@ -595,3 +595,193 @@ function getDefaultMarketReportAnalysis(
     riskAssessment: `Key risks include seasonal fluctuations in demand, potential regulatory changes affecting short-term rentals, and competition from new listings. ${profManagedPct >= 30 ? 'The high percentage of professional managers means you\'ll need to maintain high standards to compete.' : 'The market is still accessible to individual hosts who provide quality experiences.'}`
   };
 }
+
+
+// ============================================
+// AI INVESTMENT ADVISOR CHAT
+// ============================================
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface InvestmentAdvisorContext {
+  markets?: Array<{
+    name: string;
+    scores: {
+      market_score: number;
+      investability: number;
+      rental_demand: number;
+      revenue_growth: number;
+      seasonality: number;
+      regulation: number;
+    };
+    metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+    };
+    listing_count: number;
+  }>;
+  currentMarket?: string;
+}
+
+/**
+ * AI Investment Advisor - answers questions about STR markets and investments
+ */
+export async function getInvestmentAdvice(
+  question: string,
+  conversationHistory: ChatMessage[],
+  context?: InvestmentAdvisorContext
+): Promise<string> {
+  // Build context string from market data if available
+  let marketContext = '';
+  if (context?.markets && context.markets.length > 0) {
+    marketContext = `\n\nAvailable Market Data:\n${context.markets.map(m => 
+      `- ${m.name}: Score ${m.scores.market_score}/100, Investability ${m.scores.investability}, Demand ${m.scores.rental_demand}, Revenue Growth ${m.scores.revenue_growth}, Seasonality ${m.scores.seasonality}, Regulation ${m.scores.regulation}, Avg Revenue $${m.metrics.revenue.toLocaleString()}, Occupancy ${m.metrics.occupancy}%, ADR $${m.metrics.adr}, ${m.listing_count.toLocaleString()} listings`
+    ).join('\n')}`;
+  }
+
+  // Build conversation history
+  const historyText = conversationHistory.length > 0 
+    ? `\n\nConversation History:\n${conversationHistory.map(m => `${m.role === 'user' ? 'User' : 'Advisor'}: ${m.content}`).join('\n')}`
+    : '';
+
+  const prompt = `You are an expert short-term rental (STR) investment advisor with deep knowledge of Airbnb markets across the United States. You help investors make informed decisions about where and how to invest in vacation rentals.
+
+Your expertise includes:
+- Market analysis and comparison
+- Revenue projections and ROI calculations
+- Seasonality patterns and pricing strategies
+- Regulatory environments and risks
+- Property selection and optimization
+- Rental arbitrage feasibility
+
+Guidelines for your responses:
+1. Be conversational but professional
+2. Use data to support your recommendations when available
+3. Explain concepts in simple terms for beginners
+4. Provide specific, actionable advice
+5. Acknowledge limitations and risks
+6. If comparing markets, use the actual data provided
+7. Keep responses concise but informative (2-4 paragraphs max)
+8. Use bullet points for lists when helpful
+${marketContext}${historyText}
+
+User Question: ${question}
+
+Provide a helpful, data-driven response:`;
+
+  try {
+    const response = await callGemini(prompt);
+    return response.trim();
+  } catch (error) {
+    console.error('Error getting investment advice:', error);
+    return "I apologize, but I'm having trouble processing your question right now. Please try again in a moment, or feel free to rephrase your question.";
+  }
+}
+
+/**
+ * Compare two or more markets for investment potential
+ */
+export async function compareMarketsForInvestment(
+  markets: Array<{
+    name: string;
+    scores: {
+      market_score: number;
+      investability: number;
+      rental_demand: number;
+      revenue_growth: number;
+      seasonality: number;
+      regulation: number;
+    };
+    metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+    };
+    listing_count: number;
+  }>,
+  investorProfile?: {
+    budget?: string;
+    experience?: 'beginner' | 'intermediate' | 'experienced';
+    goals?: string;
+    riskTolerance?: 'low' | 'medium' | 'high';
+  }
+): Promise<{
+  comparison: string;
+  recommendation: string;
+  winner: string;
+  keyDifferences: string[];
+}> {
+  const marketDetails = markets.map(m => `
+${m.name}:
+- Overall Score: ${m.scores.market_score}/100
+- Investability: ${m.scores.investability}/100
+- Rental Demand: ${m.scores.rental_demand}/100
+- Revenue Growth: ${m.scores.revenue_growth}/100
+- Seasonality (stability): ${m.scores.seasonality}/100
+- Regulation (friendliness): ${m.scores.regulation}/100
+- Average Revenue: $${m.metrics.revenue.toLocaleString()}/year
+- Occupancy Rate: ${m.metrics.occupancy}%
+- Average Daily Rate: $${m.metrics.adr}
+- Total Listings: ${m.listing_count.toLocaleString()}`
+  ).join('\n');
+
+  const investorContext = investorProfile ? `
+Investor Profile:
+- Budget: ${investorProfile.budget || 'Not specified'}
+- Experience: ${investorProfile.experience || 'Not specified'}
+- Goals: ${investorProfile.goals || 'Not specified'}
+- Risk Tolerance: ${investorProfile.riskTolerance || 'Not specified'}` : '';
+
+  const prompt = `You are an expert STR investment advisor comparing markets for a potential investor.
+
+Markets to Compare:
+${marketDetails}
+${investorContext}
+
+Provide a comprehensive comparison in JSON format:
+
+1. COMPARISON: 2-3 paragraphs comparing these markets across key factors (revenue potential, stability, competition, growth, regulations). Be specific with numbers.
+
+2. RECOMMENDATION: 1-2 paragraphs with your recommendation and reasoning. Consider the investor profile if provided.
+
+3. WINNER: Name of the market you'd recommend (just the city name)
+
+4. KEY_DIFFERENCES: 4-5 bullet points highlighting the most important differences between these markets
+
+Respond in this exact JSON format:
+{
+  "comparison": "Your detailed comparison here",
+  "recommendation": "Your recommendation here",
+  "winner": "City Name",
+  "keyDifferences": ["difference1", "difference2", "difference3", "difference4"]
+}`;
+
+  try {
+    const response = await callGemini(prompt);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    // Fallback
+    const winner = markets.reduce((best, m) => m.scores.market_score > best.scores.market_score ? m : best);
+    return {
+      comparison: `Comparing ${markets.map(m => m.name).join(' vs ')}: Each market has unique strengths. ${winner.name} leads with a market score of ${winner.scores.market_score}/100.`,
+      recommendation: `Based on overall scores, ${winner.name} appears to be the stronger investment opportunity with better revenue potential and market fundamentals.`,
+      winner: winner.name,
+      keyDifferences: markets.map(m => `${m.name}: $${m.metrics.revenue.toLocaleString()}/yr avg revenue, ${m.metrics.occupancy}% occupancy`)
+    };
+  } catch (error) {
+    console.error('Error comparing markets:', error);
+    const winner = markets.reduce((best, m) => m.scores.market_score > best.scores.market_score ? m : best);
+    return {
+      comparison: `Unable to generate detailed comparison at this time.`,
+      recommendation: `Based on market scores, ${winner.name} has the highest overall rating.`,
+      winner: winner.name,
+      keyDifferences: markets.map(m => `${m.name}: Score ${m.scores.market_score}/100`)
+    };
+  }
+}

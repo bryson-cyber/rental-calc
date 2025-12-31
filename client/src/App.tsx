@@ -9,6 +9,13 @@ import MarketReport from "./pages/MarketReport";
 import MarketComparison from "./pages/MarketComparison";
 import PropertyComparison from "./pages/PropertyComparison";
 import SavedSearchesPage from "./pages/SavedSearchesPage";
+import MarketScorecard from "./pages/MarketScorecard";
+import MarketMap from "./pages/MarketMap";
+import RadiusSearch from "./pages/RadiusSearch";
+import SeasonalityCalendar from "./pages/SeasonalityCalendar";
+import AIAdvisor from "./pages/AIAdvisor";
+import ArbitrageTool from "./pages/ArbitrageTool";
+import TopPerformers from "./pages/TopPerformers";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +26,13 @@ function Router() {
       <Route path={"/compare"} component={MarketComparison} />
       <Route path={"/compare-properties"} component={PropertyComparison} />
       <Route path={"/saved"} component={SavedSearchesPage} />
+      <Route path={"/scorecard"} component={MarketScorecard} />
+      <Route path={"/map"} component={MarketMap} />
+      <Route path={"/radius"} component={RadiusSearch} />
+      <Route path={"/seasonality"} component={SeasonalityCalendar} />
+      <Route path={"/advisor"} component={AIAdvisor} />
+      <Route path={"/arbitrage"} component={ArbitrageTool} />
+      <Route path={"/top-performers"} component={TopPerformers} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

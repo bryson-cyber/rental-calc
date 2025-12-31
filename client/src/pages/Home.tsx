@@ -646,7 +646,7 @@ export default function RentalEstimator() {
                 <p className="text-sm text-[#0F172A]/60 font-sans mb-2">
                   Don't have a specific property yet?
                 </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6">
                   <a 
                     href="/market"
                     className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
@@ -664,6 +664,45 @@ export default function RentalEstimator() {
                     Compare Properties
                     <ChevronRight className="w-4 h-4" />
                   </a>
+                </div>
+
+                {/* Advanced Tools Grid */}
+                <div className="border-t border-[#0F172A]/10 pt-6">
+                  <p className="text-xs text-[#0F172A]/50 uppercase tracking-wider mb-4 text-center font-sans">Advanced Tools</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <a href="/scorecard" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <Award className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Market Scorecard</span>
+                    </a>
+                    <a href="/map" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <MapPin className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Market Map</span>
+                    </a>
+                    <a href="/radius" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <Target className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Radius Search</span>
+                    </a>
+                    <a href="/seasonality" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <Calendar className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Seasonality</span>
+                    </a>
+                    <a href="/advisor" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <Lightbulb className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">AI Advisor</span>
+                    </a>
+                    <a href="/arbitrage" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <DollarSign className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Arbitrage Tool</span>
+                    </a>
+                    <a href="/top-performers" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <TrendingUp className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Top Performers</span>
+                    </a>
+                    <a href="/saved" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
+                      <Star className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Saved Searches</span>
+                    </a>
+                  </div>
                 </div>
               </div>
             </motion.form>

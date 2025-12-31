@@ -16,8 +16,14 @@ import {
   getQualifyingCompetitors,
   enrichListingsWithImages,
   exploreSubmarketsWithMetrics,
+  getCountryMarkets,
+  getListingsInRadius,
+  getMarketSeasonality,
+  getTopPerformers,
+  calculateArbitrageFeasibility,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport, getInvestmentAdvice, compareMarketsForInvestment } from "./gemini";
+import type { ChatMessage } from "./gemini";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 
 // Input validation schema for rental estimate
@@ -805,6 +811,300 @@ export const appRouter = router({
         } catch (error) {
           console.error("[SavedSearches] Error updating:", error);
           return { success: false, error: "Failed to update saved search" };
+        }
+      }),
+  }),
+
+  // Advanced features router
+  advanced: router({
+    // Market Scorecard - Get all markets in a country with scores
+    getCountryMarkets: publicProcedure
+      .input(z.object({
+        countryCode: z.string().default("us"),
+        limit: z.number().int().min(1).max(25).default(25),
+        offset: z.number().int().min(0).default(0),
+        market_type: z.enum(["coastal", "urban_metro", "mountains_lakes", "suburban", "rural", "mid_size_city"]).optional(),
+        min_market_score: z.number().min(0).max(100).optional(),
+        min_investability: z.number().min(0).max(100).optional(),
+        min_rental_demand: z.number().min(0).max(100).optional(),
+        min_revenue_growth: z.number().min(0).max(100).optional(),
+        min_seasonality: z.number().min(0).max(100).optional(),
+        min_regulation: z.number().min(0).max(100).optional(),
+        sort_by: z.enum(["market_score", "investability", "rental_demand", "revenue_growth", "seasonality", "regulation", "listing_count", "revenue"]).default("market_score"),
+        sort_direction: z.enum(["asc", "desc"]).default("desc"),
+        include_geoms: z.boolean().default(false),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getCountryMarkets(input.countryCode, {
+            limit: input.limit,
+            offset: input.offset,
+            market_type: input.market_type,
+            min_market_score: input.min_market_score,
+            min_investability: input.min_investability,
+            min_rental_demand: input.min_rental_demand,
+            min_revenue_growth: input.min_revenue_growth,
+            min_seasonality: input.min_seasonality,
+            min_regulation: input.min_regulation,
+            sort_by: input.sort_by,
+            sort_direction: input.sort_direction,
+            include_geoms: input.include_geoms,
+          });
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error fetching country markets:", error);
+          return {
+            success: false,
+            error: "Failed to fetch markets",
+            data: null,
+          };
+        }
+      }),
+
+    // Radius-Based Opportunity Finder
+    getListingsInRadius: publicProcedure
+      .input(z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        radiusMeters: z.number().int().min(100).max(50000).default(2000),
+        limit: z.number().int().min(1).max(25).default(25),
+        offset: z.number().int().min(0).default(0),
+        bedrooms: z.number().int().min(0).max(20).optional(),
+        sort_by: z.enum(["revenue", "adr", "occupancy", "rating", "distance"]).default("revenue"),
+        sort_direction: z.enum(["asc", "desc"]).default("desc"),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getListingsInRadius(
+            input.latitude,
+            input.longitude,
+            input.radiusMeters,
+            {
+              limit: input.limit,
+              offset: input.offset,
+              bedrooms: input.bedrooms,
+              sort_by: input.sort_by,
+              sort_direction: input.sort_direction,
+            }
+          );
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error fetching listings in radius:", error);
+          return {
+            success: false,
+            error: "Failed to fetch listings",
+            data: null,
+          };
+        }
+      }),
+
+    // Seasonality Calendar / Heatmap
+    getMarketSeasonality: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getMarketSeasonality(input.marketId);
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error fetching seasonality:", error);
+          return {
+            success: false,
+            error: "Failed to fetch seasonality data",
+            data: null,
+          };
+        }
+      }),
+
+    // Top Performers Finder
+    getTopPerformers: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+        limit: z.number().int().min(1).max(25).default(25),
+        sort_by: z.enum(["revenue", "adr", "occupancy", "rating", "reviews"]).default("revenue"),
+        superhost_only: z.boolean().default(false),
+        professionally_managed: z.boolean().optional(),
+        bedrooms: z.number().int().min(0).max(20).optional(),
+        min_rating: z.number().min(0).max(5).optional(),
+        instant_book: z.boolean().optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getTopPerformers({
+            marketId: input.marketId,
+            limit: input.limit,
+            sort_by: input.sort_by,
+            filters: {
+              superhost_only: input.superhost_only,
+              professionally_managed: input.professionally_managed,
+              bedrooms: input.bedrooms,
+              min_rating: input.min_rating,
+              instant_book: input.instant_book,
+            },
+          });
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error fetching top performers:", error);
+          return {
+            success: false,
+            error: "Failed to fetch top performers",
+            data: null,
+          };
+        }
+      }),
+
+    // Rental Arbitrage Feasibility Tool
+    calculateArbitrageFeasibility: publicProcedure
+      .input(z.object({
+        address: z.string().min(1, "Address is required"),
+        monthlyRent: z.number().min(0, "Monthly rent is required"),
+        bedrooms: z.number().int().min(1).max(20).optional(),
+        bathrooms: z.number().min(0.5).max(20).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await calculateArbitrageFeasibility(
+            input.address,
+            input.monthlyRent,
+            input.bedrooms,
+            input.bathrooms
+          );
+          
+          if (!result) {
+            return {
+              success: false,
+              error: "Could not calculate feasibility for this address",
+              data: null,
+            };
+          }
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error calculating arbitrage feasibility:", error);
+          return {
+            success: false,
+            error: "Failed to calculate feasibility",
+            data: null,
+          };
+        }
+      }),
+
+    // AI Investment Advisor Chat
+    getInvestmentAdvice: publicProcedure
+      .input(z.object({
+        question: z.string().min(1, "Question is required"),
+        conversationHistory: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })).default([]),
+        marketContext: z.object({
+          markets: z.array(z.object({
+            name: z.string(),
+            scores: z.object({
+              market_score: z.number(),
+              investability: z.number(),
+              rental_demand: z.number(),
+              revenue_growth: z.number(),
+              seasonality: z.number(),
+              regulation: z.number(),
+            }),
+            metrics: z.object({
+              occupancy: z.number(),
+              adr: z.number(),
+              revenue: z.number(),
+            }),
+            listing_count: z.number(),
+          })).optional(),
+          currentMarket: z.string().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const response = await getInvestmentAdvice(
+            input.question,
+            input.conversationHistory as ChatMessage[],
+            input.marketContext
+          );
+          
+          return {
+            success: true,
+            data: { response },
+          };
+        } catch (error) {
+          console.error("[Advanced] Error getting investment advice:", error);
+          return {
+            success: false,
+            error: "Failed to get investment advice",
+            data: null,
+          };
+        }
+      }),
+
+    // Compare Markets for Investment
+    compareMarkets: publicProcedure
+      .input(z.object({
+        markets: z.array(z.object({
+          name: z.string(),
+          scores: z.object({
+            market_score: z.number(),
+            investability: z.number(),
+            rental_demand: z.number(),
+            revenue_growth: z.number(),
+            seasonality: z.number(),
+            regulation: z.number(),
+          }),
+          metrics: z.object({
+            occupancy: z.number(),
+            adr: z.number(),
+            revenue: z.number(),
+          }),
+          listing_count: z.number(),
+        })).min(2, "At least 2 markets required"),
+        investorProfile: z.object({
+          budget: z.string().optional(),
+          experience: z.enum(["beginner", "intermediate", "experienced"]).optional(),
+          goals: z.string().optional(),
+          riskTolerance: z.enum(["low", "medium", "high"]).optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await compareMarketsForInvestment(
+            input.markets,
+            input.investorProfile
+          );
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Advanced] Error comparing markets:", error);
+          return {
+            success: false,
+            error: "Failed to compare markets",
+            data: null,
+          };
         }
       }),
   }),
