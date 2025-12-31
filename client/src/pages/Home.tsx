@@ -17,45 +17,57 @@ import {
   Loader2, 
   Building, 
   Calendar,
-  DollarSign,
   Users,
   BedDouble,
-  Bath
+  Bath,
+  AlertCircle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { trpc } from '@/lib/trpc';
 
-// Mock data for demo (in production, this comes from your API)
-const mockEstimate = {
+// Type definitions based on API response
+interface MonthlyForecast {
+  month: string;
+  revenue: number;
+  adr: number;
+  occupancy: number;
+}
+
+interface Comp {
+  title: string;
+  bedrooms: number;
+  bathrooms: number;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  distance_meters: number;
+}
+
+interface EstimateData {
   property: {
-    address: "1321 15th St, Denver, CO 80202",
-    bedrooms: 3,
-    bathrooms: 2,
-    accommodates: 6
-  },
+    address: string;
+    address_lookup?: string;
+    zipcode?: string;
+    bedrooms: number;
+    bathrooms: number;
+    accommodates: number;
+    latitude?: number;
+    longitude?: number;
+  };
   estimates: {
-    annual_revenue: 128139,
-    annual_revenue_low: 122655,
-    annual_revenue_high: 133622,
-    average_daily_rate: 480,
-    occupancy_rate: 0.73,
-    currency_symbol: "$"
-  },
-  monthly_forecast: [
-    { month: "2024-05", revenue: 12330, adr: 439, occupancy: 0.91 },
-    { month: "2024-06", revenue: 13549, adr: 512, occupancy: 0.88 },
-    { month: "2024-07", revenue: 13266, adr: 555, occupancy: 0.77 },
-    { month: "2024-08", revenue: 11519, adr: 491, occupancy: 0.76 },
-    { month: "2024-09", revenue: 11185, adr: 422, occupancy: 0.88 },
-    { month: "2024-10", revenue: 10213, adr: 475, occupancy: 0.69 },
-    { month: "2024-11", revenue: 8044, adr: 406, occupancy: 0.66 },
-    { month: "2024-12", revenue: 6826, adr: 439, occupancy: 0.50 },
-  ],
-  comps: [
-    { title: "Downtown Luxury Loft", bedrooms: 3, bathrooms: 2.5, rating: 4.9, reviews: 148, annual_revenue: 116954, adr: 491, occupancy: 0.66, distance_meters: 885 },
-    { title: "Modern City Townhome", bedrooms: 3, bathrooms: 3, rating: 5.0, reviews: 109, annual_revenue: 71676, adr: 278, occupancy: 0.71, distance_meters: 1140 },
-    { title: "Spacious Urban Retreat", bedrooms: 3, bathrooms: 2.5, rating: 4.8, reviews: 60, annual_revenue: 61115, adr: 347, occupancy: 0.88, distance_meters: 930 },
-  ]
-};
+    annual_revenue: number;
+    annual_revenue_low: number;
+    annual_revenue_high: number;
+    average_daily_rate: number;
+    occupancy_rate: number;
+    currency?: string;
+    currency_symbol?: string;
+  };
+  monthly_forecast: MonthlyForecast[];
+  comps: Comp[];
+}
 
 // Animated counter component
 function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
@@ -100,7 +112,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
 
 export default function RentalEstimator() {
   const [step, setStep] = useState<'search' | 'lead' | 'results'>('search');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     address: '',
     bedrooms: 2,
@@ -112,11 +124,16 @@ export default function RentalEstimator() {
     email: '',
     phone: ''
   });
-  const [estimate, setEstimate] = useState<typeof mockEstimate | null>(null);
+  const [estimate, setEstimate] = useState<EstimateData | null>(null);
+
+  // tRPC mutations
+  const getEstimateMutation = trpc.rental.getEstimate.useMutation();
+  const submitLeadMutation = trpc.rental.submitLead.useMutation();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.address) return;
+    setError(null);
     setStep('lead');
   };
 
@@ -124,15 +141,42 @@ export default function RentalEstimator() {
     e.preventDefault();
     if (!leadData.email || !leadData.name) return;
     
-    setLoading(true);
+    setError(null);
     
-    // Simulate API call
-    setTimeout(() => {
-      setEstimate(mockEstimate);
-      setLoading(false);
-      setStep('results');
-    }, 1500);
+    try {
+      // Submit lead first
+      await submitLeadMutation.mutateAsync({
+        name: leadData.name,
+        email: leadData.email,
+        phone: leadData.phone || undefined,
+        address: formData.address,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        accommodates: formData.accommodates,
+      });
+
+      // Then get the estimate from AirDNA
+      const result = await getEstimateMutation.mutateAsync({
+        address: formData.address,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        accommodates: formData.accommodates,
+        currency: 'usd',
+      });
+
+      if (result.success && result.data) {
+        setEstimate(result.data);
+        setStep('results');
+      } else {
+        setError(result.error || 'Failed to get rental estimate. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error getting estimate:', err);
+      setError('An error occurred while fetching your estimate. Please try again.');
+    }
   };
+
+  const isLoading = getEstimateMutation.isPending || submitLeadMutation.isPending;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -361,6 +405,14 @@ export default function RentalEstimator() {
                   </div>
                 </div>
               </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700 font-sans">{error}</p>
+                </div>
+              )}
               
               {/* Lead Form */}
               <form onSubmit={handleLeadSubmit}>
@@ -408,10 +460,10 @@ export default function RentalEstimator() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading || !leadData.email || !leadData.name}
+                  disabled={isLoading || !leadData.email || !leadData.name}
                   className="w-full bg-[#166534] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#14532d] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 font-sans"
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       Analyzing Property...
@@ -428,7 +480,8 @@ export default function RentalEstimator() {
               {/* Back Button */}
               <button
                 onClick={() => setStep('search')}
-                className="w-full text-[#0F172A]/50 text-sm mt-6 hover:text-[#0F172A] transition-colors font-sans flex items-center justify-center gap-1"
+                disabled={isLoading}
+                className="w-full text-[#0F172A]/50 text-sm mt-6 hover:text-[#0F172A] transition-colors font-sans flex items-center justify-center gap-1 disabled:opacity-50"
               >
                 ← Back to search
               </button>
@@ -442,7 +495,9 @@ export default function RentalEstimator() {
   // Results View
   if (step === 'results' && estimate) {
     const { property, estimates, monthly_forecast, comps } = estimate;
-    const maxRevenue = Math.max(...monthly_forecast.map(m => m.revenue));
+    const maxRevenue = monthly_forecast.length > 0 
+      ? Math.max(...monthly_forecast.map(m => m.revenue))
+      : 10000;
     
     return (
       <div 
@@ -515,102 +570,106 @@ export default function RentalEstimator() {
           </motion.div>
           
           {/* Monthly Forecast */}
-          <motion.div 
-            className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <h2 className="text-xl md:text-2xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-[#C9A962]" />
-              </div>
-              Monthly Revenue Forecast
-            </h2>
-            <div className="space-y-4">
-              {monthly_forecast.map((month, idx) => (
-                <motion.div 
-                  key={idx} 
-                  className="flex items-center gap-4"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 + idx * 0.05 }}
-                >
-                  <div className="w-12 text-sm font-medium text-[#0F172A]/60 font-sans">{formatMonth(month.month)}</div>
-                  <div className="flex-1">
-                    <div className="h-10 bg-[#0F172A]/5 rounded-lg overflow-hidden">
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-lg flex items-center justify-end pr-4"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(month.revenue / maxRevenue) * 100}%` }}
-                        transition={{ duration: 0.8, delay: 0.5 + idx * 0.05, ease: "easeOut" }}
-                      >
-                        <span className="text-white text-sm font-medium font-sans">{formatCurrency(month.revenue)}</span>
-                      </motion.div>
+          {monthly_forecast.length > 0 && (
+            <motion.div 
+              className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <h2 className="text-xl md:text-2xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#C9A962]" />
+                </div>
+                Monthly Revenue Forecast
+              </h2>
+              <div className="space-y-4">
+                {monthly_forecast.map((month, idx) => (
+                  <motion.div 
+                    key={idx} 
+                    className="flex items-center gap-4"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4, delay: 0.3 + idx * 0.05 }}
+                  >
+                    <div className="w-12 text-sm font-medium text-[#0F172A]/60 font-sans">{formatMonth(month.month)}</div>
+                    <div className="flex-1">
+                      <div className="h-10 bg-[#0F172A]/5 rounded-lg overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-lg flex items-center justify-end pr-4"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(month.revenue / maxRevenue) * 100}%` }}
+                          transition={{ duration: 0.8, delay: 0.5 + idx * 0.05, ease: "easeOut" }}
+                        >
+                          <span className="text-white text-sm font-medium font-sans">{formatCurrency(month.revenue)}</span>
+                        </motion.div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="w-16 text-right text-sm text-[#0F172A]/50 font-sans">{formatPercent(month.occupancy)}</div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+                    <div className="w-16 text-right text-sm text-[#0F172A]/50 font-sans">{formatPercent(month.occupancy)}</div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
           
           {/* Comparable Properties */}
-          <motion.div 
-            className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <h2 className="text-xl md:text-2xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center">
-                <Building className="w-5 h-5 text-[#C9A962]" />
-              </div>
-              Comparable Properties ({comps.length})
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {comps.map((comp, idx) => (
-                <motion.div 
-                  key={idx} 
-                  className="border border-[#0F172A]/10 rounded-xl p-5 hover:shadow-lg hover:border-[#C9A962]/30 transition-all duration-300 group"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 + idx * 0.1 }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-[#0F172A] font-sans line-clamp-2 group-hover:text-[#C9A962] transition-colors">{comp.title}</h3>
-                    {comp.rating && (
-                      <div className="flex items-center gap-1 text-sm bg-[#C9A962]/10 px-2 py-1 rounded-full">
-                        <Star className="w-3.5 h-3.5 text-[#C9A962] fill-[#C9A962]" />
-                        <span className="font-medium text-[#0F172A] font-sans">{comp.rating}</span>
+          {comps.length > 0 && (
+            <motion.div 
+              className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <h2 className="text-xl md:text-2xl font-serif font-semibold text-[#0F172A] mb-6 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center">
+                  <Building className="w-5 h-5 text-[#C9A962]" />
+                </div>
+                Comparable Properties ({comps.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {comps.slice(0, 6).map((comp, idx) => (
+                  <motion.div 
+                    key={idx} 
+                    className="border border-[#0F172A]/10 rounded-xl p-5 hover:shadow-lg hover:border-[#C9A962]/30 transition-all duration-300 group"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.4 + idx * 0.1 }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-semibold text-[#0F172A] font-sans line-clamp-2 group-hover:text-[#C9A962] transition-colors">{comp.title}</h3>
+                      {comp.rating && (
+                        <div className="flex items-center gap-1 text-sm bg-[#C9A962]/10 px-2 py-1 rounded-full">
+                          <Star className="w-3.5 h-3.5 text-[#C9A962] fill-[#C9A962]" />
+                          <span className="font-medium text-[#0F172A] font-sans">{comp.rating}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-[#0F172A]/50 mb-4 font-sans">
+                      {comp.bedrooms} BR • {comp.bathrooms} BA • {Math.round(comp.distance_meters)}m away
+                    </div>
+                    
+                    {/* Gold divider */}
+                    <div className="h-px bg-gradient-to-r from-transparent via-[#C9A962]/30 to-transparent mb-4" />
+                    
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">Revenue</div>
+                        <div className="font-semibold text-[#166534] text-sm font-sans">{formatCurrency(comp.annual_revenue)}</div>
                       </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-[#0F172A]/50 mb-4 font-sans">
-                    {comp.bedrooms} BR • {comp.bathrooms} BA • {Math.round(comp.distance_meters)}m away
-                  </div>
-                  
-                  {/* Gold divider */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-[#C9A962]/30 to-transparent mb-4" />
-                  
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">Revenue</div>
-                      <div className="font-semibold text-[#166534] text-sm font-sans">{formatCurrency(comp.annual_revenue)}</div>
+                      <div>
+                        <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">ADR</div>
+                        <div className="font-semibold text-[#0F172A] text-sm font-sans">{formatCurrency(comp.adr)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">Occ.</div>
+                        <div className="font-semibold text-[#C9A962] text-sm font-sans">{formatPercent(comp.occupancy)}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">ADR</div>
-                      <div className="font-semibold text-[#0F172A] text-sm font-sans">{formatCurrency(comp.adr)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-[#0F172A]/50 font-sans uppercase tracking-wider mb-1">Occ.</div>
-                      <div className="font-semibold text-[#C9A962] text-sm font-sans">{formatPercent(comp.occupancy)}</div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
           
           {/* CTA Section */}
           <motion.div 
@@ -641,7 +700,9 @@ export default function RentalEstimator() {
               onClick={() => {
                 setStep('search');
                 setEstimate(null);
+                setError(null);
                 setFormData({ address: '', bedrooms: 2, bathrooms: 1, accommodates: 4 });
+                setLeadData({ name: '', email: '', phone: '' });
               }}
               className="text-[#0F172A]/60 hover:text-[#C9A962] font-medium font-sans transition-colors inline-flex items-center gap-2"
             >
