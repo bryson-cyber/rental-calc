@@ -16,6 +16,7 @@ import {
   enrichListingsWithImages,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
+import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -222,8 +223,35 @@ export const appRouter = router({
             qualifyingCompetitors = competitorData.qualifyingListings;
             console.log(`[getAIPropertyReport] Found ${allCompetitors.length} same-bedroom listings, ${qualifyingCompetitors.length} meet threshold`);
             
-            // Note: AirDNA Enterprise API v2 does not provide listing images
-            // The UI will show "View on Airbnb" buttons for listings without images
+            // Scrape images from Airbnb for top competitors
+            const airbnbUrls = allCompetitors
+              .slice(0, 15)
+              .map(c => c.airbnb_url)
+              .filter((url): url is string => !!url);
+            
+            if (airbnbUrls.length > 0) {
+              console.log(`[getAIPropertyReport] Scraping images for ${airbnbUrls.length} listings...`);
+              try {
+                const imageMap = await batchScrapeAirbnbImages(airbnbUrls, 3);
+                console.log(`[getAIPropertyReport] Successfully scraped images for ${imageMap.size} listings`);
+                
+                // Update competitors with scraped images
+                allCompetitors = allCompetitors.map(c => {
+                  if (c.airbnb_url && imageMap.has(c.airbnb_url)) {
+                    const images = imageMap.get(c.airbnb_url)!;
+                    return {
+                      ...c,
+                      image_url: images[0],
+                      images: images,
+                    };
+                  }
+                  return c;
+                });
+              } catch (error) {
+                console.error('[getAIPropertyReport] Image scraping failed:', error);
+                // Continue without images - UI will show fallback
+              }
+            }
           } else {
             // Fallback to original comps if no market ID
             allCompetitors = baseReport.same_bedroom_comps || [];

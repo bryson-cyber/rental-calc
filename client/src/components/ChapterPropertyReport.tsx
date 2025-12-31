@@ -290,13 +290,32 @@ function ThoughtProcess({ children }: { children: React.ReactNode }) {
 
 export default function ChapterPropertyReport({ data, onBack, clientName }: ChapterPropertyReportProps) {
   const [activeChapter, setActiveChapter] = useState(1);
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
+  const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
 
   const { property, revenue_estimate, monthly_forecast, comps, same_bedroom_comps, market_data, bedroom_performance, revenue_percentiles } = data;
 
   // Use same-bedroom comps if available, otherwise use all comps
   // Sort by annual revenue descending to show top performers first
   const allComps = same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps;
-  const displayComps = [...allComps].sort((a, b) => b.annual_revenue - a.annual_revenue);
+  
+  // Get unique property types for filter dropdown
+  const propertyTypes = Array.from(new Set(allComps.map(c => c.property_type).filter(Boolean))) as string[];
+  
+  // Apply filters and sort
+  const displayComps = [...allComps]
+    .filter(comp => {
+      // Property type filter
+      if (propertyTypeFilter !== 'all' && comp.property_type !== propertyTypeFilter) {
+        return false;
+      }
+      // Rating filter
+      if (minRatingFilter > 0 && (comp.rating === null || comp.rating < minRatingFilter)) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.annual_revenue - a.annual_revenue);
 
   const chapters = [
     { id: 1, title: 'The Property' },
@@ -710,6 +729,55 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               Here are the top-earning {property.bedrooms}-bedroom properties in {property.city}. 
               Properties marked with <span className="text-green-600 font-semibold">"✓ Meets 2x Rule"</span> are earning above the {formatCurrency(minRevenueThreshold)} threshold.
             </p>
+
+            {/* Filter Controls */}
+            <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-[#0F172A]/70">Property Type:</label>
+                  <select
+                    value={propertyTypeFilter}
+                    onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-[#0F172A]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A962]/50"
+                  >
+                    <option value="all">All Types</option>
+                    {propertyTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-[#0F172A]/70">Min Rating:</label>
+                  <select
+                    value={minRatingFilter}
+                    onChange={(e) => setMinRatingFilter(Number(e.target.value))}
+                    className="px-3 py-1.5 rounded-lg border border-[#0F172A]/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A962]/50"
+                  >
+                    <option value={0}>Any Rating</option>
+                    <option value={3}>3+ Stars</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                    <option value={4.8}>4.8+ Stars</option>
+                  </select>
+                </div>
+                {(propertyTypeFilter !== 'all' || minRatingFilter > 0) && (
+                  <button
+                    onClick={() => {
+                      setPropertyTypeFilter('all');
+                      setMinRatingFilter(0);
+                    }}
+                    className="text-sm text-[#C9A962] hover:text-[#C9A962]/80 font-medium"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              {(propertyTypeFilter !== 'all' || minRatingFilter > 0) && (
+                <p className="text-xs text-[#0F172A]/50 mt-2">
+                  Showing {displayComps.length} of {allComps.length} listings
+                </p>
+              )}
+            </div>
 
             {/* Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

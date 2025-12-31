@@ -194,3 +194,13 @@
 - [x] Add graceful error handling for invalid market IDs (user-friendly error messages)
 - [x] Add detailed logging for image fetching to debug photo display issue
 - [x] Listing photos: AirDNA Enterprise API v2 does not provide images - using "View on Airbnb" button as fallback
+
+
+## Feature Sprint - Image Scraping & Filtering
+- [x] Build Airbnb image scraping service to fetch listing thumbnails from URLs
+- [x] Integrate scraped images into competitor cards display
+- [x] Add property type filter dropdown (house, apartment, townhouse, etc.)
+- [x] Add minimum rating filter dropdown (Any, 3+, 4+, 4.5+, 4.8+ stars)
+- [x] Apply filters to competitor listings in real-time
+- [x] Test image scraping with various Airbnb URLs
+- [x] Test filtering functionality across different markets
