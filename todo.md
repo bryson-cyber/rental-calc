@@ -299,3 +299,26 @@
 - [ ] Clean up unused pages/routes
   - [ ] Remove or consolidate duplicate tools
   - [ ] Streamline navigation
+
+
+## Homepage Rebuild - AI-First Experience
+- [x] Redesign homepage with single smart input bar
+  - [x] One input field: "Enter an address, Zillow link, zip code, or city"
+  - [x] AI chat interface as primary UI element
+  - [x] Remove separate tool tabs/links
+- [x] Build input type detection logic
+  - [x] Detect Zillow URL (contains zillow.com)
+  - [x] Detect zip code (5 digits)
+  - [x] Detect address (contains street number + name)
+  - [x] Detect city/market name (everything else)
+- [x] Add property-level AI queries
+  - [x] Parse property addresses from user questions
+  - [x] Fetch property data from AirDNA Rentalizer API
+  - [x] Combine property + market data in AI responses
+  - [x] Handle "Analyze 123 Main St, Austin TX" type queries
+- [x] Connect smart input to appropriate responses
+  - [x] Property address → Property Report + Market insights
+  - [x] Zillow link → Parse address → Property analysis
+  - [x] Zip code → Market analysis for that zip
+  - [x] City name → Market analysis for that city
+  - [x] Natural language question → AI Advisor response

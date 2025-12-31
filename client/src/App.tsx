@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import SmartHome from "./pages/SmartHome";
 import MarketReport from "./pages/MarketReport";
 import MarketComparison from "./pages/MarketComparison";
 import PropertyComparison from "./pages/PropertyComparison";
@@ -21,7 +22,8 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={SmartHome} />
+      <Route path={"/property"} component={Home} />
       <Route path={"/market"} component={MarketReport} />
       <Route path={"/compare"} component={MarketComparison} />
       <Route path={"/compare-properties"} component={PropertyComparison} />

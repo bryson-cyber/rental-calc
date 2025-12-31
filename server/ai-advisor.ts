@@ -10,7 +10,8 @@ import {
   searchMarkets, 
   getComprehensiveMarketReport,
   getTopPerformers,
-  getMarketSeasonality
+  getMarketSeasonality,
+  getRentalizerEstimate
 } from './airdna';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -84,6 +85,28 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["market_id"]
+      }
+    },
+    {
+      name: "analyze_property",
+      description: "Analyze a specific property address to get rental revenue estimates, comparable properties, and investment potential. Use this when the user provides a property address.",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The full property address (e.g., '123 Main St, Austin, TX 78701')"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms (optional, will be estimated if not provided)"
+          },
+          bathrooms: {
+            type: "number",
+            description: "Number of bathrooms (optional, will be estimated if not provided)"
+          }
+        },
+        required: ["address"]
       }
     }
   ]
@@ -180,6 +203,55 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         };
       }
       
+      case "analyze_property": {
+        const address = args.address as string;
+        const bedrooms = (args.bedrooms as number) || 2;
+        const bathrooms = (args.bathrooms as number) || 1;
+        const accommodates = bedrooms * 2;
+        
+        const estimate = await getRentalizerEstimate({
+          address,
+          bedrooms,
+          bathrooms,
+          accommodates,
+          currency: 'usd'
+        });
+        
+        if (!estimate) {
+          return { error: `Could not analyze property at "${address}". Please check the address is valid.` };
+        }
+        
+        return {
+          property: {
+            address: estimate.property.address,
+            bedrooms: estimate.property.bedrooms,
+            bathrooms: estimate.property.bathrooms,
+            accommodates: estimate.property.accommodates
+          },
+          estimates: {
+            annual_revenue: estimate.estimates.annual_revenue,
+            annual_revenue_low: estimate.estimates.annual_revenue_low,
+            annual_revenue_high: estimate.estimates.annual_revenue_high,
+            average_daily_rate: estimate.estimates.average_daily_rate,
+            occupancy_rate: estimate.estimates.occupancy_rate
+          },
+          monthly_forecast: estimate.monthly_forecast.slice(0, 6).map(m => ({
+            month: m.month,
+            revenue: m.revenue,
+            occupancy: m.occupancy
+          })),
+          comparable_properties: estimate.comps.slice(0, 5).map(c => ({
+            title: c.title,
+            bedrooms: c.bedrooms,
+            annual_revenue: c.annual_revenue,
+            adr: c.adr,
+            occupancy: c.occupancy,
+            rating: c.rating,
+            reviews: c.reviews
+          }))
+        };
+      }
+      
       default:
         return { error: `Unknown function: ${functionName}` };
     }
@@ -221,12 +293,20 @@ IMPORTANT RULES:
 1. ALWAYS use the provided functions to fetch real data - NEVER make up numbers or statistics
 2. When a user asks about a market, FIRST use search_market to find the market ID, THEN use get_market_data to get details
 3. For market comparisons, fetch data for EACH market mentioned
-4. Be conversational but always back up claims with actual data
-5. If you can't find data for a market, say so clearly
-6. Format currency values nicely (e.g., $45,000 not 45000)
-7. Explain what metrics mean in simple terms
+4. When a user provides a property address, use analyze_property to get rental estimates
+5. Be conversational but always back up claims with actual data
+6. If you can't find data for a market or property, say so clearly
+7. Format currency values nicely (e.g., $45,000 not 45000)
+8. Explain what metrics mean in simple terms
 
-When comparing markets, consider:
+For PROPERTY ANALYSIS (when user provides an address):
+- Use analyze_property function with the full address
+- Report the estimated annual revenue (and range)
+- Explain the occupancy rate and ADR
+- Mention comparable properties in the area
+- Provide investment insights based on the data
+
+For MARKET ANALYSIS:
 - Revenue potential (average annual revenue)
 - Occupancy rates (higher = more consistent bookings)
 - ADR (Average Daily Rate - how much per night)
