@@ -84,9 +84,15 @@ interface PropertyEstimate {
   comps: Comp[];
 }
 
+interface HistoricalDataPoint {
+  date: string;
+  value: number;
+}
+
 interface MarketData {
-  market_id: string;
-  market_name: string;
+  id: string;
+  name: string;
+  listing_count: number;
   metrics: {
     occupancy: number;
     adr: number;
@@ -94,11 +100,36 @@ interface MarketData {
     revpar: number;
     active_listings: number;
   };
-  historical_trends?: {
-    occupancy: Array<{ date: string; value: number }>;
-    adr: Array<{ date: string; value: number }>;
-    revenue: Array<{ date: string; value: number }>;
+  historical: {
+    occupancy: HistoricalDataPoint[];
+    adr: HistoricalDataPoint[];
+    revenue: HistoricalDataPoint[];
+    revpar: HistoricalDataPoint[];
+    active_listings: HistoricalDataPoint[];
   };
+}
+
+interface SubmarketData {
+  id: string;
+  name: string;
+  listing_count: number;
+}
+
+interface ListingData {
+  id: string;
+  title: string;
+  airbnb_url?: string;
+  image_url?: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  superhost?: boolean;
 }
 
 interface BedroomPerformance {
@@ -106,24 +137,34 @@ interface BedroomPerformance {
   occupancy: number;
   adr: number;
   revenue: number;
+  listing_count: number;
 }
 
 interface ComprehensiveReportData {
   property: PropertyEstimate;
   market: MarketData | null;
-  bedroom_performance: BedroomPerformance[] | null;
+  submarkets: SubmarketData[];
+  same_bedroom_comps: ListingData[];
+  bedroom_performance: BedroomPerformance[];
   generated_at: string;
 }
 
 // Animated counter component
 function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
-  const [displayValue, setDisplayValue] = useState(0);
+  const [displayValue, setDisplayValue] = useState(value || 0);
   const animationRef = useRef<number | null>(null);
+  const prevValueRef = useRef(value);
   
   useEffect(() => {
+    // If value hasn't changed or is 0, don't animate
+    if (value === prevValueRef.current || value === 0) {
+      setDisplayValue(value);
+      return;
+    }
+    
     const duration = 1500;
     const startTime = Date.now();
-    const startValue = 0;
+    const startValue = prevValueRef.current || 0;
     
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -136,6 +177,8 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
       
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
+      } else {
+        prevValueRef.current = value;
       }
     };
     
@@ -148,9 +191,12 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: { value: number; pr
     };
   }, [value]);
   
+  // If value is provided and displayValue is still 0, show value immediately
+  const showValue = displayValue === 0 && value > 0 ? value : displayValue;
+  
   return (
     <span>
-      {prefix}{displayValue.toLocaleString()}{suffix}
+      {prefix}{showValue.toLocaleString()}{suffix}
     </span>
   );
 }
@@ -244,7 +290,7 @@ export default function RentalEstimator() {
   const [reportData, setReportData] = useState<ComprehensiveReportData | null>(null);
 
   // tRPC mutations
-  const getReportMutation = trpc.rental.getComprehensiveReport.useMutation();
+  const getReportMutation = trpc.rental.getPropertyReport.useMutation();
   const submitLeadMutation = trpc.rental.submitLead.useMutation();
 
   const handleZillowParse = () => {
@@ -297,8 +343,7 @@ export default function RentalEstimator() {
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
         accommodates: formData.accommodates,
-        currency: 'usd',
-        zillow_url: zillowUrl || undefined,
+
       });
 
       if (result.success && result.data) {
@@ -734,7 +779,7 @@ export default function RentalEstimator() {
 
   // Results View
   if (step === 'results' && reportData) {
-    const { property, market, bedroom_performance } = reportData;
+    const { property, market, bedroom_performance, submarkets } = reportData;
     const { property: propertyInfo, estimates, monthly_forecast, comps } = property;
     
     const maxRevenue = Math.max(...monthly_forecast.map(m => m.revenue));
@@ -766,7 +811,7 @@ export default function RentalEstimator() {
               </h1>
               <p className="text-white/60 font-sans">
                 {propertyInfo.bedrooms} Bedrooms • {propertyInfo.bathrooms} Bathrooms • Sleeps {propertyInfo.accommodates}
-                {market && ` • ${market.market_name} Market`}
+                {market && ` • ${market.name} Market`}
               </p>
             </motion.div>
           </div>
@@ -917,7 +962,7 @@ export default function RentalEstimator() {
           )}
 
           {/* Section 3: Market Overview */}
-          {market && (
+          {market && market.metrics && (
             <motion.section
               className="mb-8"
               initial={{ opacity: 0, y: 20 }}
@@ -928,7 +973,7 @@ export default function RentalEstimator() {
                 <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-6 text-[#0F172A]">
                   <h2 className="text-xl font-serif font-semibold flex items-center gap-3">
                     <BarChart3 className="w-6 h-6" />
-                    {market.market_name} Market Overview
+                    {market.name} Market Overview
                   </h2>
                 </div>
                 <div className="p-6 md:p-8">
@@ -947,17 +992,137 @@ export default function RentalEstimator() {
                     </div>
                     <div className="p-4 bg-[#f8f7f4] rounded-xl text-center">
                       <div className="text-xs text-[#0F172A]/50 mb-1 font-sans uppercase tracking-wider">Active Listings</div>
-                      <div className="text-2xl font-serif font-bold text-[#0F172A]">{market.metrics.active_listings.toLocaleString()}</div>
+                      <div className="text-2xl font-serif font-bold text-[#0F172A]">{(market.metrics.active_listings || 0).toLocaleString()}</div>
                     </div>
                   </div>
                   
-                  <div className="p-4 bg-[#0F172A]/5 rounded-xl">
+                  <div className="p-4 bg-[#0F172A]/5 rounded-xl mb-6">
                     <p className="text-[#0F172A]/70 font-sans text-sm leading-relaxed">
-                      The {market.market_name} market has <strong>{market.metrics.active_listings.toLocaleString()}</strong> active short-term rentals 
+                      The {market.name} market has <strong>{(market.metrics.active_listings || 0).toLocaleString()}</strong> active short-term rentals 
                       with an average occupancy of <strong>{formatPercent(market.metrics.occupancy)}</strong>. 
                       Properties in this market earn an average of <strong>{formatCurrency(market.metrics.revenue)}</strong> annually.
                     </p>
                   </div>
+
+                  {/* Historical Trends */}
+                  {market.historical && market.historical.adr.length > 0 && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">12-Month Market Trends</h3>
+                      
+                      {/* ADR Trend */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Average Daily Rate (ADR)</span>
+                          <span className="text-sm font-medium text-[#C9A962] font-sans">
+                            {(() => {
+                              const data = market.historical.adr;
+                              if (data.length < 2) return 'N/A';
+                              const first = data[0]?.value || 0;
+                              const last = data[data.length - 1]?.value || 0;
+                              const change = first > 0 ? ((last - first) / first * 100) : 0;
+                              return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% YoY`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-end gap-1 h-16">
+                          {market.historical.adr.map((point, idx) => {
+                            const maxVal = Math.max(...market.historical.adr.map(p => p.value));
+                            const height = maxVal > 0 ? (point.value / maxVal * 100) : 0;
+                            return (
+                              <div key={idx} className="flex-1 group relative">
+                                <div 
+                                  className="bg-gradient-to-t from-[#C9A962] to-[#d4b876] rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                  {formatCurrency(point.value)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.adr[0]?.date?.substring(0, 7) || ''}</span>
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.adr[market.historical.adr.length - 1]?.date?.substring(0, 7) || ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Occupancy Trend */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Occupancy Rate</span>
+                          <span className="text-sm font-medium text-[#166534] font-sans">
+                            {(() => {
+                              const data = market.historical.occupancy;
+                              if (data.length < 2) return 'N/A';
+                              const first = data[0]?.value || 0;
+                              const last = data[data.length - 1]?.value || 0;
+                              const change = last - first;
+                              return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% pts YoY`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-end gap-1 h-16">
+                          {market.historical.occupancy.map((point, idx) => {
+                            const height = point.value; // Occupancy is already a percentage
+                            return (
+                              <div key={idx} className="flex-1 group relative">
+                                <div 
+                                  className="bg-gradient-to-t from-[#166534] to-[#15803d] rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                  {formatPercent(point.value)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.occupancy[0]?.date?.substring(0, 7) || ''}</span>
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.occupancy[market.historical.occupancy.length - 1]?.date?.substring(0, 7) || ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Supply Trend (Active Listings) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-[#0F172A]/60 font-sans">Active Listings (Supply)</span>
+                          <span className="text-sm font-medium text-[#0F172A] font-sans">
+                            {(() => {
+                              const data = market.historical.active_listings;
+                              if (data.length < 2) return 'N/A';
+                              const first = data[0]?.value || 0;
+                              const last = data[data.length - 1]?.value || 0;
+                              const change = first > 0 ? ((last - first) / first * 100) : 0;
+                              return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% YoY`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-end gap-1 h-16">
+                          {market.historical.active_listings.map((point, idx) => {
+                            const maxVal = Math.max(...market.historical.active_listings.map(p => p.value));
+                            const height = maxVal > 0 ? (point.value / maxVal * 100) : 0;
+                            return (
+                              <div key={idx} className="flex-1 group relative">
+                                <div 
+                                  className="bg-gradient-to-t from-[#0F172A] to-[#334155] rounded-t transition-all hover:opacity-80"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                  {(point.value || 0).toLocaleString()} listings
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.active_listings[0]?.date?.substring(0, 7) || ''}</span>
+                          <span className="text-xs text-[#0F172A]/40 font-sans">{market.historical.active_listings[market.historical.active_listings.length - 1]?.date?.substring(0, 7) || ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.section>
@@ -1016,7 +1181,51 @@ export default function RentalEstimator() {
             </motion.section>
           )}
 
-          {/* Section 5: Comparable Properties */}
+          {/* Section 5: Best Neighborhoods */}
+          {submarkets && submarkets.length > 0 && (
+            <motion.section
+              className="mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.38 }}
+            >
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-[#166534] to-[#15803d] p-6 text-white">
+                  <h2 className="text-xl font-serif font-semibold flex items-center gap-3">
+                    <MapPin className="w-6 h-6" />
+                    Neighborhoods in This Market
+                  </h2>
+                  <p className="text-white/70 text-sm mt-1 font-sans">
+                    {submarkets.length} submarkets available for analysis
+                  </p>
+                </div>
+                <div className="p-6 md:p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {submarkets.slice(0, 12).map((submarket, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-4 border border-[#0F172A]/10 rounded-xl hover:border-[#166534]/30 hover:shadow-md transition-all duration-300"
+                      >
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-[#0F172A] font-sans text-sm line-clamp-1">{submarket.name}</h3>
+                          <span className="text-xs text-[#0F172A]/50 font-sans bg-[#0F172A]/5 px-2 py-1 rounded-full">
+                            {(submarket.listing_count || 0).toLocaleString()} listings
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {submarkets.length > 12 && (
+                    <p className="text-sm text-[#0F172A]/50 mt-4 text-center font-sans">
+                      + {submarkets.length - 12} more neighborhoods
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* Section 6: Comparable Properties */}
           {comps.length > 0 && (
             <motion.section
               className="mb-8"

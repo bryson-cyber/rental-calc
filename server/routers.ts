@@ -7,9 +7,9 @@ import { getDb } from "./db";
 import { leads } from "../drizzle/schema";
 import { 
   getRentalizerEstimate, 
-  searchMarket, 
-  getComprehensiveMarketData,
-  getBedroomPerformance 
+  searchMarkets,
+  getComprehensivePropertyReport,
+  getComprehensiveMarketReport,
 } from "./airdna";
 
 // Input validation schema for rental estimate
@@ -33,14 +33,23 @@ const leadInputSchema = z.object({
   zillow_url: z.string().optional(),
 });
 
-// Comprehensive report schema
-const comprehensiveReportInputSchema = z.object({
+// Property report schema
+const propertyReportInputSchema = z.object({
   address: z.string().min(1, "Address is required"),
   bedrooms: z.number().int().min(1).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
-  currency: z.string().default("usd"),
-  zillow_url: z.string().optional(),
+});
+
+// Market search schema
+const marketSearchInputSchema = z.object({
+  searchTerm: z.string().min(1, "Search term is required"),
+  limit: z.number().int().min(1).max(20).default(10),
+});
+
+// Market report schema
+const marketReportInputSchema = z.object({
+  marketId: z.string().min(1, "Market ID is required"),
 });
 
 export const appRouter = router({
@@ -58,7 +67,27 @@ export const appRouter = router({
 
   // Rental estimate router
   rental: router({
-    // Get rental estimate from AirDNA API
+    // Search for markets (for autocomplete)
+    searchMarkets: publicProcedure
+      .input(marketSearchInputSchema)
+      .query(async ({ input }) => {
+        try {
+          const results = await searchMarkets(input.searchTerm, input.limit);
+          return {
+            success: true,
+            data: results,
+          };
+        } catch (error) {
+          console.error("[Rental] Error searching markets:", error);
+          return {
+            success: false,
+            error: "Failed to search markets",
+            data: [],
+          };
+        }
+      }),
+
+    // Get basic rental estimate from AirDNA API
     getEstimate: publicProcedure
       .input(rentalizerInputSchema)
       .mutation(async ({ input }) => {
@@ -86,61 +115,63 @@ export const appRouter = router({
         }
       }),
 
-    // Get comprehensive report with market data
-    getComprehensiveReport: publicProcedure
-      .input(comprehensiveReportInputSchema)
+    // Get comprehensive property report with market data
+    getPropertyReport: publicProcedure
+      .input(propertyReportInputSchema)
       .mutation(async ({ input }) => {
         try {
-          // Step 1: Get property estimate
-          const estimate = await getRentalizerEstimate({
-            address: input.address,
-            bedrooms: input.bedrooms,
-            bathrooms: input.bathrooms,
-            accommodates: input.accommodates,
-            currency: input.currency,
-          });
+          const report = await getComprehensivePropertyReport(
+            input.address,
+            input.bedrooms,
+            input.bathrooms,
+            input.accommodates
+          );
 
-          // Step 2: Search for the market based on property location
-          let marketData = null;
-          let bedroomPerformance = null;
-          
-          try {
-            const markets = await searchMarket(
-              undefined,
-              estimate.property.latitude,
-              estimate.property.longitude
-            );
-
-            if (markets.length > 0) {
-              const primaryMarket = markets[0];
-              
-              // Step 3: Get comprehensive market metrics
-              marketData = await getComprehensiveMarketData(
-                primaryMarket.id,
-                input.bedrooms
-              );
-              marketData.market_name = primaryMarket.name;
-
-              // Step 4: Get bedroom performance for the market
-              bedroomPerformance = await getBedroomPerformance(primaryMarket.id);
-            }
-          } catch (marketError) {
-            console.error("[Rental] Error fetching market data:", marketError);
-            // Continue without market data - property estimate is still valuable
+          if (!report) {
+            return {
+              success: false,
+              error: "Could not generate property report for this address",
+              data: null,
+            };
           }
 
           return {
             success: true,
-            data: {
-              property: estimate,
-              market: marketData,
-              bedroom_performance: bedroomPerformance,
-              generated_at: new Date().toISOString(),
-            },
+            data: report,
           };
         } catch (error) {
-          console.error("[Rental] Error getting comprehensive report:", error);
-          const message = error instanceof Error ? error.message : "Failed to generate report";
+          console.error("[Rental] Error getting property report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate property report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get comprehensive market report
+    getMarketReport: publicProcedure
+      .input(marketReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          const report = await getComprehensiveMarketReport(input.marketId);
+
+          if (!report) {
+            return {
+              success: false,
+              error: "Could not generate market report",
+              data: null,
+            };
+          }
+
+          return {
+            success: true,
+            data: report,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting market report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate market report";
           return {
             success: false,
             error: message,

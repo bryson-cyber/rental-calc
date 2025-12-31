@@ -35,6 +35,8 @@ interface Comp {
   airbnb_url?: string;
   image_url?: string;
   property_type?: string;
+  last_review_date?: string;
+  amenities?: string[];
 }
 
 export interface RentalizerResponse {
@@ -47,6 +49,8 @@ export interface RentalizerResponse {
     accommodates: number;
     latitude: number;
     longitude: number;
+    market_id?: string;
+    submarket_id?: string;
   };
   estimates: {
     annual_revenue: number;
@@ -81,14 +85,21 @@ export interface MarketMetrics {
   booking_lead_time?: number;
 }
 
+export interface HistoricalDataPoint {
+  date: string;
+  value: number;
+}
+
 export interface MarketData {
   market_id: string;
   market_name: string;
   metrics: MarketMetrics;
   historical_trends?: {
-    occupancy: Array<{ date: string; value: number }>;
-    adr: Array<{ date: string; value: number }>;
-    revenue: Array<{ date: string; value: number }>;
+    occupancy: HistoricalDataPoint[];
+    adr: HistoricalDataPoint[];
+    revenue: HistoricalDataPoint[];
+    revpar: HistoricalDataPoint[];
+    active_listings: HistoricalDataPoint[];
   };
   bedroom_performance?: Array<{
     bedrooms: number;
@@ -99,650 +110,834 @@ export interface MarketData {
   }>;
 }
 
-// ============================================
-// API RESPONSE INTERFACES
-// ============================================
-
-interface AirDNAApiResponse {
-  payload?: {
-    details?: {
-      address: string;
-      address_lookup: string;
-      zipcode: string;
-      accommodates: number;
-      bedrooms: number;
-      bathrooms: number;
-    };
-    location?: {
-      lat: number;
-      lng: number;
-    };
-    stats?: {
-      currency: string;
-      currency_symbol: string;
-      property_value: number | null;
-      future?: {
-        summary?: {
-          adr: number;
-          occupancy: number;
-          revenue: number;
-          revenue_upper: number;
-          revenue_lower: number;
-        };
-        metrics?: Array<{
-          date: string;
-          occupancy: number;
-          adr: number;
-          revenue: number;
-          revenue_lower?: number;
-          revenue_upper?: number;
-        }>;
-      };
-      historical?: {
-        summary?: {
-          revenue_valuation?: {
-            monthly_pct_change: number;
-            yearly_pct_change: number;
-          };
-        };
-        metrics?: Array<{
-          date: string;
-          revenue_valuation: number;
-        }>;
-      };
-    };
-    comps?: Array<{
-      property_id: string;
-      details: {
-        title: string;
-        accommodates: number;
-        bedrooms: number;
-        bathrooms: number;
-        reviews: number;
-        rating: number | null;
-        images: string[];
-        property_type: string;
-        listing_type: string;
-      };
-      location: {
-        lat: number;
-        lng: number;
-      };
-      distance_meters: number;
-      platforms: {
-        airbnb_property_id: string | null;
-        airbnb_property_url: string | null;
-        vrbo_property_id: string | null;
-        vrbo_property_url: string | null;
-      };
-      stats: {
-        summary: {
-          occupancy: number;
-          days_available: number;
-          days_reserved: number;
-          adr: number;
-          revenue: number;
-          revenue_potential: number;
-        };
-        metrics: Array<{
-          date: string;
-          occupancy: number;
-          adr: number;
-          revenue: number;
-          revenue_potential: number;
-        }>;
-      };
-    }>;
-  };
-  status?: {
-    type: string;
-    response_id: string;
-    message: string;
-  };
-  error?: {
-    type: string;
-    message: string;
+export interface SubmarketData {
+  id: string;
+  name: string;
+  listing_count: number;
+  metrics?: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
   };
 }
 
-interface MarketSearchResponse {
-  payload?: {
-    page_info: {
-      page_size: number;
-      offset: number;
-    };
-    results: Array<{
-      id: string;
-      name: string;
-      type: "market" | "submarket";
-      listing_count: number;
-      location_name: string;
-      location: {
-        state?: string;
-        country?: string;
-        country_code?: string;
-      };
-    }>;
-  };
-  status?: {
-    type: string;
-    response_id: string;
-    message: string;
-  };
-  error?: {
-    type: string;
-    message: string;
-  };
-}
-
-interface MarketMetricsResponse {
-  payload?: {
-    market_id?: string;
-    metrics: Array<{
-      date: string;
-      // Different endpoints return different field names
-      value?: number;
-      occupancy_rate?: number;
-      adr?: number;
-      revenue?: number;
-      revpar?: number;
-      active_listings?: number;
-      listing_count?: number;
-    }>;
-    summary?: {
-      avg: number;
-      min: number;
-      max: number;
-    };
-    monthly_pct_change?: number;
-    yearly_pct_change?: number;
-  };
-  status?: {
-    type: string;
-    response_id?: string;
-    message: string;
-  };
-  error?: {
-    type: string;
-    message: string;
-  };
+export interface ListingData {
+  id: string;
+  title: string;
+  airbnb_url?: string;
+  image_url?: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  last_review_date?: string;
+  amenities?: string[];
+  superhost?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 // ============================================
-// HELPER FUNCTIONS
+// API HELPER FUNCTIONS
 // ============================================
 
-async function makeAirDNARequest<T>(
+async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" = "POST",
-  body?: object
+  body?: Record<string, unknown>
 ): Promise<T> {
-  const apiKey = ENV.airdnaApiKey;
-  
-  if (!apiKey) {
-    throw new Error("AirDNA API key is not configured");
-  }
-
   const url = `${AIRDNA_API_BASE}${endpoint}`;
-  console.log(`[AirDNA] ${method} ${endpoint}`);
-
+  
   const options: RequestInit = {
     method,
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      "Authorization": `Bearer ${ENV.airdnaApiKey}`,
       "Content-Type": "application/json",
     },
   };
-
+  
   if (body && method === "POST") {
     options.body = JSON.stringify(body);
   }
-
+  
   const response = await fetch(url, options);
-
+  
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error("[AirDNA] API error:", response.status, errorData);
-    
-    if (response.status === 401) {
-      throw new Error("Invalid AirDNA API credentials");
-    }
-    if (response.status === 403) {
-      throw new Error("AirDNA API access denied - check your subscription");
-    }
-    if (response.status === 400) {
-      throw new Error(errorData?.error?.message || "Invalid request to AirDNA API");
-    }
-    
-    throw new Error(`AirDNA API error: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`AirDNA API error (${response.status}): ${errorText}`);
   }
-
+  
   return response.json();
-}
-
-// ============================================
-// RENTALIZER (PROPERTY VALUATION)
-// ============================================
-
-export async function getRentalizerEstimate(
-  request: RentalizerRequest
-): Promise<RentalizerResponse> {
-  console.log("[AirDNA] Making rentalizer request for address:", request.address);
-
-  const data = await makeAirDNARequest<AirDNAApiResponse>("/rentalizer/estimate", "POST", {
-    address: request.address,
-    bedrooms: request.bedrooms ?? null,
-    bathrooms: request.bathrooms ?? null,
-    accommodates: request.accommodates ?? null,
-    currency: request.currency ?? "usd",
-  });
-  
-  console.log("[AirDNA] Response status:", data.status?.type);
-  
-  if (data.status?.type !== "success" || !data.payload) {
-    throw new Error(data.status?.message || "Failed to get rental estimate");
-  }
-
-  const { details, location, stats, comps } = data.payload;
-  
-  if (!details || !stats) {
-    throw new Error("Incomplete data received from AirDNA API");
-  }
-
-  // Extract future estimates from the correct structure
-  const futureStats = stats.future;
-  const futureSummary = futureStats?.summary;
-  
-  const annualRevenue = futureSummary?.revenue ?? 0;
-  const adr = futureSummary?.adr ?? 0;
-  const occupancy = futureSummary?.occupancy ?? 0;
-  
-  // Revenue range from the API response
-  const revenueLow = futureSummary?.revenue_lower ?? Math.round(annualRevenue * 0.85);
-  const revenueHigh = futureSummary?.revenue_upper ?? Math.round(annualRevenue * 1.15);
-
-  // Get monthly forecast from future metrics
-  const futureMetrics = futureStats?.metrics ?? [];
-  
-  const monthlyForecast: MonthlyForecast[] = futureMetrics.slice(0, 12).map((m) => ({
-    month: m.date,
-    revenue: Math.round(m.revenue),
-    adr: Math.round(m.adr),
-    occupancy: m.occupancy,
-  }));
-
-  // Transform comps data - filter to Airbnb only and sort by revenue
-  const transformedComps: Comp[] = (comps ?? [])
-    .filter(comp => comp.platforms?.airbnb_property_id) // Airbnb only
-    .sort((a, b) => (b.stats?.summary?.revenue ?? 0) - (a.stats?.summary?.revenue ?? 0))
-    .slice(0, 10)
-    .map((comp) => ({
-      title: comp.details?.title || "Comparable Property",
-      bedrooms: comp.details?.bedrooms ?? 0,
-      bathrooms: comp.details?.bathrooms ?? 0,
-      rating: comp.details?.rating ?? null,
-      reviews: comp.details?.reviews ?? 0,
-      annual_revenue: Math.round(comp.stats?.summary?.revenue ?? 0),
-      adr: Math.round(comp.stats?.summary?.adr ?? 0),
-      occupancy: comp.stats?.summary?.occupancy ?? 0,
-      distance_meters: Math.round(comp.distance_meters ?? 0),
-      airbnb_listing_id: comp.platforms?.airbnb_property_id ?? undefined,
-      airbnb_url: comp.platforms?.airbnb_property_url ?? undefined,
-      image_url: comp.details?.images?.[0] ?? undefined,
-      property_type: comp.details?.property_type ?? undefined,
-    }));
-
-  console.log("[AirDNA] Parsed data - Revenue:", annualRevenue, "ADR:", adr, "Occupancy:", occupancy);
-  console.log("[AirDNA] Monthly forecast count:", monthlyForecast.length);
-  console.log("[AirDNA] Comps count:", transformedComps.length);
-
-  return {
-    property: {
-      address: details.address,
-      address_lookup: details.address_lookup,
-      zipcode: details.zipcode,
-      bedrooms: details.bedrooms ?? request.bedrooms ?? 2,
-      bathrooms: details.bathrooms ?? request.bathrooms ?? 1,
-      accommodates: details.accommodates ?? request.accommodates ?? 4,
-      latitude: location?.lat ?? 0,
-      longitude: location?.lng ?? 0,
-    },
-    estimates: {
-      annual_revenue: Math.round(annualRevenue),
-      annual_revenue_low: Math.round(revenueLow),
-      annual_revenue_high: Math.round(revenueHigh),
-      average_daily_rate: Math.round(adr),
-      occupancy_rate: occupancy,
-      currency: stats.currency,
-      currency_symbol: stats.currency_symbol,
-    },
-    monthly_forecast: monthlyForecast,
-    comps: transformedComps,
-  };
 }
 
 // ============================================
 // MARKET SEARCH
 // ============================================
 
-export async function searchMarket(
-  searchTerm?: string,
-  lat?: number,
-  lng?: number
-): Promise<MarketSearchResult[]> {
-  const body: Record<string, unknown> = {
-    pagination: {
-      page_size: 5,
-      offset: 0,
-    },
-  };
-
-  if (searchTerm) {
-    body.search_term = searchTerm;
-  } else if (lat !== undefined && lng !== undefined) {
-    body.lat = lat;
-    body.lng = lng;
-  } else {
-    throw new Error("Either search_term or coordinates (lat/lng) required");
-  }
-
-  const data = await makeAirDNARequest<MarketSearchResponse>("/market/search", "POST", body);
-
-  if (data.status?.type !== "success" || !data.payload?.results) {
-    throw new Error(data.status?.message || "Failed to search markets");
-  }
-
-  return data.payload.results.map((r) => ({
-    id: r.id,
-    name: r.name,
-    type: r.type,
-    listing_count: r.listing_count,
-    location_name: r.location_name,
-    state: r.location?.state,
-    country: r.location?.country,
-  }));
-}
-
-// ============================================
-// MARKET METRICS
-// ============================================
-
-export async function getMarketOccupancy(
-  marketId: string,
-  bedrooms?: number
-): Promise<{ metrics: Array<{ date: string; value: number }>; average: number }> {
-  const body: Record<string, unknown> = {
-    num_months: 12,
-  };
-  
-  if (bedrooms !== undefined) {
-    body.filters = [
-      { type: "select", field: "bedrooms", value: bedrooms }
-    ];
-  }
-
-  const data = await makeAirDNARequest<MarketMetricsResponse>(
-    `/market/${marketId}/metrics/occupancy`,
-    "POST",
-    body
-  );
-
-  if (data.status?.type !== "success" || !data.payload) {
-    throw new Error(data.status?.message || "Failed to fetch occupancy metrics");
-  }
-
-  // Map occupancy_rate field to value
-  const metrics = (data.payload.metrics || []).map(m => ({
-    date: m.date,
-    value: m.occupancy_rate ?? m.value ?? 0
-  }));
-  
-  const average = metrics.length > 0 
-    ? metrics.reduce((sum, m) => sum + m.value, 0) / metrics.length 
-    : 0;
-
-  return { metrics, average };
-}
-
-export async function getMarketRevenue(
-  marketId: string,
-  bedrooms?: number
-): Promise<{ metrics: Array<{ date: string; value: number }>; average: number }> {
-  const body: Record<string, unknown> = {
-    num_months: 12,
-  };
-  
-  if (bedrooms !== undefined) {
-    body.filters = [
-      { type: "select", field: "bedrooms", value: bedrooms }
-    ];
-  }
-
-  // Use avg_revenue endpoint (not revenue)
-  const data = await makeAirDNARequest<MarketMetricsResponse>(
-    `/market/${marketId}/metrics/avg_revenue`,
-    "POST",
-    body
-  );
-
-  if (data.status?.type !== "success" || !data.payload) {
-    throw new Error(data.status?.message || "Failed to fetch revenue metrics");
-  }
-
-  // The avg_revenue endpoint returns 'adr' field (confusingly named)
-  const metrics = (data.payload.metrics || []).map(m => ({
-    date: m.date,
-    value: m.adr ?? m.revenue ?? m.value ?? 0
-  }));
-  
-  const average = metrics.length > 0 
-    ? metrics.reduce((sum, m) => sum + m.value, 0) / metrics.length 
-    : 0;
-
-  return { metrics, average };
-}
-
-export async function getMarketADR(
-  marketId: string,
-  bedrooms?: number
-): Promise<{ metrics: Array<{ date: string; value: number }>; average: number }> {
-  const body: Record<string, unknown> = {
-    num_months: 12,
-  };
-  
-  if (bedrooms !== undefined) {
-    body.filters = [
-      { type: "select", field: "bedrooms", value: bedrooms }
-    ];
-  }
-
-  const data = await makeAirDNARequest<MarketMetricsResponse>(
-    `/market/${marketId}/metrics/adr`,
-    "POST",
-    body
-  );
-
-  if (data.status?.type !== "success" || !data.payload) {
-    throw new Error(data.status?.message || "Failed to fetch ADR metrics");
-  }
-
-  // Map adr field to value
-  const metrics = (data.payload.metrics || []).map(m => ({
-    date: m.date,
-    value: m.adr ?? m.value ?? 0
-  }));
-  
-  const average = metrics.length > 0 
-    ? metrics.reduce((sum, m) => sum + m.value, 0) / metrics.length 
-    : 0;
-
-  return { metrics, average };
-}
-
-export async function getMarketRevPAR(
-  marketId: string,
-  bedrooms?: number
-): Promise<{ metrics: Array<{ date: string; value: number }>; average: number }> {
-  const body: Record<string, unknown> = {
-    num_months: 12,
-  };
-  
-  if (bedrooms !== undefined) {
-    body.filters = [
-      { type: "select", field: "bedrooms", value: bedrooms }
-    ];
-  }
-
-  const data = await makeAirDNARequest<MarketMetricsResponse>(
-    `/market/${marketId}/metrics/revpar`,
-    "POST",
-    body
-  );
-
-  if (data.status?.type !== "success" || !data.payload) {
-    throw new Error(data.status?.message || "Failed to fetch RevPAR metrics");
-  }
-
-  // Map revpar field to value
-  const metrics = (data.payload.metrics || []).map(m => ({
-    date: m.date,
-    value: m.revpar ?? m.value ?? 0
-  }));
-  
-  const average = metrics.length > 0 
-    ? metrics.reduce((sum, m) => sum + m.value, 0) / metrics.length 
-    : 0;
-
-  return { metrics, average };
-}
-
-// Response type for market search (for listing count)
-interface MarketListingCountResponse {
-  payload?: {
-    results?: Array<{
-      id: string;
-      name: string;
-      listing_count?: number;
-    }>;
-  };
-  status?: {
-    type: string;
-    message: string;
-  };
-}
-
-export async function getMarketActiveListings(
-  marketId: string,
-  _bedrooms?: number // Not used for this endpoint
-): Promise<{ metrics: Array<{ date: string; value: number }>; current: number }> {
-  // Extract market name from marketId (e.g., "airdna-166" -> search for that market)
-  // Use market search to get listing_count which is the most reliable source
+export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
   try {
-    // First get the market name from GET /market/{marketId}
-    const marketDetails = await makeAirDNARequest<{
-      payload?: { name?: string };
-      status?: { type: string };
+    const response = await makeApiRequest<{
+      payload: {
+        results: Array<{
+          id: string;
+          name: string;
+          type: "market" | "submarket";
+          listing_count: number;
+          location_name: string;
+          location?: {
+            state?: string;
+            country?: string;
+          };
+        }>;
+      };
+    }>("/market/search", "POST", {
+      search_term: searchTerm,
+      pagination: {
+        page_size: Math.min(limit, 25), // API max is 25
+        offset: 0,
+      },
+    });
+    
+    return response.payload.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      listing_count: r.listing_count,
+      location_name: r.location_name,
+      state: r.location?.state,
+      country: r.location?.country,
+    }));
+  } catch (error) {
+    console.error("Error searching markets:", error);
+    return [];
+  }
+}
+
+// ============================================
+// MARKET DETAILS
+// ============================================
+
+export async function getMarketDetails(marketId: string): Promise<{
+  id: string;
+  name: string;
+  listing_count: number;
+  location_name: string;
+  metrics?: {
+    market_score: number;
+    revenue: number;
+    booked: number;
+    daily_rate: number;
+    revpar: number;
+  };
+} | null> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        id: string;
+        name: string;
+        listing_count?: number;
+        location_name?: string;
+        metrics?: {
+          market_score: number;
+          revenue: number;
+          booked: number;
+          daily_rate: number;
+          revpar: number;
+        };
+      };
     }>(`/market/${marketId}`, "GET");
     
-    const marketName = marketDetails.payload?.name || "";
-    
-    if (marketName) {
-      // Search for the market to get listing_count
-      const searchData = await makeAirDNARequest<MarketListingCountResponse>(
-        `/market/search`,
-        "POST",
-        {
-          search_term: marketName,
-          pagination: { page_size: 1, offset: 0 }
-        }
-      );
-      
-      if (searchData.status?.type === "success" && searchData.payload?.results?.[0]) {
-        const listingCount = searchData.payload.results[0].listing_count || 0;
-        return {
-          metrics: [{ date: new Date().toISOString().slice(0, 7), value: listingCount }],
-          current: listingCount
-        };
-      }
-    }
+    return {
+      id: response.payload.id,
+      name: response.payload.name,
+      listing_count: response.payload.listing_count || 0,
+      location_name: response.payload.location_name || response.payload.name,
+      metrics: response.payload.metrics,
+    };
   } catch (error) {
-    console.log("[AirDNA] Failed to get listing count via search, falling back to 0", error);
+    console.error("Error fetching market details:", error);
+    return null;
   }
-  
-  return { metrics: [], current: 0 };
 }
 
 // ============================================
-// COMPREHENSIVE MARKET DATA
+// MARKET METRICS (Historical Data)
 // ============================================
 
-export async function getComprehensiveMarketData(
+async function getMarketMetric(
   marketId: string,
-  bedrooms?: number
-): Promise<MarketData> {
-  console.log(`[AirDNA] Fetching comprehensive market data for ${marketId}`);
+  metricType: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count" | "booking_lead_time" | "los",
+  numMonths: number = 12
+): Promise<HistoricalDataPoint[]> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        results?: Array<{
+          month?: string;
+          date?: string;
+          value?: number;
+          occupancy?: number;
+          occupancy_rate?: number;
+          avg_revenue?: number;
+          adr?: number;
+          revpar?: number;
+          active_listings_count?: number;
+          active_listings?: number;
+          booking_lead_time?: number;
+          los?: number;
+        }>;
+      };
+    }>(`/market/${marketId}/metrics/${metricType}`, "POST", {
+      num_months: numMonths,
+    });
+    
+    const results = response.payload.results || [];
+    
+    return results.map((r) => {
+      const date = r.month || r.date || "";
+      let value = r.value;
+      
+      // Handle different response field names
+      if (value === undefined) {
+        switch (metricType) {
+          case "occupancy": value = r.occupancy_rate || r.occupancy; break;
+          case "avg_revenue": value = r.avg_revenue; break;
+          case "adr": value = r.adr; break;
+          case "revpar": value = r.revpar; break;
+          case "active_listings_count": value = r.active_listings || r.active_listings_count; break;
+          case "booking_lead_time": value = r.booking_lead_time; break;
+          case "los": value = r.los; break;
+        }
+      }
+      
+      return { date, value: value || 0 };
+    });
+  } catch (error) {
+    console.error(`Error fetching ${metricType} for market ${marketId}:`, error);
+    return [];
+  }
+}
 
-  // Fetch all metrics in parallel
-  const [occupancy, revenue, adr, revpar, listings] = await Promise.all([
-    getMarketOccupancy(marketId, bedrooms).catch(() => ({ metrics: [], average: 0 })),
-    getMarketRevenue(marketId, bedrooms).catch(() => ({ metrics: [], average: 0 })),
-    getMarketADR(marketId, bedrooms).catch(() => ({ metrics: [], average: 0 })),
-    getMarketRevPAR(marketId, bedrooms).catch(() => ({ metrics: [], average: 0 })),
-    getMarketActiveListings(marketId, bedrooms).catch(() => ({ metrics: [], current: 0 })),
+export async function getMarketHistoricalData(marketId: string, numMonths: number = 12): Promise<{
+  occupancy: HistoricalDataPoint[];
+  adr: HistoricalDataPoint[];
+  revenue: HistoricalDataPoint[];
+  revpar: HistoricalDataPoint[];
+  active_listings: HistoricalDataPoint[];
+}> {
+  const [occupancy, adr, revenue, revpar, active_listings] = await Promise.all([
+    getMarketMetric(marketId, "occupancy", numMonths),
+    getMarketMetric(marketId, "adr", numMonths),
+    getMarketMetric(marketId, "avg_revenue", numMonths),
+    getMarketMetric(marketId, "revpar", numMonths),
+    getMarketMetric(marketId, "active_listings_count", numMonths),
   ]);
+  
+  return { occupancy, adr, revenue, revpar, active_listings };
+}
 
+// ============================================
+// SUBMARKET DATA
+// ============================================
+
+export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketData[]> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        results: Array<{
+          id: string;
+          name: string;
+          listing_count: number;
+        }>;
+      };
+    }>(`/submarket/explore/market/${marketId}`, "POST", {
+      pagination: {
+        page_size: 100,
+        offset: 0,
+      },
+    });
+    
+    return response.payload.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      listing_count: r.listing_count,
+    }));
+  } catch (error) {
+    console.error("Error fetching submarkets:", error);
+    return [];
+  }
+}
+
+export async function getSubmarketMetrics(submarketId: string): Promise<{
+  occupancy: number;
+  adr: number;
+  revenue: number;
+  revpar: number;
+} | null> {
+  try {
+    const [occupancyData, adrData, revenueData, revparData] = await Promise.all([
+      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "occupancy", 1),
+      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "adr", 1),
+      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "avg_revenue", 1),
+      getMarketMetric(submarketId.replace("airdna-", "submarket-"), "revpar", 1),
+    ]);
+    
+    return {
+      occupancy: occupancyData[0]?.value || 0,
+      adr: adrData[0]?.value || 0,
+      revenue: revenueData[0]?.value || 0,
+      revpar: revparData[0]?.value || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching submarket metrics:", error);
+    return null;
+  }
+}
+
+// ============================================
+// LISTING DATA
+// ============================================
+
+// Note: The /listing/explore/market endpoint returns 404, so we use a workaround
+// by getting market details and using comps/area with a central location
+export async function exploreListingsInMarket(
+  marketId: string,
+  filters?: {
+    bedrooms?: number;
+    minRevenue?: number;
+    listingType?: string;
+  },
+  limit: number = 50
+): Promise<ListingData[]> {
+  try {
+    // The explore/market endpoint doesn't work, so we'll return empty
+    // The bedroom performance data will be calculated from comps instead
+    console.log(`[exploreListingsInMarket] Market listing exploration not available for ${marketId}`);
+    return [];
+  } catch (error) {
+    console.error("Error exploring listings:", error);
+    return [];
+  }
+}
+
+export async function exploreListingsInRadius(
+  address: string,
+  radiusMeters: number = 3000,
+  filters?: {
+    bedrooms?: number;
+    bathrooms?: number;
+    minRevenue?: number;
+  },
+  limit: number = 50
+): Promise<ListingData[]> {
+  try {
+    const filterArray: Array<{ type: string; field: string; value: unknown }> = [];
+    
+    if (filters?.bedrooms !== undefined) {
+      filterArray.push({
+        type: "select",
+        field: "bedrooms",
+        value: filters.bedrooms,
+      });
+    }
+    
+    if (filters?.bathrooms !== undefined) {
+      filterArray.push({
+        type: "select",
+        field: "bathrooms",
+        value: filters.bathrooms,
+      });
+    }
+    
+    const response = await makeApiRequest<{
+      payload: {
+        listings?: Array<{
+          property_id: string;
+          title: string;
+          airbnb_property_id?: string;
+          airbnb_property_url?: string;
+          bedrooms: number;
+          bathrooms: number;
+          accommodates: number;
+          property_type: string;
+          rating: number | null;
+          reviews: number;
+          revenue_ltm?: number;
+          average_daily_rate_ltm?: number;
+          occupancy_rate_ltm?: number;
+          last_scraped_date?: string;
+          superhost?: boolean;
+          location?: { lat?: number; lng?: number };
+          zipcode?: string;
+          market_name?: string;
+        }>;
+      };
+    }>("/listing/comps/area", "POST", {
+      address,
+      radius: radiusMeters,
+      filters: filterArray.length > 0 ? filterArray : undefined,
+      pagination: {
+        page_size: Math.min(limit, 25), // API max is 25
+        offset: 0,
+      },
+      sort_order: "revenue",
+      sort_direction: "descending",
+    });
+    
+    let listings: ListingData[] = (response.payload.listings || []).map((r) => ({
+      id: r.property_id || '',
+      title: r.title || 'Untitled Listing',
+      airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
+      image_url: '',
+      bedrooms: r.bedrooms || 0,
+      bathrooms: r.bathrooms || 0,
+      accommodates: r.accommodates || 0,
+      property_type: r.property_type || 'Unknown',
+      rating: r.rating ?? null,
+      reviews: r.reviews || 0,
+      annual_revenue: r.revenue_ltm || 0,
+      adr: r.average_daily_rate_ltm || 0,
+      occupancy: r.occupancy_rate_ltm || 0,
+      last_review_date: r.last_scraped_date || '',
+      superhost: r.superhost ?? false,
+      latitude: r.location?.lat ?? 0,
+      longitude: r.location?.lng ?? 0,
+    }));
+    
+    // Filter by minimum revenue if specified
+    if (filters?.minRevenue) {
+      listings = listings.filter((l: ListingData) => l.annual_revenue >= filters.minRevenue!);
+    }
+    
+    // Sort by revenue (highest first)
+    listings.sort((a: ListingData, b: ListingData) => b.annual_revenue - a.annual_revenue);
+    
+    return listings;
+  } catch (error) {
+    console.error("Error exploring listings in radius:", error);
+    return [];
+  }
+}
+
+// ============================================
+// RENTALIZER (Property Estimate)
+// ============================================
+
+export async function getRentalizerEstimate(
+  request: RentalizerRequest
+): Promise<RentalizerResponse | null> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        details: {
+          address: string;
+          address_lookup: string;
+          zipcode: string;
+          bedrooms: number;
+          bathrooms: number;
+          accommodates: number;
+        };
+        location: {
+          lat: number;
+          lng: number;
+          market_id?: string;
+          submarket_id?: string;
+        };
+        stats: {
+          currency: string;
+          currency_symbol: string;
+          future: {
+            summary: {
+              adr: number;
+              occupancy: number;
+              revenue: number;
+              revenue_upper: number;
+              revenue_lower: number;
+            };
+            metrics: Array<{
+              date: string;
+              occupancy: number;
+              adr: number;
+              revenue: number;
+            }>;
+          };
+        };
+        comps?: Array<{
+          property_id: string;
+          details: {
+            title: string;
+            accommodates: number;
+            bedrooms: number;
+            bathrooms: number;
+            reviews: number;
+            rating: number | null;
+            images?: string[];
+            property_type?: string;
+          };
+          distance_meters: number;
+          platforms?: {
+            airbnb_property_id?: string;
+            airbnb_property_url?: string;
+          };
+          stats: {
+            summary: {
+              occupancy: number;
+              adr: number;
+              revenue: number;
+            };
+          };
+        }>;
+      };
+    }>("/rentalizer/estimate", "POST", {
+      address: request.address,
+      bedrooms: request.bedrooms,
+      bathrooms: request.bathrooms,
+      accommodates: request.accommodates,
+      currency: request.currency || "usd",
+    });
+    
+    const { details, location, stats, comps } = response.payload;
+    
+    return {
+      property: {
+        address: details.address,
+        address_lookup: details.address_lookup,
+        zipcode: details.zipcode,
+        bedrooms: details.bedrooms,
+        bathrooms: details.bathrooms,
+        accommodates: details.accommodates,
+        latitude: location.lat,
+        longitude: location.lng,
+        market_id: location.market_id,
+        submarket_id: location.submarket_id,
+      },
+      estimates: {
+        annual_revenue: stats.future.summary.revenue,
+        annual_revenue_low: stats.future.summary.revenue_lower,
+        annual_revenue_high: stats.future.summary.revenue_upper,
+        average_daily_rate: stats.future.summary.adr,
+        occupancy_rate: stats.future.summary.occupancy,
+        currency: stats.currency,
+        currency_symbol: stats.currency_symbol,
+      },
+      monthly_forecast: (stats.future.metrics || []).map((m) => ({
+        month: m.date,
+        revenue: m.revenue,
+        adr: m.adr,
+        occupancy: m.occupancy,
+      })),
+      comps: (comps || []).map((c) => ({
+        title: c.details.title,
+        bedrooms: c.details.bedrooms,
+        bathrooms: c.details.bathrooms,
+        rating: c.details.rating,
+        reviews: c.details.reviews,
+        annual_revenue: c.stats.summary.revenue,
+        adr: c.stats.summary.adr,
+        occupancy: c.stats.summary.occupancy,
+        distance_meters: c.distance_meters,
+        airbnb_listing_id: c.platforms?.airbnb_property_id,
+        airbnb_url: c.platforms?.airbnb_property_url,
+        image_url: c.details.images?.[0],
+        property_type: c.details.property_type,
+      })),
+    };
+  } catch (error) {
+    console.error("Error getting rentalizer estimate:", error);
+    return null;
+  }
+}
+
+// ============================================
+// COMPREHENSIVE REPORT DATA
+// ============================================
+
+export interface ComprehensivePropertyReport {
+  property: RentalizerResponse;
+  market: {
+    id: string;
+    name: string;
+    listing_count: number;
+    metrics: MarketMetrics;
+    historical: {
+      occupancy: HistoricalDataPoint[];
+      adr: HistoricalDataPoint[];
+      revenue: HistoricalDataPoint[];
+      revpar: HistoricalDataPoint[];
+      active_listings: HistoricalDataPoint[];
+    };
+  } | null;
+  submarkets: SubmarketData[];
+  same_bedroom_comps: ListingData[];
+  bedroom_performance: Array<{
+    bedrooms: number;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    listing_count: number;
+  }>;
+  generated_at: string;
+}
+
+export interface ComprehensiveMarketReport {
+  market: {
+    id: string;
+    name: string;
+    listing_count: number;
+    location_name: string;
+    metrics: MarketMetrics;
+    historical: {
+      occupancy: HistoricalDataPoint[];
+      adr: HistoricalDataPoint[];
+      revenue: HistoricalDataPoint[];
+      revpar: HistoricalDataPoint[];
+      active_listings: HistoricalDataPoint[];
+    };
+  };
+  submarkets: SubmarketData[];
+  top_listings: ListingData[];
+  bedroom_performance: Array<{
+    bedrooms: number;
+    count: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+  }>;
+  generated_at: string;
+}
+
+export async function getComprehensivePropertyReport(
+  address: string,
+  bedrooms?: number,
+  bathrooms?: number,
+  accommodates?: number
+): Promise<ComprehensivePropertyReport | null> {
+  // Step 1: Get property estimate
+  const propertyEstimate = await getRentalizerEstimate({
+    address,
+    bedrooms,
+    bathrooms,
+    accommodates,
+  });
+  
+  if (!propertyEstimate) {
+    return null;
+  }
+  
+  let marketId = propertyEstimate.property.market_id;
+  const propertyBedrooms = propertyEstimate.property.bedrooms;
+  const lat = propertyEstimate.property.latitude;
+  const lng = propertyEstimate.property.longitude;
+  const zipcode = propertyEstimate.property.zipcode;
+  
+  // Step 2: Find market ID if not provided by rentalizer
+  // Extract city from address (format: "123 Main St, City, ST 12345")
+  let marketListingCount = 0; // Store listing count from search results
+  
+  if (!marketId) {
+    const addressParts = address.split(',');
+    if (addressParts.length >= 2) {
+      // Try to get city name from address
+      const cityPart = addressParts[1]?.trim();
+      if (cityPart) {
+        console.log('[Market Search] Searching for city:', cityPart);
+        const markets = await searchMarkets(cityPart, 10);
+        console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
+        // Find a market (not submarket) that matches the state
+        const stateMatch = address.match(/,\s*([A-Z]{2})\s*\d{5}/);
+        const state = stateMatch ? stateMatch[1] : null;
+        console.log('[Market Search] Looking for state:', state);
+        
+        // First try to find a parent market in the same state
+        const parentMarket = markets.find(m => 
+          m.type === 'market' && 
+          (!state || m.state?.toLowerCase().includes(state.toLowerCase()) || m.location_name?.includes(state))
+        );
+        console.log('[Market Search] Found parent market:', parentMarket);
+        
+        if (parentMarket) {
+          marketId = parentMarket.id;
+          marketListingCount = parentMarket.listing_count; // Get listing count from search
+          console.log('[Market Search] Using market ID:', marketId, 'with listing count:', marketListingCount);
+        } else {
+          // Fall back to first market with parent_market in same state
+          const submarketWithParent = markets.find(m => 
+            m.type === 'submarket' && 
+            (!state || m.state?.toLowerCase().includes(state.toLowerCase()) || m.location_name?.includes(state))
+          );
+          if (submarketWithParent) {
+            // Search for the parent market name
+            const parentSearch = await searchMarkets(submarketWithParent.name, 5);
+            const parent = parentSearch.find(m => m.type === 'market');
+            if (parent) {
+              marketId = parent.id;
+              marketListingCount = parent.listing_count;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Step 3: Get market data (if market_id available)
+  let marketData = null;
+  let submarkets: SubmarketData[] = [];
+  
+  if (marketId) {
+    const [marketDetails, historicalData, submarketList] = await Promise.all([
+      getMarketDetails(marketId),
+      getMarketHistoricalData(marketId, 12),
+      getSubmarketsInMarket(marketId),
+    ]);
+    
+    if (marketDetails) {
+      // Calculate current metrics from historical data, fall back to market details metrics
+      let latestOccupancy = historicalData.occupancy[historicalData.occupancy.length - 1]?.value || 0;
+      let latestAdr = historicalData.adr[historicalData.adr.length - 1]?.value || 0;
+      let latestRevenue = historicalData.revenue[historicalData.revenue.length - 1]?.value || 0;
+      let latestRevpar = historicalData.revpar[historicalData.revpar.length - 1]?.value || 0;
+      let latestListings = historicalData.active_listings[historicalData.active_listings.length - 1]?.value || marketDetails.listing_count;
+      
+      // If historical data is empty, use market details metrics
+      if (latestOccupancy === 0 && marketDetails.metrics) {
+        latestOccupancy = Math.round(marketDetails.metrics.booked * 100); // Convert decimal to percentage
+        latestAdr = Math.round(marketDetails.metrics.daily_rate);
+        latestRevenue = Math.round(marketDetails.metrics.revenue);
+        latestRevpar = Math.round(marketDetails.metrics.revpar);
+        console.log('[Market Data] Using market details metrics:', { latestOccupancy, latestAdr, latestRevenue, latestRevpar });
+      }
+      
+      marketData = {
+        id: marketId,
+        name: marketDetails.name,
+        listing_count: marketListingCount || marketDetails.listing_count || latestListings,
+        metrics: {
+          occupancy: latestOccupancy,
+          adr: latestAdr,
+          revenue: latestRevenue,
+          revpar: latestRevpar,
+          active_listings: marketListingCount || latestListings,
+        },
+        historical: historicalData,
+      };
+    }
+    
+    submarkets = submarketList;
+  }
+  
+  // Step 3: Get same-bedroom comps in radius (apples-to-apples)
+  const sameBedroomComps = await exploreListingsInRadius(address, 3000, {
+    bedrooms: propertyBedrooms,
+    bathrooms: propertyEstimate.property.bathrooms,
+    minRevenue: 10000, // Filter out very low performers
+  }, 20);
+  
+  // Step 4: Get bedroom performance data from comps in radius
+  const bedroomPerformance: Array<{
+    bedrooms: number;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    listing_count: number;
+  }> = [];
+  
+  // Get listings for different bedroom counts from radius comps
+  for (let br = 1; br <= 5; br++) {
+    const listings = await exploreListingsInRadius(address, 5000, { bedrooms: br }, 100);
+    if (listings.length > 0) {
+      const avgRevenue = listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length;
+      const avgAdr = listings.reduce((sum, l) => sum + l.adr, 0) / listings.length;
+      const avgOccupancy = listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length;
+      
+      bedroomPerformance.push({
+        bedrooms: br,
+        occupancy: Math.round(avgOccupancy),
+        adr: Math.round(avgAdr),
+        revenue: Math.round(avgRevenue),
+        listing_count: listings.length,
+      });
+    }
+  }
+  
   return {
-    market_id: marketId,
-    market_name: "", // Will be filled by caller if needed
-    metrics: {
-      occupancy: occupancy.average,
-      adr: adr.average,
-      revenue: revenue.average,
-      revpar: revpar.average,
-      active_listings: listings.current,
-    },
-    historical_trends: {
-      occupancy: occupancy.metrics,
-      adr: adr.metrics,
-      revenue: revenue.metrics,
-    },
+    property: propertyEstimate,
+    market: marketData,
+    submarkets,
+    same_bedroom_comps: sameBedroomComps,
+    bedroom_performance: bedroomPerformance,
+    generated_at: new Date().toISOString(),
   };
 }
 
-// ============================================
-// BEDROOM PERFORMANCE ANALYSIS
-// ============================================
-
-export async function getBedroomPerformance(
+export async function getComprehensiveMarketReport(
   marketId: string
-): Promise<Array<{ bedrooms: number; occupancy: number; adr: number; revenue: number }>> {
-  const bedroomCounts = [1, 2, 3, 4, 5];
+): Promise<ComprehensiveMarketReport | null> {
+  // Step 1: Get market details
+  const marketDetails = await getMarketDetails(marketId);
+  if (!marketDetails) {
+    return null;
+  }
   
-  const results = await Promise.all(
-    bedroomCounts.map(async (bedrooms) => {
-      try {
-        const [occupancy, adr, revenue] = await Promise.all([
-          getMarketOccupancy(marketId, bedrooms),
-          getMarketADR(marketId, bedrooms),
-          getMarketRevenue(marketId, bedrooms),
-        ]);
-
-        return {
-          bedrooms,
-          occupancy: occupancy.average,
-          adr: adr.average,
-          revenue: revenue.average,
-        };
-      } catch {
-        return {
-          bedrooms,
-          occupancy: 0,
-          adr: 0,
-          revenue: 0,
-        };
-      }
-    })
-  );
-
-  return results.filter((r) => r.occupancy > 0 || r.adr > 0 || r.revenue > 0);
+  // Step 2: Get all market data in parallel
+  const [historicalData, submarkets, topListings] = await Promise.all([
+    getMarketHistoricalData(marketId, 12),
+    getSubmarketsInMarket(marketId),
+    exploreListingsInMarket(marketId, { minRevenue: 30000 }, 50),
+  ]);
+  
+  // Calculate current metrics
+  const latestOccupancy = historicalData.occupancy[historicalData.occupancy.length - 1]?.value || 0;
+  const latestAdr = historicalData.adr[historicalData.adr.length - 1]?.value || 0;
+  const latestRevenue = historicalData.revenue[historicalData.revenue.length - 1]?.value || 0;
+  const latestRevpar = historicalData.revpar[historicalData.revpar.length - 1]?.value || 0;
+  const latestListings = historicalData.active_listings[historicalData.active_listings.length - 1]?.value || marketDetails.listing_count;
+  
+  // Step 3: Calculate bedroom performance
+  const bedroomPerformance: Array<{
+    bedrooms: number;
+    count: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+  }> = [];
+  
+  for (let br = 1; br <= 5; br++) {
+    const listings = await exploreListingsInMarket(marketId, { bedrooms: br }, 100);
+    if (listings.length > 0) {
+      bedroomPerformance.push({
+        bedrooms: br,
+        count: listings.length,
+        avg_revenue: Math.round(listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length),
+        avg_adr: Math.round(listings.reduce((sum, l) => sum + l.adr, 0) / listings.length),
+        avg_occupancy: Math.round(listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length),
+      });
+    }
+  }
+  
+  return {
+    market: {
+      id: marketId,
+      name: marketDetails.name,
+      listing_count: marketDetails.listing_count,
+      location_name: marketDetails.location_name,
+      metrics: {
+        occupancy: latestOccupancy,
+        adr: latestAdr,
+        revenue: latestRevenue,
+        revpar: latestRevpar,
+        active_listings: latestListings,
+      },
+      historical: historicalData,
+    },
+    submarkets,
+    top_listings: topListings,
+    bedroom_performance: bedroomPerformance,
+    generated_at: new Date().toISOString(),
+  };
 }
