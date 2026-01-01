@@ -20,6 +20,7 @@ import {
 } from './airdna';
 import { makeRequest, GeocodingResult } from './_core/map';
 import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
+import { SOPReports, generateFullArbitrageAnalysis } from './sop-reports';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
@@ -705,6 +706,125 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["address", "purchase_price"]
+      }
+    },
+    {
+      name: "generate_arbitrage_report",
+      description: "Generate a comprehensive Airbnb arbitrage analysis report following Coach Inayah's SOP. This creates a professional investment report with property analysis, market data, competitor analysis with Airbnb URLs, and profitability projections with 3 scenarios (Conservative, Realistic, Optimistic). Use when user provides a property address and monthly rent for arbitrage analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The full property address"
+          },
+          monthly_rent: {
+            type: "number",
+            description: "The monthly rent for the property"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms (optional, will be detected)"
+          },
+          bathrooms: {
+            type: "number",
+            description: "Number of bathrooms (optional, will be detected)"
+          },
+          zillow_url: {
+            type: "string",
+            description: "Optional Zillow listing URL for reference"
+          },
+          attractive_features: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of attractive features (e.g., 'Private backyard', 'Modern kitchen', 'In-unit laundry')"
+          }
+        },
+        required: ["address", "monthly_rent"]
+      }
+    },
+    {
+      name: "get_market_percentiles",
+      description: "Get revenue percentiles (Top 10%, Top 25%, Median, Average) for a market filtered by bedroom count. Use this to understand revenue potential and set realistic expectations.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market name (e.g., 'Austin', 'Nashville')"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Filter by bedroom count for accurate comparison"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "get_competitors_above_threshold",
+      description: "Get top-performing competitors that earn at least 2x the annual rent (the minimum for 30%+ profit margin). Use this to find viable comps for arbitrage analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market name"
+          },
+          monthly_rent: {
+            type: "number",
+            description: "The monthly rent - competitors must earn 2x this annually"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Filter by bedroom count for apples-to-apples comparison"
+          },
+          limit: {
+            type: "number",
+            description: "Number of competitors to return (default 5)"
+          }
+        },
+        required: ["market_name", "monthly_rent"]
+      }
+    },
+    {
+      name: "calculate_sop_profitability",
+      description: "Calculate profitability using Coach Inayah's SOP formulas: $20K startup costs, Rent + $780/month expenses, and 3 profit scenarios. Use when user asks about profit potential or arbitrage viability.",
+      parameters: {
+        type: "object",
+        properties: {
+          monthly_rent: {
+            type: "number",
+            description: "The monthly rent"
+          },
+          top_10_revenue: {
+            type: "number",
+            description: "Top 10% (90th percentile) annual revenue in the market"
+          },
+          top_25_revenue: {
+            type: "number",
+            description: "Top 25% (75th percentile) annual revenue in the market"
+          },
+          median_revenue: {
+            type: "number",
+            description: "Median (50th percentile) annual revenue in the market"
+          }
+        },
+        required: ["monthly_rent", "top_10_revenue", "top_25_revenue", "median_revenue"]
+      }
+    },
+    {
+      name: "tier_neighborhoods",
+      description: "Categorize neighborhoods into investment tiers: Premier (best all-around), High-Occupancy (always booked), Up-and-Coming (growth signals), and Caution (declining). Use for market-level neighborhood analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze neighborhoods for"
+          }
+        },
+        required: ["market_name"]
       }
     }
   ]
@@ -1693,6 +1813,239 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
       case "generate_deal_analysis":
         return executeDealFunction(functionName, args);
       
+      // SOP Report Generation Functions
+      case "generate_arbitrage_report": {
+        const address = args.address as string;
+        const monthlyRent = args.monthly_rent as number;
+        const bedrooms = args.bedrooms as number | undefined;
+        const bathrooms = args.bathrooms as number | undefined;
+        const zillowUrl = args.zillow_url as string | undefined;
+        const attractiveFeatures = args.attractive_features as string[] | undefined;
+        
+        try {
+          const result = await generateFullArbitrageAnalysis(
+            address,
+            monthlyRent,
+            bedrooms,
+            bathrooms,
+            zillowUrl,
+            attractiveFeatures
+          );
+          
+          return {
+            report: result.report,
+            summary: {
+              property_address: address,
+              monthly_rent: monthlyRent,
+              minimum_revenue_threshold: result.profitability.minimum_revenue_threshold,
+              percentiles: result.percentiles,
+              viable_competitors_found: result.competitors.length,
+              scenarios: {
+                conservative_profit: result.profitability.scenarios.conservative.estimated_profit,
+                realistic_profit: result.profitability.scenarios.realistic.estimated_profit,
+                optimistic_profit: result.profitability.scenarios.optimistic.estimated_profit
+              }
+            },
+            instruction: "Present the full report to the user. The report is formatted in Markdown and follows Coach Inayah's SOP template."
+          };
+        } catch (error) {
+          return { error: `Failed to generate arbitrage report: ${error instanceof Error ? error.message : 'Unknown error'}` };
+        }
+      }
+      
+      case "get_market_percentiles": {
+        const marketName = args.market_name as string;
+        const bedrooms = args.bedrooms as number | undefined;
+        
+        // Get market data
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        
+        const performersResult = await getTopPerformers({
+          marketId: markets[0].id,
+          limit: 50,
+          sort_by: 'revenue',
+          filters: bedrooms ? { bedrooms } : undefined
+        });
+        const performersList = performersResult.listings || [];
+        
+        const percentiles = SOPReports.calculateMarketPercentiles(performersList);
+        
+        return {
+          market: marketName,
+          bedrooms: bedrooms || 'all',
+          sample_size: performersList.length,
+          percentiles: {
+            top_10_percent: percentiles.top_10_percent,
+            top_25_percent: percentiles.top_25_percent,
+            median: percentiles.median,
+            average: percentiles.average
+          },
+          explanation: {
+            top_10_percent: `Top 10% of ${bedrooms || 'all'}-bedroom properties earn $${percentiles.top_10_percent.toLocaleString()}/year or more`,
+            top_25_percent: `Top 25% earn $${percentiles.top_25_percent.toLocaleString()}/year - this is our realistic target`,
+            median: `The typical property earns $${percentiles.median.toLocaleString()}/year`,
+            average: `Market average is $${percentiles.average.toLocaleString()}/year`
+          }
+        };
+      }
+      
+      case "get_competitors_above_threshold": {
+        const marketName = args.market_name as string;
+        const monthlyRent = args.monthly_rent as number;
+        const bedrooms = args.bedrooms as number | undefined;
+        const limit = (args.limit as number) || 5;
+        
+        const threshold = monthlyRent * 12 * 2;
+        
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        
+        const performersResult = await getTopPerformers({
+          marketId: markets[0].id,
+          limit: 50,
+          sort_by: 'revenue',
+          filters: bedrooms ? { bedrooms } : undefined
+        });
+        const performers = performersResult.listings || [];
+        
+        const viableCompetitors = SOPReports.filterCompetitorsAboveThreshold(performers, monthlyRent);
+        const analyzed = viableCompetitors.slice(0, limit).map(SOPReports.analyzeCompetitorSuccessFactors);
+        
+        return {
+          market: marketName,
+          monthly_rent: monthlyRent,
+          minimum_threshold: threshold,
+          threshold_explanation: `Competitors must earn at least $${threshold.toLocaleString()}/year (2x annual rent of $${(monthlyRent * 12).toLocaleString()}) to demonstrate 30%+ profit potential`,
+          viable_competitors_found: viableCompetitors.length,
+          competitors: analyzed,
+          warning: viableCompetitors.length < 5 
+            ? `Only ${viableCompetitors.length} competitors meet the threshold. This may indicate the rent is too high for this market.`
+            : null
+        };
+      }
+      
+      case "calculate_sop_profitability": {
+        const monthlyRent = args.monthly_rent as number;
+        const top10 = args.top_10_revenue as number;
+        const top25 = args.top_25_revenue as number;
+        const median = args.median_revenue as number;
+        
+        const percentiles = {
+          top_10_percent: top10,
+          top_25_percent: top25,
+          median: median,
+          average: median
+        };
+        
+        const profitability = SOPReports.calculateSOPProfitability(monthlyRent, percentiles);
+        
+        return {
+          monthly_rent: monthlyRent,
+          startup_costs: profitability.startup_costs,
+          monthly_expenses: profitability.monthly_expenses,
+          annual_operating_costs: profitability.annual_operating_costs,
+          minimum_revenue_needed: profitability.minimum_revenue_threshold,
+          scenarios: {
+            conservative: {
+              ...profitability.scenarios.conservative,
+              viable: profitability.scenarios.conservative.estimated_profit > 0
+            },
+            realistic: {
+              ...profitability.scenarios.realistic,
+              viable: profitability.scenarios.realistic.estimated_profit > 0
+            },
+            optimistic: {
+              ...profitability.scenarios.optimistic,
+              viable: profitability.scenarios.optimistic.estimated_profit > 0
+            }
+          },
+          recommendation: profitability.scenarios.realistic.estimated_profit > 0
+            ? `This property shows profit potential. At our realistic target (Top 25%), you could earn $${profitability.scenarios.realistic.estimated_profit.toLocaleString()}/year profit.`
+            : `This property may not be viable at $${monthlyRent.toLocaleString()}/month rent. The market revenue doesn't support profitable arbitrage.`
+        };
+      }
+      
+      case "tier_neighborhoods": {
+        const marketName = args.market_name as string;
+        
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        
+        const submarketResult = await exploreSubmarketsWithMetrics(markets[0].id);
+        const submarkets = submarketResult?.submarkets || [];
+        const tiered = SOPReports.tierNeighborhoods(submarkets.map(s => ({
+          name: s.name,
+          metrics: s.metrics ? {
+            occupancy: s.metrics.occupancy,
+            adr: s.metrics.adr,
+            revenue: s.metrics.revenue,
+            revpar: s.metrics.revpar
+          } : undefined
+        })));
+        
+        // Group by tier
+        const grouped = {
+          premier: tiered.filter(n => n.tier === 'Premier'),
+          high_occupancy: tiered.filter(n => n.tier === 'High-Occupancy'),
+          up_and_coming: tiered.filter(n => n.tier === 'Up-and-Coming'),
+          caution: tiered.filter(n => n.tier === 'Caution')
+        };
+        
+        return {
+          market: marketName,
+          total_neighborhoods: tiered.length,
+          tiers: {
+            premier: {
+              count: grouped.premier.length,
+              description: 'Best all-around performers - high revenue AND high occupancy',
+              neighborhoods: grouped.premier.map(n => ({
+                name: n.name,
+                revpar: n.revpar,
+                occupancy: n.occupancy,
+                rationale: n.rationale
+              }))
+            },
+            high_occupancy: {
+              count: grouped.high_occupancy.length,
+              description: 'Consistently booked - reliable demand even if not highest revenue',
+              neighborhoods: grouped.high_occupancy.map(n => ({
+                name: n.name,
+                revpar: n.revpar,
+                occupancy: n.occupancy,
+                rationale: n.rationale
+              }))
+            },
+            up_and_coming: {
+              count: grouped.up_and_coming.length,
+              description: 'Solid fundamentals with growth potential',
+              neighborhoods: grouped.up_and_coming.map(n => ({
+                name: n.name,
+                revpar: n.revpar,
+                occupancy: n.occupancy,
+                rationale: n.rationale
+              }))
+            },
+            caution: {
+              count: grouped.caution.length,
+              description: 'Below-average metrics - may indicate declining demand or oversaturation',
+              neighborhoods: grouped.caution.map(n => ({
+                name: n.name,
+                revpar: n.revpar,
+                occupancy: n.occupancy,
+                rationale: n.rationale
+              }))
+            }
+          }
+        };
+      }
+      
       default:
         return { error: `Unknown function: ${functionName}` };
     }
@@ -2063,13 +2416,58 @@ For PROFIT CALCULATIONS:
 After substantive analyses, include:
 "Ready to turn this analysis into action? Coach Inayah's team specializes in helping investors like you launch profitable Airbnbs - from property selection to professional setup and ongoing optimization."
 
+=== SOP REPORT GENERATION ===
+
+**ARBITRAGE REPORT (generate_arbitrage_report):**
+When user provides a property address AND monthly rent for arbitrage analysis:
+- Use generate_arbitrage_report to create a FULL professional report
+- The report follows Coach Inayah's exact SOP template with 5 sections
+- Present the COMPLETE report to the user - do not summarize
+- The report includes: Property Overview, Market Analysis with percentiles, Competitor Analysis with Airbnb URLs, and Profitability Projections with 3 scenarios
+
+**MARKET PERCENTILES (get_market_percentiles):**
+When user asks about revenue potential or "how much can I make":
+- Use get_market_percentiles to show Top 10%, Top 25%, and Median revenue
+- Explain in plain language: "Top performers earn $X, our realistic target is $Y, average is $Z"
+- Always filter by bedroom count for accurate comparison
+
+**COMPETITOR THRESHOLD (get_competitors_above_threshold):**
+When analyzing arbitrage viability:
+- Use get_competitors_above_threshold to find VIABLE comps
+- Only show competitors earning 2x the annual rent (minimum for 30%+ profit)
+- If fewer than 5 meet threshold, warn that rent may be too high
+
+**SOP PROFITABILITY (calculate_sop_profitability):**
+When calculating profit potential:
+- Use calculate_sop_profitability for Coach Inayah's exact formula
+- Startup costs: Fixed $20,000
+- Monthly expenses: Rent + $780 (utilities, internet, supplies, maintenance)
+- Show 3 scenarios: Conservative (Median), Realistic (Top 25%), Optimistic (Top 10%)
+
+**NEIGHBORHOOD TIERING (tier_neighborhoods):**
+When analyzing neighborhoods in a market:
+- Use tier_neighborhoods to categorize areas
+- Tier 1: Premier (best all-around)
+- Tier 2: High-Occupancy (always booked)
+- Tier 3: Up-and-Coming (growth signals)
+- Caution: Declining metrics
+
+=== PLAIN LANGUAGE REQUIREMENT ===
+When presenting data, ALWAYS explain what it means in simple terms:
+- BAD: "ADR of $446 and RevPAR of $296"
+- GOOD: "You can charge an average of $446 per night, and properties here earn more per available night than most markets"
+
+After EVERY metric, add "What This Means:" explanation.
+
 === FINAL REMINDERS ===
 1. Be a CONSULTANT, not a data dump - interpret everything
 2. Give SPECIFIC, ACTIONABLE advice
 3. Use REAL numbers from the data
 4. Include [Airbnb](url) links for all listings
 5. End with relevant follow-up questions
-6. Make every response feel like a $500 consultation`;
+6. Make every response feel like a $500 consultation
+7. For arbitrage analysis, use generate_arbitrage_report for the full SOP template
+8. Always explain metrics in plain language with "What This Means" sections`;
 
   try {
     // Make the initial API call with function declarations

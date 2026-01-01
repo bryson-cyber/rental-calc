@@ -641,3 +641,49 @@
 - [x] Revenue percentile calculator (calculate_revenue_percentile) - market ranking
 - [x] Seasonality-adjusted projections (calculate_seasonality_adjusted_revenue) - accurate monthly forecasts
 - [x] Deal analysis with AI decision framework (generate_deal_analysis) - comprehensive investment scoring with STRONG BUY/BUY/HOLD/AVOID recommendations
+
+
+## SOP-Aligned AI Enhancements (Priority Implementation)
+
+### Phase 1: Critical Data Functions
+- [x] Add get_market_percentiles function - retrieve Top 10%, Top 25%, Median revenue for market+bedroom
+- [x] Add get_competitors_above_threshold function - filter competitors by Monthly Rent × 12 × 2
+- [x] Add calculate_sop_profitability function ($20K startup, Rent + $780/month expenses)
+- [x] Ensure all listing data includes Airbnb URL (airbnb.com/rooms/{id})
+
+### Phase 2: Report Generation Engine
+- [x] Create generate_arbitrage_report function - 5-section professional report matching SOP
+- [x] Create generateSimplifiedReport function - 5-section educational report for beginners
+- [ ] Create generate_market_ebook function - 7-chapter market guide
+- [x] Add analyzeCompetitorSuccessFactors function - AI-powered "why they succeed" analysis
+- [x] Add tier_neighborhoods function - categorize into Premier/High-Occ/Up-and-Coming/Caution
+
+### Phase 3: Plain Language & UX
+- [x] Update system prompt to enforce plain language (no ADR/RevPAR jargon)
+- [x] Add "What This Means" explanations after every metric
+- [x] Add profitability scenarios (Conservative/Realistic/Optimistic)
+- [x] Ensure all reports follow exact SOP table formats
+
+### Report Templates to Implement
+- [ ] Property Analysis Report (MASTER SOP format)
+  - Executive Summary with bold revenue potential
+  - Property Analysis with competitive positioning
+  - Market Seasonality & Trends
+  - Detailed Competitor Analysis with hyperlinked Airbnb URLs
+  - Revenue Projection (range justified by competitor data)
+  
+- [x] Simplified Arbitrage Report (Beginner format) - IMPLEMENTED & TESTED
+  - [x] Property Overview with attractive features
+  - [x] Market Analysis with percentile table (Good/Better/Best)
+  - [x] Competitive Analysis with success factors
+  - [x] Profitability Projections with 3 scenarios
+  - [x] References section
+
+- [ ] Market eBook (City-level analysis)
+  - Chapter 1: The Big Picture
+  - Chapter 2: What Guests Want (amenities, property types)
+  - Chapter 3: Understanding the Seasons
+  - Chapter 4: Best Neighborhoods (tiered)
+  - Chapter 5: Property Size Matters
+  - Chapter 6: Deeper Insights
+  - Chapter 7: Your Action Plan
