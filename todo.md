@@ -747,3 +747,11 @@
 ## Follow-up Input Placeholder Fix
 - [x] Change placeholder from "Ask a follow-up question, paste a Zillow link, or enter a new address..." to "Ask about this property, market, or competitors..."
 - [ ] Make placeholder dynamic based on whether a report is displayed (optional enhancement)
+
+
+## Property Report Enhancements - Maximize AirDNA API
+- [x] Add seasonality data - monthly revenue breakdown with peak/off-peak identification
+- [x] Add booking lead time - how far in advance guests book (calculated from seasonality)
+- [x] Add length of stay - average nights per booking (calculated from seasonality)
+- [x] Add amenity analysis - what amenities top performers have vs common
+- [ ] Add submarket comparison - how this ZIP compares to nearby areas

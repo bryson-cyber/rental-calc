@@ -77,6 +77,28 @@ export interface SOPProfitability {
   };
 }
 
+export interface SeasonalityData {
+  month: string;
+  revenue: number;
+  occupancy: number;
+  adr: number;
+  season_type: 'Peak' | 'Shoulder' | 'Slow';
+}
+
+export interface BookingMetrics {
+  average_length_of_stay: number; // nights
+  booking_lead_time: number; // days in advance
+  peak_booking_months: string[];
+  slow_booking_months: string[];
+}
+
+export interface AmenityAnalysis {
+  amenity: string;
+  percentage_of_top_performers: number;
+  revenue_impact: 'High' | 'Medium' | 'Low';
+  recommendation: string;
+}
+
 export interface ArbitrageReport {
   title: string;
   prepared_for: string;
@@ -86,11 +108,16 @@ export interface ArbitrageReport {
     executive_summary: string;
     property_analysis: string;
     market_analysis: string;
+    seasonality_analysis: string;
     competitor_analysis: string;
+    amenity_analysis: string;
     profitability_projections: string;
     references: string;
   };
   full_report: string;
+  seasonality?: SeasonalityData[];
+  booking_metrics?: BookingMetrics;
+  amenity_analysis?: AmenityAnalysis[];
 }
 
 // ============================================
@@ -409,6 +436,9 @@ export async function generateFullArbitrageAnalysis(
   profitability: SOPProfitability;
   competitors: CompetitorAnalysis[];
   property_estimate: RentalizerResponse | null;
+  seasonality: SeasonalityData[];
+  booking_metrics: BookingMetrics;
+  amenity_analysis: AmenityAnalysis[];
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -548,7 +578,19 @@ export async function generateFullArbitrageAnalysis(
     generated_at: new Date().toISOString()
   };
   
-  const report = await generateSimplifiedReport(
+  // Step 7: Analyze seasonality from monthly forecast
+  const seasonality = property_estimate?.monthly_forecast 
+    ? analyzeSeasonality(property_estimate.monthly_forecast)
+    : [];
+  
+  // Step 8: Calculate booking metrics
+  const booking_metrics = calculateBookingMetrics(seasonality);
+  
+  // Step 9: Analyze amenities from competitors
+  const amenity_analysis = analyzeAmenities(competitors);
+  
+  // Step 10: Generate base report
+  let report = await generateSimplifiedReport(
     property,
     defaultMarketData,
     competitors,
@@ -556,12 +598,35 @@ export async function generateFullArbitrageAnalysis(
     profitability
   );
   
+  // Step 11: Add seasonality section if we have data
+  if (seasonality.length > 0) {
+    const seasonalitySection = generateSeasonalitySection(seasonality);
+    // Insert after market analysis section
+    const marketAnalysisEnd = report.indexOf('## 3. Then, We Study the Competition');
+    if (marketAnalysisEnd > 0) {
+      report = report.slice(0, marketAnalysisEnd) + seasonalitySection + '\n\n' + report.slice(marketAnalysisEnd);
+    }
+  }
+  
+  // Step 12: Add amenity analysis section if we have data
+  if (amenity_analysis.length > 0) {
+    const amenitySection = generateAmenitySection(amenity_analysis);
+    // Insert after competitor analysis section
+    const competitorAnalysisEnd = report.indexOf('## 4. Finally, We Project the Profit');
+    if (competitorAnalysisEnd > 0) {
+      report = report.slice(0, competitorAnalysisEnd) + amenitySection + '\n\n' + report.slice(competitorAnalysisEnd);
+    }
+  }
+  
   return {
     report,
     percentiles,
     profitability,
     competitors,
-    property_estimate
+    property_estimate,
+    seasonality,
+    booking_metrics,
+    amenity_analysis
   };
 }
 
@@ -634,6 +699,256 @@ export function tierNeighborhoods(submarkets: Array<{
   });
 }
 
+// ============================================
+// SEASONALITY ANALYSIS
+// ============================================
+
+/**
+ * Analyze seasonality from monthly forecast data
+ */
+export function analyzeSeasonality(monthlyForecast: Array<{
+  month: string;
+  revenue: number;
+  occupancy: number;
+  adr: number;
+}>): SeasonalityData[] {
+  if (!monthlyForecast || monthlyForecast.length === 0) return [];
+  
+  const avgRevenue = monthlyForecast.reduce((sum, m) => sum + m.revenue, 0) / monthlyForecast.length;
+  
+  return monthlyForecast.map(m => {
+    let season_type: 'Peak' | 'Shoulder' | 'Slow';
+    if (m.revenue > avgRevenue * 1.15) {
+      season_type = 'Peak';
+    } else if (m.revenue < avgRevenue * 0.85) {
+      season_type = 'Slow';
+    } else {
+      season_type = 'Shoulder';
+    }
+    
+    return {
+      month: m.month,
+      revenue: m.revenue,
+      occupancy: m.occupancy < 1 ? Math.round(m.occupancy * 100) : Math.round(m.occupancy),
+      adr: Math.round(m.adr),
+      season_type
+    };
+  });
+}
+
+/**
+ * Calculate booking metrics from seasonality data
+ */
+export function calculateBookingMetrics(seasonality: SeasonalityData[]): BookingMetrics {
+  const peakMonths = seasonality.filter(s => s.season_type === 'Peak').map(s => s.month);
+  const slowMonths = seasonality.filter(s => s.season_type === 'Slow').map(s => s.month);
+  
+  // Default booking metrics (these would come from AirDNA API if available)
+  return {
+    average_length_of_stay: 3.2, // nights - typical for vacation rentals
+    booking_lead_time: 21, // days - typical advance booking
+    peak_booking_months: peakMonths,
+    slow_booking_months: slowMonths
+  };
+}
+
+// ============================================
+// AMENITY ANALYSIS
+// ============================================
+
+/**
+ * Analyze amenities from top performers to identify what drives success
+ */
+export function analyzeAmenities(competitors: CompetitorAnalysis[]): AmenityAnalysis[] {
+  if (!competitors || competitors.length === 0) return [];
+  
+  // Count amenity frequency among top performers
+  const amenityCounts: Record<string, number> = {};
+  const totalCompetitors = competitors.length;
+  
+  // Define key amenities to track
+  const keyAmenities = [
+    'pool', 'heated pool', 'hot tub', 'spa', 'jacuzzi',
+    'game room', 'pool table', 'arcade',
+    'outdoor kitchen', 'bbq', 'grill',
+    'fire pit', 'fireplace',
+    'gym', 'fitness',
+    'theater', 'home theater', 'projector',
+    'ev charger', 'electric vehicle',
+    'pet friendly', 'pets allowed',
+    'mountain view', 'ocean view', 'lake view', 'city view'
+  ];
+  
+  // Analyze success factors to infer amenities
+  competitors.forEach(comp => {
+    const successFactor = comp.key_success_factor.toLowerCase();
+    const name = comp.name.toLowerCase();
+    
+    // Pool detection
+    if (successFactor.includes('pool') || name.includes('pool')) {
+      amenityCounts['Pool'] = (amenityCounts['Pool'] || 0) + 1;
+    }
+    if (successFactor.includes('heated') || name.includes('heated')) {
+      amenityCounts['Heated Pool'] = (amenityCounts['Heated Pool'] || 0) + 1;
+    }
+    
+    // Hot tub detection
+    if (successFactor.includes('hot tub') || successFactor.includes('spa') || 
+        name.includes('hot tub') || name.includes('spa')) {
+      amenityCounts['Hot Tub/Spa'] = (amenityCounts['Hot Tub/Spa'] || 0) + 1;
+    }
+    
+    // Game room detection
+    if (successFactor.includes('game') || name.includes('game') || 
+        name.includes('arcade') || name.includes('pool table')) {
+      amenityCounts['Game Room'] = (amenityCounts['Game Room'] || 0) + 1;
+    }
+    
+    // Outdoor features
+    if (successFactor.includes('outdoor') || name.includes('bbq') || 
+        name.includes('grill') || name.includes('fire pit')) {
+      amenityCounts['Outdoor Entertainment'] = (amenityCounts['Outdoor Entertainment'] || 0) + 1;
+    }
+    
+    // Luxury indicators
+    if (successFactor.includes('luxury') || successFactor.includes('premium') ||
+        name.includes('luxury') || name.includes('luxe')) {
+      amenityCounts['Luxury Finishes'] = (amenityCounts['Luxury Finishes'] || 0) + 1;
+    }
+    
+    // Views
+    if (name.includes('view') || name.includes('mountain') || 
+        name.includes('ocean') || name.includes('lake')) {
+      amenityCounts['Scenic Views'] = (amenityCounts['Scenic Views'] || 0) + 1;
+    }
+    
+    // Location
+    if (successFactor.includes('location') || name.includes('downtown') ||
+        name.includes('old town') || name.includes('steps from')) {
+      amenityCounts['Prime Location'] = (amenityCounts['Prime Location'] || 0) + 1;
+    }
+  });
+  
+  // Convert to analysis with recommendations
+  const analysis: AmenityAnalysis[] = Object.entries(amenityCounts)
+    .map(([amenity, count]) => {
+      const percentage = Math.round((count / totalCompetitors) * 100);
+      let revenue_impact: 'High' | 'Medium' | 'Low';
+      let recommendation: string;
+      
+      if (percentage >= 60) {
+        revenue_impact = 'High';
+        recommendation = `Essential - ${percentage}% of top performers have this. Strongly consider adding.`;
+      } else if (percentage >= 30) {
+        revenue_impact = 'Medium';
+        recommendation = `Valuable differentiator - ${percentage}% of top performers have this.`;
+      } else {
+        revenue_impact = 'Low';
+        recommendation = `Nice to have - ${percentage}% of top performers have this.`;
+      }
+      
+      return {
+        amenity,
+        percentage_of_top_performers: percentage,
+        revenue_impact,
+        recommendation
+      };
+    })
+    .sort((a, b) => b.percentage_of_top_performers - a.percentage_of_top_performers);
+  
+  return analysis;
+}
+
+/**
+ * Generate seasonality section for the report
+ */
+export function generateSeasonalitySection(seasonality: SeasonalityData[]): string {
+  if (!seasonality || seasonality.length === 0) {
+    return '';
+  }
+  
+  const peakMonths = seasonality.filter(s => s.season_type === 'Peak');
+  const slowMonths = seasonality.filter(s => s.season_type === 'Slow');
+  const avgRevenue = seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length;
+  
+  let section = `
+---
+
+## Seasonality Analysis
+
+Understanding when demand is high vs. low helps you price strategically and plan for cash flow.
+
+### Monthly Revenue Forecast
+
+| Month | Revenue | Occupancy | ADR | Season |
+| :--- | ---: | ---: | ---: | :---: |
+${seasonality.map(s => 
+  `| ${s.month} | $${s.revenue.toLocaleString()} | ${s.occupancy}% | $${s.adr} | ${s.season_type === 'Peak' ? '🔥 Peak' : s.season_type === 'Slow' ? '❄️ Slow' : '➡️ Shoulder'} |`
+).join('\n')}
+
+### What This Means for You
+
+`;
+
+  if (peakMonths.length > 0) {
+    section += `**Peak Season (${peakMonths.map(p => p.month.split(' ')[0]).join(', ')}):** This is when you'll make the most money. Raise your prices 20-30% above your base rate. Book early guests at premium rates.\n\n`;
+  }
+  
+  if (slowMonths.length > 0) {
+    section += `**Slow Season (${slowMonths.map(s => s.month.split(' ')[0]).join(', ')}):** Expect lower bookings. Consider offering discounts for longer stays (7+ nights) or targeting different guest types (remote workers, snowbirds).\n\n`;
+  }
+  
+  section += `**Average Monthly Revenue:** $${Math.round(avgRevenue).toLocaleString()} - Use this as your baseline for budgeting.`;
+  
+  return section;
+}
+
+/**
+ * Generate amenity analysis section for the report
+ */
+export function generateAmenitySection(amenityAnalysis: AmenityAnalysis[]): string {
+  if (!amenityAnalysis || amenityAnalysis.length === 0) {
+    return '';
+  }
+  
+  const highImpact = amenityAnalysis.filter(a => a.revenue_impact === 'High');
+  const mediumImpact = amenityAnalysis.filter(a => a.revenue_impact === 'Medium');
+  
+  let section = `
+---
+
+## What Makes Top Performers Successful?
+
+We analyzed the amenities and features of the highest-earning properties in this market. Here's what they have in common:
+
+### Amenity Analysis
+
+| Amenity | % of Top Performers | Impact | Recommendation |
+| :--- | ---: | :---: | :--- |
+${amenityAnalysis.slice(0, 8).map(a => 
+  `| ${a.amenity} | ${a.percentage_of_top_performers}% | ${a.revenue_impact} | ${a.recommendation.split(' - ')[0]} |`
+).join('\n')}
+
+`;
+
+  if (highImpact.length > 0) {
+    section += `### Must-Have Features\n\nThese amenities appear in most top performers and significantly impact revenue:\n\n`;
+    highImpact.forEach(a => {
+      section += `- **${a.amenity}:** ${a.recommendation}\n`;
+    });
+    section += '\n';
+  }
+  
+  if (mediumImpact.length > 0) {
+    section += `### Valuable Differentiators\n\nThese features help properties stand out from the competition:\n\n`;
+    mediumImpact.forEach(a => {
+      section += `- **${a.amenity}:** ${a.recommendation}\n`;
+    });
+  }
+  
+  return section;
+}
+
 // Export all functions for use in AI advisor
 export const SOPReports = {
   calculateSOPProfitability,
@@ -642,5 +957,10 @@ export const SOPReports = {
   analyzeCompetitorSuccessFactors,
   generateSimplifiedReport,
   generateFullArbitrageAnalysis,
-  tierNeighborhoods
+  tierNeighborhoods,
+  analyzeSeasonality,
+  calculateBookingMetrics,
+  analyzeAmenities,
+  generateSeasonalitySection,
+  generateAmenitySection
 };

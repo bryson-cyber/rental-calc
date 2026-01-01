@@ -1852,9 +1852,20 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
                 conservative_profit: result.profitability.scenarios.conservative.estimated_profit,
                 realistic_profit: result.profitability.scenarios.realistic.estimated_profit,
                 optimistic_profit: result.profitability.scenarios.optimistic.estimated_profit
-              }
+              },
+              seasonality: {
+                peak_months: result.seasonality.filter(s => s.season_type === 'Peak').map(s => s.month),
+                slow_months: result.seasonality.filter(s => s.season_type === 'Slow').map(s => s.month),
+                monthly_data_available: result.seasonality.length > 0
+              },
+              booking_metrics: result.booking_metrics,
+              amenity_insights: result.amenity_analysis.slice(0, 5).map(a => ({
+                amenity: a.amenity,
+                percentage: a.percentage_of_top_performers,
+                impact: a.revenue_impact
+              }))
             },
-            instruction: "CRITICAL: Present the ENTIRE report to the user EXACTLY as formatted. The report contains a competitor table with all properties - you MUST include this table in your response. Do NOT summarize or skip any sections. The report is formatted in Markdown with tables that must be preserved."
+            instruction: "CRITICAL: Present the ENTIRE report to the user EXACTLY as formatted. The report contains multiple sections including Seasonality Analysis and Amenity Analysis - you MUST include ALL tables in your response. Do NOT summarize or skip any sections. The report is formatted in Markdown with tables that must be preserved."
           };
         } catch (error) {
           return { error: `Failed to generate arbitrage report: ${error instanceof Error ? error.message : 'Unknown error'}` };
