@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { toast } from 'sonner';
 
 // Analysis result type
@@ -441,19 +442,19 @@ export default function PropertyAnalyzer() {
         {/* Input Form */}
         <div className={`bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 md:p-8 ${result ? 'mb-8' : ''}`}>
           <div className="grid gap-6">
-            {/* Address Input */}
+            {/* Address Input with Autocomplete */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
                 <MapPin className="w-4 h-4 inline mr-2" />
                 Property Address
               </label>
-              <Input
-                type="text"
-                placeholder="123 Main St, Austin, TX 78701"
+              <AddressAutocomplete
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 h-12 text-lg"
+                onChange={(value) => setAddress(value)}
+                onSelect={(selectedAddress) => setAddress(selectedAddress)}
+                placeholder="Start typing an address..."
                 disabled={isAnalyzing}
+                inputClassName="bg-white/5 border-white/10 text-white placeholder:text-white/30 h-12 text-lg"
               />
             </div>
             

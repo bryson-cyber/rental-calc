@@ -999,3 +999,11 @@
 - [x] Risks to Consider section
 - [x] Book a Free Strategy Call CTA
 - [x] Analyze Another Property button
+
+
+## BUG FIXES - Address Autocomplete & API Maximization
+- [x] Fix address autocomplete (Google Places API integration missing)
+- [x] Audit all AirDNA API endpoints in airdna.ts
+- [x] Verify each endpoint is called in analysis pipeline
+- [x] Test complete flow with real property
+- [x] Ensure all API data is displayed in report
