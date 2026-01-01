@@ -1330,8 +1330,8 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           monthly_forecast: estimate.monthly_forecast.map(m => {
             // Classify season type
             const avgMonthlyRev = estimate.estimates.annual_revenue / 12;
-            const seasonType = m.revenue > avgMonthlyRev * 1.15 ? 'Peak' : 
-                              m.revenue < avgMonthlyRev * 0.85 ? 'Slow' : 'Shoulder';
+            const seasonType = m.revenue > avgMonthlyRev * 1.15 ? 'peak' : 
+                              m.revenue < avgMonthlyRev * 0.85 ? 'off' : 'shoulder';
             return {
               month: m.month,
               revenue: m.revenue,
@@ -1854,8 +1854,8 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
                 optimistic_profit: result.profitability.scenarios.optimistic.estimated_profit
               },
               seasonality: {
-                peak_months: result.seasonality.filter(s => s.season_type === 'Peak').map(s => s.month),
-                slow_months: result.seasonality.filter(s => s.season_type === 'Slow').map(s => s.month),
+                peak_months: result.seasonality.filter(s => s.season_type === 'peak').map(s => s.month),
+                slow_months: result.seasonality.filter(s => s.season_type === 'off').map(s => s.month),
                 monthly_data_available: result.seasonality.length > 0
               },
               booking_metrics: result.booking_metrics,

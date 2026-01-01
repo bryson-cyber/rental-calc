@@ -1077,6 +1077,13 @@ export const appRouter = router({
               property_roi: analysis.property_roi,
               regulations: analysis.regulations,
               
+              // COMPREHENSIVE DATA: Market-level seasonality from API
+              market_seasonality: analysis.market_seasonality,
+              // COMPREHENSIVE DATA: Future pricing forecasts
+              future_pricing: analysis.future_pricing,
+              // COMPREHENSIVE DATA: Historical performance trends
+              historical_trends: analysis.historical_trends,
+              
               // Full markdown report
               full_report: analysis.report
             }

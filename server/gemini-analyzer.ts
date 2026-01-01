@@ -57,10 +57,12 @@ export interface CompetitorData {
 
 export interface SeasonalityData {
   month: string;
+  month_name?: string;
   revenue: number;
   occupancy: number;
   adr: number;
-  season_type: 'Peak' | 'Shoulder' | 'Slow';
+  season_type: 'peak' | 'shoulder' | 'off';
+  pricing_recommendation?: string;
 }
 
 export interface PercentileData {
@@ -464,8 +466,8 @@ export async function generatePricingStrategy(
 ): Promise<PricingStrategy> {
   const seasonalityData = seasonality || [];
   const competitorsList = competitors || [];
-  const peakMonths = seasonalityData.filter(s => s.season_type === 'Peak');
-  const slowMonths = seasonalityData.filter(s => s.season_type === 'Slow');
+  const peakMonths = seasonalityData.filter(s => s.season_type === 'peak');
+  const slowMonths = seasonalityData.filter(s => s.season_type === 'off');
   const avgPeakADR = peakMonths.length > 0 ? peakMonths.reduce((sum, m) => sum + m.adr, 0) / peakMonths.length : market.adr;
   const avgSlowADR = slowMonths.length > 0 ? slowMonths.reduce((sum, m) => sum + m.adr, 0) / slowMonths.length : market.adr * 0.8;
   
@@ -637,8 +639,8 @@ export async function assessRisks(
 ): Promise<RiskAssessment> {
   const seasonalityData = seasonality || [];
   const competitorsList = competitors || [];
-  const slowMonths = seasonalityData.filter(s => s.season_type === 'Slow');
-  const peakMonths = seasonalityData.filter(s => s.season_type === 'Peak');
+  const slowMonths = seasonalityData.filter(s => s.season_type === 'off');
+  const peakMonths = seasonalityData.filter(s => s.season_type === 'peak');
   const seasonalityVariance = peakMonths.length > 0 && slowMonths.length > 0
     ? (peakMonths[0].revenue - slowMonths[0].revenue) / peakMonths[0].revenue
     : 0;

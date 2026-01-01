@@ -16,13 +16,18 @@ import {
   getMarketProfessionalStats,
   getMarketCancellationPolicies,
   getEnhancedRentalizerEstimate,
+  getMarketSeasonality,
+  getMarketFutureDailyData,
+  getMarketHistoricalData,
   ListingData,
   RentalizerResponse,
   ComprehensiveMarketReport,
   BookingPatterns,
   SupplyTrend,
   ProfessionalHostStats,
-  CancellationPolicyStats
+  CancellationPolicyStats,
+  SeasonalityData,
+  FutureDailyData
 } from './airdna';
 
 import {
@@ -49,7 +54,7 @@ import {
   type RegulationInfo
 } from './gemini-analyzer';
 
-import { scrapeAirbnbImages, batchScrapeAirbnbImages } from './airbnb-scraper';
+import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -114,13 +119,8 @@ export interface SOPProfitability {
   };
 }
 
-export interface SeasonalityData {
-  month: string;
-  revenue: number;
-  occupancy: number;
-  adr: number;
-  season_type: 'Peak' | 'Shoulder' | 'Slow';
-}
+// SeasonalityData is imported from airdna.ts
+// Using lowercase season_type values: 'peak' | 'shoulder' | 'off'
 
 export interface BookingMetrics {
   average_length_of_stay: number; // nights
@@ -277,6 +277,16 @@ export interface ArbitrageReport {
   cancellation_policies?: CancellationPolicyData;
   property_roi?: PropertyROIData;
   regulations?: RegulationsData;
+  // COMPREHENSIVE DATA: Market-level seasonality from API
+  market_seasonality?: SeasonalityData[];
+  // COMPREHENSIVE DATA: Future pricing forecasts
+  future_pricing?: FutureDailyData[];
+  // COMPREHENSIVE DATA: Historical performance trends
+  historical_trends?: {
+    occupancy: Array<{ date: string; value: number }>;
+    adr: Array<{ date: string; value: number }>;
+    revenue: Array<{ date: string; value: number }>;
+  };
 }
 
 // ============================================
@@ -368,14 +378,44 @@ export function calculateMarketPercentiles(listings: ListingData[]): MarketPerce
 }
 
 /**
- * Filter competitors above minimum revenue threshold
+ * Filter competitors above minimum revenue threshold and remove inactive properties
  */
 export function filterCompetitorsAboveThreshold(
   listings: ListingData[],
   monthly_rent: number
 ): ListingData[] {
   const threshold = monthly_rent * 12 * 2;
-  return listings.filter(l => l.annual_revenue >= threshold);
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  
+  return listings.filter(l => {
+    // Must meet revenue threshold
+    if (l.annual_revenue < threshold) return false;
+    
+    // Filter out inactive properties (no recent activity)
+    // Check last_review_date - if older than 1 year, likely inactive
+    if (l.last_review_date) {
+      const lastReview = new Date(l.last_review_date);
+      if (lastReview < oneYearAgo) {
+        console.log(`[FilterCompetitors] Excluding ${l.title} - last review ${l.last_review_date} is too old`);
+        return false;
+      }
+    }
+    
+    // Check days_available - if 0 or very low, likely inactive
+    if (l.days_available !== undefined && l.days_available < 30) {
+      console.log(`[FilterCompetitors] Excluding ${l.title} - only ${l.days_available} days available`);
+      return false;
+    }
+    
+    // Check occupancy - if 0 or very low, likely inactive
+    if (l.occupancy !== undefined && l.occupancy < 0.05) {
+      console.log(`[FilterCompetitors] Excluding ${l.title} - occupancy ${l.occupancy} too low`);
+      return false;
+    }
+    
+    return true;
+  });
 }
 
 /**
@@ -617,6 +657,14 @@ export async function generateFullArbitrageAnalysis(
   cancellation_policies?: CancellationPolicyData;
   property_roi?: PropertyROIData;
   regulations?: RegulationsData;
+  // COMPREHENSIVE DATA
+  market_seasonality?: SeasonalityData[];
+  future_pricing?: FutureDailyData[];
+  historical_trends?: {
+    occupancy: Array<{ date: string; value: number }>;
+    adr: Array<{ date: string; value: number }>;
+    revenue: Array<{ date: string; value: number }>;
+  };
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -721,7 +769,32 @@ export async function generateFullArbitrageAnalysis(
   const uniqueCompetitors = viableCompetitors.filter((comp, index, self) => 
     index === self.findIndex(c => c.title === comp.title || c.airbnb_url === comp.airbnb_url)
   );
-  const competitors = uniqueCompetitors.map(analyzeCompetitorSuccessFactors);
+  
+  // Step 4b: Filter out inactive listings by checking if they actually load on Airbnb
+  let activeCompetitors = uniqueCompetitors;
+  const airbnbUrls = uniqueCompetitors
+    .map(c => c.airbnb_url)
+    .filter((url): url is string => !!url);
+  
+  if (airbnbUrls.length > 0) {
+    try {
+      console.log(`[ArbitrageAnalysis] Checking ${airbnbUrls.length} Airbnb listings for availability...`);
+      const activeUrls = await batchCheckAirbnbListingsActive(airbnbUrls);
+      
+      // Filter to only include listings that are actually active on Airbnb
+      activeCompetitors = uniqueCompetitors.filter(c => {
+        if (!c.airbnb_url) return true; // Keep listings without URLs (can't verify)
+        return activeUrls.has(c.airbnb_url);
+      });
+      
+      console.log(`[ArbitrageAnalysis] ${activeCompetitors.length}/${uniqueCompetitors.length} listings are active on Airbnb`);
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error checking Airbnb listing availability:', error);
+      // If check fails, keep all competitors
+    }
+  }
+  
+  const competitors = activeCompetitors.map(analyzeCompetitorSuccessFactors);
   
   // Step 5: Calculate profitability
   const profitability = calculateSOPProfitability(monthly_rent, percentiles);
@@ -873,7 +946,15 @@ export async function generateFullArbitrageAnalysis(
   let property_roi: PropertyROIData | undefined;
   let regulations: RegulationsData | undefined;
   
-  const marketId = defaultMarketData.market.id;
+  // Try to get market ID from defaultMarketData, or from zipData submarket's parent market
+  let marketId = defaultMarketData.market.id;
+  
+  // If marketId is 'unknown', try to get it from the property estimate or use a fallback
+  if (marketId === 'unknown' && property_estimate?.property?.market_id) {
+    marketId = property_estimate.property.market_id;
+  }
+  
+  console.log(`[ArbitrageAnalysis] Using market ID: ${marketId}`);
   
   if (marketId && marketId !== 'unknown') {
     try {
@@ -1055,6 +1136,49 @@ export async function generateFullArbitrageAnalysis(
     // Continue without photo analysis
   }
   
+  // Step 17: Fetch comprehensive market data (seasonality, future pricing, historical trends)
+  let market_seasonality: SeasonalityData[] | undefined;
+  let future_pricing: FutureDailyData[] | undefined;
+  let historical_trends: {
+    occupancy: Array<{ date: string; value: number }>;
+    adr: Array<{ date: string; value: number }>;
+    revenue: Array<{ date: string; value: number }>;
+  } | undefined;
+  
+  if (marketId && marketId !== 'unknown') {
+    try {
+      console.log('[ArbitrageAnalysis] Fetching comprehensive market data...');
+      
+      // Fetch all comprehensive data in parallel
+      const [seasonalityData, futurePricingData, historicalData] = await Promise.all([
+        getMarketSeasonality(marketId).catch(() => []),
+        getMarketFutureDailyData(marketId, 6, actualBedrooms).catch(() => []),
+        getMarketHistoricalData(marketId, 12).catch(() => null)
+      ]);
+      
+      if (seasonalityData && seasonalityData.length > 0) {
+        market_seasonality = seasonalityData;
+        console.log(`[ArbitrageAnalysis] Got ${seasonalityData.length} months of market seasonality`);
+      }
+      
+      if (futurePricingData && futurePricingData.length > 0) {
+        future_pricing = futurePricingData;
+        console.log(`[ArbitrageAnalysis] Got ${futurePricingData.length} days of future pricing`);
+      }
+      
+      if (historicalData) {
+        historical_trends = {
+          occupancy: historicalData.occupancy || [],
+          adr: historicalData.adr || [],
+          revenue: historicalData.revenue || []
+        };
+        console.log('[ArbitrageAnalysis] Got historical trends data');
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching comprehensive market data:', error);
+    }
+  }
+  
   return {
     report,
     percentiles,
@@ -1072,7 +1196,11 @@ export async function generateFullArbitrageAnalysis(
     professional_host_stats,
     cancellation_policies,
     property_roi,
-    regulations
+    regulations,
+    // COMPREHENSIVE DATA
+    market_seasonality,
+    future_pricing,
+    historical_trends
   };
 }
 
@@ -1163,17 +1291,18 @@ export function analyzeSeasonality(monthlyForecast: Array<{
   const avgRevenue = monthlyForecast.reduce((sum, m) => sum + m.revenue, 0) / monthlyForecast.length;
   
   return monthlyForecast.map(m => {
-    let season_type: 'Peak' | 'Shoulder' | 'Slow';
+    let season_type: 'peak' | 'shoulder' | 'off';
     if (m.revenue > avgRevenue * 1.15) {
-      season_type = 'Peak';
+      season_type = 'peak';
     } else if (m.revenue < avgRevenue * 0.85) {
-      season_type = 'Slow';
+      season_type = 'off';
     } else {
-      season_type = 'Shoulder';
+      season_type = 'shoulder';
     }
     
     return {
       month: m.month,
+      month_name: '', // Will be populated from date parsing
       revenue: m.revenue,
       occupancy: m.occupancy < 1 ? Math.round(m.occupancy * 100) : Math.round(m.occupancy),
       adr: Math.round(m.adr),
@@ -1186,8 +1315,8 @@ export function analyzeSeasonality(monthlyForecast: Array<{
  * Calculate booking metrics from seasonality data
  */
 export function calculateBookingMetrics(seasonality: SeasonalityData[]): BookingMetrics {
-  const peakMonths = seasonality.filter(s => s.season_type === 'Peak').map(s => s.month);
-  const slowMonths = seasonality.filter(s => s.season_type === 'Slow').map(s => s.month);
+  const peakMonths = seasonality.filter(s => s.season_type === 'peak').map(s => s.month);
+  const slowMonths = seasonality.filter(s => s.season_type === 'off').map(s => s.month);
   
   // Default booking metrics (these would come from AirDNA API if available)
   return {
@@ -1313,8 +1442,8 @@ export function generateSeasonalitySection(seasonality: SeasonalityData[]): stri
     return '';
   }
   
-  const peakMonths = seasonality.filter(s => s.season_type === 'Peak');
-  const slowMonths = seasonality.filter(s => s.season_type === 'Slow');
+  const peakMonths = seasonality.filter(s => s.season_type === 'peak');
+  const slowMonths = seasonality.filter(s => s.season_type === 'off');
   const avgRevenue = seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length;
   
   let section = `
@@ -1329,7 +1458,7 @@ Understanding when demand is high vs. low helps you price strategically and plan
 | Month | Revenue | Occupancy | ADR | Season |
 | :--- | ---: | ---: | ---: | :---: |
 ${seasonality.map(s => 
-  `| ${s.month} | $${s.revenue.toLocaleString()} | ${s.occupancy}% | $${s.adr} | ${s.season_type === 'Peak' ? '🔥 Peak' : s.season_type === 'Slow' ? '❄️ Slow' : '➡️ Shoulder'} |`
+  `| ${s.month_name || s.month} | $${s.revenue.toLocaleString()} | ${s.occupancy}% | $${s.adr} | ${s.season_type === 'peak' ? '🔥 Peak' : s.season_type === 'off' ? '❄️ Slow' : '➡️ Shoulder'} |`
 ).join('\n')}
 
 ### What This Means for You

@@ -40,6 +40,79 @@ export function constructAirbnbImageUrl(listingId: string, size: 'small' | 'medi
 }
 
 /**
+ * Check if an Airbnb listing is active (returns true if listing loads successfully)
+ */
+export async function checkAirbnbListingActive(airbnbUrl: string): Promise<boolean> {
+  const listingId = extractAirbnbListingId(airbnbUrl);
+  if (!listingId) {
+    return false;
+  }
+  
+  try {
+    const response = await fetch(airbnbUrl, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+    
+    // 404 or other error means listing is not available
+    if (!response.ok) {
+      console.log(`[checkAirbnbListingActive] Listing ${listingId} returned ${response.status}`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`[checkAirbnbListingActive] Error checking listing ${listingId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Batch check if multiple Airbnb listings are active
+ * Returns a set of active URLs
+ */
+export async function batchCheckAirbnbListingsActive(
+  airbnbUrls: string[],
+  maxConcurrent: number = 5
+): Promise<Set<string>> {
+  const activeUrls = new Set<string>();
+  
+  // Filter out invalid URLs
+  const validUrls = airbnbUrls.filter((url: string) => extractAirbnbListingId(url));
+  
+  console.log(`[batchCheckAirbnbListingsActive] Checking ${validUrls.length} URLs`);
+  
+  // Process in batches
+  for (let i = 0; i < validUrls.length; i += maxConcurrent) {
+    const batch = validUrls.slice(i, i + maxConcurrent);
+    
+    const batchResults = await Promise.all(
+      batch.map(async (url) => {
+        const isActive = await checkAirbnbListingActive(url);
+        return { url, isActive };
+      })
+    );
+    
+    batchResults.forEach(({ url, isActive }) => {
+      if (isActive) {
+        activeUrls.add(url);
+      }
+    });
+    
+    // Small delay between batches
+    if (i + maxConcurrent < validUrls.length) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+  
+  console.log(`[batchCheckAirbnbListingsActive] ${activeUrls.size}/${validUrls.length} listings are active`);
+  
+  return activeUrls;
+}
+
+/**
  * Scrape listing images from Airbnb page
  */
 export async function scrapeAirbnbImages(airbnbUrl: string): Promise<string[]> {

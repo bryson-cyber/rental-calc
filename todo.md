@@ -1016,3 +1016,36 @@
 - [x] Review and restore lost features from previous versions
 - [x] Ensure data is passed correctly to AI for analysis
 - [x] Add listing photos/thumbnails to competitor display
+
+
+## ENHANCEMENTS - Ebook-Style Report
+- [ ] Display all seasonality forms (monthly revenue, occupancy, ADR trends, booking patterns)
+- [ ] Filter out unavailable/inactive properties from competitor display
+- [ ] Transform market overview into comprehensive expert ebook-style report
+- [ ] Audit all API data being fetched vs displayed
+- [ ] Add market supply trends (growth/decline)
+- [ ] Add booking patterns (lead time, length of stay)
+- [ ] Add professional host statistics
+- [ ] Add market grade/score visualization
+- [ ] Add future pricing predictions
+- [ ] Create rich data visualizations for all metrics
+- [ ] Filter out competitor listings that return 404 or are unavailable on Airbnb
+
+
+## MAJOR ENHANCEMENT - Expert-Level Analysis Transformation
+- [ ] Audit all AirDNA API endpoints and identify underutilized data
+- [ ] Pull comprehensive market intelligence (not just basics)
+- [ ] Include historical performance trends (YoY growth)
+- [ ] Include booking lead time analysis
+- [ ] Include length of stay patterns
+- [ ] Include professional host statistics
+- [ ] Include cancellation policy insights
+- [ ] Include amenity analysis (what top performers have)
+- [ ] Include pricing strategy recommendations
+- [ ] Include demand drivers and events calendar
+- [ ] Upgrade AI prompts to generate expert-level insights
+- [ ] Transform frontend into professional ebook-style report
+- [ ] Add executive summary section
+- [ ] Add detailed market deep-dive
+- [ ] Add competitive positioning analysis
+- [ ] Add actionable recommendations section

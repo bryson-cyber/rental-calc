@@ -43,7 +43,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Award
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,11 +92,15 @@ interface AnalysisResult {
     image_url?: string;
   }>;
   
-  // Seasonality
+  // Seasonality (full data)
   seasonality: Array<{
     month: string;
+    month_name?: string;
     revenue: number;
-    season_type: 'Peak' | 'Shoulder' | 'Slow';
+    occupancy: number;
+    adr: number;
+    season_type: 'peak' | 'shoulder' | 'off';
+    pricing_recommendation?: string;
   }>;
   
   // Profitability
@@ -124,12 +129,16 @@ interface AnalysisResult {
     net_change: number;
     percent_change: number;
     trend: 'growing' | 'stable' | 'declining';
+    insight?: string;
   };
   
   // Professional stats
   professional_stats?: {
     professional_percentage: number;
     superhost_percentage: number;
+    avg_revenue_professional?: number;
+    avg_revenue_individual?: number;
+    revenue_premium_percent?: number;
   };
   
   // Booking patterns
@@ -152,6 +161,33 @@ interface AnalysisResult {
     severity: string;
     mitigation: string;
   }>;
+  
+  // Cancellation policies
+  cancellation_policies?: {
+    policies: Array<{
+      policy: string;
+      count: number;
+      percentage: number;
+      avg_revenue: number;
+    }>;
+    recommendation?: string;
+  };
+  
+  // Future pricing forecasts
+  future_pricing?: Array<{
+    date: string;
+    adr: number;
+    occupancy: number;
+    adr_percentile_25?: number;
+    adr_percentile_75?: number;
+  }>;
+  
+  // Historical trends
+  historical_trends?: {
+    occupancy: Array<{ date: string; value: number }>;
+    adr: Array<{ date: string; value: number }>;
+    revenue: Array<{ date: string; value: number }>;
+  };
   
   // Full report markdown
   full_report: string;
@@ -307,10 +343,20 @@ export default function PropertyAnalyzer() {
             months_optimistic: 8
           },
           
-          supply_trend: data.supply_trend,
+          supply_trend: data.supply_trend ? {
+            current_listings: data.supply_trend.current_listings,
+            net_change: data.supply_trend.net_change,
+            percent_change: data.supply_trend.percent_change,
+            trend: data.supply_trend.trend,
+            insight: data.supply_trend.insight
+          } : undefined,
+          
           professional_stats: data.professional_host_stats ? {
             professional_percentage: data.professional_host_stats.professional_percentage,
-            superhost_percentage: data.professional_host_stats.superhost_percentage
+            superhost_percentage: data.professional_host_stats.superhost_percentage,
+            avg_revenue_professional: data.professional_host_stats.avg_revenue_professional,
+            avg_revenue_individual: data.professional_host_stats.avg_revenue_individual,
+            revenue_premium_percent: data.professional_host_stats.revenue_premium_percent
           } : undefined,
           
           booking_patterns: data.booking_patterns ? {
@@ -320,6 +366,14 @@ export default function PropertyAnalyzer() {
           
           amenities: data.amenity_analysis,
           risks: data.ai_analysis?.risk_assessment?.risks,
+          
+          cancellation_policies: data.cancellation_policies ? {
+            policies: data.cancellation_policies.policies || [],
+            recommendation: data.cancellation_policies.recommendation
+          } : undefined,
+          
+          future_pricing: data.future_pricing,
+          historical_trends: data.historical_trends,
           
           full_report: data.full_report || ''
         };
@@ -756,7 +810,7 @@ export default function PropertyAnalyzer() {
               )}
             </div>
             
-            {/* Market Overview */}
+            {/* Market Intelligence - Comprehensive Expert Analysis */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
               <button
                 onClick={() => toggleSection('market')}
@@ -766,7 +820,7 @@ export default function PropertyAnalyzer() {
                   <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
                     <BarChart3 className="w-5 h-5 text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">Market Overview</h3>
+                  <h3 className="text-xl font-semibold text-white">Market Intelligence Report</h3>
                 </div>
                 {expandedSections.has('market') ? (
                   <ChevronUp className="w-5 h-5 text-white/50" />
@@ -776,23 +830,250 @@ export default function PropertyAnalyzer() {
               </button>
               
               {expandedSections.has('market') && (
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <p className="text-sm text-white/50 mb-1">Market</p>
-                    <p className="text-lg font-semibold text-white">{result.market.name}</p>
+                <div className="mt-6 space-y-6">
+                  {/* Market Header */}
+                  <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-5 border border-blue-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm text-white/50">Analyzing Market</p>
+                        <h4 className="text-2xl font-bold text-white">{result.market.name}</h4>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-white/50">Market Health</p>
+                        {(() => {
+                          // Normalize occupancy to percentage (0-100 scale)
+                          const occPct = result.market.occupancy > 1 ? result.market.occupancy : result.market.occupancy * 100;
+                          return (
+                            <div className={`text-lg font-bold ${
+                              occPct >= 60 ? 'text-green-400' :
+                              occPct >= 45 ? 'text-yellow-400' :
+                              'text-red-400'
+                            }`}>
+                              {occPct >= 60 ? 'Strong' :
+                               occPct >= 45 ? 'Moderate' : 'Weak'}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    {(() => {
+                      const occPct = result.market.occupancy > 1 ? result.market.occupancy : result.market.occupancy * 100;
+                      return (
+                        <p className="text-white/70 text-sm">
+                          This market has {result.market.active_listings.toLocaleString()} active short-term rental listings competing for guests. 
+                          {occPct >= 60 
+                            ? ' The high occupancy rate indicates strong demand, making this an attractive market for new listings.'
+                            : occPct >= 45
+                            ? ' Moderate occupancy suggests a balanced market with room for well-positioned listings.'
+                            : ' Lower occupancy may indicate oversupply or seasonal factors - careful positioning is essential.'}
+                        </p>
+                      );
+                    })()}
                   </div>
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <p className="text-sm text-white/50 mb-1">Avg Occupancy</p>
-                    <p className="text-lg font-semibold text-white">{formatPercent(result.market.occupancy)}</p>
+                  
+                  {/* Core Metrics Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Percent className="w-4 h-4 text-blue-400" />
+                        <p className="text-sm text-white/50">Avg Occupancy</p>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{formatPercent(result.market.occupancy)}</p>
+                      {(() => {
+                        const occPct = result.market.occupancy > 1 ? result.market.occupancy : result.market.occupancy * 100;
+                        return (
+                          <p className="text-xs text-white/40 mt-1">
+                            {occPct >= 65 ? 'Above national avg (65%)' :
+                             occPct >= 55 ? 'Near national avg (65%)' :
+                             'Below national avg (65%)'}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Banknote className="w-4 h-4 text-green-400" />
+                        <p className="text-sm text-white/50">Avg Daily Rate</p>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{formatCurrency(result.market.adr)}</p>
+                      <p className="text-xs text-white/40 mt-1">
+                        {result.market.adr >= 200 ? 'Premium pricing market' :
+                         result.market.adr >= 120 ? 'Mid-range pricing' :
+                         'Budget-friendly market'}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Building className="w-4 h-4 text-purple-400" />
+                        <p className="text-sm text-white/50">Active Listings</p>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{result.market.active_listings.toLocaleString()}</p>
+                      <p className="text-xs text-white/40 mt-1">
+                        {result.market.active_listings >= 500 ? 'Large, competitive market' :
+                         result.market.active_listings >= 100 ? 'Medium-sized market' :
+                         'Small, niche market'}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="w-4 h-4 text-amber-400" />
+                        <p className="text-sm text-white/50">Est. RevPAR</p>
+                      </div>
+                      <p className="text-2xl font-bold text-white">
+                        {formatCurrency(Math.round(result.market.adr * (result.market.occupancy > 1 ? result.market.occupancy / 100 : result.market.occupancy)))}
+                      </p>
+                      <p className="text-xs text-white/40 mt-1">Revenue per available night</p>
+                    </div>
                   </div>
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <p className="text-sm text-white/50 mb-1">Avg Daily Rate</p>
-                    <p className="text-lg font-semibold text-white">{formatCurrency(result.market.adr)}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 text-center">
-                    <p className="text-sm text-white/50 mb-1">Active Listings</p>
-                    <p className="text-lg font-semibold text-white">{result.market.active_listings.toLocaleString()}</p>
-                  </div>
+                  
+                  {/* Supply Trend */}
+                  {result.supply_trend && (
+                    <div className="bg-white/5 rounded-xl p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-semibold text-white flex items-center gap-2">
+                          {result.supply_trend.trend === 'growing' ? (
+                            <TrendingUp className="w-5 h-5 text-amber-400" />
+                          ) : result.supply_trend.trend === 'declining' ? (
+                            <TrendingDown className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <BarChart3 className="w-5 h-5 text-blue-400" />
+                          )}
+                          Supply Trend (12 months)
+                        </h5>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          result.supply_trend.trend === 'growing' ? 'bg-amber-500/20 text-amber-400' :
+                          result.supply_trend.trend === 'declining' ? 'bg-green-500/20 text-green-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {result.supply_trend.trend === 'growing' ? `+${result.supply_trend.percent_change}% Growth` :
+                           result.supply_trend.trend === 'declining' ? `${result.supply_trend.percent_change}% Decline` :
+                           'Stable'}
+                        </span>
+                      </div>
+                      <p className="text-white/70 text-sm">
+                        {result.supply_trend.trend === 'growing' 
+                          ? `The market has grown by ${result.supply_trend.net_change} listings (+${result.supply_trend.percent_change}%) over the past year. This indicates increasing competition - differentiation will be key to success.`
+                          : result.supply_trend.trend === 'declining'
+                          ? `The market has contracted by ${Math.abs(result.supply_trend.net_change)} listings (${result.supply_trend.percent_change}%) over the past year. This could indicate regulatory pressure or market correction, but also less competition for remaining hosts.`
+                          : `The market has remained stable over the past year, indicating a mature market with balanced supply and demand.`}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Professional Host Stats */}
+                  {result.professional_stats && (
+                    <div className="bg-white/5 rounded-xl p-5">
+                      <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-purple-400" />
+                        Host Competition Analysis
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-white/50">Professional Hosts</p>
+                          <p className="text-xl font-bold text-white">{result.professional_stats.professional_percentage}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/50">Superhosts</p>
+                          <p className="text-xl font-bold text-white">{result.professional_stats.superhost_percentage}%</p>
+                        </div>
+                      </div>
+                      <p className="text-white/70 text-sm">
+                        {result.professional_stats.professional_percentage >= 50
+                          ? `This is a professionally-dominated market (${result.professional_stats.professional_percentage}% professional hosts). You'll be competing against experienced operators who optimize pricing and guest experience. Professional management or strong execution is essential.`
+                          : `This market is primarily individual hosts (${100 - result.professional_stats.professional_percentage}%). There's opportunity to outperform by operating with professional-level systems and service.`}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Booking Patterns */}
+                  {result.booking_patterns && (
+                    <div className="bg-white/5 rounded-xl p-5">
+                      <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                        <CalendarDays className="w-5 h-5 text-cyan-400" />
+                        Guest Booking Behavior
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-white/50">Avg Booking Lead Time</p>
+                          <p className="text-xl font-bold text-white">{result.booking_patterns.avg_lead_time_days} days</p>
+                          <p className="text-xs text-white/40">
+                            {result.booking_patterns.avg_lead_time_days <= 7 ? 'Last-minute market' :
+                             result.booking_patterns.avg_lead_time_days <= 21 ? 'Short-term planners' :
+                             'Advance planners'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/50">Avg Length of Stay</p>
+                          <p className="text-xl font-bold text-white">{result.booking_patterns.avg_length_of_stay} nights</p>
+                          <p className="text-xs text-white/40">
+                            {result.booking_patterns.avg_length_of_stay <= 2 ? 'Weekend getaways' :
+                             result.booking_patterns.avg_length_of_stay <= 5 ? 'Short vacations' :
+                             'Extended stays'}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-white/70 text-sm">
+                        Guests in this market typically book {result.booking_patterns.avg_lead_time_days} days in advance for {result.booking_patterns.avg_length_of_stay}-night stays. 
+                        {result.booking_patterns.avg_lead_time_days <= 14 
+                          ? ' Consider dynamic pricing to capture last-minute bookings at premium rates.'
+                          : ' Longer lead times allow for strategic pricing adjustments and promotional campaigns.'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Cancellation Policies */}
+                  {result.cancellation_policies && result.cancellation_policies.policies && result.cancellation_policies.policies.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-5">
+                      <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-indigo-400" />
+                        Cancellation Policy Analysis
+                      </h5>
+                      <div className="space-y-2 mb-3">
+                        {result.cancellation_policies.policies.slice(0, 4).map((policy, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-white/70 capitalize">{policy.policy.replace(/_/g, ' ')}</span>
+                            <div className="flex items-center gap-4">
+                              <span className="text-white/50 text-sm">{policy.percentage}% of listings</span>
+                              <span className="text-white font-medium">{formatCurrency(policy.avg_revenue)}/yr avg</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {result.cancellation_policies.recommendation && (
+                        <p className="text-white/70 text-sm border-t border-white/10 pt-3 mt-3">
+                          <strong className="text-indigo-400">Recommendation:</strong> {result.cancellation_policies.recommendation}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Professional Host Revenue Premium */}
+                  {result.professional_stats && result.professional_stats.avg_revenue_professional && result.professional_stats.avg_revenue_individual && (
+                    <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl p-5 border border-purple-500/20">
+                      <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                        <Award className="w-5 h-5 text-purple-400" />
+                        Professional Management Premium
+                      </h5>
+                      <div className="grid grid-cols-3 gap-4 mb-3">
+                        <div>
+                          <p className="text-sm text-white/50">Professional Avg Revenue</p>
+                          <p className="text-xl font-bold text-purple-400">{formatCurrency(result.professional_stats.avg_revenue_professional)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/50">Individual Avg Revenue</p>
+                          <p className="text-xl font-bold text-white">{formatCurrency(result.professional_stats.avg_revenue_individual)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/50">Revenue Premium</p>
+                          <p className="text-xl font-bold text-green-400">+{result.professional_stats.revenue_premium_percent || Math.round((result.professional_stats.avg_revenue_professional / result.professional_stats.avg_revenue_individual - 1) * 100)}%</p>
+                        </div>
+                      </div>
+                      <p className="text-white/70 text-sm">
+                        Professional hosts in this market earn {result.professional_stats.revenue_premium_percent || Math.round((result.professional_stats.avg_revenue_professional / result.professional_stats.avg_revenue_individual - 1) * 100)}% more than individual hosts. 
+                        Operating with professional-level systems (dynamic pricing, professional photos, automated messaging) can significantly boost your revenue.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -869,7 +1150,7 @@ export default function PropertyAnalyzer() {
               </div>
             )}
             
-            {/* Seasonality */}
+            {/* Seasonality - Comprehensive View */}
             {result.seasonality && result.seasonality.length > 0 && (
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
                 <button
@@ -880,7 +1161,7 @@ export default function PropertyAnalyzer() {
                     <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                       <Calendar className="w-5 h-5 text-cyan-400" />
                     </div>
-                    <h3 className="text-xl font-semibold text-white">Seasonality</h3>
+                    <h3 className="text-xl font-semibold text-white">Seasonality Analysis</h3>
                   </div>
                   {expandedSections.has('seasonality') ? (
                     <ChevronUp className="w-5 h-5 text-white/50" />
@@ -890,26 +1171,110 @@ export default function PropertyAnalyzer() {
                 </button>
                 
                 {expandedSections.has('seasonality') && (
-                  <div className="mt-6 grid grid-cols-3 md:grid-cols-6 gap-2">
-                    {result.seasonality.slice(0, 12).map((month, i) => (
-                      <div 
-                        key={i} 
-                        className={`rounded-lg p-3 text-center ${
-                          month.season_type === 'Peak' ? 'bg-green-500/20 border border-green-500/30' :
-                          month.season_type === 'Slow' ? 'bg-red-500/20 border border-red-500/30' :
-                          'bg-white/5'
-                        }`}
-                      >
-                        <p className="text-xs text-white/50">{formatMonth(month.month)}</p>
-                        <p className={`text-sm font-semibold ${
-                          month.season_type === 'Peak' ? 'text-green-400' :
-                          month.season_type === 'Slow' ? 'text-red-400' :
-                          'text-white'
-                        }`}>
-                          {formatCurrency(month.revenue)}
+                  <div className="mt-6 space-y-6">
+                    {/* Season Summary */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
+                        <p className="text-xs text-green-400/70 mb-1">Peak Season</p>
+                        <p className="text-lg font-bold text-green-400">
+                          {result.seasonality.filter(m => m.season_type === 'peak').length} months
+                        </p>
+                        <p className="text-xs text-white/50 mt-1">
+                          {result.seasonality.filter(m => m.season_type === 'peak').map(m => formatMonth(m.month)).join(', ')}
                         </p>
                       </div>
-                    ))}
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                        <p className="text-xs text-yellow-400/70 mb-1">Shoulder Season</p>
+                        <p className="text-lg font-bold text-yellow-400">
+                          {result.seasonality.filter(m => m.season_type === 'shoulder').length} months
+                        </p>
+                        <p className="text-xs text-white/50 mt-1">
+                          {result.seasonality.filter(m => m.season_type === 'shoulder').map(m => formatMonth(m.month)).join(', ')}
+                        </p>
+                      </div>
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
+                        <p className="text-xs text-red-400/70 mb-1">Slow Season</p>
+                        <p className="text-lg font-bold text-red-400">
+                          {result.seasonality.filter(m => m.season_type === 'off').length} months
+                        </p>
+                        <p className="text-xs text-white/50 mt-1">
+                          {result.seasonality.filter(m => m.season_type === 'off').map(m => formatMonth(m.month)).join(', ')}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Monthly Breakdown Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/10">
+                            <th className="text-left py-3 px-2 text-white/50 font-medium">Month</th>
+                            <th className="text-right py-3 px-2 text-white/50 font-medium">Revenue</th>
+                            <th className="text-right py-3 px-2 text-white/50 font-medium">Occupancy</th>
+                            <th className="text-right py-3 px-2 text-white/50 font-medium">ADR</th>
+                            <th className="text-center py-3 px-2 text-white/50 font-medium">Season</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.seasonality.slice(0, 12).map((month, i) => (
+                            <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                              <td className="py-3 px-2 text-white font-medium">{formatMonth(month.month)}</td>
+                              <td className="py-3 px-2 text-right text-white">{formatCurrency(month.revenue)}</td>
+                              <td className="py-3 px-2 text-right text-white">{formatPercent(month.occupancy)}</td>
+                              <td className="py-3 px-2 text-right text-white">{formatCurrency(month.adr)}</td>
+                              <td className="py-3 px-2 text-center">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  month.season_type === 'peak' ? 'bg-green-500/20 text-green-400' :
+                                  month.season_type === 'off' ? 'bg-red-500/20 text-red-400' :
+                                  'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {month.season_type}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-white/20">
+                            <td className="py-3 px-2 text-white font-bold">Annual Total</td>
+                            <td className="py-3 px-2 text-right text-green-400 font-bold">
+                              {formatCurrency(result.seasonality.reduce((sum, m) => sum + m.revenue, 0))}
+                            </td>
+                            <td className="py-3 px-2 text-right text-white font-medium">
+                              {formatPercent(result.seasonality.reduce((sum, m) => sum + m.occupancy, 0) / result.seasonality.length)}
+                            </td>
+                            <td className="py-3 px-2 text-right text-white font-medium">
+                              {formatCurrency(result.seasonality.reduce((sum, m) => sum + m.adr, 0) / result.seasonality.length)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                    
+                    {/* Visual Revenue Chart */}
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <p className="text-sm text-white/70 mb-3">Monthly Revenue Trend</p>
+                      <div className="flex items-end gap-1 h-32">
+                        {result.seasonality.slice(0, 12).map((month, i) => {
+                          const maxRevenue = Math.max(...result.seasonality.map(m => m.revenue));
+                          const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div 
+                                className={`w-full rounded-t transition-all ${
+                                  month.season_type === 'peak' ? 'bg-green-500' :
+                                  month.season_type === 'off' ? 'bg-red-500' :
+                                  'bg-yellow-500'
+                                }`}
+                                style={{ height: `${height}%`, minHeight: '4px' }}
+                              />
+                              <span className="text-[10px] text-white/50">{formatMonth(month.month).slice(0, 1)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
