@@ -908,6 +908,21 @@ Format everything in clear tables where appropriate. This is for a beginner inve
     const timer = setTimeout(async () => {
       const newSuggestions: AutocompleteSuggestion[] = [];
       
+      // Check if it's a Zillow URL
+      if (trimmed.includes('zillow.com')) {
+        const parsed = parseZillowUrl(trimmed);
+        newSuggestions.push({
+          type: 'address',
+          text: trimmed,
+          subtext: parsed ? `Analyze: ${parsed.address}` : 'Analyze Zillow property',
+          icon: <ExternalLink className="w-4 h-4 text-[#C9A962]" />,
+          data: { isZillow: true, parsed }
+        });
+        setSuggestions(newSuggestions);
+        setShowAutocomplete(true);
+        return;
+      }
+      
       // Check if it's a zip code pattern
       if (/^\d{1,5}$/.test(trimmed)) {
         // Add zip code suggestions
@@ -1224,7 +1239,7 @@ Format everything in clear tables where appropriate. This is for a beginner inve
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onFocus={() => suggestions.length > 0 && setShowAutocomplete(true)}
-                      placeholder="Enter address, city, zip code, or ask a question..."
+                      placeholder="Enter address, Zillow link, city, zip code, or ask a question..."
                       className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl py-6 px-4 pr-24 text-lg focus:border-[#C9A962] focus:ring-[#C9A962]/20"
                       disabled={isLoading}
                     />
@@ -1475,7 +1490,7 @@ Format everything in clear tables where appropriate. This is for a beginner inve
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => suggestions.length > 0 && setShowAutocomplete(true)}
-                  placeholder="Ask a follow-up question or enter a new address..."
+                  placeholder="Ask a follow-up question, paste a Zillow link, or enter a new address..."
                   className="flex-1 border-2 border-[#0F172A]/10 focus:border-[#C9A962] rounded-xl py-3 px-4 pr-24"
                   disabled={isLoading}
                 />
