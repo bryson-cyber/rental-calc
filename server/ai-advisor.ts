@@ -14,6 +14,7 @@ import {
   getRentalizerEstimate,
   exploreListingsInRadius
 } from './airdna';
+import { makeRequest, GeocodingResult } from './_core/map';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
@@ -188,6 +189,88 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["annual_revenue", "monthly_rent", "bedrooms"]
+      }
+    },
+    {
+      name: "search_by_zipcode",
+      description: "Search for short-term rental market data by US zip code. Use this when the user provides a 5-digit zip code. This will return market data for the area including average revenue, occupancy, and ADR.",
+      parameters: {
+        type: "object",
+        properties: {
+          zipcode: {
+            type: "string",
+            description: "The 5-digit US zip code to search (e.g., '78701', '90210', '10001')"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Optional: Filter results by number of bedrooms"
+          }
+        },
+        required: ["zipcode"]
+      }
+    },
+    {
+      name: "generate_listing_description",
+      description: "Generate an optimized Airbnb listing title and description for a property. Use this when the user asks for help writing their listing, wants listing copy, or asks how to describe their property.",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The property address"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms"
+          },
+          bathrooms: {
+            type: "number",
+            description: "Number of bathrooms"
+          },
+          property_type: {
+            type: "string",
+            description: "Type of property (house, apartment, condo, etc.)"
+          },
+          amenities: {
+            type: "string",
+            description: "Comma-separated list of amenities (pool, hot tub, parking, etc.)"
+          },
+          unique_features: {
+            type: "string",
+            description: "Any unique features or selling points of the property"
+          }
+        },
+        required: ["address", "bedrooms", "bathrooms"]
+      }
+    },
+    {
+      name: "calculate_investment_score",
+      description: "Calculate an investment score (1-100) for a property or market based on revenue potential, occupancy rates, competition, and seasonality. Use this when user asks about investment potential, whether something is a good investment, or wants a score/rating.",
+      parameters: {
+        type: "object",
+        properties: {
+          annual_revenue: {
+            type: "number",
+            description: "Expected annual revenue"
+          },
+          occupancy_rate: {
+            type: "number",
+            description: "Occupancy rate as a percentage (e.g., 65 for 65%)"
+          },
+          adr: {
+            type: "number",
+            description: "Average daily rate"
+          },
+          competition_count: {
+            type: "number",
+            description: "Number of competing listings in the area"
+          },
+          market_name: {
+            type: "string",
+            description: "Name of the market for context"
+          }
+        },
+        required: ["annual_revenue", "occupancy_rate", "adr"]
       }
     }
   ]
@@ -694,6 +777,260 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           }),
           nearby_competitors: compsWithDistance,
           competitor_count: estimate.comps.length
+        };
+      }
+      
+      case "search_by_zipcode": {
+        const zipcode = args.zipcode as string;
+        const bedrooms = args.bedrooms as number | undefined;
+        
+        console.log(`[AI Advisor] Searching by zip code: ${zipcode}`);
+        
+        try {
+          // Use Google Geocoding to get location info for the zip code
+          const geocodeResult = await makeRequest<GeocodingResult>(
+            '/maps/api/geocode/json',
+            { address: zipcode }
+          );
+          
+          if (!geocodeResult.results || geocodeResult.results.length === 0) {
+            return { error: `Could not find location for zip code ${zipcode}` };
+          }
+          
+          const location = geocodeResult.results[0];
+          const { lat, lng } = location.geometry.location;
+          
+          // Extract city and state from address components
+          let city = '';
+          let state = '';
+          for (const component of location.address_components) {
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            }
+          }
+          
+          // Construct a generic address in this zip code for Rentalizer
+          const genericAddress = `100 Main St, ${city}, ${state} ${zipcode}`;
+          
+          console.log(`[AI Advisor] Geocoded ${zipcode} to ${city}, ${state} (${lat}, ${lng})`);
+          console.log(`[AI Advisor] Using address: ${genericAddress}`);
+          
+          // Use Rentalizer to get market data for this location
+          const estimate = await getRentalizerEstimate({
+            address: genericAddress,
+            bedrooms: bedrooms || 2,
+            bathrooms: 1,
+            accommodates: (bedrooms || 2) * 2,
+            currency: 'usd'
+          });
+          
+          if (!estimate) {
+            // Fallback: search for the city as a market
+            const marketResults = await searchMarkets(city, 1);
+            if (marketResults.length > 0) {
+              const marketId = marketResults[0].id;
+              const report = await getComprehensiveMarketReport(marketId);
+              if (report) {
+                return {
+                  zipcode,
+                  location: `${city}, ${state}`,
+                  coordinates: { lat, lng },
+                  market_name: report.market.name,
+                  market_data: {
+                    average_revenue: report.market.metrics.revenue,
+                    occupancy_rate: report.market.metrics.occupancy,
+                    average_daily_rate: report.market.metrics.adr,
+                    active_listings: report.market.metrics.active_listings
+                  },
+                  note: "Data shown is for the broader market area"
+                };
+              }
+            }
+            return { error: `Could not find rental data for zip code ${zipcode}. Try searching for ${city}, ${state} instead.` };
+          }
+          
+          // Calculate market averages from comps
+          const avgRevenue = estimate.comps.length > 0 
+            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.annual_revenue, 0) / estimate.comps.length)
+            : estimate.estimates.annual_revenue;
+          const avgOccupancy = estimate.comps.length > 0
+            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.occupancy, 0) / estimate.comps.length)
+            : estimate.estimates.occupancy_rate;
+          const avgAdr = estimate.comps.length > 0
+            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.adr, 0) / estimate.comps.length)
+            : estimate.estimates.average_daily_rate;
+          
+          return {
+            zipcode,
+            location: `${city}, ${state}`,
+            coordinates: { lat, lng },
+            market_data: {
+              average_revenue: avgRevenue,
+              revenue_range: {
+                low: estimate.estimates.annual_revenue_low,
+                mid: estimate.estimates.annual_revenue,
+                high: estimate.estimates.annual_revenue_high
+              },
+              occupancy_rate: avgOccupancy,
+              average_daily_rate: avgAdr,
+              comparable_properties: estimate.comps.length
+            },
+            top_performers: estimate.comps.slice(0, 5).map(c => ({
+              title: c.title,
+              bedrooms: c.bedrooms,
+              annual_revenue: c.annual_revenue,
+              occupancy: c.occupancy,
+              adr: c.adr
+            }))
+          };
+        } catch (error) {
+          console.error(`[AI Advisor] Zip code search error:`, error);
+          return { error: `Failed to search zip code ${zipcode}: ${error instanceof Error ? error.message : 'Unknown error'}` };
+        }
+      }
+      
+      case "generate_listing_description": {
+        const address = args.address as string;
+        const bedrooms = args.bedrooms as number;
+        const bathrooms = args.bathrooms as number;
+        const propertyType = (args.property_type as string) || 'home';
+        const amenities = (args.amenities as string) || '';
+        const uniqueFeatures = (args.unique_features as string) || '';
+        
+        // Extract location from address
+        const addressParts = address.split(',');
+        const city = addressParts.length >= 2 ? addressParts[1].trim() : 'the area';
+        
+        // Generate title options
+        const titleOptions = [
+          `Stunning ${bedrooms}BR ${propertyType} in ${city}`,
+          `Modern ${bedrooms}-Bedroom Retreat | Perfect Location`,
+          `Cozy ${propertyType} with ${bedrooms}BR/${bathrooms}BA | ${city}`,
+          `Charming ${city} ${propertyType} | Sleeps ${bedrooms * 2}`
+        ];
+        
+        // Build description sections
+        const welcomeSection = `Welcome to your perfect getaway in ${city}! This beautifully appointed ${bedrooms}-bedroom, ${bathrooms}-bathroom ${propertyType} offers everything you need for an unforgettable stay.`;
+        
+        const spaceSection = `THE SPACE:\nStep inside to discover a thoughtfully designed space that comfortably accommodates up to ${bedrooms * 2} guests. Each of the ${bedrooms} bedroom(s) features premium bedding and ample storage. The ${bathrooms} bathroom(s) are stocked with fresh towels and essential toiletries.`;
+        
+        let amenitiesSection = 'AMENITIES:\n';
+        if (amenities) {
+          const amenityList = amenities.split(',').map(a => a.trim());
+          amenitiesSection += amenityList.map(a => `• ${a}`).join('\n');
+        } else {
+          amenitiesSection += '• High-speed WiFi\n• Fully equipped kitchen\n• Smart TV with streaming\n• Washer/dryer\n• Free parking\n• Climate control';
+        }
+        
+        let featuresSection = '';
+        if (uniqueFeatures) {
+          featuresSection = `\n\nWHAT MAKES US SPECIAL:\n${uniqueFeatures}`;
+        }
+        
+        const closingSection = `\n\nWe're committed to making your stay exceptional. Book now and experience the best of ${city}!`;
+        
+        return {
+          title_options: titleOptions,
+          recommended_title: titleOptions[0],
+          description: welcomeSection + '\n\n' + spaceSection + '\n\n' + amenitiesSection + featuresSection + closingSection,
+          tips: [
+            'Use high-quality photos showing natural light',
+            'Highlight your best amenity in the first sentence',
+            'Mention nearby attractions and restaurants',
+            'Keep your title under 50 characters for mobile',
+            'Update your description seasonally'
+          ]
+        };
+      }
+      
+      case "calculate_investment_score": {
+        const annualRevenue = args.annual_revenue as number;
+        const occupancyRate = args.occupancy_rate as number;
+        const adr = args.adr as number;
+        const competitionCount = (args.competition_count as number) || 50;
+        const marketName = (args.market_name as string) || 'this market';
+        
+        // Calculate component scores (each 0-25 points)
+        
+        // Revenue Score (0-25): Based on annual revenue potential
+        // $100K+ = 25, $75K = 20, $50K = 15, $30K = 10, <$20K = 5
+        let revenueScore = 0;
+        if (annualRevenue >= 100000) revenueScore = 25;
+        else if (annualRevenue >= 75000) revenueScore = 22;
+        else if (annualRevenue >= 50000) revenueScore = 18;
+        else if (annualRevenue >= 35000) revenueScore = 14;
+        else if (annualRevenue >= 25000) revenueScore = 10;
+        else revenueScore = 5;
+        
+        // Occupancy Score (0-25): Higher occupancy = more consistent income
+        // 75%+ = 25, 65% = 20, 55% = 15, 45% = 10, <40% = 5
+        let occupancyScore = 0;
+        if (occupancyRate >= 75) occupancyScore = 25;
+        else if (occupancyRate >= 65) occupancyScore = 22;
+        else if (occupancyRate >= 55) occupancyScore = 18;
+        else if (occupancyRate >= 45) occupancyScore = 14;
+        else if (occupancyRate >= 35) occupancyScore = 10;
+        else occupancyScore = 5;
+        
+        // ADR Score (0-25): Higher ADR = premium market
+        // $300+ = 25, $200 = 20, $150 = 15, $100 = 10, <$75 = 5
+        let adrScore = 0;
+        if (adr >= 300) adrScore = 25;
+        else if (adr >= 200) adrScore = 22;
+        else if (adr >= 150) adrScore = 18;
+        else if (adr >= 100) adrScore = 14;
+        else if (adr >= 75) adrScore = 10;
+        else adrScore = 5;
+        
+        // Competition Score (0-25): Less competition = easier entry
+        // <20 = 25, 20-50 = 20, 50-100 = 15, 100-200 = 10, >200 = 5
+        let competitionScore = 0;
+        if (competitionCount < 20) competitionScore = 25;
+        else if (competitionCount <= 50) competitionScore = 20;
+        else if (competitionCount <= 100) competitionScore = 15;
+        else if (competitionCount <= 200) competitionScore = 10;
+        else competitionScore = 5;
+        
+        const totalScore = revenueScore + occupancyScore + adrScore + competitionScore;
+        
+        // Determine rating and recommendation
+        let rating = '';
+        let recommendation = '';
+        if (totalScore >= 85) {
+          rating = 'Excellent';
+          recommendation = 'This is a top-tier investment opportunity. Strong revenue potential with healthy demand.';
+        } else if (totalScore >= 70) {
+          rating = 'Good';
+          recommendation = 'Solid investment potential. Consider optimizing amenities to maximize returns.';
+        } else if (totalScore >= 55) {
+          rating = 'Moderate';
+          recommendation = 'Decent opportunity but requires careful analysis. Look for ways to differentiate.';
+        } else if (totalScore >= 40) {
+          rating = 'Below Average';
+          recommendation = 'Higher risk investment. Consider other markets or properties unless you have a competitive advantage.';
+        } else {
+          rating = 'Poor';
+          recommendation = 'Not recommended for beginners. Market conditions are challenging.';
+        }
+        
+        return {
+          investment_score: totalScore,
+          rating,
+          market: marketName,
+          breakdown: {
+            revenue_potential: { score: revenueScore, max: 25, metric: `$${annualRevenue.toLocaleString()}/year` },
+            occupancy_stability: { score: occupancyScore, max: 25, metric: `${occupancyRate}%` },
+            pricing_power: { score: adrScore, max: 25, metric: `$${adr}/night` },
+            competition_level: { score: competitionScore, max: 25, metric: `${competitionCount} listings` }
+          },
+          recommendation,
+          comparison: {
+            score_vs_average: totalScore >= 60 ? 'Above Average' : 'Below Average',
+            percentile: Math.min(99, Math.round((totalScore / 100) * 100))
+          }
         };
       }
       
