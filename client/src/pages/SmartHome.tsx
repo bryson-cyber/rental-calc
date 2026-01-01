@@ -35,11 +35,14 @@ import {
   Zap,
   ExternalLink,
   BedDouble,
+  Bath,
   Filter,
   Star,
   Award,
   X,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,14 +59,21 @@ interface ChatMessage {
 
 interface ActiveFilters {
   bedrooms?: number;
+  bathrooms?: number;
   propertyType?: string;
   minRating?: number;
   superhost?: boolean;
   amenities?: string[];
 }
 
+interface RecentSearch {
+  text: string;
+  type: 'address' | 'market' | 'zip' | 'question';
+  timestamp: number;
+}
+
 interface AutocompleteSuggestion {
-  type: 'address' | 'market' | 'zip';
+  type: 'address' | 'market' | 'zip' | 'recent';
   text: string;
   subtext?: string;
   icon: React.ReactNode;
@@ -301,6 +311,18 @@ const bedroomOptions = [
   { value: 5, label: '5+ BR' },
 ];
 
+const bathroomOptions = [
+  { value: 1, label: '1 BA' },
+  { value: 1.5, label: '1.5 BA' },
+  { value: 2, label: '2 BA' },
+  { value: 2.5, label: '2.5 BA' },
+  { value: 3, label: '3 BA' },
+  { value: 4, label: '4+ BA' },
+];
+
+// Recent searches storage key
+const RECENT_SEARCHES_KEY = 'str-advisor-recent-searches';
+
 const propertyTypeOptions = [
   { value: 'house', label: 'House' },
   { value: 'apartment', label: 'Apartment' },
@@ -328,6 +350,42 @@ export default function SmartHome() {
   
   // Filters state
   const [filters, setFilters] = useState<ActiveFilters>({});
+  
+  // Recent searches state
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  
+  // Load recent searches from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as RecentSearch[];
+        // Keep only last 10 searches from the past 7 days
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const filtered = parsed.filter(s => s.timestamp > weekAgo).slice(0, 10);
+        setRecentSearches(filtered);
+      }
+    } catch (e) {
+      console.error('Error loading recent searches:', e);
+    }
+  }, []);
+  
+  // Save search to recent searches
+  const saveRecentSearch = (text: string, type: 'address' | 'market' | 'zip' | 'question') => {
+    const newSearch: RecentSearch = { text, type, timestamp: Date.now() };
+    setRecentSearches(prev => {
+      // Remove duplicates and add new search at the beginning
+      const filtered = prev.filter(s => s.text.toLowerCase() !== text.toLowerCase());
+      const updated = [newSearch, ...filtered].slice(0, 10);
+      // Save to localStorage
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error saving recent searches:', e);
+      }
+      return updated;
+    });
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -396,9 +454,23 @@ export default function SmartHome() {
   // Debounced autocomplete search
   useEffect(() => {
     const trimmed = input.trim();
+    
+    // Show recent searches when input is empty or very short
     if (trimmed.length < 2) {
-      setSuggestions([]);
-      setShowAutocomplete(false);
+      if (recentSearches.length > 0 && trimmed.length === 0) {
+        const recentSuggestions: AutocompleteSuggestion[] = recentSearches.slice(0, 5).map(search => ({
+          type: 'recent' as const,
+          text: search.text,
+          subtext: `Recent ${search.type}`,
+          icon: <History className="w-4 h-4 text-[#C9A962]" />,
+          data: search
+        }));
+        setSuggestions(recentSuggestions);
+        // Don't auto-show, only show on focus
+      } else {
+        setSuggestions([]);
+        setShowAutocomplete(false);
+      }
       return;
     }
 
@@ -507,6 +579,7 @@ export default function SmartHome() {
   const buildFilterContext = (): string => {
     const parts: string[] = [];
     if (filters.bedrooms) parts.push(`${filters.bedrooms} bedroom properties`);
+    if (filters.bathrooms) parts.push(`${filters.bathrooms} bathroom properties`);
     if (filters.propertyType) parts.push(`${filters.propertyType} type`);
     if (filters.minRating) parts.push(`${filters.minRating}+ star rating`);
     if (filters.superhost) parts.push(`superhost only`);
@@ -531,6 +604,13 @@ export default function SmartHome() {
     setInput('');
     setShowAutocomplete(false);
     setIsLoading(true);
+    
+    // Save to recent searches
+    const searchType = inputType === 'zillow_url' ? 'address' : 
+                       inputType === 'zip_code' ? 'zip' : 
+                       inputType === 'city' ? 'market' : 
+                       inputType === 'address' ? 'address' : 'question';
+    saveRecentSearch(messageText, searchType);
 
     try {
       let questionToAsk = messageText;
@@ -696,9 +776,20 @@ export default function SmartHome() {
                                 <p className="text-white/40 text-xs truncate">{suggestion.subtext}</p>
                               )}
                             </div>
-                            <span className="text-xs text-white/30 capitalize">{suggestion.type}</span>
+                            <span className="text-xs text-white/30 capitalize">{suggestion.type === 'recent' ? 'recent' : suggestion.type}</span>
                           </button>
                         ))}
+                        {/* Google Attribution */}
+                        {suggestions.some(s => s.type === 'address') && (
+                          <div className="px-4 py-2 border-t border-white/10 flex items-center justify-end gap-1">
+                            <span className="text-white/30 text-[10px]">Powered by</span>
+                            <img 
+                              src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_light_clr_74x24px.svg" 
+                              alt="Google" 
+                              className="h-3 opacity-60"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -751,6 +842,13 @@ export default function SmartHome() {
                     value={filters.bedrooms}
                     onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
                     icon={<BedDouble className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Bathrooms"
+                    options={bathroomOptions}
+                    value={filters.bathrooms}
+                    onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
+                    icon={<Bath className="w-3 h-3" />}
                   />
                   <FilterDropdown
                     label="Property Type"
@@ -860,6 +958,14 @@ export default function SmartHome() {
                     </button>
                   </span>
                 )}
+                {filters.bathrooms && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.bathrooms} BA
+                    <button onClick={() => setFilters(prev => ({ ...prev, bathrooms: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
                 {filters.propertyType && (
                   <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
                     {filters.propertyType}
@@ -934,9 +1040,20 @@ export default function SmartHome() {
                             <p className="text-[#0F172A]/40 text-xs truncate">{suggestion.subtext}</p>
                           )}
                         </div>
-                        <span className="text-xs text-[#0F172A]/30 capitalize">{suggestion.type}</span>
+                        <span className="text-xs text-[#0F172A]/30 capitalize">{suggestion.type === 'recent' ? 'recent' : suggestion.type}</span>
                       </button>
                     ))}
+                    {/* Google Attribution */}
+                    {suggestions.some(s => s.type === 'address') && (
+                      <div className="px-4 py-2 border-t border-[#0F172A]/10 flex items-center justify-end gap-1">
+                        <span className="text-[#0F172A]/30 text-[10px]">Powered by</span>
+                        <img 
+                          src="https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg" 
+                          alt="Google" 
+                          className="h-3 opacity-60"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -972,6 +1089,13 @@ export default function SmartHome() {
                   value={filters.bedrooms}
                   onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
                   icon={<BedDouble className="w-3 h-3" />}
+                />
+                <FilterDropdown
+                  label="Bathrooms"
+                  options={bathroomOptions}
+                  value={filters.bathrooms}
+                  onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
+                  icon={<Bath className="w-3 h-3" />}
                 />
                 <FilterDropdown
                   label="Property Type"

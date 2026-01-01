@@ -359,3 +359,9 @@
 - [x] Fix address autocomplete dropdown not showing suggestions as user types
 - [x] Verify Google Places API integration is properly connected
 - [x] Ensure autocomplete dropdown appears with address suggestions
+
+## New Features Sprint - Autocomplete & Filters Enhancement
+- [x] Add market/city autocomplete with AirDNA suggestions
+- [x] Add "Powered by Google" attribution below autocomplete dropdown
+- [x] Add recent searches feature (store and display recently searched addresses/markets)
+- [x] Add bath filter dropdown alongside bedroom filter
