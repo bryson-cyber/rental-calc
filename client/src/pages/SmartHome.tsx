@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { jsPDF } from 'jspdf';
@@ -1089,6 +1090,27 @@ Format everything in clear tables where appropriate. This is for a beginner inve
     if (!messageText || isLoading) return;
 
     const inputType = detectInputType(messageText);
+    
+    // Check if this is a property/market search that requires filters
+    const isPropertyOrMarketSearch = ['address', 'zillow_url', 'zip_code', 'city'].includes(inputType);
+    
+    // Require bedrooms, bathrooms, and property type for property/market searches
+    if (isPropertyOrMarketSearch) {
+      const missingFilters: string[] = [];
+      if (!filters.bedrooms) missingFilters.push('Bedrooms');
+      if (!filters.bathrooms) missingFilters.push('Bathrooms');
+      if (!filters.propertyType) missingFilters.push('Property Type');
+      
+      if (missingFilters.length > 0) {
+        toast.error(`Please select ${missingFilters.join(', ')} before searching`, {
+          description: 'These filters help us show you relevant apples-to-apples comparisons',
+          duration: 5000,
+        });
+        setShowFilters(true); // Open the filter panel
+        return;
+      }
+    }
+    
     const filterContext = buildFilterContext();
     
     const userMessage: ChatMessage = { 

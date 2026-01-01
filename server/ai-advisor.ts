@@ -358,7 +358,10 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             occupancy: l.occupancy,
             rating: l.rating,
             reviews: l.reviews,
-            is_superhost: l.superhost
+            is_superhost: l.superhost,
+            airbnb_url: l.airbnb_url || '',
+            property_type: l.property_type || 'Unknown',
+            professionally_managed: l.professionally_managed || false
           }))
         };
       }
@@ -1122,10 +1125,20 @@ For ZIP CODE ANALYSIS (when user enters a 5-digit zip code):
 | Active Listings | XXX | Your competition level |
 
 **🏆 TOP 5 PERFORMERS IN THIS ZIP CODE**
-| Property | Revenue | Occupancy | ADR | What Makes Them Win |
-|----------|---------|-----------|-----|--------------------|
-| [Name](url) | $XXK | XX% | $XXX | Pool, Hot Tub, Superhost |
-(show top 5 with clickable Airbnb links)
+| Property | Revenue | Occ | ADR | View | What Makes Them Win |
+|----------|---------|-----|-----|------|--------------------|
+| 3BR Modern Home | $85K | 72% | $320 | [Airbnb](url) | Superhost + Pool + 4.95★ |
+(show top 5 with clickable Airbnb links in the View column)
+
+For "What Makes Them Win" column, analyze REAL differentiators:
+- Check if they're a Superhost (is_superhost = true)
+- Check if Professionally Managed (professionally_managed = true)
+- Check their rating (4.9+ = "Top Rated")
+- Check their reviews count (100+ = "Highly Reviewed")
+- Check property type (House vs Apartment)
+- Infer amenities from title ("Pool", "Hot Tub", "Lake View", etc.)
+- Compare their ADR vs market avg (if 20%+ higher = "Premium Pricing")
+- Compare their occupancy vs market avg (if 10%+ higher = "High Demand")
 
 **💡 KEY INSIGHTS**
 - Best property type for this area
@@ -1164,10 +1177,20 @@ Your property would earn $XX,XXX/year, putting you in the **Xth percentile** - o
 (continue for all months)
 
 **🏆 TOP PERFORMERS IN YOUR AREA**
-Show 3-5 top earners with links:
-| Property | Revenue | What Makes Them Win |
-|----------|---------|--------------------|
-| [Name](url) | $XXK | Pool + Hot Tub + Superhost |
+Show 3-5 top earners with clickable Airbnb links:
+| Property | Revenue | Occ | View | What Makes Them Win |
+|----------|---------|-----|------|--------------------|
+| 3BR Modern Home | $85K | 72% | [Airbnb](airbnb_url) | Superhost + Pool + 4.95★ |
+
+IMPORTANT: Always include the "View" column with [Airbnb](airbnb_url) links from the data.
+For "What Makes Them Win", analyze the actual data returned:
+- is_superhost = true → "Superhost"
+- professionally_managed = true → "Pro Managed"
+- rating >= 4.9 → "Top Rated (X.X★)"
+- reviews >= 100 → "Highly Reviewed (XXX reviews)"
+- Infer from title: "Pool", "Hot Tub", "Lake", "Beach", "Mountain", "Downtown"
+- High ADR vs avg → "Premium Pricing"
+- High occupancy vs avg → "High Demand"
 
 **💡 ACTIONABLE RECOMMENDATIONS**
 1. Best amenities to add (with revenue impact)
@@ -1220,16 +1243,15 @@ For SEASONALITY:
 For RADIUS SEARCH / DIRECT COMPS (nearby listings):
 - ALWAYS filter by the SAME bedroom count as the property being analyzed (apples-to-apples)
 - If user asks about comps for a 3BR property, only show 3BR listings
-- Show nearby Airbnbs in a COMPACT table with CLICKABLE LINKS:
-  | Name | BR | Rev | Occ | ADR | Link |
-  |------|-----|-----|-----|-----|------|
-  | [Cozy Apt](airbnb_url) | 3 | $45K | 68% | $180 | [View](airbnb_url) |
-- Make the property name a clickable markdown link to the Airbnb listing
-- Add a "Link" column with [View](airbnb_url) for each listing
+- Show nearby Airbnbs in a COMPACT table with CLICKABLE AIRBNB LINKS:
+  | Property | BR | Revenue | Occ | ADR | View | What Makes Them Win |
+  |----------|-----|---------|-----|-----|------|--------------------|
+  | Modern 3BR | 3 | $45K | 68% | $180 | [Airbnb](airbnb_url) | Superhost + 4.9★ |
+- The "View" column MUST contain [Airbnb](airbnb_url) with the actual URL from the data
 - Keep property names SHORT (max 15 chars, truncate with ...)
 - Revenue should be shown as $XXK format (e.g., $45K not $45,000)
 - Include a summary: "Showing X [bedroom count]-bedroom properties within Y miles"
-- Highlight the top performer and explain what makes them successful
+- For "What Makes Them Win", analyze: is_superhost, rating, reviews, property_type, title keywords
 
 For PROFIT MATH:
 - Show expense breakdown in a table

@@ -491,3 +491,14 @@
   - [x] Add INVESTMENT VERDICT with clear recommendation
   - [x] Enhanced system prompt for comprehensive property/market/zip code analysis
 - [x] Test all filters and enhanced output (63108 with 3BR + Pool + Hot Tub filters working)
+
+
+## Required Filters & Output Fixes Sprint
+- [ ] Make bedroom count REQUIRED before search (not optional)
+- [ ] Make bathroom count REQUIRED before search (no## Required Filters & Output Fixes (COMPLETED)
+- [x] Make Bedrooms, Bathrooms, Property Type REQUIRED before searching
+- [x] Show toast message prompting user to select filters
+- [x] Fix "What Makes Them Win" column to show real differentiators (Superhost + Top Rated, Premium Pricing, Highly Reviewed, etc.)
+- [x] Add Airbnb links to top performers in results table (View column with Airbnb links)
+- [x] Pass required filters to API calls for relevant apples-to-apples data
+- [x] Test all changes - 63108 with 3BR/2BA/House filters working perfectly
