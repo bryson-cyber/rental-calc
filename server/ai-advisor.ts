@@ -88,6 +88,24 @@ const AVAILABLE_TOOLS = {
       }
     },
     {
+      name: "get_bedroom_estimate",
+      description: "Get revenue estimates for a specific bedroom count in a market. Use this when the user asks about X-bedroom properties in a market (e.g., '3 bedroom properties in Austin'). This provides average revenue, occupancy, and ADR for that bedroom type.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market name (e.g., 'Austin', 'Nashville')"
+          },
+          bedrooms: {
+            type: "number",
+            description: "The number of bedrooms to get estimates for"
+          }
+        },
+        required: ["market_name", "bedrooms"]
+      }
+    },
+    {
       name: "analyze_property",
       description: "Analyze a specific property address to get rental revenue estimates, comparable properties, and investment potential. Use this when the user provides a property address.",
       parameters: {
@@ -203,6 +221,71 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         };
       }
       
+      case "get_bedroom_estimate": {
+        const marketName = args.market_name as string;
+        const bedrooms = args.bedrooms as number;
+        
+        // Search for the market first
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        
+        const market = markets[0];
+        
+        // Use market listings API with bedroom filter to get actual listings
+        const performers = await getTopPerformers({
+          marketId: market.id,
+          limit: 25,
+          sort_by: 'revenue',
+          filters: { bedrooms }
+        });
+        
+        if (!performers.listings || performers.listings.length === 0) {
+          // Fall back to market-level data if no listings found
+          const report = await getComprehensiveMarketReport(market.id);
+          if (!report) {
+            return { error: `Could not get estimates for ${bedrooms}-bedroom properties in ${marketName}` };
+          }
+          return {
+            market_name: marketName,
+            bedrooms,
+            note: `No ${bedrooms}-bedroom listings found in top performers. Showing market averages across all property sizes.`,
+            estimates: {
+              average_annual_revenue: report.market.metrics.revenue,
+              occupancy_rate: report.market.metrics.occupancy,
+              average_daily_rate: report.market.metrics.adr
+            }
+          };
+        }
+        
+        // Calculate averages from the returned listings
+        const listings = performers.listings;
+        const avgRevenue = Math.round(listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / listings.length);
+        const avgOccupancy = Math.round(listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length);
+        const avgAdr = Math.round(listings.reduce((sum, l) => sum + (l.adr || 0), 0) / listings.length);
+        const topRevenue = Math.max(...listings.map(l => l.annual_revenue || 0));
+        const bottomRevenue = Math.min(...listings.map(l => l.annual_revenue || 0));
+        
+        return {
+          market_name: marketName,
+          bedrooms,
+          listings_analyzed: listings.length,
+          estimates: {
+            average_annual_revenue: avgRevenue,
+            revenue_range: `$${bottomRevenue.toLocaleString()} - $${topRevenue.toLocaleString()}`,
+            average_occupancy_rate: avgOccupancy,
+            average_daily_rate: avgAdr
+          },
+          top_performers: listings.slice(0, 3).map(l => ({
+            title: l.title,
+            annual_revenue: l.annual_revenue,
+            occupancy: l.occupancy,
+            adr: l.adr
+          }))
+        };
+      }
+      
       case "analyze_property": {
         const address = args.address as string;
         const bedrooms = (args.bedrooms as number) || 2;
@@ -313,6 +396,17 @@ For MARKET ANALYSIS:
 - Seasonality (how much revenue varies by season)
 - Regulation scores (higher = less regulatory risk)
 - Market saturation (listing count vs demand)
+
+For BEDROOM-SPECIFIC QUERIES:
+- When users ask about specific bedroom counts (e.g., "3 bedroom properties", "2BR", "studio"), use get_top_performers with the bedrooms parameter
+- This will show actual listings with that bedroom count and their revenue/occupancy
+- Compare the bedroom-specific data to the market average
+- Example: If user asks "What about 3 bedroom properties in Austin?", call get_top_performers with market_id and bedrooms=3
+
+For FOLLOW-UP QUESTIONS:
+- Remember the context from previous messages in the conversation
+- If user asks "What about 3 bedrooms?" after discussing Austin, they mean 3 bedrooms IN Austin
+- Use the market_id from the previous search to filter by bedrooms
 
 Keep responses concise but informative. Use bullet points for comparisons.`;
 

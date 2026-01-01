@@ -7,9 +7,15 @@
  * - Zip codes → Market analysis
  * - City names → Market analysis
  * - Natural language questions → AI Advisor
+ * 
+ * Features:
+ * - Smart autocomplete for addresses, markets, and zip codes
+ * - Zillow link parsing
+ * - Conversation memory for follow-up questions
+ * - Comprehensive filtering options
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { 
@@ -26,17 +32,40 @@ import {
   DollarSign,
   BarChart3,
   Zap,
-  ArrowRight,
-  ExternalLink
+  ExternalLink,
+  BedDouble,
+  Filter,
+  Star,
+  Award,
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ReactMarkdown from 'react-markdown';
 
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'property_report' | 'market_report';
+  data?: unknown;
+  filters?: ActiveFilters;
+}
+
+interface ActiveFilters {
+  bedrooms?: number;
+  propertyType?: string;
+  minRating?: number;
+  superhost?: boolean;
+  amenities?: string[];
+}
+
+interface AutocompleteSuggestion {
+  type: 'address' | 'market' | 'zip';
+  text: string;
+  subtext?: string;
+  icon: React.ReactNode;
   data?: unknown;
 }
 
@@ -68,13 +97,11 @@ function detectInputType(input: string): InputType {
   const startsWithQuestion = questionWords.some(word => trimmed.startsWith(word));
   
   if (!startsWithQuestion && cityPattern.test(trimmed) && trimmed.length < 50 && !trimmed.includes('?')) {
-    // Could be a city - check if it has comma (city, state format)
     if (trimmed.includes(',') || trimmed.split(' ').length <= 3) {
       return 'city';
     }
   }
   
-  // Default to question/natural language
   return 'question';
 }
 
@@ -98,6 +125,32 @@ function getInputTypeIcon(type: InputType) {
   }
 }
 
+// Parse Zillow URL to extract address
+function parseZillowUrl(url: string): { address: string; zipCode?: string } | null {
+  try {
+    // Zillow URLs typically have format: zillow.com/homedetails/123-Main-St-City-State-12345/12345_zpid
+    const match = url.match(/homedetails\/([^/]+)\//);
+    if (match) {
+      const slug = match[1];
+      // Convert slug to address: "123-Main-St-City-State-12345" -> "123 Main St, City, State 12345"
+      const parts = slug.replace(/-/g, ' ').split(' ');
+      
+      // Find zip code (5 digits at the end)
+      const zipIndex = parts.findIndex(p => /^\d{5}$/.test(p));
+      const zipCode = zipIndex >= 0 ? parts[zipIndex] : undefined;
+      
+      // Reconstruct address
+      const addressParts = zipIndex >= 0 ? parts.slice(0, zipIndex + 1) : parts;
+      const address = addressParts.join(' ');
+      
+      return { address, zipCode };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
   
@@ -117,6 +170,23 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           ? 'bg-[#0F172A] text-white rounded-tr-sm' 
           : 'bg-white border border-[#0F172A]/10 text-[#0F172A] rounded-tl-sm shadow-md'
       }`}>
+        {/* Show active filters if any */}
+        {isUser && message.filters && Object.keys(message.filters).length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {message.filters.bedrooms && (
+              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.bedrooms} BR</span>
+            )}
+            {message.filters.propertyType && (
+              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.propertyType}</span>
+            )}
+            {message.filters.minRating && (
+              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.minRating}+ stars</span>
+            )}
+            {message.filters.superhost && (
+              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">Superhost</span>
+            )}
+          </div>
+        )}
         {isUser ? (
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
         ) : (
@@ -129,13 +199,120 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
+// Filter chip component
+function FilterChip({ 
+  label, 
+  active, 
+  onClick,
+  icon
+}: { 
+  label: string; 
+  active: boolean; 
+  onClick: () => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+        active 
+          ? 'bg-[#C9A962] text-white' 
+          : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+      }`}
+    >
+      {icon}
+      {label}
+      {active && <X className="w-3 h-3 ml-1" />}
+    </button>
+  );
+}
+
+// Dropdown filter component
+function FilterDropdown({
+  label,
+  options,
+  value,
+  onChange,
+  icon
+}: {
+  label: string;
+  options: { value: string | number; label: string }[];
+  value?: string | number;
+  onChange: (value: string | number | undefined) => void;
+  icon?: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          value !== undefined 
+            ? 'bg-[#C9A962] text-white' 
+            : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+        }`}
+      >
+        {icon}
+        {value !== undefined ? options.find(o => o.value === value)?.label || label : label}
+        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-[#1a2744] border border-white/10 rounded-lg shadow-xl z-50 min-w-[120px] py-1">
+          <button
+            onClick={() => { onChange(undefined); setIsOpen(false); }}
+            className="w-full px-3 py-1.5 text-left text-xs text-white/70 hover:bg-white/10"
+          >
+            Any
+          </button>
+          {options.map(option => (
+            <button
+              key={option.value}
+              onClick={() => { onChange(option.value); setIsOpen(false); }}
+              className={`w-full px-3 py-1.5 text-left text-xs hover:bg-white/10 ${
+                value === option.value ? 'text-[#C9A962]' : 'text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const suggestedActions = [
   { icon: <TrendingUp className="w-5 h-5" />, text: "Compare Austin vs Nashville", type: "question" as const },
   { icon: <DollarSign className="w-5 h-5" />, text: "What's the average revenue in Miami?", type: "question" as const },
   { icon: <MapPin className="w-5 h-5" />, text: "78701", type: "zip" as const, label: "Austin Downtown" },
   { icon: <Building className="w-5 h-5" />, text: "Denver, CO", type: "city" as const },
   { icon: <BarChart3 className="w-5 h-5" />, text: "Which market has the best ROI?", type: "question" as const },
-  { icon: <Home className="w-5 h-5" />, text: "Analyze a property address", type: "prompt" as const },
+  { icon: <Home className="w-5 h-5" />, text: "Analyze 123 Main St, Austin TX", type: "address" as const },
+];
+
+const bedroomOptions = [
+  { value: 1, label: '1 BR' },
+  { value: 2, label: '2 BR' },
+  { value: 3, label: '3 BR' },
+  { value: 4, label: '4 BR' },
+  { value: 5, label: '5+ BR' },
+];
+
+const propertyTypeOptions = [
+  { value: 'house', label: 'House' },
+  { value: 'apartment', label: 'Apartment' },
+  { value: 'condo', label: 'Condo' },
+  { value: 'townhouse', label: 'Townhouse' },
+  { value: 'cabin', label: 'Cabin' },
+];
+
+const ratingOptions = [
+  { value: 4.8, label: '4.8+ Stars' },
+  { value: 4.5, label: '4.5+ Stars' },
+  { value: 4.0, label: '4.0+ Stars' },
+  { value: 3.0, label: '3.0+ Stars' },
 ];
 
 export default function SmartHome() {
@@ -143,11 +320,22 @@ export default function SmartHome() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [detectedType, setDetectedType] = useState<InputType>('question');
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filters state
+  const [filters, setFilters] = useState<ActiveFilters>({});
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
+  
 
   const advisorMutation = trpc.advanced.getInvestmentAdvice.useMutation();
+  
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,102 +353,151 @@ export default function SmartHome() {
     }
   }, [input]);
 
+  // Debounced autocomplete search
+  useEffect(() => {
+    const trimmed = input.trim();
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      setShowAutocomplete(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const newSuggestions: AutocompleteSuggestion[] = [];
+      
+      // Check if it's a zip code pattern
+      if (/^\d{1,5}$/.test(trimmed)) {
+        // Add zip code suggestions
+        newSuggestions.push({
+          type: 'zip',
+          text: trimmed.padEnd(5, '0').slice(0, 5),
+          subtext: 'Search zip code',
+          icon: <MapPin className="w-4 h-4 text-[#C9A962]" />
+        });
+      }
+      
+      // Search for markets using fetch
+      try {
+        const response = await fetch(`/api/trpc/rental.searchMarkets?input=${encodeURIComponent(JSON.stringify({ searchTerm: trimmed, limit: 5 }))}`);
+        const data = await response.json();
+        if (data?.result?.data?.success && data?.result?.data?.data) {
+          data.result.data.data.forEach((market: { name: string; location_name?: string; id: string }) => {
+            newSuggestions.push({
+              type: 'market',
+              text: market.name,
+              subtext: market.location_name || 'Market',
+              icon: <Building className="w-4 h-4 text-[#C9A962]" />,
+              data: market
+            });
+          });
+        }
+      } catch (e) {
+        // Silently fail for market search
+      }
+      
+      // If it looks like an address, add address suggestion
+      if (/\d+\s+\w+/.test(trimmed)) {
+        newSuggestions.push({
+          type: 'address',
+          text: trimmed,
+          subtext: 'Analyze this address',
+          icon: <Home className="w-4 h-4 text-[#C9A962]" />
+        });
+      }
+      
+      setSuggestions(newSuggestions);
+      setShowAutocomplete(newSuggestions.length > 0);
+      setSelectedSuggestionIndex(-1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [input]);
+
+  // Close autocomplete when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectSuggestion = (suggestion: AutocompleteSuggestion) => {
+    setInput(suggestion.text);
+    setShowAutocomplete(false);
+    inputRef.current?.focus();
+  };
+
+  const buildFilterContext = (): string => {
+    const parts: string[] = [];
+    if (filters.bedrooms) parts.push(`${filters.bedrooms} bedroom properties`);
+    if (filters.propertyType) parts.push(`${filters.propertyType} type`);
+    if (filters.minRating) parts.push(`${filters.minRating}+ star rating`);
+    if (filters.superhost) parts.push(`superhost only`);
+    if (filters.amenities?.length) parts.push(`with ${filters.amenities.join(', ')}`);
+    
+    return parts.length > 0 ? ` Focus on ${parts.join(', ')}.` : '';
+  };
+
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText || isLoading) return;
 
     const inputType = detectInputType(messageText);
-    const userMessage: ChatMessage = { role: 'user', content: messageText };
+    const filterContext = buildFilterContext();
+    
+    const userMessage: ChatMessage = { 
+      role: 'user', 
+      content: messageText,
+      filters: Object.keys(filters).length > 0 ? { ...filters } : undefined
+    };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setShowAutocomplete(false);
     setIsLoading(true);
 
     try {
-      // Handle different input types
-      if (inputType === 'address') {
-        // For property addresses, redirect to the property report page
-        // But first, let the AI acknowledge and provide context
-        const result = await advisorMutation.mutateAsync({
-          question: `The user wants to analyze this property address: "${messageText}". Please acknowledge and explain that you'll analyze this property. Then provide any initial market context you can find for the area.`,
-          conversationHistory: messages,
-        });
-
-        if (result.success && result.data?.response) {
-          const assistantMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: result.data.response + "\n\n**[Click here to see the full property analysis →](/)**"
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        
-        // Store the address for the property report
-        sessionStorage.setItem('pendingPropertyAddress', messageText);
-        
-      } else if (inputType === 'zillow_url') {
-        // Parse Zillow URL and analyze
-        const result = await advisorMutation.mutateAsync({
-          question: `The user shared a Zillow link: "${messageText}". Please acknowledge this and explain that you'll analyze the property from this listing.`,
-          conversationHistory: messages,
-        });
-
-        if (result.success && result.data?.response) {
-          const assistantMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: result.data.response
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        
-      } else if (inputType === 'zip_code') {
-        // Analyze zip code market
-        const result = await advisorMutation.mutateAsync({
-          question: `Analyze the short-term rental market for zip code ${messageText}. What are the revenue expectations, occupancy rates, and investment potential?`,
-          conversationHistory: messages,
-        });
-
-        if (result.success && result.data?.response) {
-          const assistantMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: result.data.response
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        
-      } else if (inputType === 'city') {
-        // Analyze city market
-        const result = await advisorMutation.mutateAsync({
-          question: `Analyze the short-term rental market in ${messageText}. What are the revenue expectations, occupancy rates, ADR, and investment potential?`,
-          conversationHistory: messages,
-        });
-
-        if (result.success && result.data?.response) {
-          const assistantMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: result.data.response
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }
-        
-      } else {
-        // Natural language question - send to AI Advisor
-        const result = await advisorMutation.mutateAsync({
-          question: messageText,
-          conversationHistory: messages,
-        });
-
-        if (result.success && result.data?.response) {
-          const assistantMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: result.data.response 
-          };
-          setMessages(prev => [...prev, assistantMessage]);
+      let questionToAsk = messageText;
+      
+      // Handle Zillow URL parsing
+      if (inputType === 'zillow_url') {
+        const parsed = parseZillowUrl(messageText);
+        if (parsed) {
+          questionToAsk = `Analyze this property: ${parsed.address}${parsed.zipCode ? ` (zip code: ${parsed.zipCode})` : ''}.${filterContext}`;
+          // Zillow link detected and parsed
         } else {
-          const errorMessage: ChatMessage = { 
-            role: 'assistant', 
-            content: "I apologize, but I couldn't process your question. Please try again." 
-          };
-          setMessages(prev => [...prev, errorMessage]);
+          questionToAsk = `The user shared a Zillow link: "${messageText}". Please try to analyze this property.${filterContext}`;
         }
+      } else if (inputType === 'address') {
+        questionToAsk = `Analyze this property address: "${messageText}".${filterContext}`;
+      } else if (inputType === 'zip_code') {
+        questionToAsk = `Analyze the short-term rental market for zip code ${messageText}. What are the revenue expectations, occupancy rates, and investment potential?${filterContext}`;
+      } else if (inputType === 'city') {
+        questionToAsk = `Analyze the short-term rental market in ${messageText}. What are the revenue expectations, occupancy rates, ADR, and investment potential?${filterContext}`;
+      } else {
+        questionToAsk = messageText + filterContext;
+      }
+
+      // Send to AI Advisor with conversation history
+      const result = await advisorMutation.mutateAsync({
+        question: questionToAsk,
+        conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
+      });
+
+      if (result.success && result.data?.response) {
+        const assistantMessage: ChatMessage = { 
+          role: 'assistant', 
+          content: result.data.response 
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        const errorMessage: ChatMessage = { 
+          role: 'assistant', 
+          content: "I apologize, but I couldn't process your question. Please try again." 
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -276,6 +513,23 @@ export default function SmartHome() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showAutocomplete && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => Math.max(prev - 1, -1));
+      } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(suggestions[selectedSuggestionIndex]);
+        return;
+      } else if (e.key === 'Escape') {
+        setShowAutocomplete(false);
+        return;
+      }
+    }
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -283,12 +537,17 @@ export default function SmartHome() {
   };
 
   const handleSuggestedAction = (action: typeof suggestedActions[0]) => {
-    if (action.type === 'prompt') {
-      inputRef.current?.focus();
-      return;
-    }
     handleSend(action.text);
   };
+
+  const clearFilters = () => {
+    setFilters({});
+  };
+
+  const hasActiveFilters = Object.keys(filters).some(key => {
+    const value = filters[key as keyof ActiveFilters];
+    return value !== undefined && value !== false && (Array.isArray(value) ? value.length > 0 : true);
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0F172A] via-[#0F172A] to-[#1a2744] flex flex-col">
@@ -316,12 +575,12 @@ export default function SmartHome() {
               <h2 className="text-2xl font-serif font-semibold text-white mb-3">
                 What would you like to know?
               </h2>
-              <p className="text-white/50 mb-8">
+              <p className="text-white/50 mb-6">
                 Enter a property address, city, zip code, or ask any question about STR investing
               </p>
               
-              {/* Smart Input */}
-              <div className="relative mb-8">
+              {/* Smart Input with Autocomplete */}
+              <div className="relative mb-4" ref={autocompleteRef}>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -329,6 +588,7 @@ export default function SmartHome() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
+                      onFocus={() => suggestions.length > 0 && setShowAutocomplete(true)}
                       placeholder="Enter address, city, zip code, or ask a question..."
                       className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl py-6 px-4 pr-24 text-lg focus:border-[#C9A962] focus:ring-[#C9A962]/20"
                       disabled={isLoading}
@@ -339,6 +599,32 @@ export default function SmartHome() {
                           {getInputTypeIcon(detectedType)}
                           {getInputTypeLabel(detectedType)}
                         </span>
+                      </div>
+                    )}
+                    
+                    {/* Autocomplete Dropdown */}
+                    {showAutocomplete && suggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a2744] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        {suggestions.map((suggestion, index) => (
+                          <button
+                            key={`${suggestion.type}-${suggestion.text}-${index}`}
+                            onClick={() => selectSuggestion(suggestion)}
+                            className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/10 transition-colors ${
+                              index === selectedSuggestionIndex ? 'bg-white/10' : ''
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+                              {suggestion.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{suggestion.text}</p>
+                              {suggestion.subtext && (
+                                <p className="text-white/40 text-xs truncate">{suggestion.subtext}</p>
+                              )}
+                            </div>
+                            <span className="text-xs text-white/30 capitalize">{suggestion.type}</span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -355,6 +641,65 @@ export default function SmartHome() {
                   </Button>
                 </div>
               </div>
+              
+              {/* Filter Toggle */}
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${
+                    showFilters || hasActiveFilters
+                      ? 'bg-[#C9A962]/20 text-[#C9A962]' 
+                      : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  {hasActiveFilters && (
+                    <span className="w-2 h-2 rounded-full bg-[#C9A962]" />
+                  )}
+                </button>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-white/40 hover:text-white/60"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              
+              {/* Filters Panel */}
+              {showFilters && (
+                <div className="flex flex-wrap items-center justify-center gap-2 mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                  <FilterDropdown
+                    label="Bedrooms"
+                    options={bedroomOptions}
+                    value={filters.bedrooms}
+                    onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
+                    icon={<BedDouble className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Property Type"
+                    options={propertyTypeOptions}
+                    value={filters.propertyType}
+                    onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
+                    icon={<Home className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Rating"
+                    options={ratingOptions}
+                    value={filters.minRating}
+                    onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
+                    icon={<Star className="w-3 h-3" />}
+                  />
+                  <FilterChip
+                    label="Superhost"
+                    active={!!filters.superhost}
+                    onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
+                    icon={<Award className="w-3 h-3" />}
+                  />
+                </div>
+              )}
               
               {/* Suggested Actions */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -429,13 +774,59 @@ export default function SmartHome() {
         {/* Input Area (shown when there are messages) */}
         {messages.length > 0 && (
           <div className="bg-[#FAF9F6] rounded-b-3xl border-t border-[#0F172A]/10 p-4">
+            {/* Active Filters Display */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="text-xs text-[#0F172A]/50">Active filters:</span>
+                {filters.bedrooms && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.bedrooms} BR
+                    <button onClick={() => setFilters(prev => ({ ...prev, bedrooms: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.propertyType && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.propertyType}
+                    <button onClick={() => setFilters(prev => ({ ...prev, propertyType: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.minRating && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.minRating}+ stars
+                    <button onClick={() => setFilters(prev => ({ ...prev, minRating: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.superhost && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    Superhost
+                    <button onClick={() => setFilters(prev => ({ ...prev, superhost: false }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-[#0F172A]/40 hover:text-[#0F172A]/60 underline"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+            
             <div className="flex gap-2">
-              <div className="relative flex-1">
+              <div className="relative flex-1" ref={autocompleteRef}>
                 <Input
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => suggestions.length > 0 && setShowAutocomplete(true)}
                   placeholder="Ask a follow-up question or enter a new address..."
                   className="flex-1 border-2 border-[#0F172A]/10 focus:border-[#C9A962] rounded-xl py-3 px-4 pr-24"
                   disabled={isLoading}
@@ -448,7 +839,43 @@ export default function SmartHome() {
                     </span>
                   </div>
                 )}
+                
+                {/* Autocomplete Dropdown */}
+                {showAutocomplete && suggestions.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-[#0F172A]/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={`${suggestion.type}-${suggestion.text}-${index}`}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-[#C9A962]/10 transition-colors ${
+                          index === selectedSuggestionIndex ? 'bg-[#C9A962]/10' : ''
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+                          {suggestion.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#0F172A] text-sm font-medium truncate">{suggestion.text}</p>
+                          {suggestion.subtext && (
+                            <p className="text-[#0F172A]/40 text-xs truncate">{suggestion.subtext}</p>
+                          )}
+                        </div>
+                        <span className="text-xs text-[#0F172A]/30 capitalize">{suggestion.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+              
+              {/* Filter button in chat mode */}
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                variant="outline"
+                className={`rounded-xl px-3 ${hasActiveFilters ? 'border-[#C9A962] text-[#C9A962]' : ''}`}
+              >
+                <Filter className="w-5 h-5" />
+              </Button>
+              
               <Button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isLoading}
@@ -461,6 +888,39 @@ export default function SmartHome() {
                 )}
               </Button>
             </div>
+            
+            {/* Filters Panel in Chat Mode */}
+            {showFilters && (
+              <div className="flex flex-wrap items-center gap-2 mt-3 p-3 bg-[#0F172A]/5 rounded-xl">
+                <FilterDropdown
+                  label="Bedrooms"
+                  options={bedroomOptions}
+                  value={filters.bedrooms}
+                  onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
+                  icon={<BedDouble className="w-3 h-3" />}
+                />
+                <FilterDropdown
+                  label="Property Type"
+                  options={propertyTypeOptions}
+                  value={filters.propertyType}
+                  onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
+                  icon={<Home className="w-3 h-3" />}
+                />
+                <FilterDropdown
+                  label="Rating"
+                  options={ratingOptions}
+                  value={filters.minRating}
+                  onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
+                  icon={<Star className="w-3 h-3" />}
+                />
+                <FilterChip
+                  label="Superhost"
+                  active={!!filters.superhost}
+                  onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
+                  icon={<Award className="w-3 h-3" />}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

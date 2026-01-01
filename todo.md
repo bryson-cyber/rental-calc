@@ -322,3 +322,35 @@
   - [x] Zip code → Market analysis for that zip
   - [x] City name → Market analysis for that city
   - [x] Natural language question → AI Advisor response
+
+
+## AI Advisor Enhancement Sprint - Full Featured Experience
+- [ ] Smart autocomplete for all input types
+  - [ ] Address autocomplete (Google Places API)
+  - [ ] Market/city autocomplete (AirDNA market search)
+  - [ ] Zip code suggestions
+  - [ ] Unified dropdown showing all suggestion types
+- [ ] Zillow link parsing
+  - [ ] Extract full address from Zillow URL
+  - [ ] Extract zip code from Zillow URL
+  - [ ] Auto-populate property details (bedrooms, bathrooms)
+- [ ] Conversation memory
+  - [ ] Store conversation history in state
+  - [ ] Pass history to AI for context-aware responses
+  - [ ] Enable follow-up questions like "What about 3BR specifically?"
+- [ ] Comprehensive filtering options
+  - [ ] Bedroom count filter (1, 2, 3, 4, 5+)
+  - [ ] Property type filter (house, apartment, condo, townhouse)
+  - [ ] Amenities filter (pool, hot tub, pet-friendly, etc.)
+  - [ ] Minimum rating filter (3+, 4+, 4.5+, 4.8+)
+  - [ ] Superhost filter
+  - [ ] Instant book filter
+- [ ] Filter UI integration
+  - [ ] Add filter chips/buttons below input
+  - [ ] AI understands and applies filters to queries
+  - [ ] Show active filters in conversation
+
+## Bedroom Estimate Fix
+- [ ] Fix bedroom estimate to use market listings API with bedroom filter
+- [ ] Fetch listings filtered by bedrooms from /market/{marketId}/listings
+- [ ] Calculate averages from returned listings (revenue, occupancy, ADR)

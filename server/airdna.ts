@@ -256,50 +256,116 @@ async function makeApiRequest<T>(
 // MARKET SEARCH
 // ============================================
 
-export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
-  try {
-    const response = await makeApiRequest<{
-      payload: {
-        results: Array<{
-          id: string;
-          name: string;
-          type: "market" | "submarket";
-          listing_count: number;
-          location_name: string;
-          location?: {
-            state?: string;
-            country?: string;
-          };
-          parent_market?: {
+// Cache for US markets to avoid repeated API calls
+let usMarketsCache: Array<{
+  id: string;
+  name: string;
+  listing_count?: number;
+  market_type?: string;
+  metrics?: {
+    revenue?: number;
+    booked?: number;
+    daily_rate?: number;
+  };
+}> | null = null;
+let usMarketsCacheTime: number = 0;
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
+
+async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
+  // Return cached data if still valid
+  if (usMarketsCache && Date.now() - usMarketsCacheTime < CACHE_TTL) {
+    return usMarketsCache;
+  }
+  
+  console.log('[getAllUSMarkets] Fetching all US markets...');
+  const allMarkets: typeof usMarketsCache = [];
+  let offset = 0;
+  const pageSize = 25;
+  let hasMore = true;
+  
+  while (hasMore && offset < 400) { // Max 400 markets to avoid infinite loop
+    try {
+      const response = await makeApiRequest<{
+        payload: {
+          markets: Array<{
             id: string;
             name: string;
-          };
-          legacy_location?: {
-            zipcodes?: string[];
-          };
-        }>;
-      };
-    }>("/market/search", "POST", {
-      search_term: searchTerm,
-      pagination: {
-        page_size: Math.min(limit, 25), // API max is 25
-        offset: 0,
-      },
+            market_type?: string;
+            metrics?: {
+              revenue?: number;
+              booked?: number;
+              daily_rate?: number;
+            };
+          }>;
+        };
+      }>('/country/us/markets', 'POST', {
+        pagination: { page_size: pageSize, offset },
+      });
+      
+      if (response.payload.markets.length === 0) {
+        hasMore = false;
+      } else {
+        allMarkets.push(...response.payload.markets);
+        offset += pageSize;
+      }
+    } catch (error) {
+      console.error('[getAllUSMarkets] Error fetching page:', error);
+      hasMore = false;
+    }
+  }
+  
+  console.log(`[getAllUSMarkets] Loaded ${allMarkets.length} US markets`);
+  usMarketsCache = allMarkets;
+  usMarketsCacheTime = Date.now();
+  return allMarkets;
+}
+
+export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
+  try {
+    // Get all US markets from cache or API
+    const allMarkets = await getAllUSMarkets();
+    if (!allMarkets) return [];
+    
+    // Normalize search term
+    const searchLower = searchTerm.toLowerCase().replace(/,\s*/g, ' ').trim();
+    const searchParts = searchLower.split(/\s+/);
+    const mainSearch = searchParts[0];
+    
+    // Score each market based on how well it matches
+    const scoredMarkets = allMarkets.map((m) => {
+      const nameLower = m.name.toLowerCase();
+      
+      let score = 0;
+      // Exact name match gets highest score
+      if (nameLower === mainSearch) score += 100;
+      // Name starts with search term
+      else if (nameLower.startsWith(mainSearch)) score += 75;
+      // Name contains search term
+      else if (nameLower.includes(mainSearch)) score += 50;
+      
+      return { ...m, score };
     });
     
-    return response.payload.results.map((r) => ({
-      id: r.id,
-      name: r.name,
-      type: r.type,
-      listing_count: r.listing_count,
-      location_name: r.location_name,
-      state: r.location?.state,
-      country: r.location?.country,
-      parent_market: r.parent_market,
-      zipcodes: r.legacy_location?.zipcodes,
+    // Filter and sort by score
+    const matchedMarkets = scoredMarkets
+      .filter(m => m.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+    
+    console.log(`[searchMarkets] Found ${matchedMarkets.length} matching markets for "${searchTerm}"`);
+    if (matchedMarkets.length > 0) {
+      console.log(`[searchMarkets] Top matches:`, matchedMarkets.slice(0, 5).map(m => ({ id: m.id, name: m.name, score: m.score })));
+    }
+    
+    return matchedMarkets.map((m) => ({
+      id: m.id,
+      name: m.name,
+      type: 'market' as const,
+      listing_count: m.listing_count || 0,
+      location_name: `${m.name}, United States`,
     }));
   } catch (error) {
-    console.error("Error searching markets:", error);
+    console.error('Error searching markets:', error);
     return [];
   }
 }
@@ -2550,9 +2616,113 @@ export async function getTopPerformers(
   options: TopPerformersOptions
 ): Promise<{ listings: ListingData[]; total_count: number }> {
   try {
+    // If filtering by bedrooms, we need to paginate through multiple pages
+    // because the AirDNA API bedroom filter doesn't work reliably
+    const needsClientSideBedroomFilter = options.filters?.bedrooms !== undefined;
+    const targetCount = options.limit || 10;
+    
+    const buildFilters = () => {
+      if (!options.filters) return undefined;
+      const filters: Record<string, unknown> = {};
+      if (options.filters.superhost_only) filters.superhost = true;
+      if (options.filters.professionally_managed) filters.professionally_managed = true;
+      // Skip bedroom filter in API request - will filter client-side
+      if (options.filters.min_rating) filters.min_rating = options.filters.min_rating;
+      if (options.filters.instant_book !== undefined) filters.instant_book = options.filters.instant_book;
+      return Object.keys(filters).length > 0 ? filters : undefined;
+    };
+    
+    const filters = buildFilters();
+    
+    // If we need bedroom filtering, paginate through multiple pages
+    if (needsClientSideBedroomFilter) {
+      const allFilteredListings: ListingData[] = [];
+      // Start at a smarter offset for smaller bedroom counts (they appear later in revenue-sorted results)
+      // Top earners in Austin are 5+ bedrooms, so 4BR starts around offset 0, 3BR around offset 175
+      const bedroomCount = options.filters!.bedrooms || 3;
+      const startOffset = bedroomCount <= 2 ? 250 : bedroomCount === 3 ? 175 : 0;
+      let offset = startOffset;
+      const maxPages = 15; // Limit pages to prevent timeout
+      let pagesChecked = 0;
+      let totalCount = 0;
+      
+      while (allFilteredListings.length < targetCount && pagesChecked < maxPages) {
+        const requestBody: Record<string, unknown> = {
+          pagination: { page_size: 25, offset },
+          order_by: { field: options.sort_by || "revenue", method: "desc" },
+        };
+        if (filters) requestBody.filters = filters;
+        
+        const response = await makeApiRequest<{
+          payload: {
+            listings: Array<{
+              property_id: string;
+              title: string;
+              airbnb_property_id?: string;
+              airbnb_property_url?: string;
+              bedrooms: number;
+              bathrooms: number;
+              accommodates: number;
+              property_type: string;
+              rating: number | null;
+              reviews: number;
+              revenue_ltm: number;
+              average_daily_rate_ltm: number;
+              occupancy_rate_ltm: number;
+              superhost?: boolean;
+              professionally_managed?: boolean;
+              host_size?: string;
+              location?: { lat?: number; lng?: number };
+              zipcode?: string;
+            }>;
+            page_info: { total_count: number };
+          };
+        }>(`/market/${options.marketId}/listings`, "POST", requestBody);
+        
+        totalCount = response.payload.page_info.total_count;
+        
+        // Filter by bedrooms client-side
+        const filtered = response.payload.listings
+          .filter(l => l.bedrooms === options.filters!.bedrooms)
+          .map(r => ({
+            id: r.property_id || '',
+            title: r.title || 'Untitled Listing',
+            airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
+            bedrooms: r.bedrooms || 0,
+            bathrooms: r.bathrooms || 0,
+            accommodates: r.accommodates || 0,
+            property_type: r.property_type || 'Unknown',
+            rating: r.rating ?? null,
+            reviews: r.reviews || 0,
+            annual_revenue: r.revenue_ltm || 0,
+            adr: r.average_daily_rate_ltm || 0,
+            occupancy: r.occupancy_rate_ltm || 0,
+            superhost: r.superhost ?? false,
+            professionally_managed: r.professionally_managed ?? false,
+            host_size: r.host_size || 'unknown',
+            latitude: r.location?.lat ?? 0,
+            longitude: r.location?.lng ?? 0,
+            zipcode: r.zipcode || '',
+          }));
+        
+        allFilteredListings.push(...filtered);
+        offset += 25;
+        pagesChecked++;
+        
+        // Stop if we've checked all listings
+        if (offset >= totalCount) break;
+      }
+      
+      return {
+        listings: allFilteredListings.slice(0, targetCount),
+        total_count: allFilteredListings.length,
+      };
+    }
+    
+    // Standard request without bedroom filtering
     const requestBody: Record<string, unknown> = {
       pagination: {
-        page_size: Math.min(options.limit || 25, 25),
+        page_size: Math.min(targetCount, 25),
         offset: 0,
       },
       order_by: {
@@ -2560,18 +2730,9 @@ export async function getTopPerformers(
         method: "desc",
       },
     };
-
-    if (options.filters) {
-      const filters: Record<string, unknown> = {};
-      if (options.filters.superhost_only) filters.superhost = true;
-      if (options.filters.professionally_managed) filters.professionally_managed = true;
-      if (options.filters.bedrooms) filters.bedrooms = options.filters.bedrooms;
-      if (options.filters.min_rating) filters.min_rating = options.filters.min_rating;
-      if (options.filters.instant_book !== undefined) filters.instant_book = options.filters.instant_book;
-      
-      if (Object.keys(filters).length > 0) {
-        requestBody.filters = filters;
-      }
+    
+    if (filters) {
+      requestBody.filters = filters;
     }
 
     const response = await makeApiRequest<{
