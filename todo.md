@@ -719,3 +719,20 @@
 - [ ] Add Airbnb URL for each comp
 - [ ] Show distance from subject property
 - [ ] Add success factor analysis for top performers
+
+
+## PDF Output Issues (CRITICAL)
+
+### Identified Problems from User PDF
+- [x] Fix corrupted emoji characters - removed all emoji from system prompt templates
+- [x] Fix placeholder text "[X]%" - added critical instruction to never output placeholders
+- [x] Fix "[Show 5 comparable properties]" - added explicit instruction to populate with real data
+- [x] Fix table formatting - rewrote PDF export to properly render markdown tables
+- [x] Fix markdown not rendering properly in PDF export - added table parser with column alignment
+- [x] Ensure all data fields are populated - added "CRITICAL - NO PLACEHOLDERS" section to system prompt
+
+
+## Bug Fixes - Occupancy Display
+- [x] Fix occupancy showing 100% - API returns decimal (0.56), now converted to percentage (56%)
+- [x] Fixed in ai-advisor.ts: analyze_property, get_bedroom_estimate, search_nearby_listings
+- [x] Fixed in sop-reports.ts: competitor table display

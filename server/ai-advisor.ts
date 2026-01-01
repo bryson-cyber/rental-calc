@@ -983,7 +983,9 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         // Calculate averages from the returned listings
         const listings = performers.listings;
         const avgRevenue = Math.round(listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / listings.length);
-        const avgOccupancy = Math.round(listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length);
+        // Occupancy comes as decimal (0.56 = 56%), convert to percentage
+        const avgOccupancyDecimal = listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length;
+        const avgOccupancy = avgOccupancyDecimal < 1 ? Math.round(avgOccupancyDecimal * 100) : Math.round(avgOccupancyDecimal);
         const avgAdr = Math.round(listings.reduce((sum, l) => sum + (l.adr || 0), 0) / listings.length);
         const topRevenue = Math.max(...listings.map(l => l.annual_revenue || 0));
         const bottomRevenue = Math.min(...listings.map(l => l.annual_revenue || 0));
@@ -1001,7 +1003,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           top_performers: listings.slice(0, 3).map(l => ({
             title: l.title,
             annual_revenue: l.annual_revenue,
-            occupancy: l.occupancy,
+            occupancy: l.occupancy < 1 ? Math.round(l.occupancy * 100) : Math.round(l.occupancy),
             adr: l.adr
           }))
         };
@@ -1106,7 +1108,9 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         
         // Calculate summary stats
         const avgRevenue = Math.round(listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length);
-        const avgOccupancy = Math.round(listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length);
+        // Occupancy comes as decimal (0.56 = 56%), convert to percentage
+        const avgOccupancyDecimal = listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length;
+        const avgOccupancy = avgOccupancyDecimal < 1 ? Math.round(avgOccupancyDecimal * 100) : Math.round(avgOccupancyDecimal);
         const avgAdr = Math.round(listings.reduce((sum, l) => sum + l.adr, 0) / listings.length);
         const topRevenue = Math.max(...listings.map(l => l.annual_revenue));
         const bottomRevenue = Math.min(...listings.map(l => l.annual_revenue));
@@ -1130,7 +1134,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             property_type: l.property_type,
             annual_revenue: l.annual_revenue,
             adr: l.adr,
-            occupancy: l.occupancy,
+            occupancy: l.occupancy < 1 ? Math.round(l.occupancy * 100) : Math.round(l.occupancy),
             rating: l.rating,
             reviews: l.reviews,
             is_superhost: l.superhost,
@@ -1269,7 +1273,8 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             bathrooms: c.bathrooms,
             annual_revenue: c.annual_revenue,
             adr: c.adr,
-            occupancy: c.occupancy,
+            // Convert occupancy from decimal to percentage
+            occupancy: c.occupancy < 1 ? Math.round(c.occupancy * 100) : Math.round(c.occupancy),
             rating: c.rating,
             reviews: c.reviews,
             distance_miles: distanceMiles,
@@ -1280,7 +1285,9 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         
         // Calculate market averages from comps
         const avgRevenue = compsWithDistance.reduce((sum, c) => sum + c.annual_revenue, 0) / compsWithDistance.length;
-        const avgOccupancy = compsWithDistance.reduce((sum, c) => sum + c.occupancy, 0) / compsWithDistance.length;
+        // Occupancy comes as decimal (0.56 = 56%), convert to percentage for display
+        const avgOccupancyDecimal = compsWithDistance.reduce((sum, c) => sum + c.occupancy, 0) / compsWithDistance.length;
+        const avgOccupancy = avgOccupancyDecimal < 1 ? Math.round(avgOccupancyDecimal * 100) : Math.round(avgOccupancyDecimal);
         const avgAdr = compsWithDistance.reduce((sum, c) => sum + c.adr, 0) / compsWithDistance.length;
         
         // Find top performer
@@ -1305,8 +1312,9 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             your_property_vs_market: {
               your_revenue: estimate.estimates.annual_revenue,
               market_avg_revenue: Math.round(avgRevenue),
-              your_occupancy: estimate.estimates.occupancy_rate,
-              market_avg_occupancy: Math.round(avgOccupancy),
+              // Convert occupancy from decimal to percentage if needed
+              your_occupancy: estimate.estimates.occupancy_rate < 1 ? Math.round(estimate.estimates.occupancy_rate * 100) : Math.round(estimate.estimates.occupancy_rate),
+              market_avg_occupancy: avgOccupancy,
               your_adr: estimate.estimates.average_daily_rate,
               market_avg_adr: Math.round(avgAdr)
             },
@@ -2093,6 +2101,13 @@ CORE PRINCIPLES:
 4. Show your work - explain HOW you arrived at conclusions
 5. Format currency as $XX,XXX and occupancy as XX%
 
+CRITICAL - NO PLACEHOLDERS:
+- NEVER output placeholder text like [X]%, [XX,XXX], [Name], [Show X properties], etc.
+- EVERY value in your response MUST be a real number calculated from the data
+- If you don't have data for a field, either fetch it with a function call or omit that section
+- The competitor table MUST contain ACTUAL property names, revenues, and Airbnb URLs from the data
+- Calculate percentiles by comparing the property's projected revenue against all listings in the results
+
 CRITICAL - FILTER HANDLING:
 When the user's question includes filter context (bedrooms, bathrooms, property type, amenities), you MUST:
 1. Extract ALL filter values and pass them to search_by_zipcode:
@@ -2106,10 +2121,10 @@ When the user's question includes filter context (bedrooms, bathrooms, property 
 === ZIP CODE ANALYSIS FORMAT ===
 When user enters a zip code, deliver this COMPLETE analysis:
 
-## 📍 MARKET INTELLIGENCE REPORT: [Neighborhood Name]
+## MARKET INTELLIGENCE REPORT: [Neighborhood Name]
 **Zip Code [XXXXX] | [City, State] | Analysis Date: [Today]**
 
-### 💰 REVENUE POTENTIAL
+### REVENUE POTENTIAL
 | Metric | Value | Market Context | Your Opportunity |
 |--------|-------|----------------|------------------|
 | Avg Annual Revenue | $XX,XXX | Top X% of US markets | [Strong/Moderate/Weak] earning potential |
@@ -2118,7 +2133,7 @@ When user enters a zip code, deliver this COMPLETE analysis:
 | RevPAR | $XXX | Revenue per available night | [Efficient/Inefficient] market |
 | Market Score | XX/100 | Investment grade: [A/B/C/D] | [Recommended/Proceed with caution/Avoid] |
 
-### 📊 WHAT THESE NUMBERS MEAN FOR YOU
+### WHAT THESE NUMBERS MEAN FOR YOU
 **Revenue Reality Check:**
 - At $[revenue], you'd earn $[monthly] per month BEFORE expenses
 - After typical expenses (30-40%), expect $[net_monthly] net monthly income
@@ -2134,7 +2149,7 @@ When user enters a zip code, deliver this COMPLETE analysis:
 - Top performers charge $[top_adr] - [X]% higher
 - Opportunity: [Can you command premium rates? Why/why not?]
 
-### 🏆 TOP PERFORMERS: WHO'S WINNING & WHY
+### TOP PERFORMERS: WHO'S WINNING & WHY
 | Rank | Property | Revenue | Occ | ADR | Rating | View | Success Formula |
 |------|----------|---------|-----|-----|--------|------|----------------|
 | 1 | [Name] | $XXK | XX% | $XXX | X.X★ | [Airbnb](url) | [Specific reasons] |
@@ -2145,15 +2160,15 @@ When user enters a zip code, deliver this COMPLETE analysis:
 
 **Success Formula Analysis:**
 For each top performer, analyze REAL differentiators from the data:
-- Superhost status (is_superhost = true) → "⭐ Superhost"
-- High rating (4.9+) → "Top Rated (X.X★)"
-- Many reviews (100+) → "Social Proof (XXX reviews)"
+- Superhost status (is_superhost = true) -> "Superhost"
+- High rating (4.9+) -> "Top Rated (X.X stars)"
+- Many reviews (100+) -> "Social Proof (XXX reviews)"
 - Premium ADR vs avg → "Premium Pricing (+XX%)"
 - High occupancy vs avg → "High Demand (+XX%)"
 - Title keywords → "Pool", "Hot Tub", "Lake View", "Downtown"
 - Property type advantage → "House (vs apartments)"
 
-### 🎯 COMPETITIVE INTELLIGENCE
+### COMPETITIVE INTELLIGENCE
 **What separates the top 20% from everyone else:**
 1. **[Pattern 1]**: X of 5 top performers have [feature] - this is non-negotiable
 2. **[Pattern 2]**: Average rating of top 5 is [X.X] vs market avg of [Y.Y]
@@ -2165,7 +2180,7 @@ For each top performer, analyze REAL differentiators from the data:
 - [ ] Can you price at $[optimal_price] (sweet spot for this market)?
 - [ ] Is your property type [optimal_type] or can you compete differently?
 
-### 💵 ROI PROJECTION
+### ROI PROJECTION
 **Conservative Scenario (Bottom 25% performance):**
 | Metric | Annual | Monthly |
 |--------|--------|--------|
@@ -2191,23 +2206,23 @@ For each top performer, analyze REAL differentiators from the data:
 - At $[avg_noi] NOI, you need a property priced under $[max_price] for 8%+ cash-on-cash return
 - Break-even occupancy: [X]% (you need at least this to cover costs)
 
-### ⚠️ RISK ASSESSMENT
+### RISK ASSESSMENT
 **Strengths:**
-✅ [Specific strength based on data]
-✅ [Specific strength based on data]
-✅ [Specific strength based on data]
++ [Specific strength based on data]
++ [Specific strength based on data]
++ [Specific strength based on data]
 
 **Risks:**
-⚠️ [Specific risk based on data]
-⚠️ [Specific risk based on data]
-⚠️ [Specific risk based on data]
+- [Specific risk based on data]
+- [Specific risk based on data]
+- [Specific risk based on data]
 
 **Risk Score: [Low/Medium/High]**
 [1-2 sentence explanation]
 
-### 🎯 INVESTMENT VERDICT
+### INVESTMENT VERDICT
 
-**Rating: [⭐⭐⭐⭐⭐ EXCELLENT / ⭐⭐⭐⭐ GOOD / ⭐⭐⭐ MODERATE / ⭐⭐ BELOW AVERAGE / ⭐ POOR]**
+**Rating: [EXCELLENT / GOOD / MODERATE / BELOW AVERAGE / POOR]** (Based on score: 80+= EXCELLENT, 60-79= GOOD, 40-59= MODERATE, 20-39= BELOW AVERAGE, <20= POOR)
 
 **Bottom Line:** [2-3 sentence definitive recommendation. Be direct - should they invest here or not? Under what conditions?]
 
@@ -2231,20 +2246,20 @@ For each top performer, analyze REAL differentiators from the data:
 === PROPERTY ANALYSIS FORMAT ===
 When user provides an address, deliver this COMPLETE analysis:
 
-## 🏠 PROPERTY INVESTMENT ANALYSIS
+## PROPERTY INVESTMENT ANALYSIS
 **[Full Address]**
 
-### 💰 REVENUE PROJECTION
+### REVENUE PROJECTION
 | Metric | Your Property | Market Average | vs Market | Verdict |
 |--------|---------------|----------------|-----------|--------|
-| Annual Revenue | $XX,XXX | $XX,XXX | +X% ✅ / -X% ⚠️ | [Above/Below] average |
+| Annual Revenue | $XX,XXX | $XX,XXX | +X% / -X% | [Above/Below] average |
 | Occupancy Rate | XX% | XX% | +X% / -X% | [Strong/Weak] demand |
 | Avg Daily Rate | $XXX | $XXX | +X% / -X% | [Premium/Discount] pricing |
 
-**Revenue Percentile: Top [X]%**
-Your property would outperform [X]% of listings in this market.
+**Revenue Percentile: Top XX%** (CALCULATE the actual percentile based on where this property's projected revenue ranks among all listings in the market - e.g., if revenue is higher than 75% of listings, say "Top 25%")
+Your property would outperform XX% of listings in this market. (REPLACE XX with the actual calculated percentage)
 
-### 📅 12-MONTH REVENUE FORECAST
+### 12-MONTH REVENUE FORECAST
 | Month | Revenue | Occupancy | ADR | Season | Strategy |
 |-------|---------|-----------|-----|--------|----------|
 | January | $X,XXX | XX% | $XXX | Off | Lower rates, min 2-night stay |
@@ -2256,12 +2271,13 @@ Your property would outperform [X]% of listings in this market.
 - **Shoulder Season ([months]):** Standard pricing, flexible minimums
 - **Off Season ([months]):** Discount rates, target business travelers
 
-### 🏆 YOUR DIRECT COMPETITORS
-[Show 5 comparable properties with same bedroom count]
+### YOUR DIRECT COMPETITORS
+IMPORTANT: You MUST populate this table with ACTUAL competitor data from the search_nearby_listings or get_market_listings results. DO NOT leave this as a placeholder. Show at least 5 real properties with their actual data:
 | Property | Revenue | Occ | ADR | Rating | View | How to Beat Them |
 |----------|---------|-----|-----|--------|------|------------------|
+| [Actual property name from data] | $XX,XXX | XX% | $XXX | X.X | [Airbnb](actual_url) | [Specific advice] |
 
-### 💵 PROFIT & LOSS PROJECTION
+### PROFIT & LOSS PROJECTION
 | Category | Monthly | Annual | % of Revenue |
 |----------|---------|--------|-------------|
 | **Gross Revenue** | $X,XXX | $XX,XXX | 100% |
@@ -2273,9 +2289,9 @@ Your property would outperform [X]% of listings in this market.
 | Property Management (optional) | -$XXX | -$X,XXX | X% |
 | **Net Operating Income** | **$X,XXX** | **$XX,XXX** | **XX%** |
 
-### 🎯 INVESTMENT VERDICT
-**Score: [XX/100]**
-**Rating: [⭐⭐⭐⭐⭐ / ⭐⭐⭐⭐ / ⭐⭐⭐ / ⭐⭐ / ⭐]**
+### INVESTMENT VERDICT
+**Score: [XX/100]** (Calculate actual score based on revenue potential, occupancy, and market conditions)
+**Rating: EXCELLENT / GOOD / FAIR / POOR** (Based on score: 80+= EXCELLENT, 60-79= GOOD, 40-59= FAIR, <40= POOR)
 
 **Recommendation:** [Clear, direct advice]
 
@@ -2291,7 +2307,7 @@ Your property would outperform [X]% of listings in this market.
 === MARKET COMPARISON FORMAT ===
 When comparing markets, show side-by-side analysis:
 
-## 📊 MARKET COMPARISON: [Market A] vs [Market B]
+## MARKET COMPARISON: [Market A] vs [Market B]
 
 | Factor | [Market A] | [Market B] | Winner | Why It Matters |
 |--------|------------|------------|--------|----------------|

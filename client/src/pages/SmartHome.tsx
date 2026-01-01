@@ -876,76 +876,238 @@ export default function SmartHome() {
     // Create PDF document
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
+    const margin = 15;
     const maxWidth = pageWidth - 2 * margin;
     let yPosition = 20;
     
+    // Helper function to add page break if needed
+    const checkPageBreak = (neededSpace: number = 20) => {
+      if (yPosition > doc.internal.pageSize.getHeight() - neededSpace) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    };
+    
+    // Helper function to clean emoji and special characters for PDF
+    const cleanForPDF = (text: string) => {
+      return text
+        // Remove emoji and special unicode characters that cause encoding issues
+        // Using character ranges that work without the 'u' flag
+        .replace(/[\uD800-\uDFFF]/g, '')  // Remove surrogate pairs (emoji)
+        .replace(/[\u2600-\u27BF]/g, '')  // Remove misc symbols
+        // Replace common symbols with text equivalents
+        .replace(/\u2705/g, '[OK]')  // checkmark
+        .replace(/\u26a0/g, '[!]')  // warning
+        .replace(/\u2b50/g, '*')  // star
+        .replace(/\u2192/g, '->')  // arrow
+        .replace(/\u2022/g, '-')  // bullet
+        .replace(/\u2728/g, '')  // sparkles
+        .replace(/\uD83C\uDFE0/g, '')  // house emoji
+        // Clean up any remaining problematic characters
+        .replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, '');
+    };
+    
+    // Helper function to parse and render markdown tables
+    const renderTable = (tableText: string) => {
+      const lines = tableText.trim().split('\n');
+      if (lines.length < 2) return;
+      
+      // Parse header
+      const headerCells = lines[0].split('|').filter(c => c.trim()).map(c => cleanForPDF(c.trim()));
+      const numCols = headerCells.length;
+      if (numCols === 0) return;
+      
+      // Calculate column widths
+      const colWidth = maxWidth / numCols;
+      const cellPadding = 2;
+      const rowHeight = 8;
+      
+      checkPageBreak(rowHeight * (lines.length + 1));
+      
+      // Draw header row with background
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPosition - 5, maxWidth, rowHeight, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      
+      headerCells.forEach((cell, i) => {
+        const cellX = margin + (i * colWidth) + cellPadding;
+        const truncatedCell = cell.length > 20 ? cell.substring(0, 18) + '...' : cell;
+        doc.text(truncatedCell, cellX, yPosition);
+      });
+      yPosition += rowHeight;
+      
+      // Draw data rows (skip separator line at index 1)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      for (let i = 2; i < lines.length; i++) {
+        const cells = lines[i].split('|').filter(c => c.trim()).map(c => cleanForPDF(c.trim()));
+        if (cells.length === 0 || cells.every(c => c.match(/^-+$/))) continue;
+        
+        checkPageBreak(rowHeight);
+        
+        // Alternate row background
+        if (i % 2 === 0) {
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPosition - 5, maxWidth, rowHeight, 'F');
+        }
+        
+        cells.forEach((cell, j) => {
+          if (j < numCols) {
+            const cellX = margin + (j * colWidth) + cellPadding;
+            const truncatedCell = cell.length > 20 ? cell.substring(0, 18) + '...' : cell;
+            doc.text(truncatedCell, cellX, yPosition);
+          }
+        });
+        yPosition += rowHeight;
+      }
+      
+      yPosition += 5; // Space after table
+    };
+    
     // Add header
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
     doc.text('STR Investment Analysis Report', margin, yPosition);
-    yPosition += 15;
+    yPosition += 12;
     
     // Add date
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(128, 128, 128);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
-    yPosition += 10;
+    yPosition += 8;
     
     // Add divider line
-    doc.setDrawColor(201, 169, 98); // Gold color
+    doc.setDrawColor(201, 169, 98);
     doc.setLineWidth(0.5);
     doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 15;
+    yPosition += 12;
     
     // Add query section
     if (userMessage) {
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
       doc.text('Query:', margin, yPosition);
-      yPosition += 7;
+      yPosition += 6;
       
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      const queryLines = doc.splitTextToSize(userMessage.content, maxWidth);
+      doc.setFontSize(10);
+      const queryLines = doc.splitTextToSize(cleanForPDF(userMessage.content), maxWidth);
       doc.text(queryLines, margin, yPosition);
-      yPosition += queryLines.length * 6 + 10;
+      yPosition += queryLines.length * 5 + 10;
     }
     
     // Add analysis section
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Analysis:', margin, yPosition);
-    yPosition += 7;
+    yPosition += 8;
     
-    // Clean up markdown and format content
-    const cleanContent = assistantMessage.content
-      .replace(/\*\*/g, '')
-      .replace(/\*/g, '')
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\|/g, ' ')
-      .replace(/-{3,}/g, '')
-      .replace(/\n{3,}/g, '\n\n');
+    // Process content - split into sections and handle tables separately
+    const content = assistantMessage.content;
+    
+    // Split content by tables (markdown table pattern)
+    const tablePattern = /(\|[^\n]+\|\n\|[-:|\s]+\|\n(?:\|[^\n]+\|\n?)+)/g;
+    let lastIndex = 0;
+    let match;
     
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    const contentLines = doc.splitTextToSize(cleanContent, maxWidth);
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
     
-    // Add content with page breaks
-    for (const line of contentLines) {
-      if (yPosition > doc.internal.pageSize.getHeight() - 30) {
-        doc.addPage();
-        yPosition = 20;
+    while ((match = tablePattern.exec(content)) !== null) {
+      // Render text before the table
+      if (match.index > lastIndex) {
+        const textBefore = content.substring(lastIndex, match.index);
+        const cleanText = cleanForPDF(textBefore)
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/#{1,6}\s*/g, '')
+          .replace(/-{3,}/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        
+        if (cleanText) {
+          // Check for section headers (lines that were markdown headers)
+          const lines = cleanText.split('\n');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            checkPageBreak(10);
+            
+            // Detect section headers (all caps or specific patterns)
+            if (line.match(/^[A-Z][A-Z\s&]+:?$/) || line.match(/^(PROPERTY|REVENUE|MARKET|COMPETITOR|PROFIT|INVESTMENT|RISK|ROI)/)) {
+              yPosition += 3;
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(11);
+              doc.text(line, margin, yPosition);
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9);
+              yPosition += 7;
+            } else {
+              const wrappedLines = doc.splitTextToSize(line, maxWidth);
+              for (const wrappedLine of wrappedLines) {
+                checkPageBreak(6);
+                doc.text(wrappedLine, margin, yPosition);
+                yPosition += 5;
+              }
+            }
+          }
+        }
       }
-      doc.text(line, margin, yPosition);
-      yPosition += 5;
+      
+      // Render the table
+      renderTable(match[1]);
+      lastIndex = match.index + match[0].length;
     }
     
-    // Add footer
+    // Render remaining text after last table
+    if (lastIndex < content.length) {
+      const remainingText = content.substring(lastIndex);
+      const cleanText = cleanForPDF(remainingText)
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/#{1,6}\s*/g, '')
+        .replace(/-{3,}/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/---FOLLOW_UP_QUESTIONS---[\s\S]*?---END_FOLLOW_UP---/g, '')
+        .trim();
+      
+      if (cleanText) {
+        const lines = cleanText.split('\n');
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          checkPageBreak(10);
+          
+          if (line.match(/^[A-Z][A-Z\s&]+:?$/) || line.match(/^(PROPERTY|REVENUE|MARKET|COMPETITOR|PROFIT|INVESTMENT|RISK|ROI)/)) {
+            yPosition += 3;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text(line, margin, yPosition);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            yPosition += 7;
+          } else {
+            const wrappedLines = doc.splitTextToSize(line, maxWidth);
+            for (const wrappedLine of wrappedLines) {
+              checkPageBreak(6);
+              doc.text(wrappedLine, margin, yPosition);
+              yPosition += 5;
+            }
+          }
+        }
+      }
+    }
+    
+    // Add footer on last page
     yPosition = doc.internal.pageSize.getHeight() - 15;
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text('Powered by Coach Inayah STR Investment Advisor', margin, yPosition);
     
