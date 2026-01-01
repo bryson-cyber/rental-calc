@@ -1863,9 +1863,17 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
                 amenity: a.amenity,
                 percentage: a.percentage_of_top_performers,
                 impact: a.revenue_impact
-              }))
+              })),
+              // AI-Powered Analysis Summary
+              ai_analysis: result.ai_analysis ? {
+                verdict: result.ai_analysis.verdict,
+                insights_count: result.ai_analysis.insights.length,
+                pricing_strategy: result.ai_analysis.pricing_strategy,
+                risk_level: result.ai_analysis.risk_assessment.overall_risk,
+                action_plan_phases: result.ai_analysis.action_plan.length
+              } : null
             },
-            instruction: "CRITICAL: Present the ENTIRE report to the user EXACTLY as formatted. The report contains multiple sections including Seasonality Analysis and Amenity Analysis - you MUST include ALL tables in your response. Do NOT summarize or skip any sections. The report is formatted in Markdown with tables that must be preserved."
+            instruction: "CRITICAL: Present the ENTIRE report to the user EXACTLY as formatted. The report now includes an AI-POWERED INVESTMENT ANALYSIS section with unique insights, investment verdict, pricing strategy, risk assessment, and action plan. You MUST include ALL sections and tables in your response. Do NOT summarize or skip any sections. The report is formatted in Markdown with tables that must be preserved."
           };
         } catch (error) {
           return { error: `Failed to generate arbitrage report: ${error instanceof Error ? error.message : 'Unknown error'}` };
@@ -2463,10 +2471,28 @@ After substantive analyses, include:
 **ARBITRAGE REPORT (generate_arbitrage_report):**
 When user provides a property address AND monthly rent for arbitrage analysis:
 - Use generate_arbitrage_report to create a FULL professional report
-- The report follows Coach Inayah's exact SOP template with 5 sections
+- The report follows Coach Inayah's exact SOP template with enhanced AI analysis
 - CRITICAL: Present the COMPLETE report to the user - do NOT summarize or skip any sections
-- The report includes: Property Overview, Market Analysis with percentiles, Competitor Analysis with Airbnb URLs, and Profitability Projections with 3 scenarios
-- IMPORTANT: The Competitor Analysis section contains a FULL TABLE with ALL competitors - you MUST include this entire table in your response
+
+**The report now includes these AI-POWERED sections:**
+1. Property Overview - basic property details
+2. Market Analysis - percentiles and market context
+3. Seasonality Analysis - peak/slow season patterns
+4. Competitor Analysis - FULL TABLE with Airbnb URLs (show EVERY row)
+5. Amenity Analysis - what top performers have
+6. **Visual Analysis (NEW)** - AI photo analysis of competitor listings using Gemini Vision
+7. **AI-Powered Investment Analysis (NEW)** - includes:
+   - Executive Summary synthesized by AI
+   - Investment Verdict (STRONG BUY/BUY/HOLD/PASS) with confidence score
+   - Unique Insights specific to THIS property
+   - Competitor Patterns - what makes winners win
+   - Recommended Pricing Strategy with base rate, premiums, min stays
+   - Risk Assessment with mitigations
+   - Opportunities to capture
+   - Personalized Action Plan with timeline
+8. Profitability Projections - 3 scenarios
+
+- IMPORTANT: The AI analysis is UNIQUE to each property - not generic advice
 - Each competitor row has: Property name (linked to Airbnb), Revenue, Occupancy, ADR, Rating, Reviews, and Success Factor
 - Do NOT summarize the competitor table - show EVERY row
 

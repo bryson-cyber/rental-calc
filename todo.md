@@ -755,3 +755,50 @@
 - [x] Add length of stay - average nights per booking (calculated from seasonality)
 - [x] Add amenity analysis - what amenities top performers have vs common
 - [ ] Add submarket comparison - how this ZIP compares to nearby areas
+
+## AI MAXIMIZATION SPRINT - Full Gemini Integration for Arbitrage Analysis
+
+### Phase 1: AI Synthesis Layer
+- [x] Create gemini-analyzer.ts module for AI-powered analysis
+- [x] Add synthesizePropertyInsights() - generate 3-5 unique insights per property
+- [x] Add analyzeCompetitorPatterns() - identify what makes winners win
+- [x] Add generateInvestmentVerdict() - STRONG BUY/BUY/HOLD/PASS with confidence
+- [x] Add generatePricingStrategy() - base rate, peak premiums, min stays
+
+### Phase 2: Photo Analysis (Gemini Vision)
+- [x] Add analyzeListingPhotos() - analyze competitor listing photos from Airbnb
+- [x] Identify design themes that drive bookings (modern, cozy, luxury, etc.)
+- [x] Extract amenity presence from photos (pool, hot tub, game room visible)
+- [x] Generate photo improvement recommendations for subject property
+- [ ] Add analyzePropertyPhotos() - analyze Zillow/user-uploaded photos (future enhancement)
+
+### Phase 3: Competitor Deep Dive
+- [x] Add analyzeListingTitles() - what keywords top performers use (via competitor patterns)
+- [x] Add analyzeListingDescriptions() - common themes and selling points (via competitor patterns)
+- [x] Add identifyCompetitiveGaps() - what's missing in the market (via risk assessment)
+- [x] Add predictGuestPersonas() - who books these properties (via photo analysis guest_appeal)
+
+### Phase 4: Pricing Intelligence
+- [x] Add generateDynamicPricing() - base rate, peak/slow adjustments
+- [x] Add analyzeWeekendVsWeekday() - weekend premium percentage
+- [ ] Add analyzeEventPricing() - local events that spike demand (future enhancement)
+- [x] Add generateMinimumStayStrategy() - by season and day of week
+
+### Phase 5: Risk & Opportunity Analysis
+- [x] Add assessMarketRisks() - regulation, saturation, seasonality risks
+- [x] Add identifyOpportunities() - underserved niches, timing advantages
+- [x] Add generateScenarioModels() - best/worst/likely case projections (via profitability scenarios)
+- [x] Add calculateBreakEvenTimeline() - when will this investment pay off (via action plan)
+
+### Phase 6: Personalized Action Plan
+- [x] Add generateLaunchPlan() - step-by-step to go live
+- [x] Add generateAmenityRoadmap() - what to add and when (via amenity analysis)
+- [x] Add generateMarketingStrategy() - how to stand out (via competitor patterns)
+- [x] Add generateGuestExperienceBlueprint() - 5-star review formula (via action plan)
+
+### Phase 7: Integration & Polish
+- [x] Integrate all AI analysis into arbitrage report
+- [x] Add AI confidence scores to all recommendations
+- [x] Add "Why This Matters" explanations for each insight
+- [x] Create executive summary with key takeaways
+- [ ] Add follow-up question suggestions based on analysis (future enhancement)

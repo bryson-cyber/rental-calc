@@ -16,6 +16,29 @@ import {
   ComprehensiveMarketReport
 } from './airdna';
 
+import {
+  runFullAIAnalysis,
+  synthesizePropertyInsights,
+  analyzeCompetitorPatterns,
+  generateInvestmentVerdict,
+  generatePricingStrategy,
+  assessRisks,
+  generateActionPlan,
+  generateExecutiveSummary,
+  analyzeCompetitorPhotos,
+  analyzeListingPhoto,
+  type FullAIAnalysis,
+  type AIInsight,
+  type InvestmentVerdict,
+  type PricingStrategy,
+  type CompetitorPattern,
+  type RiskAssessment,
+  type ActionPlan,
+  type PhotoAnalysis
+} from './gemini-analyzer';
+
+import { scrapeAirbnbImages, batchScrapeAirbnbImages } from './airbnb-scraper';
+
 // ============================================
 // TYPE DEFINITIONS
 // ============================================
@@ -118,6 +141,22 @@ export interface ArbitrageReport {
   seasonality?: SeasonalityData[];
   booking_metrics?: BookingMetrics;
   amenity_analysis?: AmenityAnalysis[];
+  // AI-Powered Analysis (NEW)
+  ai_analysis?: FullAIAnalysis;
+  // Photo Analysis (NEW)
+  photo_analysis?: {
+    competitor_photos: Array<{
+      name: string;
+      imageUrl: string;
+      analysis: PhotoAnalysis;
+    }>;
+    design_insights: {
+      common_themes: string[];
+      design_recommendations: string[];
+      must_have_shots: string[];
+      differentiation_opportunities: string[];
+    };
+  };
 }
 
 // ============================================
@@ -439,6 +478,16 @@ export async function generateFullArbitrageAnalysis(
   seasonality: SeasonalityData[];
   booking_metrics: BookingMetrics;
   amenity_analysis: AmenityAnalysis[];
+  ai_analysis: FullAIAnalysis | null;
+  photo_analysis: {
+    competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }>;
+    design_insights: {
+      common_themes: string[];
+      design_recommendations: string[];
+      must_have_shots: string[];
+      differentiation_opportunities: string[];
+    };
+  } | null;
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -618,6 +667,148 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
+  // Step 13: Run FULL AI ANALYSIS using Gemini
+  let ai_analysis: FullAIAnalysis | null = null;
+  try {
+    console.log('[ArbitrageAnalysis] Running full AI analysis with Gemini...');
+    
+    // Prepare data for AI analysis
+    const propertyData = {
+      address,
+      bedrooms: actualBedrooms,
+      bathrooms: actualBathrooms,
+      monthly_rent,
+      zillow_url,
+      attractive_features
+    };
+    
+    const marketData = {
+      name: defaultMarketData.market.name,
+      occupancy: defaultMarketData.market.metrics.occupancy,
+      adr: defaultMarketData.market.metrics.adr,
+      revenue: defaultMarketData.market.metrics.revenue,
+      active_listings: defaultMarketData.market.metrics.active_listings || defaultMarketData.market.listing_count
+    };
+    
+    const competitorData = competitors.map(c => ({
+      name: c.name,
+      airbnb_url: c.airbnb_url,
+      annual_revenue: c.annual_revenue,
+      occupancy: c.occupancy,
+      adr: c.adr,
+      rating: c.rating,
+      reviews: c.reviews,
+      success_factor: c.key_success_factor,
+      amenities: c.amenities
+    }));
+    
+    const profitabilityData = {
+      conservative: profitability.scenarios.conservative.estimated_profit,
+      realistic: profitability.scenarios.realistic.estimated_profit,
+      optimistic: profitability.scenarios.optimistic.estimated_profit
+    };
+    
+    ai_analysis = await runFullAIAnalysis(
+      propertyData,
+      marketData,
+      competitorData,
+      percentiles,
+      seasonality,
+      profitabilityData
+    );
+    
+    console.log('[ArbitrageAnalysis] AI analysis complete');
+    
+    // Step 14: Add AI Analysis section to report
+    if (ai_analysis) {
+      const aiSection = generateAIAnalysisSection(ai_analysis);
+      // Insert after profitability section, before references
+      const referencesStart = report.indexOf('## 5. References');
+      if (referencesStart > 0) {
+        report = report.slice(0, referencesStart) + aiSection + '\n\n' + report.slice(referencesStart);
+      } else {
+        report += '\n\n' + aiSection;
+      }
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error running AI analysis:', error);
+    // Continue without AI analysis - the base report is still valuable
+  }
+  
+  // Step 15: Analyze competitor photos using Gemini Vision
+  let photo_analysis: {
+    competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }>;
+    design_insights: {
+      common_themes: string[];
+      design_recommendations: string[];
+      must_have_shots: string[];
+      differentiation_opportunities: string[];
+    };
+  } | null = null;
+  
+  try {
+    console.log('[ArbitrageAnalysis] Analyzing competitor photos with Gemini Vision...');
+    
+    // Get Airbnb URLs from top competitors
+    const competitorsWithUrls = competitors
+      .filter(c => c.airbnb_url && c.airbnb_url.includes('airbnb.com'))
+      .slice(0, 5); // Analyze top 5 competitors
+    
+    if (competitorsWithUrls.length > 0) {
+      // Scrape images from competitor listings
+      const urlsToScrape = competitorsWithUrls.map(c => c.airbnb_url);
+      const scrapedImages = await batchScrapeAirbnbImages(urlsToScrape, 2);
+      
+      // Analyze photos for competitors that have images
+      const competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }> = [];
+      
+      for (const comp of competitorsWithUrls) {
+        const images = scrapedImages.get(comp.airbnb_url);
+        if (images && images.length > 0) {
+          try {
+            const analysis = await analyzeListingPhoto(images[0], comp.name);
+            competitor_photos.push({
+              name: comp.name,
+              imageUrl: images[0],
+              analysis
+            });
+          } catch (photoError) {
+            console.error(`[ArbitrageAnalysis] Error analyzing photo for ${comp.name}:`, photoError);
+          }
+        }
+      }
+      
+      // Generate design insights from analyzed photos
+      if (competitor_photos.length > 0) {
+        const themes = competitor_photos.map(p => p.analysis.design_theme).filter(t => t !== 'Unable to analyze');
+        const allStrengths = competitor_photos.flatMap(p => p.analysis.strengths);
+        const allImprovements = competitor_photos.flatMap(p => p.analysis.improvements);
+        
+        photo_analysis = {
+          competitor_photos,
+          design_insights: {
+            common_themes: Array.from(new Set(themes)),
+            design_recommendations: Array.from(new Set(allStrengths)).slice(0, 5),
+            must_have_shots: ['Hero living room shot', 'Kitchen with staging', 'Each bedroom', 'Clean bathroom', 'Outdoor/patio area'],
+            differentiation_opportunities: Array.from(new Set(allImprovements)).slice(0, 3)
+          }
+        };
+        
+        console.log(`[ArbitrageAnalysis] Analyzed ${competitor_photos.length} competitor photos`);
+        
+        // Add photo analysis section to report
+        const photoSection = generatePhotoAnalysisSection(photo_analysis);
+        const aiSectionStart = report.indexOf('## AI-Powered Investment Analysis');
+        if (aiSectionStart > 0) {
+          report = report.slice(0, aiSectionStart) + photoSection + '\n\n' + report.slice(aiSectionStart);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error analyzing photos:', error);
+    // Continue without photo analysis
+  }
+  
   return {
     report,
     percentiles,
@@ -626,7 +817,9 @@ export async function generateFullArbitrageAnalysis(
     property_estimate,
     seasonality,
     booking_metrics,
-    amenity_analysis
+    amenity_analysis,
+    ai_analysis,
+    photo_analysis
   };
 }
 
@@ -946,6 +1139,212 @@ ${amenityAnalysis.slice(0, 8).map(a =>
     });
   }
   
+  return section;
+}
+
+/**
+ * Generate AI Analysis section for the report
+ */
+export function generateAIAnalysisSection(aiAnalysis: FullAIAnalysis): string {
+  let section = `
+---
+
+## AI-Powered Investment Analysis
+
+*This section was generated by our AI analyst using Gemini, synthesizing all the data above into actionable insights specific to YOUR property.*
+
+### Executive Summary
+
+${aiAnalysis.executive_summary}
+
+---
+
+### Investment Verdict
+
+| Rating | Confidence | Summary |
+| :---: | :---: | :--- |
+| **${aiAnalysis.verdict.rating}** | ${aiAnalysis.verdict.confidence}/10 | ${aiAnalysis.verdict.summary} |
+
+**Top Reasons:**
+${aiAnalysis.verdict.top_reasons.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+**Key Risk:** ${aiAnalysis.verdict.key_risk}
+
+**Key Opportunity:** ${aiAnalysis.verdict.key_opportunity}
+
+---
+
+### Unique Insights for This Property
+
+`;
+
+  // Add insights
+  aiAnalysis.insights.forEach((insight, i) => {
+    section += `#### ${i + 1}. ${insight.title}\n\n`;
+    section += `${insight.insight}\n\n`;
+    section += `**Impact:** ${insight.impact} | **Action:** ${insight.action}\n\n`;
+  });
+
+  // Add competitor patterns
+  if (aiAnalysis.competitor_patterns.length > 0) {
+    section += `---\n\n### What Makes Winners Win\n\nOur AI analyzed your top competitors and identified these patterns:\n\n`;
+    section += `| Pattern | Frequency | Revenue Impact | Recommendation |\n`;
+    section += `| :--- | :--- | :--- | :--- |\n`;
+    aiAnalysis.competitor_patterns.forEach(p => {
+      section += `| ${p.pattern} | ${p.frequency} | ${p.revenue_impact} | ${p.recommendation} |\n`;
+    });
+    section += '\n';
+  }
+
+  // Add pricing strategy
+  section += `---\n\n### Recommended Pricing Strategy\n\n`;
+  section += `| Metric | Recommendation |\n`;
+  section += `| :--- | :--- |\n`;
+  section += `| **Base Rate** | $${aiAnalysis.pricing_strategy.base_rate}/night |\n`;
+  section += `| **Peak Season Premium** | +${aiAnalysis.pricing_strategy.peak_premium_percent}% |\n`;
+  section += `| **Slow Season Discount** | -${aiAnalysis.pricing_strategy.slow_discount_percent}% |\n`;
+  section += `| **Weekend Premium** | +${aiAnalysis.pricing_strategy.weekend_premium_percent}% |\n`;
+  section += `| **Min Stay (Peak)** | ${aiAnalysis.pricing_strategy.minimum_stay_peak} nights |\n`;
+  section += `| **Min Stay (Slow)** | ${aiAnalysis.pricing_strategy.minimum_stay_slow} nights |\n`;
+  section += `\n**Rationale:** ${aiAnalysis.pricing_strategy.pricing_rationale}\n\n`;
+
+  // Add risk assessment
+  section += `---\n\n### Risk Assessment\n\n`;
+  section += `**Overall Risk Level:** ${aiAnalysis.risk_assessment.overall_risk}\n\n`;
+  
+  if (aiAnalysis.risk_assessment.risks.length > 0) {
+    section += `**Risks to Watch:**\n\n`;
+    section += `| Category | Risk | Severity | Mitigation |\n`;
+    section += `| :--- | :--- | :---: | :--- |\n`;
+    aiAnalysis.risk_assessment.risks.forEach(r => {
+      section += `| ${r.category} | ${r.description} | ${r.severity} | ${r.mitigation} |\n`;
+    });
+    section += '\n';
+  }
+  
+  if (aiAnalysis.risk_assessment.opportunities.length > 0) {
+    section += `**Opportunities to Capture:**\n\n`;
+    section += `| Category | Opportunity | Potential Impact | Action |\n`;
+    section += `| :--- | :--- | :--- | :--- |\n`;
+    aiAnalysis.risk_assessment.opportunities.forEach(o => {
+      section += `| ${o.category} | ${o.description} | ${o.potential_impact} | ${o.action} |\n`;
+    });
+    section += '\n';
+  }
+
+  // Add action plan
+  if (aiAnalysis.action_plan.length > 0) {
+    section += `---\n\n### Your Action Plan\n\n`;
+    section += `Here's a step-by-step roadmap to launch this property:\n\n`;
+    
+    aiAnalysis.action_plan.forEach((phase, i) => {
+      section += `#### Phase ${i + 1}: ${phase.phase} (${phase.timeline})\n\n`;
+      phase.tasks.forEach(task => {
+        section += `- [ ] ${task}\n`;
+      });
+      if (phase.estimated_cost) {
+        section += `\n**Estimated Cost:** ${phase.estimated_cost}\n`;
+      }
+      section += `\n**Expected Outcome:** ${phase.expected_outcome}\n\n`;
+    });
+  }
+
+  section += `---\n\n*This AI analysis is based on real market data and is specific to this property. For personalized guidance on executing this plan, contact Coach Inayah's team.*\n`;
+
+  return section;
+}
+
+/**
+ * Generate Photo Analysis section for the report
+ */
+export function generatePhotoAnalysisSection(photoAnalysis: {
+  competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }>;
+  design_insights: {
+    common_themes: string[];
+    design_recommendations: string[];
+    must_have_shots: string[];
+    differentiation_opportunities: string[];
+  };
+}): string {
+  let section = `
+---
+
+## Visual Analysis: What Top Performers Look Like
+
+*Our AI analyzed photos from your top competitors using Gemini Vision to identify design patterns that drive bookings.*
+
+`;
+
+  // Design themes
+  if (photoAnalysis.design_insights.common_themes.length > 0) {
+    section += `### Common Design Themes\n\n`;
+    section += `The most successful listings in your market share these design approaches:\n\n`;
+    photoAnalysis.design_insights.common_themes.forEach(theme => {
+      section += `- **${theme}**\n`;
+    });
+    section += '\n';
+  }
+
+  // Individual photo analyses
+  if (photoAnalysis.competitor_photos.length > 0) {
+    section += `### Competitor Photo Analysis\n\n`;
+    section += `| Listing | Design Theme | Quality | Guest Appeal |\n`;
+    section += `| :--- | :--- | :---: | :--- |\n`;
+    photoAnalysis.competitor_photos.forEach(p => {
+      const cleanName = p.name.replace(/[\|\[\]]/g, '').substring(0, 35);
+      section += `| ${cleanName} | ${p.analysis.design_theme} | ${p.analysis.quality_score}/10 | ${p.analysis.guest_appeal} |\n`;
+    });
+    section += '\n';
+    
+    // Strengths observed
+    const allStrengths = photoAnalysis.competitor_photos.flatMap(p => p.analysis.strengths);
+    const uniqueStrengths = Array.from(new Set(allStrengths)).slice(0, 5);
+    if (uniqueStrengths.length > 0) {
+      section += `### What Makes Their Photos Effective\n\n`;
+      uniqueStrengths.forEach(s => {
+        section += `- ${s}\n`;
+      });
+      section += '\n';
+    }
+    
+    // Amenities visible in photos
+    const allAmenities = photoAnalysis.competitor_photos.flatMap(p => p.analysis.amenities_visible);
+    const uniqueAmenities = Array.from(new Set(allAmenities)).slice(0, 8);
+    if (uniqueAmenities.length > 0) {
+      section += `### Amenities Visible in Top Listings\n\n`;
+      section += `These amenities appear prominently in competitor photos:\n\n`;
+      uniqueAmenities.forEach(a => {
+        section += `- ${a}\n`;
+      });
+      section += '\n';
+    }
+  }
+
+  // Recommendations
+  section += `### Your Photo Strategy\n\n`;
+  
+  section += `**Must-Have Shots:**\n`;
+  photoAnalysis.design_insights.must_have_shots.forEach(shot => {
+    section += `- [ ] ${shot}\n`;
+  });
+  section += '\n';
+  
+  if (photoAnalysis.design_insights.design_recommendations.length > 0) {
+    section += `**Design Recommendations:**\n`;
+    photoAnalysis.design_insights.design_recommendations.forEach(rec => {
+      section += `- ${rec}\n`;
+    });
+    section += '\n';
+  }
+  
+  if (photoAnalysis.design_insights.differentiation_opportunities.length > 0) {
+    section += `**Differentiation Opportunities:**\n`;
+    section += `Areas where you can stand out from competitors:\n\n`;
+    photoAnalysis.design_insights.differentiation_opportunities.forEach(opp => {
+      section += `- ${opp}\n`;
+    });
+  }
+
   return section;
 }
 
