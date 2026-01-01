@@ -309,6 +309,54 @@ const AVAILABLE_TOOLS = {
         },
         required: ["annual_revenue", "occupancy_rate", "adr"]
       }
+    },
+    {
+      name: "calculate_amenity_impact",
+      description: "Calculate the revenue impact of adding specific amenities (pool, hot tub, extra bedroom, etc.) to a property. Use this when user asks 'what if I add a pool?' or 'how much more could I make with a hot tub?' or 'should I add an extra bedroom?'",
+      parameters: {
+        type: "object",
+        properties: {
+          base_revenue: {
+            type: "number",
+            description: "Current or projected annual revenue without the amenity"
+          },
+          amenity_type: {
+            type: "string",
+            description: "The amenity to evaluate: 'pool', 'hot_tub', 'extra_bedroom', 'game_room', 'outdoor_kitchen', 'ev_charger', 'home_theater', 'sauna'"
+          },
+          market_type: {
+            type: "string",
+            description: "Market type: 'beach', 'mountain', 'urban', 'suburban', 'lake', 'desert'"
+          },
+          current_bedrooms: {
+            type: "number",
+            description: "Current number of bedrooms (for extra bedroom calculation)"
+          }
+        },
+        required: ["base_revenue", "amenity_type"]
+      }
+    },
+    {
+      name: "find_markets_for_budget",
+      description: "Find the best STR markets for a given investment budget. Use this when user asks 'where can I invest with $X?' or 'best markets for my budget' or 'what can I afford?'",
+      parameters: {
+        type: "object",
+        properties: {
+          budget: {
+            type: "number",
+            description: "Total investment budget in dollars"
+          },
+          investment_type: {
+            type: "string",
+            description: "'purchase' for buying property or 'arbitrage' for rental arbitrage"
+          },
+          preferred_region: {
+            type: "string",
+            description: "Optional preferred region: 'southeast', 'southwest', 'midwest', 'northeast', 'west_coast', 'any'"
+          }
+        },
+        required: ["budget", "investment_type"]
+      }
     }
   ]
 };
@@ -928,12 +976,14 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
               title: p.title,
               bedrooms: p.bedrooms,
               bathrooms: p.bathrooms,
+              property_type: (p as any).property_type || 'Unknown',
               annual_revenue: p.annual_revenue,
               occupancy: p.occupancy,
               adr: p.adr,
               rating: p.rating,
               reviews: p.reviews,
-              airbnb_url: p.airbnb_url
+              airbnb_url: p.airbnb_url,
+              note: (p as any).note
             }))
           };
         } catch (error) {
@@ -1081,6 +1131,192 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             score_vs_average: totalScore >= 60 ? 'Above Average' : 'Below Average',
             percentile: Math.min(99, Math.round((totalScore / 100) * 100))
           }
+        };
+      }
+      
+      case "calculate_amenity_impact": {
+        const baseRevenue = args.base_revenue as number;
+        const amenityType = args.amenity_type as string;
+        const marketType = (args.market_type as string) || 'suburban';
+        const currentBedrooms = (args.current_bedrooms as number) || 3;
+        
+        // Amenity impact multipliers based on market research
+        const amenityImpacts: Record<string, { multiplier: number; cost: number; marketBonus: Record<string, number> }> = {
+          'pool': { 
+            multiplier: 1.15, 
+            cost: 45000, 
+            marketBonus: { beach: 0.05, desert: 0.10, suburban: 0.08, mountain: 0.03, urban: 0.02, lake: 0.06 }
+          },
+          'hot_tub': { 
+            multiplier: 1.12, 
+            cost: 8000, 
+            marketBonus: { mountain: 0.10, lake: 0.08, beach: 0.05, suburban: 0.06, urban: 0.04, desert: 0.03 }
+          },
+          'extra_bedroom': { 
+            multiplier: 1.20, 
+            cost: 25000, 
+            marketBonus: { suburban: 0.05, urban: 0.08, beach: 0.06, mountain: 0.04, lake: 0.05, desert: 0.03 }
+          },
+          'game_room': { 
+            multiplier: 1.08, 
+            cost: 5000, 
+            marketBonus: { suburban: 0.05, mountain: 0.06, lake: 0.04, beach: 0.03, urban: 0.02, desert: 0.02 }
+          },
+          'outdoor_kitchen': { 
+            multiplier: 1.10, 
+            cost: 15000, 
+            marketBonus: { beach: 0.08, lake: 0.07, suburban: 0.05, desert: 0.04, mountain: 0.03, urban: 0.02 }
+          },
+          'ev_charger': { 
+            multiplier: 1.05, 
+            cost: 2500, 
+            marketBonus: { urban: 0.08, suburban: 0.05, beach: 0.04, mountain: 0.03, lake: 0.02, desert: 0.02 }
+          },
+          'home_theater': { 
+            multiplier: 1.07, 
+            cost: 8000, 
+            marketBonus: { suburban: 0.05, urban: 0.04, mountain: 0.06, lake: 0.04, beach: 0.03, desert: 0.03 }
+          },
+          'sauna': { 
+            multiplier: 1.09, 
+            cost: 6000, 
+            marketBonus: { mountain: 0.10, lake: 0.06, suburban: 0.04, urban: 0.03, beach: 0.02, desert: 0.01 }
+          }
+        };
+        
+        const amenity = amenityImpacts[amenityType] || { multiplier: 1.05, cost: 5000, marketBonus: {} };
+        const marketBonus = amenity.marketBonus[marketType] || 0;
+        const totalMultiplier = amenity.multiplier + marketBonus;
+        
+        // For extra bedroom, adjust based on current bedroom count
+        let adjustedMultiplier = totalMultiplier;
+        if (amenityType === 'extra_bedroom') {
+          // Diminishing returns for more bedrooms
+          if (currentBedrooms >= 5) adjustedMultiplier = 1 + (totalMultiplier - 1) * 0.5;
+          else if (currentBedrooms >= 4) adjustedMultiplier = 1 + (totalMultiplier - 1) * 0.75;
+        }
+        
+        const newRevenue = Math.round(baseRevenue * adjustedMultiplier);
+        const revenueIncrease = newRevenue - baseRevenue;
+        const percentIncrease = Math.round((adjustedMultiplier - 1) * 100);
+        const paybackYears = amenity.cost / revenueIncrease;
+        const fiveYearROI = ((revenueIncrease * 5) - amenity.cost) / amenity.cost * 100;
+        
+        return {
+          amenity: amenityType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          market_type: marketType,
+          analysis: {
+            current_revenue: baseRevenue,
+            projected_revenue: newRevenue,
+            revenue_increase: revenueIncrease,
+            percent_increase: percentIncrease,
+            estimated_cost: amenity.cost,
+            payback_period_years: Math.round(paybackYears * 10) / 10,
+            five_year_roi: Math.round(fiveYearROI)
+          },
+          recommendation: paybackYears < 2 
+            ? `HIGHLY RECOMMENDED: This amenity pays for itself in ${Math.round(paybackYears * 12)} months with a ${Math.round(fiveYearROI)}% 5-year ROI.`
+            : paybackYears < 4
+            ? `RECOMMENDED: Good investment with ${Math.round(paybackYears * 10) / 10} year payback and ${Math.round(fiveYearROI)}% 5-year ROI.`
+            : `CONSIDER CAREFULLY: ${Math.round(paybackYears * 10) / 10} year payback. May be worth it for competitive differentiation.`,
+          market_insight: `In ${marketType} markets, ${amenityType.replace('_', ' ')} typically adds ${Math.round((amenity.marketBonus[marketType] || 0) * 100)}% extra value on top of the base ${Math.round((amenity.multiplier - 1) * 100)}% boost.`
+        };
+      }
+      
+      case "find_markets_for_budget": {
+        const budget = args.budget as number;
+        const investmentType = args.investment_type as string;
+        const preferredRegion = (args.preferred_region as string) || 'any';
+        
+        // Market recommendations based on budget and type
+        const markets: Array<{
+          name: string;
+          region: string;
+          avg_home_price: number;
+          avg_rent: number;
+          avg_revenue: number;
+          market_score: number;
+          best_for: string;
+        }> = [
+          { name: 'Cleveland, OH', region: 'midwest', avg_home_price: 180000, avg_rent: 1400, avg_revenue: 32000, market_score: 72, best_for: 'Cash flow, low entry' },
+          { name: 'Indianapolis, IN', region: 'midwest', avg_home_price: 220000, avg_rent: 1500, avg_revenue: 38000, market_score: 75, best_for: 'Balanced growth & cash flow' },
+          { name: 'Memphis, TN', region: 'southeast', avg_home_price: 200000, avg_rent: 1350, avg_revenue: 35000, market_score: 70, best_for: 'High yields, investor friendly' },
+          { name: 'Birmingham, AL', region: 'southeast', avg_home_price: 190000, avg_rent: 1300, avg_revenue: 33000, market_score: 68, best_for: 'Affordable entry, growing market' },
+          { name: 'San Antonio, TX', region: 'southwest', avg_home_price: 280000, avg_rent: 1800, avg_revenue: 45000, market_score: 78, best_for: 'Tourism + military demand' },
+          { name: 'Phoenix, AZ', region: 'southwest', avg_home_price: 420000, avg_rent: 2200, avg_revenue: 55000, market_score: 80, best_for: 'Snowbird market, high ADR' },
+          { name: 'Tampa, FL', region: 'southeast', avg_home_price: 380000, avg_rent: 2100, avg_revenue: 52000, market_score: 79, best_for: 'Beach tourism, year-round' },
+          { name: 'Nashville, TN', region: 'southeast', avg_home_price: 450000, avg_rent: 2400, avg_revenue: 65000, market_score: 85, best_for: 'Premium market, high demand' },
+          { name: 'Austin, TX', region: 'southwest', avg_home_price: 520000, avg_rent: 2600, avg_revenue: 70000, market_score: 82, best_for: 'Tech hub, events market' },
+          { name: 'Denver, CO', region: 'west_coast', avg_home_price: 550000, avg_rent: 2500, avg_revenue: 68000, market_score: 81, best_for: 'Mountain tourism, ski season' },
+          { name: 'Gatlinburg, TN', region: 'southeast', avg_home_price: 400000, avg_rent: 2000, avg_revenue: 75000, market_score: 88, best_for: 'Cabin market, high RevPAR' },
+          { name: 'Myrtle Beach, SC', region: 'southeast', avg_home_price: 350000, avg_rent: 1900, avg_revenue: 48000, market_score: 76, best_for: 'Beach vacation, family market' }
+        ];
+        
+        let filteredMarkets = markets;
+        
+        // Filter by region if specified
+        if (preferredRegion !== 'any') {
+          filteredMarkets = markets.filter(m => m.region === preferredRegion);
+        }
+        
+        // Filter by budget
+        if (investmentType === 'purchase') {
+          // For purchase, budget should cover 20% down payment + closing costs + startup
+          const maxPrice = (budget - 20000) / 0.25; // 20% down + 5% closing + $20K startup
+          filteredMarkets = filteredMarkets.filter(m => m.avg_home_price <= maxPrice);
+        } else {
+          // For arbitrage, budget should cover first/last/security + startup costs
+          const maxMonthlyRent = (budget - 15000) / 4; // 3 months rent + $15K startup
+          filteredMarkets = filteredMarkets.filter(m => m.avg_rent <= maxMonthlyRent);
+        }
+        
+        // Sort by market score
+        filteredMarkets.sort((a, b) => b.market_score - a.market_score);
+        
+        // Calculate ROI for each market
+        const marketsWithROI = filteredMarkets.slice(0, 5).map(m => {
+          if (investmentType === 'purchase') {
+            const downPayment = m.avg_home_price * 0.20;
+            const closingCosts = m.avg_home_price * 0.05;
+            const startup = 15000;
+            const totalInvestment = downPayment + closingCosts + startup;
+            const annualExpenses = m.avg_revenue * 0.35; // 35% expenses
+            const mortgage = (m.avg_home_price * 0.80) * 0.07 / 12 * 12; // Rough annual mortgage
+            const netIncome = m.avg_revenue - annualExpenses - mortgage;
+            const cashOnCash = (netIncome / totalInvestment) * 100;
+            
+            return {
+              ...m,
+              investment_required: Math.round(totalInvestment),
+              projected_net_income: Math.round(netIncome),
+              cash_on_cash_return: Math.round(cashOnCash * 10) / 10,
+              investment_type: 'purchase'
+            };
+          } else {
+            const startup = m.avg_rent * 3 + 12000; // 3 months + furnishing
+            const annualExpenses = m.avg_rent * 12 + (m.avg_revenue * 0.25); // Rent + 25% other expenses
+            const netIncome = m.avg_revenue - annualExpenses;
+            const roi = (netIncome / startup) * 100;
+            
+            return {
+              ...m,
+              investment_required: Math.round(startup),
+              projected_net_income: Math.round(netIncome),
+              cash_on_cash_return: Math.round(roi * 10) / 10,
+              investment_type: 'arbitrage'
+            };
+          }
+        });
+        
+        return {
+          budget,
+          investment_type: investmentType,
+          region: preferredRegion,
+          markets_found: marketsWithROI.length,
+          recommended_markets: marketsWithROI,
+          budget_insight: investmentType === 'purchase'
+            ? `With $${budget.toLocaleString()}, you can afford properties up to $${Math.round((budget - 20000) / 0.25).toLocaleString()} (20% down + closing + startup).`
+            : `With $${budget.toLocaleString()}, you can afford monthly rents up to $${Math.round((budget - 15000) / 4).toLocaleString()} (3 months + startup costs).`
         };
       }
       

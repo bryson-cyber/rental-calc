@@ -45,7 +45,9 @@ import {
   FileDown,
   FileText,
   Trash2,
-  Star
+  Star,
+  Scale,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -468,11 +470,13 @@ const ratingOptions = [
 function FavoritesPanel({ 
   sessionId, 
   onClose, 
-  onAnalyze 
+  onAnalyze,
+  onCompare
 }: { 
   sessionId: string; 
   onClose: () => void; 
   onAnalyze: (address: string) => void;
+  onCompare: (favorites: Array<{ address: string; bedrooms?: number; annualRevenue?: number; occupancyRate?: number; averageDailyRate?: number; marketName?: string }>) => void;
 }) {
   const favoritesQuery = trpc.favorites.list.useQuery({ sessionId });
   const removeFavorite = trpc.favorites.remove.useMutation({
@@ -484,6 +488,21 @@ function FavoritesPanel({
   
   const [editingNotes, setEditingNotes] = useState<number | null>(null);
   const [noteText, setNoteText] = useState('');
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<number>>(new Set());
+  
+  const toggleCompareSelection = (id: number) => {
+    setSelectedForCompare(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else if (newSet.size < 3) {
+        newSet.add(id);
+      } else {
+        toast.error('You can compare up to 3 properties at a time');
+      }
+      return newSet;
+    });
+  };
   
   const favorites = favoritesQuery.data?.data || [];
   
@@ -495,13 +514,44 @@ function FavoritesPanel({
             <Heart className="w-5 h-5 text-[#C9A962] fill-current" />
             My Favorite Properties
           </h2>
-          <button
-            onClick={onClose}
-            className="text-white/50 hover:text-white p-1"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedForCompare.size >= 2 && (
+              <button
+                onClick={() => {
+                  const selectedFavs = favorites.filter(f => selectedForCompare.has(f.id));
+                  onCompare(selectedFavs.map(f => ({
+                    address: f.address,
+                    bedrooms: f.bedrooms ?? undefined,
+                    annualRevenue: f.annualRevenue ?? undefined,
+                    occupancyRate: f.occupancyRate ? Number(f.occupancyRate) : undefined,
+                    averageDailyRate: f.averageDailyRate ? Number(f.averageDailyRate) : undefined,
+                    marketName: f.marketName ?? undefined
+                  })));
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#C9A962] text-white hover:bg-[#b8994f] transition-all"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                Compare {selectedForCompare.size} Properties
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/50 hover:text-white p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        
+        {/* Selection hint */}
+        {favorites.length >= 2 && selectedForCompare.size < 2 && (
+          <div className="mb-4 px-3 py-2 bg-[#C9A962]/10 rounded-lg border border-[#C9A962]/20">
+            <p className="text-[#C9A962] text-xs flex items-center gap-2">
+              <Scale className="w-3.5 h-3.5" />
+              Select 2-3 properties to compare them side-by-side
+            </p>
+          </div>
+        )}
         
         {favoritesQuery.isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -518,12 +568,26 @@ function FavoritesPanel({
             {favorites.map((fav) => (
               <div 
                 key={fav.id} 
-                className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-[#C9A962]/30 transition-colors"
+                className={`bg-white/5 rounded-xl p-4 border transition-colors cursor-pointer ${
+                  selectedForCompare.has(fav.id) 
+                    ? 'border-[#C9A962] bg-[#C9A962]/10' 
+                    : 'border-white/10 hover:border-[#C9A962]/30'
+                }`}
+                onClick={() => toggleCompareSelection(fav.id)}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium truncate">{fav.address}</h3>
-                    <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {/* Checkbox */}
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                      selectedForCompare.has(fav.id)
+                        ? 'bg-[#C9A962] border-[#C9A962]'
+                        : 'border-white/30 hover:border-[#C9A962]/50'
+                    }`}>
+                      {selectedForCompare.has(fav.id) && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-medium truncate">{fav.address}</h3>
+                      <div className="flex flex-wrap gap-2 mt-2 text-sm">
                       {fav.marketName && (
                         <span className="text-white/50">{fav.marketName}</span>
                       )}
@@ -587,9 +651,10 @@ function FavoritesPanel({
                         + Add notes
                       </button>
                     )}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => onAnalyze(fav.address)}
                       className="p-2 bg-[#C9A962]/20 text-[#C9A962] rounded-lg hover:bg-[#C9A962]/30 transition-colors"
@@ -1283,6 +1348,17 @@ Format everything in clear tables where appropriate. This is for a beginner inve
             setTimeout(() => {
               const event = new KeyboardEvent('keydown', { key: 'Enter' });
               inputRef.current?.dispatchEvent(event);
+            }, 100);
+          }}
+          onCompare={(selectedFavorites) => {
+            // Build comparison prompt
+            const addresses = selectedFavorites.map(f => f.address).join(' vs ');
+            const prompt = `Compare these properties side-by-side: ${addresses}. Show a detailed comparison table with revenue, occupancy, ADR, and investment potential for each.`;
+            setInput(prompt);
+            setShowFavorites(false);
+            // Trigger comparison analysis
+            setTimeout(() => {
+              handleSend(prompt);
             }, 100);
           }}
         />

@@ -535,17 +535,42 @@ export async function searchByZipcode(zipcode: string, options?: {
           }
         });
         
-        topPerformers = listingsResult.listings.map((l: ListingData) => ({
-          title: l.title,
-          bedrooms: l.bedrooms,
-          bathrooms: l.bathrooms,
-          annual_revenue: l.annual_revenue,
-          occupancy: l.occupancy,
-          adr: l.adr,
-          rating: l.rating,
-          reviews: l.reviews,
-          airbnb_url: l.airbnb_url
-        }));
+        // If filtered results are empty, try without filters to get some data
+        if (listingsResult.listings.length === 0 && (options?.bedrooms || options?.bathrooms || options?.propertyType)) {
+          console.log('[searchByZipcode] No filtered listings found, trying without filters...');
+          const unfilteredResult = await getSubmarketListings(submarket.id, {
+            limit: options?.limit || 10,
+            orderBy: 'revenue',
+            orderDirection: 'desc'
+          });
+          
+          topPerformers = unfilteredResult.listings.map((l: ListingData) => ({
+            title: l.title,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            property_type: l.property_type,
+            annual_revenue: l.annual_revenue,
+            occupancy: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviews: l.reviews,
+            airbnb_url: l.airbnb_url,
+            note: 'Showing top performers across all property types (no exact matches for your filters)'
+          }));
+        } else {
+          topPerformers = listingsResult.listings.map((l: ListingData) => ({
+            title: l.title,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            property_type: l.property_type,
+            annual_revenue: l.annual_revenue,
+            occupancy: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviews: l.reviews,
+            airbnb_url: l.airbnb_url
+          }));
+        }
       } catch (e) {
         console.error('[searchByZipcode] Error getting listings:', e);
       }
