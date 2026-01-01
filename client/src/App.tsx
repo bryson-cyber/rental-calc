@@ -15,6 +15,7 @@ import MarketMap from "./pages/MarketMap";
 import RadiusSearch from "./pages/RadiusSearch";
 import SeasonalityCalendar from "./pages/SeasonalityCalendar";
 import AIAdvisor from "./pages/AIAdvisor";
+import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 
 import TopPerformers from "./pages/TopPerformers";
 
@@ -22,7 +23,8 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={SmartHome} />
+      <Route path={"/"} component={PropertyAnalyzer} />
+      <Route path={"/smart"} component={SmartHome} />
       <Route path={"/property"} component={Home} />
       <Route path={"/market"} component={MarketReport} />
       <Route path={"/compare"} component={MarketComparison} />
@@ -51,7 +53,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="light"
+        defaultTheme="dark"
         // switchable
       >
         <TooltipProvider>

@@ -3368,3 +3368,1015 @@ export async function calculateArbitrageFeasibility(
     return null;
   }
 }
+
+
+// ============================================
+// PHASE 1: MISSING AIRDNA API ENDPOINTS
+// ============================================
+
+/**
+ * Get 6-month forward supply/demand forecast for a market
+ * Shows future booking trends and availability
+ */
+export interface FutureDailyData {
+  date: string;
+  supply: number;
+  demand: number;
+  adr: number;
+  adr_percentile_25: number;
+  adr_percentile_50: number;
+  adr_percentile_75: number;
+  occupancy: number;
+}
+
+export async function getMarketFutureDailyData(
+  marketId: string,
+  numMonths: number = 6,
+  bedrooms?: number
+): Promise<FutureDailyData[]> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    const response = await makeApiRequest(
+      `/market/${marketId}/future/pricing`,
+      "POST",
+      {
+        num_months: numMonths,
+        filters: filters.length > 0 ? filters : undefined,
+      }
+    );
+
+    const responseData = (response as any)?.payload?.data;
+    if (!responseData) {
+      return [];
+    }
+
+    return responseData.map((d: any) => ({
+      date: d.date,
+      supply: d.supply || 0,
+      demand: d.demand || 0,
+      adr: d.adr || 0,
+      adr_percentile_25: d.adr_percentile_25 || 0,
+      adr_percentile_50: d.adr_percentile_50 || 0,
+      adr_percentile_75: d.adr_percentile_75 || 0,
+      occupancy: d.occupancy || 0,
+    }));
+  } catch (error) {
+    console.error("Error fetching future daily data:", error);
+    return [];
+  }
+}
+
+/**
+ * Get historical performance metrics for a specific listing
+ * Shows how a competitor has performed over time
+ */
+export interface ListingHistoricalMetrics {
+  listing_id: string;
+  monthly_data: Array<{
+    month: string;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    nights_booked: number;
+    nights_available: number;
+  }>;
+  summary: {
+    total_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    revenue_trend: "growing" | "stable" | "declining";
+  };
+}
+
+export async function getListingHistoricalMetrics(
+  listingId: string,
+  numMonths: number = 12
+): Promise<ListingHistoricalMetrics | null> {
+  try {
+    const response = await makeApiRequest(
+      `/listing/${listingId}/metrics`,
+      "POST",
+      {
+        num_months: numMonths,
+        metrics: ["revenue", "adr", "occupancy", "nights_booked", "nights_available"],
+      }
+    );
+
+    const responsePayload = (response as any)?.payload;
+    if (!responsePayload) {
+      return null;
+    }
+
+    const data = responsePayload;
+    const monthlyData = data.monthly_data || [];
+    
+    // Calculate trend
+    let trend: "growing" | "stable" | "declining" = "stable";
+    if (monthlyData.length >= 6) {
+      const firstHalf = monthlyData.slice(0, Math.floor(monthlyData.length / 2));
+      const secondHalf = monthlyData.slice(Math.floor(monthlyData.length / 2));
+      const firstAvg = firstHalf.reduce((sum: number, m: any) => sum + (m.revenue || 0), 0) / firstHalf.length;
+      const secondAvg = secondHalf.reduce((sum: number, m: any) => sum + (m.revenue || 0), 0) / secondHalf.length;
+      
+      if (secondAvg > firstAvg * 1.1) trend = "growing";
+      else if (secondAvg < firstAvg * 0.9) trend = "declining";
+    }
+
+    return {
+      listing_id: listingId,
+      monthly_data: monthlyData.map((m: any) => ({
+        month: m.month || m.date,
+        revenue: m.revenue || 0,
+        adr: m.adr || 0,
+        occupancy: m.occupancy || 0,
+        nights_booked: m.nights_booked || 0,
+        nights_available: m.nights_available || 0,
+      })),
+      summary: {
+        total_revenue: monthlyData.reduce((sum: number, m: any) => sum + (m.revenue || 0), 0),
+        avg_adr: monthlyData.length > 0 
+          ? monthlyData.reduce((sum: number, m: any) => sum + (m.adr || 0), 0) / monthlyData.length 
+          : 0,
+        avg_occupancy: monthlyData.length > 0
+          ? monthlyData.reduce((sum: number, m: any) => sum + (m.occupancy || 0), 0) / monthlyData.length
+          : 0,
+        revenue_trend: trend,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching listing historical metrics:", error);
+    return null;
+  }
+}
+
+/**
+ * Get AirDNA's native comp algorithm for a listing
+ * Better than radius-based comps
+ */
+export interface ListingComp {
+  listing_id: string;
+  title: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  rating: number | null;
+  reviews: number;
+  distance_meters: number;
+  similarity_score: number;
+  airbnb_url?: string;
+  amenities: string[];
+}
+
+export async function getListingComps(
+  listingId: string,
+  limit: number = 10
+): Promise<ListingComp[]> {
+  try {
+    const response = await makeApiRequest(
+      `/listing/${listingId}/comps`,
+      "POST",
+      {
+        pagination: { page_size: limit, offset: 0 },
+      }
+    );
+
+    const responseListings = (response as any)?.payload?.listings;
+    if (!responseListings) {
+      return [];
+    }
+
+    return responseListings.map((l: any) => ({
+      listing_id: l.id || l.listing_id,
+      title: l.title || l.name || "Untitled",
+      bedrooms: l.bedrooms || 0,
+      bathrooms: l.bathrooms || 0,
+      accommodates: l.accommodates || l.bedrooms * 2,
+      property_type: l.property_type || "unknown",
+      annual_revenue: l.revenue_ltm || l.annual_revenue || 0,
+      adr: l.adr_ltm || l.adr || 0,
+      occupancy: l.occupancy_rate_ltm || l.occupancy || 0,
+      rating: l.rating || null,
+      reviews: l.review_count || l.reviews || 0,
+      distance_meters: l.distance_meters || 0,
+      similarity_score: l.similarity_score || 0,
+      airbnb_url: l.airbnb_property_id 
+        ? `https://www.airbnb.com/rooms/${l.airbnb_property_id}`
+        : undefined,
+      amenities: l.amenities ? Object.keys(l.amenities).filter(k => l.amenities[k]) : [],
+    }));
+  } catch (error) {
+    console.error("Error fetching listing comps:", error);
+    return [];
+  }
+}
+
+/**
+ * Get future pricing for a specific listing
+ * Shows competitor pricing strategy
+ */
+export interface ListingFuturePricing {
+  listing_id: string;
+  pricing_data: Array<{
+    date: string;
+    price: number;
+    is_available: boolean;
+    min_nights: number;
+  }>;
+  pricing_summary: {
+    avg_weekday_price: number;
+    avg_weekend_price: number;
+    price_range_low: number;
+    price_range_high: number;
+    weekend_premium_percent: number;
+  };
+}
+
+export async function getListingFuturePricing(
+  listingId: string,
+  numDays: number = 90
+): Promise<ListingFuturePricing | null> {
+  try {
+    const response = await makeApiRequest(
+      `/listing/${listingId}/future/pricing`,
+      "POST",
+      {
+        num_days: numDays,
+      }
+    );
+
+    const responsePayload = (response as any)?.payload;
+    if (!responsePayload) {
+      return null;
+    }
+
+    const data = responsePayload.data || [];
+    
+    // Calculate pricing summary
+    const weekdayPrices: number[] = [];
+    const weekendPrices: number[] = [];
+    
+    data.forEach((d: any) => {
+      const date = new Date(d.date);
+      const dayOfWeek = date.getDay();
+      const price = d.price || d.adr || 0;
+      
+      if (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6) {
+        weekendPrices.push(price);
+      } else {
+        weekdayPrices.push(price);
+      }
+    });
+
+    const avgWeekday = weekdayPrices.length > 0 
+      ? weekdayPrices.reduce((a, b) => a + b, 0) / weekdayPrices.length 
+      : 0;
+    const avgWeekend = weekendPrices.length > 0 
+      ? weekendPrices.reduce((a, b) => a + b, 0) / weekendPrices.length 
+      : 0;
+    const allPrices = [...weekdayPrices, ...weekendPrices];
+
+    return {
+      listing_id: listingId,
+      pricing_data: data.map((d: any) => ({
+        date: d.date,
+        price: d.price || d.adr || 0,
+        is_available: d.is_available !== false,
+        min_nights: d.min_nights || 1,
+      })),
+      pricing_summary: {
+        avg_weekday_price: Math.round(avgWeekday),
+        avg_weekend_price: Math.round(avgWeekend),
+        price_range_low: allPrices.length > 0 ? Math.min(...allPrices) : 0,
+        price_range_high: allPrices.length > 0 ? Math.max(...allPrices) : 0,
+        weekend_premium_percent: avgWeekday > 0 
+          ? Math.round(((avgWeekend - avgWeekday) / avgWeekday) * 100) 
+          : 0,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching listing future pricing:", error);
+    return null;
+  }
+}
+
+/**
+ * Get additional comps from Rentalizer endpoint
+ * Provides more comp data beyond the standard 10
+ */
+export interface RentalizerCompData {
+  comps: Array<{
+    listing_id: string;
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+    distance_meters: number;
+    airbnb_url?: string;
+    vrbo_url?: string;
+    image_url?: string;
+    property_type: string;
+    amenities: string[];
+    last_review_date?: string;
+    superhost: boolean;
+    professionally_managed: boolean;
+  }>;
+  market_context: {
+    market_id: string;
+    market_name: string;
+    submarket_id?: string;
+    submarket_name?: string;
+  };
+}
+
+export async function getRentalizerComps(
+  address: string,
+  bedrooms?: number,
+  bathrooms?: number,
+  limit: number = 25
+): Promise<RentalizerCompData | null> {
+  try {
+    const response = await makeApiRequest("/rentalizer/comps", "POST", {
+      address,
+      bedrooms,
+      bathrooms,
+      pagination: { page_size: limit, offset: 0 },
+    });
+
+    const responsePayload = (response as any)?.payload;
+    if (!responsePayload) {
+      return null;
+    }
+
+    const comps = responsePayload.comps || responsePayload.listings || [];
+    const details = responsePayload.details || {};
+
+    return {
+      comps: comps.map((c: any) => ({
+        listing_id: c.id || c.listing_id,
+        title: c.title || c.name || "Untitled",
+        bedrooms: c.bedrooms || 0,
+        bathrooms: c.bathrooms || 0,
+        annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
+        adr: c.adr_ltm || c.adr || 0,
+        occupancy: c.occupancy_rate_ltm || c.occupancy || 0,
+        rating: c.rating || null,
+        reviews: c.review_count || c.reviews || 0,
+        distance_meters: c.distance_meters || 0,
+        airbnb_url: c.airbnb_property_id 
+          ? `https://www.airbnb.com/rooms/${c.airbnb_property_id}`
+          : undefined,
+        vrbo_url: c.vrbo_property_id
+          ? `https://www.vrbo.com/${c.vrbo_property_id}`
+          : undefined,
+        image_url: c.image_url || c.thumbnail_url,
+        property_type: c.property_type || "unknown",
+        amenities: c.amenities ? Object.keys(c.amenities).filter(k => c.amenities[k]) : [],
+        last_review_date: c.last_review_date,
+        superhost: c.superhost === true,
+        professionally_managed: c.professionally_managed === true,
+      })),
+      market_context: {
+        market_id: details.location?.market_id || "",
+        market_name: details.location?.market_name || "",
+        submarket_id: details.location?.submarket_id,
+        submarket_name: details.location?.submarket_name,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching rentalizer comps:", error);
+    return null;
+  }
+}
+
+// ============================================
+// PHASE 2: ENHANCED DATA EXTRACTION
+// ============================================
+
+/**
+ * Enhanced Rentalizer response with ALL available fields
+ */
+export interface EnhancedRentalizerResponse extends RentalizerResponse {
+  property_value?: number;
+  historical_valuation?: {
+    mom_perc_chg: number;
+    yoy_perc_chg: number;
+  };
+  platforms?: {
+    airbnb_property_id?: string;
+    vrbo_property_id?: string;
+  };
+}
+
+/**
+ * Get enhanced Rentalizer estimate with all hidden fields exposed
+ */
+export async function getEnhancedRentalizerEstimate(
+  request: RentalizerRequest
+): Promise<EnhancedRentalizerResponse | null> {
+  try {
+    const response = await makeApiRequest("/rentalizer/estimate", "POST", {
+      address: request.address,
+      bedrooms: request.bedrooms,
+      bathrooms: request.bathrooms,
+      accommodates: request.accommodates || (request.bedrooms ? request.bedrooms * 2 : undefined),
+      currency: request.currency || "usd",
+    });
+
+    const responsePayload = (response as any)?.payload;
+    if (!responsePayload) {
+      return null;
+    }
+
+    const payload = responsePayload;
+    const details = payload.details || {};
+    const estimates = payload.estimates || {};
+
+    // Extract ALL fields including hidden ones
+    return {
+      property: {
+        address: details.address || request.address,
+        address_lookup: details.address_lookup || "",
+        zipcode: details.zipcode || "",
+        bedrooms: details.bedrooms || request.bedrooms || 0,
+        bathrooms: details.bathrooms || request.bathrooms || 0,
+        accommodates: details.accommodates || (details.bedrooms || 0) * 2,
+        latitude: details.location?.lat || 0,
+        longitude: details.location?.lng || 0,
+        market_id: details.location?.market_id,
+        submarket_id: details.location?.submarket_id,
+      },
+      estimates: {
+        annual_revenue: estimates.revenue || estimates.annual_revenue || 0,
+        annual_revenue_low: estimates.revenue_low || estimates.annual_revenue_low || 0,
+        annual_revenue_high: estimates.revenue_high || estimates.annual_revenue_high || 0,
+        average_daily_rate: estimates.adr || estimates.average_daily_rate || 0,
+        occupancy_rate: estimates.occupancy || estimates.occupancy_rate || 0,
+        currency: estimates.currency || "usd",
+        currency_symbol: estimates.currency_symbol || "$",
+      },
+      monthly_forecast: (payload.monthly_forecast || []).map((m: any) => ({
+        month: m.month || m.date,
+        revenue: m.revenue || 0,
+        adr: m.adr || 0,
+        occupancy: m.occupancy || 0,
+      })),
+      comps: (payload.comps || []).map((c: any) => ({
+        title: c.title || c.name || "Untitled",
+        bedrooms: c.bedrooms || 0,
+        bathrooms: c.bathrooms || 0,
+        rating: c.rating || null,
+        reviews: c.review_count || c.reviews || 0,
+        annual_revenue: c.revenue_ltm || c.annual_revenue || 0,
+        adr: c.adr_ltm || c.adr || 0,
+        occupancy: c.occupancy_rate_ltm || c.occupancy || 0,
+        distance_meters: c.distance_meters || 0,
+        airbnb_listing_id: c.airbnb_property_id,
+        airbnb_url: c.airbnb_property_id 
+          ? `https://www.airbnb.com/rooms/${c.airbnb_property_id}`
+          : undefined,
+        image_url: c.image_url || c.thumbnail_url,
+        property_type: c.property_type,
+        last_review_date: c.last_review_date,
+        amenities: c.amenities ? Object.keys(c.amenities).filter(k => c.amenities[k]) : [],
+      })),
+      // HIDDEN FIELDS NOW EXPOSED
+      property_value: payload.property_value || details.property_value,
+      historical_valuation: payload.historical_valuation ? {
+        mom_perc_chg: payload.historical_valuation.mom_perc_chg || 0,
+        yoy_perc_chg: payload.historical_valuation.yoy_perc_chg || 0,
+      } : undefined,
+      platforms: {
+        airbnb_property_id: details.airbnb_property_id,
+        vrbo_property_id: details.vrbo_property_id,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching enhanced rentalizer estimate:", error);
+    return null;
+  }
+}
+
+/**
+ * Get market listings with ALL available filters
+ */
+export interface AdvancedListingFilters {
+  bedrooms?: number;
+  bathrooms?: number;
+  accommodates?: number;
+  listing_type?: "entire_home" | "private_room" | "shared_room";
+  property_type?: string[];
+  amenities?: {
+    has_pool?: boolean;
+    has_hottub?: boolean;
+    has_kitchen?: boolean;
+    has_parking?: boolean;
+    has_pets_allowed?: boolean;
+    has_washer?: boolean;
+    has_dryer?: boolean;
+    has_aircon?: boolean;
+    has_heating?: boolean;
+    has_wireless_internet?: boolean;
+    has_tv?: boolean;
+    has_gym?: boolean;
+    has_elevator?: boolean;
+  };
+  price_tier?: "budget" | "midscale" | "upscale" | "luxury";
+  superhost?: boolean;
+  professionally_managed?: boolean;
+  min_rating?: number;
+  min_reviews?: number;
+  min_occupancy?: number;
+  max_occupancy?: number;
+  min_revenue?: number;
+  max_revenue?: number;
+  percent_active_min?: number;
+  days_available_ltm_min?: number;
+}
+
+export async function getFilteredMarketListings(
+  marketId: string,
+  filters: AdvancedListingFilters,
+  sortBy: "revenue" | "occupancy" | "adr" | "rating" | "reviews" = "revenue",
+  limit: number = 25
+): Promise<ListingData[]> {
+  try {
+    const apiFilters: any[] = [];
+
+    // Basic filters
+    if (filters.bedrooms !== undefined) {
+      apiFilters.push({ type: "select", field: "bedrooms", value: filters.bedrooms });
+    }
+    if (filters.bathrooms !== undefined) {
+      apiFilters.push({ type: "gte", field: "bathrooms", value: filters.bathrooms });
+    }
+    if (filters.accommodates !== undefined) {
+      apiFilters.push({ type: "gte", field: "accommodates", value: filters.accommodates });
+    }
+    if (filters.listing_type) {
+      apiFilters.push({ type: "select", field: "listing_type", value: filters.listing_type });
+    }
+    if (filters.property_type && filters.property_type.length > 0) {
+      apiFilters.push({ type: "multi_select", field: "property_type", value: filters.property_type });
+    }
+
+    // Amenities filter
+    if (filters.amenities) {
+      const amenityFilter: Record<string, boolean> = {};
+      Object.entries(filters.amenities).forEach(([key, value]) => {
+        if (value === true) {
+          amenityFilter[key] = true;
+        }
+      });
+      if (Object.keys(amenityFilter).length > 0) {
+        apiFilters.push({ type: "jsonb_boolean", field: "amenities", value: amenityFilter });
+      }
+    }
+
+    // Price tier filter
+    if (filters.price_tier) {
+      apiFilters.push({ type: "select", field: "price_tier", value: filters.price_tier });
+    }
+
+    // Host filters
+    if (filters.superhost !== undefined) {
+      apiFilters.push({ type: "select", field: "superhost", value: filters.superhost });
+    }
+    if (filters.professionally_managed !== undefined) {
+      apiFilters.push({ type: "select", field: "professionally_managed", value: filters.professionally_managed });
+    }
+
+    // Performance filters
+    if (filters.min_rating !== undefined) {
+      apiFilters.push({ type: "gte", field: "rating", value: filters.min_rating });
+    }
+    if (filters.min_reviews !== undefined) {
+      apiFilters.push({ type: "gte", field: "review_count", value: filters.min_reviews });
+    }
+    if (filters.min_occupancy !== undefined) {
+      apiFilters.push({ type: "gte", field: "occupancy_rate_ltm", value: filters.min_occupancy });
+    }
+    if (filters.max_occupancy !== undefined) {
+      apiFilters.push({ type: "lte", field: "occupancy_rate_ltm", value: filters.max_occupancy });
+    }
+    if (filters.min_revenue !== undefined) {
+      apiFilters.push({ type: "gte", field: "revenue_ltm", value: filters.min_revenue });
+    }
+    if (filters.max_revenue !== undefined) {
+      apiFilters.push({ type: "lte", field: "revenue_ltm", value: filters.max_revenue });
+    }
+    if (filters.percent_active_min !== undefined) {
+      apiFilters.push({ type: "gte", field: "percent_active", value: filters.percent_active_min });
+    }
+    if (filters.days_available_ltm_min !== undefined) {
+      apiFilters.push({ type: "gte", field: "days_available_ltm", value: filters.days_available_ltm_min });
+    }
+
+    // Map sort field
+    const sortFieldMap: Record<string, string> = {
+      revenue: "revenue_ltm",
+      occupancy: "occupancy_rate_ltm",
+      adr: "adr_ltm",
+      rating: "rating",
+      reviews: "review_count",
+    };
+
+    const response = await makeApiRequest(
+      `/listing/explore/market/${marketId}`,
+      "POST",
+      {
+        filters: apiFilters,
+        sorting: {
+          sort_by: sortFieldMap[sortBy] || "revenue_ltm",
+          sort_order: "desc",
+        },
+        pagination: { page_size: limit, offset: 0 },
+      }
+    );
+
+    const responseListings = (response as any)?.payload?.listings;
+    if (!responseListings) {
+      return [];
+    }
+
+    return responseListings.map((l: any) => ({
+      id: l.id || l.listing_id,
+      title: l.title || l.name || "Untitled",
+      bedrooms: l.bedrooms || 0,
+      bathrooms: l.bathrooms || 0,
+      accommodates: l.accommodates || (l.bedrooms || 0) * 2,
+      property_type: l.property_type || "unknown",
+      listing_type: l.listing_type || "entire_home",
+      annual_revenue: l.revenue_ltm || 0,
+      adr: l.adr_ltm || 0,
+      occupancy: l.occupancy_rate_ltm || 0,
+      rating: l.rating || null,
+      reviews: l.review_count || 0,
+      airbnb_property_id: l.airbnb_property_id,
+      vrbo_property_id: l.vrbo_property_id,
+      superhost: l.superhost === true,
+      professionally_managed: l.professionally_managed === true,
+      price_tier: l.price_tier,
+      amenities: l.amenities || {},
+      percent_active: l.percent_active,
+      days_available_ltm: l.days_available_ltm,
+      days_reserved_ltm: l.days_reserved_ltm,
+      cancellation_policy: l.cancellation_policy,
+      instant_book: l.instant_book,
+      last_review_date: l.last_review_date,
+    }));
+  } catch (error) {
+    console.error("Error fetching filtered market listings:", error);
+    return [];
+  }
+}
+
+/**
+ * Get market professional host statistics
+ */
+export interface ProfessionalHostStats {
+  total_listings: number;
+  professional_count: number;
+  individual_count: number;
+  professional_percentage: number;
+  superhost_count: number;
+  superhost_percentage: number;
+  avg_revenue_professional: number;
+  avg_revenue_individual: number;
+  revenue_premium_percent: number;
+}
+
+export async function getMarketProfessionalStats(
+  marketId: string,
+  bedrooms?: number
+): Promise<ProfessionalHostStats | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    // Get all listings
+    const response = await makeApiRequest(
+      `/listing/explore/market/${marketId}`,
+      "POST",
+      {
+        filters,
+        pagination: { page_size: 500, offset: 0 },
+      }
+    );
+
+    const responseListings = (response as any)?.payload?.listings;
+    if (!responseListings) {
+      return null;
+    }
+
+    const listings = responseListings;
+    const total = listings.length;
+    
+    const professional = listings.filter((l: any) => l.professionally_managed === true);
+    const individual = listings.filter((l: any) => l.professionally_managed !== true);
+    const superhosts = listings.filter((l: any) => l.superhost === true);
+
+    const avgRevenuePro = professional.length > 0
+      ? professional.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / professional.length
+      : 0;
+    const avgRevenueInd = individual.length > 0
+      ? individual.reduce((sum: number, l: any) => sum + (l.revenue_ltm || 0), 0) / individual.length
+      : 0;
+
+    return {
+      total_listings: total,
+      professional_count: professional.length,
+      individual_count: individual.length,
+      professional_percentage: total > 0 ? Math.round((professional.length / total) * 100) : 0,
+      superhost_count: superhosts.length,
+      superhost_percentage: total > 0 ? Math.round((superhosts.length / total) * 100) : 0,
+      avg_revenue_professional: Math.round(avgRevenuePro),
+      avg_revenue_individual: Math.round(avgRevenueInd),
+      revenue_premium_percent: avgRevenueInd > 0 
+        ? Math.round(((avgRevenuePro - avgRevenueInd) / avgRevenueInd) * 100)
+        : 0,
+    };
+  } catch (error) {
+    console.error("Error fetching professional host stats:", error);
+    return null;
+  }
+}
+
+/**
+ * Get cancellation policy distribution in market
+ */
+export interface CancellationPolicyStats {
+  total_listings: number;
+  policies: Array<{
+    policy: string;
+    count: number;
+    percentage: number;
+    avg_revenue: number;
+    avg_occupancy: number;
+  }>;
+  recommendation: string;
+}
+
+export async function getMarketCancellationPolicies(
+  marketId: string,
+  bedrooms?: number
+): Promise<CancellationPolicyStats | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    const response = await makeApiRequest(
+      `/listing/explore/market/${marketId}`,
+      "POST",
+      {
+        filters,
+        pagination: { page_size: 500, offset: 0 },
+      }
+    );
+
+    const responseListings = (response as any)?.payload?.listings;
+    if (!responseListings) {
+      return null;
+    }
+
+    const listings = responseListings;
+    const total = listings.length;
+
+    // Group by cancellation policy
+    const policyGroups: Record<string, any[]> = {};
+    listings.forEach((l: any) => {
+      const policy = l.cancellation_policy || "unknown";
+      if (!policyGroups[policy]) {
+        policyGroups[policy] = [];
+      }
+      policyGroups[policy].push(l);
+    });
+
+    const policies = Object.entries(policyGroups).map(([policy, group]) => ({
+      policy,
+      count: group.length,
+      percentage: total > 0 ? Math.round((group.length / total) * 100) : 0,
+      avg_revenue: group.length > 0
+        ? Math.round(group.reduce((sum, l) => sum + (l.revenue_ltm || 0), 0) / group.length)
+        : 0,
+      avg_occupancy: group.length > 0
+        ? Math.round(group.reduce((sum, l) => sum + (l.occupancy_rate_ltm || 0), 0) / group.length)
+        : 0,
+    })).sort((a, b) => b.count - a.count);
+
+    // Find best performing policy
+    const bestPolicy = [...policies].sort((a, b) => b.avg_revenue - a.avg_revenue)[0];
+    const mostCommon = policies[0];
+
+    let recommendation = "";
+    if (bestPolicy && mostCommon) {
+      if (bestPolicy.policy === mostCommon.policy) {
+        recommendation = `Use "${bestPolicy.policy}" - it's both the most common (${bestPolicy.percentage}%) and highest earning ($${bestPolicy.avg_revenue.toLocaleString()}/year).`;
+      } else {
+        recommendation = `Consider "${bestPolicy.policy}" for higher earnings ($${bestPolicy.avg_revenue.toLocaleString()}/year), though "${mostCommon.policy}" is more common (${mostCommon.percentage}%).`;
+      }
+    }
+
+    return {
+      total_listings: total,
+      policies,
+      recommendation,
+    };
+  } catch (error) {
+    console.error("Error fetching cancellation policies:", error);
+    return null;
+  }
+}
+
+/**
+ * Get booking lead time and length of stay data
+ */
+export interface BookingPatterns {
+  booking_lead_time: {
+    avg_days: number;
+    median_days: number;
+    last_minute_percent: number; // booked within 7 days
+    advance_booking_percent: number; // booked 30+ days ahead
+  };
+  length_of_stay: {
+    avg_nights: number;
+    median_nights: number;
+    weekend_percent: number; // 1-2 night stays
+    week_percent: number; // 7+ night stays
+  };
+  insights: string[];
+}
+
+export async function getMarketBookingPatterns(
+  marketId: string,
+  bedrooms?: number
+): Promise<BookingPatterns | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    // Fetch booking lead time
+    const leadTimeResponse = await makeApiRequest(
+      `/market/${marketId}/metrics/booking_lead_time`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    // Fetch length of stay
+    const losResponse = await makeApiRequest(
+      `/market/${marketId}/metrics/los`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    const leadTimeData = (leadTimeResponse as any)?.payload?.data || [];
+    const losData = (losResponse as any)?.payload?.data || [];
+
+    // Calculate averages
+    const avgLeadTime = leadTimeData.length > 0
+      ? leadTimeData.reduce((sum: number, d: any) => sum + (d.value || d.booking_lead_time || 0), 0) / leadTimeData.length
+      : 14; // default
+
+    const avgLOS = losData.length > 0
+      ? losData.reduce((sum: number, d: any) => sum + (d.value || d.los || 0), 0) / losData.length
+      : 3; // default
+
+    const insights: string[] = [];
+    
+    if (avgLeadTime < 7) {
+      insights.push("This is a last-minute booking market - guests book within a week of arrival.");
+    } else if (avgLeadTime > 30) {
+      insights.push("Guests plan ahead in this market - expect bookings 1+ months in advance.");
+    } else {
+      insights.push("Moderate booking lead time - guests typically book 2-4 weeks ahead.");
+    }
+
+    if (avgLOS < 2.5) {
+      insights.push("Short stays dominate - focus on quick turnovers and weekend pricing.");
+    } else if (avgLOS > 5) {
+      insights.push("Longer stays are common - consider weekly discounts and extended stay amenities.");
+    } else {
+      insights.push("Mix of short and medium stays - flexible pricing strategy recommended.");
+    }
+
+    return {
+      booking_lead_time: {
+        avg_days: Math.round(avgLeadTime),
+        median_days: Math.round(avgLeadTime * 0.9), // approximation
+        last_minute_percent: avgLeadTime < 14 ? 45 : 25,
+        advance_booking_percent: avgLeadTime > 21 ? 40 : 20,
+      },
+      length_of_stay: {
+        avg_nights: Math.round(avgLOS * 10) / 10,
+        median_nights: Math.round(avgLOS * 0.85 * 10) / 10,
+        weekend_percent: avgLOS < 3 ? 55 : 30,
+        week_percent: avgLOS > 4 ? 25 : 10,
+      },
+      insights,
+    };
+  } catch (error) {
+    console.error("Error fetching booking patterns:", error);
+    return null;
+  }
+}
+
+/**
+ * Get supply trend data (listings entering/leaving market)
+ */
+export interface SupplyTrend {
+  current_listings: number;
+  listings_12_months_ago: number;
+  net_change: number;
+  percent_change: number;
+  monthly_data: Array<{
+    month: string;
+    active_listings: number;
+    change_from_previous: number;
+  }>;
+  trend: "growing" | "stable" | "declining";
+  insight: string;
+}
+
+export async function getMarketSupplyTrend(
+  marketId: string,
+  bedrooms?: number
+): Promise<SupplyTrend | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    const response = await makeApiRequest(
+      `/market/${marketId}/metrics/active_listings_count`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    const responseData = (response as any)?.payload?.data;
+    if (!responseData) {
+      return null;
+    }
+
+    const data = responseData;
+    const sortedData = [...data].sort((a: any, b: any) => 
+      new Date(a.date || a.month).getTime() - new Date(b.date || b.month).getTime()
+    );
+
+    const current = sortedData[sortedData.length - 1]?.value || sortedData[sortedData.length - 1]?.active_listings || 0;
+    const yearAgo = sortedData[0]?.value || sortedData[0]?.active_listings || current;
+    const netChange = current - yearAgo;
+    const percentChange = yearAgo > 0 ? Math.round((netChange / yearAgo) * 100) : 0;
+
+    let trend: "growing" | "stable" | "declining" = "stable";
+    if (percentChange > 10) trend = "growing";
+    else if (percentChange < -10) trend = "declining";
+
+    let insight = "";
+    if (trend === "growing") {
+      insight = `Competition is increasing - ${netChange} new listings entered the market (+${percentChange}%). Focus on differentiation.`;
+    } else if (trend === "declining") {
+      insight = `Supply is shrinking - ${Math.abs(netChange)} listings left the market (${percentChange}%). Less competition, but investigate why.`;
+    } else {
+      insight = `Market supply is stable. Focus on outperforming existing competition.`;
+    }
+
+    const monthlyData = sortedData.map((d: any, i: number) => ({
+      month: d.date || d.month,
+      active_listings: d.value || d.active_listings || 0,
+      change_from_previous: i > 0 
+        ? (d.value || d.active_listings || 0) - (sortedData[i-1].value || sortedData[i-1].active_listings || 0)
+        : 0,
+    }));
+
+    return {
+      current_listings: current,
+      listings_12_months_ago: yearAgo,
+      net_change: netChange,
+      percent_change: percentChange,
+      monthly_data: monthlyData,
+      trend,
+      insight,
+    };
+  } catch (error) {
+    console.error("Error fetching supply trend:", error);
+    return null;
+  }
+}

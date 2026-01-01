@@ -119,7 +119,7 @@ describe('Gemini Analyzer', () => {
             content: {
               parts: [{
                 text: JSON.stringify({
-                  rating: "BUY",
+                  rating: "GO",
                   confidence: 7,
                   summary: "Solid arbitrage opportunity with good profit margins",
                   top_reasons: [
@@ -150,7 +150,7 @@ describe('Gemini Analyzer', () => {
 
       expect(result).toBeDefined();
       expect(result).toHaveProperty('rating');
-      expect(['STRONG BUY', 'BUY', 'HOLD', 'PASS']).toContain(result.rating);
+      expect(['GO', 'CAUTION', 'PASS']).toContain(result.rating);
       expect(result).toHaveProperty('confidence');
       expect(result.confidence).toBeGreaterThanOrEqual(1);
       expect(result.confidence).toBeLessThanOrEqual(10);
@@ -296,7 +296,7 @@ describe('Gemini Analyzer', () => {
       
       const result = await generateActionPlan(
         { address: "123 Test St", bedrooms: 3, bathrooms: 2, monthly_rent: 2500 },
-        { rating: "BUY", confidence: 7, summary: "Good opportunity", top_reasons: [], key_risk: "", key_opportunity: "" },
+       { rating: "GO", confidence: 7, summary: "Good opportunity", top_reasons: [], key_risk: "", key_opportunity: "" },
         { base_rate: 200, peak_premium_percent: 30, slow_discount_percent: 15, weekend_premium_percent: 20, minimum_stay_peak: 3, minimum_stay_slow: 2, pricing_rationale: "" }
       );
 

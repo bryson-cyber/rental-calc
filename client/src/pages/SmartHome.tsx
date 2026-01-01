@@ -404,12 +404,12 @@ function FilterDropdown({
 }
 
 const suggestedActions = [
-  { icon: <TrendingUp className="w-5 h-5" />, text: "Compare Austin vs Nashville", type: "question" as const },
-  { icon: <DollarSign className="w-5 h-5" />, text: "What's the average revenue in Miami?", type: "question" as const },
-  { icon: <MapPin className="w-5 h-5" />, text: "78701", type: "zip" as const, label: "Austin Downtown" },
-  { icon: <Building className="w-5 h-5" />, text: "Denver, CO", type: "city" as const },
-  { icon: <BarChart3 className="w-5 h-5" />, text: "Which market has the best ROI?", type: "question" as const },
-  { icon: <Home className="w-5 h-5" />, text: "Analyze 123 Main St, Austin TX", type: "address" as const },
+  { icon: <TrendingUp className="w-5 h-5" />, text: "Compare Austi...", fullText: "Compare Austin vs Nashville for a beginner investor", type: "question" as const },
+  { icon: <DollarSign className="w-5 h-5" />, text: "What's the ave...", fullText: "What's the average revenue in Miami for a 3BR?", type: "question" as const },
+  { icon: <MapPin className="w-5 h-5" />, text: "78701", fullText: "78701", type: "zip" as const, label: "Austin Downtown" },
+  { icon: <Building className="w-5 h-5" />, text: "Denver, CO", fullText: "Denver, CO", type: "city" as const },
+  { icon: <BarChart3 className="w-5 h-5" />, text: "Which market ...", fullText: "Which market is best for first-time arbitrage investors?", type: "question" as const },
+  { icon: <Home className="w-5 h-5" />, text: "Analyze 123 Ma...", fullText: "Analyze 123 Main St, Austin TX - rent is $2,000/month", type: "address" as const },
 ];
 
 const bedroomOptions = [
@@ -1452,7 +1452,7 @@ Format everything in clear tables where appropriate. This is for a beginner inve
   };
 
   const handleSuggestedAction = (action: typeof suggestedActions[0]) => {
-    handleSend(action.text);
+    handleSend(action.fullText || action.text);
   };
 
   const clearFilters = () => {
@@ -1488,11 +1488,11 @@ Format everything in clear tables where appropriate. This is for a beginner inve
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#a88b4a] mb-4">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-white mb-2">
+            <h1 className="text-2xl md:text-3xl font-serif font-semibold text-white mb-2">
               STR Investment Advisor
             </h1>
-            <p className="text-white/60 text-lg">
-              Ask anything about short-term rental markets
+            <p className="text-white/60 text-sm md:text-base">
+              Research properties before you sign the lease
             </p>
           </div>
         </div>

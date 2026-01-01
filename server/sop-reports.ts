@@ -11,9 +11,18 @@ import {
   getTopPerformers,
   getRentalizerEstimate,
   searchByZipcode,
+  getMarketBookingPatterns,
+  getMarketSupplyTrend,
+  getMarketProfessionalStats,
+  getMarketCancellationPolicies,
+  getEnhancedRentalizerEstimate,
   ListingData,
   RentalizerResponse,
-  ComprehensiveMarketReport
+  ComprehensiveMarketReport,
+  BookingPatterns,
+  SupplyTrend,
+  ProfessionalHostStats,
+  CancellationPolicyStats
 } from './airdna';
 
 import {
@@ -27,6 +36,8 @@ import {
   generateExecutiveSummary,
   analyzeCompetitorPhotos,
   analyzeListingPhoto,
+  getLocalRegulations,
+  generateWhatThisMeans,
   type FullAIAnalysis,
   type AIInsight,
   type InvestmentVerdict,
@@ -34,7 +45,8 @@ import {
   type CompetitorPattern,
   type RiskAssessment,
   type ActionPlan,
-  type PhotoAnalysis
+  type PhotoAnalysis,
+  type RegulationInfo
 } from './gemini-analyzer';
 
 import { scrapeAirbnbImages, batchScrapeAirbnbImages } from './airbnb-scraper';
@@ -122,6 +134,105 @@ export interface AmenityAnalysis {
   recommendation: string;
 }
 
+// NEW: Booking patterns analysis
+export interface BookingPatternsData {
+  booking_lead_time: {
+    avg_days: number;
+    median_days: number;
+    last_minute_percent: number;
+    advance_booking_percent: number;
+  };
+  length_of_stay: {
+    avg_nights: number;
+    median_nights: number;
+    weekend_percent: number;
+    week_percent: number;
+  };
+  insights: string[];
+  what_this_means: string;
+}
+
+// NEW: Supply trend analysis
+export interface SupplyTrendData {
+  current_listings: number;
+  listings_12_months_ago: number;
+  net_change: number;
+  percent_change: number;
+  trend: 'growing' | 'stable' | 'declining';
+  insight: string;
+  what_this_means: string;
+}
+
+// NEW: Professional host statistics
+export interface ProfessionalHostData {
+  total_listings: number;
+  professional_count: number;
+  individual_count: number;
+  professional_percentage: number;
+  superhost_count: number;
+  superhost_percentage: number;
+  avg_revenue_professional: number;
+  avg_revenue_individual: number;
+  revenue_premium_percent: number;
+  what_this_means: string;
+}
+
+// NEW: Cancellation policy analysis
+export interface CancellationPolicyData {
+  total_listings: number;
+  policies: Array<{
+    policy: string;
+    count: number;
+    percentage: number;
+    avg_revenue: number;
+    avg_occupancy: number;
+  }>;
+  recommendation: string;
+  what_this_means: string;
+}
+
+// NEW: Property value and ROI analysis
+export interface PropertyROIData {
+  property_value?: number;
+  historical_valuation?: {
+    mom_perc_chg: number;
+    yoy_perc_chg: number;
+  };
+  startup_costs: {
+    furniture_low: number;
+    furniture_high: number;
+    supplies: number;
+    photos_and_listing: number;
+    first_month_buffer: number;
+    total_low: number;
+    total_high: number;
+  };
+  break_even: {
+    months_conservative: number;
+    months_realistic: number;
+    months_optimistic: number;
+  };
+  annual_roi: {
+    conservative: number;
+    realistic: number;
+    optimistic: number;
+  };
+  what_this_means: string;
+}
+
+// NEW: Local regulations
+export interface RegulationsData {
+  city: string;
+  state: string;
+  str_allowed: 'yes' | 'no' | 'restricted' | 'unknown';
+  permit_required: boolean;
+  permit_cost_estimate: string;
+  key_restrictions: string[];
+  enforcement_level: 'strict' | 'moderate' | 'minimal' | 'unknown';
+  recommendation: string;
+  disclaimer: string;
+}
+
 export interface ArbitrageReport {
   title: string;
   prepared_for: string;
@@ -141,9 +252,9 @@ export interface ArbitrageReport {
   seasonality?: SeasonalityData[];
   booking_metrics?: BookingMetrics;
   amenity_analysis?: AmenityAnalysis[];
-  // AI-Powered Analysis (NEW)
+  // AI-Powered Analysis
   ai_analysis?: FullAIAnalysis;
-  // Photo Analysis (NEW)
+  // Photo Analysis
   photo_analysis?: {
     competitor_photos: Array<{
       name: string;
@@ -157,6 +268,13 @@ export interface ArbitrageReport {
       differentiation_opportunities: string[];
     };
   };
+  // NEW: Additional Report Sections
+  booking_patterns?: BookingPatternsData;
+  supply_trend?: SupplyTrendData;
+  professional_host_stats?: ProfessionalHostData;
+  cancellation_policies?: CancellationPolicyData;
+  property_roi?: PropertyROIData;
+  regulations?: RegulationsData;
 }
 
 // ============================================
@@ -488,6 +606,13 @@ export async function generateFullArbitrageAnalysis(
       differentiation_opportunities: string[];
     };
   } | null;
+  // NEW: Additional market intelligence
+  booking_patterns?: BookingPatternsData;
+  supply_trend?: SupplyTrendData;
+  professional_host_stats?: ProfessionalHostData;
+  cancellation_policies?: CancellationPolicyData;
+  property_roi?: PropertyROIData;
+  regulations?: RegulationsData;
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -735,7 +860,123 @@ export async function generateFullArbitrageAnalysis(
     // Continue without AI analysis - the base report is still valuable
   }
   
-  // Step 15: Analyze competitor photos using Gemini Vision
+  // Step 15: Fetch additional market intelligence data
+  let booking_patterns: BookingPatternsData | undefined;
+  let supply_trend: SupplyTrendData | undefined;
+  let professional_host_stats: ProfessionalHostData | undefined;
+  let cancellation_policies: CancellationPolicyData | undefined;
+  let property_roi: PropertyROIData | undefined;
+  let regulations: RegulationsData | undefined;
+  
+  const marketId = defaultMarketData.market.id;
+  
+  if (marketId && marketId !== 'unknown') {
+    try {
+      console.log('[ArbitrageAnalysis] Fetching additional market intelligence...');
+      
+      // Fetch all additional data in parallel
+      const [bookingData, supplyData, professionalData, cancellationData] = await Promise.all([
+        getMarketBookingPatterns(marketId, actualBedrooms).catch(() => null),
+        getMarketSupplyTrend(marketId, actualBedrooms).catch(() => null),
+        getMarketProfessionalStats(marketId, actualBedrooms).catch(() => null),
+        getMarketCancellationPolicies(marketId, actualBedrooms).catch(() => null)
+      ]);
+      
+      // Process booking patterns
+      if (bookingData) {
+        booking_patterns = {
+          ...bookingData,
+          what_this_means: bookingData.insights.join(' ')
+        };
+        console.log('[ArbitrageAnalysis] Got booking patterns data');
+      }
+      
+      // Process supply trend
+      if (supplyData) {
+        supply_trend = {
+          ...supplyData,
+          what_this_means: supplyData.insight
+        };
+        console.log('[ArbitrageAnalysis] Got supply trend data');
+      }
+      
+      // Process professional host stats
+      if (professionalData) {
+        const whatThisMeans = professionalData.professional_percentage > 50
+          ? `This market is ${professionalData.professional_percentage}% professionally managed. You're competing against experienced operators who know how to maximize revenue. Professional hosts earn ${professionalData.revenue_premium_percent}% more on average.`
+          : `Only ${professionalData.professional_percentage}% of hosts are professional. This means most of your competition are individual hosts - a good opportunity if you operate professionally.`;
+        
+        professional_host_stats = {
+          ...professionalData,
+          what_this_means: whatThisMeans
+        };
+        console.log('[ArbitrageAnalysis] Got professional host stats');
+      }
+      
+      // Process cancellation policies
+      if (cancellationData) {
+        cancellation_policies = {
+          ...cancellationData,
+          what_this_means: cancellationData.recommendation
+        };
+        console.log('[ArbitrageAnalysis] Got cancellation policy data');
+      }
+      
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching additional market data:', error);
+    }
+  }
+  
+  // Calculate property ROI
+  const startupBase = actualBedrooms * 3000;
+  property_roi = {
+    startup_costs: {
+      furniture_low: startupBase,
+      furniture_high: Math.round(startupBase * 1.5),
+      supplies: 750,
+      photos_and_listing: 500,
+      first_month_buffer: monthly_rent * 2,
+      total_low: startupBase + 750 + 500 + monthly_rent * 2,
+      total_high: Math.round(startupBase * 1.5) + 750 + 500 + monthly_rent * 2
+    },
+    break_even: {
+      months_conservative: profitability.scenarios.conservative.estimated_profit > 0 
+        ? Math.ceil((startupBase + 1250) / (profitability.scenarios.conservative.estimated_profit / 12)) 
+        : 24,
+      months_realistic: profitability.scenarios.realistic.estimated_profit > 0 
+        ? Math.ceil((startupBase + 1250) / (profitability.scenarios.realistic.estimated_profit / 12)) 
+        : 18,
+      months_optimistic: profitability.scenarios.optimistic.estimated_profit > 0 
+        ? Math.ceil((startupBase + 1250) / (profitability.scenarios.optimistic.estimated_profit / 12)) 
+        : 12
+    },
+    annual_roi: {
+      conservative: startupBase > 0 ? Math.round((profitability.scenarios.conservative.estimated_profit / startupBase) * 100) : 0,
+      realistic: startupBase > 0 ? Math.round((profitability.scenarios.realistic.estimated_profit / startupBase) * 100) : 0,
+      optimistic: startupBase > 0 ? Math.round((profitability.scenarios.optimistic.estimated_profit / startupBase) * 100) : 0
+    },
+    what_this_means: `You'll need $${(startupBase + 1250 + monthly_rent * 2).toLocaleString()}-$${(Math.round(startupBase * 1.5) + 1250 + monthly_rent * 2).toLocaleString()} to get started. At realistic projections, you'll make your money back in ${profitability.scenarios.realistic.estimated_profit > 0 ? Math.ceil((startupBase + 1250) / (profitability.scenarios.realistic.estimated_profit / 12)) : 18} months.`
+  };
+  
+  // Get local regulations
+  try {
+    const addressParts = address.split(',').map(p => p.trim());
+    const city = addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '';
+    const state = addressParts.length >= 1 ? addressParts[addressParts.length - 1].replace(/\d+/g, '').trim() : '';
+    
+    if (city && state) {
+      const regData = await getLocalRegulations(city, state);
+      regulations = {
+        ...regData,
+        disclaimer: regData.disclaimer || 'Always verify regulations with local authorities before operating.'
+      };
+      console.log('[ArbitrageAnalysis] Got local regulations');
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error fetching regulations:', error);
+  }
+  
+  // Step 16: Analyze competitor photos using Gemini Vision
   let photo_analysis: {
     competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }>;
     design_insights: {
@@ -819,7 +1060,14 @@ export async function generateFullArbitrageAnalysis(
     booking_metrics,
     amenity_analysis,
     ai_analysis,
-    photo_analysis
+    photo_analysis,
+    // NEW: Additional market intelligence
+    booking_patterns,
+    supply_trend,
+    professional_host_stats,
+    cancellation_policies,
+    property_roi,
+    regulations
   };
 }
 

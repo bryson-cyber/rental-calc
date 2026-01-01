@@ -25,6 +25,7 @@ import {
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
+import { generateFullArbitrageAnalysis } from "./sop-reports";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1005,6 +1006,87 @@ export const appRouter = router({
             success: false,
             error: "Failed to calculate feasibility",
             data: null,
+          };
+        }
+      }),
+
+    // Lead Magnet Property Analysis - Comprehensive structured report
+    analyzeProperty: publicProcedure
+      .input(z.object({
+        address: z.string().min(1, "Address is required"),
+        monthly_rent: z.number().positive("Monthly rent must be positive"),
+        bedrooms: z.number().int().min(1).max(20),
+        bathrooms: z.number().min(0.5).max(20),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[LeadMagnet] Starting property analysis:', input.address);
+          
+          // Run the full arbitrage analysis
+          const analysis = await generateFullArbitrageAnalysis(
+            input.address,
+            input.monthly_rent,
+            input.bedrooms,
+            input.bathrooms
+          );
+          
+          console.log('[LeadMagnet] Analysis complete');
+          
+          // Return structured data for the frontend
+          return {
+            success: true,
+            data: {
+              // Core property info
+              address: input.address,
+              bedrooms: input.bedrooms,
+              bathrooms: input.bathrooms,
+              monthly_rent: input.monthly_rent,
+              
+              // Revenue estimates from percentiles
+              percentiles: analysis.percentiles,
+              
+              // Property estimate from Rentalizer
+              property_estimate: analysis.property_estimate,
+              
+              // Profitability scenarios
+              profitability: analysis.profitability,
+              
+              // Competitors
+              competitors: analysis.competitors,
+              
+              // Seasonality
+              seasonality: analysis.seasonality,
+              
+              // Booking metrics
+              booking_metrics: analysis.booking_metrics,
+              
+              // Amenity analysis
+              amenity_analysis: analysis.amenity_analysis,
+              
+              // AI-powered analysis (verdict, insights, risks, etc.)
+              ai_analysis: analysis.ai_analysis,
+              
+              // Photo analysis
+              photo_analysis: analysis.photo_analysis,
+              
+              // Additional market intelligence
+              booking_patterns: analysis.booking_patterns,
+              supply_trend: analysis.supply_trend,
+              professional_host_stats: analysis.professional_host_stats,
+              cancellation_policies: analysis.cancellation_policies,
+              property_roi: analysis.property_roi,
+              regulations: analysis.regulations,
+              
+              // Full markdown report
+              full_report: analysis.report
+            }
+          };
+        } catch (error) {
+          console.error('[LeadMagnet] Error analyzing property:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to analyze property',
+            data: null
           };
         }
       }),

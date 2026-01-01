@@ -802,3 +802,200 @@
 - [x] Add "Why This Matters" explanations for each insight
 - [x] Create executive summary with key takeaways
 - [ ] Add follow-up question suggestions based on analysis (future enhancement)
+
+
+## BEGINNER RESEARCH REFOCUS - Mobile-First Confident Analysis
+
+### Core Pain Points to Address
+- [ ] "Is this property worth the rent?" - Clear GO/NO-GO verdict
+- [ ] "What do successful listings look like?" - Competitor visual analysis
+- [ ] "What amenities do I need to compete?" - Must-have vs nice-to-have
+- [ ] "How much startup capital do I need?" - Realistic budget estimate
+- [ ] "What's the risk if I sign this lease?" - Risk assessment with specifics
+- [ ] "How long until I break even?" - Timeline to profitability
+
+### UI Simplification (Mobile-First)
+- [ ] Simplify home page - single search input, clear CTA
+- [ ] Mobile-responsive chat interface
+- [ ] Streamlined report display for mobile viewing
+- [ ] Remove unnecessary complexity from UI
+- [ ] Fast, confident loading states
+
+### AI Analysis Refocus (Pre-Lease Research)
+- [x] Reframe AI prompts for beginner researchers (not hosts)
+- [x] Add startup cost estimation based on market/bedrooms
+- [x] Add break-even timeline calculation
+- [x] Add "must-have amenities" vs "nice-to-have" analysis
+- [x] Add clear GO/NO-GO recommendation with confidence
+- [x] Competitor photo analysis = "what you're competing against"
+
+### API Maximization
+- [ ] Audit all AirDNA API endpoints being used
+- [ ] Identify unused API capabilities
+- [ ] Ensure all relevant data feeds into AI analysis
+- [ ] Optimize API calls for speed
+
+### Integration Testing
+- [ ] Test full research flow on mobile
+- [ ] Verify AI analysis generates confident recommendations
+- [ ] Ensure all API data is being utilized
+- [ ] Test edge cases (no data, low competition, etc.)
+
+
+## LEAD MAGNET REFOCUS - One Input, One Amazing Report
+
+### Phase 1: Simplified Single-Input UI
+- [ ] Create new PropertyAnalyzer page with simple form
+- [ ] Input fields: Address (autocomplete), Monthly Rent, Bedrooms, Bathrooms
+- [ ] ONE button: "Analyze This Property"
+- [ ] Remove chat interface - this is not conversational
+- [ ] Mobile-first responsive design
+
+### Phase 2: Comprehensive Backend Pipeline
+- [ ] Create generateComprehensiveReport() function
+- [ ] Fetch Rentalizer estimate (filtered to bedroom count)
+- [ ] Fetch market metrics (listings, occupancy, ADR, RevPAR, YoY changes)
+- [ ] Fetch competitors (filtered to same bedroom count)
+- [ ] Analyze competitor amenities
+- [ ] Get seasonality data
+- [ ] Calculate startup costs based on bedroom count
+- [ ] Calculate break-even based on rent provided
+- [ ] Run all through Gemini for synthesis
+
+### Phase 3: Report Output Format (Fifth Grade Level)
+- [ ] Market Health section with plain English explanations
+- [ ] Revenue Estimate with "what this means for you"
+- [ ] Competition Analysis (same bedroom count only)
+- [ ] Amenity Gap Analysis (what winners have)
+- [ ] Seasonality breakdown (when money is good/slow)
+- [ ] Startup Costs estimate
+- [ ] Break-even Timeline
+- [ ] Risk Assessment
+- [ ] GO/NO-GO Verdict
+
+### Phase 4: Integration
+- [ ] Wire up all API calls to report generator
+- [ ] Ensure bedroom filter is applied everywhere
+- [ ] Add loading states with progress indicators
+
+### Phase 5: CTA and Polish
+- [ ] Add "Book a Call" CTA after report
+- [ ] Add Calendly/booking link integration
+- [ ] Final UI polish for mobile
+
+
+## COMPLETE API MAXIMIZATION - 10/10 Lead Magnet
+
+### AirDNA Endpoints to Implement
+- [ ] `POST /market/{marketId}/charts/booking_lead_time` - How far ahead guests book
+- [ ] `POST /market/{marketId}/charts/los` - Average length of stay
+- [ ] `POST /market/{marketId}/charts/future_pricing` - Future pricing trends
+- [ ] `POST /submarket/explore/market` - Get ALL neighborhoods with metrics
+- [ ] `GET /listing/{listingId}` - Full listing details with ALL images
+- [ ] `POST /listing/batch` - Batch fetch multiple listings
+- [ ] `POST /listing/{listingId}/charts` - Historical performance per listing
+- [ ] `POST /listing/{listingId}/comps` - AirDNA's comp algorithm
+- [ ] Add amenities filter to listing queries
+- [ ] Add superhost filter to listing queries
+- [ ] Add professionally_managed filter
+- [ ] Add price_tier filter
+- [ ] Add listing_type filter (entire_home vs room)
+
+### Gemini Analysis to Maximize
+- [ ] Analyze multiple photos per competitor (not just 1)
+- [ ] Market trend analysis from historical data
+- [ ] Competitor strategy deep dive
+- [ ] Risk scenario modeling (what if occupancy drops?)
+- [ ] Startup cost estimation by market/bedroom
+- [ ] Break-even timeline calculation
+- [ ] Amenity ROI analysis
+
+### Report Data Points to Add
+- [ ] Listings entering/leaving market (supply trends)
+- [ ] YoY changes (revenue, occupancy, ADR, listings)
+- [ ] Booking lead time and length of stay
+- [ ] Superhost percentage in market
+- [ ] Professionally managed percentage
+- [ ] Property type distribution
+- [ ] Amenity frequency analysis
+- [ ] Month-by-month forecast
+- [ ] Seasonality score
+- [ ] Cash reserve recommendation
+
+
+## COMPLETE API MAXIMIZATION - 27 Items for 10/10 Lead Magnet
+
+### Phase 1: Missing AirDNA Endpoints (5)
+- [x] Add getMarketFutureDailyData() - 6-month forward supply/demand
+- [x] Add getListingHistoricalMetrics() - Historical performance per listing
+- [x] Add getListingComps() - AirDNA's native comp algorithm
+- [x] Add getListingFuturePricing() - Future pricing for specific listing
+- [x] Add getRentalizerComps() - Additional comp source
+
+### Phase 2: Hidden Data Fields & Filters (9)
+- [x] Expose property_value from Rentalizer (for ROI calc)
+- [x] Expose historical_valuation MoM and YoY changes
+- [x] Expose platforms field (Airbnb + Vrbo IDs)
+- [x] Expose cancellation_policy distribution
+- [x] Add amenities filter (has_pool, has_hottub, etc.)
+- [x] Add price_tier filter (budget/midscale/upscale/luxury)
+- [x] Add percent_active filter
+- [x] Add days_available_ltm filter
+- [x] Add occupancy_rate_ltm filter
+
+### Phase 3: Gemini Advanced Features (4)
+- [x] Add structured JSON output schema (callGeminiStructured, generateStructuredAnalysis)
+- [x] Add parallel function calling for faster data fetch (fetchAnalysisDataParallel)
+- [x] Add code execution for complex calculations (built into structured analysis)
+- [x] Add regulation lookup via Gemini knowledge (getLocalRegulations)
+
+### Phase 4: Report Output Sections (5)
+- [x] Add booking window analysis section (BookingPatternsData)
+- [x] Add supply trend indicator (SupplyTrendData)
+- [x] Add professional host percentage (ProfessionalHostData)
+- [x] Add cancellation policy distribution (CancellationPolicyData)
+- [x] Add property value & ROI calculation (PropertyROIData)
+
+### Phase 5: Lead Magnet Wow Factors (4)
+- [x] Add time-to-revenue calculator (calculateTimeToRevenue)
+- [x] Add hidden costs reveal (calculateHiddenCosts)
+- [x] Add complexity overwhelm display (calculateComplexity)
+- [x] Add DIY vs professional comparison (compareDIYvsProfessional)
+
+### Phase 6: Simplified One-Input UI
+- [x] Create one-input form (address + rent + beds + baths)
+- [x] Create loading state with progress
+- [x] Create beautiful report display (mobile-first)
+- [x] Add Book a Call CTA
+- [x] Fifth-grade reading level explanations
+
+## RENTAL ARBITRAGE LANGUAGE FIX
+- [ ] Change "BUY" verdict to "GO" (sign the lease)
+- [ ] Change "HOLD" verdict to "CAUTION" (proceed carefully)  
+- [ ] Keep "PASS" as is (don't sign this lease)
+- [ ] Change "Investment Verdict" to "Lease Decision"
+- [ ] Remove all purchase/buying language throughout
+- [ ] Reframe everything as "Should you sign this lease?"
+
+
+## RENTAL ARBITRAGE LANGUAGE FIX
+- [x] Change "BUY" verdict to "GO" (sign the lease)
+- [x] Change "HOLD" verdict to "CAUTION" (proceed carefully)
+- [x] Change "Investment Verdict" to "Lease Decision"
+- [x] Update all AI prompts to use rental arbitrage framing
+- [x] Fix month labels in seasonality display (Dec, Jan, Feb, etc.)
+- [x] Fix occupancy percentage display formatting
+
+## LEAD MAGNET UI COMPLETE
+- [x] Single input form (Address + Rent + Beds + Baths)
+- [x] Loading progress indicator with 6 steps
+- [x] GO/CAUTION/PASS verdict with confidence score
+- [x] Revenue projections (Conservative/Realistic/Optimistic)
+- [x] Annual profit after rent & expenses
+- [x] Startup costs & break-even timeline
+- [x] Market overview (occupancy, ADR, active listings)
+- [x] Competition section (10 similar properties)
+- [x] Seasonality section (12-month revenue breakdown)
+- [x] Risks to Consider section
+- [x] Book a Free Strategy Call CTA
+- [x] Analyze Another Property button
