@@ -249,7 +249,7 @@ PROPERTY:
 
 MARKET DATA:
 - Market: ${market.name}
-- Average Occupancy: ${market.occupancy}%
+- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - Average Daily Rate: $${market.adr}
 - Average Annual Revenue: $${market.revenue.toLocaleString()}
 - Active Listings: ${market.active_listings.toLocaleString()}
@@ -260,7 +260,7 @@ REVENUE PERCENTILES (${property.bedrooms}BR properties):
 - Median: $${percentiles.median.toLocaleString()}/year
 
 TOP COMPETITORS:
-${competitors.slice(0, 5).map((c, i) => `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${c.occupancy}% occ, $${c.adr} ADR, ${c.rating || 'N/A'} rating, ${c.reviews} reviews - Success: ${c.success_factor}`).join('\n')}
+${competitors.slice(0, 5).map((c, i) => `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ, $${c.adr} ADR, ${c.rating || 'N/A'} rating, ${c.reviews} reviews - Success: ${c.success_factor}`).join('\n')}
 
 SEASONALITY:
 ${(seasonality || []).map(s => `${s.month}: $${s.revenue.toLocaleString()} (${s.season_type})`).join(', ') || 'No seasonality data available'}
@@ -319,7 +319,7 @@ TOP PERFORMERS (sorted by revenue):
 ${competitors.map((c, i) => `
 ${i + 1}. "${c.name}"
    - Revenue: $${c.annual_revenue.toLocaleString()}/year
-   - Occupancy: ${c.occupancy}%
+   - Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
    - ADR: $${c.adr}/night
    - Rating: ${c.rating || 'N/A'} (${c.reviews} reviews)
    - Success Factor: ${c.success_factor}
@@ -386,7 +386,7 @@ PROPERTY:
 MARKET CONTEXT:
 - Market: ${market.name}
 - Active Listings: ${market.active_listings.toLocaleString()}
-- Market Occupancy: ${market.occupancy}%
+- Market Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - Market ADR: $${market.adr}
 
 REVENUE POTENTIAL:
@@ -444,7 +444,7 @@ Return ONLY the JSON object, no other text.`;
       summary: `Based on the numbers, this lease shows ${rating === 'PASS' ? 'unfavorable' : rating === 'CAUTION' ? 'marginal' : 'strong'} profit potential with a conservative estimate of $${medianProfit.toLocaleString()}/year.`,
       top_reasons: [
         `${viableCompetitors.length} competitors prove the 2x revenue threshold is achievable`,
-        `Market occupancy of ${market.occupancy}% indicates ${market.occupancy > 60 ? 'healthy' : 'moderate'} demand`,
+        `Market occupancy of ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}% indicates ${(market.occupancy > 1 ? market.occupancy : market.occupancy * 100) > 60 ? 'healthy' : 'moderate'} demand`,
         `Top 25% revenue of $${percentiles.top_25_percent.toLocaleString()} provides upside potential`
       ],
       key_risk: "Market saturation with " + market.active_listings.toLocaleString() + " active listings",
@@ -477,10 +477,10 @@ PROPERTY:
 
 MARKET DATA:
 - Average ADR: $${market.adr}
-- Average Occupancy: ${market.occupancy}%
+- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 
 COMPETITOR ADRs:
-${competitorsList.slice(0, 5).map(c => `- "${c.name}": $${c.adr}/night (${c.occupancy}% occ)`).join('\n')}
+${competitorsList.slice(0, 5).map(c => `- "${c.name}": $${c.adr}/night (${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ)`).join('\n')}
 
 SEASONALITY:
 - Peak Season ADR: $${Math.round(avgPeakADR)} (${peakMonths.map(m => m.month).join(', ') || 'N/A'})
@@ -651,7 +651,7 @@ PROPERTY:
 
 MARKET:
 - ${market.name} with ${market.active_listings.toLocaleString()} active listings
-- Occupancy: ${market.occupancy}%
+- Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - ADR: $${market.adr}
 
 SEASONALITY:
@@ -1089,12 +1089,12 @@ PROPERTY:
 MARKET DATA:
 - Market: ${market.name}
 - Active Listings: ${market.active_listings.toLocaleString()}
-- Average Occupancy: ${Math.round(market.occupancy * 100)}%
+- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - Average Daily Rate: $${Math.round(market.adr)}
 - Average Annual Revenue: $${Math.round(market.revenue).toLocaleString()}
 
 COMPETITION (${competitors.length} comparable ${property.bedrooms}BR properties):
-${competitors.slice(0, 5).map(c => `- ${c.name}: $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy * 100)}% occ, ${c.rating || 'N/A'} rating`).join('\n')}
+${competitors.slice(0, 5).map(c => `- ${c.name}: $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ, ${c.rating || 'N/A'} rating`).join('\n')}
 
 REVENUE PERCENTILES (${property.bedrooms}BR in this market):
 - Top 10%: $${percentiles.top_10_percent.toLocaleString()}/yr

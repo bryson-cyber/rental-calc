@@ -87,6 +87,8 @@ interface AnalysisResult {
     annual_revenue: number;
     occupancy: number;
     rating: number | null;
+    airbnb_url?: string;
+    image_url?: string;
   }>;
   
   // Seasonality
@@ -281,7 +283,9 @@ export default function PropertyAnalyzer() {
             name: c.name || c.title,
             annual_revenue: c.annual_revenue,
             occupancy: c.occupancy,
-            rating: c.rating
+            rating: c.rating,
+            airbnb_url: c.airbnb_url,
+            image_url: c.image_url
           })),
           
           seasonality: data.seasonality || [],
@@ -816,15 +820,46 @@ export default function PropertyAnalyzer() {
                 {expandedSections.has('competition') && (
                   <div className="mt-6 space-y-3">
                     {result.competitors.slice(0, 5).map((comp, i) => (
-                      <div key={i} className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-white">{comp.name}</p>
+                      <div key={i} className="bg-white/5 rounded-xl p-4 flex items-center gap-4">
+                        {/* Listing Image */}
+                        <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-white/10">
+                          {comp.image_url ? (
+                            <img 
+                              src={comp.image_url} 
+                              alt={comp.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Home className="w-8 h-8 text-white/30" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Listing Details */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white truncate">{comp.name}</p>
                           <p className="text-sm text-white/50">
-                            {formatPercent(comp.occupancy / 100)} occupancy
+                            {formatPercent(comp.occupancy)} occupancy
                             {comp.rating && ` • ${comp.rating} ★`}
                           </p>
+                          {comp.airbnb_url && (
+                            <a 
+                              href={comp.airbnb_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 mt-1"
+                            >
+                              View on Airbnb <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
                         </div>
-                        <div className="text-right">
+                        
+                        {/* Revenue */}
+                        <div className="text-right flex-shrink-0">
                           <p className="font-semibold text-green-400">{formatCurrency(comp.annual_revenue)}/yr</p>
                         </div>
                       </div>

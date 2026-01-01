@@ -76,6 +76,7 @@ export interface MarketPercentiles {
 export interface CompetitorAnalysis {
   name: string;
   airbnb_url: string;
+  image_url?: string;
   annual_revenue: number;
   occupancy: number;
   adr: number;
@@ -83,6 +84,7 @@ export interface CompetitorAnalysis {
   amenities: string[];
   rating: number | null;
   reviews: number;
+  bedrooms?: number;
 }
 
 export interface ProfitabilityScenario {
@@ -406,13 +408,15 @@ export function analyzeCompetitorSuccessFactors(listing: ListingData): Competito
   return {
     name: listing.title,
     airbnb_url: listing.airbnb_url || `https://www.airbnb.com/rooms/${listing.id}`,
+    image_url: listing.image_url,
     annual_revenue: listing.annual_revenue,
     occupancy: listing.occupancy,
     adr: listing.adr,
     key_success_factor,
     amenities,
     rating: listing.rating,
-    reviews: listing.reviews
+    reviews: listing.reviews,
+    bedrooms: listing.bedrooms
   };
 }
 
@@ -673,6 +677,7 @@ export async function generateFullArbitrageAnalysis(
               id: '',
               title: p.title,
               airbnb_url: p.airbnb_url,
+              image_url: (p as any).image_url,
               bedrooms: p.bedrooms,
               bathrooms: p.bathrooms,
               accommodates: 0,

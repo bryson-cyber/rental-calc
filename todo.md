@@ -1007,3 +1007,12 @@
 - [x] Verify each endpoint is called in analysis pipeline
 - [x] Test complete flow with real property
 - [x] Ensure all API data is displayed in report
+
+
+## CRITICAL BUG FIXES - Round 5
+- [x] Fix occupancy percentage display (showing 0.56% instead of 56%)
+- [x] Fix AI risk analysis misinterpreting occupancy data
+- [x] Restore Airbnb links in competitor listings
+- [x] Review and restore lost features from previous versions
+- [x] Ensure data is passed correctly to AI for analysis
+- [x] Add listing photos/thumbnails to competitor display
