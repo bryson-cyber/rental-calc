@@ -106,3 +106,51 @@ export const savedSearches = mysqlTable("saved_searches", {
 
 export type SavedSearch = typeof savedSearches.$inferSelect;
 export type InsertSavedSearch = typeof savedSearches.$inferInsert;
+
+/**
+ * Favorite properties table for storing properties users want to track
+ */
+export const favoriteProperties = mysqlTable("favorite_properties", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous saves via cookie)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Property information
+  address: text("address").notNull(),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  
+  // Property details
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  propertyType: varchar("propertyType", { length: 100 }),
+  
+  // Market information
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Cached analysis results
+  annualRevenue: int("annualRevenue"),
+  monthlyRevenue: int("monthlyRevenue"),
+  occupancyRate: decimal("occupancyRate", { precision: 5, scale: 2 }),
+  averageDailyRate: int("averageDailyRate"),
+  
+  // User input for arbitrage calculation
+  monthlyRent: int("monthlyRent"),
+  estimatedProfit: int("estimatedProfit"),
+  
+  // User notes
+  notes: text("notes"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FavoriteProperty = typeof favoriteProperties.$inferSelect;
+export type InsertFavoriteProperty = typeof favoriteProperties.$inferInsert;

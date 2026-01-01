@@ -380,7 +380,8 @@ IMPORTANT RULES:
 5. Be conversational but always back up claims with actual data
 6. If you can't find data for a market or property, say so clearly
 7. Format currency values nicely (e.g., $45,000 not 45000)
-8. Explain what metrics mean in simple terms
+8. Format occupancy rates as percentages (e.g., 67% not 0.67) - multiply decimal values by 100
+9. Explain what metrics mean in simple terms
 
 For PROPERTY ANALYSIS (when user provides an address):
 - Use analyze_property function with the full address

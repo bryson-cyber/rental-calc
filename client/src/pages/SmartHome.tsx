@@ -37,16 +37,18 @@ import {
   BedDouble,
   Bath,
   Filter,
-  Star,
-  Award,
   X,
   ChevronDown,
   Clock,
-  History
+  History,
+  Heart,
+  FileDown,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ReactMarkdown from 'react-markdown';
+import { jsPDF } from 'jspdf';
 
 
 interface ChatMessage {
@@ -162,8 +164,19 @@ function parseZillowUrl(url: string): { address: string; zipCode?: string } | nu
   }
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ 
+  message, 
+  onSaveToFavorites,
+  onExportPDF,
+  isSaved 
+}: { 
+  message: ChatMessage; 
+  onSaveToFavorites?: () => void;
+  onExportPDF?: () => void;
+  isSaved?: boolean;
+}) {
   const isUser = message.role === 'user';
+  const isPropertyAnalysis = !isUser && message.content.includes('Annual Revenue') && message.content.includes('$');
   
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -187,14 +200,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.filters.bedrooms && (
               <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.bedrooms} BR</span>
             )}
+            {message.filters.bathrooms && (
+              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.bathrooms} BA</span>
+            )}
             {message.filters.propertyType && (
               <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.propertyType}</span>
-            )}
-            {message.filters.minRating && (
-              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">{message.filters.minRating}+ stars</span>
-            )}
-            {message.filters.superhost && (
-              <span className="text-xs bg-[#C9A962]/30 px-2 py-0.5 rounded-full">Superhost</span>
             )}
           </div>
         )}
@@ -203,6 +213,34 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         ) : (
           <div className="prose prose-sm max-w-none text-[#0F172A] prose-headings:text-[#0F172A] prose-strong:text-[#0F172A] prose-li:marker:text-[#C9A962]">
             <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
+        
+        {/* Action buttons for property analyses */}
+        {isPropertyAnalysis && (onSaveToFavorites || onExportPDF) && (
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#0F172A]/10">
+            {onSaveToFavorites && (
+              <button
+                onClick={onSaveToFavorites}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  isSaved 
+                    ? 'bg-[#C9A962] text-white' 
+                    : 'bg-[#C9A962]/10 text-[#C9A962] hover:bg-[#C9A962]/20'
+                }`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                {isSaved ? 'Saved' : 'Save to Favorites'}
+              </button>
+            )}
+            {onExportPDF && (
+              <button
+                onClick={onExportPDF}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#0F172A]/10 text-[#0F172A] hover:bg-[#0F172A]/20 transition-all"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Export PDF
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -331,12 +369,156 @@ const propertyTypeOptions = [
   { value: 'cabin', label: 'Cabin' },
 ];
 
-const ratingOptions = [
-  { value: 4.8, label: '4.8+ Stars' },
-  { value: 4.5, label: '4.5+ Stars' },
-  { value: 4.0, label: '4.0+ Stars' },
-  { value: 3.0, label: '3.0+ Stars' },
-];
+// Favorites Panel Component
+function FavoritesPanel({ 
+  sessionId, 
+  onClose, 
+  onAnalyze 
+}: { 
+  sessionId: string; 
+  onClose: () => void; 
+  onAnalyze: (address: string) => void;
+}) {
+  const favoritesQuery = trpc.favorites.list.useQuery({ sessionId });
+  const removeFavorite = trpc.favorites.remove.useMutation({
+    onSuccess: () => favoritesQuery.refetch(),
+  });
+  const updateNotes = trpc.favorites.updateNotes.useMutation({
+    onSuccess: () => favoritesQuery.refetch(),
+  });
+  
+  const [editingNotes, setEditingNotes] = useState<number | null>(null);
+  const [noteText, setNoteText] = useState('');
+  
+  const favorites = favoritesQuery.data?.data || [];
+  
+  return (
+    <div className="max-w-4xl w-full mx-auto px-4 mb-6">
+      <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-serif font-semibold text-white flex items-center gap-2">
+            <Heart className="w-5 h-5 text-[#C9A962] fill-current" />
+            My Favorite Properties
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-white/50 hover:text-white p-1"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {favoritesQuery.isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-[#C9A962]" />
+          </div>
+        ) : favorites.length === 0 ? (
+          <div className="text-center py-8">
+            <Heart className="w-12 h-12 text-white/20 mx-auto mb-3" />
+            <p className="text-white/50">No favorite properties yet</p>
+            <p className="text-white/30 text-sm mt-1">Analyze a property and click the heart to save it</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {favorites.map((fav) => (
+              <div 
+                key={fav.id} 
+                className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-[#C9A962]/30 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium truncate">{fav.address}</h3>
+                    <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                      {fav.marketName && (
+                        <span className="text-white/50">{fav.marketName}</span>
+                      )}
+                      {fav.bedrooms && (
+                        <span className="bg-[#C9A962]/20 text-[#C9A962] px-2 py-0.5 rounded-full text-xs">
+                          {fav.bedrooms} BR
+                        </span>
+                      )}
+                      {fav.annualRevenue && (
+                        <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full text-xs">
+                          ${fav.annualRevenue.toLocaleString()}/yr
+                        </span>
+                      )}
+                      {fav.occupancyRate && (
+                        <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full text-xs">
+                          {Number(fav.occupancyRate).toFixed(0)}% occ
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Notes section */}
+                    {editingNotes === fav.id ? (
+                      <div className="mt-3">
+                        <textarea
+                          value={noteText}
+                          onChange={(e) => setNoteText(e.target.value)}
+                          placeholder="Add notes about this property..."
+                          className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-sm text-white placeholder:text-white/40 resize-none"
+                          rows={2}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => {
+                              updateNotes.mutate({ id: fav.id, notes: noteText, sessionId });
+                              setEditingNotes(null);
+                            }}
+                            className="text-xs bg-[#C9A962] text-white px-3 py-1 rounded-full"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingNotes(null)}
+                            className="text-xs text-white/50 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : fav.notes ? (
+                      <p 
+                        className="text-white/40 text-sm mt-2 cursor-pointer hover:text-white/60"
+                        onClick={() => { setEditingNotes(fav.id); setNoteText(fav.notes || ''); }}
+                      >
+                        {fav.notes}
+                      </p>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingNotes(fav.id); setNoteText(''); }}
+                        className="text-white/30 text-xs mt-2 hover:text-white/50"
+                      >
+                        + Add notes
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onAnalyze(fav.address)}
+                      className="p-2 bg-[#C9A962]/20 text-[#C9A962] rounded-lg hover:bg-[#C9A962]/30 transition-colors"
+                      title="Analyze again"
+                    >
+                      <Search className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => removeFavorite.mutate({ id: fav.id, sessionId })}
+                      className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                      title="Remove from favorites"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function SmartHome() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -350,6 +532,17 @@ export default function SmartHome() {
   
   // Filters state
   const [filters, setFilters] = useState<ActiveFilters>({});
+  
+  // Favorites state
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [sessionId] = useState(() => {
+    // Get or create a session ID for anonymous users
+    const stored = localStorage.getItem('str-advisor-session-id');
+    if (stored) return stored;
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('str-advisor-session-id', newId);
+    return newId;
+  });
   
   // Recent searches state
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
@@ -434,6 +627,175 @@ export default function SmartHome() {
 
   const advisorMutation = trpc.advanced.getInvestmentAdvice.useMutation();
   
+  // Favorites mutations
+  const addFavorite = trpc.favorites.add.useMutation();
+  const [savedAddresses, setSavedAddresses] = useState<Set<string>>(new Set());
+  
+  // Extract address from message content for saving
+  const extractAddressFromMessage = (userMessage: string): string | null => {
+    // Check if it's a direct address input
+    const inputType = detectInputType(userMessage);
+    if (inputType === 'address') return userMessage;
+    
+    // Check for Zillow URL
+    if (inputType === 'zillow_url') {
+      const parsed = parseZillowUrl(userMessage);
+      return parsed?.address || null;
+    }
+    
+    return null;
+  };
+  
+  // Extract revenue data from AI response
+  const extractRevenueFromResponse = (response: string): { annualRevenue?: number; occupancyRate?: number; adr?: number } => {
+    const result: { annualRevenue?: number; occupancyRate?: number; adr?: number } = {};
+    
+    // Extract annual revenue (look for patterns like $XX,XXX/year or Annual Revenue: $XX,XXX)
+    const revenueMatch = response.match(/\$([\d,]+)(?:\/year|\/yr|\s*per\s*year|\s*annually)/i) ||
+                         response.match(/Annual Revenue[:\s]*\$([\d,]+)/i);
+    if (revenueMatch) {
+      result.annualRevenue = parseInt(revenueMatch[1].replace(/,/g, ''));
+    }
+    
+    // Extract occupancy rate
+    const occMatch = response.match(/(\d+)%\s*(?:occupancy|occ)/i);
+    if (occMatch) {
+      result.occupancyRate = parseInt(occMatch[1]);
+    }
+    
+    // Extract ADR
+    const adrMatch = response.match(/\$([\d,]+)(?:\/night|\s*ADR|\s*per\s*night)/i);
+    if (adrMatch) {
+      result.adr = parseInt(adrMatch[1].replace(/,/g, ''));
+    }
+    
+    return result;
+  };
+  
+  const handleSaveToFavorites = async (messageIndex: number) => {
+    // Find the user message that triggered this response
+    const userMessageIndex = messageIndex - 1;
+    if (userMessageIndex < 0) return;
+    
+    const userMessage = messages[userMessageIndex];
+    const assistantMessage = messages[messageIndex];
+    
+    const address = extractAddressFromMessage(userMessage.content);
+    if (!address) return;
+    
+    const revenueData = extractRevenueFromResponse(assistantMessage.content);
+    
+    try {
+      await addFavorite.mutateAsync({
+        sessionId,
+        address,
+        bedrooms: userMessage.filters?.bedrooms,
+        bathrooms: userMessage.filters?.bathrooms,
+        propertyType: userMessage.filters?.propertyType,
+        annualRevenue: revenueData.annualRevenue,
+        occupancyRate: revenueData.occupancyRate,
+        averageDailyRate: revenueData.adr,
+      });
+      
+      setSavedAddresses(prev => {
+        const newSet = new Set(prev);
+        newSet.add(address.toLowerCase());
+        return newSet;
+      });
+    } catch (error) {
+      console.error('Error saving to favorites:', error);
+    }
+  };
+  
+  // Export to PDF function
+  const handleExportPDF = (messageIndex: number) => {
+    const assistantMessage = messages[messageIndex];
+    const userMessageIndex = messageIndex - 1;
+    const userMessage = userMessageIndex >= 0 ? messages[userMessageIndex] : null;
+    
+    // Create PDF document
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxWidth = pageWidth - 2 * margin;
+    let yPosition = 20;
+    
+    // Add header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('STR Investment Analysis Report', margin, yPosition);
+    yPosition += 15;
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
+    yPosition += 10;
+    
+    // Add divider line
+    doc.setDrawColor(201, 169, 98); // Gold color
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 15;
+    
+    // Add query section
+    if (userMessage) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Query:', margin, yPosition);
+      yPosition += 7;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      const queryLines = doc.splitTextToSize(userMessage.content, maxWidth);
+      doc.text(queryLines, margin, yPosition);
+      yPosition += queryLines.length * 6 + 10;
+    }
+    
+    // Add analysis section
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Analysis:', margin, yPosition);
+    yPosition += 7;
+    
+    // Clean up markdown and format content
+    const cleanContent = assistantMessage.content
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\|/g, ' ')
+      .replace(/-{3,}/g, '')
+      .replace(/\n{3,}/g, '\n\n');
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const contentLines = doc.splitTextToSize(cleanContent, maxWidth);
+    
+    // Add content with page breaks
+    for (const line of contentLines) {
+      if (yPosition > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(line, margin, yPosition);
+      yPosition += 5;
+    }
+    
+    // Add footer
+    yPosition = doc.internal.pageSize.getHeight() - 15;
+    doc.setFontSize(9);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Powered by Coach Inayah STR Investment Advisor', margin, yPosition);
+    
+    // Save the PDF
+    const address = userMessage ? extractAddressFromMessage(userMessage.content) : null;
+    const filename = address 
+      ? `str-analysis-${address.replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}.pdf`
+      : `str-analysis-${Date.now()}.pdf`;
+    doc.save(filename);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -707,18 +1069,52 @@ export default function SmartHome() {
     <div className="min-h-screen bg-gradient-to-b from-[#0F172A] via-[#0F172A] to-[#1a2744] flex flex-col">
       {/* Header */}
       <div className="py-6 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#a88b4a] mb-4">
-            <Sparkles className="w-8 h-8 text-white" />
+        <div className="max-w-4xl mx-auto">
+          {/* Top bar with favorites button */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${
+                showFavorites
+                  ? 'bg-[#C9A962] text-white'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${showFavorites ? 'fill-current' : ''}`} />
+              My Favorites
+            </button>
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-semibold text-white mb-2">
-            STR Investment Advisor
-          </h1>
-          <p className="text-white/60 text-lg">
-            Ask anything about short-term rental markets
-          </p>
+          
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#a88b4a] mb-4">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-white mb-2">
+              STR Investment Advisor
+            </h1>
+            <p className="text-white/60 text-lg">
+              Ask anything about short-term rental markets
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Favorites Panel */}
+      {showFavorites && (
+        <FavoritesPanel 
+          sessionId={sessionId} 
+          onClose={() => setShowFavorites(false)}
+          onAnalyze={(address) => {
+            setInput(address);
+            setShowFavorites(false);
+            // Trigger analysis
+            setTimeout(() => {
+              const event = new KeyboardEvent('keydown', { key: 'Enter' });
+              inputRef.current?.dispatchEvent(event);
+            }, 100);
+          }}
+        />
+      )}
 
       {/* Main Chat Area */}
       <div className="flex-1 max-w-4xl w-full mx-auto px-4 pb-6 flex flex-col">
@@ -857,19 +1253,6 @@ export default function SmartHome() {
                     onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
                     icon={<Home className="w-3 h-3" />}
                   />
-                  <FilterDropdown
-                    label="Rating"
-                    options={ratingOptions}
-                    value={filters.minRating}
-                    onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
-                    icon={<Star className="w-3 h-3" />}
-                  />
-                  <FilterChip
-                    label="Superhost"
-                    active={!!filters.superhost}
-                    onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
-                    icon={<Award className="w-3 h-3" />}
-                  />
                 </div>
               )}
               
@@ -923,9 +1306,23 @@ export default function SmartHome() {
         ) : (
           /* Messages */
           <div className="flex-1 bg-[#FAF9F6] rounded-t-3xl p-6 space-y-4 overflow-y-auto">
-            {messages.map((message, index) => (
-              <MessageBubble key={index} message={message} />
-            ))}
+            {messages.map((message, index) => {
+              // Check if this is an assistant message with property analysis
+              const isAssistant = message.role === 'assistant';
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const prevAddress = prevMessage ? extractAddressFromMessage(prevMessage.content) : null;
+              const isSaved = prevAddress ? savedAddresses.has(prevAddress.toLowerCase()) : false;
+              
+              return (
+                <MessageBubble 
+                  key={index} 
+                  message={message}
+                  onSaveToFavorites={isAssistant && prevAddress ? () => handleSaveToFavorites(index) : undefined}
+                  onExportPDF={isAssistant ? () => handleExportPDF(index) : undefined}
+                  isSaved={isSaved}
+                />
+              );
+            })}
             {isLoading && (
               <div className="flex gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C9A962] to-[#a88b4a] flex items-center justify-center flex-shrink-0">
@@ -970,22 +1367,6 @@ export default function SmartHome() {
                   <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
                     {filters.propertyType}
                     <button onClick={() => setFilters(prev => ({ ...prev, propertyType: undefined }))} className="hover:text-[#0F172A]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {filters.minRating && (
-                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
-                    {filters.minRating}+ stars
-                    <button onClick={() => setFilters(prev => ({ ...prev, minRating: undefined }))} className="hover:text-[#0F172A]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {filters.superhost && (
-                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
-                    Superhost
-                    <button onClick={() => setFilters(prev => ({ ...prev, superhost: false }))} className="hover:text-[#0F172A]">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -1104,19 +1485,6 @@ export default function SmartHome() {
                   onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
                   icon={<Home className="w-3 h-3" />}
                 />
-                <FilterDropdown
-                  label="Rating"
-                  options={ratingOptions}
-                  value={filters.minRating}
-                  onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
-                  icon={<Star className="w-3 h-3" />}
-                />
-                <FilterChip
-                  label="Superhost"
-                  active={!!filters.superhost}
-                  onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
-                  icon={<Award className="w-3 h-3" />}
-                />
               </div>
             )}
           </div>
@@ -1126,7 +1494,7 @@ export default function SmartHome() {
       {/* Footer */}
       <div className="py-4 text-center">
         <p className="text-white/30 text-xs">
-          Powered by AirDNA market data • Real-time analysis
+          Powered by Coach Inayah • Real-time analysis
         </p>
       </div>
     </div>

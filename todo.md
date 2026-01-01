@@ -365,3 +365,15 @@
 - [x] Add "Powered by Google" attribution below autocomplete dropdown
 - [x] Add recent searches feature (store and display recently searched addresses/markets)
 - [x] Add bath filter dropdown alongside bedroom filter
+
+## Major Feature Sprint - Vision Alignment
+- [ ] Remove rating filter from UI
+- [ ] Remove superhost filter from UI
+- [ ] Change "Powered by AirDNA" to "Powered by Coach Inayah"
+- [ ] Add favorite properties feature (save/view/manage favorites)
+- [ ] Add export analysis to PDF feature
+- [ ] Stress test: Test various addresses across different cities
+- [ ] Stress test: Test various zip codes
+- [ ] Stress test: Test market/city queries
+- [ ] Stress test: Test edge cases and error handling
+- [ ] Fix any issues found during stress testing
