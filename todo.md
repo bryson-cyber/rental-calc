@@ -415,3 +415,9 @@
 - [x] Allow users to search for nearby Airbnbs around a property
 - [x] Display listings with performance data (revenue, occupancy, ADR)
 - [x] Support distance filtering (0.5mi, 1mi, 2mi, 5mi)
+
+
+## Direct Comps & Clickable Links
+- [x] Filter radius search to show same-size properties (apples to apples)
+- [x] Make Airbnb links clickable in the radius search results
+- [x] Pass bedroom count from property analysis to radius search

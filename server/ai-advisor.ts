@@ -144,7 +144,7 @@ const AVAILABLE_TOOLS = {
     },
     {
       name: "search_nearby_listings",
-      description: "Search for nearby Airbnb listings around a specific address within a given radius. Use this when user asks about: nearby rentals, competitors near a property, Airbnbs in the area, what's around a property, or radius search. Returns actual listing data with revenue, occupancy, and ADR.",
+      description: "Search for nearby Airbnb listings (direct comps) around a specific address. IMPORTANT: Always filter by the same bedroom count as the property being analyzed for apples-to-apples comparison. Use this when user asks about: nearby rentals, competitors, comps, what's around a property, or radius search. Returns actual listing data with clickable Airbnb links.",
       parameters: {
         type: "object",
         properties: {
@@ -158,14 +158,14 @@ const AVAILABLE_TOOLS = {
           },
           bedrooms: {
             type: "number",
-            description: "Optional: Filter by number of bedrooms"
+            description: "REQUIRED for direct comps: Filter by number of bedrooms to show same-size properties only. Use the bedroom count from the property being analyzed."
           },
           limit: {
             type: "number",
             description: "Number of listings to return (default 10, max 25)"
           }
         },
-        required: ["address"]
+        required: ["address", "bedrooms"]
       }
     },
     {
@@ -810,16 +810,19 @@ For SEASONALITY:
 - Explain which months are best and worst for bookings
 - Give pricing recommendations for each season
 
-For RADIUS SEARCH (nearby listings):
-- Show nearby Airbnbs in a COMPACT table with SHORT column headers:
-  | Name | Rev | Occ | ADR | Dist |
-  |------|-----|-----|-----|------|
-  | Cozy Apt | $45K | 68% | $180 | 0.3mi |
+For RADIUS SEARCH / DIRECT COMPS (nearby listings):
+- ALWAYS filter by the SAME bedroom count as the property being analyzed (apples-to-apples)
+- If user asks about comps for a 3BR property, only show 3BR listings
+- Show nearby Airbnbs in a COMPACT table with CLICKABLE LINKS:
+  | Name | BR | Rev | Occ | ADR | Link |
+  |------|-----|-----|-----|-----|------|
+  | [Cozy Apt](airbnb_url) | 3 | $45K | 68% | $180 | [View](airbnb_url) |
+- Make the property name a clickable markdown link to the Airbnb listing
+- Add a "Link" column with [View](airbnb_url) for each listing
 - Keep property names SHORT (max 15 chars, truncate with ...)
-- Use abbreviated column headers to fit the table
 - Revenue should be shown as $XXK format (e.g., $45K not $45,000)
-- Include a summary of average metrics for the area
-- Highlight the top performer
+- Include a summary: "Showing X [bedroom count]-bedroom properties within Y miles"
+- Highlight the top performer and explain what makes them successful
 
 For PROFIT MATH:
 - Show expense breakdown in a table

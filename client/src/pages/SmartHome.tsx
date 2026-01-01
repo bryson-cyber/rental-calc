@@ -237,6 +237,17 @@ function MessageBubble({
                 tr: ({children}) => (
                   <tr className="even:bg-[#0F172A]/5">{children}</tr>
                 ),
+                a: ({href, children}) => (
+                  <a 
+                    href={href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#C9A962] hover:text-[#B8944D] underline font-medium inline-flex items-center gap-1"
+                  >
+                    {children}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ),
               }}
             >{message.content}</ReactMarkdown>
           </div>
