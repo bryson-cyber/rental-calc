@@ -354,3 +354,8 @@
 - [ ] Fix bedroom estimate to use market listings API with bedroom filter
 - [ ] Fetch listings filtered by bedrooms from /market/{marketId}/listings
 - [ ] Calculate averages from returned listings (revenue, occupancy, ADR)
+
+## Bug Fix - Address Autocomplete Not Working
+- [x] Fix address autocomplete dropdown not showing suggestions as user types
+- [x] Verify Google Places API integration is properly connected
+- [x] Ensure autocomplete dropdown appears with address suggestions

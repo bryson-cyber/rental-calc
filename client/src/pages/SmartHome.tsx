@@ -16,6 +16,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePersistFn } from '@/hooks/usePersistFn';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { 
@@ -331,7 +332,46 @@ export default function SmartHome() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const placesServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
   const [, setLocation] = useLocation();
+
+  // Load Google Maps script for Places Autocomplete
+  const loadGoogleMaps = usePersistFn(async () => {
+    if (window.google?.maps?.places) {
+      placesServiceRef.current = new window.google.maps.places.AutocompleteService();
+      setGoogleLoaded(true);
+      return;
+    }
+
+    const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+    const FORGE_BASE_URL = import.meta.env.VITE_FRONTEND_FORGE_API_URL || 'https://forge.butterfly-effect.dev';
+    const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+
+    return new Promise<void>((resolve) => {
+      const script = document.createElement('script');
+      script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=places`;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => {
+        if (window.google?.maps?.places) {
+          placesServiceRef.current = new window.google.maps.places.AutocompleteService();
+          setGoogleLoaded(true);
+        }
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('Failed to load Google Maps script');
+        resolve();
+      };
+      document.head.appendChild(script);
+    });
+  });
+
+  // Initialize Google Maps on component mount
+  useEffect(() => {
+    loadGoogleMaps();
+  }, [loadGoogleMaps]);
   
 
   const advisorMutation = trpc.advanced.getInvestmentAdvice.useMutation();
@@ -375,6 +415,40 @@ export default function SmartHome() {
           icon: <MapPin className="w-4 h-4 text-[#C9A962]" />
         });
       }
+
+      // Google Places address autocomplete
+      if (placesServiceRef.current && trimmed.length >= 3) {
+        try {
+          const predictions = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve) => {
+            placesServiceRef.current!.getPlacePredictions(
+              {
+                input: trimmed,
+                componentRestrictions: { country: 'us' },
+                types: ['address']
+              },
+              (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                  resolve(results);
+                } else {
+                  resolve([]);
+                }
+              }
+            );
+          });
+
+          predictions.slice(0, 5).forEach((prediction) => {
+            newSuggestions.push({
+              type: 'address',
+              text: prediction.description,
+              subtext: prediction.structured_formatting?.secondary_text || 'Address',
+              icon: <Home className="w-4 h-4 text-[#C9A962]" />,
+              data: prediction
+            });
+          });
+        } catch (e) {
+          console.error('Google Places error:', e);
+        }
+      }
       
       // Search for markets using fetch
       try {
@@ -395,8 +469,8 @@ export default function SmartHome() {
         // Silently fail for market search
       }
       
-      // If it looks like an address, add address suggestion
-      if (/\d+\s+\w+/.test(trimmed)) {
+      // If it looks like an address and no Google Places results, add manual address suggestion
+      if (/\d+\s+\w+/.test(trimmed) && !newSuggestions.some(s => s.type === 'address')) {
         newSuggestions.push({
           type: 'address',
           text: trimmed,
