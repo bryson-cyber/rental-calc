@@ -99,14 +99,15 @@ export interface ArbitrageReport {
 
 /**
  * Calculate profitability using SOP formulas
- * - Startup costs: Fixed $20,000
  * - Monthly expenses: Rent + $250 (utilities) + $80 (internet) + $250 (supplies) + $200 (maintenance)
+ * - Startup costs removed - varies by property and investor situation
  */
 export function calculateSOPProfitability(
   monthly_rent: number,
   percentiles: MarketPercentiles
 ): SOPProfitability {
-  const startup_costs = 20000;
+  // Startup costs removed - too variable to estimate accurately
+  const startup_costs = 0; // Not included in calculations
   
   const monthly_expenses = {
     rent: monthly_rent,
@@ -311,7 +312,7 @@ Here are the average numbers for ${property.bedrooms || 'similar'}-bedroom prope
 | Metric | Average Value | What This Means |
 | :--- | :--- | :--- |
 | **Annual Revenue** | $${percentiles.average.toLocaleString()} | This is the total money the average ${property.bedrooms || 'similar'}-bedroom Airbnb in this area makes in a year. |
-| **Occupancy Rate** | ${Math.round(marketData.market.metrics.occupancy)}% | This means that, on average, properties are booked and paid for about ${Math.round(marketData.market.metrics.occupancy * 3.65)} nights in a year. |
+| **Occupancy Rate** | ${marketData.market.metrics.occupancy < 1 ? Math.round(marketData.market.metrics.occupancy * 100) : Math.round(marketData.market.metrics.occupancy)}% | This means that, on average, properties are booked and paid for about ${Math.round((marketData.market.metrics.occupancy < 1 ? marketData.market.metrics.occupancy * 100 : marketData.market.metrics.occupancy) * 3.65)} nights in a year. |
 | **Average Daily Rate (ADR)** | $${marketData.market.metrics.adr} | This is the average price guests pay per night. |
 
 ### How Much is Possible? (Good, Better, Best)
@@ -338,9 +339,9 @@ To get into the Top 25%, we need to understand what the best are doing right. We
 
 Here's a quick look at what makes the best properties stand out. We look at their design, their special features, and how they market themselves.
 
-| Competitor Example | Annual Revenue | What Makes Them Successful? |
-| :--- | :--- | :--- |
-${competitors.slice(0, 5).map(c => `| [**${c.name.substring(0, 40)}${c.name.length > 40 ? '...' : ''}**](${c.airbnb_url}) | $${c.annual_revenue.toLocaleString()} | **${c.key_success_factor}** |`).join('\n')}
+| # | Property | Revenue | Occ% | ADR | Rating | Reviews | Success Factor |
+| :--- | :--- | ---: | ---: | ---: | :---: | ---: | :--- |
+${competitors.map((c, idx) => `| ${idx + 1} | [${c.name.substring(0, 35)}${c.name.length > 35 ? '...' : ''}](${c.airbnb_url}) | $${c.annual_revenue.toLocaleString()} | ${Math.round(c.occupancy)}% | $${Math.round(c.adr)} | ${c.rating ? c.rating.toFixed(1) + '⭐' : 'N/A'} | ${c.reviews} | ${c.key_success_factor} |`).join('\n')}
 
 **The Thought Process:** We are not just providing a place to sleep; we are selling an **experience**. The most successful Airbnbs have a unique personality or a special feature that makes them memorable. Our job is to create that for our property.
 
@@ -349,14 +350,6 @@ ${competitors.slice(0, 5).map(c => `| [**${c.name.substring(0, 40)}${c.name.leng
 ## 4. Finally, We Project the Profit
 
 This is where we put it all together to see if the business model makes sense financially. We estimate the costs and subtract them from the potential revenue.
-
-### How Much Does It Cost to Start?
-
-To turn an empty rental into a beautiful, guest-ready Airbnb, there are upfront costs.
-
-| Cost Item | Estimated Amount | What This Is For |
-| :--- | :--- | :--- |
-| **Total Estimated Startup Costs** | **$${profitability.startup_costs.toLocaleString()}** | This is a flat-rate estimate that covers everything needed to get started: the first month's rent, security deposit, all furniture, decor, kitchen supplies, linens, professional photos, and business licenses. |
 
 ### What Are the Monthly Expenses?
 
@@ -428,44 +421,12 @@ export async function generateFullArbitrageAnalysis(
   const actualBathrooms = property_estimate?.property.bathrooms || bathrooms || 2;
   const zipcode = property_estimate?.property.zipcode;
   
-  // Step 2: Get market data
+  // Step 2: Get market data and ALL available listings
   let marketData: ComprehensiveMarketReport | null = null;
   let listings: ListingData[] = [];
   
-  if (zipcode) {
-    try {
-      const zipData = await searchByZipcode(zipcode, { bedrooms: actualBedrooms });
-      if (zipData) {
-        // Get listings from top_performers
-        if (zipData.top_performers) {
-          listings = zipData.top_performers.map(p => ({
-            id: '',
-            title: p.title,
-            airbnb_url: p.airbnb_url,
-            bedrooms: p.bedrooms,
-            bathrooms: p.bathrooms,
-            accommodates: 0,
-            property_type: (p as any).property_type || 'house',
-            rating: p.rating,
-            reviews: p.reviews,
-            annual_revenue: p.annual_revenue,
-            adr: p.adr,
-            occupancy: p.occupancy
-          }));
-        }
-        
-        // Try to get comprehensive market report
-        if (zipData.market?.id) {
-          marketData = await getComprehensiveMarketReport(zipData.market.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error getting market data:', error);
-    }
-  }
-  
-  // If no listings from ZIP, use comps from Rentalizer
-  if (listings.length === 0 && property_estimate?.comps) {
+  // First, always get comps from Rentalizer (these are the closest to the property)
+  if (property_estimate?.comps && property_estimate.comps.length > 0) {
     listings = property_estimate.comps.map(c => ({
       id: c.airbnb_listing_id || '',
       title: c.title,
@@ -483,14 +444,69 @@ export async function generateFullArbitrageAnalysis(
       amenities: c.amenities,
       distance_meters: c.distance_meters
     }));
+    console.log(`[ArbitrageAnalysis] Got ${listings.length} comps from Rentalizer`);
+  }
+  
+  // Then try to get more listings from ZIP code search
+  if (zipcode) {
+    try {
+      const zipData = await searchByZipcode(zipcode, { bedrooms: actualBedrooms });
+      if (zipData) {
+        // Add listings from top_performers that aren't already in our list
+        if (zipData.top_performers) {
+          const existingTitles = new Set(listings.map(l => l.title));
+          const existingUrls = new Set(listings.map(l => l.airbnb_url).filter(Boolean));
+          
+          const newListings = zipData.top_performers
+            .filter(p => !existingTitles.has(p.title) && !existingUrls.has(p.airbnb_url))
+            .map(p => ({
+              id: '',
+              title: p.title,
+              airbnb_url: p.airbnb_url,
+              bedrooms: p.bedrooms,
+              bathrooms: p.bathrooms,
+              accommodates: 0,
+              property_type: (p as any).property_type || 'house',
+              rating: p.rating,
+              reviews: p.reviews,
+              annual_revenue: p.annual_revenue,
+              adr: p.adr,
+              occupancy: p.occupancy
+            }));
+          
+          listings = [...listings, ...newListings];
+          console.log(`[ArbitrageAnalysis] Added ${newListings.length} more from ZIP search, total: ${listings.length}`);
+        }
+        
+        // Try to get comprehensive market report
+        if (zipData.market?.id) {
+          marketData = await getComprehensiveMarketReport(zipData.market.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error getting ZIP data:', error);
+    }
+  }
+  
+  // Filter to same bedroom count for apples-to-apples comparison
+  const sameBedroomListings = listings.filter(l => l.bedrooms === actualBedrooms);
+  console.log(`[ArbitrageAnalysis] Same bedroom (${actualBedrooms}BR) listings: ${sameBedroomListings.length}`);
+  
+  // Use same-bedroom listings if we have enough, otherwise use all
+  if (sameBedroomListings.length >= 5) {
+    listings = sameBedroomListings;
   }
   
   // Step 3: Calculate percentiles
   const percentiles = calculateMarketPercentiles(listings);
   
-  // Step 4: Filter competitors above threshold and analyze
+  // Step 4: Filter competitors above threshold and analyze - show ALL viable competitors
   const viableCompetitors = filterCompetitorsAboveThreshold(listings, monthly_rent);
-  const competitors = viableCompetitors.slice(0, 5).map(analyzeCompetitorSuccessFactors);
+  // Remove duplicates by title and show ALL viable competitors (not limited)
+  const uniqueCompetitors = viableCompetitors.filter((comp, index, self) => 
+    index === self.findIndex(c => c.title === comp.title || c.airbnb_url === comp.airbnb_url)
+  );
+  const competitors = uniqueCompetitors.map(analyzeCompetitorSuccessFactors);
   
   // Step 5: Calculate profitability
   const profitability = calculateSOPProfitability(monthly_rent, percentiles);

@@ -687,3 +687,35 @@
   - Chapter 5: Property Size Matters
   - Chapter 6: Deeper Insights
   - Chapter 7: Your Action Plan
+
+
+## Property Report Maximization Sprint (Current)
+
+### Critical Fixes
+- [x] Remove fixed $20K startup cost - removed entirely (varies too much)
+- [x] Fix duplicate comps being returned - added deduplication by title and URL
+- [x] Fix follow-up chat - updated system prompt to be contextual only
+- [x] Include ALL comparable properties with full stats (Revenue, Occ%, ADR, Rating, Reviews, Success Factor)
+
+### Full Market Context (Optional - User Requested)
+- [x] Add "Get Full Market Report" follow-up option after property analysis (in system prompt)
+- [x] When requested, fetch ZIP code level data (via existing functions)
+- [x] When requested, fetch submarket level data (via analyze_market_submarkets)
+- [x] When requested, fetch city/market level data (via get_market_data)
+- [x] Show market hierarchy: Property → ZIP → Submarket → City (on demand)
+
+### Maximize AirDNA API Usage
+- [x] Use Rentalizer comps + ZIP search to get more listings
+- [x] Use /market/{marketId}/submarkets for neighborhood context (via analyze_market_submarkets)
+- [x] Filter to same bedroom count for apples-to-apples comparison
+- [x] Deduplicate listings by title and URL
+- [ ] Use /market/{marketId} for city-level metrics
+- [ ] Use /zipcode endpoint for ZIP-specific data
+- [ ] Include ALL available fields from each endpoint in reports
+
+### Comparable Properties Display
+- [ ] Show ALL comps meeting criteria (not limited to 3-5)
+- [ ] Include full stats for each comp: Revenue, Occupancy, ADR, Rating, Reviews, Bedrooms, Bathrooms
+- [ ] Add Airbnb URL for each comp
+- [ ] Show distance from subject property
+- [ ] Add success factor analysis for top performers
