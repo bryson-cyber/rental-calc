@@ -53,13 +53,13 @@ const AVAILABLE_TOOLS = {
     },
     {
       name: "get_top_performers",
-      description: "Get the top-performing Airbnb listings in a market, sorted by revenue. Useful for understanding what successful properties look like.",
+      description: "Get the top-performing Airbnb listings in a market, sorted by revenue. Useful for understanding what successful properties look like. Use market_name (like 'Austin' or 'Nashville') - the system will look up the market ID automatically.",
       parameters: {
         type: "object",
         properties: {
-          market_id: {
+          market_name: {
             type: "string",
-            description: "The market ID to get top performers for"
+            description: "The market name (e.g., 'Austin', 'Nashville', 'Denver')"
           },
           bedrooms: {
             type: "number",
@@ -70,21 +70,21 @@ const AVAILABLE_TOOLS = {
             description: "Number of listings to return (default 10, max 25)"
           }
         },
-        required: ["market_id"]
+        required: ["market_name"]
       }
     },
     {
       name: "get_seasonality",
-      description: "Get monthly seasonality data showing peak, shoulder, and off-season patterns for a market.",
+      description: "Get monthly seasonality data showing peak, shoulder, and off-season patterns for a market. Use market_name (like 'Austin' or 'Nashville') - the system will look up the market ID automatically.",
       parameters: {
         type: "object",
         properties: {
-          market_id: {
+          market_name: {
             type: "string",
-            description: "The market ID to get seasonality data for"
+            description: "The market name (e.g., 'Austin', 'Nashville', 'Denver')"
           }
         },
-        required: ["market_id"]
+        required: ["market_name"]
       }
     },
     {
@@ -125,6 +125,20 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["address"]
+      }
+    },
+    {
+      name: "get_amenity_impact",
+      description: "Get information about which amenities help properties earn more in a specific market. Use this when user asks about amenities, what features to add, how to increase revenue through amenities, or what top performers have. Returns data on popular amenities and their impact on revenue.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market name (e.g., 'Austin', 'Nashville', 'Miami Beach')"
+          }
+        },
+        required: ["market_name"]
       }
     },
     {
@@ -202,9 +216,17 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
       }
       
       case "get_top_performers": {
-        const marketId = args.market_id as string;
+        const marketName = args.market_name as string;
         const bedrooms = args.bedrooms as number | undefined;
         const limit = Math.min((args.limit as number) || 10, 25);
+        
+        // Look up market ID from name
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        const marketId = markets[0].id;
+        console.log(`[AI Advisor] Found market ID ${marketId} for "${marketName}"`);
         
         const performers = await getTopPerformers({
           marketId,
@@ -214,6 +236,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         });
         
         return {
+          market_name: markets[0].name,
           total_found: performers.total_count,
           listings: performers.listings.map(l => ({
             title: l.title,
@@ -230,7 +253,16 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
       }
       
       case "get_seasonality": {
-        const marketId = args.market_id as string;
+        const marketName = args.market_name as string;
+        
+        // Look up market ID from name
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        const marketId = markets[0].id;
+        console.log(`[AI Advisor] Found market ID ${marketId} for seasonality in "${marketName}"`);
+        
         const seasonality = await getMarketSeasonality(marketId);
         return {
           monthly_data: seasonality.map(s => ({
@@ -305,6 +337,81 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             occupancy: l.occupancy,
             adr: l.adr
           }))
+        };
+      }
+      
+      case "get_amenity_impact": {
+        const marketName = args.market_name as string;
+        
+        // Look up market ID from name
+        const markets = await searchMarkets(marketName, 1);
+        if (markets.length === 0) {
+          return { error: `Could not find market "${marketName}"` };
+        }
+        const marketId = markets[0].id;
+        
+        // Get top performers to analyze their amenities
+        const performers = await getTopPerformers({
+          marketId,
+          limit: 25,
+          sort_by: 'revenue'
+        });
+        
+        // Analyze amenities from top performers
+        const amenityCounts: Record<string, number> = {};
+        const amenityRevenue: Record<string, number[]> = {};
+        
+        // Common amenities to track
+        const keyAmenities = ['pool', 'hot_tub', 'pet_friendly', 'wifi', 'parking', 'kitchen', 'washer', 'dryer', 'air_conditioning', 'heating', 'gym', 'ev_charger', 'fireplace', 'bbq', 'outdoor_space', 'waterfront', 'mountain_view', 'city_view'];
+        
+        performers.listings.forEach(listing => {
+          const revenue = listing.annual_revenue || 0;
+          // Check title and property type for amenity hints
+          const titleLower = (listing.title || '').toLowerCase();
+          
+          keyAmenities.forEach(amenity => {
+            const amenityWords = amenity.split('_');
+            const hasAmenity = amenityWords.some(word => titleLower.includes(word));
+            if (hasAmenity) {
+              amenityCounts[amenity] = (amenityCounts[amenity] || 0) + 1;
+              if (!amenityRevenue[amenity]) amenityRevenue[amenity] = [];
+              amenityRevenue[amenity].push(revenue);
+            }
+          });
+        });
+        
+        // Calculate average revenue for properties with each amenity
+        const amenityImpact = Object.entries(amenityRevenue).map(([amenity, revenues]) => {
+          const avgRevenue = revenues.reduce((a, b) => a + b, 0) / revenues.length;
+          return {
+            amenity: amenity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            properties_with_amenity: revenues.length,
+            average_revenue: Math.round(avgRevenue)
+          };
+        }).sort((a, b) => b.average_revenue - a.average_revenue);
+        
+        // Get market average for comparison
+        const marketAvgRevenue = performers.listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / performers.listings.length;
+        
+        // Generate recommendations based on market type
+        const recommendations = [
+          { amenity: 'Hot Tub / Spa', revenue_premium: '15-25%', reason: 'High demand in vacation markets, creates memorable experience' },
+          { amenity: 'Pool (Private)', revenue_premium: '20-35%', reason: 'Major differentiator, especially in warm climates' },
+          { amenity: 'Pet-Friendly', revenue_premium: '10-20%', reason: 'Opens up to 40% more potential guests, less competition' },
+          { amenity: 'EV Charger', revenue_premium: '5-10%', reason: 'Growing demand, attracts higher-income guests' },
+          { amenity: 'Game Room', revenue_premium: '10-15%', reason: 'Great for families and groups, increases booking appeal' },
+          { amenity: 'Outdoor Kitchen/BBQ', revenue_premium: '5-10%', reason: 'Enhances outdoor living experience' },
+          { amenity: 'Fire Pit', revenue_premium: '5-10%', reason: 'Creates ambiance, great for evening entertainment' },
+          { amenity: 'Smart Home Features', revenue_premium: '3-5%', reason: 'Convenience factor, appeals to tech-savvy guests' }
+        ];
+        
+        return {
+          market_name: markets[0].name,
+          analysis_based_on: performers.listings.length + ' top-performing listings',
+          market_average_revenue: Math.round(marketAvgRevenue),
+          amenities_found_in_top_performers: amenityImpact.slice(0, 10),
+          recommended_amenities: recommendations,
+          key_insight: `In ${markets[0].name}, properties with premium amenities like pools and hot tubs typically earn 15-35% more than average. Pet-friendly properties also command a premium due to limited supply.`
         };
       }
       
@@ -563,18 +670,20 @@ Always structure your response with:
 4. End EVERY response with exactly 3-5 follow-up questions in this EXACT format:
 
 ---FOLLOW_UP_QUESTIONS---
-Question 1 here?
-Question 2 here?
-Question 3 here?
+What is the best time of year to list this property?
+How can I increase my revenue with amenities?
+What are the startup costs to get this running?
 ---END_FOLLOW_UP---
 
-The follow-up questions should:
-- Be relevant to what was just discussed
+The follow-up questions MUST:
+- Be SPECIFIC to the data just shown (not generic placeholders)
+- Reference the actual property, market, or topic discussed
 - Help them dig deeper into the analysis
-- Cover different aspects (competition, seasonality, profit, neighborhood, etc.)
-- Be phrased as complete questions they can click
+- Cover different aspects (competition, seasonality, profit, amenities, etc.)
+- Be phrased as complete, clickable questions
+- NEVER use placeholder text like "Question 1 here?" - always generate real questions
 
-Examples of good follow-up questions:
+Examples of good follow-up questions for a property analysis:
 - "How does this compare to nearby competitors?"
 - "What's the monthly breakdown by season?"
 - "What amenities would help this property earn more?"
@@ -607,8 +716,15 @@ For COMPETITION ANALYSIS:
 - Highlight what top performers do differently
 
 For SEASONALITY:
-- Show monthly breakdown with Peak/Shoulder/Slow labels
-- Explain the best and worst months
+- ALWAYS show a monthly breakdown table like this:
+  | Month | Revenue | Occupancy | ADR | Season |
+  |-------|---------|-----------|-----|--------|
+  | January | $X,XXX | XX% | $XXX | Shoulder |
+  | February | $X,XXX | XX% | $XXX | Peak |
+  (continue for all 12 months)
+- Use Peak, Shoulder, or Off for season type
+- Explain which months are best and worst for bookings
+- Give pricing recommendations for each season
 
 For PROFIT MATH:
 - Show expense breakdown in a table

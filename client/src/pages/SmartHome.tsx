@@ -49,6 +49,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { jsPDF } from 'jspdf';
 
 
@@ -218,7 +219,26 @@ function MessageBubble({
           <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
         ) : (
           <div className="prose prose-sm max-w-none text-[#0F172A] prose-headings:text-[#0F172A] prose-strong:text-[#0F172A] prose-li:marker:text-[#C9A962]">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                table: ({children}) => (
+                  <table className="w-full border-collapse my-4 text-sm">{children}</table>
+                ),
+                thead: ({children}) => (
+                  <thead className="bg-[#0F172A]/5">{children}</thead>
+                ),
+                th: ({children}) => (
+                  <th className="border border-[#0F172A]/20 px-3 py-2 text-left font-semibold text-[#0F172A]">{children}</th>
+                ),
+                td: ({children}) => (
+                  <td className="border border-[#0F172A]/20 px-3 py-2">{children}</td>
+                ),
+                tr: ({children}) => (
+                  <tr className="even:bg-[#0F172A]/5">{children}</tr>
+                ),
+              }}
+            >{message.content}</ReactMarkdown>
           </div>
         )}
         

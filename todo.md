@@ -381,10 +381,10 @@
 
 ## Vision Document Implementation Sprint - Complete Conversational Experience
 - [x] Clickable follow-up question buttons (3-5 suggestions after each response)
-- [ ] Structured data tables for property analysis (revenue, ADR, occupancy, neighborhood rank)
+- [x] Structured data tables for property analysis (revenue, ADR, occupancy, neighborhood rank)
 - [ ] Competition analysis table (top 5-10 nearby competitors with distance)
 - [ ] Monthly breakdown table with Peak/Slow/Shoulder status labels
-- [ ] Amenity impact analysis ("What would help this property earn more?")
+- [x] Amenity impact analysis ("What would help this property earn more?")
 - [ ] Neighborhood rankings table (rank within city, vs city average)
 - [x] Profit math calculator (expense breakdown, break-even occupancy, profit scenarios)
 - [ ] "Generate Full Report" button to compile everything into one document
@@ -392,6 +392,6 @@
 - [ ] Context-aware follow-up suggestions based on what's been discussed
 - [ ] "What do top earners have that others don't?" analysis
 - [ ] "Show me more about the #1 competitor" deep dive
-- [ ] Startup costs breakdown
-- [ ] Risk factors analysis
+- [x] Startup costs breakdown
+- [x] Risk factors analysis
 - [ ] Soft CTA at conversation end ("We handle the entire setup...")
