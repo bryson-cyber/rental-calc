@@ -44,7 +44,8 @@ import {
   Heart,
   FileDown,
   FileText,
-  Trash2
+  Trash2,
+  Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,9 @@ interface ActiveFilters {
   propertyType?: string;
   minRating?: number;
   superhost?: boolean;
+  instantBook?: boolean;
+  professionallyManaged?: boolean;
+  priceTier?: string;
   amenities?: string[];
 }
 
@@ -431,6 +435,32 @@ const propertyTypeOptions = [
   { value: 'condo', label: 'Condo' },
   { value: 'townhouse', label: 'Townhouse' },
   { value: 'cabin', label: 'Cabin' },
+  { value: 'villa', label: 'Villa' },
+  { value: 'cottage', label: 'Cottage' },
+];
+
+const amenityOptions = [
+  { value: 'has_pool', label: 'Pool', icon: '🏊' },
+  { value: 'has_hottub', label: 'Hot Tub', icon: '♨️' },
+  { value: 'has_pets_allowed', label: 'Pet Friendly', icon: '🐕' },
+  { value: 'has_parking', label: 'Parking', icon: '🅿️' },
+  { value: 'has_gym', label: 'Gym', icon: '💪' },
+  { value: 'has_kitchen', label: 'Kitchen', icon: '🍳' },
+  { value: 'has_washer', label: 'Washer/Dryer', icon: '🧺' },
+  { value: 'has_aircon', label: 'A/C', icon: '❄️' },
+];
+
+const priceTierOptions = [
+  { value: 'budget', label: 'Budget' },
+  { value: 'midscale', label: 'Midscale' },
+  { value: 'upscale', label: 'Upscale' },
+  { value: 'luxury', label: 'Luxury' },
+];
+
+const ratingOptions = [
+  { value: 4.0, label: '4.0+' },
+  { value: 4.5, label: '4.5+' },
+  { value: 4.8, label: '4.8+' },
 ];
 
 // Favorites Panel Component
@@ -1039,8 +1069,17 @@ Format everything in clear tables where appropriate. This is for a beginner inve
     if (filters.bathrooms) parts.push(`${filters.bathrooms} bathroom properties`);
     if (filters.propertyType) parts.push(`${filters.propertyType} type`);
     if (filters.minRating) parts.push(`${filters.minRating}+ star rating`);
+    if (filters.priceTier) parts.push(`${filters.priceTier} price tier`);
     if (filters.superhost) parts.push(`superhost only`);
-    if (filters.amenities?.length) parts.push(`with ${filters.amenities.join(', ')}`);
+    if (filters.instantBook) parts.push(`instant book enabled`);
+    if (filters.professionallyManaged) parts.push(`professionally managed`);
+    if (filters.amenities?.length) {
+      const amenityLabels = filters.amenities.map(a => {
+        const found = amenityOptions.find(opt => opt.value === a);
+        return found ? found.label.toLowerCase() : a.replace('has_', '');
+      });
+      parts.push(`with ${amenityLabels.join(', ')}`);
+    }
     
     return parts.length > 0 ? ` Focus on ${parts.join(', ')}.` : '';
   };
@@ -1342,28 +1381,99 @@ Format everything in clear tables where appropriate. This is for a beginner inve
               
               {/* Filters Panel */}
               {showFilters && (
-                <div className="flex flex-wrap items-center justify-center gap-2 mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
-                  <FilterDropdown
-                    label="Bedrooms"
-                    options={bedroomOptions}
-                    value={filters.bedrooms}
-                    onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
-                    icon={<BedDouble className="w-3 h-3" />}
-                  />
-                  <FilterDropdown
-                    label="Bathrooms"
-                    options={bathroomOptions}
-                    value={filters.bathrooms}
-                    onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
-                    icon={<Bath className="w-3 h-3" />}
-                  />
-                  <FilterDropdown
-                    label="Property Type"
-                    options={propertyTypeOptions}
-                    value={filters.propertyType}
-                    onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
-                    icon={<Home className="w-3 h-3" />}
-                  />
+                <div className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                  {/* Row 1: Basic Filters */}
+                  <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+                    <FilterDropdown
+                      label="Bedrooms"
+                      options={bedroomOptions}
+                      value={filters.bedrooms}
+                      onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
+                      icon={<BedDouble className="w-3 h-3" />}
+                    />
+                    <FilterDropdown
+                      label="Bathrooms"
+                      options={bathroomOptions}
+                      value={filters.bathrooms}
+                      onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
+                      icon={<Bath className="w-3 h-3" />}
+                    />
+                    <FilterDropdown
+                      label="Property Type"
+                      options={propertyTypeOptions}
+                      value={filters.propertyType}
+                      onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
+                      icon={<Home className="w-3 h-3" />}
+                    />
+                    <FilterDropdown
+                      label="Rating"
+                      options={ratingOptions}
+                      value={filters.minRating}
+                      onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
+                      icon={<Star className="w-3 h-3" />}
+                    />
+                    <FilterDropdown
+                      label="Price Tier"
+                      options={priceTierOptions}
+                      value={filters.priceTier}
+                      onChange={(v) => setFilters(prev => ({ ...prev, priceTier: v as string | undefined }))}
+                      icon={<DollarSign className="w-3 h-3" />}
+                    />
+                  </div>
+                  
+                  {/* Row 2: Amenity Toggles */}
+                  <div className="border-t border-white/10 pt-4">
+                    <p className="text-white/50 text-xs mb-3 text-center">Must-Have Amenities</p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {amenityOptions.map((amenity) => {
+                        const isActive = filters.amenities?.includes(amenity.value);
+                        return (
+                          <button
+                            key={amenity.value}
+                            onClick={() => {
+                              setFilters(prev => {
+                                const current = prev.amenities || [];
+                                if (current.includes(amenity.value)) {
+                                  return { ...prev, amenities: current.filter(a => a !== amenity.value) };
+                                } else {
+                                  return { ...prev, amenities: [...current, amenity.value] };
+                                }
+                              });
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
+                              isActive
+                                ? 'bg-[#C9A962] text-[#0F172A] font-medium'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                          >
+                            <span>{amenity.icon}</span>
+                            <span>{amenity.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Row 3: Toggle Filters */}
+                  <div className="border-t border-white/10 pt-4 mt-4">
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <FilterChip
+                        label="⭐ Superhost Only"
+                        active={filters.superhost || false}
+                        onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
+                      />
+                      <FilterChip
+                        label="⚡ Instant Book"
+                        active={filters.instantBook || false}
+                        onClick={() => setFilters(prev => ({ ...prev, instantBook: !prev.instantBook }))}
+                      />
+                      <FilterChip
+                        label="🏢 Pro Managed"
+                        active={filters.professionallyManaged || false}
+                        onClick={() => setFilters(prev => ({ ...prev, professionallyManaged: !prev.professionallyManaged }))}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
               
@@ -1484,6 +1594,49 @@ Format everything in clear tables where appropriate. This is for a beginner inve
                     </button>
                   </span>
                 )}
+                {filters.minRating && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.minRating}+ ⭐
+                    <button onClick={() => setFilters(prev => ({ ...prev, minRating: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.priceTier && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    {filters.priceTier}
+                    <button onClick={() => setFilters(prev => ({ ...prev, priceTier: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.superhost && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    Superhost
+                    <button onClick={() => setFilters(prev => ({ ...prev, superhost: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.instantBook && (
+                  <span className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                    Instant Book
+                    <button onClick={() => setFilters(prev => ({ ...prev, instantBook: undefined }))} className="hover:text-[#0F172A]">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filters.amenities?.map(amenity => {
+                  const found = amenityOptions.find(opt => opt.value === amenity);
+                  return (
+                    <span key={amenity} className="text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-1 rounded-full flex items-center gap-1">
+                      {found?.icon} {found?.label || amenity}
+                      <button onClick={() => setFilters(prev => ({ ...prev, amenities: prev.amenities?.filter(a => a !== amenity) }))} className="hover:text-[#0F172A]">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })}
                 <button
                   onClick={clearFilters}
                   className="text-xs text-[#0F172A]/40 hover:text-[#0F172A]/60 underline"
@@ -1576,28 +1729,70 @@ Format everything in clear tables where appropriate. This is for a beginner inve
             
             {/* Filters Panel in Chat Mode */}
             {showFilters && (
-              <div className="flex flex-wrap items-center gap-2 mt-3 p-3 bg-[#0F172A]/5 rounded-xl">
-                <FilterDropdown
-                  label="Bedrooms"
-                  options={bedroomOptions}
-                  value={filters.bedrooms}
-                  onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
-                  icon={<BedDouble className="w-3 h-3" />}
-                />
-                <FilterDropdown
-                  label="Bathrooms"
-                  options={bathroomOptions}
-                  value={filters.bathrooms}
-                  onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
-                  icon={<Bath className="w-3 h-3" />}
-                />
-                <FilterDropdown
-                  label="Property Type"
-                  options={propertyTypeOptions}
-                  value={filters.propertyType}
-                  onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
-                  icon={<Home className="w-3 h-3" />}
-                />
+              <div className="mt-3 p-3 bg-[#0F172A]/5 rounded-xl">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <FilterDropdown
+                    label="Bedrooms"
+                    options={bedroomOptions}
+                    value={filters.bedrooms}
+                    onChange={(v) => setFilters(prev => ({ ...prev, bedrooms: v as number | undefined }))}
+                    icon={<BedDouble className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Bathrooms"
+                    options={bathroomOptions}
+                    value={filters.bathrooms}
+                    onChange={(v) => setFilters(prev => ({ ...prev, bathrooms: v as number | undefined }))}
+                    icon={<Bath className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Property Type"
+                    options={propertyTypeOptions}
+                    value={filters.propertyType}
+                    onChange={(v) => setFilters(prev => ({ ...prev, propertyType: v as string | undefined }))}
+                    icon={<Home className="w-3 h-3" />}
+                  />
+                  <FilterDropdown
+                    label="Rating"
+                    options={ratingOptions}
+                    value={filters.minRating}
+                    onChange={(v) => setFilters(prev => ({ ...prev, minRating: v as number | undefined }))}
+                    icon={<Star className="w-3 h-3" />}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {amenityOptions.slice(0, 4).map((amenity) => {
+                    const isActive = filters.amenities?.includes(amenity.value);
+                    return (
+                      <button
+                        key={amenity.value}
+                        onClick={() => {
+                          setFilters(prev => {
+                            const current = prev.amenities || [];
+                            if (current.includes(amenity.value)) {
+                              return { ...prev, amenities: current.filter(a => a !== amenity.value) };
+                            } else {
+                              return { ...prev, amenities: [...current, amenity.value] };
+                            }
+                          });
+                        }}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-all ${
+                          isActive
+                            ? 'bg-[#C9A962] text-[#0F172A] font-medium'
+                            : 'bg-[#0F172A]/10 text-[#0F172A]/70 hover:bg-[#0F172A]/20'
+                        }`}
+                      >
+                        <span>{amenity.icon}</span>
+                        <span>{amenity.label}</span>
+                      </button>
+                    );
+                  })}
+                  <FilterChip
+                    label="⭐ Superhost"
+                    active={filters.superhost || false}
+                    onClick={() => setFilters(prev => ({ ...prev, superhost: !prev.superhost }))}
+                  />
+                </div>
               </div>
             )}
           </div>

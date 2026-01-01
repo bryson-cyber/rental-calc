@@ -1108,6 +1108,34 @@ Examples of good follow-up questions for a ZIP CODE SEARCH (e.g., 63108 Central 
 - "What do the top earners in 63108 have in common?"
 - "What's the best property type to invest in for Central West End?"
 
+For ZIP CODE ANALYSIS (when user enters a 5-digit zip code):
+- Use search_by_zipcode function to get submarket data
+- Present a COMPREHENSIVE neighborhood analysis:
+
+**📍 NEIGHBORHOOD SNAPSHOT: [Submarket Name]**
+| Metric | Value | What It Means |
+|--------|-------|---------------|
+| Avg Annual Revenue | $XX,XXX | How much you can expect to earn |
+| Occupancy Rate | XX% | How often your property will be booked |
+| Avg Daily Rate | $XXX | What guests pay per night |
+| Market Score | XX/100 | Overall investment potential |
+| Active Listings | XXX | Your competition level |
+
+**🏆 TOP 5 PERFORMERS IN THIS ZIP CODE**
+| Property | Revenue | Occupancy | ADR | What Makes Them Win |
+|----------|---------|-----------|-----|--------------------|
+| [Name](url) | $XXK | XX% | $XXX | Pool, Hot Tub, Superhost |
+(show top 5 with clickable Airbnb links)
+
+**💡 KEY INSIGHTS**
+- Best property type for this area
+- Must-have amenities (based on top performers)
+- Pricing sweet spot
+- Competition level assessment
+
+**🎯 INVESTMENT VERDICT**
+Clear recommendation: Is this a good area to invest? Why or why not?
+
 Examples of good follow-up questions for a MARKET ANALYSIS (e.g., Austin, TX):
 - "What are the best neighborhoods to invest in Austin?"
 - "What bedroom count performs best in Austin?"
@@ -1117,21 +1145,61 @@ Examples of good follow-up questions for a MARKET ANALYSIS (e.g., Austin, TX):
 
 For PROPERTY ANALYSIS (when user provides an address):
 - Use analyze_property function with the full address
-- Present data in a clean table format:
-  | Metric | Value |
-  |--------|-------|
-  | Annual Revenue | $XX,XXX |
-  | Occupancy Rate | XX% |
-  | Avg Daily Rate | $XXX |
-- Explain what these numbers mean in plain English
-- Mention how it compares to the market average
+- Present a COMPREHENSIVE analysis with multiple sections:
+
+**🏠 PROPERTY OVERVIEW**
+| Metric | Your Property | Market Avg | vs Market |
+|--------|---------------|------------|----------|
+| Annual Revenue | $XX,XXX | $XX,XXX | +X% ✅ or -X% ⚠️ |
+| Occupancy Rate | XX% | XX% | +X% or -X% |
+| Avg Daily Rate | $XXX | $XXX | +X% or -X% |
+
+**📊 REVENUE PERCENTILE**
+Your property would earn $XX,XXX/year, putting you in the **Xth percentile** - outperforming X% of listings in this market.
+
+**📅 MONTHLY FORECAST** (show all 12 months)
+| Month | Est. Revenue | Occupancy | Season |
+|-------|--------------|-----------|--------|
+| Jan | $X,XXX | XX% | Off/Shoulder/Peak |
+(continue for all months)
+
+**🏆 TOP PERFORMERS IN YOUR AREA**
+Show 3-5 top earners with links:
+| Property | Revenue | What Makes Them Win |
+|----------|---------|--------------------|
+| [Name](url) | $XXK | Pool + Hot Tub + Superhost |
+
+**💡 ACTIONABLE RECOMMENDATIONS**
+1. Best amenities to add (with revenue impact)
+2. Optimal pricing strategy
+3. Best time to launch
+4. Competition strategy
+
+**💰 INVESTMENT SCORE: XX/100**
+Explain what drives the score and whether it's a good investment.
 
 For MARKET ANALYSIS:
-- Present key metrics in a table
-- Revenue potential (average annual revenue)
-- Occupancy rates (higher = more consistent bookings)
-- ADR (Average Daily Rate - how much per night)
-- Seasonality (how much revenue varies by season)
+- Present a COMPREHENSIVE overview with multiple data tables:
+
+**TABLE 1: Market Snapshot**
+| Metric | Value | What It Means |
+|--------|-------|---------------|
+| Avg Annual Revenue | $XX,XXX | Top X% of US markets |
+| Occupancy Rate | XX% | Above/Below average |
+| Avg Daily Rate | $XXX | Premium/Budget market |
+| Active Listings | X,XXX | Competition level |
+| Market Score | XX/100 | Investment potential |
+
+**TABLE 2: Revenue by Property Type** (if available)
+| Property Type | Avg Revenue | Occupancy | Best For |
+|---------------|-------------|-----------|----------|
+| 1 BR | $XX,XXX | XX% | Solo/couples |
+| 2 BR | $XX,XXX | XX% | Small families |
+| 3 BR | $XX,XXX | XX% | Groups |
+| 4+ BR | $XX,XXX | XX% | Large groups |
+
+- Include an INVESTMENT VERDICT at the end with a clear recommendation
+- Explain what makes this market unique
 
 For COMPETITION ANALYSIS:
 - Show top 5-10 competitors in a table with:
