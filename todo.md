@@ -540,3 +540,104 @@
 - [x] Add "Best Markets for Your Budget" feature - WORKING! Shows 5 markets with investment required, market score, projected net income, cash-on-cash return
 - [x] Add startup cost calculator by market - INCLUDED in budget finder
 - [ ] Add regulatory risk assessment by market - DEFERRED
+
+
+## Advanced Gemini Enhancement Sprint - Research Maximization
+
+### Current API Optimization (Maximizing Existing Endpoints)
+- [x] Add multi-market comparison in single query (combine market data for side-by-side analysis)
+- [x] Add bedroom-specific market analysis (revenue by bedroom count across markets)
+- [x] Add property type performance comparison (house vs condo vs apartment in same market)
+- [x] Add amenity correlation analysis (which amenities drive highest revenue in each market)
+- [x] Add seasonality-adjusted revenue projections (factor in peak/off-peak for accurate estimates)
+- [x] Add submarket vs parent market comparison (hyperlocal vs broader market context)
+- [x] Add competitor clustering analysis (group similar properties to find gaps)
+- [x] Add revenue percentile ranking (where does this property rank in its market?)
+
+### Smart Rates Dynamic Pricing Integration
+- [ ] Add AirDNA Smart Rates API endpoint integration
+- [ ] Create pricing strategy selector (balanced, high_adr, high_occupancy)
+- [ ] Build 365-day pricing calendar visualization
+- [ ] Add AI-generated pricing strategy explanations
+- [ ] Create seasonal pricing recommendations with event detection
+- [ ] Add competitor pricing comparison (your rates vs market)
+- [ ] Build dynamic pricing alerts for high-demand periods
+
+### Automated Competitor Intelligence System
+- [ ] Add deep listing analysis endpoint (full competitor profile)
+- [ ] Build success factor extraction (what makes top performers win)
+- [ ] Create amenity gap analysis (what you're missing vs competitors)
+- [ ] Add pricing strategy reverse engineering (how competitors price)
+- [ ] Build review sentiment analysis (what guests love/hate)
+- [ ] Create operational benchmarking (response time, booking settings)
+- [ ] Add photo quality scoring (professional vs amateur assessment)
+
+### Predictive Market Timing Analysis
+- [ ] Add historical metrics integration (12-60 months of data)
+- [ ] Build market saturation detector (listing growth vs revenue growth)
+- [ ] Create market phase classifier (emerging, growth, mature, declining)
+- [ ] Add entry timing recommendations (when to enter a market)
+- [ ] Build demand forecasting model (predict future occupancy)
+- [ ] Create competition trend analysis (is market getting more competitive?)
+- [ ] Add regulatory risk assessment (market-specific STR regulations)
+
+### Voice-Activated Research (Gemini Live API)
+- [ ] Research Gemini Live API WebSocket integration
+- [ ] Implement real-time voice input (speech-to-text)
+- [ ] Add voice response output (text-to-speech)
+- [ ] Create voice command handlers for common queries
+- [ ] Build hands-free property analysis mode
+- [ ] Add voice-activated market comparison
+- [ ] Implement conversation memory for voice sessions
+
+### Automated Investment Report Generation
+- [ ] Build comprehensive PDF report generator
+- [ ] Add executive summary with AI narrative
+- [ ] Create market overview section with charts
+- [ ] Add property analysis with revenue projections
+- [ ] Build competitive landscape visualization
+- [ ] Add risk assessment section
+- [ ] Create investment recommendation summary
+- [ ] Add appendix with raw data tables
+- [ ] Implement white-label branding (Coach Inayah)
+
+### Objection Handler RAG System
+- [ ] Build objection knowledge base (common investor concerns)
+- [ ] Create data-backed response templates
+- [ ] Add market saturation objection handler
+- [ ] Add regulation risk objection handler
+- [ ] Add seasonality concern handler
+- [ ] Add "numbers too good" skepticism handler
+- [ ] Add break-even scenario calculator for objections
+- [ ] Implement RAG retrieval for personalized responses
+
+### New AI Advisor Functions to Add
+- [ ] get_historical_trends - Fetch 12-60 months of market data with AI interpretation
+- [ ] get_smart_rates - Retrieve dynamic pricing recommendations
+- [ ] get_listing_details - Deep dive into specific competitor listings
+- [ ] get_listing_comps - Fetch comparable properties for a listing
+- [ ] get_future_pricing - Retrieve forward-looking pricing data
+- [ ] generate_investment_report - Create comprehensive PDF reports
+- [ ] analyze_market_timing - Predict optimal entry/exit timing
+- [ ] handle_objection - Respond to specific investor concerns with data
+- [ ] compare_pricing_strategies - Analyze different pricing approaches
+- [ ] forecast_demand - Predict future booking demand
+
+
+
+### Advanced Gemini Function Enhancements (COMPLETED)
+- [x] Multi-market comparison (compare_multiple_markets) - side-by-side analysis with winner declaration
+- [x] Submarket/neighborhood analysis (analyze_market_submarkets) - ranked neighborhoods with recommendations
+- [x] Nationwide market discovery (find_top_markets_nationwide) - top markets by criteria with grades
+- [x] Arbitrage feasibility analysis (analyze_arbitrage_feasibility) - comprehensive GO/NO-GO recommendation
+- [x] Bedroom configuration comparison (compare_property_configurations) - optimal property size analysis
+- [x] Competition landscape analysis (analyze_competition_landscape) - success patterns and gaps
+- [x] Investment thesis generation (generate_investment_thesis) - full synthesis with confidence level
+- [x] Scenario analysis (calculate_scenario_analysis) - what-if modeling for risk assessment
+- [x] Market gap identification (identify_market_gaps) - underserved niches and opportunities
+- [x] Bedroom performance breakdown (get_bedroom_performance_breakdown) - detailed metrics by size
+- [x] Property type comparison (compare_property_types) - house vs condo vs apartment analysis
+- [x] Amenity correlation analysis (analyze_amenity_correlation) - which amenities drive revenue
+- [x] Revenue percentile calculator (calculate_revenue_percentile) - market ranking
+- [x] Seasonality-adjusted projections (calculate_seasonality_adjusted_revenue) - accurate monthly forecasts
+- [x] Deal analysis with AI decision framework (generate_deal_analysis) - comprehensive investment scoring with STRONG BUY/BUY/HOLD/AVOID recommendations

@@ -13,9 +13,13 @@ import {
   getMarketSeasonality,
   getRentalizerEstimate,
   exploreListingsInRadius,
-  searchByZipcode
+  searchByZipcode,
+  getCountryMarkets,
+  exploreSubmarketsWithMetrics,
+  calculateArbitrageFeasibility
 } from './airdna';
 import { makeRequest, GeocodingResult } from './_core/map';
+import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
@@ -356,6 +360,351 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["budget", "investment_type"]
+      }
+    },
+    // ============================================
+    // ENHANCED FUNCTIONS - Advanced Analysis
+    // ============================================
+    {
+      name: "compare_multiple_markets",
+      description: "Compare 2-5 markets side-by-side with detailed metrics, scores, and investment recommendations. Use this when user wants to compare cities or decide between markets (e.g., 'compare Austin vs Nashville vs Denver').",
+      parameters: {
+        type: "object",
+        properties: {
+          market_names: {
+            type: "array",
+            items: { type: "string" },
+            description: "Array of 2-5 market names to compare (e.g., ['Austin', 'Nashville', 'Denver'])"
+          },
+          comparison_focus: {
+            type: "string",
+            description: "What to prioritize: 'revenue' (highest earning), 'stability' (consistent occupancy), 'growth' (emerging markets), 'entry_cost' (affordable entry), 'balanced' (overall best)"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Optional: Compare performance for specific bedroom count"
+          }
+        },
+        required: ["market_names"]
+      }
+    },
+    {
+      name: "analyze_market_submarkets",
+      description: "Deep dive into a market's neighborhoods/submarkets to find the best areas to invest. Shows ranking by revenue, occupancy, and overall score. Use when user asks about neighborhoods or best areas within a city.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market name to explore (e.g., 'Atlanta', 'Nashville')"
+          },
+          sort_by: {
+            type: "string",
+            description: "How to rank submarkets: 'revenue', 'occupancy', 'revpar', 'overall'"
+          },
+          limit: {
+            type: "number",
+            description: "Number of submarkets to return (default 10)"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "find_top_markets_nationwide",
+      description: "Find the best STR markets in the US based on specific criteria. Use for market discovery and identifying opportunities (e.g., 'best markets for investors', 'top STR-friendly markets').",
+      parameters: {
+        type: "object",
+        properties: {
+          criteria: {
+            type: "string",
+            description: "What to optimize for: 'market_score' (overall best), 'investability' (best for investors), 'rental_demand' (highest demand), 'revenue_growth' (fastest growing), 'regulation' (STR-friendly)"
+          },
+          market_type: {
+            type: "string",
+            description: "Optional filter: 'coastal', 'urban_metro', 'mountains_lakes', 'suburban', 'rural', 'mid_size_city'"
+          },
+          min_score: {
+            type: "number",
+            description: "Minimum score threshold (0-100)"
+          },
+          limit: {
+            type: "number",
+            description: "Number of markets to return (default 10, max 25)"
+          }
+        },
+        required: ["criteria"]
+      }
+    },
+    {
+      name: "analyze_arbitrage_feasibility",
+      description: "Comprehensive rental arbitrage analysis for a property. Calculates profitability, break-even, risk assessment, and provides recommendation. Use when user asks about arbitrage viability for a specific property.",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The property address"
+          },
+          monthly_rent: {
+            type: "number",
+            description: "The monthly rent amount"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms"
+          },
+          bathrooms: {
+            type: "number",
+            description: "Number of bathrooms"
+          }
+        },
+        required: ["address", "monthly_rent"]
+      }
+    },
+    {
+      name: "compare_property_configurations",
+      description: "Compare different bedroom configurations in the same market to find the optimal property size. Shows revenue, occupancy, and ROI by bedroom count. Use when user asks 'what size property should I get?' or 'is 3BR or 4BR better?'",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          },
+          bedroom_range: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of bedroom counts to compare (e.g., [2, 3, 4, 5])"
+          }
+        },
+        required: ["market_name", "bedroom_range"]
+      }
+    },
+    {
+      name: "analyze_competition_landscape",
+      description: "Deep analysis of the competitive landscape in a market or around a property. Identifies gaps, opportunities, and success patterns. Use when user asks about competition or how to stand out.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze (use this OR address)"
+          },
+          address: {
+            type: "string",
+            description: "Property address for hyperlocal analysis (use this OR market_name)"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Focus on specific bedroom count"
+          },
+          analysis_depth: {
+            type: "string",
+            description: "'quick' (top 10), 'standard' (top 25), 'deep' (comprehensive)"
+          }
+        },
+        required: []
+      }
+    },
+    {
+      name: "generate_investment_thesis",
+      description: "Generate a comprehensive investment thesis for a specific property or market. Synthesizes all available data into actionable recommendations. Use for detailed investment analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          target_type: {
+            type: "string",
+            description: "'property' or 'market'"
+          },
+          target: {
+            type: "string",
+            description: "Property address or market name"
+          },
+          investor_profile: {
+            type: "string",
+            description: "'conservative' (low risk), 'moderate' (balanced), 'aggressive' (high growth)"
+          },
+          investment_type: {
+            type: "string",
+            description: "'arbitrage' or 'purchase'"
+          },
+          budget: {
+            type: "number",
+            description: "Investment budget (optional)"
+          }
+        },
+        required: ["target_type", "target"]
+      }
+    },
+    {
+      name: "calculate_scenario_analysis",
+      description: "Run multiple what-if scenarios for an investment. Shows outcomes under different conditions (recession, competition increase, best/worst case). Use when user asks 'what if' questions or wants risk analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          base_revenue: {
+            type: "number",
+            description: "Expected annual revenue"
+          },
+          base_occupancy: {
+            type: "number",
+            description: "Expected occupancy rate (%)"
+          },
+          base_adr: {
+            type: "number",
+            description: "Expected average daily rate"
+          },
+          monthly_costs: {
+            type: "number",
+            description: "Monthly fixed costs (rent/mortgage + utilities)"
+          },
+          scenarios: {
+            type: "array",
+            items: { type: "string" },
+            description: "Scenarios to model: 'recession', 'competition_increase', 'seasonality_shift', 'rate_war', 'best_case', 'worst_case'"
+          }
+        },
+        required: ["base_revenue", "monthly_costs"]
+      }
+    },
+    {
+      name: "identify_market_gaps",
+      description: "Identify underserved niches and opportunities in a market. Finds gaps in property types, amenities, or price points. Use when user asks about opportunities or how to differentiate.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          },
+          focus_areas: {
+            type: "array",
+            items: { type: "string" },
+            description: "Areas to analyze: 'property_type', 'bedroom_count', 'amenities', 'price_tier', 'guest_type'"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "get_bedroom_performance_breakdown",
+      description: "Get detailed performance metrics broken down by bedroom count for a market. Shows which property sizes perform best. Use when user asks about optimal bedroom count or property size.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "compare_property_types",
+      description: "Compare performance of different property types (house, condo, apartment, townhouse) in a market. Use when user asks 'house vs condo' or 'which property type performs best'.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "analyze_amenity_correlation",
+      description: "Analyze which amenities correlate with highest revenue in a market. Use when user asks about amenity impact, what amenities to add, or which features drive revenue.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          }
+        },
+        required: ["market_name"]
+      }
+    },
+    {
+      name: "calculate_revenue_percentile",
+      description: "Calculate where a property's revenue ranks compared to the market. Use when user asks 'how does this compare?' or 'where would I rank?'",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to compare against"
+          },
+          target_revenue: {
+            type: "number",
+            description: "The revenue to rank"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Optional: Filter by bedroom count for apples-to-apples comparison"
+          }
+        },
+        required: ["market_name", "target_revenue"]
+      }
+    },
+    {
+      name: "calculate_seasonality_adjusted_revenue",
+      description: "Calculate revenue projection adjusted for seasonal patterns. Use when user wants accurate monthly projections or asks about seasonality impact.",
+      parameters: {
+        type: "object",
+        properties: {
+          market_name: {
+            type: "string",
+            description: "The market to analyze"
+          },
+          base_revenue: {
+            type: "number",
+            description: "The base annual revenue estimate"
+          },
+          start_month: {
+            type: "number",
+            description: "Month to start projection (1-12, default 1 for January)"
+          }
+        },
+        required: ["market_name", "base_revenue"]
+      }
+    },
+    {
+      name: "generate_deal_analysis",
+      description: "Generate comprehensive investment deal analysis with financing, returns, and AI-powered recommendation. Use when user provides a property address with purchase price or asks 'should I buy this property?'",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The property address"
+          },
+          purchase_price: {
+            type: "number",
+            description: "The purchase price of the property"
+          },
+          down_payment_percent: {
+            type: "number",
+            description: "Down payment percentage (default 20)"
+          },
+          interest_rate: {
+            type: "number",
+            description: "Mortgage interest rate (default 7)"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms"
+          },
+          bathrooms: {
+            type: "number",
+            description: "Number of bathrooms"
+          }
+        },
+        required: ["address", "purchase_price"]
       }
     }
   ]
@@ -1320,6 +1669,30 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         };
       }
       
+      // Route to enhanced functions for advanced analysis
+      case "compare_multiple_markets":
+      case "analyze_market_submarkets":
+      case "find_top_markets_nationwide":
+      case "analyze_arbitrage_feasibility":
+      case "compare_property_configurations":
+      case "analyze_competition_landscape":
+      case "generate_investment_thesis":
+      case "calculate_scenario_analysis":
+      case "identify_market_gaps":
+      case "get_bedroom_performance_breakdown":
+        return executeEnhancedFunction(functionName, args);
+      
+      // Additional optimization functions
+      case "compare_property_types":
+      case "analyze_amenity_correlation":
+      case "calculate_revenue_percentile":
+      case "calculate_seasonality_adjusted_revenue":
+        return executeAdditionalFunction(functionName, args);
+      
+      // Deal analysis functions
+      case "generate_deal_analysis":
+        return executeDealFunction(functionName, args);
+      
       default:
         return { error: `Unknown function: ${functionName}` };
     }
@@ -1593,6 +1966,80 @@ Questions MUST:
 - Be actionable and lead to useful insights
 - Cover different aspects of the investment decision
 - Never be generic placeholders
+
+=== ADVANCED ANALYSIS CAPABILITIES ===
+
+You now have access to POWERFUL ADVANCED FUNCTIONS for sophisticated analysis:
+
+**MULTI-MARKET COMPARISON (compare_multiple_markets):**
+When user asks to compare markets (e.g., "Austin vs Nashville vs Denver"):
+- Use compare_multiple_markets with all market names
+- Present side-by-side comparison table with metrics
+- Declare a clear WINNER with specific reasons
+- Provide personalized recommendation based on investor goals
+
+**SUBMARKET/NEIGHBORHOOD ANALYSIS (analyze_market_submarkets):**
+When user asks about best neighborhoods or areas within a city:
+- Use analyze_market_submarkets to get ranked neighborhoods
+- Show top 5-10 submarkets with revenue, occupancy, overall score
+- Highlight the TOP RECOMMENDATION with specific reasons
+- Explain what makes each area unique
+
+**NATIONWIDE MARKET DISCOVERY (find_top_markets_nationwide):**
+When user asks for best markets, top cities, or market recommendations:
+- Use find_top_markets_nationwide with appropriate criteria
+- Present ranked list with scores and grades (A/B/C/D)
+- Filter by market type if user specifies (coastal, urban, mountain, etc.)
+- Provide investment grade assessment for each
+
+**ARBITRAGE FEASIBILITY (analyze_arbitrage_feasibility):**
+When user asks about rental arbitrage viability:
+- Use analyze_arbitrage_feasibility with address and rent
+- Show detailed profitability projections
+- Calculate break-even occupancy
+- Provide clear GO/NO-GO recommendation with risk assessment
+
+**BEDROOM CONFIGURATION ANALYSIS (compare_property_configurations):**
+When user asks "what size property should I get?" or "2BR vs 3BR vs 4BR":
+- Use compare_property_configurations with bedroom range
+- Show revenue, occupancy, efficiency by bedroom count
+- Identify OPTIMAL configuration with specific reasons
+- Explain diminishing returns if applicable
+
+**COMPETITION LANDSCAPE (analyze_competition_landscape):**
+When user asks about competition or how to stand out:
+- Use analyze_competition_landscape for deep competitive analysis
+- Identify success patterns from top performers
+- Find gaps and opportunities in the market
+- Provide competitive positioning recommendations
+
+**INVESTMENT THESIS (generate_investment_thesis):**
+When user wants comprehensive investment analysis:
+- Use generate_investment_thesis for full synthesis
+- Provide key points, risks, opportunities
+- Tailor to investor profile (conservative/moderate/aggressive)
+- Give clear confidence level and recommendation
+
+**SCENARIO ANALYSIS (calculate_scenario_analysis):**
+When user asks "what if" questions or wants risk analysis:
+- Use calculate_scenario_analysis with base metrics
+- Model multiple scenarios (recession, competition, best/worst case)
+- Show break-even analysis
+- Identify which scenarios remain profitable
+
+**MARKET GAP ANALYSIS (identify_market_gaps):**
+When user asks about opportunities or differentiation:
+- Use identify_market_gaps to find underserved niches
+- Analyze property types, bedroom counts, amenities, price tiers
+- Provide specific actionable opportunities
+- Generate action items for capitalizing on gaps
+
+**BEDROOM PERFORMANCE BREAKDOWN (get_bedroom_performance_breakdown):**
+When user asks about optimal property size or bedroom analysis:
+- Use get_bedroom_performance_breakdown for detailed metrics
+- Show performance by bedroom count (1-6 BR)
+- Identify most efficient configuration (revenue per bedroom)
+- Provide insights on occupancy and top earners by size
 
 === ADDITIONAL ANALYSIS TYPES ===
 
