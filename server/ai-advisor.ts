@@ -11,7 +11,8 @@ import {
   getComprehensiveMarketReport,
   getTopPerformers,
   getMarketSeasonality,
-  getRentalizerEstimate
+  getRentalizerEstimate,
+  exploreListingsInRadius
 } from './airdna';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -139,6 +140,32 @@ const AVAILABLE_TOOLS = {
           }
         },
         required: ["market_name"]
+      }
+    },
+    {
+      name: "search_nearby_listings",
+      description: "Search for nearby Airbnb listings around a specific address within a given radius. Use this when user asks about: nearby rentals, competitors near a property, Airbnbs in the area, what's around a property, or radius search. Returns actual listing data with revenue, occupancy, and ADR.",
+      parameters: {
+        type: "object",
+        properties: {
+          address: {
+            type: "string",
+            description: "The property address to search around (e.g., '123 Main St, Austin, TX 78701')"
+          },
+          radius_miles: {
+            type: "number",
+            description: "Search radius in miles (default 1, options: 0.5, 1, 2, 5)"
+          },
+          bedrooms: {
+            type: "number",
+            description: "Optional: Filter by number of bedrooms"
+          },
+          limit: {
+            type: "number",
+            description: "Number of listings to return (default 10, max 25)"
+          }
+        },
+        required: ["address"]
       }
     },
     {
@@ -412,6 +439,63 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           amenities_found_in_top_performers: amenityImpact.slice(0, 10),
           recommended_amenities: recommendations,
           key_insight: `In ${markets[0].name}, properties with premium amenities like pools and hot tubs typically earn 15-35% more than average. Pet-friendly properties also command a premium due to limited supply.`
+        };
+      }
+      
+      case "search_nearby_listings": {
+        const address = args.address as string;
+        const radiusMiles = (args.radius_miles as number) || 1;
+        const bedrooms = args.bedrooms as number | undefined;
+        const limit = Math.min((args.limit as number) || 10, 25);
+        
+        // Convert miles to meters (1 mile = 1609.34 meters)
+        const radiusMeters = Math.round(radiusMiles * 1609.34);
+        
+        const listings = await exploreListingsInRadius(address, radiusMeters, {
+          bedrooms,
+          minRevenue: 5000 // Filter out very low performers
+        }, limit);
+        
+        if (listings.length === 0) {
+          return {
+            error: `No listings found within ${radiusMiles} mile(s) of ${address}. Try increasing the search radius.`,
+            address,
+            radius_miles: radiusMiles
+          };
+        }
+        
+        // Calculate summary stats
+        const avgRevenue = Math.round(listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length);
+        const avgOccupancy = Math.round(listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length);
+        const avgAdr = Math.round(listings.reduce((sum, l) => sum + l.adr, 0) / listings.length);
+        const topRevenue = Math.max(...listings.map(l => l.annual_revenue));
+        const bottomRevenue = Math.min(...listings.map(l => l.annual_revenue));
+        
+        return {
+          address,
+          radius_miles: radiusMiles,
+          total_found: listings.length,
+          summary: {
+            average_revenue: avgRevenue,
+            average_occupancy: avgOccupancy,
+            average_adr: avgAdr,
+            top_revenue: topRevenue,
+            bottom_revenue: bottomRevenue,
+            revenue_range: `$${bottomRevenue.toLocaleString()} - $${topRevenue.toLocaleString()}`
+          },
+          nearby_listings: listings.slice(0, limit).map(l => ({
+            title: l.title,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            property_type: l.property_type,
+            annual_revenue: l.annual_revenue,
+            adr: l.adr,
+            occupancy: l.occupancy,
+            rating: l.rating,
+            reviews: l.reviews,
+            is_superhost: l.superhost,
+            airbnb_url: l.airbnb_url
+          }))
         };
       }
       
@@ -725,6 +809,17 @@ For SEASONALITY:
 - Use Peak, Shoulder, or Off for season type
 - Explain which months are best and worst for bookings
 - Give pricing recommendations for each season
+
+For RADIUS SEARCH (nearby listings):
+- Show nearby Airbnbs in a COMPACT table with SHORT column headers:
+  | Name | Rev | Occ | ADR | Dist |
+  |------|-----|-----|-----|------|
+  | Cozy Apt | $45K | 68% | $180 | 0.3mi |
+- Keep property names SHORT (max 15 chars, truncate with ...)
+- Use abbreviated column headers to fit the table
+- Revenue should be shown as $XXK format (e.g., $45K not $45,000)
+- Include a summary of average metrics for the area
+- Highlight the top performer
 
 For PROFIT MATH:
 - Show expense breakdown in a table

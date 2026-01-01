@@ -408,3 +408,10 @@
 - [x] Fix monthly breakdown table with proper season labels
 - [x] Add neighborhood rankings table - AI provides market position context
 - [x] Add "Generate Full Report" button functionality (verify it works)
+
+
+## Radius Search Feature
+- [x] Add radius search capability to AI Advisor
+- [x] Allow users to search for nearby Airbnbs around a property
+- [x] Display listings with performance data (revenue, occupancy, ADR)
+- [x] Support distance filtering (0.5mi, 1mi, 2mi, 5mi)
