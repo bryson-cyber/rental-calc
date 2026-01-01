@@ -455,3 +455,16 @@
 - [x] Add Listing Description Generator feature
 - [x] Add Investment Score Calculator (1-100 scale)
 - [x] Test all new features (78701, 90210, listing generator, investment score)
+
+
+## AirDNA API Full Audit & Zip Code Fix
+- [x] Read complete AirDNA API documentation from https://airdna.redoc.ly
+- [x] Identify all available endpoints (markets, submarkets, zip codes, etc.)
+- [x] Fix zip code search to use proper AirDNA Market Search API endpoint
+- [x] Test 63108 (St. Louis) zip code - NOW RETURNS "Central West End" submarket with $37,395 avg revenue, 66% occupancy, $156 ADR, Market Score 71
+- [x] Add any missing high-value AirDNA features (submarket-level data now included)
+- [x] Improve follow-up question relevance based on query context - NOW SHOWS:
+  - "What amenities are most popular in Cumberland?"
+  - "What are the peak and off seasons in Cumberland?"
+  - "How do these numbers compare to other neighborhoods in Atlanta?"
+- [x] Test all features end-to-end (63108, 30339 both working)

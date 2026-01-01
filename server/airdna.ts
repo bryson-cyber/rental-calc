@@ -373,6 +373,198 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
   }
 }
 
+// ============================================
+// ZIP CODE SEARCH (Using AirDNA Market Search API)
+// ============================================
+
+export interface ZipCodeSearchResult {
+  zipcode: string;
+  location: string;
+  submarket?: {
+    id: string;
+    name: string;
+    listing_count: number;
+    parent_market?: {
+      id: string;
+      name: string;
+    };
+  };
+  market?: {
+    id: string;
+    name: string;
+    listing_count: number;
+  };
+  metrics?: {
+    revenue: number;
+    occupancy: number;
+    adr: number;
+    revpar: number;
+    active_listings: number;
+    market_score?: number;
+  };
+  top_performers?: Array<{
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    annual_revenue: number;
+    occupancy: number;
+    adr: number;
+    rating: number | null;
+    reviews: number;
+    airbnb_url?: string;
+  }>;
+}
+
+/**
+ * Search for market data by zip code using the AirDNA Market Search API.
+ * This is the CORRECT way to search by zip code - directly through the API.
+ */
+export async function searchByZipcode(zipcode: string, options?: {
+  bedrooms?: number;
+  limit?: number;
+}): Promise<ZipCodeSearchResult | null> {
+  console.log(`[searchByZipcode] Searching for zip code: ${zipcode}`);
+  
+  try {
+    // Step 1: Use AirDNA Market Search with the zip code as search term
+    const searchResponse = await makeApiRequest<{
+      payload: {
+        results: Array<{
+          id: string;
+          name: string;
+          type: "market" | "submarket";
+          listing_count: number;
+          location_name: string;
+          location?: {
+            state?: string;
+            country?: string;
+          };
+          legacy_location?: {
+            zipcodes?: string[];
+            neighborhoods?: string[];
+          };
+          parent_market?: {
+            id: string;
+            name: string;
+          };
+        }>;
+      };
+      status: {
+        type: string;
+        message: string;
+      };
+    }>('/market/search', 'POST', {
+      search_term: zipcode,
+      pagination: {
+        page_size: 25,
+        offset: 0
+      }
+    });
+    
+    console.log(`[searchByZipcode] Search response:`, JSON.stringify(searchResponse.status));
+    
+    const results = searchResponse.payload?.results || [];
+    
+    if (results.length === 0) {
+      console.log(`[searchByZipcode] No results found for zip code ${zipcode}`);
+      return null;
+    }
+    
+    // Prefer submarket results as they're more specific to the zip code
+    const submarket = results.find(r => r.type === 'submarket');
+    const market = results.find(r => r.type === 'market');
+    
+    const targetResult = submarket || market;
+    if (!targetResult) {
+      return null;
+    }
+    
+    console.log(`[searchByZipcode] Found ${targetResult.type}: ${targetResult.name} (${targetResult.id})`);
+    
+    // Step 2: Get detailed metrics for the submarket or market
+    let metrics: ZipCodeSearchResult['metrics'];
+    let topPerformers: ZipCodeSearchResult['top_performers'];
+    
+    if (submarket) {
+      // Get submarket details which include metrics
+      const submarketDetails = await getSubmarketDetails(submarket.id);
+      if (submarketDetails?.metrics) {
+        metrics = {
+          revenue: submarketDetails.metrics.revenue,
+          occupancy: submarketDetails.metrics.booked,
+          adr: submarketDetails.metrics.daily_rate,
+          revpar: submarketDetails.metrics.revpar,
+          active_listings: submarketDetails.listing_count || 0,
+          market_score: submarketDetails.metrics.market_score
+        };
+      }
+      
+      // Get top performers in the submarket
+      try {
+        const listingsResult = await getSubmarketListings(submarket.id, {
+          limit: options?.limit || 10,
+          orderBy: 'revenue',
+          orderDirection: 'desc'
+        });
+        
+        topPerformers = listingsResult.listings.map((l: ListingData) => ({
+          title: l.title,
+          bedrooms: l.bedrooms,
+          bathrooms: l.bathrooms,
+          annual_revenue: l.annual_revenue,
+          occupancy: l.occupancy,
+          adr: l.adr,
+          rating: l.rating,
+          reviews: l.reviews,
+          airbnb_url: l.airbnb_url
+        }));
+      } catch (e) {
+        console.error('[searchByZipcode] Error getting listings:', e);
+      }
+    } else if (market) {
+      // Get market details
+      const marketDetails = await getMarketDetails(market.id);
+      if (marketDetails?.metrics) {
+        metrics = {
+          revenue: marketDetails.metrics.revenue,
+          occupancy: marketDetails.metrics.booked,
+          adr: marketDetails.metrics.daily_rate,
+          revpar: marketDetails.metrics.revpar,
+          active_listings: marketDetails.listing_count || 0,
+          market_score: marketDetails.metrics.market_score
+        };
+      }
+    }
+    
+    // Build location string
+    const location = targetResult.location_name || 
+      (targetResult.location ? `${targetResult.name}, ${targetResult.location.state}` : targetResult.name);
+    
+    return {
+      zipcode,
+      location,
+      submarket: submarket ? {
+        id: submarket.id,
+        name: submarket.name,
+        listing_count: submarket.listing_count,
+        parent_market: submarket.parent_market
+      } : undefined,
+      market: market ? {
+        id: market.id,
+        name: market.name,
+        listing_count: market.listing_count
+      } : undefined,
+      metrics,
+      top_performers: topPerformers
+    };
+  } catch (error) {
+    console.error(`[searchByZipcode] Error searching zip code ${zipcode}:`, error);
+    return null;
+  }
+}
+
+
+
 // Detect search type from input
 export function detectSearchType(input: string): "address" | "city" | "zipcode" | "market" {
   const trimmed = input.trim();

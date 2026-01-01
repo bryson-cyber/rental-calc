@@ -12,7 +12,8 @@ import {
   getTopPerformers,
   getMarketSeasonality,
   getRentalizerEstimate,
-  exploreListingsInRadius
+  exploreListingsInRadius,
+  searchByZipcode
 } from './airdna';
 import { makeRequest, GeocodingResult } from './_core/map';
 
@@ -77,13 +78,13 @@ const AVAILABLE_TOOLS = {
     },
     {
       name: "get_seasonality",
-      description: "Get monthly seasonality data showing peak, shoulder, and off-season patterns for a market. Use market_name (like 'Austin' or 'Nashville') - the system will look up the market ID automatically.",
+      description: "Get monthly seasonality data showing peak, shoulder, and off-season patterns for a market. Use market_name (like 'Austin' or 'Nashville') - the system will look up the market ID automatically. IMPORTANT: If the user asks about a submarket/neighborhood (like 'Cumberland' or 'Central West End'), use the PARENT MARKET name instead (e.g., 'Atlanta' for Cumberland, 'St. Louis' for Central West End).",
       parameters: {
         type: "object",
         properties: {
           market_name: {
             type: "string",
-            description: "The market name (e.g., 'Austin', 'Nashville', 'Denver')"
+            description: "The PARENT MARKET name (e.g., 'Austin', 'Nashville', 'Atlanta', 'St. Louis'). If user asks about a submarket/neighborhood, use the parent market name."
           }
         },
         required: ["market_name"]
@@ -131,13 +132,13 @@ const AVAILABLE_TOOLS = {
     },
     {
       name: "get_amenity_impact",
-      description: "Get information about which amenities help properties earn more in a specific market. Use this when user asks about amenities, what features to add, how to increase revenue through amenities, or what top performers have. Returns data on popular amenities and their impact on revenue.",
+      description: "Get information about which amenities help properties earn more in a specific market. Use this when user asks about amenities, what features to add, how to increase revenue through amenities, or what top performers have. Returns data on popular amenities and their impact on revenue. IMPORTANT: If the user asks about a submarket/neighborhood (like 'Cumberland' or 'Central West End'), use the PARENT MARKET name instead (e.g., 'Atlanta' for Cumberland, 'St. Louis' for Central West End).",
       parameters: {
         type: "object",
         properties: {
           market_name: {
             type: "string",
-            description: "The market name (e.g., 'Austin', 'Nashville', 'Miami Beach')"
+            description: "The PARENT MARKET name (e.g., 'Austin', 'Nashville', 'Atlanta', 'St. Louis'). If user asks about a submarket/neighborhood, use the parent market name."
           }
         },
         required: ["market_name"]
@@ -784,106 +785,94 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         const zipcode = args.zipcode as string;
         const bedrooms = args.bedrooms as number | undefined;
         
-        console.log(`[AI Advisor] Searching by zip code: ${zipcode}`);
+        console.log(`[AI Advisor] Searching by zip code: ${zipcode} using AirDNA Market Search API`);
         
         try {
-          // Use Google Geocoding to get location info for the zip code
-          const geocodeResult = await makeRequest<GeocodingResult>(
-            '/maps/api/geocode/json',
-            { address: zipcode }
-          );
-          
-          if (!geocodeResult.results || geocodeResult.results.length === 0) {
-            return { error: `Could not find location for zip code ${zipcode}` };
-          }
-          
-          const location = geocodeResult.results[0];
-          const { lat, lng } = location.geometry.location;
-          
-          // Extract city and state from address components
-          let city = '';
-          let state = '';
-          for (const component of location.address_components) {
-            if (component.types.includes('locality')) {
-              city = component.long_name;
-            }
-            if (component.types.includes('administrative_area_level_1')) {
-              state = component.short_name;
-            }
-          }
-          
-          // Construct a generic address in this zip code for Rentalizer
-          const genericAddress = `100 Main St, ${city}, ${state} ${zipcode}`;
-          
-          console.log(`[AI Advisor] Geocoded ${zipcode} to ${city}, ${state} (${lat}, ${lng})`);
-          console.log(`[AI Advisor] Using address: ${genericAddress}`);
-          
-          // Use Rentalizer to get market data for this location
-          const estimate = await getRentalizerEstimate({
-            address: genericAddress,
-            bedrooms: bedrooms || 2,
-            bathrooms: 1,
-            accommodates: (bedrooms || 2) * 2,
-            currency: 'usd'
+          // Use the new searchByZipcode function that calls AirDNA Market Search API directly
+          const result = await searchByZipcode(zipcode, {
+            bedrooms,
+            limit: 10
           });
           
-          if (!estimate) {
-            // Fallback: search for the city as a market
-            const marketResults = await searchMarkets(city, 1);
-            if (marketResults.length > 0) {
-              const marketId = marketResults[0].id;
-              const report = await getComprehensiveMarketReport(marketId);
-              if (report) {
-                return {
-                  zipcode,
-                  location: `${city}, ${state}`,
-                  coordinates: { lat, lng },
-                  market_name: report.market.name,
-                  market_data: {
-                    average_revenue: report.market.metrics.revenue,
-                    occupancy_rate: report.market.metrics.occupancy,
-                    average_daily_rate: report.market.metrics.adr,
-                    active_listings: report.market.metrics.active_listings
-                  },
-                  note: "Data shown is for the broader market area"
-                };
+          if (!result) {
+            // Fallback: try to find the market by geocoding the zip code
+            const geocodeResult = await makeRequest<GeocodingResult>(
+              '/maps/api/geocode/json',
+              { address: zipcode }
+            );
+            
+            if (geocodeResult.results && geocodeResult.results.length > 0) {
+              const location = geocodeResult.results[0];
+              let city = '';
+              let state = '';
+              for (const component of location.address_components) {
+                if (component.types.includes('locality')) {
+                  city = component.long_name;
+                }
+                if (component.types.includes('administrative_area_level_1')) {
+                  state = component.short_name;
+                }
+              }
+              
+              // Try searching by city name
+              const marketResults = await searchMarkets(city, 1);
+              if (marketResults.length > 0) {
+                const report = await getComprehensiveMarketReport(marketResults[0].id);
+                if (report) {
+                  return {
+                    zipcode,
+                    location: `${city}, ${state}`,
+                    market_name: report.market.name,
+                    market_data: {
+                      average_revenue: report.market.metrics.revenue,
+                      occupancy_rate: report.market.metrics.occupancy,
+                      average_daily_rate: report.market.metrics.adr,
+                      active_listings: report.market.metrics.active_listings,
+                      market_score: report.market.metrics.market_score
+                    },
+                    note: `Data shown is for the ${report.market.name} market area. The specific zip code ${zipcode} may be a smaller submarket within this region.`
+                  };
+                }
               }
             }
-            return { error: `Could not find rental data for zip code ${zipcode}. Try searching for ${city}, ${state} instead.` };
+            
+            return { 
+              error: `Could not find rental data for zip code ${zipcode}. This zip code may not have enough short-term rental activity in the AirDNA database.`,
+              suggestion: "Try searching for the city name instead (e.g., 'St. Louis, MO' or 'Austin, TX')"
+            };
           }
           
-          // Calculate market averages from comps
-          const avgRevenue = estimate.comps.length > 0 
-            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.annual_revenue, 0) / estimate.comps.length)
-            : estimate.estimates.annual_revenue;
-          const avgOccupancy = estimate.comps.length > 0
-            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.occupancy, 0) / estimate.comps.length)
-            : estimate.estimates.occupancy_rate;
-          const avgAdr = estimate.comps.length > 0
-            ? Math.round(estimate.comps.reduce((sum, c) => sum + c.adr, 0) / estimate.comps.length)
-            : estimate.estimates.average_daily_rate;
-          
+          // Format the successful response
           return {
-            zipcode,
-            location: `${city}, ${state}`,
-            coordinates: { lat, lng },
-            market_data: {
-              average_revenue: avgRevenue,
-              revenue_range: {
-                low: estimate.estimates.annual_revenue_low,
-                mid: estimate.estimates.annual_revenue,
-                high: estimate.estimates.annual_revenue_high
-              },
-              occupancy_rate: avgOccupancy,
-              average_daily_rate: avgAdr,
-              comparable_properties: estimate.comps.length
-            },
-            top_performers: estimate.comps.slice(0, 5).map(c => ({
-              title: c.title,
-              bedrooms: c.bedrooms,
-              annual_revenue: c.annual_revenue,
-              occupancy: c.occupancy,
-              adr: c.adr
+            zipcode: result.zipcode,
+            location: result.location,
+            submarket: result.submarket ? {
+              name: result.submarket.name,
+              listing_count: result.submarket.listing_count,
+              parent_market: result.submarket.parent_market?.name
+            } : undefined,
+            market: result.market ? {
+              name: result.market.name,
+              listing_count: result.market.listing_count
+            } : undefined,
+            market_data: result.metrics ? {
+              average_revenue: result.metrics.revenue,
+              occupancy_rate: result.metrics.occupancy,
+              average_daily_rate: result.metrics.adr,
+              revpar: result.metrics.revpar,
+              active_listings: result.metrics.active_listings,
+              market_score: result.metrics.market_score
+            } : undefined,
+            top_performers: result.top_performers?.slice(0, 5).map(p => ({
+              title: p.title,
+              bedrooms: p.bedrooms,
+              bathrooms: p.bathrooms,
+              annual_revenue: p.annual_revenue,
+              occupancy: p.occupancy,
+              adr: p.adr,
+              rating: p.rating,
+              reviews: p.reviews,
+              airbnb_url: p.airbnb_url
             }))
           };
         } catch (error) {
@@ -1098,20 +1087,33 @@ What are the startup costs to get this running?
 
 The follow-up questions MUST:
 - Be SPECIFIC to the data just shown (not generic placeholders)
-- Reference the actual property, market, or topic discussed
+- Reference the actual property, market, zip code, or topic discussed BY NAME
 - Help them dig deeper into the analysis
 - Cover different aspects (competition, seasonality, profit, amenities, etc.)
 - Be phrased as complete, clickable questions
 - NEVER use placeholder text like "Question 1 here?" - always generate real questions
+- ALWAYS include the specific location name in at least 2 of the questions
 
-Examples of good follow-up questions for a property analysis:
-- "How does this compare to nearby competitors?"
-- "What's the monthly breakdown by season?"
-- "What amenities would help this property earn more?"
+Examples of good follow-up questions for a PROPERTY ANALYSIS at "123 Main St, Austin TX":
+- "How does 123 Main St compare to nearby competitors?"
+- "What's the monthly breakdown by season for this Austin property?"
+- "What amenities would help this Austin property earn more?"
 - "What are the startup costs to get this running?"
-- "How does this neighborhood rank in the city?"
-- "What do the top earners in this area have in common?"
-- "What's the profit potential after expenses?"
+- "How does this neighborhood rank in Austin?"
+
+Examples of good follow-up questions for a ZIP CODE SEARCH (e.g., 63108 Central West End):
+- "What amenities are most popular in Central West End?"
+- "What are the peak and off seasons in Central West End?"
+- "How do these numbers compare to other neighborhoods in St. Louis?"
+- "What do the top earners in 63108 have in common?"
+- "What's the best property type to invest in for Central West End?"
+
+Examples of good follow-up questions for a MARKET ANALYSIS (e.g., Austin, TX):
+- "What are the best neighborhoods to invest in Austin?"
+- "What bedroom count performs best in Austin?"
+- "When is peak season in Austin?"
+- "What amenities drive the most revenue in Austin?"
+- "How does Austin compare to other Texas markets?"
 
 For PROPERTY ANALYSIS (when user provides an address):
 - Use analyze_property function with the full address
