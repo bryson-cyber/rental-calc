@@ -421,6 +421,23 @@ export interface ZipCodeSearchResult {
  */
 export async function searchByZipcode(zipcode: string, options?: {
   bedrooms?: number;
+  bathrooms?: number;
+  propertyType?: string;
+  amenities?: {
+    pool?: boolean;
+    hotTub?: boolean;
+    petFriendly?: boolean;
+    parking?: boolean;
+    gym?: boolean;
+    kitchen?: boolean;
+    washerDryer?: boolean;
+    aircon?: boolean;
+  };
+  superhost?: boolean;
+  instantBook?: boolean;
+  professionallyManaged?: boolean;
+  minRating?: number;
+  priceTier?: string;
   limit?: number;
 }): Promise<ZipCodeSearchResult | null> {
   console.log(`[searchByZipcode] Searching for zip code: ${zipcode}`);
@@ -499,12 +516,23 @@ export async function searchByZipcode(zipcode: string, options?: {
         };
       }
       
-      // Get top performers in the submarket
+      // Get top performers in the submarket with filters
       try {
         const listingsResult = await getSubmarketListings(submarket.id, {
           limit: options?.limit || 10,
           orderBy: 'revenue',
-          orderDirection: 'desc'
+          orderDirection: 'desc',
+          filters: {
+            bedrooms: options?.bedrooms,
+            bathrooms: options?.bathrooms,
+            propertyType: options?.propertyType,
+            amenities: options?.amenities,
+            superhost: options?.superhost,
+            instantBook: options?.instantBook,
+            professionallyManaged: options?.professionallyManaged,
+            minRating: options?.minRating,
+            priceTier: options?.priceTier
+          }
         });
         
         topPerformers = listingsResult.listings.map((l: ListingData) => ({
@@ -1034,6 +1062,27 @@ export async function getMarketListings(
 // SUBMARKET LISTINGS
 // ============================================
 
+export interface ListingFilters {
+  bedrooms?: number;
+  bathrooms?: number;
+  propertyType?: string;
+  amenities?: {
+    pool?: boolean;
+    hotTub?: boolean;
+    petFriendly?: boolean;
+    parking?: boolean;
+    gym?: boolean;
+    kitchen?: boolean;
+    washerDryer?: boolean;
+    aircon?: boolean;
+  };
+  superhost?: boolean;
+  instantBook?: boolean;
+  professionallyManaged?: boolean;
+  minRating?: number;
+  priceTier?: string;
+}
+
 export async function getSubmarketListings(
   submarketId: string,
   options?: {
@@ -1041,9 +1090,101 @@ export async function getSubmarketListings(
     offset?: number;
     orderBy?: "revenue" | "adr" | "occupancy" | "rating";
     orderDirection?: "asc" | "desc";
+    filters?: ListingFilters;
   }
 ): Promise<{ listings: ListingData[]; total_count: number }> {
   try {
+    // Build filters array based on options
+    const filters: Array<Record<string, unknown>> = [];
+    
+    if (options?.filters?.bedrooms) {
+      filters.push({
+        type: "select",
+        field: "bedrooms",
+        value: options.filters.bedrooms
+      });
+    }
+    
+    if (options?.filters?.bathrooms) {
+      filters.push({
+        type: "gte",
+        field: "bathrooms",
+        value: options.filters.bathrooms
+      });
+    }
+    
+    if (options?.filters?.propertyType) {
+      filters.push({
+        type: "multi_select",
+        field: "property_type",
+        value: [options.filters.propertyType.toLowerCase()]
+      });
+    }
+    
+    // Build amenities filter
+    const amenitiesFilter: Record<string, boolean> = {};
+    if (options?.filters?.amenities?.pool) amenitiesFilter.has_pool = true;
+    if (options?.filters?.amenities?.hotTub) amenitiesFilter.has_hottub = true;
+    if (options?.filters?.amenities?.petFriendly) amenitiesFilter.has_pets_allowed = true;
+    if (options?.filters?.amenities?.parking) amenitiesFilter.has_parking = true;
+    if (options?.filters?.amenities?.gym) amenitiesFilter.has_gym = true;
+    if (options?.filters?.amenities?.kitchen) amenitiesFilter.has_kitchen = true;
+    if (options?.filters?.amenities?.washerDryer) amenitiesFilter.has_washer = true;
+    if (options?.filters?.amenities?.aircon) amenitiesFilter.has_aircon = true;
+    
+    if (Object.keys(amenitiesFilter).length > 0) {
+      filters.push({
+        type: "jsonb_boolean",
+        field: "amenities",
+        value: amenitiesFilter
+      });
+    }
+    
+    if (options?.filters?.superhost) {
+      filters.push({
+        type: "select",
+        field: "superhost",
+        value: true
+      });
+    }
+    
+    if (options?.filters?.instantBook) {
+      filters.push({
+        type: "select",
+        field: "instant_book",
+        value: true
+      });
+    }
+    
+    if (options?.filters?.professionallyManaged) {
+      filters.push({
+        type: "select",
+        field: "professionally_managed",
+        value: true
+      });
+    }
+    
+    if (options?.filters?.minRating) {
+      filters.push({
+        type: "gte",
+        field: "ratings",
+        value: options.filters.minRating
+      });
+    }
+    
+    if (options?.filters?.priceTier) {
+      filters.push({
+        type: "multi_select",
+        field: "price_tier",
+        value: [options.filters.priceTier.toLowerCase()]
+      });
+    }
+    
+    console.log(`[getSubmarketListings] Fetching listings for submarket ${submarketId} with ${filters.length} filters`);
+    if (filters.length > 0) {
+      console.log(`[getSubmarketListings] Filters:`, JSON.stringify(filters));
+    }
+    
     const response = await makeApiRequest<{
       payload: {
         listings: Array<{
@@ -1085,6 +1226,7 @@ export async function getSubmarketListings(
         field: options?.orderBy || "revenue",
         method: options?.orderDirection || "desc",
       },
+      ...(filters.length > 0 && { filters })
     });
     
     const listings: ListingData[] = response.payload.listings.map((r) => ({

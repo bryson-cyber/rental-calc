@@ -502,3 +502,23 @@
 - [x] Add Airbnb links to top performers in results table (View column with Airbnb links)
 - [x] Pass required filters to API calls for relevant apples-to-apples data
 - [x] Test all changes - 63108 with 3BR/2BA/House filters working perfectly
+
+## API Filter Pass-Through Fix
+- [ ] Audit how filters are currently passed to AI advisor
+- [ ] Update AirDNA API calls to filter by bedrooms (not just context)
+- [ ] Update AirDNA API calls to filter by bathrooms (not just context)
+- [ ] Update AirDNA API calls to filter by property type (not just context)
+- [ ] Ensure top performers returned match user's selected filters exactly
+- [ ] Test with 63108 + 3BR/2BA/House to verify filtered results
+
+
+## Professional-Grade AI Output Redesign (COMPLETED)
+- [x] Rewrite AI system prompt for consultant-level analysis
+- [x] Add rich data interpretation (what numbers MEAN for investor)
+- [x] Add ROI calculations with real numbers (Conservative/Realistic/Optimistic scenarios)
+- [x] Add competitive intelligence analysis (What separates top 20%)
+- [x] Add actionable recommendations (numbered Action Items)
+- [x] Add risk assessment with pros/cons (Strengths/Risks with icons)
+- [x] Add market positioning vs alternatives (Investment Verdict with star rating)
+- [ ] Make filters actually filter the API results (top performers still show all types)
+- [x] Test professional-grade output - 63108 shows comprehensive Market Intelligence Report
