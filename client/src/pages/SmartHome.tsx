@@ -43,6 +43,7 @@ import {
   History,
   Heart,
   FileDown,
+  FileText,
   Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ interface ChatMessage {
   type?: 'text' | 'property_report' | 'market_report';
   data?: unknown;
   filters?: ActiveFilters;
+  followUpQuestions?: string[];
 }
 
 interface ActiveFilters {
@@ -168,11 +170,15 @@ function MessageBubble({
   message, 
   onSaveToFavorites,
   onExportPDF,
+  onFollowUpClick,
+  onGenerateReport,
   isSaved 
 }: { 
   message: ChatMessage; 
   onSaveToFavorites?: () => void;
   onExportPDF?: () => void;
+  onFollowUpClick?: (question: string) => void;
+  onGenerateReport?: () => void;
   isSaved?: boolean;
 }) {
   const isUser = message.role === 'user';
@@ -241,6 +247,33 @@ function MessageBubble({
                 Export PDF
               </button>
             )}
+            {onGenerateReport && (
+              <button
+                onClick={onGenerateReport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#C9A962] text-white hover:bg-[#b8984f] transition-all"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Generate Full Report
+              </button>
+            )}
+          </div>
+        )}
+        
+        {/* Follow-up Questions */}
+        {!isUser && message.followUpQuestions && message.followUpQuestions.length > 0 && onFollowUpClick && (
+          <div className="mt-4 pt-4 border-t border-[#0F172A]/10">
+            <p className="text-xs text-[#0F172A]/50 mb-2 font-medium">Explore further:</p>
+            <div className="flex flex-wrap gap-2">
+              {message.followUpQuestions.map((question, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onFollowUpClick(question)}
+                  className="text-xs bg-[#0F172A]/5 hover:bg-[#C9A962]/20 text-[#0F172A] hover:text-[#0F172A] px-3 py-2 rounded-lg transition-all border border-[#0F172A]/10 hover:border-[#C9A962]/30 text-left"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -797,6 +830,22 @@ export default function SmartHome() {
     doc.save(filename);
   };
 
+  // Generate Full Report - asks AI for comprehensive analysis
+  const handleGenerateFullReport = async (address: string) => {
+    const reportPrompt = `Generate a comprehensive investment report for the property at ${address}. Include:
+
+1. **Property Overview** - Basic property details and location
+2. **Revenue Analysis** - Annual revenue estimate with monthly breakdown by season (Peak/Shoulder/Slow)
+3. **Competition Analysis** - Top 5-10 nearby competitors with their revenue, occupancy, ADR, and distance
+4. **Market Position** - How this property compares to market averages
+5. **Profit Potential** - Assuming $2,000/month rent, calculate startup costs, monthly expenses breakdown, and profit scenarios (conservative/realistic/optimistic)
+6. **Investment Recommendation** - Based on all data, is this a good investment? What are the risks and opportunities?
+
+Format everything in clear tables where appropriate. This is for a beginner investor.`;
+    
+    await handleSend(reportPrompt);
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -1003,9 +1052,25 @@ export default function SmartHome() {
       });
 
       if (result.success && result.data?.response) {
+        // Parse follow-up questions from the response
+        const responseText = result.data.response;
+        let content = responseText;
+        let followUpQuestions: string[] = [];
+        
+        // Extract follow-up questions if present
+        const followUpMatch = responseText.match(/---FOLLOW_UP_QUESTIONS---([\s\S]*?)---END_FOLLOW_UP---/);
+        if (followUpMatch) {
+          content = responseText.replace(/---FOLLOW_UP_QUESTIONS---[\s\S]*?---END_FOLLOW_UP---/, '').trim();
+          followUpQuestions = followUpMatch[1]
+            .split('\n')
+            .map(q => q.trim())
+            .filter(q => q.length > 0 && q.endsWith('?'));
+        }
+        
         const assistantMessage: ChatMessage = { 
           role: 'assistant', 
-          content: result.data.response 
+          content,
+          followUpQuestions: followUpQuestions.length > 0 ? followUpQuestions : undefined
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
@@ -1319,6 +1384,8 @@ export default function SmartHome() {
                   message={message}
                   onSaveToFavorites={isAssistant && prevAddress ? () => handleSaveToFavorites(index) : undefined}
                   onExportPDF={isAssistant ? () => handleExportPDF(index) : undefined}
+                  onFollowUpClick={isAssistant ? (question) => handleSend(question) : undefined}
+                  onGenerateReport={isAssistant && prevAddress ? () => handleGenerateFullReport(prevAddress) : undefined}
                   isSaved={isSaved}
                 />
               );

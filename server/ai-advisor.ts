@@ -126,6 +126,28 @@ const AVAILABLE_TOOLS = {
         },
         required: ["address"]
       }
+    },
+    {
+      name: "calculate_profit",
+      description: "Calculate startup costs, monthly expenses, profit potential, and break-even analysis for a short-term rental property. Use this when user asks about: startup costs, expenses, profit, cash flow, break-even, ROI, or financial analysis. If you don't know the monthly rent, assume $2,000/month as a default.",
+      parameters: {
+        type: "object",
+        properties: {
+          annual_revenue: {
+            type: "number",
+            description: "Expected annual STR revenue (use the revenue from the previous property analysis)"
+          },
+          monthly_rent: {
+            type: "number",
+            description: "Monthly rent cost (for arbitrage) or mortgage payment. Default to $2,000 if unknown."
+          },
+          bedrooms: {
+            type: "number",
+            description: "Number of bedrooms (affects startup costs). Use the bedrooms from the previous property analysis."
+          }
+        },
+        required: ["annual_revenue", "monthly_rent", "bedrooms"]
+      }
     }
   ]
 };
@@ -286,6 +308,109 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         };
       }
       
+      case "calculate_profit": {
+        const annualRevenue = args.annual_revenue as number;
+        const monthlyRent = args.monthly_rent as number;
+        const bedrooms = args.bedrooms as number;
+        
+        // Calculate startup costs based on bedrooms
+        const baseStartupCost = 5000; // Base furnishing
+        const perBedroomCost = 3000; // Per bedroom furnishing
+        const startupCost = baseStartupCost + (bedrooms * perBedroomCost);
+        
+        // Monthly expenses breakdown
+        const annualRent = monthlyRent * 12;
+        const utilities = monthlyRent * 0.15 * 12; // ~15% of rent
+        const wifi = 100 * 12; // $100/month
+        const supplies = 50 * bedrooms * 12; // $50/bedroom/month
+        const cleaning = (annualRevenue / 150) * 75; // Estimate cleanings based on revenue, $75 each
+        const platformFees = annualRevenue * 0.03; // ~3% Airbnb host fees
+        const insurance = 150 * 12; // $150/month STR insurance
+        const maintenance = annualRevenue * 0.05; // 5% for repairs/maintenance
+        const miscellaneous = 100 * 12; // $100/month misc
+        
+        const totalAnnualExpenses = annualRent + utilities + wifi + supplies + cleaning + platformFees + insurance + maintenance + miscellaneous;
+        const monthlyExpenses = totalAnnualExpenses / 12;
+        
+        // Profit calculations
+        const annualProfit = annualRevenue - totalAnnualExpenses;
+        const monthlyProfit = annualProfit / 12;
+        
+        // Break-even occupancy
+        const avgNightlyRate = annualRevenue / 365 / 0.65; // Estimate ADR from revenue assuming 65% occupancy
+        const breakEvenNights = Math.ceil(totalAnnualExpenses / avgNightlyRate);
+        const breakEvenOccupancy = Math.round((breakEvenNights / 365) * 100);
+        
+        // Scenarios
+        const conservativeRevenue = annualRevenue * 0.8;
+        const optimisticRevenue = annualRevenue * 1.2;
+        const conservativeProfit = conservativeRevenue - totalAnnualExpenses;
+        const optimisticProfit = optimisticRevenue - totalAnnualExpenses;
+        
+        // ROI calculation
+        const roi = startupCost > 0 ? Math.round((annualProfit / startupCost) * 100) : 0;
+        const paybackMonths = annualProfit > 0 ? Math.ceil(startupCost / monthlyProfit) : 0;
+        
+        return {
+          startup_costs: {
+            total: startupCost,
+            breakdown: {
+              furniture_and_decor: baseStartupCost + (bedrooms * 2000),
+              linens_and_towels: bedrooms * 500,
+              kitchen_essentials: 500,
+              photography: 300,
+              initial_supplies: 200
+            }
+          },
+          monthly_expenses: {
+            total: Math.round(monthlyExpenses),
+            breakdown: {
+              rent_or_mortgage: monthlyRent,
+              utilities: Math.round(utilities / 12),
+              wifi_streaming: Math.round(wifi / 12),
+              supplies_consumables: Math.round(supplies / 12),
+              cleaning: Math.round(cleaning / 12),
+              platform_fees: Math.round(platformFees / 12),
+              insurance: Math.round(insurance / 12),
+              maintenance_repairs: Math.round(maintenance / 12),
+              miscellaneous: Math.round(miscellaneous / 12)
+            }
+          },
+          annual_summary: {
+            gross_revenue: annualRevenue,
+            total_expenses: Math.round(totalAnnualExpenses),
+            net_profit: Math.round(annualProfit),
+            profit_margin: Math.round((annualProfit / annualRevenue) * 100)
+          },
+          break_even: {
+            occupancy_needed: breakEvenOccupancy,
+            nights_per_year: breakEvenNights,
+            nights_per_month: Math.ceil(breakEvenNights / 12)
+          },
+          scenarios: {
+            conservative: {
+              revenue: Math.round(conservativeRevenue),
+              profit: Math.round(conservativeProfit),
+              label: 'Conservative (-20%)'
+            },
+            realistic: {
+              revenue: annualRevenue,
+              profit: Math.round(annualProfit),
+              label: 'Realistic (Expected)'
+            },
+            optimistic: {
+              revenue: Math.round(optimisticRevenue),
+              profit: Math.round(optimisticProfit),
+              label: 'Optimistic (+20%)'
+            }
+          },
+          roi: {
+            first_year_roi: roi,
+            payback_period_months: paybackMonths
+          }
+        };
+      }
+      
       case "analyze_property": {
         const address = args.address as string;
         const bedrooms = (args.bedrooms as number) || 2;
@@ -304,12 +429,39 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           return { error: `Could not analyze property at "${address}". Please check the address is valid.` };
         }
         
+        // Calculate distance in miles for each comp
+        const compsWithDistance = estimate.comps.slice(0, 10).map(c => {
+          const distanceMiles = c.distance_meters ? (c.distance_meters / 1609.34).toFixed(1) : 'N/A';
+          return {
+            title: c.title,
+            bedrooms: c.bedrooms,
+            bathrooms: c.bathrooms,
+            annual_revenue: c.annual_revenue,
+            adr: c.adr,
+            occupancy: c.occupancy,
+            rating: c.rating,
+            reviews: c.reviews,
+            distance_miles: distanceMiles,
+            property_type: c.property_type || 'Unknown',
+            airbnb_url: c.airbnb_url || ''
+          };
+        });
+        
+        // Calculate market averages from comps
+        const avgRevenue = compsWithDistance.reduce((sum, c) => sum + c.annual_revenue, 0) / compsWithDistance.length;
+        const avgOccupancy = compsWithDistance.reduce((sum, c) => sum + c.occupancy, 0) / compsWithDistance.length;
+        const avgAdr = compsWithDistance.reduce((sum, c) => sum + c.adr, 0) / compsWithDistance.length;
+        
+        // Find top performer
+        const topPerformer = compsWithDistance.reduce((top, c) => c.annual_revenue > top.annual_revenue ? c : top, compsWithDistance[0]);
+        
         return {
           property: {
             address: estimate.property.address,
             bedrooms: estimate.property.bedrooms,
             bathrooms: estimate.property.bathrooms,
-            accommodates: estimate.property.accommodates
+            accommodates: estimate.property.accommodates,
+            zipcode: estimate.property.zipcode
           },
           estimates: {
             annual_revenue: estimate.estimates.annual_revenue,
@@ -318,20 +470,39 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             average_daily_rate: estimate.estimates.average_daily_rate,
             occupancy_rate: estimate.estimates.occupancy_rate
           },
-          monthly_forecast: estimate.monthly_forecast.slice(0, 6).map(m => ({
-            month: m.month,
-            revenue: m.revenue,
-            occupancy: m.occupancy
-          })),
-          comparable_properties: estimate.comps.slice(0, 5).map(c => ({
-            title: c.title,
-            bedrooms: c.bedrooms,
-            annual_revenue: c.annual_revenue,
-            adr: c.adr,
-            occupancy: c.occupancy,
-            rating: c.rating,
-            reviews: c.reviews
-          }))
+          market_comparison: {
+            your_property_vs_market: {
+              your_revenue: estimate.estimates.annual_revenue,
+              market_avg_revenue: Math.round(avgRevenue),
+              your_occupancy: estimate.estimates.occupancy_rate,
+              market_avg_occupancy: Math.round(avgOccupancy),
+              your_adr: estimate.estimates.average_daily_rate,
+              market_avg_adr: Math.round(avgAdr)
+            },
+            top_performer: {
+              title: topPerformer.title,
+              annual_revenue: topPerformer.annual_revenue,
+              occupancy: topPerformer.occupancy,
+              adr: topPerformer.adr,
+              rating: topPerformer.rating,
+              reviews: topPerformer.reviews
+            }
+          },
+          monthly_forecast: estimate.monthly_forecast.map(m => {
+            // Classify season type
+            const avgMonthlyRev = estimate.estimates.annual_revenue / 12;
+            const seasonType = m.revenue > avgMonthlyRev * 1.15 ? 'Peak' : 
+                              m.revenue < avgMonthlyRev * 0.85 ? 'Slow' : 'Shoulder';
+            return {
+              month: m.month,
+              revenue: m.revenue,
+              occupancy: m.occupancy,
+              adr: m.adr,
+              season_type: seasonType
+            };
+          }),
+          nearby_competitors: compsWithDistance,
+          competitor_count: estimate.comps.length
         };
       }
       
@@ -370,7 +541,7 @@ export async function getAIAdvisorResponse(
     }
   ];
   
-  const systemInstruction = `You are an expert short-term rental investment advisor. Your job is to help investors make data-driven decisions using real AirDNA market data.
+  const systemInstruction = `You are an expert short-term rental investment advisor helping beginner investors make data-driven decisions. Your job is to guide them through the analysis process step by step.
 
 IMPORTANT RULES:
 1. ALWAYS use the provided functions to fetch real data - NEVER make up numbers or statistics
@@ -381,35 +552,70 @@ IMPORTANT RULES:
 6. If you can't find data for a market or property, say so clearly
 7. Format currency values nicely (e.g., $45,000 not 45000)
 8. Format occupancy rates as percentages (e.g., 67% not 0.67) - multiply decimal values by 100
-9. Explain what metrics mean in simple terms
+9. Explain what metrics mean in simple, beginner-friendly terms
+10. Write at an elementary reading level - no jargon
+
+RESPONSE FORMAT:
+Always structure your response with:
+1. A clear, direct answer to their question with the key data
+2. Use markdown tables for data when showing comparisons or multiple metrics
+3. Brief explanation of what the numbers mean for them
+4. End EVERY response with exactly 3-5 follow-up questions in this EXACT format:
+
+---FOLLOW_UP_QUESTIONS---
+Question 1 here?
+Question 2 here?
+Question 3 here?
+---END_FOLLOW_UP---
+
+The follow-up questions should:
+- Be relevant to what was just discussed
+- Help them dig deeper into the analysis
+- Cover different aspects (competition, seasonality, profit, neighborhood, etc.)
+- Be phrased as complete questions they can click
+
+Examples of good follow-up questions:
+- "How does this compare to nearby competitors?"
+- "What's the monthly breakdown by season?"
+- "What amenities would help this property earn more?"
+- "What are the startup costs to get this running?"
+- "How does this neighborhood rank in the city?"
+- "What do the top earners in this area have in common?"
+- "What's the profit potential after expenses?"
 
 For PROPERTY ANALYSIS (when user provides an address):
 - Use analyze_property function with the full address
-- Report the estimated annual revenue (and range)
-- Explain the occupancy rate and ADR
-- Mention comparable properties in the area
-- Provide investment insights based on the data
+- Present data in a clean table format:
+  | Metric | Value |
+  |--------|-------|
+  | Annual Revenue | $XX,XXX |
+  | Occupancy Rate | XX% |
+  | Avg Daily Rate | $XXX |
+- Explain what these numbers mean in plain English
+- Mention how it compares to the market average
 
 For MARKET ANALYSIS:
+- Present key metrics in a table
 - Revenue potential (average annual revenue)
 - Occupancy rates (higher = more consistent bookings)
 - ADR (Average Daily Rate - how much per night)
 - Seasonality (how much revenue varies by season)
-- Regulation scores (higher = less regulatory risk)
-- Market saturation (listing count vs demand)
 
-For BEDROOM-SPECIFIC QUERIES:
-- When users ask about specific bedroom counts (e.g., "3 bedroom properties", "2BR", "studio"), use get_top_performers with the bedrooms parameter
-- This will show actual listings with that bedroom count and their revenue/occupancy
-- Compare the bedroom-specific data to the market average
-- Example: If user asks "What about 3 bedroom properties in Austin?", call get_top_performers with market_id and bedrooms=3
+For COMPETITION ANALYSIS:
+- Show top 5-10 competitors in a table with:
+  | Property | Revenue | Occupancy | ADR | Distance |
+- Highlight what top performers do differently
 
-For FOLLOW-UP QUESTIONS:
-- Remember the context from previous messages in the conversation
-- If user asks "What about 3 bedrooms?" after discussing Austin, they mean 3 bedrooms IN Austin
-- Use the market_id from the previous search to filter by bedrooms
+For SEASONALITY:
+- Show monthly breakdown with Peak/Shoulder/Slow labels
+- Explain the best and worst months
 
-Keep responses concise but informative. Use bullet points for comparisons.`;
+For PROFIT MATH:
+- Show expense breakdown in a table
+- Calculate break-even occupancy
+- Show conservative/realistic/optimistic scenarios
+
+Remember: You're talking to beginners. Explain everything simply. Use tables to make data scannable. Always end with clickable follow-up questions.`;
 
   try {
     // Make the initial API call with function declarations
