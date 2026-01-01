@@ -1854,7 +1854,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
                 optimistic_profit: result.profitability.scenarios.optimistic.estimated_profit
               }
             },
-            instruction: "Present the full report to the user. The report is formatted in Markdown and follows Coach Inayah's SOP template."
+            instruction: "CRITICAL: Present the ENTIRE report to the user EXACTLY as formatted. The report contains a competitor table with all properties - you MUST include this table in your response. Do NOT summarize or skip any sections. The report is formatted in Markdown with tables that must be preserved."
           };
         } catch (error) {
           return { error: `Failed to generate arbitrage report: ${error instanceof Error ? error.message : 'Unknown error'}` };
@@ -2453,8 +2453,11 @@ After substantive analyses, include:
 When user provides a property address AND monthly rent for arbitrage analysis:
 - Use generate_arbitrage_report to create a FULL professional report
 - The report follows Coach Inayah's exact SOP template with 5 sections
-- Present the COMPLETE report to the user - do not summarize
+- CRITICAL: Present the COMPLETE report to the user - do NOT summarize or skip any sections
 - The report includes: Property Overview, Market Analysis with percentiles, Competitor Analysis with Airbnb URLs, and Profitability Projections with 3 scenarios
+- IMPORTANT: The Competitor Analysis section contains a FULL TABLE with ALL competitors - you MUST include this entire table in your response
+- Each competitor row has: Property name (linked to Airbnb), Revenue, Occupancy, ADR, Rating, Reviews, and Success Factor
+- Do NOT summarize the competitor table - show EVERY row
 
 **MARKET PERCENTILES (get_market_percentiles):**
 When user asks about revenue potential or "how much can I make":

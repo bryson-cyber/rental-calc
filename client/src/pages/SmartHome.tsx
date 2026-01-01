@@ -1914,7 +1914,7 @@ Format everything in clear tables where appropriate. This is for a beginner inve
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => suggestions.length > 0 && setShowAutocomplete(true)}
-                  placeholder="Ask a follow-up question, paste a Zillow link, or enter a new address..."
+                  placeholder="Ask about this property, market, or competitors..."
                   className="flex-1 border-2 border-[#0F172A]/10 focus:border-[#C9A962] rounded-xl py-3 px-4 pr-24"
                   disabled={isLoading}
                 />

@@ -341,7 +341,13 @@ Here's a quick look at what makes the best properties stand out. We look at thei
 
 | # | Property | Revenue | Occ% | ADR | Rating | Reviews | Success Factor |
 | :--- | :--- | ---: | ---: | ---: | :---: | ---: | :--- |
-${competitors.map((c, idx) => `| ${idx + 1} | [${c.name.substring(0, 35)}${c.name.length > 35 ? '...' : ''}](${c.airbnb_url}) | $${c.annual_revenue.toLocaleString()} | ${c.occupancy < 1 ? Math.round(c.occupancy * 100) : Math.round(c.occupancy)}% | $${Math.round(c.adr)} | ${c.rating ? c.rating.toFixed(1) + '⭐' : 'N/A'} | ${c.reviews} | ${c.key_success_factor} |`).join('\n')}
+${competitors.map((c, idx) => {
+  const cleanName = c.name.replace(/[\|\[\]]/g, '').substring(0, 40);
+  const displayName = cleanName.length > 35 ? cleanName.substring(0, 35) + '...' : cleanName;
+  const occPercent = c.occupancy < 1 ? Math.round(c.occupancy * 100) : Math.round(c.occupancy);
+  const ratingDisplay = c.rating ? c.rating.toFixed(1) + '⭐' : 'N/A';
+  return `| ${idx + 1} | [${displayName}](${c.airbnb_url}) | $${c.annual_revenue.toLocaleString()} | ${occPercent}% | $${Math.round(c.adr)} | ${ratingDisplay} | ${c.reviews} | ${c.key_success_factor} |`;
+}).join('\n')}
 
 **The Thought Process:** We are not just providing a place to sleep; we are selling an **experience**. The most successful Airbnbs have a unique personality or a special feature that makes them memorable. Our job is to create that for our property.
 

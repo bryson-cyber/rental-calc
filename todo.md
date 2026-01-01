@@ -736,3 +736,14 @@
 - [x] Fix occupancy showing 100% - API returns decimal (0.56), now converted to percentage (56%)
 - [x] Fixed in ai-advisor.ts: analyze_property, get_bedroom_estimate, search_nearby_listings
 - [x] Fixed in sop-reports.ts: competitor table display
+
+
+## Table Formatting Fix
+- [x] Fix competitor table - cleaned up name formatting and link generation
+- [x] Updated AI instructions to show FULL competitor table (not summarize)
+- [x] Test that all competitors display with clickable Airbnb links (verified 12 properties with links)
+
+
+## Follow-up Input Placeholder Fix
+- [x] Change placeholder from "Ask a follow-up question, paste a Zillow link, or enter a new address..." to "Ask about this property, market, or competitors..."
+- [ ] Make placeholder dynamic based on whether a report is displayed (optional enhancement)
