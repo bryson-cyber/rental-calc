@@ -1049,3 +1049,14 @@
 - [ ] Add detailed market deep-dive
 - [ ] Add competitive positioning analysis
 - [ ] Add actionable recommendations section
+
+## Incorporate More AirDNA API Data
+
+- [x] Audit all AirDNA API endpoints for unused data points
+- [x] Add booking patterns section (lead time, length of stay)
+- [x] Add cancellation policy analysis section
+- [x] Add professional host premium section
+- [x] Add supply trend analysis (listings entering/leaving market)
+- [x] Add future daily pricing forecasts
+- [x] Add market score/investability metrics
+- [x] Ensure all fetched data is displayed in the report

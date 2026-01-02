@@ -1280,6 +1280,282 @@ export default function PropertyAnalyzer() {
               </div>
             )}
             
+            {/* Historical Trends - 12 Month Performance */}
+            {result.historical_trends && (result.historical_trends.occupancy?.length > 0 || result.historical_trends.adr?.length > 0 || result.historical_trends.revenue?.length > 0) && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <button
+                  onClick={() => toggleSection('historical')}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white">12-Month Historical Performance</h3>
+                  </div>
+                  {expandedSections.has('historical') ? (
+                    <ChevronUp className="w-5 h-5 text-white/50" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-white/50" />
+                  )}
+                </button>
+                
+                {expandedSections.has('historical') && (
+                  <div className="mt-6 space-y-6">
+                    {/* Occupancy Trend */}
+                    {result.historical_trends.occupancy && result.historical_trends.occupancy.length > 0 && (
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <p className="text-sm text-white/70 mb-3 flex items-center gap-2">
+                          <Percent className="w-4 h-4 text-blue-400" />
+                          Occupancy Rate Trend (12 months)
+                        </p>
+                        <div className="flex items-end gap-1 h-24">
+                          {result.historical_trends.occupancy.slice(-12).map((point, i) => {
+                            const maxVal = Math.max(...result.historical_trends!.occupancy!.map(p => p.value));
+                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div 
+                                  className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-400"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  title={`${formatMonth(point.date)}: ${formatPercent(point.value)}`}
+                                />
+                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-2 text-xs text-white/50">
+                          <span>Low: {formatPercent(Math.min(...result.historical_trends.occupancy.map(p => p.value)))}</span>
+                          <span>High: {formatPercent(Math.max(...result.historical_trends.occupancy.map(p => p.value)))}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* ADR Trend */}
+                    {result.historical_trends.adr && result.historical_trends.adr.length > 0 && (
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <p className="text-sm text-white/70 mb-3 flex items-center gap-2">
+                          <Banknote className="w-4 h-4 text-green-400" />
+                          Average Daily Rate Trend (12 months)
+                        </p>
+                        <div className="flex items-end gap-1 h-24">
+                          {result.historical_trends.adr.slice(-12).map((point, i) => {
+                            const maxVal = Math.max(...result.historical_trends!.adr!.map(p => p.value));
+                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div 
+                                  className="w-full rounded-t bg-green-500 transition-all hover:bg-green-400"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  title={`${formatMonth(point.date)}: ${formatCurrency(point.value)}`}
+                                />
+                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-2 text-xs text-white/50">
+                          <span>Low: {formatCurrency(Math.min(...result.historical_trends.adr.map(p => p.value)))}</span>
+                          <span>High: {formatCurrency(Math.max(...result.historical_trends.adr.map(p => p.value)))}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Revenue Trend */}
+                    {result.historical_trends.revenue && result.historical_trends.revenue.length > 0 && (
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <p className="text-sm text-white/70 mb-3 flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-amber-400" />
+                          Monthly Revenue Trend (12 months)
+                        </p>
+                        <div className="flex items-end gap-1 h-24">
+                          {result.historical_trends.revenue.slice(-12).map((point, i) => {
+                            const maxVal = Math.max(...result.historical_trends!.revenue!.map(p => p.value));
+                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div 
+                                  className="w-full rounded-t bg-amber-500 transition-all hover:bg-amber-400"
+                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  title={`${formatMonth(point.date)}: ${formatCurrency(point.value)}`}
+                                />
+                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between mt-2 text-xs text-white/50">
+                          <span>Low: {formatCurrency(Math.min(...result.historical_trends.revenue.map(p => p.value)))}</span>
+                          <span>High: {formatCurrency(Math.max(...result.historical_trends.revenue.map(p => p.value)))}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Trend Summary */}
+                    <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl p-4 border border-indigo-500/20">
+                      <p className="text-white/70 text-sm">
+                        <strong className="text-white">Trend Analysis:</strong> Historical data shows how this market has performed over the past year. 
+                        {result.historical_trends.occupancy && result.historical_trends.occupancy.length > 1 && (() => {
+                          const first = result.historical_trends!.occupancy![0].value;
+                          const last = result.historical_trends!.occupancy![result.historical_trends!.occupancy!.length - 1].value;
+                          const change = ((last - first) / first) * 100;
+                          return change > 5 
+                            ? ` Occupancy has increased by ${Math.abs(change).toFixed(1)}% - indicating growing demand.`
+                            : change < -5
+                            ? ` Occupancy has decreased by ${Math.abs(change).toFixed(1)}% - monitor market conditions.`
+                            : ' Occupancy has remained relatively stable.';
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Future Pricing Forecasts */}
+            {result.future_pricing && result.future_pricing.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <button
+                  onClick={() => toggleSection('future')}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                      <CalendarDays className="w-5 h-5 text-teal-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white">Future Pricing Forecast</h3>
+                  </div>
+                  {expandedSections.has('future') ? (
+                    <ChevronUp className="w-5 h-5 text-white/50" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-white/50" />
+                  )}
+                </button>
+                
+                {expandedSections.has('future') && (
+                  <div className="mt-6 space-y-6">
+                    {/* Forecast Summary */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white/5 rounded-xl p-4 text-center">
+                        <p className="text-xs text-white/50 mb-1">Avg Forecasted ADR</p>
+                        <p className="text-2xl font-bold text-white">
+                          {formatCurrency(result.future_pricing.reduce((sum, d) => sum + d.adr, 0) / result.future_pricing.length)}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-4 text-center">
+                        <p className="text-xs text-white/50 mb-1">Avg Forecasted Occupancy</p>
+                        <p className="text-2xl font-bold text-white">
+                          {formatPercent(result.future_pricing.reduce((sum, d) => sum + d.occupancy, 0) / result.future_pricing.length)}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-4 text-center">
+                        <p className="text-xs text-white/50 mb-1">Forecast Period</p>
+                        <p className="text-2xl font-bold text-white">{result.future_pricing.length} days</p>
+                      </div>
+                    </div>
+                    
+                    {/* ADR Forecast Chart */}
+                    <div className="bg-white/5 rounded-xl p-4">
+                      <p className="text-sm text-white/70 mb-3">Daily ADR Forecast</p>
+                      <div className="flex items-end gap-px h-24">
+                        {result.future_pricing.slice(0, 90).map((day, i) => {
+                          const maxAdr = Math.max(...result.future_pricing!.slice(0, 90).map(d => d.adr));
+                          const minAdr = Math.min(...result.future_pricing!.slice(0, 90).map(d => d.adr));
+                          const range = maxAdr - minAdr;
+                          const height = range > 0 ? ((day.adr - minAdr) / range) * 80 + 20 : 50;
+                          return (
+                            <div 
+                              key={i} 
+                              className="flex-1 bg-teal-500 hover:bg-teal-400 transition-all rounded-t"
+                              style={{ height: `${height}%`, minHeight: '4px' }}
+                              title={`${day.date}: ${formatCurrency(day.adr)}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-white/50">
+                        <span>Next 90 days</span>
+                        <span>Range: {formatCurrency(Math.min(...result.future_pricing.slice(0, 90).map(d => d.adr)))} - {formatCurrency(Math.max(...result.future_pricing.slice(0, 90).map(d => d.adr)))}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Pricing Insight */}
+                    <div className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 rounded-xl p-4 border border-teal-500/20">
+                      <p className="text-white/70 text-sm">
+                        <strong className="text-white">Pricing Strategy:</strong> Based on forecasted demand, 
+                        {(() => {
+                          const avgAdr = result.future_pricing!.reduce((sum, d) => sum + d.adr, 0) / result.future_pricing!.length;
+                          const avgOcc = result.future_pricing!.reduce((sum, d) => sum + d.occupancy, 0) / result.future_pricing!.length;
+                          const occPct = avgOcc > 1 ? avgOcc : avgOcc * 100;
+                          return occPct >= 70
+                            ? ` high demand is expected. Consider pricing at or above ${formatCurrency(avgAdr)} to maximize revenue.`
+                            : occPct >= 50
+                            ? ` moderate demand is expected. Price competitively around ${formatCurrency(avgAdr)} to capture bookings.`
+                            : ` lower demand is forecasted. Consider promotional pricing below ${formatCurrency(avgAdr)} to drive bookings.`;
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Amenity Analysis */}
+            {result.amenities && result.amenities.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <button
+                  onClick={() => toggleSection('amenities')}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+                      <Star className="w-5 h-5 text-pink-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white">Amenity Analysis</h3>
+                  </div>
+                  {expandedSections.has('amenities') ? (
+                    <ChevronUp className="w-5 h-5 text-white/50" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-white/50" />
+                  )}
+                </button>
+                
+                {expandedSections.has('amenities') && (
+                  <div className="mt-6 space-y-4">
+                    <p className="text-white/70 text-sm mb-4">
+                      These amenities are most common among top-performing properties in your market:
+                    </p>
+                    {result.amenities.slice(0, 10).map((amenity, i) => (
+                      <div key={i} className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-white capitalize">{amenity.amenity.replace(/_/g, ' ')}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            amenity.percentage_of_top_performers >= 80 ? 'bg-green-500/20 text-green-400' :
+                            amenity.percentage_of_top_performers >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {amenity.percentage_of_top_performers}% of top performers
+                          </span>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-2 mb-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              amenity.percentage_of_top_performers >= 80 ? 'bg-green-500' :
+                              amenity.percentage_of_top_performers >= 50 ? 'bg-yellow-500' :
+                              'bg-blue-500'
+                            }`}
+                            style={{ width: `${amenity.percentage_of_top_performers}%` }}
+                          />
+                        </div>
+                        <p className="text-white/50 text-sm">{amenity.recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Risks */}
             {result.risks && result.risks.length > 0 && (
               <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">

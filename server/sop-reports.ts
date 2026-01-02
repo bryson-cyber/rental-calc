@@ -742,8 +742,11 @@ export async function generateFullArbitrageAnalysis(
         }
         
         // Try to get comprehensive market report
-        if (zipData.market?.id) {
-          marketData = await getComprehensiveMarketReport(zipData.market.id);
+        // First try direct market, then try submarket's parent market
+        const zipMarketId = zipData.market?.id || zipData.submarket?.parent_market?.id;
+        if (zipMarketId) {
+          console.log(`[ArbitrageAnalysis] Found market ID from ZIP search: ${zipMarketId}`);
+          marketData = await getComprehensiveMarketReport(zipMarketId);
         }
       }
     } catch (error) {
@@ -946,15 +949,27 @@ export async function generateFullArbitrageAnalysis(
   let property_roi: PropertyROIData | undefined;
   let regulations: RegulationsData | undefined;
   
-  // Try to get market ID from defaultMarketData, or from zipData submarket's parent market
+  // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
   
-  // If marketId is 'unknown', try to get it from the property estimate or use a fallback
-  if (marketId === 'unknown' && property_estimate?.property?.market_id) {
-    marketId = property_estimate.property.market_id;
+  // If marketId is 'unknown', try multiple fallbacks
+  if (marketId === 'unknown') {
+    // Try property estimate's market_id
+    if (property_estimate?.property?.market_id) {
+      marketId = property_estimate.property.market_id;
+      console.log(`[ArbitrageAnalysis] Using market ID from property estimate: ${marketId}`);
+    }
+    // Try property estimate's submarket_id (some API calls work with submarket IDs)
+    else if (property_estimate?.property?.submarket_id) {
+      marketId = property_estimate.property.submarket_id;
+      console.log(`[ArbitrageAnalysis] Using submarket ID from property estimate: ${marketId}`);
+    }
   }
   
-  console.log(`[ArbitrageAnalysis] Using market ID: ${marketId}`);
+  console.log(`[ArbitrageAnalysis] Final market ID: ${marketId}`);
+  console.log(`[ArbitrageAnalysis] Property estimate market_id: ${property_estimate?.property?.market_id}`);
+  console.log(`[ArbitrageAnalysis] Property estimate submarket_id: ${property_estimate?.property?.submarket_id}`);
+  console.log(`[ArbitrageAnalysis] defaultMarketData.market.id: ${defaultMarketData.market.id}`);
   
   if (marketId && marketId !== 'unknown') {
     try {

@@ -1617,7 +1617,7 @@ export async function getRentalizerEstimate(
       airbnb_listing_id: comp.platforms?.airbnb_property_id,
       airbnb_url: comp.platforms?.airbnb_property_url || 
         (comp.platforms?.airbnb_property_id ? `https://www.airbnb.com/rooms/${comp.platforms.airbnb_property_id}` : undefined),
-      image_url: comp.details.images?.[0],
+      image_url: comp.details.images?.[0] || (comp.details as any).thumbnail_url || (comp as any).thumbnail_url,
       property_type: comp.details.property_type,
     }));
     
