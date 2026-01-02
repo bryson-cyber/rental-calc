@@ -28,6 +28,8 @@ import {
   getSinglePropertyDetails,
   getSubmarketListings,
   getQualifyingCompetitors,
+  getListingsInRadius,
+  RadiusSearchResult,
   ListingData,
   ListingComp,
   ListingFuturePricing,
@@ -930,6 +932,19 @@ export async function generateFullArbitrageAnalysis(
     professional_percentage: number;
     top_qualifiers: ListingData[];
   };
+  // RADIUS LISTINGS (hyper-local competition within 1km)
+  radius_listings?: {
+    total_count: number;
+    radius_meters: number;
+    listings_per_sqkm: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    same_bedroom_count: number;
+    top_nearby: ListingData[];
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1571,6 +1586,18 @@ export async function generateFullArbitrageAnalysis(
   let cancellation_policies: CancellationPolicyData | undefined;
   let property_roi: PropertyROIData | undefined;
   let regulations: RegulationsData | undefined;
+  let radius_listings: {
+    total_count: number;
+    radius_meters: number;
+    listings_per_sqkm: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    same_bedroom_count: number;
+    top_nearby: ListingData[];
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -1681,6 +1708,55 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching qualifying competitors:', error);
+    }
+    
+    // Step 15.6: Fetch listings within 1km radius for hyper-local density analysis
+    try {
+      const propertyLat = property_estimate?.property?.latitude;
+      const propertyLng = property_estimate?.property?.longitude;
+      
+      if (propertyLat && propertyLng) {
+        console.log(`[ArbitrageAnalysis] Fetching listings within 1km of (${propertyLat}, ${propertyLng})...`);
+        const radiusResult = await getListingsInRadius(propertyLat, propertyLng, 1000, {
+          limit: 25,
+          sort_by: 'revenue',
+          sort_direction: 'desc'
+        });
+        
+        if (radiusResult.listings.length > 0) {
+          const listings = radiusResult.listings;
+          const superhostCount = listings.filter(l => l.superhost).length;
+          const professionalCount = listings.filter(l => l.professionally_managed).length;
+          const sameBedroomCount = listings.filter(l => l.bedrooms === actualBedrooms).length;
+          const avgRevenue = listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / listings.length;
+          const avgAdr = listings.reduce((sum, l) => sum + (l.adr || 0), 0) / listings.length;
+          const avgOccupancy = listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length;
+          
+          // Calculate listings per square kilometer (1km radius = ~3.14 sq km)
+          const areaInSqKm = Math.PI * Math.pow(1, 2); // π * r²
+          const listingsPerSqKm = radiusResult.total_count / areaInSqKm;
+          
+          radius_listings = {
+            total_count: radiusResult.total_count,
+            radius_meters: 1000,
+            listings_per_sqkm: Math.round(listingsPerSqKm * 10) / 10,
+            avg_revenue: avgRevenue,
+            avg_adr: avgAdr,
+            avg_occupancy: avgOccupancy,
+            superhost_percentage: (superhostCount / listings.length) * 100,
+            professional_percentage: (professionalCount / listings.length) * 100,
+            same_bedroom_count: sameBedroomCount,
+            top_nearby: listings.slice(0, 10)
+          };
+          console.log(`[ArbitrageAnalysis] Found ${radiusResult.total_count} listings within 1km (${listingsPerSqKm.toFixed(1)} per sq km). ${sameBedroomCount} same-bedroom. Avg Revenue: $${Math.round(avgRevenue)}/yr`);
+        } else {
+          console.log(`[ArbitrageAnalysis] No listings found within 1km radius`);
+        }
+      } else {
+        console.log(`[ArbitrageAnalysis] No coordinates available for radius search`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching radius listings:', error);
     }
   }
   
@@ -2096,10 +2172,31 @@ export async function generateFullArbitrageAnalysis(
           superhost: l.superhost || false,
           professionally_managed: l.professionally_managed || false
         }))
+      } : undefined,
+      radius_listings: radius_listings ? {
+        total_count: radius_listings.total_count,
+        radius_meters: radius_listings.radius_meters,
+        listings_per_sqkm: radius_listings.listings_per_sqkm,
+        avg_revenue: radius_listings.avg_revenue,
+        avg_adr: radius_listings.avg_adr,
+        avg_occupancy: radius_listings.avg_occupancy,
+        superhost_percentage: radius_listings.superhost_percentage,
+        professional_percentage: radius_listings.professional_percentage,
+        same_bedroom_count: radius_listings.same_bedroom_count,
+        top_nearby: radius_listings.top_nearby.slice(0, 5).map(l => ({
+          title: l.title || 'Unnamed Listing',
+          bedrooms: l.bedrooms,
+          annual_revenue: l.annual_revenue,
+          adr: l.adr,
+          occupancy: l.occupancy,
+          rating: l.rating,
+          distance_meters: l.distance_meters
+        }))
       } : undefined
     });
     
-    console.log('[ArbitrageAnalysis] Narrative report generation complete');    break; // Success, exit retry loop
+    console.log('[ArbitrageAnalysis] Narrative report generation complete');
+    break; // Success, exit retry loop
   } catch (error: any) {
     console.error(`[ArbitrageAnalysis] Error generating narrative report (attempt ${attempt}/${MAX_RETRIES}):`, error?.message || error);
     
@@ -2266,7 +2363,9 @@ export async function generateFullArbitrageAnalysis(
     // SUBMARKET LISTINGS
     submarket_listings,
     // QUALIFYING COMPETITORS
-    qualifying_competitors
+    qualifying_competitors,
+    // RADIUS LISTINGS
+    radius_listings
   };
 }
 

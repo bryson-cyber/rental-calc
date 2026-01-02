@@ -2243,6 +2243,28 @@ export interface NarrativeReportInput {
       professionally_managed: boolean;
     }>;
   };
+  
+  // Radius listings (hyper-local competition within 1km)
+  radius_listings?: {
+    total_count: number;
+    radius_meters: number;
+    listings_per_sqkm: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    same_bedroom_count: number;
+    top_nearby: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      distance_meters?: number;
+    }>;
+  };
 }
 
 /**
@@ -2610,6 +2632,44 @@ Key Insight: ${qc.qualification_rate > 30 ?
   `With ${qc.qualification_rate.toFixed(0)}% of similar properties meeting the profitability threshold, this market shows good potential for arbitrage success.` : 
   `Only ${qc.qualification_rate.toFixed(0)}% of similar properties meet the profitability threshold - you'll need to be in the top tier to succeed.`}`;
   }
+  
+  // Build radius listings context (hyper-local density within 1km)
+  let radiusListingsContext = '';
+  if (input.radius_listings && input.radius_listings.total_count > 0) {
+    const rl = input.radius_listings;
+    const densityAssessment = rl.listings_per_sqkm > 100 ? 'VERY HIGH - extremely competitive micro-market' : 
+      rl.listings_per_sqkm > 50 ? 'HIGH - crowded immediate area' : 
+      rl.listings_per_sqkm > 20 ? 'MODERATE - typical urban density' : 
+      rl.listings_per_sqkm > 10 ? 'LOW - less competitive immediate area' : 
+      'VERY LOW - limited nearby competition';
+    
+    const revenueComparison = rl.avg_revenue > input.revenue_mid ? 
+      `Local competitors average $${Math.round(rl.avg_revenue).toLocaleString()}/yr - ABOVE your realistic projection` :
+      `Local competitors average $${Math.round(rl.avg_revenue).toLocaleString()}/yr - BELOW your realistic projection`;
+    
+    radiusListingsContext = `
+HYPER-LOCAL COMPETITION (Within 1km / 0.6mi of Property):
+This shows the IMMEDIATE neighborhood competition - your closest rivals:
+- Total Listings Within 1km: ${rl.total_count}
+- Density: ${rl.listings_per_sqkm.toFixed(1)} listings per sq km (${densityAssessment})
+- Same-Bedroom Competitors: ${rl.same_bedroom_count} (direct competition)
+
+Neighborhood Averages:
+- Average Revenue: $${Math.round(rl.avg_revenue).toLocaleString()}/yr (${revenueComparison})
+- Average ADR: $${Math.round(rl.avg_adr)}/night
+- Average Occupancy: ${(rl.avg_occupancy * 100).toFixed(0)}%
+- Superhost Rate: ${rl.superhost_percentage.toFixed(0)}%
+- Professionally Managed: ${rl.professional_percentage.toFixed(0)}%
+
+Top Nearby Competitors:
+${rl.top_nearby.slice(0, 5).map((l, i) => 
+  `${i + 1}. "${l.title}" (${l.bedrooms}BR) - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ${l.distance_meters ? ` | ${l.distance_meters}m away` : ''}`
+).join('\n')}
+
+Key Insight: ${rl.listings_per_sqkm > 50 ? 
+  `With ${rl.listings_per_sqkm.toFixed(0)} listings per sq km, this is a highly competitive micro-market. Differentiation through amenities, photos, and pricing will be critical.` : 
+  `With only ${rl.listings_per_sqkm.toFixed(0)} listings per sq km nearby, there's room to capture local demand without intense immediate competition.`}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2666,6 +2726,7 @@ ${rentalizerCompsContext}
 ${existingListingContext}
 ${submarketListingsContext}
 ${qualifyingCompetitorsContext}
+${radiusListingsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2683,7 +2744,7 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, and HYPER-LOCAL COMPETITION data - what does the superhost percentage, professional manager presence, and submarket density reveal about competition quality? How can this property differentiate itself in this specific neighborhood?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data - what does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How crowded is the immediate 1km radius? How can this property differentiate itself in this specific micro-market?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   

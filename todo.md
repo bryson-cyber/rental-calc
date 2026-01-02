@@ -1292,6 +1292,11 @@
 - [x] Pass filtered competitor data (superhosts only, high-rated only) to Gemini
 - [x] Update AI prompt to analyze what separates top-tier competitors
 
+### Iteration 12: Listings In Radius (Hyper-Local Density)
+- [x] Call getListingsInRadius to get all listings within 1km of property
+- [x] Pass radius-based density data (listing count, avg revenue, competition density) to Gemini
+- [x] Update AI prompt to analyze immediate neighborhood competition
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters
