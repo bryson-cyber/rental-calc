@@ -39,6 +39,9 @@ import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { generateRentalReportPdf } from '@/lib/generatePdf';
 import ChapterPropertyReport from '@/components/ChapterPropertyReport';
+import AnalysisProgress from '@/components/AnalysisProgress';
+import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/EnhancedInsights';
+import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
 
 // Type definitions based on API response
 interface MonthlyForecast {
@@ -152,6 +155,7 @@ interface ComprehensiveReportData {
   same_bedroom_comps: ListingData[];
   bedroom_performance: BedroomPerformance[];
   generated_at: string;
+  enhanced_narrative_report?: EnhancedNarrativeReport;
 }
 
 // Animated counter component
@@ -305,8 +309,11 @@ export default function RentalEstimator() {
   });
   const [reportData, setReportData] = useState<ComprehensiveReportData | null>(null);
 
-  // tRPC mutations
-  const getReportMutation = trpc.rental.getPropertyReport.useMutation();
+  // Progress tracking for real-time updates
+  const { sessionId, progress, startTracking, stopTracking } = useAnalysisProgress();
+
+  // tRPC mutations - use analyzeProperty for full analysis with progress tracking
+  const analyzePropertyMutation = trpc.advanced.analyzeProperty.useMutation();
   const submitLeadMutation = trpc.rental.submitLead.useMutation();
 
   const handleZillowParse = () => {
@@ -344,6 +351,9 @@ export default function RentalEstimator() {
     setError(null);
     setStep('loading');
     
+    // Start progress tracking and get session ID
+    const trackingSessionId = startTracking();
+    
     try {
       // Submit lead first
       await submitLeadMutation.mutateAsync({
@@ -357,18 +367,78 @@ export default function RentalEstimator() {
         zillow_url: zillowUrl || undefined,
       });
 
-      // Then get the comprehensive report
-      const result = await getReportMutation.mutateAsync({
+      // Run comprehensive analysis with progress tracking
+      const result = await analyzePropertyMutation.mutateAsync({
         address: formData.address,
+        monthly_rent: formData.monthlyRent,
         bedrooms: formData.bedrooms,
         bathrooms: formData.bathrooms,
-        accommodates: formData.accommodates,
-
+        sessionId: trackingSessionId, // Enable real-time progress updates
       });
 
+      // Stop progress tracking
+      stopTracking();
+
       if (result.success && result.data) {
-        // The API returns { success, data: { property, market, ... } }
-        setReportData(result.data as ComprehensiveReportData);
+        // Transform the analysis result to match ComprehensiveReportData
+        const analysisData = result.data as any;
+        const propEst = analysisData.property_estimate as any;
+        const percentiles = analysisData.percentiles as any;
+        const competitors = analysisData.competitors as any[] || [];
+        
+        const reportData: ComprehensiveReportData = {
+          property: propEst || {
+            property: {
+              address: formData.address,
+              bedrooms: formData.bedrooms,
+              bathrooms: formData.bathrooms,
+              accommodates: formData.bedrooms * 2,
+            },
+            estimates: {
+              annual_revenue: percentiles?.p50 || 0,
+              annual_revenue_low: percentiles?.p25 || 0,
+              annual_revenue_high: percentiles?.p75 || 0,
+              average_daily_rate: propEst?.estimates?.average_daily_rate || 0,
+              occupancy_rate: propEst?.estimates?.occupancy_rate || 0,
+            },
+            monthly_forecast: propEst?.monthly_forecast || [],
+            comps: competitors.map((c: any) => ({
+              title: c.name,
+              bedrooms: c.bedrooms,
+              bathrooms: c.bathrooms,
+              rating: c.rating,
+              reviews: c.reviews,
+              annual_revenue: c.annual_revenue,
+              adr: c.adr,
+              occupancy: c.occupancy,
+              distance_meters: 0,
+              airbnb_url: c.airbnb_url,
+              image_url: c.image_url,
+              property_type: c.property_type,
+            })),
+          },
+          market: null,
+          submarkets: [],
+          same_bedroom_comps: competitors.map((c: any) => ({
+            id: c.id || '',
+            title: c.name,
+            airbnb_url: c.airbnb_url,
+            image_url: c.image_url,
+            bedrooms: c.bedrooms,
+            bathrooms: c.bathrooms,
+            accommodates: c.accommodates || 0,
+            property_type: c.property_type || 'house',
+            rating: c.rating,
+            reviews: c.reviews,
+            annual_revenue: c.annual_revenue,
+            adr: c.adr,
+            occupancy: c.occupancy,
+          })),
+          bedroom_performance: [],
+          generated_at: new Date().toISOString(),
+          enhanced_narrative_report: analysisData.enhanced_narrative_report as EnhancedNarrativeReport | undefined,
+        };
+        setReportData(reportData);
         setStep('results');
       } else {
         setError(result.error || 'Failed to generate report. Please try again.');
@@ -376,6 +446,7 @@ export default function RentalEstimator() {
       }
     } catch (err) {
       console.error('Error getting report:', err);
+      stopTracking();
       setError('An error occurred while generating your report. Please try again.');
       setStep('lead');
     }
@@ -832,85 +903,14 @@ export default function RentalEstimator() {
     );
   }
 
-  // Loading State - Polished step-by-step animation
+  // Loading State - Real-time progress tracking
   if (step === 'loading') {
-    const loadingSteps = [
-      { text: 'Analyzing property details', delay: 0 },
-      { text: 'Pulling proprietary market data', delay: 1.5 },
-      { text: 'Finding same-bedroom comparables', delay: 3 },
-      { text: 'Calculating revenue projections', delay: 4.5 },
-      { text: 'Running AI profitability analysis', delay: 6 },
-      { text: 'Generating your personalized report', delay: 7.5 },
-    ];
-
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: 'url(/images/hero-property.jpg)' }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0F172A]/95 via-[#0F172A]/90 to-[#1e293b]/85" />
-        </div>
-        
-        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-          <motion.div 
-            className="text-center max-w-lg"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Animated Icon */}
-            <div className="relative inline-flex items-center justify-center w-24 h-24 mb-8">
-              <motion.div
-                className="absolute inset-0 bg-[#C9A962]/20 rounded-2xl backdrop-blur-sm border border-[#C9A962]/30"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              <Loader2 className="w-12 h-12 text-[#C9A962] animate-spin" />
-            </div>
-
-            {/* Title */}
-            <h2 className="text-3xl font-serif font-semibold text-white mb-3">
-              Building Your Analysis
-            </h2>
-            <p className="text-white/60 font-sans mb-2">
-              {formData.address}
-            </p>
-            <p className="text-[#C9A962] font-sans text-sm mb-8">
-              Monthly Rent: ${formData.monthlyRent.toLocaleString()}
-            </p>
-            
-            {/* Progress Steps */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <div className="space-y-4">
-                {loadingSteps.map((step, idx) => (
-                  <motion.div
-                    key={idx}
-                    className="flex items-center gap-3"
-                    initial={{ opacity: 0.3 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: step.delay, duration: 0.5 }}
-                  >
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: step.delay + 0.2, type: 'spring' }}
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-[#C9A962]" />
-                    </motion.div>
-                    <span className="text-white/80 text-sm font-sans text-left">{step.text}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* Reassurance */}
-            <p className="mt-6 text-white/40 text-xs font-sans">
-              This usually takes 15-30 seconds. Please don't refresh the page.
-            </p>
-          </motion.div>
-        </div>
-      </div>
+      <AnalysisProgress
+        progress={progress}
+        address={formData.address}
+        monthlyRent={formData.monthlyRent}
+      />
     );
   }
 

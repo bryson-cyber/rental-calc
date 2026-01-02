@@ -1017,17 +1017,21 @@ export const appRouter = router({
         monthly_rent: z.number().positive("Monthly rent must be positive"),
         bedrooms: z.number().int().min(1).max(20),
         bathrooms: z.number().min(0.5).max(20),
+        sessionId: z.string().optional(), // For progress tracking
       }))
       .mutation(async ({ input }) => {
         try {
           console.log('[LeadMagnet] Starting property analysis:', input.address);
           
-          // Run the full arbitrage analysis
+          // Run the full arbitrage analysis with optional progress tracking
           const analysis = await generateFullArbitrageAnalysis(
             input.address,
             input.monthly_rent,
             input.bedrooms,
-            input.bathrooms
+            input.bathrooms,
+            undefined, // zillow_url
+            undefined, // attractive_features
+            input.sessionId // sessionId for progress tracking
           );
           
           console.log('[LeadMagnet] Analysis complete');
@@ -1089,6 +1093,8 @@ export const appRouter = router({
               historical_analysis: analysis.historical_analysis,
               // COMPREHENSIVE NARRATIVE REPORT
               narrative_report: analysis.narrative_report,
+              // ENHANCED NARRATIVE REPORT (with action items and what_this_means)
+              enhanced_narrative_report: analysis.enhanced_narrative_report,
               
               // Full markdown report
               full_report: analysis.report

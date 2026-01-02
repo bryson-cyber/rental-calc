@@ -1169,3 +1169,39 @@
 - [x] Add retry logic with exponential backoff for all AI calls
 - [x] Optimize token usage to reduce API costs and latency
 - [ ] Add progress indicators during long-running analyses
+
+
+## UI Enhancement Sprint - Enhanced Report Display & Progress Indicator
+
+### Progress Indicator
+- [ ] Add animated progress bar during analysis
+- [ ] Show real-time status messages (Fetching market data, Analyzing competitors, Generating report)
+- [ ] Display estimated time remaining
+- [ ] Add smooth transitions between status updates
+
+### Enhanced Report Display
+- [ ] Display "What This Means For You" sections in the results page
+- [ ] Show action items with priority badges (high/medium/low)
+- [ ] Display market context information
+- [ ] Show revenue-to-rent ratio prominently with 2x rule indicator
+- [ ] Add quick facts sidebar or section
+
+
+## UI Enhancement Sprint - Enhanced Report Display
+
+### Progress Indicator
+- [x] Create real-time progress tracking via SSE
+- [x] Create AnalysisProgress component with step-by-step display
+- [x] Add progress bar with percentage
+- [x] Show estimated time remaining
+- [x] Connect frontend to backend progress events
+- [x] Write unit tests for progress tracker
+
+### Enhanced Report Display
+- [x] Create EnhancedInsights component
+- [x] Display "What This Means For You" sections
+- [x] Display Action Items with priorities
+- [x] Show Market Context badges
+- [x] Display Revenue-to-Rent ratio indicator
+- [x] Add Quick Facts banner
+- [ ] Integrate EnhancedInsights into ChapterPropertyReport (next step)

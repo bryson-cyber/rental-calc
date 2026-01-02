@@ -65,6 +65,7 @@ import {
 } from './gemini-analyzer-enhanced';
 
 import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';
+import { progressTracker, withProgress } from './progress-tracker';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -790,6 +791,7 @@ Here we compare our revenue goals with our annual costs to see the potential pro
 
 /**
  * Generate full arbitrage analysis with all data
+ * @param sessionId - Optional session ID for progress tracking
  */
 export async function generateFullArbitrageAnalysis(
   address: string,
@@ -797,7 +799,8 @@ export async function generateFullArbitrageAnalysis(
   bedrooms?: number,
   bathrooms?: number,
   zillow_url?: string,
-  attractive_features?: string[]
+  attractive_features?: string[],
+  sessionId?: string
 ): Promise<{
   report: string;
   percentiles: MarketPercentiles;
@@ -841,6 +844,12 @@ export async function generateFullArbitrageAnalysis(
   // ENHANCED NARRATIVE REPORT
   enhanced_narrative_report?: EnhancedNarrativeReport;
 }> {
+  // Initialize progress tracking if sessionId provided
+  if (sessionId) {
+    progressTracker.createSession(sessionId);
+    progressTracker.startStep(sessionId, 'property', `Analyzing ${address}`);
+  }
+  
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
   try {
@@ -849,8 +858,10 @@ export async function generateFullArbitrageAnalysis(
       bedrooms,
       bathrooms
     });
+    if (sessionId) progressTracker.completeStep(sessionId, 'property', 'Property details retrieved');
   } catch (error) {
     console.error('Error getting Rentalizer estimate:', error);
+    if (sessionId) progressTracker.errorStep(sessionId, 'property', 'Could not retrieve property estimate');
   }
   
   // Use property estimate data or defaults
@@ -859,6 +870,7 @@ export async function generateFullArbitrageAnalysis(
   const zipcode = property_estimate?.property.zipcode;
   
   // Step 2: Get market data and ALL available listings
+  if (sessionId) progressTracker.startStep(sessionId, 'market', 'Fetching market data...');
   let marketData: ComprehensiveMarketReport | null = null;
   let listings: ListingData[] = [];
   
@@ -939,6 +951,8 @@ export async function generateFullArbitrageAnalysis(
   }
   
   // Step 3: Calculate percentiles
+  if (sessionId) progressTracker.completeStep(sessionId, 'market', `Found ${listings.length} listings`);
+  if (sessionId) progressTracker.startStep(sessionId, 'competitors', 'Analyzing competitors...');
   const percentiles = calculateMarketPercentiles(listings);
   
   // Step 4: Filter competitors above threshold and analyze - show ALL viable competitors
@@ -1047,6 +1061,10 @@ export async function generateFullArbitrageAnalysis(
       report = report.slice(0, competitorAnalysisEnd) + amenitySection + '\n\n' + report.slice(competitorAnalysisEnd);
     }
   }
+  
+  // Mark competitors step complete, start AI analysis
+  if (sessionId) progressTracker.completeStep(sessionId, 'competitors', `Analyzed ${competitors.length} competitors`);
+  if (sessionId) progressTracker.startStep(sessionId, 'ai_analysis', 'Running AI analysis...');
   
   // Step 13: Run FULL AI ANALYSIS using Gemini
   let ai_analysis: FullAIAnalysis | null = null;
@@ -1326,6 +1344,10 @@ export async function generateFullArbitrageAnalysis(
     // Continue without photo analysis
   }
   
+  // Mark AI analysis complete, start historical data
+  if (sessionId) progressTracker.completeStep(sessionId, 'ai_analysis', 'AI analysis complete');
+  if (sessionId) progressTracker.startStep(sessionId, 'historical', 'Processing historical data...');
+  
   // Step 17: Fetch comprehensive market data (seasonality, future pricing, historical trends)
   let market_seasonality: SeasonalityData[] | undefined;
   let future_pricing: FutureDailyData[] | undefined;
@@ -1416,6 +1438,10 @@ export async function generateFullArbitrageAnalysis(
       console.error('[ArbitrageAnalysis] Error generating historical analysis:', error);
     }
   }
+  
+  // Mark historical complete, start narrative generation
+  if (sessionId) progressTracker.completeStep(sessionId, 'historical', 'Historical data processed');
+  if (sessionId) progressTracker.startStep(sessionId, 'narrative', 'Generating narrative report...');
   
   // Step 20: Generate comprehensive narrative report with retry logic
   let narrative_report: NarrativeReport | undefined;
@@ -1522,6 +1548,10 @@ export async function generateFullArbitrageAnalysis(
   }
   }
   
+  // Mark narrative complete, start enhanced report
+  if (sessionId) progressTracker.completeStep(sessionId, 'narrative', 'Narrative report complete');
+  if (sessionId) progressTracker.startStep(sessionId, 'enhanced', 'Creating enhanced insights...');
+  
   // Step 21: Generate ENHANCED narrative report with better prompts and action items
   let enhanced_narrative_report: EnhancedNarrativeReport | undefined;
   
@@ -1615,9 +1645,19 @@ export async function generateFullArbitrageAnalysis(
     });
     
     console.log('[ArbitrageAnalysis] Enhanced narrative report generation complete');
+    if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'Enhanced insights created');
   } catch (error: any) {
     console.error('[ArbitrageAnalysis] Error generating enhanced narrative report:', error?.message || error);
+    if (sessionId) progressTracker.errorStep(sessionId, 'enhanced', 'Could not generate enhanced report');
     // Continue without enhanced report - the standard narrative report is still available
+  }
+  
+  // Finalize progress
+  if (sessionId) {
+    progressTracker.startStep(sessionId, 'finalize', 'Finalizing your report...');
+    progressTracker.completeStep(sessionId, 'finalize', 'Report complete!');
+    // Clean up session after a delay to allow final progress to be sent
+    setTimeout(() => progressTracker.endSession(sessionId), 5000);
   }
   
   return {

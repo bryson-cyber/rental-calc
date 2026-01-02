@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { progressTracker, type ProgressState } from "../progress-tracker";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +36,39 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // SSE endpoint for progress tracking
+  app.get('/api/progress/:sessionId', (req, res) => {
+    const { sessionId } = req.params;
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    
+    // Send initial state if exists
+    const initialState = progressTracker.getState(sessionId);
+    if (initialState) {
+      res.write(`data: ${JSON.stringify(initialState)}\n\n`);
+    }
+    
+    // Listen for progress updates
+    const onProgress = (sid: string, state: ProgressState) => {
+      if (sid === sessionId) {
+        res.write(`data: ${JSON.stringify(state)}\n\n`);
+      }
+    };
+    
+    progressTracker.on('progress', onProgress);
+    
+    // Clean up on client disconnect
+    req.on('close', () => {
+      progressTracker.off('progress', onProgress);
+    });
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",
