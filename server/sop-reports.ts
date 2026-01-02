@@ -34,6 +34,7 @@ import {
   getCountryMarkets,
   calculateArbitrageFeasibility,
   getComprehensiveSubmarketReport,
+  batchFetchPropertyImages,
   ArbitrageFeasibility,
   CountryMarket,
   AdvancedListingFilters,
@@ -1064,6 +1065,24 @@ export async function generateFullArbitrageAnalysis(
       growth_potential: string;
     };
   };
+  // COMPETITOR IMAGERY ANALYSIS
+  competitor_imagery?: {
+    total_competitors_analyzed: number;
+    competitors_with_images: number;
+    avg_image_count: number;
+    max_image_count: number;
+    min_image_count: number;
+    top_competitors: Array<{
+      name: string;
+      image_count: number;
+      has_professional_photos: boolean;
+    }>;
+    photo_quality_insights: {
+      high_photo_count_threshold: number;
+      competitors_above_threshold: number;
+      recommendation: string;
+    };
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1823,6 +1842,23 @@ export async function generateFullArbitrageAnalysis(
       growth_potential: string;
     };
   } | undefined;
+  let competitor_imagery: {
+    total_competitors_analyzed: number;
+    competitors_with_images: number;
+    avg_image_count: number;
+    max_image_count: number;
+    min_image_count: number;
+    top_competitors: Array<{
+      name: string;
+      image_count: number;
+      has_professional_photos: boolean;
+    }>;
+    photo_quality_insights: {
+      high_photo_count_threshold: number;
+      competitors_above_threshold: number;
+      recommendation: string;
+    };
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -2287,6 +2323,76 @@ export async function generateFullArbitrageAnalysis(
       } catch (error) {
         console.error('[ArbitrageAnalysis] Error getting submarket report:', error);
       }
+    }
+  }
+  
+  // Step 15.12: Fetch competitor imagery for top performers
+  if (competitors.length > 0) {
+    try {
+      console.log('[ArbitrageAnalysis] Fetching competitor imagery...');
+      
+      // Get property IDs from top competitors (limit to 10 to avoid too many API calls)
+      const topCompetitors = competitors.slice(0, 10);
+      const propertyIds = topCompetitors
+        .map(c => c.airbnb_url)
+        .filter(url => url)
+        .map(url => {
+          const match = url?.match(/rooms\/(\d+)/);
+          return match ? match[1] : null;
+        })
+        .filter((id): id is string => id !== null);
+      
+      if (propertyIds.length > 0) {
+        const imageMap = await batchFetchPropertyImages(propertyIds, 3);
+        
+        // Analyze image data
+        const imageCounts: number[] = [];
+        const competitorImageData: Array<{ name: string; image_count: number; has_professional_photos: boolean }> = [];
+        
+        topCompetitors.forEach((comp, index) => {
+          const match = comp.airbnb_url?.match(/rooms\/(\d+)/);
+          const propId = match ? match[1] : null;
+          if (propId && imageMap.has(propId)) {
+            const images = imageMap.get(propId) || [];
+            imageCounts.push(images.length);
+            competitorImageData.push({
+              name: comp.name,
+              image_count: images.length,
+              has_professional_photos: images.length >= 20 // Assume 20+ photos indicates professional
+            });
+          }
+        });
+        
+        if (imageCounts.length > 0) {
+          const avgImageCount = imageCounts.reduce((a, b) => a + b, 0) / imageCounts.length;
+          const maxImageCount = Math.max(...imageCounts);
+          const minImageCount = Math.min(...imageCounts);
+          const highPhotoThreshold = Math.ceil(avgImageCount * 1.5);
+          const aboveThreshold = imageCounts.filter(c => c >= highPhotoThreshold).length;
+          
+          competitor_imagery = {
+            total_competitors_analyzed: topCompetitors.length,
+            competitors_with_images: imageCounts.length,
+            avg_image_count: Math.round(avgImageCount),
+            max_image_count: maxImageCount,
+            min_image_count: minImageCount,
+            top_competitors: competitorImageData.slice(0, 5),
+            photo_quality_insights: {
+              high_photo_count_threshold: highPhotoThreshold,
+              competitors_above_threshold: aboveThreshold,
+              recommendation: avgImageCount >= 25 
+                ? 'Market expects professional photography with 25+ high-quality images'
+                : avgImageCount >= 15
+                ? 'Aim for 20+ photos to match top competitors'
+                : 'Basic photography may suffice, but quality images still help'
+            }
+          };
+          
+          console.log(`[ArbitrageAnalysis] Competitor imagery: avg ${Math.round(avgImageCount)} photos, max ${maxImageCount}, min ${minImageCount}`);
+        }
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching competitor imagery:', error);
     }
   }
   
@@ -2761,6 +2867,15 @@ export async function generateFullArbitrageAnalysis(
         bedroom_performance: submarket_deep_dive.bedroom_performance,
         top_performers: submarket_deep_dive.top_performers,
         insights: submarket_deep_dive.insights
+      } : undefined,
+      competitor_imagery: competitor_imagery ? {
+        total_competitors_analyzed: competitor_imagery.total_competitors_analyzed,
+        competitors_with_images: competitor_imagery.competitors_with_images,
+        avg_image_count: competitor_imagery.avg_image_count,
+        max_image_count: competitor_imagery.max_image_count,
+        min_image_count: competitor_imagery.min_image_count,
+        top_competitors: competitor_imagery.top_competitors,
+        photo_quality_insights: competitor_imagery.photo_quality_insights
       } : undefined
     });
     
@@ -2944,7 +3059,9 @@ export async function generateFullArbitrageAnalysis(
     // AIRDNA FEASIBILITY
     airdna_feasibility,
     // SUBMARKET DEEP DIVE
-    submarket_deep_dive
+    submarket_deep_dive,
+    // COMPETITOR IMAGERY
+    competitor_imagery
   };
 }
 

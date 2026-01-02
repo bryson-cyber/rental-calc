@@ -1322,6 +1322,11 @@
 - [x] Pass submarket trends, growth rates, and neighborhood metrics to Gemini
 - [x] Update AI prompt to analyze neighborhood-level performance and trajectory
 
+### Iteration 18: Batch Property Images (Visual Competitive Intelligence)
+- [x] Call batchFetchPropertyImages for top competitors
+- [x] Pass image counts and photo quality metrics to Gemini
+- [x] Update AI prompt to analyze visual presentation standards
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

@@ -2381,6 +2381,25 @@ export interface NarrativeReportInput {
       growth_potential: string;
     };
   };
+  
+  // Competitor imagery analysis
+  competitor_imagery?: {
+    total_competitors_analyzed: number;
+    competitors_with_images: number;
+    avg_image_count: number;
+    max_image_count: number;
+    min_image_count: number;
+    top_competitors: Array<{
+      name: string;
+      image_count: number;
+      has_professional_photos: boolean;
+    }>;
+    photo_quality_insights: {
+      high_photo_count_threshold: number;
+      competitors_above_threshold: number;
+      recommendation: string;
+    };
+  };
 }
 
 /**
@@ -2954,6 +2973,33 @@ Submarket Insights:
 - Market Health: ${sd.insights.market_health.toUpperCase()}
 - Growth Potential: ${sd.insights.growth_potential.toUpperCase()}`;
   }
+  
+  // Build competitor imagery context
+  let competitorImageryContext = '';
+  if (input.competitor_imagery) {
+    const ci = input.competitor_imagery;
+    const topComps = ci.top_competitors
+      .map(c => `- ${c.name}: ${c.image_count} photos${c.has_professional_photos ? ' (professional quality)' : ''}`)
+      .join('\n');
+    
+    competitorImageryContext = `
+COMPETITOR IMAGERY ANALYSIS:
+Competitors Analyzed: ${ci.total_competitors_analyzed}
+Competitors with Images: ${ci.competitors_with_images}
+
+Photo Statistics:
+- Average Photo Count: ${ci.avg_image_count}
+- Maximum Photo Count: ${ci.max_image_count}
+- Minimum Photo Count: ${ci.min_image_count}
+
+Top Competitors by Photo Count:
+${topComps}
+
+Photo Quality Insights:
+- High Photo Threshold: ${ci.photo_quality_insights.high_photo_count_threshold}+ photos
+- Competitors Above Threshold: ${ci.photo_quality_insights.competitors_above_threshold}
+- Recommendation: ${ci.photo_quality_insights.recommendation}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -3016,6 +3062,7 @@ ${propertyTypeContext}
 ${nearbyMarketsContext}
 ${airdnaFeasibilityContext}
 ${submarketDeepDiveContext}
+${competitorImageryContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -3033,7 +3080,7 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance - which listing type performs better in this market and why? What does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How can this property differentiate itself?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance. If COMPETITOR IMAGERY ANALYSIS is available, discuss photo quality standards - how many photos do top competitors have? What does this mean for listing presentation requirements? What does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How can this property differentiate itself?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   
