@@ -2265,6 +2265,20 @@ export interface NarrativeReportInput {
       distance_meters?: number;
     }>;
   };
+  
+  // Market saturation (complete market analysis)
+  market_saturation?: {
+    total_listings: number;
+    same_bedroom_count: number;
+    bedroom_distribution: Array<{ bedrooms: number; count: number; percentage: number }>;
+    revenue_percentiles: { p25: number; p50: number; p75: number; p90: number };
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    market_concentration: 'fragmented' | 'moderate' | 'concentrated';
+  };
 }
 
 /**
@@ -2670,6 +2684,51 @@ Key Insight: ${rl.listings_per_sqkm > 50 ?
   `With ${rl.listings_per_sqkm.toFixed(0)} listings per sq km, this is a highly competitive micro-market. Differentiation through amenities, photos, and pricing will be critical.` : 
   `With only ${rl.listings_per_sqkm.toFixed(0)} listings per sq km nearby, there's room to capture local demand without intense immediate competition.`}`;
   }
+  
+  // Build market saturation context (complete market analysis)
+  let marketSaturationContext = '';
+  if (input.market_saturation) {
+    const ms = input.market_saturation;
+    const concentrationDesc = ms.market_concentration === 'concentrated' ? 
+      'CONCENTRATED - top performers dominate, hard to break in' :
+      ms.market_concentration === 'moderate' ? 
+      'MODERATE - balanced competition, room for quality operators' :
+      'FRAGMENTED - many small players, opportunity for consolidation';
+    
+    const bedroomMix = ms.bedroom_distribution.slice(0, 5)
+      .map(b => `${b.bedrooms}BR: ${b.count} (${b.percentage.toFixed(0)}%)`)
+      .join(', ');
+    
+    const yourPosition = input.revenue_mid > ms.revenue_percentiles.p75 ? 
+      'Your realistic projection puts you in the TOP 25% of the market' :
+      input.revenue_mid > ms.revenue_percentiles.p50 ? 
+      'Your realistic projection puts you ABOVE MEDIAN but below top quartile' :
+      'Your realistic projection is BELOW MEDIAN - you need to outperform to succeed';
+    
+    marketSaturationContext = `
+MARKET SATURATION ANALYSIS (Complete Market Picture):
+This shows the ENTIRE market structure and where you'd fit:
+- Total Active Listings: ${ms.total_listings}
+- Same-Bedroom Competitors: ${ms.same_bedroom_count} (${((ms.same_bedroom_count / ms.total_listings) * 100).toFixed(0)}% of market)
+- Market Concentration: ${concentrationDesc}
+
+Bedroom Distribution: ${bedroomMix}
+
+Revenue Distribution:
+- 25th Percentile: $${ms.revenue_percentiles.p25.toLocaleString()}/yr (bottom quarter)
+- 50th Percentile (Median): $${ms.revenue_percentiles.p50.toLocaleString()}/yr
+- 75th Percentile: $${ms.revenue_percentiles.p75.toLocaleString()}/yr (top quarter)
+- 90th Percentile: $${ms.revenue_percentiles.p90.toLocaleString()}/yr (top 10%)
+
+Market Averages:
+- Average Revenue: $${Math.round(ms.avg_revenue).toLocaleString()}/yr
+- Average ADR: $${Math.round(ms.avg_adr)}/night
+- Average Occupancy: ${(ms.avg_occupancy * 100).toFixed(0)}%
+- Superhost Rate: ${ms.superhost_percentage.toFixed(0)}%
+- Professionally Managed: ${ms.professional_percentage.toFixed(0)}%
+
+Your Positioning: ${yourPosition}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2727,6 +2786,7 @@ ${existingListingContext}
 ${submarketListingsContext}
 ${qualifyingCompetitorsContext}
 ${radiusListingsContext}
+${marketSaturationContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2740,7 +2800,7 @@ Return your response as JSON with this exact structure:
 {
   "executive_summary": "A compelling 2-3 paragraph overview that captures the essence of this investment opportunity. Start with the bottom line - is this a strong opportunity? Then summarize the key factors that support your assessment. End with what makes this property unique in its market.",
   
-  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Discuss the market size, occupancy rates, pricing dynamics, and how this market compares to typical STR markets. Explain what the market conditions mean for a new entrant.",
+  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. Explain what the revenue distribution (25th/50th/75th/90th percentiles) means for realistic expectations. Analyze whether this is a fragmented, moderate, or concentrated market and what that means for a new entrant.",
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   

@@ -29,6 +29,7 @@ import {
   getSubmarketListings,
   getQualifyingCompetitors,
   getListingsInRadius,
+  getAllMarketListings,
   RadiusSearchResult,
   ListingData,
   ListingComp,
@@ -945,6 +946,19 @@ export async function generateFullArbitrageAnalysis(
     same_bedroom_count: number;
     top_nearby: ListingData[];
   };
+  // MARKET SATURATION (complete market analysis)
+  market_saturation?: {
+    total_listings: number;
+    same_bedroom_count: number;
+    bedroom_distribution: Array<{ bedrooms: number; count: number; percentage: number }>;
+    revenue_percentiles: { p25: number; p50: number; p75: number; p90: number };
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    market_concentration: 'fragmented' | 'moderate' | 'concentrated';
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1598,6 +1612,18 @@ export async function generateFullArbitrageAnalysis(
     same_bedroom_count: number;
     top_nearby: ListingData[];
   } | undefined;
+  let market_saturation: {
+    total_listings: number;
+    same_bedroom_count: number;
+    bedroom_distribution: Array<{ bedrooms: number; count: number; percentage: number }>;
+    revenue_percentiles: { p25: number; p50: number; p75: number; p90: number };
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    market_concentration: 'fragmented' | 'moderate' | 'concentrated';
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -1757,6 +1783,72 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching radius listings:', error);
+    }
+    
+    // Step 15.7: Fetch complete market listings for saturation analysis
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching complete market listings for saturation analysis...`);
+      const allListings = await getAllMarketListings(marketId, { maxListings: 200 });
+      
+      if (allListings.length > 0) {
+        // Calculate bedroom distribution
+        const bedroomCounts = new Map<number, number>();
+        allListings.forEach(l => {
+          const br = l.bedrooms || 0;
+          bedroomCounts.set(br, (bedroomCounts.get(br) || 0) + 1);
+        });
+        const bedroomDistribution = Array.from(bedroomCounts.entries())
+          .map(([bedrooms, count]) => ({
+            bedrooms,
+            count,
+            percentage: (count / allListings.length) * 100
+          }))
+          .sort((a, b) => a.bedrooms - b.bedrooms);
+        
+        // Calculate revenue percentiles
+        const revenues = allListings.map(l => l.annual_revenue || 0).filter(r => r > 0).sort((a, b) => a - b);
+        const getPercentile = (arr: number[], p: number) => {
+          const idx = Math.floor(arr.length * p);
+          return arr[Math.min(idx, arr.length - 1)] || 0;
+        };
+        
+        // Calculate averages
+        const avgRevenue = allListings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / allListings.length;
+        const avgAdr = allListings.reduce((sum, l) => sum + (l.adr || 0), 0) / allListings.length;
+        const avgOccupancy = allListings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / allListings.length;
+        const superhostCount = allListings.filter(l => l.superhost).length;
+        const professionalCount = allListings.filter(l => l.professionally_managed).length;
+        const sameBedroomCount = allListings.filter(l => l.bedrooms === actualBedrooms).length;
+        
+        // Determine market concentration (top 10% revenue share)
+        const top10Percent = Math.ceil(allListings.length * 0.1);
+        const totalRevenue = revenues.reduce((sum, r) => sum + r, 0);
+        const top10Revenue = revenues.slice(-top10Percent).reduce((sum, r) => sum + r, 0);
+        const top10Share = totalRevenue > 0 ? (top10Revenue / totalRevenue) * 100 : 0;
+        const concentration: 'fragmented' | 'moderate' | 'concentrated' = 
+          top10Share > 50 ? 'concentrated' : top10Share > 30 ? 'moderate' : 'fragmented';
+        
+        market_saturation = {
+          total_listings: allListings.length,
+          same_bedroom_count: sameBedroomCount,
+          bedroom_distribution: bedroomDistribution,
+          revenue_percentiles: {
+            p25: getPercentile(revenues, 0.25),
+            p50: getPercentile(revenues, 0.50),
+            p75: getPercentile(revenues, 0.75),
+            p90: getPercentile(revenues, 0.90)
+          },
+          avg_revenue: avgRevenue,
+          avg_adr: avgAdr,
+          avg_occupancy: avgOccupancy,
+          superhost_percentage: (superhostCount / allListings.length) * 100,
+          professional_percentage: (professionalCount / allListings.length) * 100,
+          market_concentration: concentration
+        };
+        console.log(`[ArbitrageAnalysis] Market saturation: ${allListings.length} listings, ${sameBedroomCount} same-bedroom, ${concentration} concentration. Top 10% hold ${top10Share.toFixed(0)}% of revenue.`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching market saturation data:', error);
     }
   }
   
@@ -2192,6 +2284,18 @@ export async function generateFullArbitrageAnalysis(
           rating: l.rating,
           distance_meters: l.distance_meters
         }))
+      } : undefined,
+      market_saturation: market_saturation ? {
+        total_listings: market_saturation.total_listings,
+        same_bedroom_count: market_saturation.same_bedroom_count,
+        bedroom_distribution: market_saturation.bedroom_distribution,
+        revenue_percentiles: market_saturation.revenue_percentiles,
+        avg_revenue: market_saturation.avg_revenue,
+        avg_adr: market_saturation.avg_adr,
+        avg_occupancy: market_saturation.avg_occupancy,
+        superhost_percentage: market_saturation.superhost_percentage,
+        professional_percentage: market_saturation.professional_percentage,
+        market_concentration: market_saturation.market_concentration
       } : undefined
     });
     
@@ -2365,7 +2469,9 @@ export async function generateFullArbitrageAnalysis(
     // QUALIFYING COMPETITORS
     qualifying_competitors,
     // RADIUS LISTINGS
-    radius_listings
+    radius_listings,
+    // MARKET SATURATION
+    market_saturation
   };
 }
 
