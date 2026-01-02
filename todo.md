@@ -1317,6 +1317,11 @@
 - [x] Pass feasibility data (profit margin, risk level, recommendation) to Gemini
 - [x] Update AI prompt to compare our analysis with AirDNA's assessment
 
+### Iteration 17: Comprehensive Submarket Report (Neighborhood Deep-Dive)
+- [x] Call getComprehensiveSubmarketReport for property's submarket
+- [x] Pass submarket trends, growth rates, and neighborhood metrics to Gemini
+- [x] Update AI prompt to analyze neighborhood-level performance and trajectory
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

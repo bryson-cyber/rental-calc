@@ -33,6 +33,7 @@ import {
   getFilteredMarketListings,
   getCountryMarkets,
   calculateArbitrageFeasibility,
+  getComprehensiveSubmarketReport,
   ArbitrageFeasibility,
   CountryMarket,
   AdvancedListingFilters,
@@ -1031,6 +1032,38 @@ export async function generateFullArbitrageAnalysis(
       assessment_match: boolean;
     };
   };
+  // SUBMARKET DEEP DIVE
+  submarket_deep_dive?: {
+    submarket_name: string;
+    listing_count: number;
+    metrics: {
+      revenue: number;
+      adr: number;
+      occupancy: number;
+      revpar: number;
+    };
+    bedroom_performance: Array<{
+      bedrooms: number;
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+    }>;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+    }>;
+    insights: {
+      revenue_trend: string;
+      occupancy_trend: string;
+      market_health: string;
+      growth_potential: string;
+    };
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1759,6 +1792,37 @@ export async function generateFullArbitrageAnalysis(
       assessment_match: boolean;
     };
   } | undefined;
+  let submarket_deep_dive: {
+    submarket_name: string;
+    listing_count: number;
+    metrics: {
+      revenue: number;
+      adr: number;
+      occupancy: number;
+      revpar: number;
+    };
+    bedroom_performance: Array<{
+      bedrooms: number;
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+    }>;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+    }>;
+    insights: {
+      revenue_trend: string;
+      occupancy_trend: string;
+      market_health: string;
+      growth_potential: string;
+    };
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -2164,6 +2228,65 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error getting AirDNA feasibility:', error);
+    }
+    
+    // Step 15.11: Get comprehensive submarket report for neighborhood deep-dive
+    const submarketId = property_estimate?.property?.submarket_id;
+    if (submarketId) {
+      try {
+        console.log(`[ArbitrageAnalysis] Getting comprehensive submarket report for ${submarketId}...`);
+        
+        const submarketReport = await getComprehensiveSubmarketReport(submarketId);
+        
+        if (submarketReport) {
+          // Determine trends based on available metrics
+          const occupancy = submarketReport.submarket.metrics.occupancy;
+          const revenue = submarketReport.submarket.metrics.revenue;
+          const revpar = submarketReport.submarket.metrics.revpar;
+          
+          // Estimate trends based on occupancy and revpar levels
+          const revenueTrend = revpar > 100 ? 'growing' : revpar > 75 ? 'stable' : 'declining';
+          const occupancyTrend = occupancy > 0.65 ? 'growing' : occupancy > 0.50 ? 'stable' : 'declining';
+          
+          // Determine market health based on metrics
+          const healthScore = (occupancy * 100 + (revenue / 1000)) / 2;
+          const marketHealth = healthScore > 70 ? 'strong' : healthScore > 50 ? 'moderate' : 'weak';
+          
+          // Determine growth potential based on professional management and superhost presence
+          const profPct = submarketReport.insights.professionally_managed_pct;
+          const growthPotential = profPct > 30 ? 'high' : profPct > 15 ? 'moderate' : 'low';
+          
+          submarket_deep_dive = {
+            submarket_name: submarketReport.submarket.name,
+            listing_count: submarketReport.submarket.listing_count,
+            metrics: {
+              revenue: submarketReport.submarket.metrics.revenue,
+              adr: submarketReport.submarket.metrics.adr,
+              occupancy: submarketReport.submarket.metrics.occupancy,
+              revpar: submarketReport.submarket.metrics.revpar
+            },
+            bedroom_performance: submarketReport.bedroom_performance,
+            top_performers: submarketReport.top_listings.slice(0, 5).map(l => ({
+              title: l.title || 'Unnamed Listing',
+              bedrooms: l.bedrooms,
+              annual_revenue: l.annual_revenue,
+              adr: l.adr,
+              occupancy: l.occupancy,
+              rating: l.rating ?? 0
+            })),
+            insights: {
+              revenue_trend: revenueTrend,
+              occupancy_trend: occupancyTrend,
+              market_health: marketHealth,
+              growth_potential: growthPotential
+            }
+          };
+          
+          console.log(`[ArbitrageAnalysis] Submarket deep-dive: ${submarketReport.submarket.name} - ${submarketReport.submarket.listing_count} listings, health: ${marketHealth}`);
+        }
+      } catch (error) {
+        console.error('[ArbitrageAnalysis] Error getting submarket report:', error);
+      }
     }
   }
   
@@ -2630,6 +2753,14 @@ export async function generateFullArbitrageAnalysis(
         risk_assessment: airdna_feasibility.risk_assessment,
         recommendation: airdna_feasibility.recommendation,
         comparison: airdna_feasibility.comparison
+      } : undefined,
+      submarket_deep_dive: submarket_deep_dive ? {
+        submarket_name: submarket_deep_dive.submarket_name,
+        listing_count: submarket_deep_dive.listing_count,
+        metrics: submarket_deep_dive.metrics,
+        bedroom_performance: submarket_deep_dive.bedroom_performance,
+        top_performers: submarket_deep_dive.top_performers,
+        insights: submarket_deep_dive.insights
       } : undefined
     });
     
@@ -2811,7 +2942,9 @@ export async function generateFullArbitrageAnalysis(
     // NEARBY MARKETS
     nearby_markets,
     // AIRDNA FEASIBILITY
-    airdna_feasibility
+    airdna_feasibility,
+    // SUBMARKET DEEP DIVE
+    submarket_deep_dive
   };
 }
 

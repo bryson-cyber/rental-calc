@@ -2348,6 +2348,39 @@ export interface NarrativeReportInput {
       assessment_match: boolean;
     };
   };
+  
+  // Submarket deep-dive analysis
+  submarket_deep_dive?: {
+    submarket_name: string;
+    listing_count: number;
+    metrics: {
+      revenue: number;
+      adr: number;
+      occupancy: number;
+      revpar: number;
+    };
+    bedroom_performance: Array<{
+      bedrooms: number;
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+    }>;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+    }>;
+    insights: {
+      revenue_trend: string;
+      occupancy_trend: string;
+      market_health: string;
+      growth_potential: string;
+    };
+  };
 }
 
 /**
@@ -2886,6 +2919,41 @@ Comparison with Our Analysis:
 - Difference: $${Math.round(af.comparison.profit_difference).toLocaleString()} (${af.comparison.profit_difference_pct >= 0 ? '+' : ''}${af.comparison.profit_difference_pct.toFixed(0)}%)
 - Assessment Status: ${matchStatus}`;
   }
+  
+  // Build submarket deep-dive context
+  let submarketDeepDiveContext = '';
+  if (input.submarket_deep_dive) {
+    const sd = input.submarket_deep_dive;
+    const bedroomPerf = sd.bedroom_performance
+      .map(b => `${b.bedrooms}BR: ${b.count} listings, $${Math.round(b.avg_revenue).toLocaleString()} avg revenue, $${Math.round(b.avg_adr)} ADR, ${(b.avg_occupancy * 100).toFixed(0)}% occupancy`)
+      .join('\n');
+    const topPerformers = sd.top_performers
+      .map(p => `- ${p.title}: ${p.bedrooms}BR, $${Math.round(p.annual_revenue).toLocaleString()} revenue, $${Math.round(p.adr)} ADR, ${(p.occupancy * 100).toFixed(0)}% occ, ${p.rating.toFixed(1)}★`)
+      .join('\n');
+    
+    submarketDeepDiveContext = `
+SUBMARKET DEEP-DIVE (Neighborhood Analysis):
+Submarket: ${sd.submarket_name}
+Total Listings in Submarket: ${sd.listing_count}
+
+Submarket Metrics:
+- Average Revenue: $${Math.round(sd.metrics.revenue).toLocaleString()}
+- Average ADR: $${Math.round(sd.metrics.adr)}
+- Average Occupancy: ${(sd.metrics.occupancy * 100).toFixed(0)}%
+- RevPAR: $${Math.round(sd.metrics.revpar)}
+
+Bedroom Performance in Submarket:
+${bedroomPerf}
+
+Top Performers in Submarket:
+${topPerformers}
+
+Submarket Insights:
+- Revenue Trend: ${sd.insights.revenue_trend.toUpperCase()}
+- Occupancy Trend: ${sd.insights.occupancy_trend.toUpperCase()}
+- Market Health: ${sd.insights.market_health.toUpperCase()}
+- Growth Potential: ${sd.insights.growth_potential.toUpperCase()}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2947,6 +3015,7 @@ ${marketSaturationContext}
 ${propertyTypeContext}
 ${nearbyMarketsContext}
 ${airdnaFeasibilityContext}
+${submarketDeepDiveContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2960,7 +3029,7 @@ Return your response as JSON with this exact structure:
 {
   "executive_summary": "A compelling 2-3 paragraph overview that captures the essence of this investment opportunity. Start with the bottom line - is this a strong opportunity? Then summarize the key factors that support your assessment. End with what makes this property unique in its market.",
   
-  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. If NEARBY MARKETS COMPARISON data is available, compare this market against top alternatives - how does it rank in terms of revenue potential, market score, and regulation friendliness? Should the investor consider alternative markets? Explain what the revenue distribution means for realistic expectations.",
+  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. If SUBMARKET DEEP-DIVE data is available, analyze the specific neighborhood's health, trends, and growth potential - how does this submarket compare to the broader market? What does the bedroom performance breakdown reveal about optimal configurations? If NEARBY MARKETS COMPARISON data is available, compare this market against top alternatives. Explain what the revenue distribution means for realistic expectations.",
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
