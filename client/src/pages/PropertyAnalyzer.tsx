@@ -648,7 +648,7 @@ export default function PropertyAnalyzer() {
         {/* Loading State */}
         {isAnalyzing && (
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 mt-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-white">
                 Running Deep Analysis...
               </h3>
@@ -659,6 +659,27 @@ export default function PropertyAnalyzer() {
                 </span>
               </div>
             </div>
+            
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-white/60">Progress</span>
+                <span className="text-sm font-medium text-amber-400">
+                  {Math.min(Math.round((currentStep / ANALYSIS_STEPS.length) * 100), 100)}%
+                </span>
+              </div>
+              <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min((currentStep / ANALYSIS_STEPS.length) * 100, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-white/40">Step {currentStep + 1} of {ANALYSIS_STEPS.length}</span>
+                <span className="text-xs text-white/40">~{Math.max(0, Math.ceil((ANALYSIS_STEPS.length - currentStep) * 20))}s remaining</span>
+              </div>
+            </div>
+            
             {elapsedTime > 30 && (
               <p className="text-white/60 text-sm text-center mb-4">
                 {elapsedTime > 120 

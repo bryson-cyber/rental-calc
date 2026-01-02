@@ -1223,3 +1223,13 @@
 - [x] Fix 5-Year Market History chart not displaying properly
 - [x] Fix market occupancy showing 6300% instead of 63% in quick facts
 - [x] Add timer counter to loading screen showing elapsed time
+
+## AI Accuracy & Progress Bar Improvements (Current Sprint)
+
+- [x] Investigate AI narrative accuracy - ensure data matches AirDNA values
+- [x] Fix AI prompts to correctly reference actual market data (added formatOccupancy helper)
+- [x] Add validation to ensure AI uses correct percentages and values
+- [x] Add visual progress bar to loading screen
+- [x] Show percentage completion alongside timer
+- [x] Add contextual messages during analysis (changes based on elapsed time)
+- [x] Add estimated time remaining display

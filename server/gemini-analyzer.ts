@@ -2122,9 +2122,16 @@ export interface NarrativeReport {
 export async function generateNarrativeReport(
   input: NarrativeReportInput
 ): Promise<NarrativeReport> {
+  // Helper function to format occupancy consistently
+  // AirDNA returns occupancy as decimal (0.63) but sometimes it's already percentage (63)
+  const formatOccupancy = (occ: number): string => {
+    if (occ > 1) return occ.toFixed(1); // Already a percentage
+    return (occ * 100).toFixed(1); // Convert decimal to percentage
+  };
+
   // Format competitor data for the prompt
   const competitorSummary = input.competitors.slice(0, 5).map((c, i) => 
-    `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy * 100)}% occupancy, $${Math.round(c.adr)}/night${c.rating ? `, ${c.rating}★` : ''}`
+    `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${formatOccupancy(c.occupancy)}% occupancy, $${Math.round(c.adr)}/night${c.rating ? `, ${c.rating}★` : ''}`
   ).join('\n');
   
   // Format seasonality for the prompt
@@ -2141,7 +2148,7 @@ export async function generateNarrativeReport(
 HISTORICAL DATA (${fys.years_of_data} years):
 - Market Maturity: ${fys.market_maturity}
 - Occupancy Trend: ${fys.occupancy.trend} (${fys.occupancy.percent_change > 0 ? '+' : ''}${fys.occupancy.percent_change.toFixed(1)}% over 5 years)
-  Current: ${fys.occupancy.current_year_avg.toFixed(1)}%, 5-Year Avg: ${fys.occupancy.five_year_avg.toFixed(1)}%
+  Current: ${formatOccupancy(fys.occupancy.current_year_avg)}%, 5-Year Avg: ${formatOccupancy(fys.occupancy.five_year_avg)}%
 - ADR Trend: ${fys.adr.trend} (${fys.adr.percent_change > 0 ? '+' : ''}${fys.adr.percent_change.toFixed(1)}% over 5 years)
   Current: $${fys.adr.current_year_avg.toFixed(0)}, 5-Year Avg: $${fys.adr.five_year_avg.toFixed(0)}
 - Revenue Trend: ${fys.revenue.trend} (${fys.revenue.percent_change > 0 ? '+' : ''}${fys.revenue.percent_change.toFixed(1)}% over 5 years)
@@ -2195,7 +2202,7 @@ PROPERTY DETAILS:
 
 MARKET OVERVIEW:
 - Market: ${input.market_name}
-- Market Occupancy: ${input.market_occupancy < 1 ? (input.market_occupancy * 100).toFixed(1) : input.market_occupancy.toFixed(1)}%
+- Market Occupancy: ${formatOccupancy(input.market_occupancy)}%
 - Market ADR: $${input.market_adr.toFixed(0)}
 - Active Listings: ${input.active_listings}
 
@@ -2311,7 +2318,7 @@ IMPORTANT:
     // Return a basic fallback report
     return {
       executive_summary: `This ${input.bedrooms}-bedroom property at ${input.address} presents a potential short-term rental opportunity in the ${input.market_name} market. With a monthly rent of $${input.monthly_rent.toLocaleString()}, the property could generate between $${input.revenue_low.toLocaleString()} and $${input.revenue_high.toLocaleString()} annually based on market comparables.`,
-      market_overview: `The ${input.market_name} market shows an occupancy rate of ${(input.market_occupancy * 100).toFixed(1)}% with an average daily rate of $${input.market_adr.toFixed(0)}. There are currently ${input.active_listings} active listings in the area.`,
+      market_overview: `The ${input.market_name} market shows an occupancy rate of ${formatOccupancy(input.market_occupancy)}% with an average daily rate of $${input.market_adr.toFixed(0)}. There are currently ${input.active_listings} active listings in the area.`,
       revenue_analysis: `Revenue projections range from $${input.revenue_low.toLocaleString()} (conservative) to $${input.revenue_high.toLocaleString()} (optimistic), with a realistic target of $${input.revenue_mid.toLocaleString()} annually.`,
       competitive_landscape: `The market includes ${input.competitors.length} comparable properties. Top performers are achieving annual revenues of $${input.competitors[0]?.annual_revenue?.toLocaleString() || 'N/A'}.`,
       seasonal_strategy: `Peak season months include ${peakMonths || 'varies by market'}. Off-season months are ${offMonths || 'varies by market'}.`,
@@ -2332,7 +2339,7 @@ IMPORTANT:
       quick_facts: [
         `Monthly rent: $${input.monthly_rent.toLocaleString()}`,
         `Projected annual revenue: $${input.revenue_mid.toLocaleString()}`,
-        `Market occupancy: ${input.market_occupancy > 1 ? input.market_occupancy.toFixed(1) : (input.market_occupancy * 100).toFixed(1)}%`,
+        `Market occupancy: ${formatOccupancy(input.market_occupancy)}%`,
         `${input.competitors.length} comparable properties in area`
       ]
     };
