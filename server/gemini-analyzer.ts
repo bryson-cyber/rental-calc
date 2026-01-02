@@ -2279,6 +2279,27 @@ export interface NarrativeReportInput {
     professional_percentage: number;
     market_concentration: 'fragmented' | 'moderate' | 'concentrated';
   };
+  
+  // Property type analysis (entire home vs private room)
+  property_type_analysis?: {
+    entire_home: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    private_room: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    revenue_premium: number;
+    recommended_type: 'entire_home' | 'private_room';
+    recommendation_reason: string;
+  };
 }
 
 /**
@@ -2729,6 +2750,31 @@ Market Averages:
 
 Your Positioning: ${yourPosition}`;
   }
+  
+  // Build property type analysis context
+  let propertyTypeContext = '';
+  if (input.property_type_analysis) {
+    const pta = input.property_type_analysis;
+    propertyTypeContext = `
+PROPERTY TYPE ANALYSIS (Entire Home vs Private Room):
+This compares performance between listing types to help you decide how to list:
+
+Entire Home Performance (${pta.entire_home.count} listings analyzed):
+- Average Revenue: $${Math.round(pta.entire_home.avg_revenue).toLocaleString()}/yr
+- Average ADR: $${Math.round(pta.entire_home.avg_adr)}/night
+- Average Occupancy: ${(pta.entire_home.avg_occupancy * 100).toFixed(0)}%
+- Superhost Rate: ${pta.entire_home.superhost_percentage.toFixed(0)}%
+
+Private Room Performance (${pta.private_room.count} listings analyzed):
+- Average Revenue: $${Math.round(pta.private_room.avg_revenue).toLocaleString()}/yr
+- Average ADR: $${Math.round(pta.private_room.avg_adr)}/night
+- Average Occupancy: ${(pta.private_room.avg_occupancy * 100).toFixed(0)}%
+- Superhost Rate: ${pta.private_room.superhost_percentage.toFixed(0)}%
+
+Revenue Premium: Entire homes earn ${pta.revenue_premium.toFixed(0)}% more than private rooms
+Recommended Listing Type: ${pta.recommended_type === 'entire_home' ? 'ENTIRE HOME' : 'PRIVATE ROOM'}
+Reason: ${pta.recommendation_reason}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2787,6 +2833,7 @@ ${submarketListingsContext}
 ${qualifyingCompetitorsContext}
 ${radiusListingsContext}
 ${marketSaturationContext}
+${propertyTypeContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2804,7 +2851,7 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data - what does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How crowded is the immediate 1km radius? How can this property differentiate itself in this specific micro-market?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance - which listing type performs better in this market and why? What does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How can this property differentiate itself?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   

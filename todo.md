@@ -1302,6 +1302,11 @@
 - [x] Pass market saturation data (total listings, revenue distribution, bedroom mix) to Gemini
 - [x] Update AI prompt to analyze market saturation and positioning opportunities
 
+### Iteration 14: Filtered Market Listings (Property Type Analysis)
+- [x] Call getFilteredMarketListings to get listings filtered by property type
+- [x] Pass property type breakdown (entire home vs private room performance) to Gemini
+- [x] Update AI prompt to analyze property type competitive dynamics
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

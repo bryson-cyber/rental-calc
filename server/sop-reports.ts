@@ -30,6 +30,8 @@ import {
   getQualifyingCompetitors,
   getListingsInRadius,
   getAllMarketListings,
+  getFilteredMarketListings,
+  AdvancedListingFilters,
   RadiusSearchResult,
   ListingData,
   ListingComp,
@@ -959,6 +961,26 @@ export async function generateFullArbitrageAnalysis(
     professional_percentage: number;
     market_concentration: 'fragmented' | 'moderate' | 'concentrated';
   };
+  // PROPERTY TYPE ANALYSIS (entire home vs private room performance)
+  property_type_analysis?: {
+    entire_home: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    private_room: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    revenue_premium: number; // % premium entire home earns over private room
+    recommended_type: 'entire_home' | 'private_room';
+    recommendation_reason: string;
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1624,6 +1646,25 @@ export async function generateFullArbitrageAnalysis(
     professional_percentage: number;
     market_concentration: 'fragmented' | 'moderate' | 'concentrated';
   } | undefined;
+  let property_type_analysis: {
+    entire_home: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    private_room: {
+      count: number;
+      avg_revenue: number;
+      avg_adr: number;
+      avg_occupancy: number;
+      superhost_percentage: number;
+    };
+    revenue_premium: number;
+    recommended_type: 'entire_home' | 'private_room';
+    recommendation_reason: string;
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -1849,6 +1890,61 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching market saturation data:', error);
+    }
+    
+    // Step 15.8: Fetch property type analysis (entire home vs private room)
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching property type analysis...`);
+      
+      // Fetch entire home listings
+      const entireHomeListings = await getFilteredMarketListings(marketId, {
+        listing_type: 'entire_home',
+        bedrooms: actualBedrooms
+      }, 'revenue', 50);
+      
+      // Fetch private room listings
+      const privateRoomListings = await getFilteredMarketListings(marketId, {
+        listing_type: 'private_room'
+      }, 'revenue', 50);
+      
+      const calcStats = (listings: ListingData[]) => {
+        if (listings.length === 0) return { count: 0, avg_revenue: 0, avg_adr: 0, avg_occupancy: 0, superhost_percentage: 0 };
+        return {
+          count: listings.length,
+          avg_revenue: listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / listings.length,
+          avg_adr: listings.reduce((sum, l) => sum + (l.adr || 0), 0) / listings.length,
+          avg_occupancy: listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length,
+          superhost_percentage: (listings.filter(l => l.superhost).length / listings.length) * 100
+        };
+      };
+      
+      const entireHomeStats = calcStats(entireHomeListings);
+      const privateRoomStats = calcStats(privateRoomListings);
+      
+      // Calculate revenue premium
+      const revenuePremium = privateRoomStats.avg_revenue > 0 
+        ? ((entireHomeStats.avg_revenue - privateRoomStats.avg_revenue) / privateRoomStats.avg_revenue) * 100 
+        : 0;
+      
+      // Determine recommendation
+      const recommendedType: 'entire_home' | 'private_room' = revenuePremium > 50 ? 'entire_home' : 
+        entireHomeStats.avg_occupancy > privateRoomStats.avg_occupancy ? 'entire_home' : 'private_room';
+      
+      const reason = recommendedType === 'entire_home' 
+        ? `Entire homes earn ${revenuePremium.toFixed(0)}% more revenue with ${(entireHomeStats.avg_occupancy * 100).toFixed(0)}% occupancy vs ${(privateRoomStats.avg_occupancy * 100).toFixed(0)}% for private rooms`
+        : `Private rooms have higher occupancy (${(privateRoomStats.avg_occupancy * 100).toFixed(0)}%) and lower competition in this market`;
+      
+      property_type_analysis = {
+        entire_home: entireHomeStats,
+        private_room: privateRoomStats,
+        revenue_premium: revenuePremium,
+        recommended_type: recommendedType,
+        recommendation_reason: reason
+      };
+      
+      console.log(`[ArbitrageAnalysis] Property type analysis: Entire homes ($${Math.round(entireHomeStats.avg_revenue)}/yr) vs Private rooms ($${Math.round(privateRoomStats.avg_revenue)}/yr). Premium: ${revenuePremium.toFixed(0)}%`);
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching property type analysis:', error);
     }
   }
   
@@ -2296,6 +2392,13 @@ export async function generateFullArbitrageAnalysis(
         superhost_percentage: market_saturation.superhost_percentage,
         professional_percentage: market_saturation.professional_percentage,
         market_concentration: market_saturation.market_concentration
+      } : undefined,
+      property_type_analysis: property_type_analysis ? {
+        entire_home: property_type_analysis.entire_home,
+        private_room: property_type_analysis.private_room,
+        revenue_premium: property_type_analysis.revenue_premium,
+        recommended_type: property_type_analysis.recommended_type,
+        recommendation_reason: property_type_analysis.recommendation_reason
       } : undefined
     });
     
@@ -2471,7 +2574,9 @@ export async function generateFullArbitrageAnalysis(
     // RADIUS LISTINGS
     radius_listings,
     // MARKET SATURATION
-    market_saturation
+    market_saturation,
+    // PROPERTY TYPE ANALYSIS
+    property_type_analysis
   };
 }
 
