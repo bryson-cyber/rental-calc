@@ -285,7 +285,7 @@ export function AddressAutocomplete({
 
       {/* Predictions Dropdown */}
       {isOpen && predictions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-[#1a2744] border border-white/20 rounded-lg shadow-lg overflow-hidden">
           {predictions.map((prediction, index) => (
             <button
               key={prediction.placeId}
@@ -294,24 +294,24 @@ export function AddressAutocomplete({
               onMouseEnter={() => setHighlightedIndex(index)}
               className={cn(
                 "w-full px-4 py-3 text-left flex items-start gap-3 transition-colors",
-                "hover:bg-muted/50",
-                highlightedIndex === index && "bg-muted/50"
+                "hover:bg-white/10",
+                highlightedIndex === index && "bg-white/10"
               )}
             >
-              <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+              <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-foreground truncate">
+                <div className="font-medium text-white truncate">
                   {prediction.mainText}
                 </div>
                 {prediction.secondaryText && (
-                  <div className="text-sm text-muted-foreground truncate">
+                  <div className="text-sm text-white/60 truncate">
                     {prediction.secondaryText}
                   </div>
                 )}
               </div>
             </button>
           ))}
-          <div className="px-4 py-2 text-xs text-muted-foreground border-t border-border bg-muted/30">
+          <div className="px-4 py-2 text-xs text-white/40 border-t border-white/10 bg-white/5">
             Powered by Google
           </div>
         </div>

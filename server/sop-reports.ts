@@ -1408,11 +1408,13 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // Step 20: Generate comprehensive narrative report
+  // Step 20: Generate comprehensive narrative report with retry logic
   let narrative_report: NarrativeReport | undefined;
+  const MAX_RETRIES = 2;
   
-  try {
-    console.log('[ArbitrageAnalysis] Generating comprehensive narrative report...');
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[ArbitrageAnalysis] Generating comprehensive narrative report (attempt ${attempt}/${MAX_RETRIES})...`);
     
     // Get market name for the report
     const marketName = property_estimate?.property?.market_id 
@@ -1498,8 +1500,17 @@ export async function generateFullArbitrageAnalysis(
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
-  } catch (error) {
-    console.error('[ArbitrageAnalysis] Error generating narrative report:', error);
+    break; // Success, exit retry loop
+  } catch (error: any) {
+    console.error(`[ArbitrageAnalysis] Error generating narrative report (attempt ${attempt}/${MAX_RETRIES}):`, error?.message || error);
+    
+    if (attempt < MAX_RETRIES) {
+      console.log(`[ArbitrageAnalysis] Retrying narrative report generation in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } else {
+      console.error('[ArbitrageAnalysis] All narrative report generation attempts failed');
+    }
+  }
   }
   
   return {

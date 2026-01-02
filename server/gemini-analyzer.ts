@@ -152,26 +152,40 @@ export interface FullAIAnalysis {
 // CORE GEMINI CALL FUNCTION
 // ============================================
 
-async function callGemini(prompt: string, maxTokens: number = 4096): Promise<string> {
-  const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: maxTokens,
-      }
-    })
-  });
+async function callGemini(prompt: string, maxTokens: number = 4096, timeoutMs: number = 120000): Promise<string> {
+  // Create an AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: maxTokens,
+        }
+      }),
+      signal: controller.signal
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: number = 2048): Promise<string> {

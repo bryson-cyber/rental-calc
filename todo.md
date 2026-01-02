@@ -1135,3 +1135,16 @@
 - [x] Replace raw data display with Gemini-generated narrative content
 - [x] Make report read like a professional investment memo, not a data dump
 - [x] Test report quality across multiple properties
+
+
+## Stress Test - Narrative Report (10 St. Louis Properties)
+- [x] Run 10 St. Louis properties through the new narrative report
+- [x] Verify all sections generate correctly (Executive Summary, Market Overview, etc.)
+- [x] Document any errors or issues found
+- [x] Confirm report quality across different property types
+
+
+## Bug Fixes - Stress Test Issues
+- [x] Fix address autocomplete dropdown text color (hard to read)
+- [x] Add timeout handling and retry logic for API calls
+- [x] Add better error messages when analysis times out
