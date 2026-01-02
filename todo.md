@@ -1272,6 +1272,11 @@
 - [x] Pass pricing data (weekday/weekend prices, premium %) to Gemini
 - [x] Update AI prompt to analyze pricing patterns and recommend strategy
 
+### Iteration 8: Rentalizer Comps (Enhanced Competitor Data)
+- [x] Call getRentalizerComps for address-based comps with superhost/professional flags
+- [x] Pass enhanced comp data (superhost %, professional %, distance) to Gemini
+- [x] Update AI prompt to analyze host quality metrics and proximity patterns
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

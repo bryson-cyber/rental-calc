@@ -24,9 +24,11 @@ import {
   exploreSubmarketsWithMetrics,
   getListingComps,
   getListingFuturePricing,
+  getRentalizerComps,
   ListingData,
   ListingComp,
   ListingFuturePricing,
+  RentalizerCompData,
   RentalizerResponse,
   ComprehensiveMarketReport,
   BookingPatterns,
@@ -347,6 +349,8 @@ export interface ArbitrageReport {
   top_performer_comps?: ListingComp[];
   // TOP PERFORMER PRICING: Future pricing strategy from top performer
   top_performer_pricing?: ListingFuturePricing;
+  // RENTALIZER COMPS: Enhanced competitor data with superhost/professional flags
+  rentalizer_comps?: RentalizerCompData;
 }
 
 // ============================================
@@ -868,6 +872,8 @@ export async function generateFullArbitrageAnalysis(
   top_performer_comps?: ListingComp[];
   // TOP PERFORMER PRICING
   top_performer_pricing?: ListingFuturePricing;
+  // RENTALIZER COMPS
+  rentalizer_comps?: RentalizerCompData;
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1272,6 +1278,24 @@ export async function generateFullArbitrageAnalysis(
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching top performer pricing:', error);
     }
+  }
+  
+  // Step 6.10: Fetch Rentalizer comps for enhanced competitor data
+  let rentalizer_comps: RentalizerCompData | null = null;
+  
+  try {
+    console.log(`[ArbitrageAnalysis] Fetching Rentalizer comps for ${address}...`);
+    const comps = await getRentalizerComps(address, actualBedrooms, actualBathrooms, 25);
+    
+    if (comps && comps.comps.length > 0) {
+      rentalizer_comps = comps;
+      const superhostCount = comps.comps.filter(c => c.superhost).length;
+      const professionalCount = comps.comps.filter(c => c.professionally_managed).length;
+      const avgDistance = comps.comps.reduce((sum, c) => sum + c.distance_meters, 0) / comps.comps.length;
+      console.log(`[ArbitrageAnalysis] Got ${comps.comps.length} Rentalizer comps. Superhosts: ${superhostCount}/${comps.comps.length}, Professional: ${professionalCount}/${comps.comps.length}, Avg Distance: ${Math.round(avgDistance)}m`);
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error fetching Rentalizer comps:', error);
   }
   
   // Step 7: Analyze seasonality from monthly forecast
@@ -1816,7 +1840,39 @@ export async function generateFullArbitrageAnalysis(
         price_range_high: top_performer_pricing.pricing_summary.price_range_high,
         weekend_premium_percent: top_performer_pricing.pricing_summary.weekend_premium_percent,
         days_of_data: top_performer_pricing.pricing_data.length
-      } : undefined
+      } : undefined,
+      rentalizer_comps: rentalizer_comps ? (() => {
+        const comps = rentalizer_comps.comps;
+        const superhostCount = comps.filter(c => c.superhost).length;
+        const professionalCount = comps.filter(c => c.professionally_managed).length;
+        const avgDistance = comps.reduce((sum, c) => sum + c.distance_meters, 0) / comps.length;
+        const avgRevenue = comps.reduce((sum, c) => sum + c.annual_revenue, 0) / comps.length;
+        const ratingsWithValue = comps.filter(c => c.rating !== null);
+        const avgRating = ratingsWithValue.length > 0 ? ratingsWithValue.reduce((sum, c) => sum + (c.rating || 0), 0) / ratingsWithValue.length : 0;
+        const avgReviews = comps.reduce((sum, c) => sum + c.reviews, 0) / comps.length;
+        
+        return {
+          total_comps: comps.length,
+          superhost_count: superhostCount,
+          superhost_percentage: (superhostCount / comps.length) * 100,
+          professional_count: professionalCount,
+          professional_percentage: (professionalCount / comps.length) * 100,
+          avg_distance_meters: avgDistance,
+          avg_revenue: avgRevenue,
+          avg_rating: avgRating,
+          avg_reviews: avgReviews,
+          top_comps: comps.slice(0, 8).map(c => ({
+            title: c.title,
+            bedrooms: c.bedrooms,
+            annual_revenue: c.annual_revenue,
+            rating: c.rating,
+            reviews: c.reviews,
+            distance_meters: c.distance_meters,
+            superhost: c.superhost,
+            professionally_managed: c.professionally_managed
+          }))
+        };
+      })() : undefined
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
@@ -1979,7 +2035,9 @@ export async function generateFullArbitrageAnalysis(
     // TOP PERFORMER COMPS
     top_performer_comps,
     // TOP PERFORMER PRICING
-    top_performer_pricing: top_performer_pricing || undefined
+    top_performer_pricing: top_performer_pricing || undefined,
+    // RENTALIZER COMPS
+    rentalizer_comps: rentalizer_comps || undefined
   };
 }
 

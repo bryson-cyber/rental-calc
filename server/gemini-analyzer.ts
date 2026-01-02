@@ -2169,6 +2169,29 @@ export interface NarrativeReportInput {
     weekend_premium_percent: number;
     days_of_data: number;
   };
+  
+  // Rentalizer comps with enhanced host quality data
+  rentalizer_comps?: {
+    total_comps: number;
+    superhost_count: number;
+    superhost_percentage: number;
+    professional_count: number;
+    professional_percentage: number;
+    avg_distance_meters: number;
+    avg_revenue: number;
+    avg_rating: number;
+    avg_reviews: number;
+    top_comps: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      rating: number | null;
+      reviews: number;
+      distance_meters: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
 }
 
 /**
@@ -2433,6 +2456,32 @@ Pricing Strategy Insights:
 - Price range of $${priceRange} ${volatilityLevel === 'high' ? 'indicates significant seasonal/event-based pricing - dynamic pricing is essential' : volatilityLevel === 'moderate' ? 'shows some seasonal variation' : 'suggests stable year-round pricing'}
 - To compete, consider pricing weekdays at $${Math.round(pricing.avg_weekday_price * 0.9)}-$${Math.round(pricing.avg_weekday_price * 1.1)} and weekends at $${Math.round(pricing.avg_weekend_price * 0.9)}-$${Math.round(pricing.avg_weekend_price * 1.1)}`;
   }
+  
+  // Build rentalizer comps context
+  let rentalizerCompsContext = '';
+  if (input.rentalizer_comps && input.rentalizer_comps.total_comps > 0) {
+    const comps = input.rentalizer_comps;
+    const competitionLevel = comps.superhost_percentage > 50 ? 'high' : comps.superhost_percentage > 25 ? 'moderate' : 'low';
+    const professionalLevel = comps.professional_percentage > 40 ? 'highly professionalized' : comps.professional_percentage > 20 ? 'moderately professionalized' : 'mostly individual hosts';
+    
+    rentalizerCompsContext = `
+HOST QUALITY ANALYSIS (${comps.total_comps} nearby competitors):
+This data reveals the quality and professionalism of your direct competition:
+- Superhost Presence: ${comps.superhost_count}/${comps.total_comps} (${comps.superhost_percentage.toFixed(0)}%) - ${competitionLevel} competition quality
+- Professional Managers: ${comps.professional_count}/${comps.total_comps} (${comps.professional_percentage.toFixed(0)}%) - market is ${professionalLevel}
+- Average Distance: ${Math.round(comps.avg_distance_meters)}m from subject property
+- Competitor Avg Revenue: $${comps.avg_revenue.toLocaleString()}/yr
+- Competitor Avg Rating: ${comps.avg_rating.toFixed(1)}★ (${comps.avg_reviews.toFixed(0)} avg reviews)
+
+Top Nearby Competitors:
+${comps.top_comps.slice(0, 5).map((c, i) => 
+  `${i + 1}. "${c.title}" - ${c.bedrooms}BR | $${c.annual_revenue.toLocaleString()}/yr | ${c.rating || 'N/A'}★ | ${c.reviews} reviews | ${Math.round(c.distance_meters)}m away${c.superhost ? ' [SUPERHOST]' : ''}${c.professionally_managed ? ' [PRO]' : ''}`
+).join('\n')}
+
+Host Quality Insights:
+- ${comps.superhost_percentage > 50 ? 'High superhost concentration means guests have high expectations - achieving superhost status is critical' : comps.superhost_percentage > 25 ? 'Moderate superhost presence - quality service will help differentiate' : 'Lower superhost concentration - opportunity to stand out with excellent service'}
+- ${comps.professional_percentage > 40 ? 'Many professional managers - expect sophisticated competition with optimized pricing and operations' : comps.professional_percentage > 20 ? 'Mix of professional and individual hosts - room for both approaches' : 'Mostly individual hosts - professional operations could be a competitive advantage'}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2485,6 +2534,7 @@ ${dailyPricingContext}
 ${submarketContext}
 ${topPerformerCompsContext}
 ${topPerformerPricingContext}
+${rentalizerCompsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2502,7 +2552,7 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. Calculate and explain the revenue-to-rent ratio.",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET data - what does it reveal about what makes the top performer successful? What patterns emerge from their comp set? How can this property differentiate itself? Discuss the professional host presence and what it means.",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET and HOST QUALITY ANALYSIS data - what does the superhost percentage and professional manager presence reveal about competition quality? How can this property differentiate itself? What does the proximity of competitors mean for this location?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   
