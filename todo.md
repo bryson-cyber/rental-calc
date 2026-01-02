@@ -1148,3 +1148,24 @@
 - [x] Fix address autocomplete dropdown text color (hard to read)
 - [x] Add timeout handling and retry logic for API calls
 - [x] Add better error messages when analysis times out
+
+
+## AI Enhancement Sprint - Narrative Quality & Performance
+
+### Narrative Quality Improvements
+- [x] Improve prompt engineering for more specific, actionable insights
+- [x] Add market-specific context and local knowledge to narratives
+- [x] Include more concrete numbers and comparisons in reports
+- [x] Add "What This Means For You" sections with plain-language explanations
+- [x] Improve competitor analysis with specific success factors
+- [x] Add investment-grade language and professional tone
+- [x] Include specific action items and next steps in conclusions
+
+### Performance Improvements
+- [x] Add parallel API calls for faster data fetching (already implemented in sop-reports.ts)
+- [x] Implement caching for repeated market data requests
+- [ ] Add streaming responses for better perceived performance
+- [x] Improve timeout handling with graceful degradation
+- [x] Add retry logic with exponential backoff for all AI calls
+- [x] Optimize token usage to reduce API costs and latency
+- [ ] Add progress indicators during long-running analyses

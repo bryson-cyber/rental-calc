@@ -59,6 +59,11 @@ import {
   type NarrativeReport
 } from './gemini-analyzer';
 
+import {
+  generateEnhancedNarrativeReport,
+  type EnhancedNarrativeReport
+} from './gemini-analyzer-enhanced';
+
 import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';
 
 // ============================================
@@ -323,6 +328,8 @@ export interface ArbitrageReport {
   historical_analysis?: HistoricalMarketAnalysis;
   // COMPREHENSIVE NARRATIVE REPORT
   narrative_report?: NarrativeReport;
+  // ENHANCED NARRATIVE REPORT (with action items and plain-language explanations)
+  enhanced_narrative_report?: EnhancedNarrativeReport;
 }
 
 // ============================================
@@ -831,6 +838,8 @@ export async function generateFullArbitrageAnalysis(
   historical_analysis?: HistoricalMarketAnalysis;
   // COMPREHENSIVE NARRATIVE REPORT
   narrative_report?: NarrativeReport;
+  // ENHANCED NARRATIVE REPORT
+  enhanced_narrative_report?: EnhancedNarrativeReport;
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -1513,6 +1522,104 @@ export async function generateFullArbitrageAnalysis(
   }
   }
   
+  // Step 21: Generate ENHANCED narrative report with better prompts and action items
+  let enhanced_narrative_report: EnhancedNarrativeReport | undefined;
+  
+  try {
+    console.log('[ArbitrageAnalysis] Generating enhanced narrative report...');
+    
+    // Get market name for the report
+    const marketNameForEnhanced = property_estimate?.property?.market_id 
+      ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+      : 'Local Market';
+    
+    enhanced_narrative_report = await generateEnhancedNarrativeReport({
+      address,
+      monthly_rent,
+      bedrooms: actualBedrooms,
+      bathrooms: actualBathrooms,
+      market_name: marketNameForEnhanced,
+      market_occupancy: marketData?.market?.metrics?.occupancy || 0.65,
+      market_adr: marketData?.market?.metrics?.adr || 150,
+      active_listings: marketData?.market?.listing_count || competitors.length,
+      revenue_low: percentiles.median,
+      revenue_mid: percentiles.top_25_percent,
+      revenue_high: percentiles.top_10_percent,
+      monthly_expenses: profitability.monthly_expenses.total,
+      annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
+      annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
+      annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
+      competitors: competitors.slice(0, 8).map(c => ({
+        name: c.name,
+        annual_revenue: c.annual_revenue,
+        occupancy: c.occupancy,
+        adr: c.adr,
+        rating: c.rating,
+        reviews: c.reviews,
+        airbnb_url: c.airbnb_url,
+        success_factor: c.key_success_factor
+      })),
+      seasonality: seasonality.map(s => ({
+        month: s.month,
+        revenue: s.revenue,
+        occupancy: s.occupancy,
+        adr: s.adr,
+        season_type: s.season_type
+      })),
+      five_year_summary: five_year_summary ? {
+        years_of_data: five_year_summary.years_of_data,
+        occupancy: {
+          current_year_avg: five_year_summary.occupancy.current_year_avg,
+          five_year_avg: five_year_summary.occupancy.five_year_avg,
+          trend: five_year_summary.occupancy.trend,
+          percent_change: five_year_summary.occupancy.percent_change
+        },
+        adr: {
+          current_year_avg: five_year_summary.adr.current_year_avg,
+          five_year_avg: five_year_summary.adr.five_year_avg,
+          trend: five_year_summary.adr.trend,
+          percent_change: five_year_summary.adr.percent_change
+        },
+        revenue: {
+          current_year_avg: five_year_summary.revenue.current_year_avg,
+          five_year_avg: five_year_summary.revenue.five_year_avg,
+          trend: five_year_summary.revenue.trend,
+          percent_change: five_year_summary.revenue.percent_change
+        },
+        market_maturity: five_year_summary.market_maturity
+      } : undefined,
+      supply_trend: supply_trend ? {
+        current_listings: supply_trend.current_listings,
+        net_change: supply_trend.net_change,
+        percent_change: supply_trend.percent_change,
+        trend: supply_trend.trend
+      } : undefined,
+      professional_stats: professional_host_stats ? {
+        professional_percentage: professional_host_stats.professional_percentage,
+        superhost_percentage: professional_host_stats.superhost_percentage,
+        revenue_premium_percent: professional_host_stats.revenue_premium_percent
+      } : undefined,
+      booking_patterns: booking_patterns ? {
+        avg_lead_time_days: booking_patterns.booking_lead_time.avg_days,
+        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights
+      } : undefined,
+      amenities: amenity_analysis?.slice(0, 10).map(a => ({
+        amenity: a.amenity,
+        percentage_of_top_performers: a.percentage_of_top_performers
+      })),
+      risks: ai_analysis?.risk_assessment?.risks?.slice(0, 5).map(r => ({
+        category: r.category,
+        description: r.description,
+        severity: r.severity
+      }))
+    });
+    
+    console.log('[ArbitrageAnalysis] Enhanced narrative report generation complete');
+  } catch (error: any) {
+    console.error('[ArbitrageAnalysis] Error generating enhanced narrative report:', error?.message || error);
+    // Continue without enhanced report - the standard narrative report is still available
+  }
+  
   return {
     report,
     percentiles,
@@ -1539,7 +1646,9 @@ export async function generateFullArbitrageAnalysis(
     // GEMINI HISTORICAL ANALYSIS
     historical_analysis,
     // COMPREHENSIVE NARRATIVE REPORT
-    narrative_report
+    narrative_report,
+    // ENHANCED NARRATIVE REPORT
+    enhanced_narrative_report
   };
 }
 
