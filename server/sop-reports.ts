@@ -31,6 +31,8 @@ import {
   getListingsInRadius,
   getAllMarketListings,
   getFilteredMarketListings,
+  getCountryMarkets,
+  CountryMarket,
   AdvancedListingFilters,
   RadiusSearchResult,
   ListingData,
@@ -981,6 +983,27 @@ export async function generateFullArbitrageAnalysis(
     recommended_type: 'entire_home' | 'private_room';
     recommendation_reason: string;
   };
+  // NEARBY MARKETS (alternative market opportunities)
+  nearby_markets?: {
+    current_market: {
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+    };
+    alternatives: Array<{
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+      revenue_vs_current: number; // % difference from current market
+      distance_estimate: string; // rough distance category
+    }>;
+    best_alternative: string;
+    recommendation: string;
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1665,6 +1688,26 @@ export async function generateFullArbitrageAnalysis(
     recommended_type: 'entire_home' | 'private_room';
     recommendation_reason: string;
   } | undefined;
+  let nearby_markets: {
+    current_market: {
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+    };
+    alternatives: Array<{
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+      revenue_vs_current: number;
+      distance_estimate: string;
+    }>;
+    best_alternative: string;
+    recommendation: string;
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -1945,6 +1988,77 @@ export async function generateFullArbitrageAnalysis(
       console.log(`[ArbitrageAnalysis] Property type analysis: Entire homes ($${Math.round(entireHomeStats.avg_revenue)}/yr) vs Private rooms ($${Math.round(privateRoomStats.avg_revenue)}/yr). Premium: ${revenuePremium.toFixed(0)}%`);
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching property type analysis:', error);
+    }
+    
+    // Step 15.9: Fetch nearby markets for comparison
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching nearby markets for comparison...`);
+      
+      // Get top markets in the US sorted by market score
+      const countryMarketsResponse = await getCountryMarkets('us', {
+        limit: 25,
+        sort_by: 'market_score',
+        sort_direction: 'desc',
+        min_market_score: 50
+      });
+      
+      if (countryMarketsResponse.markets.length > 0) {
+        // Find current market in the list
+        const currentMarketName = defaultMarketData.market.name || 'Unknown Market';
+        const currentMarketData = countryMarketsResponse.markets.find(
+          m => m.name.toLowerCase().includes(currentMarketName.toLowerCase().split(',')[0]) ||
+               currentMarketName.toLowerCase().includes(m.name.toLowerCase().split(',')[0])
+        );
+        
+        // Get current market metrics (use found data or defaults)
+        const currentRevenue = currentMarketData?.metrics.revenue || defaultMarketData.market.metrics?.revenue || 0;
+        const currentOccupancy = currentMarketData?.metrics.occupancy || defaultMarketData.market.metrics?.occupancy || 0;
+        const currentScore = currentMarketData?.scores.market_score || 0;
+        const currentRegulation = currentMarketData?.scores.regulation || 0;
+        
+        // Filter to get alternative markets (exclude current)
+        const alternativeMarkets = countryMarketsResponse.markets
+          .filter(m => !m.name.toLowerCase().includes(currentMarketName.toLowerCase().split(',')[0]))
+          .slice(0, 5)
+          .map(m => ({
+            name: m.name,
+            market_score: m.scores.market_score,
+            revenue: m.metrics.revenue,
+            occupancy: m.metrics.occupancy,
+            regulation_score: m.scores.regulation,
+            revenue_vs_current: currentRevenue > 0 ? ((m.metrics.revenue - currentRevenue) / currentRevenue) * 100 : 0,
+            distance_estimate: 'varies' // Would need geocoding for actual distance
+          }));
+        
+        // Find best alternative (highest market score with better revenue)
+        const bestAlt = alternativeMarkets.reduce((best, current) => 
+          (current.market_score > best.market_score && current.revenue > currentRevenue) ? current : best,
+          alternativeMarkets[0]
+        );
+        
+        // Generate recommendation
+        const hasGoodAlternative = bestAlt && bestAlt.revenue > currentRevenue * 1.2;
+        const recommendation = hasGoodAlternative
+          ? `Consider ${bestAlt.name} - it has ${bestAlt.revenue_vs_current.toFixed(0)}% higher revenue potential with a market score of ${bestAlt.market_score.toFixed(0)}`
+          : `${currentMarketName} is competitive. The top alternatives don't significantly outperform it.`;
+        
+        nearby_markets = {
+          current_market: {
+            name: currentMarketName,
+            market_score: currentScore,
+            revenue: currentRevenue,
+            occupancy: currentOccupancy,
+            regulation_score: currentRegulation
+          },
+          alternatives: alternativeMarkets,
+          best_alternative: bestAlt?.name || 'None identified',
+          recommendation
+        };
+        
+        console.log(`[ArbitrageAnalysis] Nearby markets: Found ${alternativeMarkets.length} alternatives. Best: ${bestAlt?.name || 'N/A'}`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching nearby markets:', error);
     }
   }
   
@@ -2399,6 +2513,12 @@ export async function generateFullArbitrageAnalysis(
         revenue_premium: property_type_analysis.revenue_premium,
         recommended_type: property_type_analysis.recommended_type,
         recommendation_reason: property_type_analysis.recommendation_reason
+      } : undefined,
+      nearby_markets: nearby_markets ? {
+        current_market: nearby_markets.current_market,
+        alternatives: nearby_markets.alternatives,
+        best_alternative: nearby_markets.best_alternative,
+        recommendation: nearby_markets.recommendation
       } : undefined
     });
     
@@ -2576,7 +2696,9 @@ export async function generateFullArbitrageAnalysis(
     // MARKET SATURATION
     market_saturation,
     // PROPERTY TYPE ANALYSIS
-    property_type_analysis
+    property_type_analysis,
+    // NEARBY MARKETS
+    nearby_markets
   };
 }
 

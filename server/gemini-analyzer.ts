@@ -2300,6 +2300,28 @@ export interface NarrativeReportInput {
     recommended_type: 'entire_home' | 'private_room';
     recommendation_reason: string;
   };
+  
+  // Nearby markets comparison
+  nearby_markets?: {
+    current_market: {
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+    };
+    alternatives: Array<{
+      name: string;
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      regulation_score: number;
+      revenue_vs_current: number;
+      distance_estimate: string;
+    }>;
+    best_alternative: string;
+    recommendation: string;
+  };
 }
 
 /**
@@ -2775,6 +2797,31 @@ Revenue Premium: Entire homes earn ${pta.revenue_premium.toFixed(0)}% more than 
 Recommended Listing Type: ${pta.recommended_type === 'entire_home' ? 'ENTIRE HOME' : 'PRIVATE ROOM'}
 Reason: ${pta.recommendation_reason}`;
   }
+  
+  // Build nearby markets context
+  let nearbyMarketsContext = '';
+  if (input.nearby_markets) {
+    const nm = input.nearby_markets;
+    const alternativesText = nm.alternatives.map(a => 
+      `- ${a.name}: Market Score ${a.market_score.toFixed(0)}, Revenue $${Math.round(a.revenue).toLocaleString()}/yr (${a.revenue_vs_current >= 0 ? '+' : ''}${a.revenue_vs_current.toFixed(0)}% vs current), Occupancy ${(a.occupancy * 100).toFixed(0)}%, Regulation Score ${a.regulation_score.toFixed(0)}`
+    ).join('\n');
+    
+    nearbyMarketsContext = `
+NEARBY MARKETS COMPARISON:
+This compares your market against top-performing alternatives in the country:
+
+Your Current Market: ${nm.current_market.name}
+- Market Score: ${nm.current_market.market_score.toFixed(0)}
+- Average Revenue: $${Math.round(nm.current_market.revenue).toLocaleString()}/yr
+- Occupancy: ${(nm.current_market.occupancy * 100).toFixed(0)}%
+- Regulation Score: ${nm.current_market.regulation_score.toFixed(0)} (higher = more STR-friendly)
+
+Top Alternative Markets:
+${alternativesText}
+
+Best Alternative: ${nm.best_alternative}
+Recommendation: ${nm.recommendation}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2834,6 +2881,7 @@ ${qualifyingCompetitorsContext}
 ${radiusListingsContext}
 ${marketSaturationContext}
 ${propertyTypeContext}
+${nearbyMarketsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2847,7 +2895,7 @@ Return your response as JSON with this exact structure:
 {
   "executive_summary": "A compelling 2-3 paragraph overview that captures the essence of this investment opportunity. Start with the bottom line - is this a strong opportunity? Then summarize the key factors that support your assessment. End with what makes this property unique in its market.",
   
-  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. Explain what the revenue distribution (25th/50th/75th/90th percentiles) means for realistic expectations. Analyze whether this is a fragmented, moderate, or concentrated market and what that means for a new entrant.",
+  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. If NEARBY MARKETS COMPARISON data is available, compare this market against top alternatives - how does it rank in terms of revenue potential, market score, and regulation friendliness? Should the investor consider alternative markets? Explain what the revenue distribution means for realistic expectations.",
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   

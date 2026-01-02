@@ -1307,6 +1307,11 @@
 - [x] Pass property type breakdown (entire home vs private room performance) to Gemini
 - [x] Update AI prompt to analyze property type competitive dynamics
 
+### Iteration 15: Country Markets (Nearby Market Comparison)
+- [x] Call getCountryMarkets to get all markets in the country
+- [x] Pass nearby market comparison data (top 5 nearby markets by revenue potential) to Gemini
+- [x] Update AI prompt to analyze alternative market opportunities
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters
