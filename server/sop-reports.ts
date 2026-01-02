@@ -25,6 +25,8 @@ import {
   getListingComps,
   getListingFuturePricing,
   getRentalizerComps,
+  getSinglePropertyDetails,
+  getSubmarketListings,
   ListingData,
   ListingComp,
   ListingFuturePricing,
@@ -351,6 +353,26 @@ export interface ArbitrageReport {
   top_performer_pricing?: ListingFuturePricing;
   // RENTALIZER COMPS: Enhanced competitor data with superhost/professional flags
   rentalizer_comps?: RentalizerCompData;
+  // EXISTING LISTING DATA: If property was previously listed on Airbnb
+  existing_listing_data?: {
+    property_id: string;
+    title: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+  };
+  // SUBMARKET LISTINGS: Hyper-local competition within the submarket
+  submarket_listings?: {
+    submarket_id: string;
+    submarket_name: string;
+    total_listings: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    top_listings: ListingData[];
+  };
 }
 
 // ============================================
@@ -874,6 +896,26 @@ export async function generateFullArbitrageAnalysis(
   top_performer_pricing?: ListingFuturePricing;
   // RENTALIZER COMPS
   rentalizer_comps?: RentalizerCompData;
+  // EXISTING LISTING DATA
+  existing_listing_data?: {
+    property_id: string;
+    title: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+  };
+  // SUBMARKET LISTINGS
+  submarket_listings?: {
+    submarket_id: string;
+    submarket_name: string;
+    total_listings: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    top_listings: ListingData[];
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1296,6 +1338,90 @@ export async function generateFullArbitrageAnalysis(
     }
   } catch (error) {
     console.error('[ArbitrageAnalysis] Error fetching Rentalizer comps:', error);
+  }
+  
+  // Step 6.11: Check if property already exists in AirDNA database (was previously listed)
+  let existing_listing_data: {
+    property_id: string;
+    title: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+  } | undefined = undefined;
+  
+  // Try to find existing listing from rentalizer comps or competitors that match the address
+  if (rentalizer_comps && rentalizer_comps.comps.length > 0) {
+    // Check if any comp is at distance 0 (same property)
+    const samePropertyComp = rentalizer_comps.comps.find(c => c.distance_meters === 0);
+    if (samePropertyComp) {
+      try {
+        console.log(`[ArbitrageAnalysis] Found existing listing at same address (ID: ${samePropertyComp.listing_id}), fetching details...`);
+        const details = await getSinglePropertyDetails(samePropertyComp.listing_id);
+        if (details) {
+          existing_listing_data = {
+            property_id: details.property_id,
+            title: details.title,
+            annual_revenue: details.annual_revenue,
+            adr: details.adr,
+            occupancy: details.occupancy,
+            rating: details.rating,
+            reviews: details.reviews
+          };
+          console.log(`[ArbitrageAnalysis] Got existing listing data: Revenue $${details.annual_revenue}/yr, ADR $${details.adr}, ${details.reviews} reviews`);
+        }
+      } catch (error) {
+        console.error('[ArbitrageAnalysis] Error fetching existing listing details:', error);
+      }
+    }
+  }
+  
+  // Step 6.12: Fetch submarket listings for hyper-local competition analysis
+  let submarket_listings: {
+    submarket_id: string;
+    submarket_name: string;
+    total_listings: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    top_listings: ListingData[];
+  } | undefined = undefined;
+  
+  // Get submarket ID from rentalizer comps or property estimate
+  const submarketId = rentalizer_comps?.market_context?.submarket_id || 
+    (property_estimate as any)?.property?.submarket_id;
+  const submarketName = rentalizer_comps?.market_context?.submarket_name || 'Local Submarket';
+  
+  if (submarketId) {
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching submarket listings for ${submarketName} (ID: ${submarketId})...`);
+      const submarketResult = await getSubmarketListings(submarketId, {
+        limit: 50,
+        orderBy: 'revenue',
+        orderDirection: 'desc'
+      });
+      
+      if (submarketResult.listings.length > 0) {
+        const listings = submarketResult.listings;
+        const avgRevenue = listings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / listings.length;
+        const avgAdr = listings.reduce((sum, l) => sum + (l.adr || 0), 0) / listings.length;
+        const avgOccupancy = listings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / listings.length;
+        
+        submarket_listings = {
+          submarket_id: submarketId,
+          submarket_name: submarketName,
+          total_listings: submarketResult.total_count,
+          avg_revenue: avgRevenue,
+          avg_adr: avgAdr,
+          avg_occupancy: avgOccupancy,
+          top_listings: listings.slice(0, 10)
+        };
+        console.log(`[ArbitrageAnalysis] Got ${submarketResult.total_count} submarket listings. Avg Revenue: $${Math.round(avgRevenue)}/yr, Avg ADR: $${Math.round(avgAdr)}`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching submarket listings:', error);
+    }
   }
   
   // Step 7: Analyze seasonality from monthly forecast
@@ -1872,7 +1998,23 @@ export async function generateFullArbitrageAnalysis(
             professionally_managed: c.professionally_managed
           }))
         };
-      })() : undefined
+      })() : undefined,
+      existing_listing_data: existing_listing_data,
+      submarket_listings: submarket_listings ? {
+        submarket_name: submarket_listings.submarket_name,
+        total_listings: submarket_listings.total_listings,
+        avg_revenue: submarket_listings.avg_revenue,
+        avg_adr: submarket_listings.avg_adr,
+        avg_occupancy: submarket_listings.avg_occupancy,
+        top_listings: submarket_listings.top_listings.slice(0, 5).map(l => ({
+          name: l.title || 'Unnamed Listing',
+          bedrooms: l.bedrooms,
+          annual_revenue: l.annual_revenue || 0,
+          adr: l.adr || 0,
+          occupancy: l.occupancy || 0,
+          rating: l.rating || null
+        }))
+      } : undefined
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
@@ -2037,7 +2179,11 @@ export async function generateFullArbitrageAnalysis(
     // TOP PERFORMER PRICING
     top_performer_pricing: top_performer_pricing || undefined,
     // RENTALIZER COMPS
-    rentalizer_comps: rentalizer_comps || undefined
+    rentalizer_comps: rentalizer_comps || undefined,
+    // EXISTING LISTING DATA
+    existing_listing_data,
+    // SUBMARKET LISTINGS
+    submarket_listings
   };
 }
 

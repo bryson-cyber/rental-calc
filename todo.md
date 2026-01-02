@@ -1277,6 +1277,16 @@
 - [x] Pass enhanced comp data (superhost %, professional %, distance) to Gemini
 - [x] Update AI prompt to analyze host quality metrics and proximity patterns
 
+### Iteration 9: Single Property Details (Existing Listing Data)
+- [x] Call getSinglePropertyDetails if property exists in AirDNA database
+- [x] Pass existing listing performance data to Gemini
+- [x] Update AI prompt to analyze historical performance if property was previously listed
+
+### Iteration 10: Submarket Listings (Hyper-Local Competition)
+- [x] Call getSubmarketListings for property's specific submarket
+- [x] Pass submarket-level competition data to Gemini
+- [x] Update AI prompt to analyze hyper-local competitive dynamics
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

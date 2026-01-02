@@ -2192,6 +2192,34 @@ export interface NarrativeReportInput {
       professionally_managed: boolean;
     }>;
   };
+  
+  // Existing listing data if property was previously on Airbnb
+  existing_listing_data?: {
+    property_id: string;
+    title: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+  };
+  
+  // Submarket listings for hyper-local competition
+  submarket_listings?: {
+    submarket_name: string;
+    total_listings: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    top_listings: Array<{
+      name: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+    }>;
+  };
 }
 
 /**
@@ -2482,6 +2510,50 @@ Host Quality Insights:
 - ${comps.superhost_percentage > 50 ? 'High superhost concentration means guests have high expectations - achieving superhost status is critical' : comps.superhost_percentage > 25 ? 'Moderate superhost presence - quality service will help differentiate' : 'Lower superhost concentration - opportunity to stand out with excellent service'}
 - ${comps.professional_percentage > 40 ? 'Many professional managers - expect sophisticated competition with optimized pricing and operations' : comps.professional_percentage > 20 ? 'Mix of professional and individual hosts - room for both approaches' : 'Mostly individual hosts - professional operations could be a competitive advantage'}`;
   }
+  
+  // Build existing listing context (if property was previously on Airbnb)
+  let existingListingContext = '';
+  if (input.existing_listing_data) {
+    const listing = input.existing_listing_data;
+    const performanceLevel = listing.annual_revenue > input.revenue_mid ? 'above average' : listing.annual_revenue > input.revenue_low ? 'average' : 'below average';
+    
+    existingListingContext = `
+EXISTING LISTING DATA (Property was previously on Airbnb):
+IMPORTANT: This property has historical performance data from when it was previously listed:
+- Previous Listing Title: "${listing.title}"
+- Historical Annual Revenue: $${listing.annual_revenue.toLocaleString()}/yr (${performanceLevel} for this market)
+- Historical ADR: $${Math.round(listing.adr)}/night
+- Historical Occupancy: ${(listing.occupancy * 100).toFixed(0)}%
+- Guest Rating: ${listing.rating || 'N/A'}★
+- Total Reviews: ${listing.reviews}
+
+This historical data is GOLD - it shows exactly how this property performed before. ${listing.reviews > 50 ? 'With ' + listing.reviews + ' reviews, this is a well-established listing with proven demand.' : listing.reviews > 20 ? 'The review count suggests moderate guest history.' : 'Limited reviews suggest the property may have been listed briefly or recently.'}`;
+  }
+  
+  // Build submarket listings context (hyper-local competition)
+  let submarketListingsContext = '';
+  if (input.submarket_listings && input.submarket_listings.total_listings > 0) {
+    const sub = input.submarket_listings;
+    const competitionDensity = sub.total_listings > 100 ? 'highly competitive' : sub.total_listings > 50 ? 'moderately competitive' : 'less saturated';
+    const revenueComparison = sub.avg_revenue > input.revenue_mid ? 'above your projections' : sub.avg_revenue > input.revenue_low ? 'in line with your projections' : 'below your projections';
+    
+    submarketListingsContext = `
+HYPER-LOCAL COMPETITION (${sub.submarket_name} Submarket):
+This is the immediate neighborhood competition - the listings guests will compare you against:
+- Total Listings in Submarket: ${sub.total_listings} (${competitionDensity})
+- Submarket Avg Revenue: $${Math.round(sub.avg_revenue).toLocaleString()}/yr (${revenueComparison})
+- Submarket Avg ADR: $${Math.round(sub.avg_adr)}/night
+- Submarket Avg Occupancy: ${(sub.avg_occupancy * 100).toFixed(0)}%
+
+Top Performers in Your Immediate Area:
+${sub.top_listings.slice(0, 5).map((l, i) => 
+  `${i + 1}. "${l.name}" - ${l.bedrooms}BR | $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ | ${l.rating || 'N/A'}★`
+).join('\n')}
+
+Submarket Insights:
+- ${sub.total_listings > 100 ? 'High listing density means strong competition - differentiation is critical' : sub.total_listings > 50 ? 'Moderate competition - quality and pricing will determine success' : 'Lower competition density - opportunity to capture market share'}
+- Submarket average revenue of $${Math.round(sub.avg_revenue).toLocaleString()}/yr ${revenueComparison}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2535,6 +2607,8 @@ ${submarketContext}
 ${topPerformerCompsContext}
 ${topPerformerPricingContext}
 ${rentalizerCompsContext}
+${existingListingContext}
+${submarketListingsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2552,11 +2626,11 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. Calculate and explain the revenue-to-rent ratio.",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET and HOST QUALITY ANALYSIS data - what does the superhost percentage and professional manager presence reveal about competition quality? How can this property differentiate itself? What does the proximity of competitors mean for this location?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, and HYPER-LOCAL COMPETITION data - what does the superhost percentage, professional manager presence, and submarket density reveal about competition quality? How can this property differentiate itself in this specific neighborhood?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   
-  "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? How has the market evolved?",
+  "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? If EXISTING LISTING DATA is available, analyze how this specific property performed historically and what that means for future projections.",
   
   "risk_assessment": "2-3 paragraphs honestly discussing the risks. What could go wrong? What are the market-specific risks? What operational challenges should be expected? How can these risks be mitigated?",
   
