@@ -1267,6 +1267,11 @@
 - [x] Pass top performer comps to Gemini for deeper competitive analysis
 - [x] Update AI prompt to analyze what top performer's comps reveal
 
+### Iteration 7: Top Performer Pricing Strategy
+- [x] Call getListingFuturePricing for top performer to get their pricing strategy
+- [x] Pass pricing data (weekday/weekend prices, premium %) to Gemini
+- [x] Update AI prompt to analyze pricing patterns and recommend strategy
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

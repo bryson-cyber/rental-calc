@@ -2159,6 +2159,16 @@ export interface NarrativeReportInput {
     similarity_score: number;
     amenities: string[];
   }>;
+  
+  // Top performer pricing strategy (90-day forward)
+  top_performer_pricing?: {
+    avg_weekday_price: number;
+    avg_weekend_price: number;
+    price_range_low: number;
+    price_range_high: number;
+    weekend_premium_percent: number;
+    days_of_data: number;
+  };
 }
 
 /**
@@ -2401,6 +2411,28 @@ Top Performer Comp Insights:
 - Common Amenities Among Comps: ${commonAmenities || 'Not available'}
 - This reveals what the top performer is competing against and what makes them successful`;
   }
+  
+  // Build top performer pricing context
+  let topPerformerPricingContext = '';
+  if (input.top_performer_pricing) {
+    const pricing = input.top_performer_pricing;
+    const priceDiff = pricing.avg_weekend_price - pricing.avg_weekday_price;
+    const priceRange = pricing.price_range_high - pricing.price_range_low;
+    const volatilityLevel = priceRange > pricing.avg_weekday_price * 0.5 ? 'high' : priceRange > pricing.avg_weekday_price * 0.25 ? 'moderate' : 'low';
+    
+    topPerformerPricingContext = `
+TOP PERFORMER'S PRICING STRATEGY (${pricing.days_of_data}-Day Forward):
+This is how the market's #1 revenue earner prices their listing:
+- Weekday Average: $${pricing.avg_weekday_price}/night
+- Weekend Average: $${pricing.avg_weekend_price}/night (${pricing.weekend_premium_percent > 0 ? '+' : ''}${pricing.weekend_premium_percent}% premium)
+- Price Range: $${pricing.price_range_low} - $${pricing.price_range_high}/night
+- Price Volatility: ${volatilityLevel} (${priceRange > 0 ? `$${priceRange} spread` : 'stable'})
+
+Pricing Strategy Insights:
+- Weekend premium of ${pricing.weekend_premium_percent}% ${pricing.weekend_premium_percent > 20 ? 'indicates strong weekend demand - consider similar or higher weekend pricing' : pricing.weekend_premium_percent > 10 ? 'shows moderate weekend demand' : 'suggests consistent demand throughout the week'}
+- Price range of $${priceRange} ${volatilityLevel === 'high' ? 'indicates significant seasonal/event-based pricing - dynamic pricing is essential' : volatilityLevel === 'moderate' ? 'shows some seasonal variation' : 'suggests stable year-round pricing'}
+- To compete, consider pricing weekdays at $${Math.round(pricing.avg_weekday_price * 0.9)}-$${Math.round(pricing.avg_weekday_price * 1.1)} and weekends at $${Math.round(pricing.avg_weekend_price * 0.9)}-$${Math.round(pricing.avg_weekend_price * 1.1)}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2452,6 +2484,7 @@ ${competitorHistoricalContext}
 ${dailyPricingContext}
 ${submarketContext}
 ${topPerformerCompsContext}
+${topPerformerPricingContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2471,7 +2504,7 @@ Return your response as JSON with this exact structure:
   
   "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET data - what does it reveal about what makes the top performer successful? What patterns emerge from their comp set? How can this property differentiate itself? Discuss the professional host presence and what it means.",
   
-  "seasonal_strategy": "2-3 paragraphs on seasonality and timing. When are the peak and off-peak periods? How dramatic is the seasonal swing? What pricing and marketing strategies should be employed for each season?",
+  "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   
   "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? How has the market evolved?",
   

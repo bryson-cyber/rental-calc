@@ -23,8 +23,10 @@ import {
   getListingHistoricalMetrics,
   exploreSubmarketsWithMetrics,
   getListingComps,
+  getListingFuturePricing,
   ListingData,
   ListingComp,
+  ListingFuturePricing,
   RentalizerResponse,
   ComprehensiveMarketReport,
   BookingPatterns,
@@ -343,6 +345,8 @@ export interface ArbitrageReport {
   enhanced_narrative_report?: EnhancedNarrativeReport;
   // TOP PERFORMER COMPS: AirDNA's native comp algorithm for top performer
   top_performer_comps?: ListingComp[];
+  // TOP PERFORMER PRICING: Future pricing strategy from top performer
+  top_performer_pricing?: ListingFuturePricing;
 }
 
 // ============================================
@@ -862,6 +866,8 @@ export async function generateFullArbitrageAnalysis(
   enhanced_narrative_report?: EnhancedNarrativeReport;
   // TOP PERFORMER COMPS
   top_performer_comps?: ListingComp[];
+  // TOP PERFORMER PRICING
+  top_performer_pricing?: ListingFuturePricing;
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1243,6 +1249,28 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching top performer comps:', error);
+    }
+  }
+  
+  // Step 6.9: Fetch top performer's pricing strategy
+  let top_performer_pricing: ListingFuturePricing | null = null;
+  
+  if (topPerformer?.airbnb_url) {
+    try {
+      const urlMatch = topPerformer.airbnb_url.match(/rooms\/(\d+)/);
+      const listingId = urlMatch ? urlMatch[1] : null;
+      
+      if (listingId) {
+        console.log(`[ArbitrageAnalysis] Fetching pricing strategy for top performer (ID: ${listingId})...`);
+        const pricing = await getListingFuturePricing(listingId, 90);
+        
+        if (pricing && pricing.pricing_data.length > 0) {
+          top_performer_pricing = pricing;
+          console.log(`[ArbitrageAnalysis] Got ${pricing.pricing_data.length} days of pricing data. Weekday: $${pricing.pricing_summary.avg_weekday_price}, Weekend: $${pricing.pricing_summary.avg_weekend_price}, Premium: ${pricing.pricing_summary.weekend_premium_percent}%`);
+        }
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching top performer pricing:', error);
     }
   }
   
@@ -1780,7 +1808,15 @@ export async function generateFullArbitrageAnalysis(
         reviews: c.reviews,
         similarity_score: c.similarity_score,
         amenities: c.amenities
-      })) : undefined
+      })) : undefined,
+      top_performer_pricing: top_performer_pricing ? {
+        avg_weekday_price: top_performer_pricing.pricing_summary.avg_weekday_price,
+        avg_weekend_price: top_performer_pricing.pricing_summary.avg_weekend_price,
+        price_range_low: top_performer_pricing.pricing_summary.price_range_low,
+        price_range_high: top_performer_pricing.pricing_summary.price_range_high,
+        weekend_premium_percent: top_performer_pricing.pricing_summary.weekend_premium_percent,
+        days_of_data: top_performer_pricing.pricing_data.length
+      } : undefined
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
@@ -1941,7 +1977,9 @@ export async function generateFullArbitrageAnalysis(
     // ENHANCED NARRATIVE REPORT
     enhanced_narrative_report,
     // TOP PERFORMER COMPS
-    top_performer_comps
+    top_performer_comps,
+    // TOP PERFORMER PRICING
+    top_performer_pricing: top_performer_pricing || undefined
   };
 }
 
