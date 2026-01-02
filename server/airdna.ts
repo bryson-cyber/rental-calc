@@ -756,17 +756,19 @@ async function getMarketMetric(
   try {
     const response = await makeApiRequest<{
       payload: {
-        results?: Array<{
+        metrics?: Array<{
           month?: string;
           date?: string;
           value?: number;
           occupancy?: number;
           occupancy_rate?: number;
           avg_revenue?: number;
+          revenue?: number;
           adr?: number;
           revpar?: number;
           active_listings_count?: number;
           active_listings?: number;
+          available_listings?: number;
           booking_lead_time?: number;
           los?: number;
         }>;
@@ -775,7 +777,14 @@ async function getMarketMetric(
       num_months: numMonths,
     });
     
-    const results = response.payload.results || [];
+    // API returns payload.metrics, not payload.results
+    const results = response.payload.metrics || [];
+    
+    if (results.length === 0) {
+      console.log(`[AirDNA] ${metricType} returned 0 results for ${numMonths} months`);
+    } else {
+      console.log(`[AirDNA] ${metricType} returned ${results.length} results for ${numMonths} months`);
+    }
     
     return results.map((r) => {
       const date = r.month || r.date || "";
@@ -785,7 +794,7 @@ async function getMarketMetric(
       if (value === undefined) {
         switch (metricType) {
           case "occupancy": value = r.occupancy_rate || r.occupancy; break;
-          case "avg_revenue": value = r.avg_revenue; break;
+          case "avg_revenue": value = r.revenue || r.avg_revenue; break;
           case "adr": value = r.adr; break;
           case "revpar": value = r.revpar; break;
           case "active_listings_count": value = r.active_listings || r.active_listings_count; break;
@@ -802,6 +811,27 @@ async function getMarketMetric(
   }
 }
 
+// Helper function to add delay between requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper function to fetch with retry
+async function fetchWithRetry<T>(
+  fn: () => Promise<T>,
+  retries: number = 3,
+  delayMs: number = 1000
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      console.log(`[AirDNA] Retry ${i + 1}/${retries} after ${delayMs}ms delay...`);
+      await delay(delayMs * (i + 1)); // Exponential backoff
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 export async function getMarketHistoricalData(marketId: string, numMonths: number = 12): Promise<{
   occupancy: HistoricalDataPoint[];
   adr: HistoricalDataPoint[];
@@ -809,13 +839,25 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
   revpar: HistoricalDataPoint[];
   active_listings: HistoricalDataPoint[];
 }> {
-  const [occupancy, adr, revenue, revpar, active_listings] = await Promise.all([
-    getMarketMetric(marketId, "occupancy", numMonths),
-    getMarketMetric(marketId, "adr", numMonths),
-    getMarketMetric(marketId, "avg_revenue", numMonths),
-    getMarketMetric(marketId, "revpar", numMonths),
-    getMarketMetric(marketId, "active_listings_count", numMonths),
-  ]);
+  console.log(`[AirDNA] Fetching ${numMonths} months of historical data for market ${marketId}`);
+  
+  // Serialize requests to avoid overwhelming the API
+  // Add small delays between requests to prevent rate limiting
+  const occupancy = await fetchWithRetry(() => getMarketMetric(marketId, "occupancy", numMonths));
+  await delay(200);
+  
+  const adr = await fetchWithRetry(() => getMarketMetric(marketId, "adr", numMonths));
+  await delay(200);
+  
+  const revenue = await fetchWithRetry(() => getMarketMetric(marketId, "avg_revenue", numMonths));
+  await delay(200);
+  
+  const revpar = await fetchWithRetry(() => getMarketMetric(marketId, "revpar", numMonths));
+  await delay(200);
+  
+  const active_listings = await fetchWithRetry(() => getMarketMetric(marketId, "active_listings_count", numMonths));
+  
+  console.log(`[AirDNA] Historical data results: occupancy=${occupancy.length}, adr=${adr.length}, revenue=${revenue.length}`);
   
   return { occupancy, adr, revenue, revpar, active_listings };
 }
@@ -3401,7 +3443,7 @@ export async function getMarketFutureDailyData(
     }
 
     const response = await makeApiRequest(
-      `/market/${marketId}/future/pricing`,
+      `/market/${marketId}/future_pricing`,
       "POST",
       {
         num_months: numMonths,
@@ -3409,8 +3451,10 @@ export async function getMarketFutureDailyData(
       }
     );
 
-    const responseData = (response as any)?.payload?.data;
-    if (!responseData) {
+    // API returns payload.metrics, not payload.data
+    const responseData = (response as any)?.payload?.metrics || (response as any)?.payload?.data;
+    if (!responseData || !Array.isArray(responseData)) {
+      console.log('[AirDNA] Future pricing response structure:', JSON.stringify(response, null, 2).slice(0, 500));
       return [];
     }
 

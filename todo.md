@@ -1076,3 +1076,53 @@
 - [x] Pass historical data to Gemini for contextual interpretation
 - [x] Generate market trend insights (growth patterns, saturation signals, etc.)
 - [x] Display Gemini historical analysis in frontend report
+
+
+## Stress Test - 10 St. Louis Properties
+
+- [x] Find 10 rental properties in St. Louis with addresses and rent prices
+- [x] Run all 10 properties through the analyzer
+- [x] Document results and any issues found
+
+
+## Remove Verdict System & Fix API Errors
+
+- [x] Remove GO/CAUTION/PASS verdict from AI analysis
+- [x] Remove verdict display from frontend
+- [x] Update UI to be informational rather than prescriptive
+- [x] Fix future daily data API 404 errors (changed /future/pricing to /future_pricing)
+
+
+## API Fixes Sprint
+- [x] Fix historical data API response parsing (payload.metrics not payload.results)
+- [x] Fix avg_revenue field mapping (API returns 'revenue' not 'avg_revenue')
+- [x] Remove GO/CAUTION/PASS verdict system - make tool informational only
+- [x] Add 5-Year Market History section with Gemini AI analysis
+
+
+## AirDNA API Audit & Historical Data Sprint
+- [x] Audit all AirDNA API endpoints - document which are used vs unused
+- [x] Verify occupancy displays as percentages (not decimals) across ALL sections
+- [x] Research historical data availability from AirDNA API (5 years)
+- [x] Add 5-year historical data summary section to report
+- [x] Display historical trends (occupancy, ADR, revenue over time)
+
+## Gemini Historical Market Analysis
+- [x] Add Gemini function to analyze 5-year historical data
+- [x] Pass historical data to Gemini for contextual interpretation
+- [x] Generate market trend insights (growth patterns, saturation signals, etc.)
+- [x] Display Gemini historical analysis in frontend report
+
+## Remove Verdict System & Fix API Errors
+- [x] Remove GO/CAUTION/PASS verdict from AI analysis
+- [x] Remove verdict display from frontend
+- [x] Update UI to be informational rather than prescriptive
+- [x] Fix future daily data API 404 errors (changed /future/pricing to /future_pricing)
+- [x] Fix historical data API response parsing (payload.metrics not payload.results)
+- [x] Fix avg_revenue field mapping (API returns 'revenue' not 'avg_revenue')
+- [x] Use parent market ID for historical data (submarket IDs don't support metrics endpoint)
+
+## Stress Test - 10 St. Louis Properties
+- [x] Find 10 rental properties in St. Louis with addresses and rent prices
+- [x] Run all 10 properties through the analyzer
+- [x] Document results and any issues found

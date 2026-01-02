@@ -1,0 +1,62 @@
+[
+  {
+    "address": "6655 Garner Ave, Saint Louis, MO 63139",
+    "monthly_rent": 1900,
+    "bedrooms": 3,
+    "bathrooms": 2
+  },
+  {
+    "address": "4256 McPherson Ave, Saint Louis, MO 63108",
+    "monthly_rent": 2295,
+    "bedrooms": 3,
+    "bathrooms": 2
+  },
+  {
+    "address": "3527 Halliday Ave, Saint Louis, MO 63118",
+    "monthly_rent": 2250,
+    "bedrooms": 3,
+    "bathrooms": 1
+  },
+  {
+    "address": "6537 Mardel Ave, Saint Louis, MO 63109",
+    "monthly_rent": 2200,
+    "bedrooms": 3,
+    "bathrooms": 2
+  },
+  {
+    "address": "7610 Vermont Ave, Saint Louis, MO 63111",
+    "monthly_rent": 2200,
+    "bedrooms": 3,
+    "bathrooms": 2
+  },
+  {
+    "address": "5959 Pershing Ave, Saint Louis, MO 63112",
+    "monthly_rent": 2900,
+    "bedrooms": 3,
+    "bathrooms": 3
+  },
+  {
+    "address": "2710 Geyer Ave, Saint Louis, MO 63104",
+    "monthly_rent": 2925,
+    "bedrooms": 3,
+    "bathrooms": 2.5
+  },
+  {
+    "address": "2213 Missouri Ave, Saint Louis, MO 63104",
+    "monthly_rent": 2650,
+    "bedrooms": 3,
+    "bathrooms": 2.5
+  },
+  {
+    "address": "4132 Kettler Rd, Saint Louis, MO 63123",
+    "monthly_rent": 1925,
+    "bedrooms": 3,
+    "bathrooms": 2
+  },
+  {
+    "address": "4334 Arco Ave, Saint Louis, MO 63110",
+    "monthly_rent": 2750,
+    "bedrooms": 3,
+    "bathrooms": 2.5
+  }
+]

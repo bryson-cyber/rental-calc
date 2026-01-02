@@ -40,9 +40,6 @@ import {
   CalendarDays,
   Banknote,
   AlertCircle,
-  ThumbsUp,
-  ThumbsDown,
-  HelpCircle,
   ExternalLink,
   Award
 } from 'lucide-react';
@@ -66,12 +63,10 @@ interface AnalysisResult {
     high: number;
   };
   
-  // Lease Decision Verdict
-  verdict: {
-    rating: 'GO' | 'CAUTION' | 'PASS';
-    confidence: number;
+  // Executive Summary (informational, not prescriptive)
+  executive_summary: {
     summary: string;
-    top_reasons: string[];
+    key_points: string[];
   };
   
   // Market data
@@ -255,7 +250,7 @@ export default function PropertyAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   
   // Expanded sections
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['verdict', 'revenue', 'market']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['summary', 'revenue', 'market']));
   
   // Results ref for scrolling
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -339,11 +334,9 @@ export default function PropertyAnalyzer() {
             high: data.percentiles?.top_10_percent || (data.property_estimate?.estimates?.annual_revenue ?? 0) * 1.2 || 0,
           },
           
-          verdict: data.ai_analysis?.verdict || {
-            rating: 'CAUTION',
-            confidence: 5,
-            summary: 'Analysis complete. Review the details below.',
-            top_reasons: []
+          executive_summary: {
+            summary: data.ai_analysis?.verdict?.summary || 'Analysis complete. Review the market data and projections below to make an informed decision.',
+            key_points: data.ai_analysis?.verdict?.top_reasons || []
           },
           
           market: {
@@ -440,25 +433,7 @@ export default function PropertyAnalyzer() {
     }
   };
   
-  // Verdict color
-  const getVerdictColor = (rating: string) => {
-    switch (rating) {
-      case 'GO': return 'text-green-500 bg-green-500/10 border-green-500/30';
-      case 'CAUTION': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
-      case 'PASS': return 'text-red-500 bg-red-500/10 border-red-500/30';
-      default: return 'text-gray-500 bg-gray-500/10 border-gray-500/30';
-    }
-  };
-  
-  // Verdict icon
-  const getVerdictIcon = (rating: string) => {
-    switch (rating) {
-      case 'GO': return <ThumbsUp className="w-8 h-8" />;
-      case 'CAUTION': return <AlertCircle className="w-8 h-8" />;
-      case 'PASS': return <ThumbsDown className="w-8 h-8" />;
-      default: return <HelpCircle className="w-8 h-8" />;
-    }
-  };
+
   
   // Format currency
   const formatCurrency = (value: number) => {
@@ -684,27 +659,27 @@ export default function PropertyAnalyzer() {
         {/* Results */}
         {result && (
           <div ref={resultsRef} className="space-y-6 mt-8">
-            {/* Verdict Card */}
-            <div className={`rounded-2xl border-2 p-6 ${getVerdictColor(result.verdict.rating)}`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  {getVerdictIcon(result.verdict.rating)}
-                  <div>
-                    <h3 className="text-2xl font-bold">{result.verdict.rating}</h3>
-                    <p className="text-sm opacity-70">Confidence: {result.verdict.confidence}/10</p>
-                  </div>
+            {/* Executive Summary Card */}
+            <div className="rounded-2xl border-2 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-blue-400" />
                 </div>
+                <h3 className="text-xl font-semibold text-white">Analysis Summary</h3>
               </div>
-              <p className="text-lg">{result.verdict.summary}</p>
-              {result.verdict.top_reasons && result.verdict.top_reasons.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {result.verdict.top_reasons.map((reason, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
+              <p className="text-lg text-white/90 mb-4">{result.executive_summary.summary}</p>
+              {result.executive_summary.key_points && result.executive_summary.key_points.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-white/60 font-medium">Key Points:</p>
+                  <ul className="space-y-2">
+                    {result.executive_summary.key_points.map((point: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-white/80">
+                        <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-400" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
             

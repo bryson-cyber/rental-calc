@@ -1324,11 +1324,22 @@ export async function generateFullArbitrageAnalysis(
     try {
       console.log('[ArbitrageAnalysis] Fetching comprehensive market data...');
       
+      // For historical data, prefer the parent market_id over submarket_id
+      // The metrics API works better with parent market IDs (e.g., airdna-429 for St. Louis)
+      let historicalMarketId = marketId;
+      if (property_estimate?.property?.market_id && property_estimate.property.market_id !== marketId) {
+        historicalMarketId = property_estimate.property.market_id;
+        console.log(`[ArbitrageAnalysis] Using parent market ID for historical data: ${historicalMarketId}`);
+      }
+      
       // Fetch all comprehensive data in parallel
       const [seasonalityData, futurePricingData, historicalData] = await Promise.all([
         getMarketSeasonality(marketId).catch(() => []),
         getMarketFutureDailyData(marketId, 6, actualBedrooms).catch(() => []),
-        getMarketHistoricalData(marketId, 60).catch(() => null)
+        getMarketHistoricalData(historicalMarketId, 60).catch((err) => {
+          console.error(`[ArbitrageAnalysis] Historical data fetch failed for ${historicalMarketId}:`, err);
+          return null;
+        })
       ]);
       
       if (seasonalityData && seasonalityData.length > 0) {
@@ -1348,6 +1359,8 @@ export async function generateFullArbitrageAnalysis(
           revenue: historicalData.revenue || []
         };
         console.log(`[ArbitrageAnalysis] Got ${historicalData.occupancy?.length || 0} months of historical trends data`);
+      } else {
+        console.log(`[ArbitrageAnalysis] historicalData is null/undefined - API may not support 60 months for this market`);
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching comprehensive market data:', error);
