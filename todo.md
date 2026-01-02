@@ -1312,6 +1312,11 @@
 - [x] Pass nearby market comparison data (top 5 nearby markets by revenue potential) to Gemini
 - [x] Update AI prompt to analyze alternative market opportunities
 
+### Iteration 16: Arbitrage Feasibility (AirDNA's Second Opinion)
+- [x] Call calculateArbitrageFeasibility to get AirDNA's built-in profitability assessment
+- [x] Pass feasibility data (profit margin, risk level, recommendation) to Gemini
+- [x] Update AI prompt to compare our analysis with AirDNA's assessment
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

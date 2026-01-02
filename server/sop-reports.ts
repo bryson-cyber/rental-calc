@@ -32,6 +32,8 @@ import {
   getAllMarketListings,
   getFilteredMarketListings,
   getCountryMarkets,
+  calculateArbitrageFeasibility,
+  ArbitrageFeasibility,
   CountryMarket,
   AdvancedListingFilters,
   RadiusSearchResult,
@@ -1004,6 +1006,31 @@ export async function generateFullArbitrageAnalysis(
     best_alternative: string;
     recommendation: string;
   };
+  // AIRDNA FEASIBILITY (second opinion on profitability)
+  airdna_feasibility?: {
+    projections: {
+      annual_revenue: number;
+      annual_profit: number;
+      monthly_profit: number;
+      roi_percentage: number;
+      break_even_occupancy: number;
+    };
+    risk_assessment: {
+      overall_risk: 'low' | 'medium' | 'high';
+      seasonality_risk: 'low' | 'medium' | 'high';
+      regulation_risk: 'low' | 'medium' | 'high';
+      market_saturation: 'low' | 'medium' | 'high';
+      factors: string[];
+    };
+    recommendation: string;
+    comparison: {
+      our_annual_profit: number;
+      airdna_annual_profit: number;
+      profit_difference: number;
+      profit_difference_pct: number;
+      assessment_match: boolean;
+    };
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1708,6 +1735,30 @@ export async function generateFullArbitrageAnalysis(
     best_alternative: string;
     recommendation: string;
   } | undefined;
+  let airdna_feasibility: {
+    projections: {
+      annual_revenue: number;
+      annual_profit: number;
+      monthly_profit: number;
+      roi_percentage: number;
+      break_even_occupancy: number;
+    };
+    risk_assessment: {
+      overall_risk: 'low' | 'medium' | 'high';
+      seasonality_risk: 'low' | 'medium' | 'high';
+      regulation_risk: 'low' | 'medium' | 'high';
+      market_saturation: 'low' | 'medium' | 'high';
+      factors: string[];
+    };
+    recommendation: string;
+    comparison: {
+      our_annual_profit: number;
+      airdna_annual_profit: number;
+      profit_difference: number;
+      profit_difference_pct: number;
+      assessment_match: boolean;
+    };
+  } | undefined;
   
   // Try to get market ID from multiple sources
   let marketId = defaultMarketData.market.id;
@@ -2059,6 +2110,60 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching nearby markets:', error);
+    }
+    
+    // Step 15.10: Get AirDNA's built-in feasibility assessment (second opinion)
+    try {
+      console.log(`[ArbitrageAnalysis] Getting AirDNA feasibility assessment...`);
+      
+      const feasibility = await calculateArbitrageFeasibility(
+        address,
+        monthly_rent,
+        actualBedrooms,
+        actualBathrooms
+      );
+      
+      if (feasibility) {
+        // Compare AirDNA's assessment with our analysis
+        const ourAnnualProfit = profitability.scenarios.realistic.estimated_profit;
+        const airdnaAnnualProfit = feasibility.projections.projected_annual_profit;
+        const profitDifference = airdnaAnnualProfit - ourAnnualProfit;
+        const profitDifferencePct = ourAnnualProfit !== 0 
+          ? (profitDifference / Math.abs(ourAnnualProfit)) * 100 
+          : 0;
+        
+        // Check if assessments roughly match (within 20%)
+        const assessmentMatch = Math.abs(profitDifferencePct) < 20;
+        
+        airdna_feasibility = {
+          projections: {
+            annual_revenue: feasibility.projections.annual_str_revenue,
+            annual_profit: feasibility.projections.projected_annual_profit,
+            monthly_profit: feasibility.projections.projected_monthly_profit,
+            roi_percentage: feasibility.projections.roi_percentage,
+            break_even_occupancy: feasibility.projections.break_even_occupancy
+          },
+          risk_assessment: {
+            overall_risk: feasibility.risk_assessment.overall_risk,
+            seasonality_risk: feasibility.risk_assessment.seasonality_risk,
+            regulation_risk: feasibility.risk_assessment.regulation_risk,
+            market_saturation: feasibility.risk_assessment.market_saturation,
+            factors: feasibility.risk_assessment.factors
+          },
+          recommendation: feasibility.recommendation,
+          comparison: {
+            our_annual_profit: ourAnnualProfit,
+            airdna_annual_profit: airdnaAnnualProfit,
+            profit_difference: profitDifference,
+            profit_difference_pct: profitDifferencePct,
+            assessment_match: assessmentMatch
+          }
+        };
+        
+        console.log(`[ArbitrageAnalysis] AirDNA feasibility: ${feasibility.risk_assessment.overall_risk} risk, ROI ${feasibility.projections.roi_percentage.toFixed(0)}%. Match: ${assessmentMatch}`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error getting AirDNA feasibility:', error);
     }
   }
   
@@ -2519,6 +2624,12 @@ export async function generateFullArbitrageAnalysis(
         alternatives: nearby_markets.alternatives,
         best_alternative: nearby_markets.best_alternative,
         recommendation: nearby_markets.recommendation
+      } : undefined,
+      airdna_feasibility: airdna_feasibility ? {
+        projections: airdna_feasibility.projections,
+        risk_assessment: airdna_feasibility.risk_assessment,
+        recommendation: airdna_feasibility.recommendation,
+        comparison: airdna_feasibility.comparison
       } : undefined
     });
     
@@ -2698,7 +2809,9 @@ export async function generateFullArbitrageAnalysis(
     // PROPERTY TYPE ANALYSIS
     property_type_analysis,
     // NEARBY MARKETS
-    nearby_markets
+    nearby_markets,
+    // AIRDNA FEASIBILITY
+    airdna_feasibility
   };
 }
 

@@ -2322,6 +2322,32 @@ export interface NarrativeReportInput {
     best_alternative: string;
     recommendation: string;
   };
+  
+  // AirDNA's built-in feasibility assessment (second opinion)
+  airdna_feasibility?: {
+    projections: {
+      annual_revenue: number;
+      annual_profit: number;
+      monthly_profit: number;
+      roi_percentage: number;
+      break_even_occupancy: number;
+    };
+    risk_assessment: {
+      overall_risk: 'low' | 'medium' | 'high';
+      seasonality_risk: 'low' | 'medium' | 'high';
+      regulation_risk: 'low' | 'medium' | 'high';
+      market_saturation: 'low' | 'medium' | 'high';
+      factors: string[];
+    };
+    recommendation: string;
+    comparison: {
+      our_annual_profit: number;
+      airdna_annual_profit: number;
+      profit_difference: number;
+      profit_difference_pct: number;
+      assessment_match: boolean;
+    };
+  };
 }
 
 /**
@@ -2822,6 +2848,44 @@ ${alternativesText}
 Best Alternative: ${nm.best_alternative}
 Recommendation: ${nm.recommendation}`;
   }
+  
+  // Build AirDNA feasibility context
+  let airdnaFeasibilityContext = '';
+  if (input.airdna_feasibility) {
+    const af = input.airdna_feasibility;
+    const riskFactors = af.risk_assessment.factors.map(f => `- ${f}`).join('\n');
+    const matchStatus = af.comparison.assessment_match 
+      ? 'ALIGNED - Our analysis and AirDNA agree within 20%' 
+      : `DIVERGENT - Difference of ${Math.abs(af.comparison.profit_difference_pct).toFixed(0)}%`;
+    
+    airdnaFeasibilityContext = `
+AIRDNA FEASIBILITY ASSESSMENT (Second Opinion):
+This is AirDNA's built-in arbitrage calculator providing an independent profitability assessment:
+
+Projections:
+- Annual Revenue: $${Math.round(af.projections.annual_revenue).toLocaleString()}
+- Annual Profit: $${Math.round(af.projections.annual_profit).toLocaleString()}
+- Monthly Profit: $${Math.round(af.projections.monthly_profit).toLocaleString()}
+- ROI: ${af.projections.roi_percentage.toFixed(0)}%
+- Break-Even Occupancy: ${af.projections.break_even_occupancy.toFixed(0)}%
+
+Risk Assessment:
+- Overall Risk: ${af.risk_assessment.overall_risk.toUpperCase()}
+- Seasonality Risk: ${af.risk_assessment.seasonality_risk}
+- Regulation Risk: ${af.risk_assessment.regulation_risk}
+- Market Saturation: ${af.risk_assessment.market_saturation}
+
+Risk Factors:
+${riskFactors}
+
+AirDNA Recommendation: ${af.recommendation}
+
+Comparison with Our Analysis:
+- Our Annual Profit Estimate: $${Math.round(af.comparison.our_annual_profit).toLocaleString()}
+- AirDNA Annual Profit Estimate: $${Math.round(af.comparison.airdna_annual_profit).toLocaleString()}
+- Difference: $${Math.round(af.comparison.profit_difference).toLocaleString()} (${af.comparison.profit_difference_pct >= 0 ? '+' : ''}${af.comparison.profit_difference_pct.toFixed(0)}%)
+- Assessment Status: ${matchStatus}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2882,6 +2946,7 @@ ${radiusListingsContext}
 ${marketSaturationContext}
 ${propertyTypeContext}
 ${nearbyMarketsContext}
+${airdnaFeasibilityContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2905,7 +2970,7 @@ Return your response as JSON with this exact structure:
   
   "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? If EXISTING LISTING DATA is available, analyze how this specific property performed historically and what that means for future projections.",
   
-  "risk_assessment": "2-3 paragraphs honestly discussing the risks. What could go wrong? What are the market-specific risks? What operational challenges should be expected? How can these risks be mitigated?",
+  "risk_assessment": "2-3 paragraphs honestly discussing the risks. If AIRDNA FEASIBILITY ASSESSMENT data is available, compare their risk assessment with our analysis - do they agree? What does AirDNA's overall risk rating (low/medium/high) tell us? Analyze the specific risk factors they identified. What could go wrong? What are the market-specific risks? What operational challenges should be expected? How can these risks be mitigated?",
   
   "financial_outlook": "2-3 paragraphs on the financial picture. What's the realistic profit potential? How long until break-even on startup costs? What's the cash flow situation month-to-month? Is this a good use of capital?",
   
