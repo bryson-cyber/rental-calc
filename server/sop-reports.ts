@@ -22,7 +22,9 @@ import {
   getMarketDetails,
   getListingHistoricalMetrics,
   exploreSubmarketsWithMetrics,
+  getListingComps,
   ListingData,
+  ListingComp,
   RentalizerResponse,
   ComprehensiveMarketReport,
   BookingPatterns,
@@ -339,6 +341,8 @@ export interface ArbitrageReport {
   narrative_report?: NarrativeReport;
   // ENHANCED NARRATIVE REPORT (with action items and plain-language explanations)
   enhanced_narrative_report?: EnhancedNarrativeReport;
+  // TOP PERFORMER COMPS: AirDNA's native comp algorithm for top performer
+  top_performer_comps?: ListingComp[];
 }
 
 // ============================================
@@ -856,6 +860,8 @@ export async function generateFullArbitrageAnalysis(
   narrative_report?: NarrativeReport;
   // ENHANCED NARRATIVE REPORT
   enhanced_narrative_report?: EnhancedNarrativeReport;
+  // TOP PERFORMER COMPS
+  top_performer_comps?: ListingComp[];
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1209,6 +1215,34 @@ export async function generateFullArbitrageAnalysis(
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching submarket analysis:', error);
+    }
+  }
+  
+  // Step 6.8: Fetch top performer comps using AirDNA's native comp algorithm
+  let top_performer_comps: ListingComp[] = [];
+  
+  // Get the top performer's listing ID from Airbnb URL
+  const topPerformer = listings
+    .filter(l => l.airbnb_url)
+    .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))[0];
+  
+  if (topPerformer?.airbnb_url) {
+    try {
+      // Extract listing ID from Airbnb URL
+      const urlMatch = topPerformer.airbnb_url.match(/rooms\/(\d+)/);
+      const listingId = urlMatch ? urlMatch[1] : null;
+      
+      if (listingId) {
+        console.log(`[ArbitrageAnalysis] Fetching comps for top performer (ID: ${listingId})...`);
+        const comps = await getListingComps(listingId, 10);
+        
+        if (comps.length > 0) {
+          top_performer_comps = comps;
+          console.log(`[ArbitrageAnalysis] Got ${comps.length} comps from AirDNA's native algorithm for top performer`);
+        }
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching top performer comps:', error);
     }
   }
   
@@ -1733,7 +1767,20 @@ export async function generateFullArbitrageAnalysis(
       property_bedrooms: actualBedrooms,
       competitor_historical: competitor_historical,
       daily_pricing: daily_pricing,
-      submarket_analysis: submarket_analysis
+      submarket_analysis: submarket_analysis,
+      top_performer_comps: top_performer_comps.length > 0 ? top_performer_comps.map(c => ({
+        title: c.title,
+        bedrooms: c.bedrooms,
+        bathrooms: c.bathrooms,
+        property_type: c.property_type,
+        annual_revenue: c.annual_revenue,
+        adr: c.adr,
+        occupancy: c.occupancy,
+        rating: c.rating,
+        reviews: c.reviews,
+        similarity_score: c.similarity_score,
+        amenities: c.amenities
+      })) : undefined
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
@@ -1892,7 +1939,9 @@ export async function generateFullArbitrageAnalysis(
     // COMPREHENSIVE NARRATIVE REPORT
     narrative_report,
     // ENHANCED NARRATIVE REPORT
-    enhanced_narrative_report
+    enhanced_narrative_report,
+    // TOP PERFORMER COMPS
+    top_performer_comps
   };
 }
 

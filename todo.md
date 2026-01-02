@@ -1262,7 +1262,12 @@
 - [x] Pass submarket comparison data to Gemini
 - [ ] Update AI prompt to provide neighborhood-level insights
 
-### Iteration 6: Additional Functions
+### Iteration 6: Top Performer Comps Analysis
+- [x] Call getListingComps for top performer to get AirDNA's native comp algorithm
+- [x] Pass top performer comps to Gemini for deeper competitive analysis
+- [x] Update AI prompt to analyze what top performer's comps reveal
+
+### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters
 - [ ] Integrate calculateArbitrageFeasibility

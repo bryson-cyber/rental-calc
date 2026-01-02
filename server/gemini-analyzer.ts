@@ -2144,6 +2144,21 @@ export interface NarrativeReportInput {
     }>;
     market_avg_revenue: number;
   };
+  
+  // Top performer comps (AirDNA's native comp algorithm)
+  top_performer_comps?: Array<{
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    property_type: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number | null;
+    reviews: number;
+    similarity_score: number;
+    amenities: string[];
+  }>;
 }
 
 /**
@@ -2351,6 +2366,41 @@ ${sa.top_submarkets.map((s, i) =>
 
 Market Average Revenue: $${sa.market_avg_revenue.toLocaleString()}/yr`;
   }
+  
+  // Build top performer comps context
+  let topPerformerCompsContext = '';
+  if (input.top_performer_comps && input.top_performer_comps.length > 0) {
+    const comps = input.top_performer_comps;
+    const avgRevenue = comps.reduce((sum, c) => sum + c.annual_revenue, 0) / comps.length;
+    const avgSimilarity = comps.reduce((sum, c) => sum + c.similarity_score, 0) / comps.length;
+    const topAmenities: Record<string, number> = {};
+    comps.forEach(c => {
+      (c.amenities || []).forEach(a => {
+        topAmenities[a] = (topAmenities[a] || 0) + 1;
+      });
+    });
+    const commonAmenities = Object.entries(topAmenities)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([amenity, count]) => `${amenity} (${Math.round(count / comps.length * 100)}%)`)
+      .join(', ');
+    
+    topPerformerCompsContext = `
+TOP PERFORMER'S COMPETITIVE SET (AirDNA Algorithm):
+These are the listings that AirDNA's algorithm identifies as most similar to the market's top performer:
+${comps.slice(0, 8).map((c, i) => 
+  `${i + 1}. "${c.title}" (${c.property_type})
+   ${c.bedrooms}BR/${c.bathrooms}BA | Revenue: $${c.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(c.adr)}
+   Occupancy: ${formatOccupancy(c.occupancy)}% | Rating: ${c.rating || 'N/A'}★ | Reviews: ${c.reviews}
+   Similarity Score: ${Math.round(c.similarity_score * 100)}%`
+).join('\n\n')}
+
+Top Performer Comp Insights:
+- Average Revenue in Comp Set: $${Math.round(avgRevenue).toLocaleString()}/yr
+- Average Similarity Score: ${Math.round(avgSimilarity * 100)}%
+- Common Amenities Among Comps: ${commonAmenities || 'Not available'}
+- This reveals what the top performer is competing against and what makes them successful`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2401,6 +2451,7 @@ ${bedroomContext}
 ${competitorHistoricalContext}
 ${dailyPricingContext}
 ${submarketContext}
+${topPerformerCompsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2418,7 +2469,7 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. Calculate and explain the revenue-to-rent ratio.",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? What's the competitive intensity? How can this property differentiate itself? Discuss the professional host presence and what it means.",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET data - what does it reveal about what makes the top performer successful? What patterns emerge from their comp set? How can this property differentiate itself? Discuss the professional host presence and what it means.",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and timing. When are the peak and off-peak periods? How dramatic is the seasonal swing? What pricing and marketing strategies should be employed for each season?",
   
