@@ -189,6 +189,44 @@ interface AnalysisResult {
     revenue: Array<{ date: string; value: number }>;
   };
   
+  // 5-Year Historical Summary
+  five_year_summary?: {
+    years_of_data: number;
+    occupancy: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    adr: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    revenue: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated';
+    insight: string;
+  };
+  
+  // Gemini Historical Analysis
+  historical_analysis?: {
+    executive_summary: string;
+    market_trajectory: 'accelerating_growth' | 'steady_growth' | 'maturing' | 'plateauing' | 'declining';
+    key_findings: string[];
+    investment_implications: string[];
+    timing_recommendation: string;
+    confidence_level: 'high' | 'medium' | 'low';
+  };
+  
   // Full report markdown
   full_report: string;
 }
@@ -374,6 +412,8 @@ export default function PropertyAnalyzer() {
           
           future_pricing: data.future_pricing,
           historical_trends: data.historical_trends,
+          five_year_summary: data.five_year_summary,
+          historical_analysis: data.historical_analysis,
           
           full_report: data.full_report || ''
         };
@@ -1496,6 +1536,236 @@ export default function PropertyAnalyzer() {
                         })()}
                       </p>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 5-Year Historical Summary */}
+            {result.five_year_summary && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+                <button
+                  onClick={() => toggleSection('fiveYear')}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white">5-Year Market History</h3>
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400">
+                      {result.five_year_summary.years_of_data} years of data
+                    </span>
+                  </div>
+                  {expandedSections.has('fiveYear') ? (
+                    <ChevronUp className="w-5 h-5 text-white/50" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-white/50" />
+                  )}
+                </button>
+                
+                {expandedSections.has('fiveYear') && (
+                  <div className="mt-6 space-y-6">
+                    {/* Market Maturity Badge */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/70">Market Maturity:</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        result.five_year_summary.market_maturity === 'emerging' ? 'bg-green-500/20 text-green-400' :
+                        result.five_year_summary.market_maturity === 'growing' ? 'bg-blue-500/20 text-blue-400' :
+                        result.five_year_summary.market_maturity === 'mature' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {result.five_year_summary.market_maturity.charAt(0).toUpperCase() + result.five_year_summary.market_maturity.slice(1)}
+                      </span>
+                    </div>
+                    
+                    {/* Key Metrics Summary */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Occupancy */}
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Percent className="w-4 h-4 text-blue-400" />
+                          <p className="text-sm text-white/70">Occupancy</p>
+                        </div>
+                        <p className="text-2xl font-bold text-white">{formatPercent(result.five_year_summary.occupancy.current_year_avg)}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {result.five_year_summary.occupancy.trend === 'increasing' ? (
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                          ) : result.five_year_summary.occupancy.trend === 'decreasing' ? (
+                            <TrendingDown className="w-4 h-4 text-red-400" />
+                          ) : (
+                            <span className="w-4 h-4 text-yellow-400">—</span>
+                          )}
+                          <span className={`text-sm ${
+                            result.five_year_summary.occupancy.trend === 'increasing' ? 'text-green-400' :
+                            result.five_year_summary.occupancy.trend === 'decreasing' ? 'text-red-400' :
+                            'text-yellow-400'
+                          }`}>
+                            {result.five_year_summary.occupancy.percent_change > 0 ? '+' : ''}{result.five_year_summary.occupancy.percent_change}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/50 mt-1">5-yr avg: {formatPercent(result.five_year_summary.occupancy.five_year_avg)}</p>
+                      </div>
+                      
+                      {/* ADR */}
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <DollarSign className="w-4 h-4 text-green-400" />
+                          <p className="text-sm text-white/70">ADR</p>
+                        </div>
+                        <p className="text-2xl font-bold text-white">{formatCurrency(result.five_year_summary.adr.current_year_avg)}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {result.five_year_summary.adr.trend === 'increasing' ? (
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                          ) : result.five_year_summary.adr.trend === 'decreasing' ? (
+                            <TrendingDown className="w-4 h-4 text-red-400" />
+                          ) : (
+                            <span className="w-4 h-4 text-yellow-400">—</span>
+                          )}
+                          <span className={`text-sm ${
+                            result.five_year_summary.adr.trend === 'increasing' ? 'text-green-400' :
+                            result.five_year_summary.adr.trend === 'decreasing' ? 'text-red-400' :
+                            'text-yellow-400'
+                          }`}>
+                            {result.five_year_summary.adr.percent_change > 0 ? '+' : ''}{result.five_year_summary.adr.percent_change}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/50 mt-1">5-yr avg: {formatCurrency(result.five_year_summary.adr.five_year_avg)}</p>
+                      </div>
+                      
+                      {/* Revenue */}
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Banknote className="w-4 h-4 text-amber-400" />
+                          <p className="text-sm text-white/70">Monthly Revenue</p>
+                        </div>
+                        <p className="text-2xl font-bold text-white">{formatCurrency(result.five_year_summary.revenue.current_year_avg)}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {result.five_year_summary.revenue.trend === 'increasing' ? (
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                          ) : result.five_year_summary.revenue.trend === 'decreasing' ? (
+                            <TrendingDown className="w-4 h-4 text-red-400" />
+                          ) : (
+                            <span className="w-4 h-4 text-yellow-400">—</span>
+                          )}
+                          <span className={`text-sm ${
+                            result.five_year_summary.revenue.trend === 'increasing' ? 'text-green-400' :
+                            result.five_year_summary.revenue.trend === 'decreasing' ? 'text-red-400' :
+                            'text-yellow-400'
+                          }`}>
+                            {result.five_year_summary.revenue.percent_change > 0 ? '+' : ''}{result.five_year_summary.revenue.percent_change}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/50 mt-1">5-yr avg: {formatCurrency(result.five_year_summary.revenue.five_year_avg)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Year-by-Year Chart */}
+                    {result.five_year_summary.revenue.yearly_data.length > 1 && (
+                      <div className="bg-white/5 rounded-xl p-4">
+                        <p className="text-sm text-white/70 mb-4">Year-over-Year Revenue Trend</p>
+                        <div className="flex items-end gap-2 h-32">
+                          {result.five_year_summary.revenue.yearly_data.map((yearData, i) => {
+                            const maxVal = Math.max(...result.five_year_summary!.revenue.yearly_data.map(y => y.avg));
+                            const height = maxVal > 0 ? (yearData.avg / maxVal) * 100 : 0;
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                                <div 
+                                  className="w-full rounded-t bg-gradient-to-t from-violet-600 to-violet-400 transition-all hover:from-violet-500 hover:to-violet-300"
+                                  style={{ height: `${height}%`, minHeight: '8px' }}
+                                  title={`${yearData.year}: ${formatCurrency(yearData.avg)}/mo`}
+                                />
+                                <span className="text-xs text-white/70">{yearData.year}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Gemini AI Analysis */}
+                    {result.historical_analysis ? (
+                      <div className="space-y-4">
+                        {/* Executive Summary */}
+                        <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-xl p-4 border border-violet-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Zap className="w-4 h-4 text-violet-400" />
+                            <span className="text-sm font-medium text-violet-400">AI Market Analysis</span>
+                            <span className={`ml-auto px-2 py-0.5 rounded text-xs font-medium ${
+                              result.historical_analysis.confidence_level === 'high' ? 'bg-green-500/20 text-green-400' :
+                              result.historical_analysis.confidence_level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-red-500/20 text-red-400'
+                            }`}>
+                              {result.historical_analysis.confidence_level} confidence
+                            </span>
+                          </div>
+                          <p className="text-white/90 text-sm leading-relaxed">
+                            {result.historical_analysis.executive_summary}
+                          </p>
+                        </div>
+                        
+                        {/* Market Trajectory */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/70 text-sm">Market Trajectory:</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            result.historical_analysis.market_trajectory === 'accelerating_growth' ? 'bg-green-500/20 text-green-400' :
+                            result.historical_analysis.market_trajectory === 'steady_growth' ? 'bg-emerald-500/20 text-emerald-400' :
+                            result.historical_analysis.market_trajectory === 'maturing' ? 'bg-blue-500/20 text-blue-400' :
+                            result.historical_analysis.market_trajectory === 'plateauing' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {result.historical_analysis.market_trajectory.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </div>
+                        
+                        {/* Key Findings */}
+                        {result.historical_analysis.key_findings.length > 0 && (
+                          <div className="bg-white/5 rounded-xl p-4">
+                            <p className="text-sm font-medium text-white mb-3">Key Findings</p>
+                            <ul className="space-y-2">
+                              {result.historical_analysis.key_findings.map((finding, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm text-white/70">
+                                  <span className="text-violet-400 mt-1">•</span>
+                                  {finding}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Investment Implications */}
+                        {result.historical_analysis.investment_implications.length > 0 && (
+                          <div className="bg-white/5 rounded-xl p-4">
+                            <p className="text-sm font-medium text-white mb-3">Investment Implications</p>
+                            <ul className="space-y-2">
+                              {result.historical_analysis.investment_implications.map((implication, i) => (
+                                <li key={i} className="flex items-start gap-2 text-sm text-white/70">
+                                  <span className="text-amber-400 mt-1">→</span>
+                                  {implication}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Timing Recommendation */}
+                        <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-xl p-4 border border-amber-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="w-4 h-4 text-amber-400" />
+                            <span className="text-sm font-medium text-amber-400">Timing Recommendation</span>
+                          </div>
+                          <p className="text-white/90 text-sm">
+                            {result.historical_analysis.timing_recommendation}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-xl p-4 border border-violet-500/20">
+                        <p className="text-white/70 text-sm">
+                          <strong className="text-white">Historical Insight:</strong> {result.five_year_summary.insight}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

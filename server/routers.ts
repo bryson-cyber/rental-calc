@@ -1083,6 +1083,10 @@ export const appRouter = router({
               future_pricing: analysis.future_pricing,
               // COMPREHENSIVE DATA: Historical performance trends
               historical_trends: analysis.historical_trends,
+              // 5-YEAR HISTORICAL SUMMARY
+              five_year_summary: analysis.five_year_summary,
+              // GEMINI HISTORICAL ANALYSIS
+              historical_analysis: analysis.historical_analysis,
               
               // Full markdown report
               full_report: analysis.report

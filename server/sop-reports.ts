@@ -19,6 +19,7 @@ import {
   getMarketSeasonality,
   getMarketFutureDailyData,
   getMarketHistoricalData,
+  getMarketDetails,
   ListingData,
   RentalizerResponse,
   ComprehensiveMarketReport,
@@ -43,7 +44,9 @@ import {
   analyzeListingPhoto,
   getLocalRegulations,
   generateWhatThisMeans,
+  analyzeHistoricalMarketTrends,
   type FullAIAnalysis,
+  type HistoricalMarketAnalysis,
   type AIInsight,
   type InvestmentVerdict,
   type PricingStrategy,
@@ -287,6 +290,35 @@ export interface ArbitrageReport {
     adr: Array<{ date: string; value: number }>;
     revenue: Array<{ date: string; value: number }>;
   };
+  // 5-YEAR HISTORICAL SUMMARY
+  five_year_summary?: {
+    years_of_data: number;
+    occupancy: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    adr: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    revenue: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+      yearly_data: Array<{ year: number; avg: number }>;
+    };
+    market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated';
+    insight: string;
+  };
+  // GEMINI HISTORICAL ANALYSIS
+  historical_analysis?: HistoricalMarketAnalysis;
 }
 
 // ============================================
@@ -374,6 +406,130 @@ export function calculateMarketPercentiles(listings: ListingData[]): MarketPerce
     top_25_percent: getPercentile(revenues, 25),  // Top 25% = 75th percentile
     median: getPercentile(revenues, 50),          // Median = 50th percentile
     average: Math.round(average)
+  };
+}
+
+/**
+ * Calculate 5-year historical summary from monthly data
+ */
+function calculate5YearSummary(historical_trends: {
+  occupancy: Array<{ date: string; value: number }>;
+  adr: Array<{ date: string; value: number }>;
+  revenue: Array<{ date: string; value: number }>;
+}): ArbitrageReport['five_year_summary'] {
+  // Group data by year
+  const groupByYear = (data: Array<{ date: string; value: number }>) => {
+    const yearMap = new Map<number, number[]>();
+    
+    data.forEach(item => {
+      const year = new Date(item.date).getFullYear();
+      if (!yearMap.has(year)) {
+        yearMap.set(year, []);
+      }
+      yearMap.get(year)!.push(item.value);
+    });
+    
+    // Calculate yearly averages
+    const yearlyData: Array<{ year: number; avg: number }> = [];
+    yearMap.forEach((values, year) => {
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      yearlyData.push({ year, avg: Math.round(avg * 100) / 100 });
+    });
+    
+    return yearlyData.sort((a, b) => a.year - b.year);
+  };
+  
+  const occupancyByYear = groupByYear(historical_trends.occupancy);
+  const adrByYear = groupByYear(historical_trends.adr);
+  const revenueByYear = groupByYear(historical_trends.revenue);
+  
+  const yearsOfData = Math.max(occupancyByYear.length, adrByYear.length, revenueByYear.length);
+  
+  // Calculate trends
+  const calculateTrend = (yearlyData: Array<{ year: number; avg: number }>) => {
+    if (yearlyData.length < 2) {
+      return { trend: 'stable' as const, percent_change: 0, current_year_avg: yearlyData[0]?.avg || 0, five_year_avg: yearlyData[0]?.avg || 0 };
+    }
+    
+    const currentYear = yearlyData[yearlyData.length - 1];
+    const firstYear = yearlyData[0];
+    const fiveYearAvg = yearlyData.reduce((sum, y) => sum + y.avg, 0) / yearlyData.length;
+    
+    const percentChange = firstYear.avg > 0 
+      ? ((currentYear.avg - firstYear.avg) / firstYear.avg) * 100 
+      : 0;
+    
+    let trend: 'increasing' | 'stable' | 'decreasing' = 'stable';
+    if (percentChange > 5) trend = 'increasing';
+    else if (percentChange < -5) trend = 'decreasing';
+    
+    return {
+      trend,
+      percent_change: Math.round(percentChange * 10) / 10,
+      current_year_avg: currentYear.avg,
+      five_year_avg: Math.round(fiveYearAvg * 100) / 100
+    };
+  };
+  
+  const occupancyTrend = calculateTrend(occupancyByYear);
+  const adrTrend = calculateTrend(adrByYear);
+  const revenueTrend = calculateTrend(revenueByYear);
+  
+  // Determine market maturity based on trends
+  let market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated' = 'mature';
+  
+  if (revenueTrend.percent_change > 15 && occupancyTrend.percent_change > 5) {
+    market_maturity = 'emerging';
+  } else if (revenueTrend.percent_change > 5 && occupancyTrend.percent_change > 0) {
+    market_maturity = 'growing';
+  } else if (revenueTrend.percent_change < -5 || occupancyTrend.percent_change < -10) {
+    market_maturity = 'saturated';
+  }
+  
+  // Generate insight
+  let insight = `Based on ${yearsOfData} years of historical data: `;
+  
+  if (revenueTrend.trend === 'increasing') {
+    insight += `Revenue has grown ${Math.abs(revenueTrend.percent_change)}% over this period. `;
+  } else if (revenueTrend.trend === 'decreasing') {
+    insight += `Revenue has declined ${Math.abs(revenueTrend.percent_change)}% over this period. `;
+  } else {
+    insight += `Revenue has remained relatively stable. `;
+  }
+  
+  if (occupancyTrend.trend === 'increasing') {
+    insight += `Occupancy rates are trending upward (${Math.abs(occupancyTrend.percent_change)}% increase), indicating growing demand.`;
+  } else if (occupancyTrend.trend === 'decreasing') {
+    insight += `Occupancy rates have declined ${Math.abs(occupancyTrend.percent_change)}%, which may indicate increased competition or market saturation.`;
+  } else {
+    insight += `Occupancy rates have been consistent, suggesting a stable market.`;
+  }
+  
+  return {
+    years_of_data: yearsOfData,
+    occupancy: {
+      current_year_avg: occupancyTrend.current_year_avg,
+      five_year_avg: occupancyTrend.five_year_avg,
+      trend: occupancyTrend.trend,
+      percent_change: occupancyTrend.percent_change,
+      yearly_data: occupancyByYear
+    },
+    adr: {
+      current_year_avg: adrTrend.current_year_avg,
+      five_year_avg: adrTrend.five_year_avg,
+      trend: adrTrend.trend,
+      percent_change: adrTrend.percent_change,
+      yearly_data: adrByYear
+    },
+    revenue: {
+      current_year_avg: revenueTrend.current_year_avg,
+      five_year_avg: revenueTrend.five_year_avg,
+      trend: revenueTrend.trend,
+      percent_change: revenueTrend.percent_change,
+      yearly_data: revenueByYear
+    },
+    market_maturity,
+    insight
   };
 }
 
@@ -665,6 +821,10 @@ export async function generateFullArbitrageAnalysis(
     adr: Array<{ date: string; value: number }>;
     revenue: Array<{ date: string; value: number }>;
   };
+  // 5-YEAR HISTORICAL SUMMARY
+  five_year_summary?: ArbitrageReport['five_year_summary'];
+  // GEMINI HISTORICAL ANALYSIS
+  historical_analysis?: HistoricalMarketAnalysis;
 }> {
   // Step 1: Get property estimate from Rentalizer
   let property_estimate: RentalizerResponse | null = null;
@@ -1168,7 +1328,7 @@ export async function generateFullArbitrageAnalysis(
       const [seasonalityData, futurePricingData, historicalData] = await Promise.all([
         getMarketSeasonality(marketId).catch(() => []),
         getMarketFutureDailyData(marketId, 6, actualBedrooms).catch(() => []),
-        getMarketHistoricalData(marketId, 12).catch(() => null)
+        getMarketHistoricalData(marketId, 60).catch(() => null)
       ]);
       
       if (seasonalityData && seasonalityData.length > 0) {
@@ -1187,10 +1347,45 @@ export async function generateFullArbitrageAnalysis(
           adr: historicalData.adr || [],
           revenue: historicalData.revenue || []
         };
-        console.log('[ArbitrageAnalysis] Got historical trends data');
+        console.log(`[ArbitrageAnalysis] Got ${historicalData.occupancy?.length || 0} months of historical trends data`);
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching comprehensive market data:', error);
+    }
+  }
+  
+  // Step 18: Calculate 5-year historical summary
+  let five_year_summary: ArbitrageReport['five_year_summary'] | undefined;
+  
+  if (historical_trends && historical_trends.occupancy.length > 12) {
+    try {
+      five_year_summary = calculate5YearSummary(historical_trends);
+      if (five_year_summary) {
+        console.log(`[ArbitrageAnalysis] Generated 5-year summary with ${five_year_summary.years_of_data} years of data`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error calculating 5-year summary:', error);
+    }
+  }
+  
+  // Step 19: Generate Gemini historical analysis
+  let historical_analysis: HistoricalMarketAnalysis | undefined;
+  
+  if (five_year_summary && five_year_summary.years_of_data >= 2) {
+    try {
+      const marketName = property_estimate?.property?.market_id 
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+        : 'Local Market';
+      
+      console.log('[ArbitrageAnalysis] Generating Gemini historical analysis...');
+      historical_analysis = await analyzeHistoricalMarketTrends(
+        marketName,
+        five_year_summary,
+        { monthly_rent, bedrooms: actualBedrooms }
+      );
+      console.log('[ArbitrageAnalysis] Gemini historical analysis complete');
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error generating historical analysis:', error);
     }
   }
   
@@ -1215,7 +1410,10 @@ export async function generateFullArbitrageAnalysis(
     // COMPREHENSIVE DATA
     market_seasonality,
     future_pricing,
-    historical_trends
+    historical_trends,
+    five_year_summary,
+    // GEMINI HISTORICAL ANALYSIS
+    historical_analysis
   };
 }
 

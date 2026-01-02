@@ -1060,3 +1060,19 @@
 - [x] Add future daily pricing forecasts
 - [x] Add market score/investability metrics
 - [x] Ensure all fetched data is displayed in the report
+
+
+## AirDNA API Audit & Historical Data Enhancement
+
+- [x] Audit all AirDNA API endpoints - document which are used vs unused
+- [x] Verify occupancy displays as percentages (not decimals) across ALL sections
+- [x] Research historical data availability from AirDNA API (5 years)
+- [x] Add 5-year historical data summary section to report
+- [x] Display historical trends (occupancy, ADR, revenue over time)
+
+## Gemini Historical Market Analysis
+
+- [x] Add Gemini function to analyze 5-year historical data
+- [x] Pass historical data to Gemini for contextual interpretation
+- [x] Generate market trend insights (growth patterns, saturation signals, etc.)
+- [x] Display Gemini historical analysis in frontend report

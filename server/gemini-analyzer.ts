@@ -1809,3 +1809,156 @@ export async function generateLeadMagnetWowData(
     diy_vs_professional
   };
 }
+
+
+// ============================================
+// 5-YEAR HISTORICAL MARKET ANALYSIS
+// ============================================
+
+export interface HistoricalMarketAnalysis {
+  executive_summary: string;
+  market_trajectory: 'accelerating_growth' | 'steady_growth' | 'maturing' | 'plateauing' | 'declining';
+  key_findings: string[];
+  investment_implications: string[];
+  timing_recommendation: string;
+  confidence_level: 'high' | 'medium' | 'low';
+}
+
+export interface FiveYearSummaryInput {
+  years_of_data: number;
+  occupancy: {
+    current_year_avg: number;
+    five_year_avg: number;
+    trend: 'increasing' | 'stable' | 'decreasing';
+    percent_change: number;
+    yearly_data: Array<{ year: number; avg: number }>;
+  };
+  adr: {
+    current_year_avg: number;
+    five_year_avg: number;
+    trend: 'increasing' | 'stable' | 'decreasing';
+    percent_change: number;
+    yearly_data: Array<{ year: number; avg: number }>;
+  };
+  revenue: {
+    current_year_avg: number;
+    five_year_avg: number;
+    trend: 'increasing' | 'stable' | 'decreasing';
+    percent_change: number;
+    yearly_data: Array<{ year: number; avg: number }>;
+  };
+  market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated';
+}
+
+/**
+ * Generate AI-powered analysis of 5-year historical market data
+ */
+export async function analyzeHistoricalMarketTrends(
+  marketName: string,
+  fiveYearData: FiveYearSummaryInput,
+  propertyContext?: {
+    monthly_rent?: number;
+    bedrooms?: number;
+  }
+): Promise<HistoricalMarketAnalysis> {
+  const occupancyYearlyStr = fiveYearData.occupancy.yearly_data
+    .map(y => `${y.year}: ${y.avg.toFixed(1)}%`)
+    .join(', ');
+  
+  const adrYearlyStr = fiveYearData.adr.yearly_data
+    .map(y => `${y.year}: $${y.avg.toFixed(0)}`)
+    .join(', ');
+  
+  const revenueYearlyStr = fiveYearData.revenue.yearly_data
+    .map(y => `${y.year}: $${y.avg.toFixed(0)}/mo`)
+    .join(', ');
+
+  const prompt = `You are an expert short-term rental market analyst. Analyze this ${fiveYearData.years_of_data}-year historical data for the ${marketName} market and provide investment insights.
+
+HISTORICAL DATA:
+- Years of data: ${fiveYearData.years_of_data}
+- Market maturity classification: ${fiveYearData.market_maturity}
+
+OCCUPANCY TRENDS:
+- Current year average: ${fiveYearData.occupancy.current_year_avg.toFixed(1)}%
+- 5-year average: ${fiveYearData.occupancy.five_year_avg.toFixed(1)}%
+- Overall trend: ${fiveYearData.occupancy.trend} (${fiveYearData.occupancy.percent_change > 0 ? '+' : ''}${fiveYearData.occupancy.percent_change.toFixed(1)}%)
+- Year-by-year: ${occupancyYearlyStr}
+
+ADR (AVERAGE DAILY RATE) TRENDS:
+- Current year average: $${fiveYearData.adr.current_year_avg.toFixed(0)}
+- 5-year average: $${fiveYearData.adr.five_year_avg.toFixed(0)}
+- Overall trend: ${fiveYearData.adr.trend} (${fiveYearData.adr.percent_change > 0 ? '+' : ''}${fiveYearData.adr.percent_change.toFixed(1)}%)
+- Year-by-year: ${adrYearlyStr}
+
+MONTHLY REVENUE TRENDS:
+- Current year average: $${fiveYearData.revenue.current_year_avg.toFixed(0)}/month
+- 5-year average: $${fiveYearData.revenue.five_year_avg.toFixed(0)}/month
+- Overall trend: ${fiveYearData.revenue.trend} (${fiveYearData.revenue.percent_change > 0 ? '+' : ''}${fiveYearData.revenue.percent_change.toFixed(1)}%)
+- Year-by-year: ${revenueYearlyStr}
+
+${propertyContext?.monthly_rent ? `PROPERTY CONTEXT: Monthly rent $${propertyContext.monthly_rent}${propertyContext.bedrooms ? `, ${propertyContext.bedrooms} bedrooms` : ''}` : ''}
+
+Respond in this exact JSON format:
+{
+  "executive_summary": "2-3 sentence summary of the market's historical performance and what it means for investors",
+  "market_trajectory": "one of: accelerating_growth, steady_growth, maturing, plateauing, declining",
+  "key_findings": ["finding 1", "finding 2", "finding 3"],
+  "investment_implications": ["implication 1", "implication 2", "implication 3"],
+  "timing_recommendation": "1-2 sentences on whether now is a good time to enter this market",
+  "confidence_level": "high, medium, or low based on data quality and clarity of trends"
+}
+
+Focus on:
+1. What the trends reveal about market health
+2. Whether the market is becoming more or less competitive
+3. If ADR growth is keeping pace with or outpacing occupancy changes
+4. Signs of market saturation or continued opportunity
+5. Specific actionable insights for an investor considering this market`;
+
+  try {
+    const response = await callGemini(prompt, 1024);
+    
+    // Parse JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    return {
+      executive_summary: parsed.executive_summary || 'Historical analysis unavailable.',
+      market_trajectory: parsed.market_trajectory || 'maturing',
+      key_findings: parsed.key_findings || [],
+      investment_implications: parsed.investment_implications || [],
+      timing_recommendation: parsed.timing_recommendation || 'Consider current market conditions carefully.',
+      confidence_level: parsed.confidence_level || 'medium'
+    };
+  } catch (error) {
+    console.error('[GeminiAnalyzer] Error analyzing historical trends:', error);
+    
+    // Return fallback analysis based on raw data
+    return {
+      executive_summary: `The ${marketName} market has shown ${fiveYearData.revenue.trend} revenue trends over ${fiveYearData.years_of_data} years, with occupancy ${fiveYearData.occupancy.trend === 'increasing' ? 'improving' : fiveYearData.occupancy.trend === 'decreasing' ? 'declining' : 'stable'}.`,
+      market_trajectory: fiveYearData.revenue.percent_change > 10 ? 'steady_growth' : 
+                         fiveYearData.revenue.percent_change > 0 ? 'maturing' : 
+                         fiveYearData.revenue.percent_change > -5 ? 'plateauing' : 'declining',
+      key_findings: [
+        `Revenue has ${fiveYearData.revenue.trend === 'increasing' ? 'grown' : fiveYearData.revenue.trend === 'decreasing' ? 'declined' : 'remained stable'} by ${Math.abs(fiveYearData.revenue.percent_change).toFixed(1)}% over ${fiveYearData.years_of_data} years`,
+        `Occupancy rates are ${fiveYearData.occupancy.trend} (${fiveYearData.occupancy.percent_change > 0 ? '+' : ''}${fiveYearData.occupancy.percent_change.toFixed(1)}%)`,
+        `ADR has ${fiveYearData.adr.trend === 'increasing' ? 'increased' : fiveYearData.adr.trend === 'decreasing' ? 'decreased' : 'held steady'} to $${fiveYearData.adr.current_year_avg.toFixed(0)}`
+      ],
+      investment_implications: [
+        fiveYearData.market_maturity === 'emerging' ? 'Early market entry opportunity with growth potential' :
+        fiveYearData.market_maturity === 'growing' ? 'Active growth phase - good time for market entry' :
+        fiveYearData.market_maturity === 'mature' ? 'Established market - focus on differentiation' :
+        'Saturated market - requires careful property selection'
+      ],
+      timing_recommendation: fiveYearData.revenue.trend === 'increasing' 
+        ? 'Market trends support entry, but conduct thorough property-level analysis.'
+        : 'Exercise caution - ensure strong property fundamentals before committing.',
+      confidence_level: fiveYearData.years_of_data >= 4 ? 'high' : fiveYearData.years_of_data >= 2 ? 'medium' : 'low'
+    };
+  }
+}

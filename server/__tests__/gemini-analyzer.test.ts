@@ -310,3 +310,142 @@ describe('Gemini Analyzer', () => {
     });
   });
 });
+
+
+  describe('analyzeHistoricalMarketTrends', () => {
+    it('should generate AI analysis of 5-year historical data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          candidates: [{
+            content: {
+              parts: [{
+                text: JSON.stringify({
+                  executive_summary: "The Austin market has shown steady growth over 5 years with ADR increasing 25% while occupancy remained stable.",
+                  market_trajectory: "steady_growth",
+                  key_findings: [
+                    "Revenue has grown 18% over 5 years",
+                    "Occupancy rates have stabilized around 65%",
+                    "ADR growth outpacing national average"
+                  ],
+                  investment_implications: [
+                    "Market fundamentals support new entrants",
+                    "Focus on premium positioning to capture ADR growth",
+                    "Monitor supply growth for saturation signals"
+                  ],
+                  timing_recommendation: "Current market conditions favor entry, with strong ADR growth providing pricing power.",
+                  confidence_level: "high"
+                })
+              }]
+            }
+          }]
+        })
+      });
+
+      const { analyzeHistoricalMarketTrends } = await import('../gemini-analyzer');
+      
+      const result = await analyzeHistoricalMarketTrends(
+        "Austin, TX",
+        {
+          years_of_data: 5,
+          occupancy: {
+            current_year_avg: 65,
+            five_year_avg: 63,
+            trend: 'stable',
+            percent_change: 3.2,
+            yearly_data: [
+              { year: 2021, avg: 62 },
+              { year: 2022, avg: 64 },
+              { year: 2023, avg: 65 },
+              { year: 2024, avg: 64 },
+              { year: 2025, avg: 65 }
+            ]
+          },
+          adr: {
+            current_year_avg: 250,
+            five_year_avg: 220,
+            trend: 'increasing',
+            percent_change: 25,
+            yearly_data: [
+              { year: 2021, avg: 200 },
+              { year: 2022, avg: 215 },
+              { year: 2023, avg: 230 },
+              { year: 2024, avg: 245 },
+              { year: 2025, avg: 250 }
+            ]
+          },
+          revenue: {
+            current_year_avg: 5000,
+            five_year_avg: 4500,
+            trend: 'increasing',
+            percent_change: 18,
+            yearly_data: [
+              { year: 2021, avg: 4200 },
+              { year: 2022, avg: 4500 },
+              { year: 2023, avg: 4800 },
+              { year: 2024, avg: 4900 },
+              { year: 2025, avg: 5000 }
+            ]
+          },
+          market_maturity: 'growing'
+        },
+        { monthly_rent: 2500, bedrooms: 3 }
+      );
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('executive_summary');
+      expect(typeof result.executive_summary).toBe('string');
+      expect(result).toHaveProperty('market_trajectory');
+      expect(['accelerating_growth', 'steady_growth', 'maturing', 'plateauing', 'declining']).toContain(result.market_trajectory);
+      expect(result).toHaveProperty('key_findings');
+      expect(Array.isArray(result.key_findings)).toBe(true);
+      expect(result).toHaveProperty('investment_implications');
+      expect(Array.isArray(result.investment_implications)).toBe(true);
+      expect(result).toHaveProperty('timing_recommendation');
+      expect(typeof result.timing_recommendation).toBe('string');
+      expect(result).toHaveProperty('confidence_level');
+      expect(['high', 'medium', 'low']).toContain(result.confidence_level);
+    });
+
+    it('should return fallback analysis on API error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('API Error'));
+
+      const { analyzeHistoricalMarketTrends } = await import('../gemini-analyzer');
+      
+      const result = await analyzeHistoricalMarketTrends(
+        "Austin, TX",
+        {
+          years_of_data: 3,
+          occupancy: {
+            current_year_avg: 60,
+            five_year_avg: 58,
+            trend: 'stable',
+            percent_change: 3,
+            yearly_data: [{ year: 2023, avg: 58 }, { year: 2024, avg: 59 }, { year: 2025, avg: 60 }]
+          },
+          adr: {
+            current_year_avg: 200,
+            five_year_avg: 190,
+            trend: 'increasing',
+            percent_change: 10,
+            yearly_data: [{ year: 2023, avg: 180 }, { year: 2024, avg: 190 }, { year: 2025, avg: 200 }]
+          },
+          revenue: {
+            current_year_avg: 4000,
+            five_year_avg: 3800,
+            trend: 'increasing',
+            percent_change: 8,
+            yearly_data: [{ year: 2023, avg: 3600 }, { year: 2024, avg: 3800 }, { year: 2025, avg: 4000 }]
+          },
+          market_maturity: 'mature'
+        }
+      );
+
+      // Should return fallback analysis, not throw
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('executive_summary');
+      expect(result).toHaveProperty('market_trajectory');
+      expect(result).toHaveProperty('key_findings');
+      expect(result).toHaveProperty('confidence_level');
+    });
+  });
