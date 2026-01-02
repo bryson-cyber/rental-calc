@@ -271,6 +271,10 @@ export default function PropertyAnalyzer() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Timer state for loading screen
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['summary', 'revenue', 'market']));
   
@@ -317,6 +321,12 @@ export default function PropertyAnalyzer() {
     setCurrentStep(0);
     setError(null);
     setResult(null);
+    setElapsedTime(0);
+    
+    // Start timer
+    timerRef.current = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
     
     // Simulate progress through steps
     const stepInterval = setInterval(() => {
@@ -338,6 +348,10 @@ export default function PropertyAnalyzer() {
       });
       
       clearInterval(stepInterval);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       setCurrentStep(ANALYSIS_STEPS.length);
       
       // Parse the response - now using structured data from analyzeProperty endpoint
@@ -448,6 +462,10 @@ export default function PropertyAnalyzer() {
       
     } catch (err: any) {
       clearInterval(stepInterval);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       console.error('Analysis error:', err);
       setError(err.message || 'Failed to analyze property. Please try again.');
       toast.error('Analysis failed. Please try again.');
@@ -630,9 +648,26 @@ export default function PropertyAnalyzer() {
         {/* Loading State */}
         {isAnalyzing && (
           <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 mt-8">
-            <h3 className="text-xl font-semibold text-white mb-6 text-center">
-              Running Deep Analysis...
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-white">
+                Running Deep Analysis...
+              </h3>
+              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <span className="text-white font-mono text-lg">
+                  {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            </div>
+            {elapsedTime > 30 && (
+              <p className="text-white/60 text-sm text-center mb-4">
+                {elapsedTime > 120 
+                  ? "Almost there! The AI is generating your comprehensive insights..."
+                  : elapsedTime > 60 
+                    ? "Analyzing market data and competitors..."
+                    : "This analysis typically takes 2-3 minutes for best results."}
+              </p>
+            )}
             <div className="space-y-4">
               {ANALYSIS_STEPS.map((step, index) => {
                 const Icon = step.icon;
@@ -1534,21 +1569,21 @@ export default function PropertyAnalyzer() {
                     {/* Visual Revenue Chart */}
                     <div className="bg-white/5 rounded-xl p-4">
                       <p className="text-sm text-white/70 mb-3">Monthly Revenue Trend</p>
-                      <div className="flex items-end gap-1 h-32">
+                      <div className="flex items-end gap-1" style={{ height: '128px' }}>
                         {result.seasonality.slice(0, 12).map((month, i) => {
                           const maxRevenue = Math.max(...result.seasonality.map(m => m.revenue));
-                          const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+                          const heightPx = maxRevenue > 0 ? Math.max((month.revenue / maxRevenue) * 100, 8) : 8;
                           return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
                               <div 
                                 className={`w-full rounded-t transition-all ${
                                   month.season_type === 'peak' ? 'bg-green-500' :
                                   month.season_type === 'off' ? 'bg-red-500' :
                                   'bg-yellow-500'
                                 }`}
-                                style={{ height: `${height}%`, minHeight: '4px' }}
+                                style={{ height: `${heightPx}px` }}
                               />
-                              <span className="text-[10px] text-white/50">{formatMonth(month.month).slice(0, 1)}</span>
+                              <span className="text-[10px] text-white/50 mt-1">{formatMonth(month.month).slice(0, 1)}</span>
                             </div>
                           );
                         })}
@@ -1588,18 +1623,18 @@ export default function PropertyAnalyzer() {
                           <Percent className="w-4 h-4 text-blue-400" />
                           Occupancy Rate Trend (12 months)
                         </p>
-                        <div className="flex items-end gap-1 h-24">
+                        <div className="flex items-end gap-1" style={{ height: '96px' }}>
                           {result.historical_trends.occupancy.slice(-12).map((point, i) => {
                             const maxVal = Math.max(...result.historical_trends!.occupancy!.map(p => p.value));
-                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            const heightPx = maxVal > 0 ? Math.max((point.value / maxVal) * 80, 8) : 8;
                             return (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
                                 <div 
                                   className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-400"
-                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  style={{ height: `${heightPx}px` }}
                                   title={`${formatMonth(point.date)}: ${formatPercent(point.value)}`}
                                 />
-                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                                <span className="text-[10px] text-white/50 mt-1">{formatMonth(point.date).slice(0, 1)}</span>
                               </div>
                             );
                           })}
@@ -1618,18 +1653,18 @@ export default function PropertyAnalyzer() {
                           <Banknote className="w-4 h-4 text-green-400" />
                           Average Daily Rate Trend (12 months)
                         </p>
-                        <div className="flex items-end gap-1 h-24">
+                        <div className="flex items-end gap-1" style={{ height: '96px' }}>
                           {result.historical_trends.adr.slice(-12).map((point, i) => {
                             const maxVal = Math.max(...result.historical_trends!.adr!.map(p => p.value));
-                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            const heightPx = maxVal > 0 ? Math.max((point.value / maxVal) * 80, 8) : 8;
                             return (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
                                 <div 
                                   className="w-full rounded-t bg-green-500 transition-all hover:bg-green-400"
-                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  style={{ height: `${heightPx}px` }}
                                   title={`${formatMonth(point.date)}: ${formatCurrency(point.value)}`}
                                 />
-                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                                <span className="text-[10px] text-white/50 mt-1">{formatMonth(point.date).slice(0, 1)}</span>
                               </div>
                             );
                           })}
@@ -1648,18 +1683,18 @@ export default function PropertyAnalyzer() {
                           <DollarSign className="w-4 h-4 text-amber-400" />
                           Monthly Revenue Trend (12 months)
                         </p>
-                        <div className="flex items-end gap-1 h-24">
+                        <div className="flex items-end gap-1" style={{ height: '96px' }}>
                           {result.historical_trends.revenue.slice(-12).map((point, i) => {
                             const maxVal = Math.max(...result.historical_trends!.revenue!.map(p => p.value));
-                            const height = maxVal > 0 ? (point.value / maxVal) * 100 : 0;
+                            const heightPx = maxVal > 0 ? Math.max((point.value / maxVal) * 80, 8) : 8;
                             return (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
                                 <div 
                                   className="w-full rounded-t bg-amber-500 transition-all hover:bg-amber-400"
-                                  style={{ height: `${height}%`, minHeight: '4px' }}
+                                  style={{ height: `${heightPx}px` }}
                                   title={`${formatMonth(point.date)}: ${formatCurrency(point.value)}`}
                                 />
-                                <span className="text-[10px] text-white/50">{formatMonth(point.date).slice(0, 1)}</span>
+                                <span className="text-[10px] text-white/50 mt-1">{formatMonth(point.date).slice(0, 1)}</span>
                               </div>
                             );
                           })}
@@ -1737,17 +1772,17 @@ export default function PropertyAnalyzer() {
                     {/* ADR Forecast Chart */}
                     <div className="bg-white/5 rounded-xl p-4">
                       <p className="text-sm text-white/70 mb-3">Daily ADR Forecast</p>
-                      <div className="flex items-end gap-px h-24">
+                      <div className="flex items-end gap-px" style={{ height: '96px' }}>
                         {result.future_pricing.slice(0, 90).map((day, i) => {
                           const maxAdr = Math.max(...result.future_pricing!.slice(0, 90).map(d => d.adr));
                           const minAdr = Math.min(...result.future_pricing!.slice(0, 90).map(d => d.adr));
                           const range = maxAdr - minAdr;
-                          const height = range > 0 ? ((day.adr - minAdr) / range) * 80 + 20 : 50;
+                          const heightPx = range > 0 ? Math.max(((day.adr - minAdr) / range) * 70 + 16, 8) : 40;
                           return (
                             <div 
                               key={i} 
                               className="flex-1 bg-teal-500 hover:bg-teal-400 transition-all rounded-t"
-                              style={{ height: `${height}%`, minHeight: '4px' }}
+                              style={{ height: `${heightPx}px` }}
                               title={`${day.date}: ${formatCurrency(day.adr)}`}
                             />
                           );
@@ -1903,18 +1938,18 @@ export default function PropertyAnalyzer() {
                     {result.five_year_summary.revenue.yearly_data.length > 1 && (
                       <div className="bg-white/5 rounded-xl p-4">
                         <p className="text-sm text-white/70 mb-4">Year-over-Year Revenue Trend</p>
-                        <div className="flex items-end gap-2 h-32">
+                        <div className="flex items-end gap-2" style={{ height: '128px' }}>
                           {result.five_year_summary.revenue.yearly_data.map((yearData, i) => {
                             const maxVal = Math.max(...result.five_year_summary!.revenue.yearly_data.map(y => y.avg));
-                            const height = maxVal > 0 ? (yearData.avg / maxVal) * 100 : 0;
+                            const heightPx = maxVal > 0 ? Math.max((yearData.avg / maxVal) * 100, 12) : 12;
                             return (
-                              <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                              <div key={i} className="flex-1 flex flex-col items-center justify-end" style={{ height: '100%' }}>
                                 <div 
                                   className="w-full rounded-t bg-gradient-to-t from-violet-600 to-violet-400 transition-all hover:from-violet-500 hover:to-violet-300"
-                                  style={{ height: `${height}%`, minHeight: '8px' }}
+                                  style={{ height: `${heightPx}px` }}
                                   title={`${yearData.year}: ${formatCurrency(yearData.avg)}/mo`}
                                 />
-                                <span className="text-xs text-white/70">{yearData.year}</span>
+                                <span className="text-xs text-white/70 mt-2">{yearData.year}</span>
                               </div>
                             );
                           })}

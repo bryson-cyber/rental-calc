@@ -1,0 +1,505 @@
+/**
+ * Revenue Charts Component
+ * Proper chart rendering using Recharts
+ */
+
+import { useMemo } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
+  Legend,
+  Cell,
+  ComposedChart,
+} from 'recharts';
+
+// Format currency
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// Format percent
+const formatPercent = (value: number) => {
+  const pct = value > 1 ? value : value * 100;
+  return `${pct.toFixed(0)}%`;
+};
+
+// Custom tooltip for charts
+const CustomTooltip = ({ active, payload, label, type = 'revenue' }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
+        <p className="font-semibold text-gray-900 mb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} style={{ color: entry.color }} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-gray-600">{entry.name}:</span>
+            <span className="font-medium">
+              {entry.name.toLowerCase().includes('occupancy') 
+                ? formatPercent(entry.value)
+                : formatCurrency(entry.value)}
+            </span>
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Monthly Forecast Bar Chart
+interface MonthlyForecastData {
+  month: string;
+  revenue: number;
+  occupancy: number;
+  adr?: number;
+}
+
+interface MonthlyForecastChartProps {
+  data: MonthlyForecastData[];
+  height?: number;
+}
+
+export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChartProps) {
+  // Format month labels to be shorter
+  const chartData = useMemo(() => {
+    return data.slice(0, 12).map(item => ({
+      ...item,
+      shortMonth: item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3),
+      occupancyPct: item.occupancy > 1 ? item.occupancy : item.occupancy * 100,
+    }));
+  }, [data]);
+
+  const maxRevenue = Math.max(...chartData.map(d => d.revenue));
+  const avgRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length;
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="shortMonth" 
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            axisLine={{ stroke: '#d1d5db' }}
+          />
+          <YAxis 
+            yAxisId="revenue"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            axisLine={{ stroke: '#d1d5db' }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+          />
+          <YAxis 
+            yAxisId="occupancy"
+            orientation="right"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            axisLine={{ stroke: '#d1d5db' }}
+            tickFormatter={(value) => `${value}%`}
+            domain={[0, 100]}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Bar 
+            yAxisId="revenue"
+            dataKey="revenue" 
+            name="Revenue"
+            radius={[4, 4, 0, 0]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`}
+                fill={entry.revenue >= avgRevenue ? '#22c55e' : '#f59e0b'}
+              />
+            ))}
+          </Bar>
+          <Line 
+            yAxisId="occupancy"
+            type="monotone" 
+            dataKey="occupancyPct" 
+            name="Occupancy"
+            stroke="#3b82f6" 
+            strokeWidth={2}
+            dot={{ fill: '#3b82f6', strokeWidth: 2 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Revenue Comparison Chart (for percentiles)
+interface RevenuePercentileData {
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+}
+
+interface RevenuePercentileChartProps {
+  data: RevenuePercentileData;
+  yourRevenue?: number;
+  height?: number;
+}
+
+export function RevenuePercentileChart({ data, yourRevenue, height = 200 }: RevenuePercentileChartProps) {
+  const chartData = [
+    { name: 'Bottom 10%', revenue: data.p10, fill: '#ef4444' },
+    { name: 'Bottom 25%', revenue: data.p25, fill: '#f97316' },
+    { name: 'Median', revenue: data.p50, fill: '#eab308' },
+    { name: 'Top 25%', revenue: data.p75, fill: '#22c55e' },
+    { name: 'Top 10%', revenue: data.p90, fill: '#10b981' },
+  ];
+
+  if (yourRevenue) {
+    chartData.push({ name: 'Your Estimate', revenue: yourRevenue, fill: '#C9A962' });
+  }
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+          <XAxis 
+            type="number"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tickFormatter={(value) => formatCurrency(value)}
+          />
+          <YAxis 
+            type="category"
+            dataKey="name"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            width={75}
+          />
+          <Tooltip 
+            formatter={(value: number) => formatCurrency(value)}
+            labelStyle={{ color: '#111827', fontWeight: 600 }}
+          />
+          <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Bedroom Performance Chart
+interface BedroomPerformanceData {
+  bedrooms: number;
+  occupancy: number;
+  adr: number;
+  revenue: number;
+  listing_count: number;
+}
+
+interface BedroomPerformanceChartProps {
+  data: BedroomPerformanceData[];
+  highlightBedroom?: number;
+  height?: number;
+}
+
+export function BedroomPerformanceChart({ data, highlightBedroom, height = 250 }: BedroomPerformanceChartProps) {
+  const chartData = useMemo(() => {
+    return data.map(item => ({
+      ...item,
+      name: `${item.bedrooms} BR`,
+      occupancyPct: item.occupancy > 1 ? item.occupancy : item.occupancy * 100,
+      isHighlighted: item.bedrooms === highlightBedroom,
+    }));
+  }, [data, highlightBedroom]);
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="name" 
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+          />
+          <YAxis 
+            yAxisId="revenue"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+          />
+          <YAxis 
+            yAxisId="occupancy"
+            orientation="right"
+            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tickFormatter={(value) => `${value}%`}
+            domain={[0, 100]}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Bar 
+            yAxisId="revenue"
+            dataKey="revenue" 
+            name="Annual Revenue"
+            radius={[4, 4, 0, 0]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`}
+                fill={entry.isHighlighted ? '#C9A962' : '#3b82f6'}
+                stroke={entry.isHighlighted ? '#a08840' : 'none'}
+                strokeWidth={entry.isHighlighted ? 2 : 0}
+              />
+            ))}
+          </Bar>
+          <Line 
+            yAxisId="occupancy"
+            type="monotone" 
+            dataKey="occupancyPct" 
+            name="Occupancy"
+            stroke="#10b981" 
+            strokeWidth={2}
+            dot={{ fill: '#10b981', strokeWidth: 2 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Historical Trend Chart
+interface HistoricalDataPoint {
+  date: string;
+  value: number;
+}
+
+interface HistoricalTrendChartProps {
+  data: HistoricalDataPoint[];
+  color?: string;
+  valueType?: 'currency' | 'percent' | 'number';
+  height?: number;
+  title?: string;
+}
+
+export function HistoricalTrendChart({ 
+  data, 
+  color = '#3b82f6', 
+  valueType = 'currency',
+  height = 200,
+  title
+}: HistoricalTrendChartProps) {
+  const chartData = useMemo(() => {
+    return data.slice(-12).map(item => ({
+      ...item,
+      shortDate: item.date.split('-').slice(1).join('/') || item.date.slice(0, 7),
+      displayValue: valueType === 'percent' && item.value <= 1 ? item.value * 100 : item.value,
+    }));
+  }, [data, valueType]);
+
+  const formatValue = (value: number) => {
+    switch (valueType) {
+      case 'currency':
+        return formatCurrency(value);
+      case 'percent':
+        return formatPercent(value);
+      default:
+        return value.toLocaleString();
+    }
+  };
+
+  return (
+    <div className="w-full" style={{ height }}>
+      {title && (
+        <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
+      )}
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`gradient-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
+              <stop offset="95%" stopColor={color} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis 
+            dataKey="shortDate" 
+            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis 
+            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(value) => {
+              if (valueType === 'currency') return `$${(value / 1000).toFixed(0)}k`;
+              if (valueType === 'percent') return `${value}%`;
+              return value.toString();
+            }}
+            width={45}
+          />
+          <Tooltip 
+            formatter={(value: number) => [formatValue(value), title || 'Value']}
+            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            contentStyle={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="displayValue" 
+            stroke={color} 
+            strokeWidth={2}
+            fill={`url(#gradient-${color.replace('#', '')})`}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Seasonality Chart (simple bar visualization)
+interface SeasonalityChartProps {
+  data: MonthlyForecastData[];
+  height?: number;
+}
+
+export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) {
+  const chartData = useMemo(() => {
+    const avgRevenue = data.reduce((sum, d) => sum + d.revenue, 0) / data.length;
+    return data.slice(0, 12).map(item => {
+      const variance = ((item.revenue - avgRevenue) / avgRevenue) * 100;
+      return {
+        ...item,
+        shortMonth: item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3),
+        variance,
+        season: variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder',
+      };
+    });
+  }, [data]);
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis 
+            dataKey="shortMonth" 
+            tick={{ fill: '#6b7280', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis hide />
+          <Tooltip 
+            formatter={(value: number, name: string, props: any) => [
+              formatCurrency(props.payload.revenue),
+              props.payload.season === 'peak' ? '🔥 Peak Season' : 
+              props.payload.season === 'off' ? '❄️ Off Season' : '📊 Shoulder Season'
+            ]}
+            labelStyle={{ color: '#111827', fontWeight: 600 }}
+          />
+          <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+            {chartData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`}
+                fill={
+                  entry.season === 'peak' ? '#22c55e' : 
+                  entry.season === 'off' ? '#f59e0b' : '#3b82f6'
+                }
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// Competitor Revenue Distribution
+interface CompetitorData {
+  title: string;
+  annual_revenue: number;
+  occupancy: number;
+  adr: number;
+}
+
+interface CompetitorDistributionChartProps {
+  data: CompetitorData[];
+  threshold?: number;
+  height?: number;
+}
+
+export function CompetitorDistributionChart({ data, threshold, height = 200 }: CompetitorDistributionChartProps) {
+  const chartData = useMemo(() => {
+    return data
+      .slice(0, 10)
+      .sort((a, b) => b.annual_revenue - a.annual_revenue)
+      .map((item, index) => ({
+        ...item,
+        name: `#${index + 1}`,
+        meetsThreshold: threshold ? item.annual_revenue >= threshold : true,
+      }));
+  }, [data, threshold]);
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <XAxis 
+            dataKey="name" 
+            tick={{ fill: '#6b7280', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis 
+            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            axisLine={false}
+            tickLine={false}
+          />
+          {threshold && (
+            <CartesianGrid 
+              strokeDasharray="5 5" 
+              stroke="#ef4444" 
+              horizontal={false}
+            />
+          )}
+          <Tooltip 
+            formatter={(value: number) => formatCurrency(value)}
+            labelFormatter={(label) => `Competitor ${label}`}
+          />
+          <Bar dataKey="annual_revenue" name="Annual Revenue" radius={[4, 4, 0, 0]}>
+            {chartData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`}
+                fill={entry.meetsThreshold ? '#22c55e' : '#ef4444'}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export default {
+  MonthlyForecastChart,
+  RevenuePercentileChart,
+  BedroomPerformanceChart,
+  HistoricalTrendChart,
+  SeasonalityChart,
+  CompetitorDistributionChart,
+};

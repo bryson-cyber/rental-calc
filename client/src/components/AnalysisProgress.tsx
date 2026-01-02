@@ -28,6 +28,7 @@ import {
   type ProgressStep,
   formatTimeRemaining 
 } from '@/hooks/useAnalysisProgress';
+import { useState, useEffect } from 'react';
 
 interface AnalysisProgressProps {
   progress: ProgressState | null;
@@ -69,6 +70,26 @@ function StatusIcon({ status }: { status: ProgressStep['status'] }) {
 }
 
 export default function AnalysisProgress({ progress, address, monthlyRent }: AnalysisProgressProps) {
+  // Timer state
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  
+  // Timer effect
+  useEffect(() => {
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+  
+  // Format elapsed time as MM:SS
+  const formatElapsedTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   // Default steps for initial display (before SSE connects)
   const defaultSteps: ProgressStep[] = [
     { id: 'property', label: 'Analyzing property details', status: 'pending' },
@@ -121,6 +142,21 @@ export default function AnalysisProgress({ progress, address, monthlyRent }: Ana
             <h2 className="text-3xl font-serif font-semibold text-white mb-3">
               Building Your Analysis
             </h2>
+            
+            {/* Elapsed Time Counter */}
+            <motion.div 
+              className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-4 border border-white/20"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Clock className="w-4 h-4 text-[#C9A962]" />
+              <span className="text-white font-mono text-lg font-semibold">
+                {formatElapsedTime(elapsedSeconds)}
+              </span>
+              <span className="text-white/50 text-sm">elapsed</span>
+            </motion.div>
+            
             <p className="text-white/60 font-sans text-sm mb-1">
               {address}
             </p>

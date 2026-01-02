@@ -1205,3 +1205,21 @@
 - [x] Display Revenue-to-Rent ratio indicator
 - [x] Add Quick Facts banner
 - [ ] Integrate EnhancedInsights into ChapterPropertyReport (next step)
+
+
+## Bug Fixes - AI Accuracy & Charts (Current Sprint)
+- [ ] Fix AI narrative accuracy - data doesn't match actual API data (needs further investigation)
+- [x] Fix 12-month historical performance chart not displaying data
+- [x] Fix all charts not rendering correctly
+- [ ] Fix site glitchiness and performance issues (needs further investigation)
+- [ ] Verify AI-generated insights match real AirDNA data (needs further investigation)
+- [x] Add timer counter to loading screen showing elapsed time
+
+
+## Bug Fixes - Charts & Timer (Current Sprint)
+- [x] Fix Monthly Revenue Trend chart not displaying bar heights
+- [x] Fix 12-month historical performance charts (Occupancy, ADR, Revenue)
+- [x] Fix ADR Forecast chart not displaying properly
+- [x] Fix 5-Year Market History chart not displaying properly
+- [x] Fix market occupancy showing 6300% instead of 63% in quick facts
+- [x] Add timer counter to loading screen showing elapsed time

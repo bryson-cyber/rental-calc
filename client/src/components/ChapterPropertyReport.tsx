@@ -40,6 +40,7 @@ import {
   Maximize
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart, CompetitorDistributionChart } from './RevenueCharts';
 
 // Helper function to extract Airbnb listing ID and construct image URL
 const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
@@ -633,6 +634,14 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
             <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 mt-10">Monthly Revenue Forecast</h3>
 
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              {/* Visual Chart */}
+              {monthly_forecast && monthly_forecast.length > 0 && (
+                <div className="mb-8">
+                  <p className="text-sm text-[#0F172A]/60 mb-4">Revenue & Occupancy by Month (Green = Above Average, Orange = Below Average)</p>
+                  <MonthlyForecastChart data={monthly_forecast} height={280} />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-green-600 font-medium">Best Month</p>
@@ -729,6 +738,23 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               Here are the top-earning {property.bedrooms}-bedroom properties in {property.city}. 
               Properties marked with <span className="text-green-600 font-semibold">"✓ Meets 2x Rule"</span> are earning above the {formatCurrency(minRevenueThreshold)} threshold.
             </p>
+
+            {/* Competitor Revenue Distribution Chart */}
+            {displayComps && displayComps.length > 0 && (
+              <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <p className="text-sm text-[#0F172A]/60 mb-4">Top 10 Competitors by Annual Revenue (Green = Meets 2x Rule, Red = Below Threshold)</p>
+                <CompetitorDistributionChart 
+                  data={displayComps.map(c => ({
+                    title: c.title,
+                    annual_revenue: c.annual_revenue,
+                    occupancy: c.occupancy,
+                    adr: c.adr
+                  }))}
+                  threshold={minRevenueThreshold}
+                  height={220}
+                />
+              </div>
+            )}
 
             {/* Filter Controls */}
             <div className="bg-white rounded-xl p-4 shadow-sm mb-6">

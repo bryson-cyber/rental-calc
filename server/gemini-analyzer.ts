@@ -2332,7 +2332,7 @@ IMPORTANT:
       quick_facts: [
         `Monthly rent: $${input.monthly_rent.toLocaleString()}`,
         `Projected annual revenue: $${input.revenue_mid.toLocaleString()}`,
-        `Market occupancy: ${(input.market_occupancy * 100).toFixed(1)}%`,
+        `Market occupancy: ${input.market_occupancy > 1 ? input.market_occupancy.toFixed(1) : (input.market_occupancy * 100).toFixed(1)}%`,
         `${input.competitors.length} comparable properties in area`
       ]
     };
