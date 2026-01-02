@@ -2009,13 +2009,20 @@ export interface NarrativeReportInput {
   annual_profit_realistic: number;
   annual_profit_optimistic: number;
   
-  // Competitors (top 5)
+  // Competitors (top 10 with full data)
   competitors: Array<{
     name: string;
     annual_revenue: number;
     occupancy: number;
     adr: number;
     rating: number | null;
+    reviews: number;
+    amenities: string[];
+    property_type: string;
+    last_review_date?: string;
+    is_superhost: boolean;
+    is_professional: boolean;
+    distance_meters?: number;
   }>;
   
   // Seasonality (12 months)
@@ -2084,6 +2091,59 @@ export interface NarrativeReportInput {
     description: string;
     severity: string;
   }>;
+  
+  // Bedroom performance data
+  bedroom_performance?: Array<{
+    bedrooms: number;
+    count: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+  }>;
+  
+  // Property's bedroom count for comparison
+  property_bedrooms?: number;
+  
+  // Competitor historical performance (top 5)
+  competitor_historical?: Array<{
+    name: string;
+    listing_id: string;
+    total_revenue_12mo: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    revenue_trend: 'growing' | 'stable' | 'declining';
+  }>;
+  
+  // Daily pricing intelligence (6-month forward)
+  daily_pricing?: {
+    avg_adr: number;
+    adr_percentile_25: number;
+    adr_percentile_50: number;
+    adr_percentile_75: number;
+    avg_occupancy: number;
+    peak_dates: string[];
+    low_dates: string[];
+    pricing_volatility: 'low' | 'medium' | 'high';
+  };
+  
+  // Submarket analysis
+  submarket_analysis?: {
+    property_submarket?: {
+      name: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      listing_count: number;
+    };
+    top_submarkets: Array<{
+      name: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      listing_count: number;
+    }>;
+    market_avg_revenue: number;
+  };
 }
 
 /**
@@ -2129,10 +2189,38 @@ export async function generateNarrativeReport(
     return (occ * 100).toFixed(1); // Convert decimal to percentage
   };
 
-  // Format competitor data for the prompt
-  const competitorSummary = input.competitors.slice(0, 5).map((c, i) => 
-    `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${formatOccupancy(c.occupancy)}% occupancy, $${Math.round(c.adr)}/night${c.rating ? `, ${c.rating}★` : ''}`
-  ).join('\n');
+  // Format competitor data for the prompt - now with full details
+  const competitorSummary = input.competitors.slice(0, 10).map((c, i) => {
+    const superhostBadge = c.is_superhost ? ' [SUPERHOST]' : '';
+    const proBadge = c.is_professional ? ' [PRO]' : '';
+    const reviewInfo = c.reviews ? `, ${c.reviews} reviews` : '';
+    const distanceInfo = c.distance_meters ? ` (${(c.distance_meters / 1609).toFixed(1)} mi away)` : '';
+    const amenityList = c.amenities?.length > 0 ? `\n   Amenities: ${c.amenities.slice(0, 8).join(', ')}` : '';
+    const lastReview = c.last_review_date ? `\n   Last Review: ${c.last_review_date}` : '';
+    
+    return `${i + 1}. "${c.name}"${superhostBadge}${proBadge}${distanceInfo}
+   Type: ${c.property_type || 'Unknown'} | Revenue: $${c.annual_revenue.toLocaleString()}/yr | Occupancy: ${formatOccupancy(c.occupancy)}%
+   ADR: $${Math.round(c.adr)}/night${c.rating ? ` | Rating: ${c.rating}★` : ''}${reviewInfo}${amenityList}${lastReview}`;
+  }).join('\n\n');
+  
+  // Analyze amenity patterns across competitors
+  const amenityFrequency: Record<string, number> = {};
+  input.competitors.forEach(c => {
+    (c.amenities || []).forEach(a => {
+      amenityFrequency[a] = (amenityFrequency[a] || 0) + 1;
+    });
+  });
+  const topCompetitorAmenities = Object.entries(amenityFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([amenity, count]) => `${amenity} (${Math.round(count / input.competitors.length * 100)}% of competitors)`)
+    .join(', ');
+  
+  // Analyze superhost/professional patterns
+  const superhostCount = input.competitors.filter(c => c.is_superhost).length;
+  const proCount = input.competitors.filter(c => c.is_professional).length;
+  const superhostAvgRevenue = input.competitors.filter(c => c.is_superhost).reduce((sum, c) => sum + c.annual_revenue, 0) / Math.max(1, superhostCount);
+  const nonSuperhostAvgRevenue = input.competitors.filter(c => !c.is_superhost).reduce((sum, c) => sum + c.annual_revenue, 0) / Math.max(1, input.competitors.length - superhostCount);
   
   // Format seasonality for the prompt
   const peakMonths = input.seasonality.filter(s => s.season_type === 'peak').map(s => s.month).join(', ');
@@ -2190,6 +2278,79 @@ ${input.amenities.slice(0, 8).map(a => `- ${a.amenity}: ${a.percentage_of_top_pe
 IDENTIFIED RISKS:
 ${input.risks.slice(0, 5).map(r => `- ${r.category}: ${r.description} (${r.severity})`).join('\n')}`;
   }
+  
+  // Build bedroom performance context
+  let bedroomContext = '';
+  if (input.bedroom_performance && input.bedroom_performance.length > 0) {
+    const propertyBr = input.property_bedrooms || input.bedrooms;
+    const propertyBrData = input.bedroom_performance.find(b => b.bedrooms === propertyBr);
+    const bestBrData = [...input.bedroom_performance].sort((a, b) => b.avg_revenue - a.avg_revenue)[0];
+    
+    bedroomContext = `
+BEDROOM PERFORMANCE ANALYSIS:
+${input.bedroom_performance.map(b => 
+  `- ${b.bedrooms}BR: ${b.count} listings, $${b.avg_revenue.toLocaleString()}/yr avg, $${b.avg_adr}/night, ${b.avg_occupancy}% occupancy`
+).join('\n')}
+
+Property Configuration: ${propertyBr}BR
+${propertyBrData ? `- Your config avg revenue: $${propertyBrData.avg_revenue.toLocaleString()}/yr` : ''}
+${bestBrData && bestBrData.bedrooms !== propertyBr ? `- Best performing: ${bestBrData.bedrooms}BR at $${bestBrData.avg_revenue.toLocaleString()}/yr` : ''}`;
+  }
+  
+  // Build competitor historical context
+  let competitorHistoricalContext = '';
+  if (input.competitor_historical && input.competitor_historical.length > 0) {
+    const growingCount = input.competitor_historical.filter(c => c.revenue_trend === 'growing').length;
+    const decliningCount = input.competitor_historical.filter(c => c.revenue_trend === 'declining').length;
+    const avgRevenue = input.competitor_historical.reduce((sum, c) => sum + c.total_revenue_12mo, 0) / input.competitor_historical.length;
+    
+    competitorHistoricalContext = `
+TOP COMPETITOR HISTORICAL PERFORMANCE (12 months):
+${input.competitor_historical.map(c => 
+  `- ${c.name.substring(0, 40)}: $${c.total_revenue_12mo.toLocaleString()} total, $${Math.round(c.avg_adr)}/night, ${Math.round(c.avg_occupancy)}% occ, Trend: ${c.revenue_trend}`
+).join('\n')}
+
+Competitor Trends Summary:
+- Growing: ${growingCount} of ${input.competitor_historical.length}
+- Declining: ${decliningCount} of ${input.competitor_historical.length}
+- Avg 12-Month Revenue: $${Math.round(avgRevenue).toLocaleString()}`;
+  }
+  
+  // Build daily pricing context
+  let dailyPricingContext = '';
+  if (input.daily_pricing) {
+    const dp = input.daily_pricing;
+    dailyPricingContext = `
+DAILY PRICING INTELLIGENCE (6-Month Forward):
+- Average ADR: $${dp.avg_adr}
+- Pricing Percentiles: 25th: $${dp.adr_percentile_25} | 50th: $${dp.adr_percentile_50} | 75th: $${dp.adr_percentile_75}
+- Average Occupancy: ${Math.round(dp.avg_occupancy * 100)}%
+- Pricing Volatility: ${dp.pricing_volatility}
+- Peak Pricing Dates: ${dp.peak_dates.slice(0, 5).join(', ')}
+- Low Pricing Dates: ${dp.low_dates.slice(0, 5).join(', ')}
+
+Pricing Strategy Insight: ${dp.pricing_volatility === 'high' ? 'High volatility suggests significant seasonal swings - dynamic pricing is essential' : dp.pricing_volatility === 'medium' ? 'Moderate volatility - adjust pricing for peak/off seasons' : 'Low volatility - stable pricing with minor seasonal adjustments'}`;
+  }
+  
+  // Build submarket analysis context
+  let submarketContext = '';
+  if (input.submarket_analysis) {
+    const sa = input.submarket_analysis;
+    submarketContext = `
+SUBMARKET ANALYSIS:
+${sa.property_submarket ? `Property's Neighborhood: ${sa.property_submarket.name}
+- Revenue: $${sa.property_submarket.revenue.toLocaleString()}/yr
+- Occupancy: ${Math.round(sa.property_submarket.occupancy * 100)}%
+- ADR: $${Math.round(sa.property_submarket.adr)}
+- Listings: ${sa.property_submarket.listing_count}` : ''}
+
+Top Performing Neighborhoods in Market:
+${sa.top_submarkets.map((s, i) => 
+  `${i + 1}. ${s.name}: $${s.revenue.toLocaleString()}/yr, ${Math.round(s.occupancy * 100)}% occ, $${Math.round(s.adr)}/night, ${s.listing_count} listings`
+).join('\n')}
+
+Market Average Revenue: $${sa.market_avg_revenue.toLocaleString()}/yr`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2217,8 +2378,14 @@ PROFITABILITY:
 - Annual Profit (Realistic): $${input.annual_profit_realistic.toLocaleString()}
 - Annual Profit (Optimistic): $${input.annual_profit_optimistic.toLocaleString()}
 
-TOP COMPETITORS:
+TOP COMPETITORS (${input.competitors.length} analyzed):
 ${competitorSummary}
+
+COMPETITOR INSIGHTS:
+- Superhosts: ${superhostCount} of ${input.competitors.length} (${Math.round(superhostCount / input.competitors.length * 100)}%)
+- Professional Hosts: ${proCount} of ${input.competitors.length} (${Math.round(proCount / input.competitors.length * 100)}%)
+- Superhost Avg Revenue: $${Math.round(superhostAvgRevenue).toLocaleString()}/yr vs Non-Superhost: $${Math.round(nonSuperhostAvgRevenue).toLocaleString()}/yr
+- Most Common Amenities: ${topCompetitorAmenities || 'Not available'}
 
 SEASONALITY:
 - Peak Months: ${peakMonths || 'Not identified'}
@@ -2230,6 +2397,10 @@ ${supplyContext}
 ${professionalContext}
 ${amenitiesContext}
 ${risksContext}
+${bedroomContext}
+${competitorHistoricalContext}
+${dailyPricingContext}
+${submarketContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days

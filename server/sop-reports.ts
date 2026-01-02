@@ -20,6 +20,8 @@ import {
   getMarketFutureDailyData,
   getMarketHistoricalData,
   getMarketDetails,
+  getListingHistoricalMetrics,
+  exploreSubmarketsWithMetrics,
   ListingData,
   RentalizerResponse,
   ComprehensiveMarketReport,
@@ -28,6 +30,7 @@ import {
   ProfessionalHostStats,
   CancellationPolicyStats,
   SeasonalityData,
+  ListingHistoricalMetrics,
   FutureDailyData
 } from './airdna';
 
@@ -101,6 +104,11 @@ export interface CompetitorAnalysis {
   rating: number | null;
   reviews: number;
   bedrooms?: number;
+  property_type?: string;
+  last_review_date?: string;
+  is_superhost?: boolean;
+  is_professional?: boolean;
+  distance_meters?: number;
 }
 
 export interface ProfitabilityScenario {
@@ -624,7 +632,12 @@ export function analyzeCompetitorSuccessFactors(listing: ListingData): Competito
     amenities,
     rating: listing.rating,
     reviews: listing.reviews,
-    bedrooms: listing.bedrooms
+    bedrooms: listing.bedrooms,
+    property_type: listing.property_type,
+    last_review_date: (listing as any).last_review_date,
+    is_superhost: listing.superhost || false,
+    is_professional: listing.professionally_managed || false,
+    distance_meters: (listing as any).distance_meters
   };
 }
 
@@ -1021,6 +1034,183 @@ export async function generateFullArbitrageAnalysis(
     bedroom_performance: [],
     generated_at: new Date().toISOString()
   };
+  
+  // Calculate bedroom performance from all listings
+  const bedroomPerformanceMap = new Map<number, { count: number; totalRevenue: number; totalAdr: number; totalOccupancy: number }>();
+  listings.forEach(l => {
+    const br = l.bedrooms || 0;
+    const existing = bedroomPerformanceMap.get(br) || { count: 0, totalRevenue: 0, totalAdr: 0, totalOccupancy: 0 };
+    existing.count++;
+    existing.totalRevenue += l.annual_revenue || 0;
+    existing.totalAdr += l.adr || 0;
+    existing.totalOccupancy += l.occupancy || 0;
+    bedroomPerformanceMap.set(br, existing);
+  });
+  
+  const bedroom_performance = Array.from(bedroomPerformanceMap.entries())
+    .map(([bedrooms, data]) => ({
+      bedrooms,
+      count: data.count,
+      avg_revenue: Math.round(data.totalRevenue / data.count),
+      avg_adr: Math.round(data.totalAdr / data.count),
+      avg_occupancy: Math.round(data.totalOccupancy / data.count * 10) / 10
+    }))
+    .sort((a, b) => a.bedrooms - b.bedrooms);
+  
+  // Step 6.5: Fetch historical metrics for top 5 competitors
+  let competitor_historical: Array<{
+    name: string;
+    listing_id: string;
+    total_revenue_12mo: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    revenue_trend: 'growing' | 'stable' | 'declining';
+  }> = [];
+  
+  const top5Competitors = listings
+    .filter(l => l.airbnb_url)
+    .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))
+    .slice(0, 5);
+  
+  if (top5Competitors.length > 0) {
+    try {
+      const historicalPromises = top5Competitors.map(async (comp) => {
+        // Extract listing ID from Airbnb URL
+        const urlMatch = comp.airbnb_url?.match(/rooms\/(\d+)/);
+        const listingId = urlMatch ? urlMatch[1] : null;
+        
+        if (!listingId) return null;
+        
+        const historical = await getListingHistoricalMetrics(listingId, 12);
+        if (!historical) return null;
+        
+        return {
+          name: comp.title || 'Competitor',
+          listing_id: listingId,
+          total_revenue_12mo: historical.summary.total_revenue,
+          avg_adr: historical.summary.avg_adr,
+          avg_occupancy: historical.summary.avg_occupancy,
+          revenue_trend: historical.summary.revenue_trend
+        };
+      });
+      
+      const results = await Promise.all(historicalPromises);
+      competitor_historical = results.filter((r): r is NonNullable<typeof r> => r !== null);
+      console.log(`[ArbitrageAnalysis] Fetched historical data for ${competitor_historical.length} competitors`);
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching competitor historical data:', error);
+    }
+  }
+  
+  // Step 6.6: Fetch daily pricing intelligence
+  let daily_pricing: {
+    avg_adr: number;
+    adr_percentile_25: number;
+    adr_percentile_50: number;
+    adr_percentile_75: number;
+    avg_occupancy: number;
+    peak_dates: string[];
+    low_dates: string[];
+    pricing_volatility: 'low' | 'medium' | 'high';
+  } | undefined;
+  
+  if (marketData?.market?.id) {
+    try {
+      const futurePricing = await getMarketFutureDailyData(marketData.market.id, 6, actualBedrooms);
+      
+      if (futurePricing.length > 0) {
+        // Calculate averages
+        const avgAdr = futurePricing.reduce((sum, d) => sum + d.adr, 0) / futurePricing.length;
+        const avgP25 = futurePricing.reduce((sum, d) => sum + d.adr_percentile_25, 0) / futurePricing.length;
+        const avgP50 = futurePricing.reduce((sum, d) => sum + d.adr_percentile_50, 0) / futurePricing.length;
+        const avgP75 = futurePricing.reduce((sum, d) => sum + d.adr_percentile_75, 0) / futurePricing.length;
+        const avgOcc = futurePricing.reduce((sum, d) => sum + d.occupancy, 0) / futurePricing.length;
+        
+        // Find peak and low dates (top/bottom 10%)
+        const sortedByAdr = [...futurePricing].sort((a, b) => b.adr - a.adr);
+        const topCount = Math.max(3, Math.floor(futurePricing.length * 0.1));
+        const peakDates = sortedByAdr.slice(0, topCount).map(d => d.date);
+        const lowDates = sortedByAdr.slice(-topCount).map(d => d.date);
+        
+        // Calculate volatility (coefficient of variation)
+        const adrMean = avgAdr;
+        const adrStdDev = Math.sqrt(futurePricing.reduce((sum, d) => sum + Math.pow(d.adr - adrMean, 2), 0) / futurePricing.length);
+        const cv = adrStdDev / adrMean;
+        const volatility: 'low' | 'medium' | 'high' = cv < 0.15 ? 'low' : cv < 0.3 ? 'medium' : 'high';
+        
+        daily_pricing = {
+          avg_adr: Math.round(avgAdr),
+          adr_percentile_25: Math.round(avgP25),
+          adr_percentile_50: Math.round(avgP50),
+          adr_percentile_75: Math.round(avgP75),
+          avg_occupancy: Math.round(avgOcc * 100) / 100,
+          peak_dates: peakDates,
+          low_dates: lowDates,
+          pricing_volatility: volatility
+        };
+        console.log(`[ArbitrageAnalysis] Daily pricing intelligence: avg ADR $${daily_pricing.avg_adr}, volatility: ${volatility}`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching daily pricing:', error);
+    }
+  }
+  
+  // Step 6.7: Fetch submarket analysis
+  let submarket_analysis: {
+    property_submarket?: {
+      name: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      listing_count: number;
+    };
+    top_submarkets: Array<{
+      name: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      listing_count: number;
+    }>;
+    market_avg_revenue: number;
+  } | undefined;
+  
+  if (marketData?.market?.id) {
+    try {
+      const submarketData = await exploreSubmarketsWithMetrics(marketData.market.id, {
+        sortBy: 'revenue',
+        limit: 10
+      });
+      
+      if (submarketData.submarkets.length > 0) {
+        submarket_analysis = {
+          top_submarkets: submarketData.submarkets.slice(0, 5).map(s => ({
+            name: s.name,
+            revenue: s.metrics.revenue,
+            occupancy: s.metrics.occupancy,
+            adr: s.metrics.adr,
+            listing_count: s.listing_count
+          })),
+          market_avg_revenue: submarketData.market.metrics.revenue || 0
+        };
+        
+        // Try to find property's submarket based on location
+        // For now, just use the top recommendation if available
+        if (submarketData.topRecommendation) {
+          submarket_analysis.property_submarket = {
+            name: submarketData.topRecommendation.name,
+            revenue: submarketData.topRecommendation.metrics.revenue,
+            occupancy: submarketData.topRecommendation.metrics.occupancy,
+            adr: submarketData.topRecommendation.metrics.adr,
+            listing_count: submarketData.topRecommendation.listing_count
+          };
+        }
+        
+        console.log(`[ArbitrageAnalysis] Submarket analysis: ${submarketData.submarkets.length} submarkets found`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching submarket analysis:', error);
+    }
+  }
   
   // Step 7: Analyze seasonality from monthly forecast
   const seasonality = property_estimate?.monthly_forecast 
@@ -1472,12 +1662,19 @@ export async function generateFullArbitrageAnalysis(
       annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
       annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
       annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
-      competitors: competitors.slice(0, 5).map(c => ({
+      competitors: competitors.slice(0, 10).map(c => ({
         name: c.name,
         annual_revenue: c.annual_revenue,
         occupancy: c.occupancy,
         adr: c.adr,
-        rating: c.rating
+        rating: c.rating,
+        reviews: c.reviews || 0,
+        amenities: c.amenities || [],
+        property_type: (c as any).property_type || 'Unknown',
+        last_review_date: (c as any).last_review_date,
+        is_superhost: (c as any).is_superhost || false,
+        is_professional: (c as any).is_professional || false,
+        distance_meters: (c as any).distance_meters
       })),
       seasonality: seasonality.map(s => ({
         month: s.month,
@@ -1531,7 +1728,12 @@ export async function generateFullArbitrageAnalysis(
         category: r.category,
         description: r.description,
         severity: r.severity
-      }))
+      })),
+      bedroom_performance: bedroom_performance,
+      property_bedrooms: actualBedrooms,
+      competitor_historical: competitor_historical,
+      daily_pricing: daily_pricing,
+      submarket_analysis: submarket_analysis
     });
     
     console.log('[ArbitrageAnalysis] Narrative report generation complete');
@@ -1641,7 +1843,9 @@ export async function generateFullArbitrageAnalysis(
         category: r.category,
         description: r.description,
         severity: r.severity
-      }))
+      })),
+      bedroom_performance: bedroom_performance,
+      property_bedrooms: actualBedrooms
     });
     
     console.log('[ArbitrageAnalysis] Enhanced narrative report generation complete');

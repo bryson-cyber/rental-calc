@@ -320,6 +320,18 @@ export interface EnhancedNarrativeReportInput {
     description: string;
     severity: string;
   }>;
+  
+  // Bedroom performance data
+  bedroom_performance?: Array<{
+    bedrooms: number;
+    count: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+  }>;
+  
+  // Property's bedroom count for comparison
+  property_bedrooms?: number;
 }
 
 export interface EnhancedNarrativeReport {

@@ -1233,3 +1233,37 @@
 - [x] Show percentage completion alongside timer
 - [x] Add contextual messages during analysis (changes based on elapsed time)
 - [x] Add estimated time remaining display
+
+
+## AirDNA & Gemini Maximization Sprint
+
+### Iteration 1: Full Competitor Data
+- [x] Pass competitor amenities to Gemini
+- [x] Pass competitor property types to Gemini
+- [x] Pass competitor last review dates to Gemini
+- [x] Pass competitor superhost/professional status to Gemini
+- [x] Update AI prompt to analyze amenity patterns
+
+### Iteration 2: Bedroom Performance
+- [x] Pass bedroom performance data to Gemini
+- [x] Update AI prompt to recommend optimal bedroom config
+
+### Iteration 3: Listing Historical Metrics
+- [x] Call getListingHistoricalMetrics for top 5 competitors
+- [x] Pass competitor revenue trends to Gemini
+- [ ] Update AI prompt to analyze competitor trajectories
+
+### Iteration 4: Daily Pricing Intelligence
+- [x] Pass daily pricing with percentiles to Gemini
+- [x] Update AI prompt to recommend pricing strategiesrecommendations
+
+### Iteration 5: Submarket Analysis
+- [x] Call exploreSubmarketsWithMetrics for market's submarkets
+- [x] Pass submarket comparison data to Gemini
+- [ ] Update AI prompt to provide neighborhood-level insights
+
+### Iteration 6: Additional Functions
+- [ ] Integrate getListingComps for better comp matching
+- [ ] Integrate getTopPerformers with filters
+- [ ] Integrate calculateArbitrageFeasibility
+- [ ] Pass all additional data to Gemini
