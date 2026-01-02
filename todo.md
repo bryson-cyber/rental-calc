@@ -1287,6 +1287,11 @@
 - [x] Pass submarket-level competition data to Gemini
 - [x] Update AI prompt to analyze hyper-local competitive dynamics
 
+### Iteration 11: Qualifying Competitors (Filtered Analysis)
+- [x] Call getQualifyingCompetitors with superhost and rating filters
+- [x] Pass filtered competitor data (superhosts only, high-rated only) to Gemini
+- [x] Update AI prompt to analyze what separates top-tier competitors
+
 ### Future Iterations
 - [ ] Integrate getListingComps for better comp matching
 - [ ] Integrate getTopPerformers with filters

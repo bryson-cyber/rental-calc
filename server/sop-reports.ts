@@ -27,6 +27,7 @@ import {
   getRentalizerComps,
   getSinglePropertyDetails,
   getSubmarketListings,
+  getQualifyingCompetitors,
   ListingData,
   ListingComp,
   ListingFuturePricing,
@@ -916,6 +917,19 @@ export async function generateFullArbitrageAnalysis(
     avg_occupancy: number;
     top_listings: ListingData[];
   };
+  // QUALIFYING COMPETITORS (filtered by revenue threshold)
+  qualifying_competitors?: {
+    qualifying_count: number;
+    total_same_bedroom: number;
+    qualification_rate: number;
+    revenue_threshold: number;
+    avg_qualifying_revenue: number;
+    avg_qualifying_occupancy: number;
+    avg_qualifying_adr: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    top_qualifiers: ListingData[];
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1424,6 +1438,20 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
+  // Step 6.13: Qualifying competitors will be fetched after marketId is determined
+  let qualifying_competitors: {
+    qualifying_count: number;
+    total_same_bedroom: number;
+    qualification_rate: number;
+    revenue_threshold: number;
+    avg_qualifying_revenue: number;
+    avg_qualifying_occupancy: number;
+    avg_qualifying_adr: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    top_qualifiers: ListingData[];
+  } | undefined = undefined;
+  
   // Step 7: Analyze seasonality from monthly forecast
   const seasonality = property_estimate?.monthly_forecast 
     ? analyzeSeasonality(property_estimate.monthly_forecast)
@@ -1620,6 +1648,39 @@ export async function generateFullArbitrageAnalysis(
       
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error fetching additional market data:', error);
+    }
+    
+    // Step 15.5: Fetch qualifying competitors (those meeting 2x rent revenue threshold)
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching qualifying competitors for market ${marketId}...`);
+      const qualifyingResult = await getQualifyingCompetitors(marketId, actualBedrooms, monthly_rent);
+      
+      if (qualifyingResult.qualifyingListings.length > 0) {
+        const qualifiers = qualifyingResult.qualifyingListings;
+        const superhostCount = qualifiers.filter(l => l.superhost).length;
+        const professionalCount = qualifiers.filter(l => l.professionally_managed).length;
+        const avgRevenue = qualifiers.reduce((sum, l) => sum + l.annual_revenue, 0) / qualifiers.length;
+        const avgOccupancy = qualifiers.reduce((sum, l) => sum + (l.occupancy || 0), 0) / qualifiers.length;
+        const avgAdr = qualifiers.reduce((sum, l) => sum + (l.adr || 0), 0) / qualifiers.length;
+        
+        qualifying_competitors = {
+          qualifying_count: qualifiers.length,
+          total_same_bedroom: qualifyingResult.totalInMarket,
+          qualification_rate: (qualifiers.length / qualifyingResult.totalInMarket) * 100,
+          revenue_threshold: qualifyingResult.revenueThreshold,
+          avg_qualifying_revenue: avgRevenue,
+          avg_qualifying_occupancy: avgOccupancy,
+          avg_qualifying_adr: avgAdr,
+          superhost_percentage: (superhostCount / qualifiers.length) * 100,
+          professional_percentage: (professionalCount / qualifiers.length) * 100,
+          top_qualifiers: qualifiers.slice(0, 10)
+        };
+        console.log(`[ArbitrageAnalysis] Found ${qualifiers.length}/${qualifyingResult.totalInMarket} (${qualifying_competitors.qualification_rate.toFixed(1)}%) listings meeting $${qualifyingResult.revenueThreshold}/yr threshold. Avg Revenue: $${Math.round(avgRevenue)}/yr`);
+      } else {
+        console.log(`[ArbitrageAnalysis] No qualifying competitors found meeting threshold`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching qualifying competitors:', error);
     }
   }
   
@@ -2014,11 +2075,31 @@ export async function generateFullArbitrageAnalysis(
           occupancy: l.occupancy || 0,
           rating: l.rating || null
         }))
+      } : undefined,
+      qualifying_competitors: qualifying_competitors ? {
+        qualifying_count: qualifying_competitors.qualifying_count,
+        total_same_bedroom: qualifying_competitors.total_same_bedroom,
+        qualification_rate: qualifying_competitors.qualification_rate,
+        revenue_threshold: qualifying_competitors.revenue_threshold,
+        avg_qualifying_revenue: qualifying_competitors.avg_qualifying_revenue,
+        avg_qualifying_occupancy: qualifying_competitors.avg_qualifying_occupancy,
+        avg_qualifying_adr: qualifying_competitors.avg_qualifying_adr,
+        superhost_percentage: qualifying_competitors.superhost_percentage,
+        professional_percentage: qualifying_competitors.professional_percentage,
+        top_qualifiers: qualifying_competitors.top_qualifiers.slice(0, 5).map(l => ({
+          title: l.title || 'Unnamed Listing',
+          bedrooms: l.bedrooms,
+          annual_revenue: l.annual_revenue,
+          adr: l.adr,
+          occupancy: l.occupancy,
+          rating: l.rating,
+          superhost: l.superhost || false,
+          professionally_managed: l.professionally_managed || false
+        }))
       } : undefined
     });
     
-    console.log('[ArbitrageAnalysis] Narrative report generation complete');
-    break; // Success, exit retry loop
+    console.log('[ArbitrageAnalysis] Narrative report generation complete');    break; // Success, exit retry loop
   } catch (error: any) {
     console.error(`[ArbitrageAnalysis] Error generating narrative report (attempt ${attempt}/${MAX_RETRIES}):`, error?.message || error);
     
@@ -2183,7 +2264,9 @@ export async function generateFullArbitrageAnalysis(
     // EXISTING LISTING DATA
     existing_listing_data,
     // SUBMARKET LISTINGS
-    submarket_listings
+    submarket_listings,
+    // QUALIFYING COMPETITORS
+    qualifying_competitors
   };
 }
 

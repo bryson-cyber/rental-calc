@@ -2220,6 +2220,29 @@ export interface NarrativeReportInput {
       rating: number | null;
     }>;
   };
+  
+  // Qualifying competitors (those meeting 2x rent revenue threshold)
+  qualifying_competitors?: {
+    qualifying_count: number;
+    total_same_bedroom: number;
+    qualification_rate: number;
+    revenue_threshold: number;
+    avg_qualifying_revenue: number;
+    avg_qualifying_occupancy: number;
+    avg_qualifying_adr: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    top_qualifiers: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
 }
 
 /**
@@ -2554,6 +2577,39 @@ Submarket Insights:
 - ${sub.total_listings > 100 ? 'High listing density means strong competition - differentiation is critical' : sub.total_listings > 50 ? 'Moderate competition - quality and pricing will determine success' : 'Lower competition density - opportunity to capture market share'}
 - Submarket average revenue of $${Math.round(sub.avg_revenue).toLocaleString()}/yr ${revenueComparison}`;
   }
+  
+  // Build qualifying competitors context (those meeting 2x rent threshold)
+  let qualifyingCompetitorsContext = '';
+  if (input.qualifying_competitors && input.qualifying_competitors.qualifying_count > 0) {
+    const qc = input.qualifying_competitors;
+    const qualificationAssessment = qc.qualification_rate > 50 ? 'STRONG - most competitors are profitable' : 
+      qc.qualification_rate > 25 ? 'MODERATE - a significant portion are profitable' : 
+      qc.qualification_rate > 10 ? 'CHALLENGING - only a minority achieve profitability' : 
+      'DIFFICULT - very few competitors meet the profitability threshold';
+    
+    qualifyingCompetitorsContext = `
+QUALIFYING COMPETITORS ANALYSIS (Properties Meeting 2x Rent Threshold):
+This is CRITICAL data - it shows how many ${qc.total_same_bedroom}-bedroom listings actually make enough to be profitable:
+- Revenue Threshold: $${qc.revenue_threshold.toLocaleString()}/yr (2x your annual rent)
+- Qualifying Listings: ${qc.qualifying_count} out of ${qc.total_same_bedroom} (${qc.qualification_rate.toFixed(1)}%)
+- Market Viability: ${qualificationAssessment}
+
+Profile of Successful (Qualifying) Competitors:
+- Average Revenue: $${Math.round(qc.avg_qualifying_revenue).toLocaleString()}/yr
+- Average ADR: $${Math.round(qc.avg_qualifying_adr)}/night
+- Average Occupancy: ${(qc.avg_qualifying_occupancy * 100).toFixed(0)}%
+- Superhost Rate: ${qc.superhost_percentage.toFixed(0)}%
+- Professionally Managed: ${qc.professional_percentage.toFixed(0)}%
+
+Top Qualifying Competitors:
+${qc.top_qualifiers.slice(0, 5).map((l, i) => 
+  `${i + 1}. "${l.title}" - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ | ${l.rating || 'N/A'}★${l.superhost ? ' [SUPERHOST]' : ''}${l.professionally_managed ? ' [PRO]' : ''}`
+).join('\n')}
+
+Key Insight: ${qc.qualification_rate > 30 ? 
+  `With ${qc.qualification_rate.toFixed(0)}% of similar properties meeting the profitability threshold, this market shows good potential for arbitrage success.` : 
+  `Only ${qc.qualification_rate.toFixed(0)}% of similar properties meet the profitability threshold - you'll need to be in the top tier to succeed.`}`;
+  }
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -2609,6 +2665,7 @@ ${topPerformerPricingContext}
 ${rentalizerCompsContext}
 ${existingListingContext}
 ${submarketListingsContext}
+${qualifyingCompetitorsContext}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -2624,7 +2681,7 @@ Return your response as JSON with this exact structure:
   
   "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Discuss the market size, occupancy rates, pricing dynamics, and how this market compares to typical STR markets. Explain what the market conditions mean for a new entrant.",
   
-  "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. Calculate and explain the revenue-to-rent ratio.",
+  "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
   "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, and HYPER-LOCAL COMPETITION data - what does the superhost percentage, professional manager presence, and submarket density reveal about competition quality? How can this property differentiate itself in this specific neighborhood?",
   
