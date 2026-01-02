@@ -224,6 +224,28 @@ interface AnalysisResult {
   
   // Full report markdown
   full_report: string;
+  
+  // Comprehensive Narrative Report (Gemini-generated)
+  narrative_report?: {
+    executive_summary: string;
+    market_overview: string;
+    revenue_analysis: string;
+    competitive_landscape: string;
+    seasonal_strategy: string;
+    historical_context: string;
+    risk_assessment: string;
+    financial_outlook: string;
+    conclusion: string;
+    key_metrics: {
+      projected_annual_revenue: number;
+      projected_monthly_profit: number;
+      market_occupancy: number;
+      market_adr: number;
+      break_even_months: number;
+      confidence_level: 'high' | 'medium' | 'low';
+    };
+    quick_facts: string[];
+  };
 }
 
 // Progress steps
@@ -407,6 +429,7 @@ export default function PropertyAnalyzer() {
           historical_trends: data.historical_trends,
           five_year_summary: data.five_year_summary,
           historical_analysis: data.historical_analysis,
+          narrative_report: data.narrative_report,
           
           full_report: data.full_report || ''
         };
@@ -659,29 +682,270 @@ export default function PropertyAnalyzer() {
         {/* Results */}
         {result && (
           <div ref={resultsRef} className="space-y-6 mt-8">
-            {/* Executive Summary Card */}
-            <div className="rounded-2xl border-2 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-blue-400" />
+            
+            {/* Narrative Report - Main Content */}
+            {result.narrative_report ? (
+              <div className="space-y-6">
+                {/* Key Metrics Bar */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-xl p-4 border border-green-500/20">
+                    <p className="text-xs text-green-400/70 uppercase tracking-wide">Projected Revenue</p>
+                    <p className="text-2xl font-bold text-green-400">{formatCurrency(result.narrative_report.key_metrics.projected_annual_revenue)}</p>
+                    <p className="text-xs text-white/40">per year</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/10 rounded-xl p-4 border border-amber-500/20">
+                    <p className="text-xs text-amber-400/70 uppercase tracking-wide">Monthly Profit</p>
+                    <p className="text-2xl font-bold text-amber-400">{formatCurrency(result.narrative_report.key_metrics.projected_monthly_profit)}</p>
+                    <p className="text-xs text-white/40">after expenses</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500/20 to-indigo-500/10 rounded-xl p-4 border border-blue-500/20">
+                    <p className="text-xs text-blue-400/70 uppercase tracking-wide">Market Occupancy</p>
+                    <p className="text-2xl font-bold text-blue-400">{formatPercent(result.narrative_report.key_metrics.market_occupancy)}</p>
+                    <p className="text-xs text-white/40">average</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
+                    <p className="text-xs text-purple-400/70 uppercase tracking-wide">Break Even</p>
+                    <p className="text-2xl font-bold text-purple-400">{result.narrative_report.key_metrics.break_even_months} mo</p>
+                    <p className="text-xs text-white/40">estimated</p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-white">Analysis Summary</h3>
+                
+                {/* Quick Facts */}
+                {result.narrative_report.quick_facts && result.narrative_report.quick_facts.length > 0 && (
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="flex flex-wrap gap-2">
+                      {result.narrative_report.quick_facts.map((fact, i) => (
+                        <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 rounded-full text-sm text-white/80">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                          {fact}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Executive Summary */}
+                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl border border-blue-500/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-blue-400" />
+                    Executive Summary
+                  </h3>
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <p className="text-white/90 leading-relaxed whitespace-pre-line">{result.narrative_report.executive_summary}</p>
+                  </div>
+                </div>
+                
+                {/* Market Overview */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('market_overview')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-emerald-400" />
+                      Market Overview
+                    </h3>
+                    {expandedSections.has('market_overview') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('market_overview') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.market_overview}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Revenue Analysis */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('revenue_analysis')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-green-400" />
+                      Revenue Analysis
+                    </h3>
+                    {expandedSections.has('revenue_analysis') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('revenue_analysis') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.revenue_analysis}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Competitive Landscape */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('competitive')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-orange-400" />
+                      Competitive Landscape
+                    </h3>
+                    {expandedSections.has('competitive') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('competitive') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.competitive_landscape}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Seasonal Strategy */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('seasonal')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-cyan-400" />
+                      Seasonal Strategy
+                    </h3>
+                    {expandedSections.has('seasonal') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('seasonal') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.seasonal_strategy}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Historical Context */}
+                {result.narrative_report.historical_context && (
+                  <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                    <button
+                      onClick={() => toggleSection('historical')}
+                      className="w-full flex items-center justify-between text-left"
+                    >
+                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-indigo-400" />
+                        Historical Context
+                      </h3>
+                      {expandedSections.has('historical') ? (
+                        <ChevronUp className="w-5 h-5 text-white/50" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-white/50" />
+                      )}
+                    </button>
+                    {expandedSections.has('historical') && (
+                      <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                        <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.historical_context}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Risk Assessment */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('risks')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                      Risk Assessment
+                    </h3>
+                    {expandedSections.has('risks') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('risks') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.risk_assessment}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Financial Outlook */}
+                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                  <button
+                    onClick={() => toggleSection('financial')}
+                    className="w-full flex items-center justify-between text-left"
+                  >
+                    <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                      <Banknote className="w-5 h-5 text-emerald-400" />
+                      Financial Outlook
+                    </h3>
+                    {expandedSections.has('financial') ? (
+                      <ChevronUp className="w-5 h-5 text-white/50" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-white/50" />
+                    )}
+                  </button>
+                  {expandedSections.has('financial') && (
+                    <div className="mt-4 prose prose-invert prose-sm max-w-none">
+                      <p className="text-white/80 leading-relaxed whitespace-pre-line">{result.narrative_report.financial_outlook}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Conclusion */}
+                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl border border-amber-500/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-amber-400" />
+                    Conclusion
+                  </h3>
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    <p className="text-white/90 leading-relaxed whitespace-pre-line">{result.narrative_report.conclusion}</p>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2">
+                    <span className="text-sm text-white/50">Confidence Level:</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      result.narrative_report.key_metrics.confidence_level === 'high' 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : result.narrative_report.key_metrics.confidence_level === 'medium'
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {result.narrative_report.key_metrics.confidence_level.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="text-lg text-white/90 mb-4">{result.executive_summary.summary}</p>
-              {result.executive_summary.key_points && result.executive_summary.key_points.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-white/60 font-medium">Key Points:</p>
-                  <ul className="space-y-2">
-                    {result.executive_summary.key_points.map((point: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-white/80">
-                        <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-400" />
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
+            ) : (
+              /* Fallback to old Executive Summary Card if narrative report not available */
+              <div className="rounded-2xl border-2 p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">Analysis Summary</h3>
                 </div>
-              )}
-            </div>
+                <p className="text-lg text-white/90 mb-4">{result.executive_summary.summary}</p>
+                {result.executive_summary.key_points && result.executive_summary.key_points.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-white/60 font-medium">Key Points:</p>
+                    <ul className="space-y-2">
+                      {result.executive_summary.key_points.map((point: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-white/80">
+                          <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-400" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Revenue Projections */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">

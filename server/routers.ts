@@ -1087,6 +1087,8 @@ export const appRouter = router({
               five_year_summary: analysis.five_year_summary,
               // GEMINI HISTORICAL ANALYSIS
               historical_analysis: analysis.historical_analysis,
+              // COMPREHENSIVE NARRATIVE REPORT
+              narrative_report: analysis.narrative_report,
               
               // Full markdown report
               full_report: analysis.report

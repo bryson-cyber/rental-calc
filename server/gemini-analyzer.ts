@@ -1962,3 +1962,365 @@ Focus on:
     };
   }
 }
+
+
+// ============================================
+// COMPREHENSIVE NARRATIVE REPORT GENERATION
+// ============================================
+
+/**
+ * Input data for generating a comprehensive narrative report
+ */
+export interface NarrativeReportInput {
+  // Property basics
+  address: string;
+  monthly_rent: number;
+  bedrooms: number;
+  bathrooms: number;
+  
+  // Market data
+  market_name: string;
+  market_occupancy: number;
+  market_adr: number;
+  active_listings: number;
+  
+  // Revenue projections
+  revenue_low: number;
+  revenue_mid: number;
+  revenue_high: number;
+  
+  // Profitability
+  monthly_expenses: number;
+  annual_profit_conservative: number;
+  annual_profit_realistic: number;
+  annual_profit_optimistic: number;
+  
+  // Competitors (top 5)
+  competitors: Array<{
+    name: string;
+    annual_revenue: number;
+    occupancy: number;
+    adr: number;
+    rating: number | null;
+  }>;
+  
+  // Seasonality (12 months)
+  seasonality: Array<{
+    month: string;
+    revenue: number;
+    occupancy: number;
+    adr: number;
+    season_type: 'peak' | 'shoulder' | 'off';
+  }>;
+  
+  // 5-year historical data (if available)
+  five_year_summary?: {
+    years_of_data: number;
+    occupancy: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+    };
+    adr: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+    };
+    revenue: {
+      current_year_avg: number;
+      five_year_avg: number;
+      trend: 'increasing' | 'stable' | 'decreasing';
+      percent_change: number;
+    };
+    market_maturity: 'emerging' | 'growing' | 'mature' | 'saturated';
+  };
+  
+  // Supply trend
+  supply_trend?: {
+    current_listings: number;
+    net_change: number;
+    percent_change: number;
+    trend: 'growing' | 'stable' | 'declining';
+  };
+  
+  // Professional host stats
+  professional_stats?: {
+    professional_percentage: number;
+    superhost_percentage: number;
+    revenue_premium_percent?: number;
+  };
+  
+  // Booking patterns
+  booking_patterns?: {
+    avg_lead_time_days: number;
+    avg_length_of_stay: number;
+  };
+  
+  // Top amenities
+  amenities?: Array<{
+    amenity: string;
+    percentage_of_top_performers: number;
+  }>;
+  
+  // Risks
+  risks?: Array<{
+    category: string;
+    description: string;
+    severity: string;
+  }>;
+}
+
+/**
+ * The narrative report output structure
+ */
+export interface NarrativeReport {
+  // Main narrative sections (Gemini-generated prose)
+  executive_summary: string;
+  market_overview: string;
+  revenue_analysis: string;
+  competitive_landscape: string;
+  seasonal_strategy: string;
+  historical_context: string;
+  risk_assessment: string;
+  financial_outlook: string;
+  conclusion: string;
+  
+  // Key metrics for display cards
+  key_metrics: {
+    projected_annual_revenue: number;
+    projected_monthly_profit: number;
+    market_occupancy: number;
+    market_adr: number;
+    break_even_months: number;
+    confidence_level: 'high' | 'medium' | 'low';
+  };
+  
+  // Quick facts for sidebar
+  quick_facts: string[];
+}
+
+/**
+ * Generate a comprehensive narrative investment report using Gemini
+ * This transforms raw data into a professional, readable document
+ */
+export async function generateNarrativeReport(
+  input: NarrativeReportInput
+): Promise<NarrativeReport> {
+  // Format competitor data for the prompt
+  const competitorSummary = input.competitors.slice(0, 5).map((c, i) => 
+    `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy * 100)}% occupancy, $${Math.round(c.adr)}/night${c.rating ? `, ${c.rating}★` : ''}`
+  ).join('\n');
+  
+  // Format seasonality for the prompt
+  const peakMonths = input.seasonality.filter(s => s.season_type === 'peak').map(s => s.month).join(', ');
+  const offMonths = input.seasonality.filter(s => s.season_type === 'off').map(s => s.month).join(', ');
+  const avgPeakRevenue = input.seasonality.filter(s => s.season_type === 'peak').reduce((sum, s) => sum + s.revenue, 0) / Math.max(1, input.seasonality.filter(s => s.season_type === 'peak').length);
+  const avgOffRevenue = input.seasonality.filter(s => s.season_type === 'off').reduce((sum, s) => sum + s.revenue, 0) / Math.max(1, input.seasonality.filter(s => s.season_type === 'off').length);
+  
+  // Build historical context if available
+  let historicalContext = '';
+  if (input.five_year_summary) {
+    const fys = input.five_year_summary;
+    historicalContext = `
+HISTORICAL DATA (${fys.years_of_data} years):
+- Market Maturity: ${fys.market_maturity}
+- Occupancy Trend: ${fys.occupancy.trend} (${fys.occupancy.percent_change > 0 ? '+' : ''}${fys.occupancy.percent_change.toFixed(1)}% over 5 years)
+  Current: ${fys.occupancy.current_year_avg.toFixed(1)}%, 5-Year Avg: ${fys.occupancy.five_year_avg.toFixed(1)}%
+- ADR Trend: ${fys.adr.trend} (${fys.adr.percent_change > 0 ? '+' : ''}${fys.adr.percent_change.toFixed(1)}% over 5 years)
+  Current: $${fys.adr.current_year_avg.toFixed(0)}, 5-Year Avg: $${fys.adr.five_year_avg.toFixed(0)}
+- Revenue Trend: ${fys.revenue.trend} (${fys.revenue.percent_change > 0 ? '+' : ''}${fys.revenue.percent_change.toFixed(1)}% over 5 years)
+  Current: $${fys.revenue.current_year_avg.toFixed(0)}/mo, 5-Year Avg: $${fys.revenue.five_year_avg.toFixed(0)}/mo`;
+  }
+  
+  // Build supply trend context
+  let supplyContext = '';
+  if (input.supply_trend) {
+    supplyContext = `
+SUPPLY DYNAMICS:
+- Current Active Listings: ${input.supply_trend.current_listings}
+- Net Change: ${input.supply_trend.net_change > 0 ? '+' : ''}${input.supply_trend.net_change} listings
+- Trend: ${input.supply_trend.trend} (${input.supply_trend.percent_change > 0 ? '+' : ''}${input.supply_trend.percent_change.toFixed(1)}%)`;
+  }
+  
+  // Build professional stats context
+  let professionalContext = '';
+  if (input.professional_stats) {
+    professionalContext = `
+HOST LANDSCAPE:
+- Professional Hosts: ${input.professional_stats.professional_percentage.toFixed(1)}% of market
+- Superhosts: ${input.professional_stats.superhost_percentage.toFixed(1)}%
+${input.professional_stats.revenue_premium_percent ? `- Professional Revenue Premium: +${input.professional_stats.revenue_premium_percent.toFixed(0)}%` : ''}`;
+  }
+  
+  // Build amenities context
+  let amenitiesContext = '';
+  if (input.amenities && input.amenities.length > 0) {
+    amenitiesContext = `
+TOP AMENITIES (% of top performers):
+${input.amenities.slice(0, 8).map(a => `- ${a.amenity}: ${a.percentage_of_top_performers}%`).join('\n')}`;
+  }
+  
+  // Build risks context
+  let risksContext = '';
+  if (input.risks && input.risks.length > 0) {
+    risksContext = `
+IDENTIFIED RISKS:
+${input.risks.slice(0, 5).map(r => `- ${r.category}: ${r.description} (${r.severity})`).join('\n')}`;
+  }
+
+  const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
+
+Write in a professional but accessible tone. Use specific numbers from the data. Explain what the numbers mean and why they matter. Be honest about both opportunities and risks.
+
+PROPERTY DETAILS:
+- Address: ${input.address}
+- Monthly Rent: $${input.monthly_rent.toLocaleString()}
+- Configuration: ${input.bedrooms} bedrooms, ${input.bathrooms} bathrooms
+
+MARKET OVERVIEW:
+- Market: ${input.market_name}
+- Market Occupancy: ${input.market_occupancy < 1 ? (input.market_occupancy * 100).toFixed(1) : input.market_occupancy.toFixed(1)}%
+- Market ADR: $${input.market_adr.toFixed(0)}
+- Active Listings: ${input.active_listings}
+
+REVENUE PROJECTIONS:
+- Conservative (50th percentile): $${input.revenue_low.toLocaleString()}/year
+- Realistic (75th percentile): $${input.revenue_mid.toLocaleString()}/year  
+- Optimistic (90th percentile): $${input.revenue_high.toLocaleString()}/year
+
+PROFITABILITY:
+- Monthly Operating Expenses: $${input.monthly_expenses.toLocaleString()}
+- Annual Profit (Conservative): $${input.annual_profit_conservative.toLocaleString()}
+- Annual Profit (Realistic): $${input.annual_profit_realistic.toLocaleString()}
+- Annual Profit (Optimistic): $${input.annual_profit_optimistic.toLocaleString()}
+
+TOP COMPETITORS:
+${competitorSummary}
+
+SEASONALITY:
+- Peak Months: ${peakMonths || 'Not identified'}
+- Off-Season Months: ${offMonths || 'Not identified'}
+- Average Peak Revenue: $${avgPeakRevenue.toFixed(0)}/month
+- Average Off-Season Revenue: $${avgOffRevenue.toFixed(0)}/month
+${historicalContext}
+${supplyContext}
+${professionalContext}
+${amenitiesContext}
+${risksContext}
+
+BOOKING PATTERNS:
+- Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
+- Average Stay Length: ${input.booking_patterns?.avg_length_of_stay || 'N/A'} nights
+
+---
+
+Generate a comprehensive investment report with the following sections. Each section should be 2-4 paragraphs of flowing narrative prose (not bullet points). Use the data to tell a story.
+
+Return your response as JSON with this exact structure:
+{
+  "executive_summary": "A compelling 2-3 paragraph overview that captures the essence of this investment opportunity. Start with the bottom line - is this a strong opportunity? Then summarize the key factors that support your assessment. End with what makes this property unique in its market.",
+  
+  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Discuss the market size, occupancy rates, pricing dynamics, and how this market compares to typical STR markets. Explain what the market conditions mean for a new entrant.",
+  
+  "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. Calculate and explain the revenue-to-rent ratio.",
+  
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? What's the competitive intensity? How can this property differentiate itself? Discuss the professional host presence and what it means.",
+  
+  "seasonal_strategy": "2-3 paragraphs on seasonality and timing. When are the peak and off-peak periods? How dramatic is the seasonal swing? What pricing and marketing strategies should be employed for each season?",
+  
+  "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? How has the market evolved?",
+  
+  "risk_assessment": "2-3 paragraphs honestly discussing the risks. What could go wrong? What are the market-specific risks? What operational challenges should be expected? How can these risks be mitigated?",
+  
+  "financial_outlook": "2-3 paragraphs on the financial picture. What's the realistic profit potential? How long until break-even on startup costs? What's the cash flow situation month-to-month? Is this a good use of capital?",
+  
+  "conclusion": "A strong 2-paragraph conclusion. Summarize the opportunity. Provide a clear, honest assessment of whether this property is worth pursuing and under what conditions.",
+  
+  "key_metrics": {
+    "projected_annual_revenue": <realistic annual revenue number>,
+    "projected_monthly_profit": <realistic monthly profit number>,
+    "market_occupancy": <market occupancy as decimal 0-1>,
+    "market_adr": <market ADR number>,
+    "break_even_months": <estimated months to break even on startup costs>,
+    "confidence_level": "<high|medium|low based on data quality and market stability>"
+  },
+  
+  "quick_facts": [
+    "<5-7 one-line facts that capture the key takeaways, e.g., 'Revenue potential is 2.8x the monthly rent' or 'Market occupancy of 68% is above the national average'>"
+  ]
+}
+
+IMPORTANT:
+- Write in flowing paragraphs, NOT bullet points
+- Use specific numbers from the data provided
+- Be honest and balanced - acknowledge both opportunities and risks
+- Explain what numbers mean, don't just state them
+- Write for someone who may be new to STR investing
+- The tone should be professional but accessible, like a trusted advisor`;
+
+  try {
+    const response = await callGemini(prompt, 8192);
+    
+    // Parse JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    return {
+      executive_summary: parsed.executive_summary || 'Analysis in progress...',
+      market_overview: parsed.market_overview || '',
+      revenue_analysis: parsed.revenue_analysis || '',
+      competitive_landscape: parsed.competitive_landscape || '',
+      seasonal_strategy: parsed.seasonal_strategy || '',
+      historical_context: parsed.historical_context || '',
+      risk_assessment: parsed.risk_assessment || '',
+      financial_outlook: parsed.financial_outlook || '',
+      conclusion: parsed.conclusion || '',
+      key_metrics: {
+        projected_annual_revenue: parsed.key_metrics?.projected_annual_revenue || input.revenue_mid,
+        projected_monthly_profit: parsed.key_metrics?.projected_monthly_profit || Math.round(input.annual_profit_realistic / 12),
+        market_occupancy: parsed.key_metrics?.market_occupancy || input.market_occupancy,
+        market_adr: parsed.key_metrics?.market_adr || input.market_adr,
+        break_even_months: parsed.key_metrics?.break_even_months || 12,
+        confidence_level: parsed.key_metrics?.confidence_level || 'medium'
+      },
+      quick_facts: parsed.quick_facts || []
+    };
+  } catch (error) {
+    console.error('[GeminiAnalyzer] Error generating narrative report:', error);
+    
+    // Return a basic fallback report
+    return {
+      executive_summary: `This ${input.bedrooms}-bedroom property at ${input.address} presents a potential short-term rental opportunity in the ${input.market_name} market. With a monthly rent of $${input.monthly_rent.toLocaleString()}, the property could generate between $${input.revenue_low.toLocaleString()} and $${input.revenue_high.toLocaleString()} annually based on market comparables.`,
+      market_overview: `The ${input.market_name} market shows an occupancy rate of ${(input.market_occupancy * 100).toFixed(1)}% with an average daily rate of $${input.market_adr.toFixed(0)}. There are currently ${input.active_listings} active listings in the area.`,
+      revenue_analysis: `Revenue projections range from $${input.revenue_low.toLocaleString()} (conservative) to $${input.revenue_high.toLocaleString()} (optimistic), with a realistic target of $${input.revenue_mid.toLocaleString()} annually.`,
+      competitive_landscape: `The market includes ${input.competitors.length} comparable properties. Top performers are achieving annual revenues of $${input.competitors[0]?.annual_revenue?.toLocaleString() || 'N/A'}.`,
+      seasonal_strategy: `Peak season months include ${peakMonths || 'varies by market'}. Off-season months are ${offMonths || 'varies by market'}.`,
+      historical_context: input.five_year_summary 
+        ? `The market has shown ${input.five_year_summary.revenue.trend} revenue trends over the past ${input.five_year_summary.years_of_data} years.`
+        : 'Historical data analysis is pending.',
+      risk_assessment: 'Key risks include market saturation, seasonal fluctuations, and regulatory changes. Proper management and competitive positioning can help mitigate these risks.',
+      financial_outlook: `With monthly expenses of approximately $${input.monthly_expenses.toLocaleString()}, the realistic profit scenario projects $${input.annual_profit_realistic.toLocaleString()} annually.`,
+      conclusion: 'This property warrants further investigation. Consider visiting the property, reviewing local regulations, and developing a detailed business plan before proceeding.',
+      key_metrics: {
+        projected_annual_revenue: input.revenue_mid,
+        projected_monthly_profit: Math.round(input.annual_profit_realistic / 12),
+        market_occupancy: input.market_occupancy,
+        market_adr: input.market_adr,
+        break_even_months: 12,
+        confidence_level: 'medium'
+      },
+      quick_facts: [
+        `Monthly rent: $${input.monthly_rent.toLocaleString()}`,
+        `Projected annual revenue: $${input.revenue_mid.toLocaleString()}`,
+        `Market occupancy: ${(input.market_occupancy * 100).toFixed(1)}%`,
+        `${input.competitors.length} comparable properties in area`
+      ]
+    };
+  }
+}

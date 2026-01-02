@@ -1126,3 +1126,12 @@
 - [x] Find 10 rental properties in St. Louis with addresses and rent prices
 - [x] Run all 10 properties through the analyzer
 - [x] Document results and any issues found
+
+
+## Narrative Report Rebuild - Gemini Synthesized Output
+- [x] Design narrative report structure (executive summary, market story, competition analysis, financial projections, recommendations)
+- [x] Create comprehensive Gemini prompt that takes ALL raw data and produces narrative document
+- [x] Generate report sections: Property Overview, Market Context, Competition Landscape, Revenue Analysis, Risk Assessment, Recommendations
+- [x] Replace raw data display with Gemini-generated narrative content
+- [x] Make report read like a professional investment memo, not a data dump
+- [x] Test report quality across multiple properties
