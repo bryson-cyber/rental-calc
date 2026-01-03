@@ -2342,6 +2342,7 @@ export async function getQualifyingCompetitors(
   const allSameBedroomListings = await getAllMarketListings(marketId, {
     bedrooms,
     maxListings: 500, // Fetch more listings to ensure we get at least 10 same-bedroom
+    minFilteredCount: 15, // Continue fetching until we have at least 15 same-bedroom listings
   });
   
   // Filter to those meeting revenue threshold
