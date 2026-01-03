@@ -1,8 +1,8 @@
 /**
- * AI Investment Advisor - Dynamic AirDNA Data Fetching
+ * AI Investment Advisor - Dynamic Data Fetching
  * 
  * This component uses Gemini function calling to dynamically fetch
- * AirDNA data based on user questions. No pre-loaded data needed.
+ * market data based on user questions. No pre-loaded data needed.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -155,7 +155,7 @@ export default function AIAdvisor() {
             </div>
             <div>
               <h1 className="text-2xl font-serif font-semibold">STR Investment Advisor</h1>
-              <p className="text-white/60 text-sm">Real-time AirDNA data • Any market • Any question</p>
+              <p className="text-white/60 text-sm">Real-time market data • Any market • Any question</p>
             </div>
           </div>
         </div>
@@ -173,14 +173,14 @@ export default function AIAdvisor() {
               Ask me about any STR market
             </h2>
             <p className="text-[#0F172A]/60 max-w-md mb-4">
-              I fetch real-time AirDNA data for any market you ask about. 
+              I fetch real-time market data for any market you ask about. 
               Compare cities, analyze revenue, understand seasonality.
             </p>
             
             {/* Data Source Badge */}
             <div className="inline-flex items-center gap-2 bg-[#0F172A]/5 px-4 py-2 rounded-full mb-8">
               <Database className="w-4 h-4 text-[#C9A962]" />
-              <span className="text-sm text-[#0F172A]/70">Powered by live AirDNA API data</span>
+              <span className="text-sm text-[#0F172A]/70">Powered by Coach Inayah</span>
             </div>
             
             <p className="text-sm text-[#0F172A]/40 mb-4">Try asking:</p>
@@ -210,7 +210,7 @@ export default function AIAdvisor() {
                   <BarChart3 className="w-5 h-5 text-[#C9A962]" />
                 </div>
                 <p className="text-xs font-medium text-[#0F172A]">Live Data</p>
-                <p className="text-xs text-[#0F172A]/50">Fresh AirDNA stats</p>
+                <p className="text-xs text-[#0F172A]/50">Fresh market stats</p>
               </div>
               <div className="text-center p-4">
                 <div className="w-10 h-10 rounded-lg bg-[#C9A962]/10 flex items-center justify-center mx-auto mb-2">
@@ -269,7 +269,7 @@ export default function AIAdvisor() {
             </Button>
           </div>
           <p className="text-xs text-center text-[#0F172A]/40 mt-3">
-            Data sourced from AirDNA API in real-time • Results may take a moment to fetch
+            Data sourced in real-time • Results may take a moment to fetch
           </p>
         </div>
       </div>

@@ -1773,7 +1773,7 @@ Format everything in clear tables where appropriate. This is for a beginner inve
                   <Zap className="w-6 h-6 text-[#C9A962]" />
                 </div>
                 <p className="text-sm font-medium text-white">Real-Time Data</p>
-                <p className="text-xs text-white/40">Fresh AirDNA stats</p>
+                <p className="text-xs text-white/40">Fresh market stats</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
