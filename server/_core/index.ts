@@ -8,6 +8,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { progressTracker, type ProgressState } from "../progress-tracker";
+import { getDb } from "../db";
+import { analysisReports } from "../../drizzle/schema";
+import { desc, like, eq, or } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -69,6 +72,51 @@ async function startServer() {
     });
   });
   
+  // Admin API endpoints
+  app.get('/api/admin/reports', async (req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available', reports: [] });
+      }
+      
+      const reports = await db
+        .select()
+        .from(analysisReports)
+        .orderBy(desc(analysisReports.createdAt))
+        .limit(100);
+      
+      res.json({ reports });
+    } catch (error) {
+      console.error('[Admin] Error fetching reports:', error);
+      res.status(500).json({ error: 'Failed to fetch reports', reports: [] });
+    }
+  });
+  
+  app.get('/api/admin/reports/:id', async (req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      const [report] = await db
+        .select()
+        .from(analysisReports)
+        .where(eq(analysisReports.id, parseInt(req.params.id)))
+        .limit(1);
+      
+      if (!report) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+      
+      res.json({ report });
+    } catch (error) {
+      console.error('[Admin] Error fetching report:', error);
+      res.status(500).json({ error: 'Failed to fetch report' });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

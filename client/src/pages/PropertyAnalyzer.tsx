@@ -608,10 +608,10 @@ export default function PropertyAnalyzer() {
         
         setResult(analysisResult);
         
-        // Show Typeform gate if user hasn't completed it yet
-        if (!hasCompletedTypeform) {
-          setShowTypeformGate(true);
-        }
+        // Typeform gate removed - users see results immediately
+        // if (!hasCompletedTypeform) {
+        //   setShowTypeformGate(true);
+        // }
         
         // Scroll to results
         setTimeout(() => {

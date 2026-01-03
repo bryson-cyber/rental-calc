@@ -1,0 +1,112 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysis_reports' ORDER BY ORDINAL_POSITION LIMIT 34;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysis_reports' ORDER BY ORDINAL_POSITION LIMIT 34;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "address"
+    },
+    {
+      "COLUMN_NAME": "city"
+    },
+    {
+      "COLUMN_NAME": "state"
+    },
+    {
+      "COLUMN_NAME": "zipCode"
+    },
+    {
+      "COLUMN_NAME": "latitude"
+    },
+    {
+      "COLUMN_NAME": "longitude"
+    },
+    {
+      "COLUMN_NAME": "bedrooms"
+    },
+    {
+      "COLUMN_NAME": "bathrooms"
+    },
+    {
+      "COLUMN_NAME": "monthlyRent"
+    },
+    {
+      "COLUMN_NAME": "marketId"
+    },
+    {
+      "COLUMN_NAME": "marketName"
+    },
+    {
+      "COLUMN_NAME": "annualRevenueConservative"
+    },
+    {
+      "COLUMN_NAME": "annualRevenueRealistic"
+    },
+    {
+      "COLUMN_NAME": "annualRevenueOptimistic"
+    },
+    {
+      "COLUMN_NAME": "occupancyRate"
+    },
+    {
+      "COLUMN_NAME": "averageDailyRate"
+    },
+    {
+      "COLUMN_NAME": "revpar"
+    },
+    {
+      "COLUMN_NAME": "annualProfitConservative"
+    },
+    {
+      "COLUMN_NAME": "annualProfitRealistic"
+    },
+    {
+      "COLUMN_NAME": "annualProfitOptimistic"
+    },
+    {
+      "COLUMN_NAME": "breakEvenOccupancy"
+    },
+    {
+      "COLUMN_NAME": "startupCostsMin"
+    },
+    {
+      "COLUMN_NAME": "startupCostsMax"
+    },
+    {
+      "COLUMN_NAME": "verdict"
+    },
+    {
+      "COLUMN_NAME": "confidenceScore"
+    },
+    {
+      "COLUMN_NAME": "fullAnalysisData"
+    },
+    {
+      "COLUMN_NAME": "narrativeReport"
+    },
+    {
+      "COLUMN_NAME": "competitorData"
+    },
+    {
+      "COLUMN_NAME": "userIp"
+    },
+    {
+      "COLUMN_NAME": "userAgent"
+    },
+    {
+      "COLUMN_NAME": "sessionId"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\naddress\ncity\nstate\nzipCode\nlatitude\nlongitude\nbedrooms\nbathrooms\nmonthlyRent\nmarketId\nmarketName\nannualRevenueConservative\nannualRevenueRealistic\nannualRevenueOptimistic\noccupancyRate\naverageDailyRate\nrevpar\nannualProfitConservative\nannualProfitRealistic\nannualProfitOptimistic\nbreakEvenOccupancy\nstartupCostsMin\nstartupCostsMax\nverdict\nconfidenceScore\nfullAnalysisData\nnarrativeReport\ncompetitorData\nuserIp\nuserAgent\nsessionId\ncreatedAt\nupdatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 416
+}

@@ -1625,3 +1625,15 @@
 - [ ] Implement fallback handling when AI times out - show numeric results with "AI insights unavailable" message
 - [x] Simplify AI prompt for faster responses
 - [ ] Test the fix
+
+
+## Fix Typeform Embed Issue
+- [x] Remove Typeform gate entirely - users see results immediately
+
+## Admin Portal for Reports
+- [x] Create database schema for storing analysis reports
+- [x] Build admin portal page at /admin with report list
+- [x] Add report detail view with full analysis data
+- [x] Add API endpoints for admin report access
+- [ ] Add search/filter functionality
+- [x] Test the admin portal

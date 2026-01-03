@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -1037,6 +1037,71 @@ export const appRouter = router({
           );
           
           console.log('[LeadMagnet] Analysis complete');
+          
+          // Save report to database for admin access
+          console.log('[LeadMagnet] Attempting to save report to database...');
+          try {
+            const db = await getDb();
+            if (db && analysis) {
+              const { analysisReports } = await import('../drizzle/schema');
+              const profitability = (analysis.profitability || {}) as any;
+              const propertyEstimate = (analysis.property_estimate || {}) as any;
+              const aiAnalysis = (analysis.ai_analysis || {}) as any;
+              
+              // Extract numeric values safely
+              const getNumber = (val: any): number | null => {
+                if (val === null || val === undefined) return null;
+                const num = typeof val === 'string' ? parseFloat(val) : Number(val);
+                return isNaN(num) ? null : Math.round(num);
+              };
+              
+              const getDecimalStr = (val: any): string | null => {
+                if (val === null || val === undefined) return null;
+                const num = typeof val === 'string' ? parseFloat(val) : Number(val);
+                return isNaN(num) ? null : num.toFixed(2);
+              };
+              
+              // Use Drizzle ORM insert with proper column mapping
+              const insertData = {
+                address: input.address,
+                city: propertyEstimate.city || null,
+                state: propertyEstimate.state || null,
+                zipCode: propertyEstimate.zipcode || null,
+                latitude: getDecimalStr(propertyEstimate.latitude),
+                longitude: getDecimalStr(propertyEstimate.longitude),
+                bedrooms: input.bedrooms || null,
+                bathrooms: getDecimalStr(input.bathrooms),
+                monthlyRent: input.monthly_rent || null,
+                marketId: propertyEstimate.market_id || null,
+                marketName: propertyEstimate.market_name || null,
+                annualRevenueConservative: getNumber(profitability.conservative?.annual_revenue),
+                annualRevenueRealistic: getNumber(profitability.realistic?.annual_revenue),
+                annualRevenueOptimistic: getNumber(profitability.optimistic?.annual_revenue),
+                occupancyRate: getDecimalStr(propertyEstimate.occupancy),
+                averageDailyRate: getNumber(propertyEstimate.adr),
+                revpar: getNumber(propertyEstimate.revpar),
+                annualProfitConservative: getNumber(profitability.conservative?.annual_profit),
+                annualProfitRealistic: getNumber(profitability.realistic?.annual_profit),
+                annualProfitOptimistic: getNumber(profitability.optimistic?.annual_profit),
+                breakEvenOccupancy: getDecimalStr(profitability.break_even_occupancy),
+                startupCostsMin: getNumber(profitability.startup_costs?.min),
+                startupCostsMax: getNumber(profitability.startup_costs?.max),
+                verdict: aiAnalysis?.verdict?.rating || aiAnalysis?.verdict || null,
+                confidenceScore: getNumber(aiAnalysis?.verdict?.confidence || aiAnalysis?.confidence_score),
+                fullAnalysisData: analysis,
+                narrativeReport: analysis.enhanced_narrative_report || analysis.narrative_report || {},
+                competitorData: analysis.competitors || [],
+              };
+              
+              console.log('[LeadMagnet] Inserting report with address:', input.address);
+              await db.insert(analysisReports).values(insertData);
+              console.log('[LeadMagnet] Report saved to database successfully');
+            }
+          } catch (dbError: any) {
+            console.error('[LeadMagnet] Error saving report to database:', dbError?.message || dbError);
+            console.error('[LeadMagnet] Full error:', dbError);
+            // Don't fail the request if database save fails
+          }
           
           // Return structured data for the frontend
           return {

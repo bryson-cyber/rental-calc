@@ -18,6 +18,7 @@ import AIAdvisor from "./pages/AIAdvisor";
 import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 
 import TopPerformers from "./pages/TopPerformers";
+import AdminReports from "./pages/AdminReports";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -37,6 +38,7 @@ function Router() {
       <Route path={"/advisor"} component={AIAdvisor} />
 
       <Route path={"/top-performers"} component={TopPerformers} />
+      <Route path={"/admin"} component={AdminReports} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
