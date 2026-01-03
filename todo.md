@@ -1420,3 +1420,23 @@
 - [x] Enhanced generatePricingStrategy with revenue optimization calculations
 - [x] Enhanced assessRisks with quantified risk scoring (4 risk dimensions, composite score)
 - [x] Enhanced generateActionPlan with detailed timeline, costs, and ROI projections
+
+
+### Prompt Engineering - Deep Dive Maximization
+- [ ] Map all Gemini functions and their data inputs
+- [ ] Identify unused data fields in each function
+- [ ] Add pre-computed calculations to reduce Gemini's cognitive load
+- [ ] Add specific forcing questions that require quantified answers
+- [ ] Add cross-referencing instructions between data sections
+- [ ] Enhance output schema requirements for structured responses
+- [ ] Test and validate enhanced prompts
+
+### Prompt Engineering Deep Dive - Completed
+- [x] Map all Gemini functions and data inputs
+- [x] Add 10 pre-computed calculations (revenue-to-rent, RevPAR, break-even, sensitivity, etc.)
+- [x] Add 23 specific forcing questions with quantified answer requirements
+- [x] Add 14 cross-referencing requirements connecting data sections
+- [x] Enhance key_metrics with 9 new fields (break_even_occupancy, cushion, seasonal_swing, etc.)
+- [x] Enhance quick_facts with 10 data-driven insights
+- [x] Update NarrativeReport interface with new fields
+- [x] Update fallback report with pre-computed values
