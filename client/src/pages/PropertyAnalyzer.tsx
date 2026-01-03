@@ -49,6 +49,7 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { TypeformOverlay } from '@/components/TypeformOverlay';
 import { toast } from 'sonner';
 import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
+import NarrativeSkeleton, { InlineNarrativeSkeleton } from '@/components/NarrativeSkeleton';
 
 // Export PDF Button Component with Progress Indicator
 function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
@@ -407,6 +408,7 @@ export default function PropertyAnalyzer() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [isNarrativeLoading, setIsNarrativeLoading] = useState(false);
   
   // UI state
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['market_overview', 'revenue_analysis', 'competitive', 'seasonal', 'risks', 'financial', 'conclusion']));
@@ -470,6 +472,7 @@ export default function PropertyAnalyzer() {
     setCurrentStep(1);
     setError(null);
     setResult(null);
+    setIsNarrativeLoading(false);
     
     // Simulate step progression
     const stepInterval = setInterval(() => {
@@ -595,6 +598,13 @@ export default function PropertyAnalyzer() {
           
           full_report: data.full_report || ''
         };
+        
+        // If no narrative report yet, show skeleton and set flag
+        if (!analysisResult.narrative_report) {
+          setIsNarrativeLoading(true);
+        } else {
+          setIsNarrativeLoading(false);
+        }
         
         setResult(analysisResult);
         
@@ -1138,6 +1148,9 @@ export default function PropertyAnalyzer() {
                   </div>
                 )}
               </div>
+            ) : isNarrativeLoading ? (
+              /* Show skeleton while AI narrative is generating */
+              <NarrativeSkeleton />
             ) : (
               /* Fallback to structured display if no narrative report */
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">

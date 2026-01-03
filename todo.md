@@ -1611,3 +1611,10 @@
 - [x] Switch from Claude Opus to Gemini 2.5 Pro (faster)
 - [x] Reduce JSON output complexity
 - [x] Test the simplified approach
+
+
+## Loading Skeleton for AI Insights
+- [x] Identify where AI insights are displayed in results page
+- [x] Create skeleton loading component for AI narrative section
+- [x] Implement progressive loading to show numeric results first
+- [x] Test the loading skeleton behavior
