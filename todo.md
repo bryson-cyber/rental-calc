@@ -1476,3 +1476,21 @@
 - [x] Run stress test on St. Louis property (4461 Gannett St)
 - [x] Fix any bugs found during stress test (stale closure bug fixed with useRef)
 - [x] Continue enhancing Gemini prompts (all 8 functions optimized) for maximum insights
+
+
+### Thorough Stress Test - Published Site
+- [ ] Navigate to published site (rentalcalc-dguybt3j.manus.space)
+- [ ] Run full property analysis on St. Louis property
+- [ ] Verify competitor count shows 10 properties (not 4)
+- [ ] Click and examine every accordion section in detail
+- [ ] Review AI-generated content quality and accuracy
+- [ ] Test PDF and Excel downloads
+- [ ] Document all bugs and issues found
+- [ ] Fix identified issues
+
+
+### Critical Bug Fixes - Stress Test Round 2
+- [ ] Fix occupancy formatting - 51 places using inconsistent * 100 logic causing 7135% bug
+- [ ] Remove all made-up startup cost assumptions - only show rent + utilities
+- [ ] Fix competitor count to show 10 properties instead of 4
+- [ ] Test fixes on published site

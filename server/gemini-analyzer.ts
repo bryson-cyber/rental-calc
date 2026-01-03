@@ -20,6 +20,53 @@ import { ENV } from './_core/env';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // ============================================
+// GLOBAL HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Formats occupancy values consistently.
+ * AirDNA API returns occupancy in inconsistent formats:
+ * - Sometimes as decimal (0.71 = 71%)
+ * - Sometimes as percentage already (71 = 71%)
+ * - Sometimes as percentage * 100 (7100 = 71%)
+ * 
+ * This function normalizes all formats to a percentage string.
+ */
+function formatOccupancy(occ: number | undefined | null): string {
+  if (occ === undefined || occ === null || isNaN(occ)) return 'N/A';
+  
+  // If value is > 100, it's likely already multiplied by 100 twice (e.g., 7135 should be 71.35%)
+  if (occ > 100) {
+    return (occ / 100).toFixed(1);
+  }
+  // If value is > 1 but <= 100, it's already a percentage
+  if (occ > 1) {
+    return occ.toFixed(1);
+  }
+  // If value is <= 1, it's a decimal that needs to be converted to percentage
+  return (occ * 100).toFixed(1);
+}
+
+/**
+ * Returns occupancy as a number (percentage form, e.g., 71.35)
+ * Use this when you need to do calculations with occupancy.
+ */
+function normalizeOccupancy(occ: number | undefined | null): number {
+  if (occ === undefined || occ === null || isNaN(occ)) return 0;
+  
+  // If value is > 100, it's likely already multiplied by 100 twice
+  if (occ > 100) {
+    return occ / 100;
+  }
+  // If value is > 1 but <= 100, it's already a percentage
+  if (occ > 1) {
+    return occ;
+  }
+  // If value is <= 1, it's a decimal that needs to be converted to percentage
+  return occ * 100;
+}
+
+// ============================================
 // TYPE DEFINITIONS
 // ============================================
 
@@ -294,7 +341,7 @@ KEY CALCULATED METRICS (USE THESE IN YOUR ANALYSIS):
 
 MARKET CONTEXT:
 - Market: ${market.name}
-- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
+- Average Occupancy: ${formatOccupancy(market.occupancy)}%
 - Average Daily Rate: $${market.adr}
 - Average Annual Revenue: $${market.revenue.toLocaleString()}
 - Active Listings: ${market.active_listings.toLocaleString()} (competition density)
@@ -307,14 +354,14 @@ REVENUE PERCENTILES (${property.bedrooms}BR properties):
 
 COMPETITOR ANALYSIS:
 ${competitors.slice(0, 5).map((c, i) => `${i + 1}. "${c.name}"
-   Revenue: $${c.annual_revenue.toLocaleString()}/yr | Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% | ADR: $${c.adr}
+   Revenue: $${c.annual_revenue.toLocaleString()}/yr | Occupancy: ${formatOccupancy(c.occupancy)}% | ADR: $${c.adr}
    Rating: ${c.rating || 'N/A'}★ (${c.reviews} reviews) | Success Factor: ${c.success_factor}`).join('\n')}
 - Average Competitor Rating: ${avgCompetitorRating.toFixed(1)}★
 - Average Competitor Reviews: ${Math.round(avgCompetitorReviews)}
 - Average Competitor ADR: $${avgCompetitorADR.toFixed(0)}
 
 SEASONALITY BREAKDOWN:
-${(seasonality || []).map(s => `${s.month}: $${s.revenue.toLocaleString()} revenue, ${Math.round(s.occupancy > 1 ? s.occupancy : s.occupancy * 100)}% occ, $${s.adr} ADR (${s.season_type.toUpperCase()})`).join('\n') || 'No seasonality data available'}
+${(seasonality || []).map(s => `${s.month}: $${s.revenue.toLocaleString()} revenue, ${formatOccupancy(s.occupancy)}% occ, $${s.adr} ADR (${s.season_type.toUpperCase()})`).join('\n') || 'No seasonality data available'}
 - Peak Season Avg: $${peakSeasonRevenue.toLocaleString()}/month
 - Off-Season Avg: $${offSeasonRevenue.toLocaleString()}/month
 
@@ -328,7 +375,7 @@ GENERATE 5 INSIGHTS - EACH MUST ANSWER ONE OF THESE QUESTIONS:
 
 4. REVIEW STRATEGY INSIGHT: Top competitors average ${avgCompetitorRating.toFixed(1)}★ with ${Math.round(avgCompetitorReviews)} reviews. How many reviews are needed to compete? At what booking rate, how long will this take?
 
-5. RISK/OPPORTUNITY INSIGHT: With ${market.active_listings.toLocaleString()} active listings and ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}% market occupancy, what is the biggest risk and the single best opportunity to exploit?
+5. RISK/OPPORTUNITY INSIGHT: With ${market.active_listings.toLocaleString()} active listings and ${formatOccupancy(market.occupancy)}% market occupancy, what is the biggest risk and the single best opportunity to exploit?
 
 JSON FORMAT:
 [
@@ -380,13 +427,13 @@ export async function analyzeCompetitorPatterns(
   // Pre-calculate statistical patterns
   const avgRevenue = competitors.reduce((sum, c) => sum + c.annual_revenue, 0) / Math.max(1, competitors.length);
   const avgADR = competitors.reduce((sum, c) => sum + c.adr, 0) / Math.max(1, competitors.length);
-  const avgOccupancy = competitors.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / Math.max(1, competitors.length);
+  const avgOccupancy = competitors.reduce((sum, c) => sum + normalizeOccupancy(c.occupancy), 0) / Math.max(1, competitors.length);
   const avgRating = competitors.filter(c => c.rating).reduce((sum, c) => sum + (c.rating || 0), 0) / Math.max(1, competitors.filter(c => c.rating).length);
   const avgReviews = competitors.reduce((sum, c) => sum + c.reviews, 0) / Math.max(1, competitors.length);
   
   // Identify strategy segments
   const highADRCompetitors = competitors.filter(c => c.adr > avgADR * 1.1);
-  const highOccCompetitors = competitors.filter(c => (c.occupancy > 1 ? c.occupancy : c.occupancy * 100) > avgOccupancy * 1.1);
+  const highOccCompetitors = competitors.filter(c => normalizeOccupancy(c.occupancy) > avgOccupancy * 1.1);
   const highRatingCompetitors = competitors.filter(c => c.rating && c.rating >= 4.8);
   const highReviewCompetitors = competitors.filter(c => c.reviews > avgReviews * 1.5);
   
@@ -397,7 +444,7 @@ export async function analyzeCompetitorPatterns(
   const bottom3AvgRevenue = bottom3.reduce((sum, c) => sum + c.annual_revenue, 0) / 3;
   const revenueSpread = bottom3AvgRevenue > 0 ? ((top3AvgRevenue - bottom3AvgRevenue) / bottom3AvgRevenue * 100) : 0;
   const top3AvgADR = top3.reduce((sum, c) => sum + c.adr, 0) / 3;
-  const top3AvgOcc = top3.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / 3;
+  const top3AvgOcc = top3.reduce((sum, c) => sum + normalizeOccupancy(c.occupancy), 0) / 3;
 
   const prompt = `You are an expert at analyzing Airbnb competition patterns. Identify QUANTIFIED PATTERNS from this data.
 
@@ -406,7 +453,7 @@ ${competitors.map((c, i) => `
 ${i + 1}. "${c.name}"
    Revenue: $${c.annual_revenue.toLocaleString()}/yr (${((c.annual_revenue / avgRevenue - 1) * 100).toFixed(0)}% vs avg)
    ADR: $${c.adr}/night (${((c.adr / avgADR - 1) * 100).toFixed(0)}% vs avg)
-   Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
+   Occupancy: ${formatOccupancy(c.occupancy)}%
    Rating: ${c.rating || 'N/A'}★ | Reviews: ${c.reviews}
    Success Factor: ${c.success_factor}`).join('')}
 
@@ -487,7 +534,7 @@ export async function generateInvestmentVerdict(
   const revenueToRentMedian = percentiles.median / annualRent;
   const revenueToRentTop25 = percentiles.top_25_percent / annualRent;
   const revenueToRentTop10 = percentiles.top_10_percent / annualRent;
-  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  const marketOccupancy = normalizeOccupancy(market.occupancy);
   
   // Break-even calculations
   const monthlyExpenses = property.monthly_rent * 1.3; // Rent + ~30% operating costs
@@ -612,7 +659,7 @@ Return ONLY the JSON object, no other text.`;
       summary: `Based on the numbers, this lease shows ${rating === 'PASS' ? 'unfavorable' : rating === 'CAUTION' ? 'marginal' : 'strong'} profit potential with a conservative estimate of $${medianProfit.toLocaleString()}/year.`,
       top_reasons: [
         `${viableCompetitors.length} competitors prove the 2x revenue threshold is achievable`,
-        `Market occupancy of ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}% indicates ${(market.occupancy > 1 ? market.occupancy : market.occupancy * 100) > 60 ? 'healthy' : 'moderate'} demand`,
+        `Market occupancy of ${formatOccupancy(market.occupancy)}% indicates ${normalizeOccupancy(market.occupancy) > 60 ? 'healthy' : 'moderate'} demand`,
         `Top 25% revenue of $${percentiles.top_25_percent.toLocaleString()} provides upside potential`
       ],
       key_risk: "Market saturation with " + market.active_listings.toLocaleString() + " active listings",
@@ -650,10 +697,10 @@ export async function generatePricingStrategy(
   const avgCompetitorADR = competitorADRs.reduce((a, b) => a + b, 0) / Math.max(1, competitorADRs.length);
   
   // Occupancy and strategy analysis
-  const avgCompetitorOccupancy = competitorsList.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / Math.max(1, competitorsList.length);
-  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  const avgCompetitorOccupancy = competitorsList.reduce((sum, c) => sum + normalizeOccupancy(c.occupancy), 0) / Math.max(1, competitorsList.length);
+  const marketOccupancy = normalizeOccupancy(market.occupancy);
   const highADRCompetitors = competitorsList.filter(c => c.adr > avgCompetitorADR * 1.1);
-  const highOccCompetitors = competitorsList.filter(c => (c.occupancy > 1 ? c.occupancy : c.occupancy * 100) > avgCompetitorOccupancy * 1.1);
+  const highOccCompetitors = competitorsList.filter(c => normalizeOccupancy(c.occupancy) > avgCompetitorOccupancy * 1.1);
   const topRevenueStrategy = highADRCompetitors.length > highOccCompetitors.length ? 'HIGH_ADR' : 'HIGH_OCCUPANCY';
   
   // Break-even and revenue calculations
@@ -683,7 +730,7 @@ MARKET PRICING DATA:
 COMPETITOR BREAKDOWN:
 ${competitorsList.slice(0, 7).map((c, i) => `${i + 1}. "${c.name}"
    ADR: $${c.adr} (${((c.adr / avgCompetitorADR - 1) * 100).toFixed(0)}% vs avg)
-   Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
+   Occupancy: ${formatOccupancy(c.occupancy)}%
    Revenue: $${c.annual_revenue.toLocaleString()}/yr
    Strategy: ${c.adr > avgCompetitorADR * 1.1 ? 'PREMIUM' : c.adr < avgCompetitorADR * 0.9 ? 'VALUE' : 'MID-MARKET'}`).join('\n')}
 
@@ -874,7 +921,7 @@ export async function assessRisks(
   // Financial risk calculations
   const monthlyExpenses = property.monthly_rent * 1.3;
   const annualExpenses = monthlyExpenses * 12;
-  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  const marketOccupancy = normalizeOccupancy(market.occupancy);
   const expectedRevenue = market.adr * 365 * (marketOccupancy / 100);
   const breakEvenOccupancy = market.adr > 0 ? (annualExpenses / (market.adr * 365)) * 100 : 100;
   const cushionAboveBreakeven = marketOccupancy - breakEvenOccupancy;
@@ -1014,18 +1061,15 @@ export async function generateActionPlan(
   verdict: InvestmentVerdict,
   pricingStrategy: PricingStrategy
 ): Promise<ActionPlan[]> {
-  // Calculate startup costs and ROI projections
-  const furnishingCostPerBedroom = 3500;
-  const estimatedFurnishingCost = property.bedrooms * furnishingCostPerBedroom + 2000; // Base + per bedroom
-  const photographyCost = 300;
-  const essentialsCost = 500;
-  const totalStartupCost = estimatedFurnishingCost + photographyCost + essentialsCost;
-  
-  // Revenue projections
+  // Calculate ONLY what we actually know - monthly operating costs
+  // We do NOT know startup costs (furniture, photos, supplies vary wildly by situation)
   const monthlyRevenueAtBase = pricingStrategy.base_rate * 30 * 0.6; // 60% occupancy estimate
-  const monthlyExpenses = property.monthly_rent * 1.3;
+  const estimatedUtilities = Math.round(property.monthly_rent * 0.15); // ~15% of rent for utilities
+  const monthlyExpenses = property.monthly_rent + estimatedUtilities;
   const monthlyProfit = monthlyRevenueAtBase - monthlyExpenses;
-  const monthsToBreakeven = monthlyProfit > 0 ? Math.ceil(totalStartupCost / monthlyProfit) : 12;
+  
+  // Break-even occupancy (what % occupancy needed to cover monthly costs)
+  const breakEvenOccupancy = monthlyExpenses / (pricingStrategy.base_rate * 30) * 100;
   
   // Review timeline calculations
   const avgStayLength = 3;
@@ -1050,15 +1094,16 @@ PRICING STRATEGY:
 - Weekend Premium: +${pricingStrategy.weekend_premium_percent}%
 - Minimum Stay: ${pricingStrategy.minimum_stay_peak}-${pricingStrategy.minimum_stay_slow} nights
 
-FINANCIAL PROJECTIONS:
-- Estimated Startup Cost: $${totalStartupCost.toLocaleString()}
-  * Furnishing (${property.bedrooms}BR): $${estimatedFurnishingCost.toLocaleString()}
-  * Professional Photography: $${photographyCost}
-  * Essentials/Supplies: $${essentialsCost}
+MONTHLY OPERATING COSTS (what we actually know):
+- Monthly Rent: $${property.monthly_rent.toLocaleString()}
+- Estimated Utilities: $${estimatedUtilities.toLocaleString()} (~15% of rent)
+- Total Monthly Expenses: $${Math.round(monthlyExpenses).toLocaleString()}
 - Monthly Revenue (at 60% occ): $${Math.round(monthlyRevenueAtBase).toLocaleString()}
-- Monthly Expenses: $${Math.round(monthlyExpenses).toLocaleString()}
-- Monthly Profit: $${Math.round(monthlyProfit).toLocaleString()}
-- Months to Break-Even: ${monthsToBreakeven}
+- Monthly Profit (at 60% occ): $${Math.round(monthlyProfit).toLocaleString()}
+- Break-Even Occupancy: ${breakEvenOccupancy.toFixed(1)}% (to cover monthly costs)
+
+NOTE: Startup costs (furniture, photos, supplies) are NOT included because they vary wildly.
+The investor should determine their own startup budget based on property condition and strategy.
 
 REVIEW TIMELINE:
 - Est. Bookings/Month (at 60% occ): ${bookingsPerMonthAt60Occ}
@@ -1084,8 +1129,8 @@ CREATE ACTION PLAN WITH 5 PHASES:
 
 PHASE REQUIREMENTS:
 
-1. PRE-LAUNCH (Weeks 1-3): $${totalStartupCost.toLocaleString()} budget
-   - Furnishing strategy for ${property.bedrooms}BR
+1. PRE-LAUNCH (Weeks 1-3): Budget TBD by investor
+   - Furnishing strategy for ${property.bedrooms}BR (costs vary by condition/style)
    - Photography checklist (hero shots, room shots, amenity shots)
    - Listing optimization (title formulas, description structure)
 
@@ -1179,12 +1224,13 @@ export async function generateExecutiveSummary(
   }
 ): Promise<string> {
   // Pre-calculate key metrics for the summary
+  // Only calculate what we actually know - monthly operating costs
   const annualRent = property.monthly_rent * 12;
   const minimumRevenue = annualRent * 2;
-  const monthlyExpenses = property.monthly_rent * 1.3;
+  const estimatedUtilities = Math.round(property.monthly_rent * 0.15);
+  const monthlyExpenses = property.monthly_rent + estimatedUtilities;
   const monthlyProfit = pricingStrategy.base_rate * 30 * 0.6 - monthlyExpenses;
-  const estimatedStartupCost = property.bedrooms * 3500 + 2800;
-  const monthsToBreakeven = monthlyProfit > 0 ? Math.ceil(estimatedStartupCost / monthlyProfit) : 12;
+  const breakEvenOccupancy = monthlyExpenses / (pricingStrategy.base_rate * 30) * 100;
   
   const prompt = `You are writing an executive summary for an Airbnb arbitrage investment report. This is the FIRST thing the investor reads - make it count.
 
@@ -1206,7 +1252,7 @@ KEY METRICS (MUST INCLUDE IN SUMMARY):
 - Qualification Rate: ${additionalMetrics?.qualificationRate?.toFixed(1) || 'N/A'}% of similar properties are profitable
 - Break-Even Occupancy: ${additionalMetrics?.breakEvenOccupancy?.toFixed(1) || 'N/A'}%
 - Cushion Above Break-Even: ${additionalMetrics?.cushionAboveBreakeven?.toFixed(1) || 'N/A'} percentage points
-- Months to Break-Even: ${additionalMetrics?.monthsToBreakeven || monthsToBreakeven}
+- Break-Even Occupancy: ${breakEvenOccupancy.toFixed(1)}% (to cover monthly costs)
 - Revenue Gap to Top Performer: $${additionalMetrics?.revenueGapToTop?.toLocaleString() || 'N/A'}
 
 KEY INSIGHTS:
@@ -1224,10 +1270,14 @@ RISK ASSESSMENT: ${riskAssessment.overall_risk}
 - Key Opportunity: ${riskAssessment.opportunities[0]?.description || 'None identified'}
   Potential Impact: ${riskAssessment.opportunities[0]?.potential_impact || 'See detailed analysis'}
 
-FINANCIAL SNAPSHOT:
-- Estimated Startup Cost: $${estimatedStartupCost.toLocaleString()}
-- Estimated Monthly Profit: $${Math.round(monthlyProfit).toLocaleString()}
-- Break-Even Timeline: ${monthsToBreakeven} months
+MONTHLY OPERATING COSTS:
+- Monthly Rent: $${property.monthly_rent.toLocaleString()}
+- Estimated Utilities: $${estimatedUtilities.toLocaleString()}
+- Total Monthly Expenses: $${Math.round(monthlyExpenses).toLocaleString()}
+- Estimated Monthly Profit (at 60% occ): $${Math.round(monthlyProfit).toLocaleString()}
+- Break-Even Occupancy: ${breakEvenOccupancy.toFixed(1)}% (to cover monthly costs)
+
+NOTE: Startup costs are NOT estimated because they vary by property condition and investor strategy.
 
 WRITE A 4-PARAGRAPH EXECUTIVE SUMMARY:
 
@@ -1247,7 +1297,7 @@ Quantify the downside (e.g., "If occupancy drops 20%, monthly loss of $X").
 Provide the specific mitigation strategy.
 
 PARAGRAPH 4 - THE ACTION (2-3 sentences):
-State the estimated startup cost and break-even timeline.
+State the break-even occupancy needed to cover monthly costs.
 Provide the single most important first action.
 End with a confident closing statement aligned with the verdict.
 
@@ -1339,20 +1389,17 @@ export interface StructuredAnalysisSchema {
     potential_value: string;
     action: string;
   }>;
-  startup_estimate: {
-    furniture_low: number;
-    furniture_high: number;
-    supplies_low: number;
-    supplies_high: number;
-    photos_and_listing: number;
-    first_month_buffer: number;
-    total_low: number;
-    total_high: number;
+  // Note: We do NOT estimate startup costs (furniture, photos, supplies) because they vary wildly
+  // We only show monthly operating costs which we can calculate from rent
+  monthly_costs: {
+    rent: number;
+    utilities_estimate: number; // ~15% of rent
+    total_monthly_expenses: number;
   };
-  break_even: {
-    months_conservative: number;
-    months_realistic: number;
-    months_optimistic: number;
+  break_even_occupancy: {
+    conservative: number; // % occupancy needed at conservative ADR
+    realistic: number; // % occupancy needed at realistic ADR
+    optimistic: number; // % occupancy needed at optimistic ADR
   };
   monthly_projections: {
     revenue_low: number;
@@ -1457,20 +1504,15 @@ export async function generateStructuredAnalysis(
     key_insights: [],
     risks: [],
     opportunities: [],
-    startup_estimate: {
-      furniture_low: 0,
-      furniture_high: 0,
-      supplies_low: 0,
-      supplies_high: 0,
-      photos_and_listing: 0,
-      first_month_buffer: 0,
-      total_low: 0,
-      total_high: 0
+    monthly_costs: {
+      rent: 0,
+      utilities_estimate: 0,
+      total_monthly_expenses: 0
     },
-    break_even: {
-      months_conservative: 0,
-      months_realistic: 0,
-      months_optimistic: 0
+    break_even_occupancy: {
+      conservative: 0,
+      realistic: 0,
+      optimistic: 0
     },
     monthly_projections: {
       revenue_low: 0,
@@ -1493,12 +1535,12 @@ PROPERTY:
 MARKET DATA:
 - Market: ${market.name}
 - Active Listings: ${market.active_listings.toLocaleString()}
-- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
+- Average Occupancy: ${formatOccupancy(market.occupancy)}%
 - Average Daily Rate: $${Math.round(market.adr)}
 - Average Annual Revenue: $${Math.round(market.revenue).toLocaleString()}
 
 COMPETITION (${competitors.length} comparable ${property.bedrooms}BR properties):
-${competitors.slice(0, 5).map(c => `- ${c.name}: $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ, ${c.rating || 'N/A'} rating`).join('\n')}
+${competitors.slice(0, 5).map(c => `- ${c.name}: $${c.annual_revenue.toLocaleString()}/yr, ${formatOccupancy(c.occupancy)}% occ, ${c.rating || 'N/A'} rating`).join('\n')}
 
 REVENUE PERCENTILES (${property.bedrooms}BR in this market):
 - Top 10%: $${percentiles.top_10_percent.toLocaleString()}/yr
@@ -1541,7 +1583,14 @@ Be specific to THIS property and market. Use fifth-grade reading level for expla
       confidence = 7;
     }
 
-    const startupBase = property.bedrooms * 3000;
+    // Calculate monthly costs (what we actually know)
+    const estimatedUtilities = Math.round(property.monthly_rent * 0.15);
+    const totalMonthlyExpenses = property.monthly_rent + estimatedUtilities;
+    
+    // Calculate break-even occupancy at different ADR levels
+    const conservativeADR = market.adr * 0.8;
+    const realisticADR = market.adr;
+    const optimisticADR = market.adr * 1.2;
     
     return {
       property_score: 70,
@@ -1579,20 +1628,15 @@ Be specific to THIS property and market. Use fifth-grade reading level for expla
           action: 'Hire professional photographer and copywriter'
         }
       ],
-      startup_estimate: {
-        furniture_low: startupBase,
-        furniture_high: startupBase * 1.5,
-        supplies_low: 500,
-        supplies_high: 1000,
-        photos_and_listing: 500,
-        first_month_buffer: property.monthly_rent * 2,
-        total_low: startupBase + 500 + 500 + property.monthly_rent * 2,
-        total_high: startupBase * 1.5 + 1000 + 500 + property.monthly_rent * 2
+      monthly_costs: {
+        rent: property.monthly_rent,
+        utilities_estimate: estimatedUtilities,
+        total_monthly_expenses: totalMonthlyExpenses
       },
-      break_even: {
-        months_conservative: conservativeProfit > 0 ? Math.ceil((startupBase + 1000) / (conservativeProfit / 12)) : 24,
-        months_realistic: realisticProfit > 0 ? Math.ceil((startupBase + 1000) / (realisticProfit / 12)) : 18,
-        months_optimistic: profitability.optimistic > 0 ? Math.ceil((startupBase + 1000) / (profitability.optimistic / 12)) : 12
+      break_even_occupancy: {
+        conservative: Math.round((totalMonthlyExpenses / (conservativeADR * 30)) * 100),
+        realistic: Math.round((totalMonthlyExpenses / (realisticADR * 30)) * 100),
+        optimistic: Math.round((totalMonthlyExpenses / (optimisticADR * 30)) * 100)
       },
       monthly_projections: {
         revenue_low: Math.round(percentiles.median / 12),
@@ -3134,7 +3178,7 @@ Competitor Trends Summary:
 DAILY PRICING INTELLIGENCE (6-Month Forward):
 - Average ADR: $${dp.avg_adr}
 - Pricing Percentiles: 25th: $${dp.adr_percentile_25} | 50th: $${dp.adr_percentile_50} | 75th: $${dp.adr_percentile_75}
-- Average Occupancy: ${Math.round(dp.avg_occupancy * 100)}%
+- Average Occupancy: ${formatOccupancy(dp.avg_occupancy)}%
 - Pricing Volatility: ${dp.pricing_volatility}
 - Peak Pricing Dates: ${dp.peak_dates.slice(0, 5).join(', ')}
 - Low Pricing Dates: ${dp.low_dates.slice(0, 5).join(', ')}
@@ -3150,13 +3194,13 @@ Pricing Strategy Insight: ${dp.pricing_volatility === 'high' ? 'High volatility 
 SUBMARKET ANALYSIS:
 ${sa.property_submarket ? `Property's Neighborhood: ${sa.property_submarket.name}
 - Revenue: $${sa.property_submarket.revenue.toLocaleString()}/yr
-- Occupancy: ${Math.round(sa.property_submarket.occupancy * 100)}%
+- Occupancy: ${formatOccupancy(sa.property_submarket.occupancy)}%
 - ADR: $${Math.round(sa.property_submarket.adr)}
 - Listings: ${sa.property_submarket.listing_count}` : ''}
 
 Top Performing Neighborhoods in Market:
 ${sa.top_submarkets.map((s, i) => 
-  `${i + 1}. ${s.name}: $${s.revenue.toLocaleString()}/yr, ${Math.round(s.occupancy * 100)}% occ, $${Math.round(s.adr)}/night, ${s.listing_count} listings`
+  `${i + 1}. ${s.name}: $${s.revenue.toLocaleString()}/yr, ${formatOccupancy(s.occupancy)}% occ, $${Math.round(s.adr)}/night, ${s.listing_count} listings`
 ).join('\n')}
 
 Market Average Revenue: $${sa.market_avg_revenue.toLocaleString()}/yr`;
@@ -3257,7 +3301,7 @@ IMPORTANT: This property has historical performance data from when it was previo
 - Previous Listing Title: "${listing.title}"
 - Historical Annual Revenue: $${listing.annual_revenue.toLocaleString()}/yr (${performanceLevel} for this market)
 - Historical ADR: $${Math.round(listing.adr)}/night
-- Historical Occupancy: ${(listing.occupancy * 100).toFixed(0)}%
+- Historical Occupancy: ${formatOccupancy(listing.occupancy)}%
 - Guest Rating: ${listing.rating || 'N/A'}★
 - Total Reviews: ${listing.reviews}
 
@@ -3277,11 +3321,11 @@ This is the immediate neighborhood competition - the listings guests will compar
 - Total Listings in Submarket: ${sub.total_listings} (${competitionDensity})
 - Submarket Avg Revenue: $${Math.round(sub.avg_revenue).toLocaleString()}/yr (${revenueComparison})
 - Submarket Avg ADR: $${Math.round(sub.avg_adr)}/night
-- Submarket Avg Occupancy: ${(sub.avg_occupancy * 100).toFixed(0)}%
+- Submarket Avg Occupancy: ${formatOccupancy(sub.avg_occupancy)}%
 
 Top Performers in Your Immediate Area:
 ${sub.top_listings.slice(0, 5).map((l, i) => 
-  `${i + 1}. "${l.name}" - ${l.bedrooms}BR | $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ | ${l.rating || 'N/A'}★`
+  `${i + 1}. "${l.name}" - ${l.bedrooms}BR | $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${formatOccupancy(l.occupancy)}% occ | ${l.rating || 'N/A'}★`
 ).join('\n')}
 
 Submarket Insights:
@@ -3308,13 +3352,13 @@ This is CRITICAL data - it shows how many ${qc.total_same_bedroom}-bedroom listi
 Profile of Successful (Qualifying) Competitors:
 - Average Revenue: $${Math.round(qc.avg_qualifying_revenue).toLocaleString()}/yr
 - Average ADR: $${Math.round(qc.avg_qualifying_adr)}/night
-- Average Occupancy: ${(qc.avg_qualifying_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(qc.avg_qualifying_occupancy)}%
 - Superhost Rate: ${qc.superhost_percentage.toFixed(0)}%
 - Professionally Managed: ${qc.professional_percentage.toFixed(0)}%
 
 Top Qualifying Competitors:
 ${qc.top_qualifiers.slice(0, 5).map((l, i) => 
-  `${i + 1}. "${l.title}" - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ | ${l.rating || 'N/A'}★${l.superhost ? ' [SUPERHOST]' : ''}${l.professionally_managed ? ' [PRO]' : ''}`
+  `${i + 1}. "${l.title}" - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${formatOccupancy(l.occupancy)}% occ | ${l.rating || 'N/A'}★${l.superhost ? ' [SUPERHOST]' : ''}${l.professionally_managed ? ' [PRO]' : ''}`
 ).join('\n')}
 
 Key Insight: ${qc.qualification_rate > 30 ? 
@@ -3346,13 +3390,13 @@ This shows the IMMEDIATE neighborhood competition - your closest rivals:
 Neighborhood Averages:
 - Average Revenue: $${Math.round(rl.avg_revenue).toLocaleString()}/yr (${revenueComparison})
 - Average ADR: $${Math.round(rl.avg_adr)}/night
-- Average Occupancy: ${(rl.avg_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(rl.avg_occupancy)}%
 - Superhost Rate: ${rl.superhost_percentage.toFixed(0)}%
 - Professionally Managed: ${rl.professional_percentage.toFixed(0)}%
 
 Top Nearby Competitors:
 ${rl.top_nearby.slice(0, 5).map((l, i) => 
-  `${i + 1}. "${l.title}" (${l.bedrooms}BR) - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${(l.occupancy * 100).toFixed(0)}% occ${l.distance_meters ? ` | ${l.distance_meters}m away` : ''}`
+  `${i + 1}. "${l.title}" (${l.bedrooms}BR) - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${formatOccupancy(l.occupancy)}% occ${l.distance_meters ? ` | ${l.distance_meters}m away` : ''}`
 ).join('\n')}
 
 Key Insight: ${rl.listings_per_sqkm > 50 ? 
@@ -3398,7 +3442,7 @@ Revenue Distribution:
 Market Averages:
 - Average Revenue: $${Math.round(ms.avg_revenue).toLocaleString()}/yr
 - Average ADR: $${Math.round(ms.avg_adr)}/night
-- Average Occupancy: ${(ms.avg_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(ms.avg_occupancy)}%
 - Superhost Rate: ${ms.superhost_percentage.toFixed(0)}%
 - Professionally Managed: ${ms.professional_percentage.toFixed(0)}%
 
@@ -3416,13 +3460,13 @@ This compares performance between listing types to help you decide how to list:
 Entire Home Performance (${pta.entire_home.count} listings analyzed):
 - Average Revenue: $${Math.round(pta.entire_home.avg_revenue).toLocaleString()}/yr
 - Average ADR: $${Math.round(pta.entire_home.avg_adr)}/night
-- Average Occupancy: ${(pta.entire_home.avg_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(pta.entire_home.avg_occupancy)}%
 - Superhost Rate: ${pta.entire_home.superhost_percentage.toFixed(0)}%
 
 Private Room Performance (${pta.private_room.count} listings analyzed):
 - Average Revenue: $${Math.round(pta.private_room.avg_revenue).toLocaleString()}/yr
 - Average ADR: $${Math.round(pta.private_room.avg_adr)}/night
-- Average Occupancy: ${(pta.private_room.avg_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(pta.private_room.avg_occupancy)}%
 - Superhost Rate: ${pta.private_room.superhost_percentage.toFixed(0)}%
 
 Revenue Premium: Entire homes earn ${pta.revenue_premium.toFixed(0)}% more than private rooms
@@ -3435,7 +3479,7 @@ Reason: ${pta.recommendation_reason}`;
   if (input.nearby_markets) {
     const nm = input.nearby_markets;
     const alternativesText = nm.alternatives.map(a => 
-      `- ${a.name}: Market Score ${a.market_score.toFixed(0)}, Revenue $${Math.round(a.revenue).toLocaleString()}/yr (${a.revenue_vs_current >= 0 ? '+' : ''}${a.revenue_vs_current.toFixed(0)}% vs current), Occupancy ${(a.occupancy * 100).toFixed(0)}%, Regulation Score ${a.regulation_score.toFixed(0)}`
+      `- ${a.name}: Market Score ${a.market_score.toFixed(0)}, Revenue $${Math.round(a.revenue).toLocaleString()}/yr (${a.revenue_vs_current >= 0 ? '+' : ''}${a.revenue_vs_current.toFixed(0)}% vs current), Occupancy ${formatOccupancy(a.occupancy)}%, Regulation Score ${a.regulation_score.toFixed(0)}`
     ).join('\n');
     
     nearbyMarketsContext = `
@@ -3445,7 +3489,7 @@ This compares your market against top-performing alternatives in the country:
 Your Current Market: ${nm.current_market.name}
 - Market Score: ${nm.current_market.market_score.toFixed(0)}
 - Average Revenue: $${Math.round(nm.current_market.revenue).toLocaleString()}/yr
-- Occupancy: ${(nm.current_market.occupancy * 100).toFixed(0)}%
+- Occupancy: ${formatOccupancy(nm.current_market.occupancy)}%
 - Regulation Score: ${nm.current_market.regulation_score.toFixed(0)} (higher = more STR-friendly)
 
 Top Alternative Markets:
@@ -3498,10 +3542,10 @@ Comparison with Our Analysis:
   if (input.submarket_deep_dive) {
     const sd = input.submarket_deep_dive;
     const bedroomPerf = sd.bedroom_performance
-      .map(b => `${b.bedrooms}BR: ${b.count} listings, $${Math.round(b.avg_revenue).toLocaleString()} avg revenue, $${Math.round(b.avg_adr)} ADR, ${(b.avg_occupancy * 100).toFixed(0)}% occupancy`)
+      .map(b => `${b.bedrooms}BR: ${b.count} listings, $${Math.round(b.avg_revenue).toLocaleString()} avg revenue, $${Math.round(b.avg_adr)} ADR, ${formatOccupancy(b.avg_occupancy)}% occupancy`)
       .join('\n');
     const topPerformers = sd.top_performers
-      .map(p => `- ${p.title}: ${p.bedrooms}BR, $${Math.round(p.annual_revenue).toLocaleString()} revenue, $${Math.round(p.adr)} ADR, ${(p.occupancy * 100).toFixed(0)}% occ, ${p.rating.toFixed(1)}★`)
+      .map(p => `- ${p.title}: ${p.bedrooms}BR, $${Math.round(p.annual_revenue).toLocaleString()} revenue, $${Math.round(p.adr)} ADR, ${formatOccupancy(p.occupancy)}% occ, ${p.rating.toFixed(1)}★`)
       .join('\n');
     
     submarketDeepDiveContext = `
@@ -3512,7 +3556,7 @@ Total Listings in Submarket: ${sd.listing_count}
 Submarket Metrics:
 - Average Revenue: $${Math.round(sd.metrics.revenue).toLocaleString()}
 - Average ADR: $${Math.round(sd.metrics.adr)}
-- Average Occupancy: ${(sd.metrics.occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(sd.metrics.occupancy)}%
 - RevPAR: $${Math.round(sd.metrics.revpar)}
 
 Bedroom Performance in Submarket:
@@ -3569,7 +3613,7 @@ ${sd.metrics ? `
 Submarket Metrics:
 - Market Score: ${sd.metrics.market_score}/100
 - Average Revenue: $${sd.metrics.revenue.toLocaleString()}/year
-- Occupancy: ${(sd.metrics.occupancy * 100).toFixed(1)}%
+- Occupancy: ${formatOccupancy(sd.metrics.occupancy)}%
 - ADR: $${sd.metrics.adr.toFixed(0)}/night
 - RevPAR: $${sd.metrics.revpar.toFixed(0)}` : ''}`;
   }
@@ -3581,7 +3625,7 @@ Submarket Metrics:
     const submarketList = as.submarkets.map((s, i) => {
       const isPropertySubmarket = s.name.toLowerCase() === as.property_submarket_name.toLowerCase();
       const marker = isPropertySubmarket ? ' ← YOUR PROPERTY' : '';
-      return `${i + 1}. ${s.name}${marker}: $${s.revenue.toLocaleString()}/yr revenue, ${(s.occupancy * 100).toFixed(0)}% occupancy, $${s.adr.toFixed(0)} ADR, ${s.listing_count} listings`;
+      return `${i + 1}. ${s.name}${marker}: $${s.revenue.toLocaleString()}/yr revenue, ${formatOccupancy(s.occupancy)}% occupancy, $${s.adr.toFixed(0)} ADR, ${s.listing_count} listings`;
     }).join('\n');
     
     allSubmarketsSection = `
@@ -3604,7 +3648,7 @@ ${submarketList}`;
       const recMarker = s.recommendation ? ` [${s.recommendation}]` : '';
       return `${i + 1}. ${s.name}${marker}${recMarker}
    Score: ${s.ranking.overall_score}/100 | Revenue Rank: #${s.ranking.revenue_rank} | Occupancy Rank: #${s.ranking.occupancy_rank} | RevPAR Rank: #${s.ranking.revpar_rank}
-   $${s.metrics.revenue.toLocaleString()}/yr | ${(s.metrics.occupancy * 100).toFixed(0)}% occ | $${s.metrics.adr.toFixed(0)} ADR | ${s.listing_count} listings`;
+   $${s.metrics.revenue.toLocaleString()}/yr | ${formatOccupancy(s.metrics.occupancy)}% occ | $${s.metrics.adr.toFixed(0)} ADR | ${s.listing_count} listings`;
     }).join('\n\n');
     
     const topRec = se.top_recommendation;
@@ -3612,7 +3656,7 @@ ${submarketList}`;
 
 ENHANCED NEIGHBORHOOD ANALYSIS (Multi-Factor Ranking):
 Market: ${se.market_name}
-Market Metrics: $${se.market_metrics.revenue.toLocaleString()}/yr avg revenue, ${(se.market_metrics.occupancy * 100).toFixed(0)}% occupancy, $${se.market_metrics.adr.toFixed(0)} ADR, ${se.market_metrics.active_listings} listings
+Market Metrics: $${se.market_metrics.revenue.toLocaleString()}/yr avg revenue, ${formatOccupancy(se.market_metrics.occupancy)}% occupancy, $${se.market_metrics.adr.toFixed(0)} ADR, ${se.market_metrics.active_listings} listings
 
 Property's Neighborhood: ${se.property_submarket_name}
 Property's Overall Score: ${se.property_submarket_overall_score}/100
@@ -3621,7 +3665,7 @@ Property's Rank: #${se.property_submarket_rank} of ${se.submarkets.length} neigh
 ${topRec ? `TOP RECOMMENDATION: ${topRec.name}
 - Overall Score: ${topRec.overall_score}/100
 - Revenue: $${topRec.revenue.toLocaleString()}/year
-- Occupancy: ${(topRec.occupancy * 100).toFixed(0)}%
+- Occupancy: ${formatOccupancy(topRec.occupancy)}%
 - Why: ${topRec.recommendation}\n\n` : ''}Neighborhood Rankings (by Overall Score):
 ${submarketRankings}`;
   }
@@ -3670,7 +3714,7 @@ Revenue Distribution (Percentiles):
     
     const topPerformersList = sbr.top_performers.map((tp, i) => 
       `${i + 1}. "${tp.title}" (${tp.property_type})
-   Revenue: $${tp.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(tp.adr)} | Occupancy: ${(tp.occupancy * 100).toFixed(0)}%
+   Revenue: $${tp.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(tp.adr)} | Occupancy: ${formatOccupancy(tp.occupancy)}%
    Rating: ${tp.rating || 'N/A'}★ | Reviews: ${tp.reviews} | ${tp.superhost ? 'Superhost' : ''} ${tp.professionally_managed ? '| Professional' : ''}`
     ).join('\n\n');
     
@@ -3683,7 +3727,7 @@ Summary:
 - Total Direct Competitors: ${sbr.total_found}
 - Average Revenue: $${Math.round(sbr.avg_revenue).toLocaleString()}/yr
 - Average ADR: $${Math.round(sbr.avg_adr)}/night
-- Average Occupancy: ${(sbr.avg_occupancy * 100).toFixed(0)}%
+- Average Occupancy: ${formatOccupancy(sbr.avg_occupancy)}%
 - Superhosts: ${sbr.superhost_count} (${superhostPct}%)
 - Professionally Managed: ${sbr.professional_count} (${professionalPct}%)
 
@@ -3698,7 +3742,7 @@ ${topPerformersList}`;
     
     const topSuperhostsList = stp.top_superhosts.map((sh, i) => 
       `${i + 1}. "${sh.title}" (${sh.property_type}, ${sh.bedrooms}BR)
-   Revenue: $${sh.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(sh.adr)} | Occupancy: ${(sh.occupancy * 100).toFixed(0)}%
+   Revenue: $${sh.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(sh.adr)} | Occupancy: ${formatOccupancy(sh.occupancy)}%
    Rating: ${sh.rating || 'N/A'}★ | Reviews: ${sh.reviews}`
     ).join('\n\n');
     
@@ -3957,7 +4001,7 @@ Return your response as JSON with this exact structure:
   
   "risk_assessment": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From AIRDNA FEASIBILITY ASSESSMENT - MUST USE:**\n- Overall risk rating (low/medium/high)\n- Seasonality risk level and what it means\n- Regulation risk level and what it means\n- Market saturation level and what it means\n- List all specific risk factors identified\n- Compare AirDNA's profit projection to ours - do they agree?\n\n**From MARKET SATURATION - MUST ANALYZE:**\n- If market concentration is 'concentrated', explain barrier to entry\n- If same-bedroom count is high, explain oversupply risk\n\n**From SUPPLY DYNAMICS - MUST ANALYZE:**\n- If supply is growing, calculate competition increase rate\n\n**From QUALIFYING COMPETITORS - MUST ANALYZE:**\n- If qualification rate <30%, this is a HIGH RISK factor\n\n**Risk Mitigation - MUST PROVIDE:**\n- For each major risk identified, provide a specific mitigation strategy\n- Quantify the downside: 'If occupancy drops 10%, monthly profit decreases by $X'\n\n**Actionable insight:** Rank the top 3 risks by severity and provide the single most important mitigation action for each.",
   
-  "financial_outlook": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**Cash Flow Analysis - MUST CALCULATE:**\n- Monthly revenue (realistic): $X\n- Monthly expenses: $Y (rent + utilities + supplies + maintenance)\n- Monthly profit: $Z\n- Annual profit: $Z × 12\n\n**Break-even Analysis - MUST CALCULATE:**\n- Estimated startup costs (furniture, supplies, photos)\n- Months to break-even = Startup costs / Monthly profit\n- Break-even occupancy = (Monthly expenses / (ADR × 30)) × 100%\n\n**Scenario Comparison - MUST SHOW:**\n- Conservative scenario: Revenue, profit, break-even months\n- Realistic scenario: Revenue, profit, break-even months\n- Optimistic scenario: Revenue, profit, break-even months\n\n**ROI Calculation - MUST INCLUDE:**\n- First-year ROI = (Annual profit - Startup costs) / Startup costs × 100%\n- Ongoing annual ROI = Annual profit / Total investment × 100%\n\n**Actionable insight:** State the minimum occupancy rate needed to cover all expenses and whether this is achievable based on market data.",
+  "financial_outlook": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**Monthly Cash Flow Analysis - MUST CALCULATE:**\n- Monthly revenue (realistic): $X\n- Monthly expenses: $Y (rent + estimated utilities at ~15% of rent)\n- Monthly profit: $Z\n- Annual profit: $Z × 12\n\n**Break-even Occupancy Analysis - MUST CALCULATE:**\n- Break-even occupancy = (Monthly expenses / (ADR × 30)) × 100%\n- Current market occupancy vs break-even occupancy\n- Cushion above break-even (how much buffer you have)\n\n**Scenario Comparison - MUST SHOW:**\n- Conservative scenario: Revenue, profit at 50% occupancy\n- Realistic scenario: Revenue, profit at market occupancy\n- Optimistic scenario: Revenue, profit at 80% occupancy\n\n**NOTE:** Startup costs (furniture, photos, supplies) are NOT estimated because they vary wildly by property condition and investor strategy. Focus on monthly operating costs which are predictable.\n\n**Actionable insight:** State the minimum occupancy rate needed to cover monthly expenses and whether this is achievable based on market data.",
   
   "conclusion": "A strong 2-paragraph conclusion. MUST INCLUDE: (1) Clear verdict: Is this a GO, PROCEED WITH CAUTION, or PASS? (2) The 3 most compelling reasons supporting the verdict, (3) The single biggest risk that could change the verdict, (4) The 3 most important actions the investor should take if proceeding.",
   
@@ -3966,7 +4010,7 @@ Return your response as JSON with this exact structure:
     "projected_monthly_profit": <number - (revenue_mid/12) - monthly_expenses>,
     "market_occupancy": <number - market occupancy as decimal 0.0-1.0>,
     "market_adr": <number - market average daily rate>,
-    "break_even_months": <number - startup costs / monthly profit>,
+    "break_even_occupancy": <number - occupancy % needed to cover monthly expenses>,
     "confidence_level": <string - "high", "medium", or "low" based on qualification rate and market maturity>,
     "revenue_to_rent_ratio": <number - revenue_mid / (monthly_rent * 12), e.g., 2.8>,
     "qualification_rate": <number - % of same-bedroom competitors meeting threshold, e.g., 34.2>,
@@ -3980,8 +4024,8 @@ Return your response as JSON with this exact structure:
     "revpar_vs_market": <number - % difference from market RevPAR, e.g., 15.3 or -8.2>,
     "top_performer_gap": <number - $ difference between your projection and top performer revenue>,
     "cash_reserves_needed": <number - $ needed for slow season buffer>,
-    "year_1_roi": <number - (annual profit - startup) / startup * 100>,
-    "year_2_roi": <number - annual profit / total investment * 100>
+    "annual_profit_potential": <number - annual profit at market occupancy>,
+    "monthly_cash_flow": <number - monthly profit at market occupancy>
   },
   
   "quick_facts": [
@@ -3990,7 +4034,7 @@ Return your response as JSON with this exact structure:
     "Neighborhood rank: #X of Y neighborhoods - $Z/year [above/below] top neighborhood",
     "Direct competitors: X same-bedroom listings within 1km - [LOW/MODERATE/HIGH/VERY HIGH] density",
     "Superhost premium: +X% revenue - Time to achieve: ~Y months",
-    "Break-even: X% occupancy needed, Y months to recover $Z startup costs",
+    "Break-even: X% occupancy needed to cover monthly expenses of $Y",
     "Sensitivity: At 80% occupancy, profit is $X/year - [STILL PROFITABLE/LOSS]",
     "Cash reserves: $X needed for Z off-season months",
     "Market trajectory: [GROWING/STABLE/DECLINING] - X% change over 5 years",
@@ -4115,11 +4159,13 @@ SPECIFIC ANALYTICAL QUESTIONS - MUST ANSWER ALL WITH EXACT NUMBERS:
 16. Cash reserves needed: State exact amount for slow season (e.g., "$4,200 to cover 3 off-season months")
 17. Market trajectory: Based on 5-year trends, state whether market is GROWING/STABLE/DECLINING and % change
 
-**Financial Projections (Month-by-month):**
-18. Startup costs: Itemize (furniture $X, photos $X, supplies $X, buffer $X = Total $X)
-19. Break-even timeline: State exact months (e.g., "7 months to recover $12,000 startup costs at $1,700/month profit")
-20. Year 1 ROI: Calculate (Annual profit - Startup costs) / Startup costs × 100%
-21. Year 2+ ROI: Calculate Annual profit / Total investment × 100%
+**Monthly Financial Projections:**
+18. Monthly operating costs: Rent $X + Utilities $Y = Total $Z/month
+19. Break-even occupancy: State exact percentage (e.g., "47% occupancy needed to cover $1,489/month expenses")
+20. Monthly profit at market occupancy: Calculate (Monthly revenue - Monthly expenses)
+21. Annual profit potential: Calculate Monthly profit × 12
+
+NOTE: Startup costs (furniture, photos, supplies) are NOT estimated because they vary wildly by property condition and investor strategy.
 
 **Action Items (Be specific, not generic):**
 22. Top 3 actions with expected ROI:

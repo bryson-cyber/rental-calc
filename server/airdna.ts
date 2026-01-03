@@ -2226,6 +2226,7 @@ export async function getAllMarketListings(
     bedrooms?: number;
     minRevenue?: number;
     maxListings?: number;
+    minFilteredCount?: number; // Minimum number of filtered listings to return
   }
 ): Promise<ListingData[]> {
   const allListings: ListingData[] = [];
@@ -2233,8 +2234,22 @@ export async function getAllMarketListings(
   let offset = 0;
   let totalCount = 0;
   const maxListings = options?.maxListings || 500; // Safety limit
+  const minFilteredCount = options?.minFilteredCount || 10; // Ensure at least 10 filtered listings
+  const absoluteMax = 1000; // Absolute maximum to prevent infinite loops
   
-  console.log(`[getAllMarketListings] Fetching listings for market ${marketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}`);
+  console.log(`[getAllMarketListings] Fetching listings for market ${marketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}, minFilteredCount: ${minFilteredCount}`);
+  
+  // Helper to count filtered listings
+  const countFiltered = (listings: ListingData[]) => {
+    let filtered = listings;
+    if (options?.bedrooms !== undefined) {
+      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
+    }
+    if (options?.minRevenue !== undefined) {
+      filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
+    }
+    return filtered.length;
+  };
   
   try {
     // First request to get total count
@@ -2252,8 +2267,15 @@ export async function getAllMarketListings(
     allListings.push(...firstResult.listings);
     offset += pageSize;
     
-    // Fetch remaining pages (up to maxListings)
-    while (offset < totalCount && allListings.length < maxListings) {
+    // Fetch remaining pages until we have enough filtered listings OR hit limits
+    while (offset < totalCount && allListings.length < absoluteMax) {
+      // Check if we have enough filtered listings
+      const filteredCount = countFiltered(allListings);
+      if (filteredCount >= minFilteredCount && allListings.length >= maxListings) {
+        console.log(`[getAllMarketListings] Have ${filteredCount} filtered listings (target: ${minFilteredCount}), stopping fetch`);
+        break;
+      }
+      
       const result = await getMarketListings(marketId, {
         limit: pageSize,
         offset,
@@ -2270,7 +2292,7 @@ export async function getAllMarketListings(
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    console.log(`[getAllMarketListings] Fetched ${allListings.length} total listings`);
+    console.log(`[getAllMarketListings] Fetched ${allListings.length} total listings, ${countFiltered(allListings)} match filters`);
     
     // Filter by bedroom count if specified
     let filtered = allListings;
@@ -2316,10 +2338,10 @@ export async function getQualifyingCompetitors(
   
   console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}`);
   
-  // Get all listings for this bedroom count
+  // Get all listings for this bedroom count - fetch more to ensure we get enough same-bedroom listings
   const allSameBedroomListings = await getAllMarketListings(marketId, {
     bedrooms,
-    maxListings: 200, // Get up to 200 same-bedroom listings
+    maxListings: 500, // Fetch more listings to ensure we get at least 10 same-bedroom
   });
   
   // Filter to those meeting revenue threshold
