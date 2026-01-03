@@ -16,6 +16,7 @@
  */
 
 import { ENV } from './_core/env';
+import { apiCache } from './cache';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
@@ -196,43 +197,105 @@ export interface FullAIAnalysis {
 }
 
 // ============================================
-// CORE GEMINI CALL FUNCTION
+// CORE GEMINI CALL FUNCTION WITH RETRY LOGIC
 // ============================================
 
-async function callGemini(prompt: string, maxTokens: number = 4096, timeoutMs: number = 120000): Promise<string> {
-  // Create an AbortController for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+/**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Call Gemini API with exponential backoff retry logic
+ * @param prompt - The prompt to send to Gemini
+ * @param maxTokens - Maximum tokens in the response
+ * @param timeoutMs - Timeout for each attempt in milliseconds
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ */
+async function callGemini(
+  prompt: string, 
+  maxTokens: number = 4096, 
+  timeoutMs: number = 120000,
+  maxRetries: number = 3
+): Promise<string> {
+  let lastError: Error | null = null;
   
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: maxTokens,
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      if (attempt > 0) {
+        // Exponential backoff: 2^attempt * 1000ms (2s, 4s, 8s, ...)
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        console.log(`[GeminiAnalyzer] Retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms backoff`);
+        await sleep(backoffMs);
+      }
+      
+      const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: maxTokens,
+          }
+        }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error?.message || 'Unknown error';
+        
+        // Check if it's a retryable error (rate limit, server error)
+        if (response.status === 429 || response.status >= 500) {
+          lastError = new Error(`Gemini API error (${response.status}): ${errorMessage}`);
+          console.warn(`[GeminiAnalyzer] Retryable error on attempt ${attempt + 1}: ${errorMessage}`);
+          continue; // Retry
         }
-      }),
-      signal: controller.signal
-    });
+        
+        // Non-retryable error, throw immediately
+        throw new Error(`Gemini API error: ${errorMessage}`);
+      }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+      const data = await response.json();
+      const result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      if (attempt > 0) {
+        console.log(`[GeminiAnalyzer] Success on retry attempt ${attempt + 1}`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        lastError = new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
+        console.warn(`[GeminiAnalyzer] Timeout on attempt ${attempt + 1}/${maxRetries}`);
+        continue; // Retry on timeout
+      }
+      
+      // For other errors, check if retryable
+      if (error.message?.includes('ECONNRESET') || 
+          error.message?.includes('ETIMEDOUT') ||
+          error.message?.includes('network')) {
+        lastError = error;
+        console.warn(`[GeminiAnalyzer] Network error on attempt ${attempt + 1}: ${error.message}`);
+        continue; // Retry on network errors
+      }
+      
+      // Non-retryable error
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      throw new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+  
+  // All retries exhausted
+  throw lastError || new Error('Gemini API failed after all retry attempts');
 }
 
 async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: number = 2048): Promise<string> {
@@ -1318,7 +1381,7 @@ ${verdict.rating === 'PASS' ? 'We recommend NOT signing this lease based on the 
 }
 
 /**
- * Run full AI analysis pipeline
+ * Run full AI analysis pipeline with 24-hour caching
  */
 export async function runFullAIAnalysis(
   property: PropertyData,
@@ -1328,6 +1391,26 @@ export async function runFullAIAnalysis(
   seasonality: SeasonalityData[],
   profitability: { conservative: number; realistic: number; optimistic: number }
 ): Promise<FullAIAnalysis> {
+  // Generate cache key based on property and market data
+  const cacheKey = apiCache.generateKey('ai_analysis', {
+    address: property.address,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    monthly_rent: property.monthly_rent,
+    market_name: market.name,
+    market_occupancy: market.occupancy,
+    market_adr: market.adr,
+    profitability_conservative: profitability.conservative,
+    profitability_realistic: profitability.realistic
+  });
+  
+  // Check cache first
+  const cached = apiCache.get<FullAIAnalysis>(cacheKey);
+  if (cached) {
+    console.log('[GeminiAnalyzer] Returning cached AI analysis for:', property.address);
+    return cached;
+  }
+  
   console.log('[GeminiAnalyzer] Starting full AI analysis for:', property.address);
   
   // Run analyses in parallel where possible
@@ -1345,7 +1428,7 @@ export async function runFullAIAnalysis(
   
   console.log('[GeminiAnalyzer] Full AI analysis complete');
   
-  return {
+  const result: FullAIAnalysis = {
     insights,
     verdict,
     pricing_strategy: pricingStrategy,
@@ -1354,6 +1437,12 @@ export async function runFullAIAnalysis(
     action_plan: actionPlan,
     executive_summary: executiveSummary
   };
+  
+  // Cache the result for 24 hours
+  apiCache.set(cacheKey, result, 'ai_analysis');
+  console.log('[GeminiAnalyzer] Cached AI analysis for:', property.address);
+  
+  return result;
 }
 
 
@@ -1413,12 +1502,19 @@ export interface StructuredAnalysisSchema {
 }
 
 /**
- * Call Gemini with structured JSON output schema
+ * Call Gemini with structured JSON output schema and retry logic
+ * @param prompt - The prompt to send to Gemini
+ * @param schema - JSON schema for the expected output
+ * @param maxTokens - Maximum tokens in the response
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param timeoutMs - Timeout for each attempt in milliseconds (default: 120000)
  */
 export async function callGeminiStructured<T>(
   prompt: string,
   schema: object,
-  maxTokens: number = 4096
+  maxTokens: number = 4096,
+  maxRetries: number = 3,
+  timeoutMs: number = 120000
 ): Promise<T> {
   const apiKey = ENV.geminiApiKey;
   if (!apiKey) {
@@ -1441,45 +1537,95 @@ ${prompt}
 
 Return ONLY the JSON object matching the schema above. No other text.`;
 
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: fullPrompt }] }],
-        generationConfig: {
-          temperature: 0.3, // Lower temperature for more consistent structured output
-          maxOutputTokens: maxTokens,
-          responseMimeType: "application/json"
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
-    // Clean up the response
-    let cleanedText = text.trim();
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.slice(7);
-    }
-    if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.slice(3);
-    }
-    if (cleanedText.endsWith('```')) {
-      cleanedText = cleanedText.slice(0, -3);
-    }
-    cleanedText = cleanedText.trim();
+    try {
+      if (attempt > 0) {
+        // Exponential backoff: 2^attempt * 1000ms (2s, 4s, 8s, ...)
+        const backoffMs = Math.pow(2, attempt) * 1000;
+        console.log(`[GeminiAnalyzer] Structured retry attempt ${attempt + 1}/${maxRetries} after ${backoffMs}ms backoff`);
+        await sleep(backoffMs);
+      }
+      
+      const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            temperature: 0.3, // Lower temperature for more consistent structured output
+            maxOutputTokens: maxTokens,
+            responseMimeType: "application/json"
+          }
+        }),
+        signal: controller.signal
+      });
 
-    return JSON.parse(cleanedText) as T;
-  } catch (error) {
-    console.error('[GeminiAnalyzer] Structured output error:', error);
-    throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+        
+        // Check if it's a retryable error (rate limit, server error)
+        if (response.status === 429 || response.status >= 500) {
+          lastError = new Error(`Gemini API error (${response.status}): ${errorMessage}`);
+          console.warn(`[GeminiAnalyzer] Retryable structured error on attempt ${attempt + 1}: ${errorMessage}`);
+          continue; // Retry
+        }
+        
+        throw new Error(`Gemini API error: ${errorMessage}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      // Clean up the response
+      let cleanedText = text.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.slice(7);
+      }
+      if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.slice(3);
+      }
+      if (cleanedText.endsWith('```')) {
+        cleanedText = cleanedText.slice(0, -3);
+      }
+      cleanedText = cleanedText.trim();
+
+      if (attempt > 0) {
+        console.log(`[GeminiAnalyzer] Structured success on retry attempt ${attempt + 1}`);
+      }
+
+      return JSON.parse(cleanedText) as T;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        lastError = new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
+        console.warn(`[GeminiAnalyzer] Structured timeout on attempt ${attempt + 1}/${maxRetries}`);
+        continue; // Retry on timeout
+      }
+      
+      // For network errors, retry
+      if (error.message?.includes('ECONNRESET') || 
+          error.message?.includes('ETIMEDOUT') ||
+          error.message?.includes('network')) {
+        lastError = error;
+        console.warn(`[GeminiAnalyzer] Structured network error on attempt ${attempt + 1}: ${error.message}`);
+        continue; // Retry on network errors
+      }
+      
+      // Non-retryable error
+      console.error('[GeminiAnalyzer] Structured output error:', error);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+  
+  // All retries exhausted
+  throw lastError || new Error('Gemini structured API failed after all retry attempts');
 }
 
 /**

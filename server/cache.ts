@@ -52,6 +52,11 @@ class APICache {
     
     // Analysis results - cache longer since they're expensive
     'full_analysis': 60 * 60 * 1000, // 1 hour
+    
+    // AI analysis results - cache for 24 hours since they're expensive to generate
+    'ai_analysis': 24 * 60 * 60 * 1000, // 24 hours
+    'ai_narrative': 24 * 60 * 60 * 1000, // 24 hours
+    'ai_structured': 24 * 60 * 60 * 1000, // 24 hours
   };
   
   /**

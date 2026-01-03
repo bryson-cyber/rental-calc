@@ -58,7 +58,7 @@ class SimpleCache<T> {
 
 // Global caches for different data types
 const marketDataCache = new SimpleCache<any>(10 * 60 * 1000); // 10 minutes
-const narrativeCache = new SimpleCache<any>(30 * 60 * 1000); // 30 minutes
+const narrativeCache = new SimpleCache<any>(24 * 60 * 60 * 1000); // 24 hours - AI analysis is expensive
 
 // ============================================
 // ENHANCED GEMINI CALL WITH RETRY
