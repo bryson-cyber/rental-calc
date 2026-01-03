@@ -1401,3 +1401,13 @@
 - [x] Enhance section prompts with actionable insights requirements
 - [x] Add cross-referencing instructions between data sections
 - [x] Test improved prompt quality
+
+### Prompt Engineering Deep Dive Sprint
+- [x] Audit gemini-prompts.ts for current prompt structure
+- [x] Audit sop-reports.ts for all data passed to Gemini
+- [x] Map each AirDNA function to its corresponding Gemini prompt section
+- [x] Identify underutilized data fields from each function
+- [x] Rewrite prompts with specific data point instructions
+- [x] Add cross-referencing between data sections
+- [x] Add specific analytical questions for each section
+- [x] Test enhanced prompts with sample property
