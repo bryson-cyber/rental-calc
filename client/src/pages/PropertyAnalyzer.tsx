@@ -894,7 +894,7 @@ export default function PropertyAnalyzer() {
                   </div>
                   <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
                     <p className="text-xs text-purple-400/70 uppercase tracking-wide">Break Even</p>
-                    <p className="text-2xl font-bold text-purple-400">{result.narrative_report.key_metrics.break_even_months} mo</p>
+                    <p className="text-2xl font-bold text-purple-400">{typeof result.narrative_report.key_metrics.break_even_months === 'number' ? result.narrative_report.key_metrics.break_even_months.toFixed(1) : result.narrative_report.key_metrics.break_even_months} mo</p>
                     <p className="text-xs text-white/40">estimated</p>
                   </div>
                 </div>
@@ -903,7 +903,9 @@ export default function PropertyAnalyzer() {
                 {result.narrative_report.quick_facts && result.narrative_report.quick_facts.length > 0 && (
                   <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                     <div className="flex flex-wrap gap-2">
-                      {result.narrative_report.quick_facts.map((fact, i) => (
+                      {result.narrative_report.quick_facts
+                        .filter(fact => !fact.includes('N/A') && !fact.includes('#N/A') && !fact.includes('$0/year below') && !fact.includes('+0%') && !fact.includes('+undefined%'))
+                        .map((fact, i) => (
                         <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 rounded-full text-sm text-white/80">
                           <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
                           {fact}
@@ -1220,7 +1222,7 @@ export default function PropertyAnalyzer() {
                   
                   <div className="bg-white/5 rounded-xl p-4">
                     <p className="text-sm text-white/70">
-                      <strong className="text-white">What this means:</strong> After paying ${formatCurrency(result.monthly_rent)}/month rent 
+                      <strong className="text-white">What this means:</strong> After paying {formatCurrency(result.monthly_rent)}/month rent 
                       and estimated expenses, you could profit {formatCurrency(result.profitability.realistic)} in your first year.
                       {result.profitability.realistic > 0 
                         ? ` That's ${formatCurrency(Math.round(result.profitability.realistic / 12))}/month in your pocket.`
@@ -1270,7 +1272,8 @@ export default function PropertyAnalyzer() {
                         {result.break_even.months_realistic} months
                       </p>
                       <p className="text-sm text-white/50 mt-1">
-                        Range: {result.break_even.months_optimistic}-{result.break_even.months_conservative} months
+                        Range: {result.break_even.months_optimistic}-{Math.min(result.break_even.months_conservative, 36)} months
+                        {result.break_even.months_conservative > 36 && <span className="text-amber-400/70"> (conservative capped)</span>}
                       </p>
                     </div>
                   </div>

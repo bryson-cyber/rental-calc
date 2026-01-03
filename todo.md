@@ -1460,3 +1460,12 @@
 - [x] Enhance output schemas with specific field requirements (19 key_metrics, 10 quick_facts)
 - [x] Add cross-function data sharing for deeper insights (14 cross-references)
 - [x] Test and validate enhanced prompts (TypeScript compiles without errors)
+
+
+### Stress Test - St. Louis Property
+- [ ] Find a real St. Louis property address to test
+- [ ] Run full analysis and monitor for errors
+- [ ] Click every button and test all interactive features
+- [ ] Review every report section for data accuracy
+- [ ] Document all bugs found
+- [ ] Fix identified bugs
