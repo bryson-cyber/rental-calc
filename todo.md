@@ -1604,3 +1604,10 @@
 - [x] Investigate root cause of Poe AI timeout on live site
 - [ ] Implement fallback to show results without AI narrative if timeout occurs
 - [ ] Test and deploy the fix
+
+
+## Simplify AI to Fix Timeout
+- [x] Simplify Poe AI prompt to generate faster responses
+- [x] Switch from Claude Opus to Gemini 2.5 Pro (faster)
+- [x] Reduce JSON output complexity
+- [x] Test the simplified approach
