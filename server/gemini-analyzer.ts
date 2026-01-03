@@ -217,8 +217,8 @@ function sleep(ms: number): Promise<void> {
 async function callGemini(
   prompt: string, 
   maxTokens: number = 4096, 
-  timeoutMs: number = 120000,
-  maxRetries: number = 3
+  timeoutMs: number = 45000,
+  maxRetries: number = 2
 ): Promise<string> {
   let lastError: Error | null = null;
   
@@ -1535,8 +1535,8 @@ export async function callGeminiStructured<T>(
   prompt: string,
   schema: object,
   maxTokens: number = 4096,
-  maxRetries: number = 3,
-  timeoutMs: number = 120000
+  maxRetries: number = 2,
+  timeoutMs: number = 45000
 ): Promise<T> {
   const apiKey = ENV.geminiApiKey;
   if (!apiKey) {

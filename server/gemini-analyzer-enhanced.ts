@@ -71,9 +71,9 @@ interface RetryConfig {
 }
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
+  maxRetries: 0, // No retries - fail fast and use fallback
   baseDelayMs: 1000,
-  maxDelayMs: 10000
+  maxDelayMs: 5000
 };
 
 async function sleep(ms: number): Promise<void> {
@@ -83,7 +83,7 @@ async function sleep(ms: number): Promise<void> {
 async function callGeminiWithRetry(
   prompt: string, 
   maxTokens: number = 4096, 
-  timeoutMs: number = 120000,
+  timeoutMs: number = 30000, // 30 second timeout - fail fast
   retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
 ): Promise<string> {
   let lastError: Error | null = null;
@@ -391,6 +391,23 @@ export interface EnhancedNarrativeReport {
 // ENHANCED NARRATIVE GENERATION
 // ============================================
 
+// Global timeout wrapper to ensure the entire operation completes within a reasonable time
+async function withGlobalTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallbackFn: () => T
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Global timeout after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]).catch((error) => {
+    console.error('[GeminiEnhanced] Global timeout triggered:', error.message);
+    return fallbackFn();
+  });
+}
+
 export async function generateEnhancedNarrativeReport(
   input: EnhancedNarrativeReportInput
 ): Promise<EnhancedNarrativeReport> {
@@ -403,6 +420,33 @@ export async function generateEnhancedNarrativeReport(
   }
   
   console.log('[GeminiEnhanced] Generating enhanced narrative report...');
+  
+  // Calculate market context and ratios early for fallback
+  const marketContext = detectMarketContext(
+    input.market_name,
+    input.market_occupancy,
+    input.market_adr,
+    input.active_listings,
+    input.seasonality
+  );
+  const revenueToRentRatio = input.revenue_mid / (input.monthly_rent * 12);
+  
+  // Wrap the entire generation in a global timeout (90 seconds max)
+  return withGlobalTimeout(
+    generateEnhancedNarrativeReportInternal(input, cacheKey),
+    90000,
+    () => {
+      console.log('[GeminiEnhanced] Returning fallback report due to global timeout');
+      return generateFallbackReport(input, marketContext, revenueToRentRatio);
+    }
+  );
+}
+
+async function generateEnhancedNarrativeReportInternal(
+  input: EnhancedNarrativeReportInput,
+  cacheKey: string
+): Promise<EnhancedNarrativeReport> {
+  console.log('[GeminiEnhanced] Starting internal report generation...');
   
   // Detect market context
   const marketContext = detectMarketContext(
@@ -623,7 +667,7 @@ IMPORTANT:
 - Include 4-6 specific action items with clear priorities`;
 
   try {
-    const response = await callGeminiWithRetry(prompt, 8192, 180000);
+    const response = await callGeminiWithRetry(prompt, 8192, 60000);
     
     // Parse JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);

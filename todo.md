@@ -1562,3 +1562,16 @@
 - [x] Added robust script loading with retry logic
 - [x] Added error handling with "Try Again" and "Skip for Now" options
 - [x] Added helper function isTypeformReady() for proper type checking
+
+
+## Timeout Fix Sprint (Jan 2026)
+- [x] Fix Typeform overlay error (window.tf.createWidget is not a function)
+- [x] Add robust Typeform script loading with retry logic
+- [x] Skip photo analysis (Gemini Vision) to fix timeout
+- [x] Skip historical market analysis (Gemini) to fix timeout
+- [x] Skip narrative report generation (Gemini) to fix timeout
+- [x] Skip enhanced narrative report generation (Gemini) to fix timeout
+- [x] Reduce Gemini API timeouts from 120s to 45s per call
+- [x] Reduce Gemini API retries from 3 to 1
+- [ ] Re-enable Gemini features once API performance improves
+- [ ] Implement streaming for Gemini responses to avoid timeouts

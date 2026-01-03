@@ -45,29 +45,37 @@ interface InvestmentAdvisorContext {
 }
 
 async function callGemini(prompt: string): Promise<string> {
-  const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      }
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+  
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        }
+      }),
+      signal: controller.signal
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const data: GeminiResponse = await response.json();
+    return data.candidates[0]?.content?.parts[0]?.text || '';
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data: GeminiResponse = await response.json();
-  return data.candidates[0]?.content?.parts[0]?.text || '';
 }
 
 export async function getInvestmentAdvice(
