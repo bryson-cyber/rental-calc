@@ -1462,10 +1462,17 @@
 - [x] Test and validate enhanced prompts (TypeScript compiles without errors)
 
 
-### Stress Test - St. Louis Property
-- [ ] Find a real St. Louis property address to test
-- [ ] Run full analysis and monitor for errors
-- [ ] Click every button and test all interactive features
-- [ ] Review every report section for data accuracy
-- [ ] Document all bugs found
-- [ ] Fix identified bugs
+### Stress Test - St. Louis Property (COMPLETED)
+- [x] Find a real St. Louis property address to test (4461 Gannett St)
+- [x] Run full analysis and monitor for errors
+- [x] Click every button and test all interactive features
+- [x] Review every report section for data accuracy
+- [x] Document all bugs found (5 bugs identified and fixed)
+- [x] Fix identified bugs (break-even formatting, N/A filtering, double dollar sign, unrealistic ranges, zero percentages)
+
+
+### PDF Progress Indicator & Stress Test Sprint (COMPLETED)
+- [x] Add PDF generation progress indicator with percentage/status
+- [x] Run stress test on St. Louis property (4461 Gannett St)
+- [x] Fix any bugs found during stress test (stale closure bug fixed with useRef)
+- [x] Continue enhancing Gemini prompts (all 8 functions optimized) for maximum insights

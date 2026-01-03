@@ -49,7 +49,7 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { toast } from 'sonner';
 import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
 
-// Export PDF Button Component
+// Export PDF Button Component with Progress Indicator
 function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
   address: string;
   monthlyRent: number;
@@ -57,10 +57,37 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
   bathrooms: number;
 }) {
   const [isExporting, setIsExporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
   const exportMutation = trpc.export.pdf.useMutation();
+  const abortRef = useRef(false);
 
   const handleExport = async () => {
+    abortRef.current = false;
     setIsExporting(true);
+    setProgress(0);
+    setStatusMessage('Preparing report data...');
+    
+    // Simulate progress stages since actual PDF generation is server-side
+    const progressStages = [
+      { progress: 15, message: 'Gathering market data...', delay: 800 },
+      { progress: 30, message: 'Analyzing competitors...', delay: 1500 },
+      { progress: 45, message: 'Calculating projections...', delay: 2000 },
+      { progress: 60, message: 'Building report sections...', delay: 3000 },
+      { progress: 75, message: 'Generating PDF layout...', delay: 4500 },
+      { progress: 90, message: 'Finalizing document...', delay: 6000 },
+    ];
+    
+    // Start progress animation using ref to avoid stale closure
+    progressStages.forEach(({ progress: p, message, delay }) => {
+      setTimeout(() => {
+        if (!abortRef.current) {
+          setProgress(p);
+          setStatusMessage(message);
+        }
+      }, delay);
+    });
+    
     try {
       const result = await exportMutation.mutateAsync({
         address,
@@ -68,6 +95,9 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
         bedrooms,
         bathrooms,
       });
+      
+      setProgress(100);
+      setStatusMessage('Download ready!');
       
       if (result.success && result.data) {
         // Convert base64 to blob and download
@@ -95,23 +125,36 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
     } catch (error) {
       toast.error('Failed to generate PDF report');
     } finally {
+      abortRef.current = true;
       setIsExporting(false);
+      setProgress(0);
+      setStatusMessage('');
     }
   };
 
   return (
-    <Button
-      onClick={handleExport}
-      disabled={isExporting}
-      className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-    >
-      {isExporting ? (
-        <ExportLoader className="w-4 h-4 mr-2 animate-spin" />
-      ) : (
-        <FileText className="w-4 h-4 mr-2" />
+    <div className="relative">
+      <Button
+        onClick={handleExport}
+        disabled={isExporting}
+        className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 min-w-[180px]"
+      >
+        {isExporting ? (
+          <ExportLoader className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <FileText className="w-4 h-4 mr-2" />
+        )}
+        {isExporting ? `${progress}% - ${statusMessage}` : 'Download PDF'}
+      </Button>
+      {isExporting && (
+        <div className="absolute -bottom-2 left-0 right-0 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       )}
-      {isExporting ? 'Generating PDF...' : 'Download PDF'}
-    </Button>
+    </div>
   );
 }
 
