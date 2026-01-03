@@ -2073,10 +2073,17 @@ export interface NarrativeReportInput {
     revenue_premium_percent?: number;
   };
   
-  // Booking patterns
+  // Booking patterns - ENHANCED with all available data
   booking_patterns?: {
     avg_lead_time_days: number;
+    median_lead_time_days: number;
+    last_minute_booking_percent: number;
+    advance_booking_percent: number;
     avg_length_of_stay: number;
+    median_length_of_stay: number;
+    weekend_stay_percent: number;
+    week_plus_stay_percent: number;
+    insights: string[];
   };
   
   // Top amenities
@@ -2523,6 +2530,25 @@ export interface NarrativeReportInput {
       reviews: number;
       superhost: boolean;
       professionally_managed: boolean;
+    }>;
+  };
+  
+  // Superhost top performers (filtered by superhost status)
+  superhost_top_performers?: {
+    total_superhosts_in_market: number;
+    avg_superhost_revenue: number;
+    avg_superhost_rating: number;
+    avg_superhost_reviews: number;
+    revenue_premium_vs_market: number;
+    top_superhosts: Array<{
+      title: string;
+      bedrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
     }>;
   };
 }
@@ -3262,6 +3288,33 @@ Top ${sbr.bedroom_filter}BR Performers Nearby:
 ${topPerformersList}`;
   }
 
+  // Build superhost top performers section
+  let superhostTopPerformersSection = '';
+  if (input.superhost_top_performers) {
+    const stp = input.superhost_top_performers;
+    
+    const topSuperhostsList = stp.top_superhosts.map((sh, i) => 
+      `${i + 1}. "${sh.title}" (${sh.property_type}, ${sh.bedrooms}BR)
+   Revenue: $${sh.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(sh.adr)} | Occupancy: ${(sh.occupancy * 100).toFixed(0)}%
+   Rating: ${sh.rating || 'N/A'}★ | Reviews: ${sh.reviews}`
+    ).join('\n\n');
+    
+    superhostTopPerformersSection = `
+
+SUPERHOST EXCELLENCE BENCHMARK:
+This shows what the TOP SUPERHOSTS in this market achieve - the gold standard for performance.
+
+Superhost Market Overview:
+- Total Superhosts in Market: ${stp.total_superhosts_in_market}
+- Average Superhost Revenue: $${stp.avg_superhost_revenue.toLocaleString()}/yr
+- Average Superhost Rating: ${stp.avg_superhost_rating}★
+- Average Superhost Reviews: ${stp.avg_superhost_reviews}
+- Revenue Premium vs Market: ${stp.revenue_premium_vs_market > 0 ? '+' : ''}${stp.revenue_premium_vs_market}%
+
+Top Superhost Performers:
+${topSuperhostsList}`;
+  }
+
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
 Write in a professional but accessible tone. Use specific numbers from the data. Explain what the numbers mean and why they matter. Be honest about both opportunities and risks.
@@ -3329,10 +3382,16 @@ ${allSubmarketsSection}
 ${submarketExplorationSection}
 ${marketInsightsSection}
 ${sameBedroomRadiusSection}
+${superhostTopPerformersSection}
 
-BOOKING PATTERNS:
-- Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
-- Average Stay Length: ${input.booking_patterns?.avg_length_of_stay || 'N/A'} nights
+BOOKING PATTERNS & GUEST BEHAVIOR:
+- Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days (median: ${input.booking_patterns?.median_lead_time_days || 'N/A'} days)
+- Last-Minute Bookings (<7 days): ${input.booking_patterns?.last_minute_booking_percent || 'N/A'}%
+- Advance Bookings (>30 days): ${input.booking_patterns?.advance_booking_percent || 'N/A'}%
+- Average Stay Length: ${input.booking_patterns?.avg_length_of_stay || 'N/A'} nights (median: ${input.booking_patterns?.median_length_of_stay || 'N/A'} nights)
+- Weekend Stays (1-2 nights): ${input.booking_patterns?.weekend_stay_percent || 'N/A'}%
+- Week+ Stays (7+ nights): ${input.booking_patterns?.week_plus_stay_percent || 'N/A'}%
+- Key Insights: ${input.booking_patterns?.insights?.join(' | ') || 'N/A'}
 
 ---
 
@@ -3346,9 +3405,9 @@ Return your response as JSON with this exact structure:
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. If DIRECT COMPETITOR ANALYSIS is available, focus heavily on this data - it shows ONLY same-bedroom listings nearby, which are the true direct competitors. What is the average revenue for these direct competitors? How many are superhosts or professionally managed? What does the top performer in this specific bedroom category achieve? Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance. If MARKET COMPOSITION INSIGHTS is available, analyze the host size distribution. If COMPETITOR IMAGERY ANALYSIS is available, discuss photo quality standards. How can this property differentiate itself from these specific direct competitors?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. If DIRECT COMPETITOR ANALYSIS is available, focus heavily on this data - it shows ONLY same-bedroom listings nearby, which are the true direct competitors. What is the average revenue for these direct competitors? How many are superhosts or professionally managed? What does the top performer in this specific bedroom category achieve? If SUPERHOST EXCELLENCE BENCHMARK is available, analyze what superhosts achieve vs the market average - what is their revenue premium? What ratings and review counts do they maintain? What does it take to reach superhost status and is it worth pursuing? Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance. If MARKET COMPOSITION INSIGHTS is available, analyze the host size distribution. If COMPETITOR IMAGERY ANALYSIS is available, discuss photo quality standards. How can this property differentiate itself from these specific direct competitors and potentially achieve superhost-level performance?",
   
-  "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
+  "seasonal_strategy": "2-3 paragraphs on seasonality, pricing strategy, and booking optimization. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? CRITICALLY use the BOOKING PATTERNS & GUEST BEHAVIOR data: If last-minute bookings are high, recommend dynamic pricing that increases as dates approach. If advance bookings dominate, recommend early-bird discounts. If weekend stays are the majority, focus marketing on weekend getaways. If week+ stays are significant, consider offering weekly discounts. What is the average lead time and how should this affect your pricing calendar? What pricing and marketing strategies should be employed for each season based on these booking patterns?",
   
   "historical_context": "2-3 paragraphs on the market's historical trajectory (if data available). Is this market growing, stable, or declining? What do the 5-year trends tell us about future performance? If EXISTING LISTING DATA is available, analyze how this specific property performed historically and what that means for future projections.",
   
@@ -3378,7 +3437,17 @@ IMPORTANT:
 - Be honest and balanced - acknowledge both opportunities and risks
 - Explain what numbers mean, don't just state them
 - Write for someone who may be new to STR investing
-- The tone should be professional but accessible, like a trusted advisor`;
+- The tone should be professional but accessible, like a trusted advisor
+
+SPECIFIC QUESTIONS TO ANSWER IN YOUR ANALYSIS:
+1. What is the revenue-to-rent ratio and is it above the 2.5x threshold needed for profitability?
+2. What percentage of competitors in this market actually achieve profitable revenue levels?
+3. Is this property in the best neighborhood, or should the investor consider a different area?
+4. What do the top 10% of performers do differently that this property should emulate?
+5. Based on booking patterns, should this property target weekend getaways, weekly stays, or business travelers?
+6. What is the realistic timeline to reach superhost status and is it worth pursuing?
+7. What are the 3 biggest risks and how can each be mitigated?
+8. If the investor could only do 3 things to maximize success, what should they be?`;
 
   try {
     const response = await callGemini(prompt, 8192);

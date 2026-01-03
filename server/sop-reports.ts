@@ -1216,6 +1216,24 @@ export async function generateFullArbitrageAnalysis(
       professionally_managed: boolean;
     }>;
   };
+  // SUPERHOST TOP PERFORMERS (filtered by superhost status)
+  superhost_top_performers?: {
+    total_superhosts_in_market: number;
+    avg_superhost_revenue: number;
+    avg_superhost_rating: number;
+    avg_superhost_reviews: number;
+    revenue_premium_vs_market: number;
+    top_superhosts: Array<{
+      title: string;
+      bedrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
+    }>;
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -2839,6 +2857,74 @@ export async function generateFullArbitrageAnalysis(
     console.error('[ArbitrageAnalysis] Error fetching same-bedroom radius listings:', error);
   }
   
+  // Step: Fetch superhost top performers
+  let superhost_top_performers: {
+    total_superhosts_in_market: number;
+    avg_superhost_revenue: number;
+    avg_superhost_rating: number;
+    avg_superhost_reviews: number;
+    revenue_premium_vs_market: number;
+    top_superhosts: Array<{
+      title: string;
+      bedrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
+    }>;
+  } | undefined;
+  
+  try {
+    const superhostMarketId = marketId || property_estimate?.property?.market_id;
+    if (superhostMarketId && superhostMarketId !== 'unknown') {
+      console.log(`[ArbitrageAnalysis] Fetching superhost top performers for market ${superhostMarketId}...`);
+      
+      const superhostResult = await getTopPerformers({
+        marketId: superhostMarketId,
+        limit: 15,
+        sort_by: 'revenue',
+        filters: {
+          superhost_only: true,
+          bedrooms: actualBedrooms
+        }
+      });
+      
+      if (superhostResult.listings.length > 0) {
+        const avgRevenue = superhostResult.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / superhostResult.listings.length;
+        const avgRating = superhostResult.listings.filter(l => l.rating).reduce((sum, l) => sum + (l.rating || 0), 0) / Math.max(1, superhostResult.listings.filter(l => l.rating).length);
+        const avgReviews = superhostResult.listings.reduce((sum, l) => sum + l.reviews, 0) / superhostResult.listings.length;
+        
+        // Calculate revenue premium vs market average
+        const marketAvgRevenue = marketData?.market?.metrics?.revenue || property_estimate?.estimates?.annual_revenue || 50000;
+        const revenuePremium = ((avgRevenue - marketAvgRevenue) / marketAvgRevenue) * 100;
+        
+        superhost_top_performers = {
+          total_superhosts_in_market: superhostResult.total_count,
+          avg_superhost_revenue: Math.round(avgRevenue),
+          avg_superhost_rating: Math.round(avgRating * 10) / 10,
+          avg_superhost_reviews: Math.round(avgReviews),
+          revenue_premium_vs_market: Math.round(revenuePremium),
+          top_superhosts: superhostResult.listings.slice(0, 10).map(l => ({
+            title: l.title,
+            bedrooms: l.bedrooms,
+            property_type: l.property_type,
+            annual_revenue: l.annual_revenue,
+            adr: l.adr,
+            occupancy: l.occupancy,
+            rating: l.rating,
+            reviews: l.reviews
+          }))
+        };
+        
+        console.log(`[ArbitrageAnalysis] Found ${superhostResult.listings.length} superhost top performers. Avg revenue: $${Math.round(avgRevenue).toLocaleString()}/yr, ${Math.round(revenuePremium)}% premium vs market`);
+      }
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error fetching superhost top performers:', error);
+  }
+  
   // Calculate property ROI
   const startupBase = actualBedrooms * 3000;
   property_roi = {
@@ -3146,7 +3232,14 @@ export async function generateFullArbitrageAnalysis(
       } : undefined,
       booking_patterns: booking_patterns ? {
         avg_lead_time_days: booking_patterns.booking_lead_time.avg_days,
-        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights
+        median_lead_time_days: booking_patterns.booking_lead_time.median_days,
+        last_minute_booking_percent: booking_patterns.booking_lead_time.last_minute_percent,
+        advance_booking_percent: booking_patterns.booking_lead_time.advance_booking_percent,
+        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights,
+        median_length_of_stay: booking_patterns.length_of_stay.median_nights,
+        weekend_stay_percent: booking_patterns.length_of_stay.weekend_percent,
+        week_plus_stay_percent: booking_patterns.length_of_stay.week_percent,
+        insights: booking_patterns.insights
       } : undefined,
       amenities: amenity_analysis?.slice(0, 8).map(a => ({
         amenity: a.amenity,
@@ -3378,6 +3471,14 @@ export async function generateFullArbitrageAnalysis(
         superhost_count: same_bedroom_radius_listings.superhost_count,
         professional_count: same_bedroom_radius_listings.professional_count,
         top_performers: same_bedroom_radius_listings.top_performers.slice(0, 5)
+      } : undefined,
+      superhost_top_performers: superhost_top_performers ? {
+        total_superhosts_in_market: superhost_top_performers.total_superhosts_in_market,
+        avg_superhost_revenue: superhost_top_performers.avg_superhost_revenue,
+        avg_superhost_rating: superhost_top_performers.avg_superhost_rating,
+        avg_superhost_reviews: superhost_top_performers.avg_superhost_reviews,
+        revenue_premium_vs_market: superhost_top_performers.revenue_premium_vs_market,
+        top_superhosts: superhost_top_performers.top_superhosts.slice(0, 5)
       } : undefined
     });
     
@@ -3478,7 +3579,14 @@ export async function generateFullArbitrageAnalysis(
       } : undefined,
       booking_patterns: booking_patterns ? {
         avg_lead_time_days: booking_patterns.booking_lead_time.avg_days,
-        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights
+        median_lead_time_days: booking_patterns.booking_lead_time.median_days,
+        last_minute_booking_percent: booking_patterns.booking_lead_time.last_minute_percent,
+        advance_booking_percent: booking_patterns.booking_lead_time.advance_booking_percent,
+        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights,
+        median_length_of_stay: booking_patterns.length_of_stay.median_nights,
+        weekend_stay_percent: booking_patterns.length_of_stay.weekend_percent,
+        week_plus_stay_percent: booking_patterns.length_of_stay.week_percent,
+        insights: booking_patterns.insights
       } : undefined,
       amenities: amenity_analysis?.slice(0, 10).map(a => ({
         amenity: a.amenity,
@@ -3573,7 +3681,9 @@ export async function generateFullArbitrageAnalysis(
     // MARKET INSIGHTS
     market_insights,
     // SAME BEDROOM RADIUS LISTINGS
-    same_bedroom_radius_listings
+    same_bedroom_radius_listings,
+    // SUPERHOST TOP PERFORMERS
+    superhost_top_performers
   };
 }
 

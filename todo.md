@@ -1387,3 +1387,17 @@
 - [x] Add retry logic for transient 500 errors in AirDNA API
 - [x] Improve error handling for network ECONNRESET errors
 - [x] Add exponential backoff for rate limiting
+
+### Iteration 24: Top Performers with Filters (Superhost Analysis)
+- [x] Call getTopPerformers with superhost_only filter
+- [x] Call getTopPerformers with same bedroom count filter
+- [x] Pass filtered top performer data to Gemini (revenue premium, ratings, reviews)
+- [x] Update AI prompt to analyze what superhosts achieve and how to reach that level
+
+### Prompt Engineering Optimization
+- [x] Audit all data sections being passed to Gemini (25+ sections identified)
+- [x] Identify underutilized data fields (booking_patterns expanded from 2 to 10 fields)
+- [x] Add specific analytical questions for each data section (8 key questions added)
+- [x] Enhance section prompts with actionable insights requirements
+- [x] Add cross-referencing instructions between data sections
+- [x] Test improved prompt quality
