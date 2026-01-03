@@ -46,6 +46,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { TypeformOverlay } from '@/components/TypeformOverlay';
 import { toast } from 'sonner';
 import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
 
@@ -411,6 +412,13 @@ export default function PropertyAnalyzer() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['market_overview', 'revenue_analysis', 'competitive', 'seasonal', 'risks', 'financial', 'conclusion']));
   const resultsRef = useRef<HTMLDivElement>(null);
   
+  // Typeform gate state
+  const [showTypeformGate, setShowTypeformGate] = useState(false);
+  const [hasCompletedTypeform, setHasCompletedTypeform] = useState(() => {
+    // Check if user has already completed the form (stored in localStorage)
+    return localStorage.getItem('typeform_completed') === 'true';
+  });
+  
   // Timer for elapsed time
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -589,6 +597,11 @@ export default function PropertyAnalyzer() {
         };
         
         setResult(analysisResult);
+        
+        // Show Typeform gate if user hasn't completed it yet
+        if (!hasCompletedTypeform) {
+          setShowTypeformGate(true);
+        }
         
         // Scroll to results
         setTimeout(() => {
@@ -1377,6 +1390,17 @@ export default function PropertyAnalyzer() {
           </p>
         </div>
       </footer>
+      
+      {/* Typeform Gate Overlay */}
+      <TypeformOverlay
+        isOpen={showTypeformGate}
+        onComplete={() => {
+          setShowTypeformGate(false);
+          setHasCompletedTypeform(true);
+          localStorage.setItem('typeform_completed', 'true');
+          toast.success('Thank you! Your full report is now unlocked.');
+        }}
+      />
     </div>
   );
 }

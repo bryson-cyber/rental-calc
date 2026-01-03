@@ -4018,7 +4018,7 @@ ${preComputedSummary}
 
 Generate a comprehensive investment report. Return JSON:
 {
-  "executive_summary": "Overview with revenue-to-rent ratio, qualification rate, and GO/CAUTION/PASS verdict.",
+  "executive_summary": "Overview with revenue-to-rent ratio and qualification rate.",
   "market_overview": "Market size, competition, and bedroom distribution.",
   "revenue_analysis": "Revenue projections and profitability probability.",
   "competitive_landscape": "Competitor analysis and differentiation strategies.",
@@ -4026,7 +4026,7 @@ Generate a comprehensive investment report. Return JSON:
   "historical_context": "5-year trends and market trajectory.",
   "risk_assessment": "Key risks and mitigation strategies.",
   "financial_outlook": "Cash flow, break-even, and scenarios.",
-  "conclusion": "Final verdict with reasons and action items.",
+  "conclusion": "Summary with key considerations and action items.",
   
   "key_metrics": {
     "projected_annual_revenue": <number>,
@@ -4041,11 +4041,10 @@ Generate a comprehensive investment report. Return JSON:
   },
   
   "quick_facts": [
-    "Revenue-to-rent ratio: X.Xx - MEETS/BELOW 2.5x threshold",
+    "Revenue-to-rent ratio: X.Xx",
     "Qualification rate: X% of Y similar properties profitable",
     "Break-even: X% occupancy needed",
-    "Market trajectory: GROWING/STABLE/DECLINING",
-    "VERDICT: GO/CAUTION/PASS - [key reason]"
+    "Market trajectory: GROWING/STABLE/DECLINING"
   ]
 }
 
@@ -4059,11 +4058,11 @@ CRITICAL FORMATTING RULES:
 
 KEY REQUIREMENTS:
 1. Use specific numbers from data - no vague terms
-2. State revenue-to-rent ratio and whether it meets 2.5x threshold
+2. State revenue-to-rent ratio
 3. State qualification rate (% of competitors profitable)
 4. State break-even occupancy %
-5. Give GO/CAUTION/PASS verdict with key reason
-6. Calculate monthly profit = (revenue/12) - expenses`;
+5. Calculate monthly profit = (revenue/12) - expenses
+6. DO NOT include any GO/CAUTION/PASS verdict language - let the reader draw their own conclusions`;
 
   try {
     const response = await callGemini(prompt, 8192);
@@ -4158,7 +4157,7 @@ KEY REQUIREMENTS:
         `Cash reserves needed: $${cashReservesNeeded.toLocaleString()} for slow season`,
         `Market RevPAR comparison: ${revPARvsMarket}% vs market average`,
         `Top performer gap: $${revenueGapToTop.toLocaleString()}/year below top performer`,
-        `VERDICT: ${meetsThreshold && qualificationRate > 30 ? 'GO' : qualificationRate > 15 ? 'CAUTION' : 'PASS'} - ${qualificationAssessment} qualification rate`
+        `Qualification assessment: ${qualificationAssessment}`
       ]
     };
   }

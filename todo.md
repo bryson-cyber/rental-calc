@@ -1530,3 +1530,12 @@
 - [x] Make output less technical and more approachable
 - [x] Update PropertyAnalyzer page with warm light theme
 - [x] Filter out verdict-related quick facts from display
+
+
+## Typeform Lead Gate Feature
+- [x] Add Typeform embed script to index.html
+- [x] Create TypeformOverlay component with blur effect
+- [x] Integrate overlay into PropertyAnalyzer results
+- [x] Detect Typeform submission to remove overlay
+- [x] Test complete flow
+- [x] Remove verdict language from AI-generated reports
