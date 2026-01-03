@@ -1545,3 +1545,14 @@
 - [x] Add HTML response detection before JSON parsing in Gemini API calls
 - [x] Improve error messages for API failures
 - [x] Test fix with live property analysis
+
+
+## UI Fix - Progress Time Estimate
+- [x] Fix misleading "~0s remaining" when analysis is still running
+- [x] Show more accurate time estimates or hide when unknown
+
+## Analysis Timeout Fix
+- [x] Diagnose timeout issue in Gemini API calls
+- [x] Increase timeout limits (120s → 180s for enhanced narrative)
+- [x] Improve error messages for timeout/network errors
+- [x] Test fix with live analysis

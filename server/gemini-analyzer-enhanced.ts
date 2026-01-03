@@ -623,7 +623,7 @@ IMPORTANT:
 - Include 4-6 specific action items with clear priorities`;
 
   try {
-    const response = await callGeminiWithRetry(prompt, 8192, 120000);
+    const response = await callGeminiWithRetry(prompt, 8192, 180000);
     
     // Parse JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);

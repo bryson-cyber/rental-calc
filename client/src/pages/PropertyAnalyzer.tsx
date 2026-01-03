@@ -613,7 +613,16 @@ export default function PropertyAnalyzer() {
     } catch (err: any) {
       clearInterval(stepInterval);
       console.error('Analysis error:', err);
-      setError(err.message || 'An error occurred during analysis. Please try again.');
+      
+      // Detect timeout or network errors and show helpful message
+      const errorMessage = err.message || '';
+      if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('network')) {
+        setError('The analysis is taking longer than expected. This can happen during peak times. Please try again in a few moments.');
+      } else if (errorMessage.includes('HTML') || errorMessage.includes('not valid JSON')) {
+        setError('Our AI service is temporarily busy. Please try again in a minute.');
+      } else {
+        setError(errorMessage || 'An error occurred during analysis. Please try again.');
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -800,7 +809,11 @@ export default function PropertyAnalyzer() {
               </div>
               <div className="flex justify-between items-center mt-2">
                 <span className="text-sm text-[#0F172A]/60">Step {currentStep} of {ANALYSIS_STEPS.length}</span>
-                <span className="text-sm text-[#0F172A]/60">~{Math.max(20 - elapsedTime, 0)}s remaining</span>
+                <span className="text-sm text-[#0F172A]/60">
+                  {currentStep < ANALYSIS_STEPS.length 
+                    ? `~${Math.max(Math.ceil((ANALYSIS_STEPS.length - currentStep) * 30), 10)}s remaining`
+                    : 'Finishing up...'}
+                </span>
               </div>
             </div>
             
