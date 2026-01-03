@@ -249,8 +249,22 @@ async function callGemini(
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        const errorMessage = error.error?.message || 'Unknown error';
+        // Check if response is HTML (error page) before trying to parse as JSON
+        const contentType = response.headers.get('content-type') || '';
+        let errorMessage = 'Unknown error';
+        
+        if (contentType.includes('text/html')) {
+          const htmlText = await response.text();
+          console.error(`[GeminiAnalyzer] Received HTML error page instead of JSON: ${htmlText.substring(0, 200)}`);
+          errorMessage = `API returned HTML error page (status ${response.status}). This may indicate an invalid API key or service issue.`;
+        } else {
+          try {
+            const error = await response.json();
+            errorMessage = error.error?.message || 'Unknown error';
+          } catch {
+            errorMessage = `HTTP ${response.status} - Could not parse error response`;
+          }
+        }
         
         // Check if it's a retryable error (rate limit, server error)
         if (response.status === 429 || response.status >= 500) {
@@ -263,6 +277,14 @@ async function callGemini(
         throw new Error(`Gemini API error: ${errorMessage}`);
       }
 
+      // Check content type before parsing
+      const successContentType = response.headers.get('content-type') || '';
+      if (successContentType.includes('text/html')) {
+        const htmlText = await response.text();
+        console.error(`[GeminiAnalyzer] Received HTML instead of JSON: ${htmlText.substring(0, 200)}`);
+        throw new Error('API returned HTML instead of JSON. This may indicate an authentication or service issue.');
+      }
+      
       const data = await response.json();
       const result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       
@@ -1566,8 +1588,18 @@ Return ONLY the JSON object matching the schema above. No other text.`;
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+        // Check if response is HTML (error page) before trying to parse as JSON
+        const contentType = response.headers.get('content-type') || '';
+        let errorMessage = `HTTP ${response.status}`;
+        
+        if (contentType.includes('text/html')) {
+          const htmlText = await response.text();
+          console.error(`[GeminiAnalyzer] Structured: Received HTML error page: ${htmlText.substring(0, 200)}`);
+          errorMessage = `API returned HTML error page (status ${response.status}). This may indicate an invalid API key or service issue.`;
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          errorMessage = errorData.error?.message || errorMessage;
+        }
         
         // Check if it's a retryable error (rate limit, server error)
         if (response.status === 429 || response.status >= 500) {
@@ -1579,6 +1611,14 @@ Return ONLY the JSON object matching the schema above. No other text.`;
         throw new Error(`Gemini API error: ${errorMessage}`);
       }
 
+      // Check content type before parsing successful response
+      const successContentType = response.headers.get('content-type') || '';
+      if (successContentType.includes('text/html')) {
+        const htmlText = await response.text();
+        console.error(`[GeminiAnalyzer] Structured: Received HTML instead of JSON: ${htmlText.substring(0, 200)}`);
+        throw new Error('API returned HTML instead of JSON. This may indicate an authentication or service issue.');
+      }
+      
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       

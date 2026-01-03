@@ -1539,3 +1539,9 @@
 - [x] Detect Typeform submission to remove overlay
 - [x] Test complete flow
 - [x] Remove verdict language from AI-generated reports
+
+
+## API Error Handling Fix
+- [x] Add HTML response detection before JSON parsing in Gemini API calls
+- [x] Improve error messages for API failures
+- [x] Test fix with live property analysis
