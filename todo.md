@@ -1637,3 +1637,10 @@
 - [x] Add API endpoints for admin report access
 - [ ] Add search/filter functionality
 - [x] Test the admin portal
+
+
+## AI Report Generation Fix (January 2026)
+- [x] Fix AI narrative generation timeout issue
+- [x] Switch from Gemini-3-Pro to Claude-Sonnet-4 for narrative generation (Gemini was returning "thinking" responses)
+- [x] Update PropertyAnalyzer to use enhanced_narrative_report as primary source
+- [x] Test and verify reports load successfully with full AI-generated content

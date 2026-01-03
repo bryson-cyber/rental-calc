@@ -1,8 +1,8 @@
 /**
- * Poe AI Narrative Generator - Uses Gemini 3 Pro for fast narrative reports
+ * Poe AI Narrative Generator - Uses Claude Sonnet 4 for fast narrative reports
  * 
- * This uses Poe AI's Gemini 3 Pro model for fast, reliable narrative generation.
- * Gemini 3 Pro is significantly faster than Claude Opus while maintaining good quality.
+ * This uses Poe AI's Claude Sonnet 4 model for fast, reliable narrative generation.
+ * Claude Sonnet 4 gives direct responses without thinking artifacts.
  * 
  * OPTIMIZED: Uses a simplified prompt for 10-20 second responses instead of 90+ seconds.
  */
@@ -11,13 +11,13 @@ import { generateNarrativeWithPoe } from './poe-ai';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './gemini-analyzer-enhanced';
 
 /**
- * Generate enhanced narrative report using Gemini 3 Pro via Poe
+ * Generate enhanced narrative report using Claude Sonnet 4 via Poe
  * OPTIMIZED: Simplified prompt for faster responses (target: <30 seconds)
  */
 export async function generateEnhancedNarrativeWithPoe(
   input: EnhancedNarrativeReportInput
 ): Promise<EnhancedNarrativeReport> {
-  console.log('[PoeNarrative] Generating enhanced narrative report with Gemini 3 Pro (optimized)...');
+  console.log('[PoeNarrative] Generating enhanced narrative report with Claude Sonnet 4 (optimized)...');
   
   // Calculate key metrics
   const revenueToRentRatio = input.revenue_mid / (input.monthly_rent * 12);
@@ -68,7 +68,7 @@ Keep it concise and actionable. No JSON, just plain text.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
-      model: 'Gemini-3-Pro',
+      model: 'Claude-Sonnet-4',
       maxTokens: 512, // Short response for speed
       timeoutMs: 30000, // 30 second timeout - fail fast
     });

@@ -594,7 +594,7 @@ export default function PropertyAnalyzer() {
           
           pricing_forecast: (data as any).pricing_forecast,
           
-          narrative_report: data.narrative_report,
+          narrative_report: data.enhanced_narrative_report || data.narrative_report,
           
           full_report: data.full_report || ''
         };
