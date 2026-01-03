@@ -2987,12 +2987,12 @@ export async function generateFullArbitrageAnalysis(
     };
   } | null = null;
   
-  // TEMPORARILY SKIP photo analysis to fix timeout issue
-  const SKIP_PHOTO_ANALYSIS = true;
+  // Photo analysis now uses Poe Gemini 3 for better reliability
+  const SKIP_PHOTO_ANALYSIS = false; // Re-enabled with Poe Gemini 3
   
   if (!SKIP_PHOTO_ANALYSIS) {
   try {
-    console.log('[ArbitrageAnalysis] Analyzing competitor photos with Gemini Vision...');
+    console.log('[ArbitrageAnalysis] Analyzing competitor photos with Poe Gemini 3 Vision...');
     
     // Get Airbnb URLs from top competitors
     const competitorsWithUrls = competitors

@@ -1586,3 +1586,9 @@
 - [x] Test Poe AI connection (vitest tests passed)
 - [x] Test full analysis with Poe AI narrative generation (completed in ~2 minutes)
 - [x] Export report structure documentation (docs/report-structure.md)
+
+## Poe Gemini 3 Photo Analysis Integration
+- [x] Add Gemini 3 model support to poe-ai.ts
+- [x] Update photo analysis to use Poe Gemini 3 instead of direct Gemini API
+- [x] Re-enable photo analysis in sop-reports.ts
+- [ ] Test photo analysis with real property images
