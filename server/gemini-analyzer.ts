@@ -1167,33 +1167,91 @@ export async function generateExecutiveSummary(
   insights: AIInsight[],
   verdict: InvestmentVerdict,
   pricingStrategy: PricingStrategy,
-  riskAssessment: RiskAssessment
+  riskAssessment: RiskAssessment,
+  additionalMetrics?: {
+    revenueToRentRatio?: number;
+    qualificationRate?: number;
+    breakEvenOccupancy?: number;
+    cushionAboveBreakeven?: number;
+    monthsToBreakeven?: number;
+    topPerformerRevenue?: number;
+    revenueGapToTop?: number;
+  }
 ): Promise<string> {
-  const prompt = `You are writing an executive summary for an Airbnb arbitrage investment report. Synthesize all the analysis into a compelling 3-4 paragraph summary.
+  // Pre-calculate key metrics for the summary
+  const annualRent = property.monthly_rent * 12;
+  const minimumRevenue = annualRent * 2;
+  const monthlyExpenses = property.monthly_rent * 1.3;
+  const monthlyProfit = pricingStrategy.base_rate * 30 * 0.6 - monthlyExpenses;
+  const estimatedStartupCost = property.bedrooms * 3500 + 2800;
+  const monthsToBreakeven = monthlyProfit > 0 ? Math.ceil(estimatedStartupCost / monthlyProfit) : 12;
+  
+  const prompt = `You are writing an executive summary for an Airbnb arbitrage investment report. This is the FIRST thing the investor reads - make it count.
 
-PROPERTY: ${property.address} (${property.bedrooms}BR/${property.bathrooms}BA) at $${property.monthly_rent}/month
+PROPERTY FUNDAMENTALS:
+- Address: ${property.address}
+- Configuration: ${property.bedrooms}BR/${property.bathrooms}BA
+- Monthly Rent: $${property.monthly_rent.toLocaleString()}
+- Annual Rent: $${annualRent.toLocaleString()}
+- Minimum Revenue Needed (2x rule): $${minimumRevenue.toLocaleString()}
 
 INVESTMENT VERDICT: ${verdict.rating} (${verdict.confidence}/10 confidence)
 ${verdict.summary}
 
+TOP REASONS:
+${verdict.top_reasons?.map((r, i) => `${i + 1}. ${r}`).join('\n') || 'See detailed analysis'}
+
+KEY METRICS (MUST INCLUDE IN SUMMARY):
+- Revenue-to-Rent Ratio: ${additionalMetrics?.revenueToRentRatio?.toFixed(2) || 'N/A'}x ${(additionalMetrics?.revenueToRentRatio || 0) >= 2.5 ? '✓ ABOVE 2.5x' : '⚠ BELOW 2.5x'}
+- Qualification Rate: ${additionalMetrics?.qualificationRate?.toFixed(1) || 'N/A'}% of similar properties are profitable
+- Break-Even Occupancy: ${additionalMetrics?.breakEvenOccupancy?.toFixed(1) || 'N/A'}%
+- Cushion Above Break-Even: ${additionalMetrics?.cushionAboveBreakeven?.toFixed(1) || 'N/A'} percentage points
+- Months to Break-Even: ${additionalMetrics?.monthsToBreakeven || monthsToBreakeven}
+- Revenue Gap to Top Performer: $${additionalMetrics?.revenueGapToTop?.toLocaleString() || 'N/A'}
+
 KEY INSIGHTS:
-${insights.map(i => `- ${i.title}: ${i.insight}`).join('\n')}
+${insights.slice(0, 3).map(i => `- ${i.title}: ${i.insight} (Impact: ${i.impact})`).join('\n')}
 
 PRICING STRATEGY:
-- Base Rate: $${pricingStrategy.base_rate}/night
-- ${pricingStrategy.pricing_rationale}
+- Recommended Base Rate: $${pricingStrategy.base_rate}/night
+- Peak Premium: +${pricingStrategy.peak_premium_percent}%
+- Slow Season Discount: -${pricingStrategy.slow_discount_percent}%
+- Rationale: ${pricingStrategy.pricing_rationale}
 
-RISK LEVEL: ${riskAssessment.overall_risk}
+RISK ASSESSMENT: ${riskAssessment.overall_risk}
 - Key Risk: ${riskAssessment.risks[0]?.description || 'None identified'}
+  Mitigation: ${riskAssessment.risks[0]?.mitigation || 'See detailed analysis'}
 - Key Opportunity: ${riskAssessment.opportunities[0]?.description || 'None identified'}
+  Potential Impact: ${riskAssessment.opportunities[0]?.potential_impact || 'See detailed analysis'}
 
-Write an executive summary that:
-1. Opens with the bottom line (should they invest?)
-2. Highlights the most compelling opportunity
-3. Acknowledges the key risk and mitigation
-4. Ends with a clear recommendation
+FINANCIAL SNAPSHOT:
+- Estimated Startup Cost: $${estimatedStartupCost.toLocaleString()}
+- Estimated Monthly Profit: $${Math.round(monthlyProfit).toLocaleString()}
+- Break-Even Timeline: ${monthsToBreakeven} months
 
-Write in a confident, professional tone. Be direct and actionable.`;
+WRITE A 4-PARAGRAPH EXECUTIVE SUMMARY:
+
+PARAGRAPH 1 - THE VERDICT (2-3 sentences):
+Open with the clear recommendation: "${verdict.rating}" with confidence level.
+State the single most important reason why.
+Include the revenue-to-rent ratio and qualification rate.
+
+PARAGRAPH 2 - THE OPPORTUNITY (2-3 sentences):
+Highlight the most compelling opportunity from the data.
+Quantify the upside (e.g., "Reaching top 25% adds $X/year").
+Mention the pricing strategy that will capture this opportunity.
+
+PARAGRAPH 3 - THE RISK (2-3 sentences):
+Acknowledge the key risk honestly.
+Quantify the downside (e.g., "If occupancy drops 20%, monthly loss of $X").
+Provide the specific mitigation strategy.
+
+PARAGRAPH 4 - THE ACTION (2-3 sentences):
+State the estimated startup cost and break-even timeline.
+Provide the single most important first action.
+End with a confident closing statement aligned with the verdict.
+
+CRITICAL: Every paragraph MUST include specific numbers from the data above. No vague statements.`;
 
   try {
     return await callGemini(prompt, 1024);
