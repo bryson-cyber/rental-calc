@@ -1657,3 +1657,26 @@
 - [x] Restore property thumbnails in competitor section (grid layout with images)
 - [x] Enhance AI prompt for expert-level analysis (150-200 word comprehensive summaries)
 - [x] Test and verify the restored functionality
+
+
+## Bug Fix - TRPC HTML Response Error
+- [ ] Fix API returning HTML instead of JSON (server crash or endpoint issue)
+
+
+## AI Model Fix - Switch to Gemini
+- [x] Fix Gemini-3-Pro thinking response issue - switched to Gemini-2.5-Pro
+- [x] Test alternative Gemini models - Gemini-2.5-Pro works without thinking tags
+
+
+## A-Tier Expert AI Prompts - COMPLETED
+- [x] Rewrote poe-narrative.ts with expert-level prompts for all sections
+- [x] Executive Summary: 200-250 word comprehensive investment thesis
+- [x] Market Overview: Institutional-grade market intelligence
+- [x] Revenue Analysis: CFO-level revenue breakdown
+- [x] Competitive Landscape: Strategic competitor analysis
+- [x] Seasonal Strategy: Actionable pricing guidance
+- [x] Risk Assessment: Quantified risk/mitigation matrix
+- [x] Financial Outlook: Clear financial projections
+- [x] Conclusion: Decisive investment recommendation
+- [x] All sections generated in parallel for speed
+- [x] Using Gemini 2.5 Pro for reliable responses
