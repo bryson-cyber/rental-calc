@@ -1591,4 +1591,10 @@
 - [x] Add Gemini 3 model support to poe-ai.ts
 - [x] Update photo analysis to use Poe Gemini 3 instead of direct Gemini API
 - [x] Re-enable photo analysis in sop-reports.ts
-- [ ] Test photo analysis with real property images
+- [x] Test photo analysis with real property images
+- [x] Validate photo analysis with real property analysis
+
+## Poe AI Timeout Fix
+- [x] Investigate Poe AI timeout causing 'AI service is temporarily busy' error
+- [x] Increase timeout settings and add retry logic
+- [ ] Test the fix with a new analysis

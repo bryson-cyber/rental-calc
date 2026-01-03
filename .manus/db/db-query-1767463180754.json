@@ -1,0 +1,25 @@
+{
+  "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()",
+  "rows": [
+    {
+      "table_name": "__drizzle_migrations"
+    },
+    {
+      "table_name": "users"
+    },
+    {
+      "table_name": "leads"
+    },
+    {
+      "table_name": "saved_searches"
+    },
+    {
+      "table_name": "favorite_properties"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\n__drizzle_migrations\nusers\nleads\nsaved_searches\nfavorite_properties\n",
+  "stderr": "",
+  "execution_time_ms": 397
+}

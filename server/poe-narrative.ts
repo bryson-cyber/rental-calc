@@ -121,7 +121,7 @@ Be specific, use the actual numbers, and provide actionable insights.`;
     const response = await generateNarrativeWithPoe(prompt, {
       model: 'Claude-Opus-4.1',
       maxTokens: 4096,
-      timeoutMs: 90000, // 90 second timeout
+      timeoutMs: 150000, // 150 second timeout (increased from 90s)
     });
 
     // Parse the JSON response

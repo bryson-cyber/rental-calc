@@ -68,14 +68,16 @@ export async function callPoeAI(
     temperature?: number;
     timeoutMs?: number;
     stream?: boolean;
+    retries?: number;
   } = {}
 ): Promise<string> {
   const {
     model = DEFAULT_MODEL,
     maxTokens = 4096,
     temperature = 0.7,
-    timeoutMs = 60000, // 60 second timeout
+    timeoutMs = 120000, // 120 second timeout (increased from 60s)
     stream = false,
+    retries = 2, // Retry up to 2 times on failure
   } = options;
 
   const apiKey = ENV.poeApiKey;
@@ -83,59 +85,80 @@ export async function callPoeAI(
     throw new Error('POE_API_KEY is not configured');
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    console.log(`[PoeAI] Calling ${model} with ${messages.length} messages...`);
-    
-    const response = await fetch(POE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: maxTokens,
-        temperature,
-        stream,
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `Poe API error (${response.status})`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error?.message || errorMessage;
-      } catch {
-        errorMessage = errorText || errorMessage;
+    try {
+      if (attempt > 0) {
+        console.log(`[PoeAI] Retry attempt ${attempt}/${retries}...`);
+        // Wait before retry with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
       }
-      throw new Error(errorMessage);
-    }
+      
+      console.log(`[PoeAI] Calling ${model} with ${messages.length} messages...`);
+      
+      const response = await fetch(POE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: maxTokens,
+          temperature,
+          stream,
+        }),
+        signal: controller.signal,
+      });
 
-    const data: PoeCompletionResponse = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    
-    if (!content) {
-      throw new Error('Empty response from Poe AI');
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Poe API error (${response.status})`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
 
-    console.log(`[PoeAI] Response received: ${content.length} chars, ${data.usage?.total_tokens || 'unknown'} tokens`);
-    return content;
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.error(`[PoeAI] Timeout after ${timeoutMs / 1000}s`);
-      throw new Error(`Poe AI timeout after ${timeoutMs / 1000} seconds`);
+      const data: PoeCompletionResponse = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      
+      if (!content) {
+        throw new Error('Empty response from Poe AI');
+      }
+
+      console.log(`[PoeAI] Response received: ${content.length} chars, ${data.usage?.total_tokens || 'unknown'} tokens`);
+      return content;
+    } catch (error: any) {
+      lastError = error;
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error(`[PoeAI] Timeout after ${timeoutMs / 1000}s (attempt ${attempt + 1}/${retries + 1})`);
+        lastError = new Error(`Poe AI timeout after ${timeoutMs / 1000} seconds`);
+      } else {
+        console.error(`[PoeAI] Error (attempt ${attempt + 1}/${retries + 1}):`, error.message);
+      }
+      
+      // Don't retry on certain errors
+      if (error.message?.includes('not configured') || error.message?.includes('401')) {
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
-    console.error('[PoeAI] Error:', error.message);
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+  
+  // All retries exhausted
+  throw lastError || new Error('Poe AI request failed after all retries');
 }
 
 /**
@@ -154,7 +177,7 @@ export async function generateNarrativeWithPoe(
     systemPrompt = 'You are a senior short-term rental investment analyst. Write clear, specific, and actionable analysis in flowing paragraphs. Use specific numbers and explain what they mean for the investor.',
     model = DEFAULT_MODEL,
     maxTokens = 4096,
-    timeoutMs = 60000,
+    timeoutMs = 150000, // 150 second timeout (increased from 60s)
   } = options;
 
   const messages: PoeMessage[] = [
@@ -176,12 +199,14 @@ export async function analyzeImageWithPoe(
     systemPrompt?: string;
     maxTokens?: number;
     timeoutMs?: number;
+    retries?: number;
   } = {}
 ): Promise<string> {
   const {
     systemPrompt = 'You are an expert at analyzing Airbnb listing photos. Provide detailed, actionable insights about the property.',
     maxTokens = 2048,
     timeoutMs = 45000, // 45 second timeout for image analysis
+    retries = 2, // Default to 2 retries
   } = options;
 
   // Build multimodal message content
@@ -201,6 +226,7 @@ export async function analyzeImageWithPoe(
     model: VISION_MODEL,
     maxTokens,
     timeoutMs,
+    retries,
     stream: false, // Recommended for media bots
   });
 }
