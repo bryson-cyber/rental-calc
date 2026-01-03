@@ -1614,7 +1614,7 @@ export default function PropertyAnalyzer() {
                 
                 {expandedSections.has('competition') && (
                   <div className="mt-6 space-y-3">
-                    {result.competitors.slice(0, 5).map((comp, i) => (
+                    {result.competitors.slice(0, 10).map((comp, i) => (
                       <div key={i} className="bg-white/5 rounded-xl p-4 flex items-center gap-4">
                         {/* Listing Image */}
                         <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-white/10">

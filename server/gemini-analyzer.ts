@@ -3087,14 +3087,7 @@ export async function generateNarrativeReport(
   if (input.five_year_summary) {
     const fys = input.five_year_summary;
     historicalContext = `
-HISTORICAL DATA (${fys.years_of_data} years):
-- Market Maturity: ${fys.market_maturity}
-- Occupancy Trend: ${fys.occupancy.trend} (${fys.occupancy.percent_change > 0 ? '+' : ''}${fys.occupancy.percent_change.toFixed(1)}% over 5 years)
-  Current: ${formatOccupancy(fys.occupancy.current_year_avg)}%, 5-Year Avg: ${formatOccupancy(fys.occupancy.five_year_avg)}%
-- ADR Trend: ${fys.adr.trend} (${fys.adr.percent_change > 0 ? '+' : ''}${fys.adr.percent_change.toFixed(1)}% over 5 years)
-  Current: $${fys.adr.current_year_avg.toFixed(0)}, 5-Year Avg: $${fys.adr.five_year_avg.toFixed(0)}
-- Revenue Trend: ${fys.revenue.trend} (${fys.revenue.percent_change > 0 ? '+' : ''}${fys.revenue.percent_change.toFixed(1)}% over 5 years)
-  Current: $${fys.revenue.current_year_avg.toFixed(0)}/mo, 5-Year Avg: $${fys.revenue.five_year_avg.toFixed(0)}/mo`;
+5-YEAR TRENDS: ${fys.market_maturity} market. Revenue ${fys.revenue.trend} (${fys.revenue.percent_change > 0 ? '+' : ''}${fys.revenue.percent_change.toFixed(0)}%), Occupancy ${fys.occupancy.trend} (${fys.occupancy.percent_change > 0 ? '+' : ''}${fys.occupancy.percent_change.toFixed(0)}%)`;
   }
   
   // Build supply trend context
@@ -3337,33 +3330,8 @@ Submarket Insights:
   let qualifyingCompetitorsContext = '';
   if (input.qualifying_competitors && input.qualifying_competitors.qualifying_count > 0) {
     const qc = input.qualifying_competitors;
-    const qualificationAssessment = qc.qualification_rate > 50 ? 'STRONG - most competitors are profitable' : 
-      qc.qualification_rate > 25 ? 'MODERATE - a significant portion are profitable' : 
-      qc.qualification_rate > 10 ? 'CHALLENGING - only a minority achieve profitability' : 
-      'DIFFICULT - very few competitors meet the profitability threshold';
-    
     qualifyingCompetitorsContext = `
-QUALIFYING COMPETITORS ANALYSIS (Properties Meeting 2x Rent Threshold):
-This is CRITICAL data - it shows how many ${qc.total_same_bedroom}-bedroom listings actually make enough to be profitable:
-- Revenue Threshold: $${qc.revenue_threshold.toLocaleString()}/yr (2x your annual rent)
-- Qualifying Listings: ${qc.qualifying_count} out of ${qc.total_same_bedroom} (${qc.qualification_rate.toFixed(1)}%)
-- Market Viability: ${qualificationAssessment}
-
-Profile of Successful (Qualifying) Competitors:
-- Average Revenue: $${Math.round(qc.avg_qualifying_revenue).toLocaleString()}/yr
-- Average ADR: $${Math.round(qc.avg_qualifying_adr)}/night
-- Average Occupancy: ${formatOccupancy(qc.avg_qualifying_occupancy)}%
-- Superhost Rate: ${qc.superhost_percentage.toFixed(0)}%
-- Professionally Managed: ${qc.professional_percentage.toFixed(0)}%
-
-Top Qualifying Competitors:
-${qc.top_qualifiers.slice(0, 5).map((l, i) => 
-  `${i + 1}. "${l.title}" - $${l.annual_revenue.toLocaleString()}/yr | ADR $${Math.round(l.adr)} | ${formatOccupancy(l.occupancy)}% occ | ${l.rating || 'N/A'}★${l.superhost ? ' [SUPERHOST]' : ''}${l.professionally_managed ? ' [PRO]' : ''}`
-).join('\n')}
-
-Key Insight: ${qc.qualification_rate > 30 ? 
-  `With ${qc.qualification_rate.toFixed(0)}% of similar properties meeting the profitability threshold, this market shows good potential for arbitrage success.` : 
-  `Only ${qc.qualification_rate.toFixed(0)}% of similar properties meet the profitability threshold - you'll need to be in the top tier to succeed.`}`;
+QUALIFICATION RATE: ${qc.qualification_rate.toFixed(0)}% of ${qc.total_same_bedroom} same-bedroom listings meet $${qc.revenue_threshold.toLocaleString()}/yr threshold (2x rent). Qualifying avg: $${Math.round(qc.avg_qualifying_revenue).toLocaleString()}/yr, ${qc.superhost_percentage.toFixed(0)}% superhosts.`;
   }
   
   // Build radius listings context (hyper-local density within 1km)
@@ -3848,59 +3816,13 @@ ${topSuperhostsList}`;
   const amenityGaps = Array.from(topPerformerAmenities).filter(a => !avgPerformerAmenities.has(a));
   
   // Build pre-computed calculations context for prompt
-  const preComputedContext = `
-PRE-COMPUTED ANALYSIS (Use these exact numbers in your analysis):
-
-1. REVENUE-TO-RENT RATIOS:
-   - Conservative: ${revenueToRentRatioConservative.toFixed(2)}x
-   - Realistic: ${revenueToRentRatioRealistic.toFixed(2)}x
-   - Optimistic: ${revenueToRentRatioOptimistic.toFixed(2)}x
-   - Threshold (2.5x): ${meetsThreshold ? 'MET ✓' : 'NOT MET ✗'}
-   ${!meetsThreshold ? `- Gap to threshold: $${thresholdGap.toLocaleString()}/year additional revenue needed` : ''}
-
-2. REVPAR ANALYSIS:
-   - Market RevPAR: $${marketRevPAR.toFixed(0)}/night
-   - Projected RevPAR: $${projectedRevPAR.toFixed(0)}/night
-   - vs Market: ${revPARvsMarket}%
-
-3. BREAK-EVEN ANALYSIS:
-   - Break-even ADR: $${breakEvenADR.toFixed(0)}/night (at market occupancy)
-   - Break-even Occupancy: ${(breakEvenOccupancy * 100).toFixed(1)}% (at market ADR)
-   - Cushion above break-even: ${cushionAboveBreakEven.toFixed(1)} percentage points
-
-4. SENSITIVITY ANALYSIS:
-   - If occupancy drops 10%: Revenue $${occupancyDrop10.newRevenue.toLocaleString()}, Profit $${occupancyDrop10.newProfit.toLocaleString()} (${occupancyDrop10.newProfit > 0 ? 'Still profitable' : 'LOSS'})
-   - If occupancy drops 20%: Revenue $${occupancyDrop20.newRevenue.toLocaleString()}, Profit $${occupancyDrop20.newProfit.toLocaleString()} (${occupancyDrop20.newProfit > 0 ? 'Still profitable' : 'LOSS'})
-   - Profit resilience: ${stillProfitableAt80Occ ? 'STRONG - survives 20% drop' : 'WEAK - unprofitable at 80% of projected occupancy'}
-
-5. REVENUE GAP TO TOP PERFORMER:
-   - Top performer revenue: $${topPerformerRevenue.toLocaleString()}/year
-   - Your realistic projection: $${input.revenue_mid.toLocaleString()}/year
-   - Gap: $${revenueGapToTop.toLocaleString()}/year (${revenueGapPercent}% below top)
-
-6. TIME-TO-SUPERHOST:
-   - Estimated bookings/month: ${bookingsPerMonth.toFixed(1)}
-   - Estimated reviews/month: ${reviewsPerMonth.toFixed(1)}
-   - Months to 10 reviews: ${monthsTo10Reviews}
-   - Months to 50 reviews: ${monthsTo50Reviews}
-   - Superhost eligibility: ~${monthsToSuperhostEligibility} months
-
-7. QUALIFICATION RATE:
-   - Rate: ${qualificationRate.toFixed(1)}% of similar properties meet profitability threshold
-   - Assessment: ${qualificationAssessment}
-   - Implication: ${qualificationRate > 30 ? 'Good odds of success' : 'Must be top-tier performer to succeed'}
-
-8. SEASONAL SWING:
-   - Peak vs Off-season swing: ${seasonalSwing}%
-   - Cash reserves needed for slow season: $${cashReservesNeeded.toLocaleString()}
-
-9. COMPETITION DENSITY:
-   - Listings per sq km: ${competitionDensity.toFixed(1)}
-   - Competition level: ${competitionLevel}
-
-10. AMENITY GAPS (What top performers have that average listings lack):
-    ${amenityGaps.length > 0 ? amenityGaps.slice(0, 5).join(', ') : 'No significant gaps identified'}
-`;
+  // Pre-computed values for key metrics (used in prompt)
+  const preComputedSummary = `
+KEY METRICS:
+- Revenue-to-Rent: ${revenueToRentRatioRealistic.toFixed(2)}x (threshold: 2.5x) - ${meetsThreshold ? 'MEETS' : 'BELOW'}
+- Break-even Occupancy: ${(breakEvenOccupancy * 100).toFixed(0)}%
+- Qualification Rate: ${qualificationRate.toFixed(0)}% of similar properties profitable
+- Competition: ${competitionLevel} (${competitionDensity.toFixed(0)} listings/sq km)`;
 
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
@@ -3942,103 +3864,42 @@ SEASONALITY:
 - Off-Season Months: ${offMonths || 'Not identified'}
 - Average Peak Revenue: $${avgPeakRevenue.toFixed(0)}/month
 - Average Off-Season Revenue: $${avgOffRevenue.toFixed(0)}/month
-${preComputedContext}
 ${historicalContext}
-${supplyContext}
-${professionalContext}
-${amenitiesContext}
-${risksContext}
-${bedroomContext}
-${competitorHistoricalContext}
-${dailyPricingContext}
-${submarketContext}
-${topPerformerCompsContext}
-${topPerformerPricingContext}
-${rentalizerCompsContext}
-${existingListingContext}
-${submarketListingsContext}
 ${qualifyingCompetitorsContext}
-${radiusListingsContext}
-${marketSaturationContext}
-${propertyTypeContext}
-${nearbyMarketsContext}
-${airdnaFeasibilityContext}
-${submarketDeepDiveContext}
-${competitorImageryContext}
-${submarketDetailsSection}
-${allSubmarketsSection}
-${submarketExplorationSection}
-${marketInsightsSection}
-${sameBedroomRadiusSection}
-${superhostTopPerformersSection}
-
-BOOKING PATTERNS & GUEST BEHAVIOR:
-- Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days (median: ${input.booking_patterns?.median_lead_time_days || 'N/A'} days)
-- Last-Minute Bookings (<7 days): ${input.booking_patterns?.last_minute_booking_percent || 'N/A'}%
-- Advance Bookings (>30 days): ${input.booking_patterns?.advance_booking_percent || 'N/A'}%
-- Average Stay Length: ${input.booking_patterns?.avg_length_of_stay || 'N/A'} nights (median: ${input.booking_patterns?.median_length_of_stay || 'N/A'} nights)
-- Weekend Stays (1-2 nights): ${input.booking_patterns?.weekend_stay_percent || 'N/A'}%
-- Week+ Stays (7+ nights): ${input.booking_patterns?.week_plus_stay_percent || 'N/A'}%
-- Key Insights: ${input.booking_patterns?.insights?.join(' | ') || 'N/A'}
+${preComputedSummary}
 
 ---
 
-Generate a comprehensive investment report with the following sections. Each section should be 2-4 paragraphs of flowing narrative prose (not bullet points). Use the data to tell a story.
-
-Return your response as JSON with this exact structure:
+Generate a comprehensive investment report. Return JSON:
 {
-  "executive_summary": "A compelling 2-3 paragraph overview. MUST INCLUDE: (1) The revenue-to-rent ratio (projected revenue / annual rent) and whether it exceeds 2.5x threshold, (2) The qualification rate from QUALIFYING COMPETITORS data - what % of similar properties are profitable, (3) The property's neighborhood rank from ENHANCED NEIGHBORHOOD ANALYSIS. Start with a clear verdict, support with these 3 key metrics, end with the single biggest opportunity or risk.",
-  
-  "market_overview": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From MARKET SATURATION ANALYSIS - MUST USE:**\n- Total listings in market and same-bedroom count\n- Revenue percentiles: State the p25, p50, p75, p90 values and explain what percentile this property needs to reach\n- Market concentration: Is it fragmented/moderate/concentrated? Explain what this means for new entrants\n- Bedroom distribution: Which bedroom count has most listings? Is the property's config oversaturated?\n\n**From ENHANCED NEIGHBORHOOD ANALYSIS - MUST USE:**\n- Property's overall score (out of 100) and rank (e.g., #5 of 12 neighborhoods)\n- Compare revenue rank vs occupancy rank vs RevPAR rank - are they consistent?\n- Name the TOP RECOMMENDATION neighborhood and its score\n- Calculate the revenue gap: How much more could the property earn in the top neighborhood?\n\n**From SUBMARKET DEEP-DIVE - MUST USE:**\n- Market health rating and growth potential rating\n- Revenue trend and occupancy trend (growing/stable/declining)\n\n**Cross-reference:** Compare this property's projected revenue to the market's p50 and p75 percentiles. Where does it fall?",
-  
-  "revenue_analysis": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**Revenue-to-Rent Analysis - MUST CALCULATE:**\n- Revenue-to-rent ratio = Realistic revenue / (Monthly rent × 12)\n- State whether ratio exceeds 2.5x threshold (minimum for profitability)\n- If below 2.5x, calculate what occupancy/ADR increase is needed\n\n**From QUALIFYING COMPETITORS - MUST USE:**\n- Qualification rate: X% of Y same-bedroom listings meet the threshold\n- Average revenue of qualifying competitors vs non-qualifying\n- Superhost % among qualifiers - do you need superhost status to succeed?\n- Professional % among qualifiers - is professional management required?\n\n**From BEDROOM PERFORMANCE - MUST USE:**\n- Compare this bedroom count's avg revenue to other configs\n- Is this the optimal bedroom count for this market?\n\n**Actionable insight:** Based on qualification rate, state the realistic probability of achieving profitability (e.g., 'Only 23% of similar properties are profitable, so success requires top-quartile performance').",
-  
-  "competitive_landscape": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From DIRECT COMPETITOR ANALYSIS (same bedroom, nearby) - MUST USE:**\n- Exact count of direct competitors (same BR within radius)\n- Their average revenue, ADR, and occupancy\n- Superhost count and % among direct competitors\n- Professional count and % among direct competitors\n- Name the top performer and their specific stats\n\n**From SUPERHOST EXCELLENCE BENCHMARK - MUST USE:**\n- Total superhosts in market and their average revenue\n- Revenue premium vs market average (e.g., '+32%')\n- Average rating and review count superhosts maintain\n- Calculate: How many reviews needed to reach superhost? At what booking rate, how long will this take?\n\n**From TOP PERFORMER'S COMPETITIVE SET - MUST USE:**\n- Average similarity score of comps\n- Most common amenities among top performer's comps (list top 5)\n- Identify amenity gaps: What do top performers have that average listings lack?\n\n**From HOST QUALITY ANALYSIS - MUST USE:**\n- Competition quality level (high/moderate/low based on superhost %)\n- Market professionalization level\n\n**From COMPETITOR IMAGERY - MUST USE:**\n- Average photo count and recommendation\n- How many photos should this listing have?\n\n**Actionable insight:** List 3 specific things this property must do to compete with the top performers.",
-  
-  "seasonal_strategy": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From SEASONALITY DATA - MUST USE:**\n- Name specific peak months and their average revenue\n- Name specific off-season months and their average revenue\n- Calculate seasonal swing: (Peak revenue - Off revenue) / Off revenue × 100%\n\n**From TOP PERFORMER'S PRICING STRATEGY - MUST USE:**\n- Weekday price: $X, Weekend price: $Y\n- Weekend premium: X%\n- Price range: $low - $high\n- Recommend specific price points for this property based on top performer data\n\n**From BOOKING PATTERNS - MUST USE ALL:**\n- Last-minute booking %: If >30%, recommend 'increase prices 20% within 7 days of date'\n- Advance booking %: If >40%, recommend 'offer 10% early-bird discount for 30+ day bookings'\n- Weekend stay %: If >50%, recommend 'focus marketing on weekend getaways, set 2-night minimum'\n- Week+ stay %: If >20%, recommend 'offer 15% weekly discount to capture extended stays'\n- Average lead time: Recommend when to start marketing each season\n\n**From DAILY PRICING INTELLIGENCE - MUST USE:**\n- Pricing volatility level\n- Specific peak dates to price highest\n- Specific low dates where discounts may be needed\n\n**Actionable insight:** Create a specific pricing calendar recommendation (e.g., 'January-March: $X/night weekday, $Y/night weekend; April-June: $A/night weekday...').",
-  
-  "historical_context": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From 5-YEAR HISTORICAL DATA - MUST USE:**\n- Years of data available\n- Occupancy trend and % change over 5 years\n- ADR trend and % change over 5 years\n- Revenue trend and % change over 5 years\n- Market maturity classification (emerging/growing/mature/saturated)\n\n**From SUPPLY DYNAMICS - MUST USE:**\n- Net listing change (+ or - X listings)\n- Trend direction (growing/stable/declining)\n- What this means: Growing supply = more competition; Declining = potential opportunity\n\n**From COMPETITOR HISTORICAL PERFORMANCE - MUST USE:**\n- How many of top 5 competitors are growing vs declining\n- Average 12-month revenue of tracked competitors\n\n**From EXISTING LISTING DATA (if available) - MUST USE:**\n- Previous listing title and performance\n- Historical revenue, ADR, occupancy\n- Review count and rating\n- Explain why this historical data is valuable for projections\n\n**Actionable insight:** Based on trends, is this market's best days ahead or behind? Should investor act now or wait?",
-  
-  "risk_assessment": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**From AIRDNA FEASIBILITY ASSESSMENT - MUST USE:**\n- Overall risk rating (low/medium/high)\n- Seasonality risk level and what it means\n- Regulation risk level and what it means\n- Market saturation level and what it means\n- List all specific risk factors identified\n- Compare AirDNA's profit projection to ours - do they agree?\n\n**From MARKET SATURATION - MUST ANALYZE:**\n- If market concentration is 'concentrated', explain barrier to entry\n- If same-bedroom count is high, explain oversupply risk\n\n**From SUPPLY DYNAMICS - MUST ANALYZE:**\n- If supply is growing, calculate competition increase rate\n\n**From QUALIFYING COMPETITORS - MUST ANALYZE:**\n- If qualification rate <30%, this is a HIGH RISK factor\n\n**Risk Mitigation - MUST PROVIDE:**\n- For each major risk identified, provide a specific mitigation strategy\n- Quantify the downside: 'If occupancy drops 10%, monthly profit decreases by $X'\n\n**Actionable insight:** Rank the top 3 risks by severity and provide the single most important mitigation action for each.",
-  
-  "financial_outlook": "2-3 paragraphs with SPECIFIC DATA REQUIREMENTS:\n\n**Monthly Cash Flow Analysis - MUST CALCULATE:**\n- Monthly revenue (realistic): $X\n- Monthly expenses: $Y (rent + estimated utilities at ~15% of rent)\n- Monthly profit: $Z\n- Annual profit: $Z × 12\n\n**Break-even Occupancy Analysis - MUST CALCULATE:**\n- Break-even occupancy = (Monthly expenses / (ADR × 30)) × 100%\n- Current market occupancy vs break-even occupancy\n- Cushion above break-even (how much buffer you have)\n\n**Scenario Comparison - MUST SHOW:**\n- Conservative scenario: Revenue, profit at 50% occupancy\n- Realistic scenario: Revenue, profit at market occupancy\n- Optimistic scenario: Revenue, profit at 80% occupancy\n\n**NOTE:** Startup costs (furniture, photos, supplies) are NOT estimated because they vary wildly by property condition and investor strategy. Focus on monthly operating costs which are predictable.\n\n**Actionable insight:** State the minimum occupancy rate needed to cover monthly expenses and whether this is achievable based on market data.",
-  
-  "conclusion": "A strong 2-paragraph conclusion. MUST INCLUDE: (1) Clear verdict: Is this a GO, PROCEED WITH CAUTION, or PASS? (2) The 3 most compelling reasons supporting the verdict, (3) The single biggest risk that could change the verdict, (4) The 3 most important actions the investor should take if proceeding.",
+  "executive_summary": "Overview with revenue-to-rent ratio, qualification rate, and GO/CAUTION/PASS verdict.",
+  "market_overview": "Market size, competition, and bedroom distribution.",
+  "revenue_analysis": "Revenue projections and profitability probability.",
+  "competitive_landscape": "Competitor analysis and differentiation strategies.",
+  "seasonal_strategy": "Peak/off-season patterns and pricing recommendations.",
+  "historical_context": "5-year trends and market trajectory.",
+  "risk_assessment": "Key risks and mitigation strategies.",
+  "financial_outlook": "Cash flow, break-even, and scenarios.",
+  "conclusion": "Final verdict with reasons and action items.",
   
   "key_metrics": {
-    "projected_annual_revenue": <number - realistic annual revenue from revenue_mid>,
-    "projected_monthly_profit": <number - (revenue_mid/12) - monthly_expenses>,
-    "market_occupancy": <number - market occupancy as decimal 0.0-1.0>,
-    "market_adr": <number - market average daily rate>,
-    "break_even_occupancy": <number - occupancy % needed to cover monthly expenses>,
-    "confidence_level": <string - "high", "medium", or "low" based on qualification rate and market maturity>,
-    "revenue_to_rent_ratio": <number - revenue_mid / (monthly_rent * 12), e.g., 2.8>,
-    "qualification_rate": <number - % of same-bedroom competitors meeting threshold, e.g., 34.2>,
-    "neighborhood_rank": <string - e.g., "#5 of 12">,
-    "superhost_premium": <number - % revenue premium, e.g., 32>,
-    "direct_competitor_count": <number - same-bedroom listings within 1km>,
-    "break_even_occupancy": <number - occupancy % needed to cover expenses, e.g., 52.3>,
-    "cushion_above_breakeven": <number - percentage points above break-even, e.g., 12.7>,
-    "seasonal_swing_percent": <number - (peak-off)/off * 100, e.g., 45.2>,
-    "time_to_superhost_months": <number - estimated months to reach superhost eligibility>,
-    "revpar_vs_market": <number - % difference from market RevPAR, e.g., 15.3 or -8.2>,
-    "top_performer_gap": <number - $ difference between your projection and top performer revenue>,
-    "cash_reserves_needed": <number - $ needed for slow season buffer>,
-    "annual_profit_potential": <number - annual profit at market occupancy>,
-    "monthly_cash_flow": <number - monthly profit at market occupancy>
+    "projected_annual_revenue": <number>,
+    "projected_monthly_profit": <number>,
+    "market_occupancy": <number 0.0-1.0>,
+    "market_adr": <number>,
+    "break_even_occupancy": <number>,
+    "confidence_level": <"high"|"medium"|"low">,
+    "revenue_to_rent_ratio": <number>,
+    "qualification_rate": <number>,
+    "direct_competitor_count": <number>
   },
   
   "quick_facts": [
-    "Revenue-to-rent ratio: X.Xx - [MEETS/BELOW] 2.5x threshold",
-    "Qualification rate: X% of Y similar properties are profitable - [STRONG/MODERATE/CHALLENGING/DIFFICULT]",
-    "Neighborhood rank: #X of Y neighborhoods - $Z/year [above/below] top neighborhood",
-    "Direct competitors: X same-bedroom listings within 1km - [LOW/MODERATE/HIGH/VERY HIGH] density",
-    "Superhost premium: +X% revenue - Time to achieve: ~Y months",
-    "Break-even: X% occupancy needed to cover monthly expenses of $Y",
-    "Sensitivity: At 80% occupancy, profit is $X/year - [STILL PROFITABLE/LOSS]",
-    "Cash reserves: $X needed for Z off-season months",
-    "Market trajectory: [GROWING/STABLE/DECLINING] - X% change over 5 years",
-    "VERDICT: [GO/CAUTION/PASS] with [HIGH/MEDIUM/LOW] confidence - [Single most important reason]"
+    "Revenue-to-rent ratio: X.Xx - MEETS/BELOW 2.5x threshold",
+    "Qualification rate: X% of Y similar properties profitable",
+    "Break-even: X% occupancy needed",
+    "Market trajectory: GROWING/STABLE/DECLINING",
+    "VERDICT: GO/CAUTION/PASS - [key reason]"
   ]
 }
 
@@ -4050,131 +3911,13 @@ CRITICAL FORMATTING RULES:
 - Write for someone who may be new to STR investing
 - The tone should be professional but accessible, like a trusted advisor
 
-CROSS-REFERENCING REQUIREMENTS:
-You MUST connect data across sections to provide deeper insights. For each cross-reference, state the specific numbers from both data sources:
-
-**Financial Cross-References:**
-1. **Revenue-to-Rent vs Qualification Rate:** 
-   - From PRE-COMPUTED: Revenue-to-rent ratio is Xx
-   - From QUALIFYING COMPETITORS: Y% meet threshold
-   - Insight: If ratio is 2.8x but only 25% qualify, you must be top-quartile to succeed
-
-2. **Break-even vs Sensitivity:**
-   - From PRE-COMPUTED: Break-even occupancy is X%
-   - From PRE-COMPUTED: At 80% occupancy, profit is $Y
-   - Insight: Calculate safety margin (market occupancy - break-even) and whether 20% drop is survivable
-
-3. **Seasonal Swing vs Cash Reserves:**
-   - From SEASONALITY: Off-season revenue is $X/month
-   - From PRE-COMPUTED: Monthly expenses are $Y
-   - Insight: If off-season revenue < expenses, calculate exact cash reserve needed
-
-**Competitive Cross-References:**
-4. **Superhost Premium vs Time-to-Achieve:**
-   - From SUPERHOST BENCHMARK: Premium is +X%
-   - From PRE-COMPUTED: Time to superhost is Y months
-   - Insight: Calculate additional revenue from superhost status over first 2 years
-
-5. **Direct Competitors vs Top Performers:**
-   - From DIRECT COMPETITOR ANALYSIS: X competitors, avg revenue $Y
-   - From TOP PERFORMER'S COMPETITIVE SET: Top performer earns $Z
-   - Insight: Revenue gap between average and top = $Z-$Y, what differentiates them?
-
-6. **Amenity Gaps vs Revenue Premium:**
-   - From PRE-COMPUTED: Top performers have [amenities] that average listings lack
-   - From COMPETITOR INSIGHTS: Superhost avg revenue vs non-superhost
-   - Insight: Which amenities correlate with higher revenue? Cost to add vs revenue gain?
-
-**Market Cross-References:**
-7. **Historical Trends vs Supply Dynamics:**
-   - From 5-YEAR HISTORICAL: Revenue trend is X (Y% change)
-   - From SUPPLY DYNAMICS: Net change is +/- Z listings
-   - RED FLAG: If supply growing but revenue declining, market is oversaturating
-   - GREEN FLAG: If supply stable but revenue growing, demand exceeds supply
-
-8. **Neighborhood Rank vs Property Location:**
-   - From ENHANCED NEIGHBORHOOD ANALYSIS: Property is #X of Y neighborhoods
-   - From TOP RECOMMENDATION: Best neighborhood earns $Z more
-   - Insight: Is the revenue gap worth considering a different location?
-
-9. **Bedroom Performance vs Market Saturation:**
-   - From BEDROOM PERFORMANCE: This config earns $X avg, best config earns $Y
-   - From MARKET SATURATION: This bedroom count has Z listings (W% of market)
-   - Insight: Is this bedroom count oversaturated? Would different config perform better?
-
-**Operational Cross-References:**
-10. **Booking Patterns vs Pricing Strategy:**
-    - From BOOKING PATTERNS: Last-minute X%, Weekend Y%, Week+ Z%
-    - From TOP PERFORMER'S PRICING: Weekend premium is W%
-    - Insight: Match pricing strategy to booking behavior (e.g., high last-minute = dynamic pricing essential)
-
-11. **Lead Time vs Marketing Strategy:**
-    - From BOOKING PATTERNS: Avg lead time is X days, advance booking Y%
-    - From SEASONALITY: Peak months are [months]
-    - Insight: When to start marketing for each season (lead time before peak)
-
-12. **Competition Density vs Differentiation:**
-    - From PRE-COMPUTED: Competition density is X listings/sq km (LEVEL)
-    - From COMPETITOR IMAGERY: Avg photo count is Y
-    - Insight: In high-density markets, what specific differentiators will stand out?
-
-**Validation Cross-References:**
-13. **AirDNA Feasibility vs Our Analysis:**
-    - From AIRDNA FEASIBILITY: Risk is X, Profit projection is $Y
-    - From Our Analysis: Profit projection is $Z
-    - Insight: If >15% difference, explain which is more reliable and why
-
-14. **Rentalizer Comps vs Direct Competitors:**
-    - From RENTALIZER COMPS: Avg revenue $X, superhost Y%
-    - From DIRECT COMPETITOR ANALYSIS: Avg revenue $Z, superhost W%
-    - Insight: Do different data sources agree? If not, which is more relevant?
-
-SPECIFIC ANALYTICAL QUESTIONS - MUST ANSWER ALL WITH EXACT NUMBERS:
-
-**Profitability Analysis (Use PRE-COMPUTED values):**
-1. Revenue-to-rent ratio: State the exact ratio (e.g., "2.8x") and whether it meets the 2.5x threshold
-2. Qualification rate: State exact % (e.g., "34.2% of 127 similar properties") and assessment (STRONG/MODERATE/CHALLENGING/DIFFICULT)
-3. Break-even occupancy: State exact % (e.g., "52.3%") and cushion above break-even (e.g., "12.7 percentage points")
-4. Sensitivity: State profit at 80% occupancy (e.g., "$X/year - still profitable" or "$X/year - LOSS")
-
-**Competitive Position (Use exact counts and percentages):**
-5. Direct competitors: State exact count (e.g., "47 same-bedroom listings within 1km") and density level
-6. Superhost landscape: State exact count and % (e.g., "23 of 47 are superhosts (49%)") and revenue premium (e.g., "+32%")
-7. Time-to-superhost: State months to eligibility (e.g., "~4 months to 10 reviews, ~8 months to superhost eligibility")
-8. Neighborhood rank: State exact rank (e.g., "#5 of 12 neighborhoods") and revenue gap to #1 (e.g., "$8,400/year below top neighborhood")
-9. Amenity gaps: List 3-5 specific amenities top performers have that average listings lack
-
-**Pricing & Operational Strategy (Use booking patterns data):**
-10. Guest profile: Based on weekend stay % and week+ stay %, define the primary guest type (e.g., "Weekend getaways (62% of bookings)" or "Extended stays (28% are 7+ nights)")
-11. Lead time strategy: Based on avg lead time and last-minute %, recommend booking window pricing (e.g., "30% of bookings are last-minute - increase prices 20% within 7 days")
-12. Minimum stay: Recommend specific minimums for peak vs off-season based on length of stay data
-13. Pricing approach: Based on volatility level and seasonal swing %, recommend static vs dynamic pricing with specific adjustments
-14. Weekend premium: Based on top performer pricing, recommend exact weekend premium % (e.g., "+25% on Fri-Sat")
-
-**Risk Assessment (Quantify each risk):**
-15. Top 3 risks ranked by financial impact:
-    - Risk 1: [Name] - Potential impact: $X/year - Mitigation: [Specific action]
-    - Risk 2: [Name] - Potential impact: $X/year - Mitigation: [Specific action]
-    - Risk 3: [Name] - Potential impact: $X/year - Mitigation: [Specific action]
-16. Cash reserves needed: State exact amount for slow season (e.g., "$4,200 to cover 3 off-season months")
-17. Market trajectory: Based on 5-year trends, state whether market is GROWING/STABLE/DECLINING and % change
-
-**Monthly Financial Projections:**
-18. Monthly operating costs: Rent $X + Utilities $Y = Total $Z/month
-19. Break-even occupancy: State exact percentage (e.g., "47% occupancy needed to cover $1,489/month expenses")
-20. Monthly profit at market occupancy: Calculate (Monthly revenue - Monthly expenses)
-21. Annual profit potential: Calculate Monthly profit × 12
-
-NOTE: Startup costs (furniture, photos, supplies) are NOT estimated because they vary wildly by property condition and investor strategy.
-
-**Action Items (Be specific, not generic):**
-22. Top 3 actions with expected ROI:
-    - Action 1: [Specific action] - Expected impact: [+$X/year or +X% revenue]
-    - Action 2: [Specific action] - Expected impact: [+$X/year or +X% revenue]
-    - Action 3: [Specific action] - Expected impact: [+$X/year or +X% revenue]
-23. Go/No-Go verdict: State GO, CAUTION, or PASS with confidence level (HIGH/MEDIUM/LOW) and the single most important reason
-
-CRITICAL: Every answer MUST include specific numbers from the data. Do not use vague terms like "high", "low", "many", or "some" without a number.`;
+KEY REQUIREMENTS:
+1. Use specific numbers from data - no vague terms
+2. State revenue-to-rent ratio and whether it meets 2.5x threshold
+3. State qualification rate (% of competitors profitable)
+4. State break-even occupancy %
+5. Give GO/CAUTION/PASS verdict with key reason
+6. Calculate monthly profit = (revenue/12) - expenses`;
 
   try {
     const response = await callGemini(prompt, 8192);

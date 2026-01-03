@@ -1494,3 +1494,17 @@
 - [ ] Remove all made-up startup cost assumptions - only show rent + utilities
 - [ ] Fix competitor count to show 10 properties instead of 4
 - [ ] Test fixes on published site
+
+
+## Gemini Prompt Optimization Sprint
+- [x] Simplify Gemini prompt to reduce token count and prevent timeouts
+- [x] Remove verbose PRE-COMPUTED ANALYSIS section (replaced with 5-line KEY METRICS summary)
+- [x] Simplify historicalContext (from 7 lines to 1 line)
+- [x] Simplify qualifyingCompetitorsContext (from 20+ lines to 2 lines)
+- [x] Simplify key_metrics schema (from 19 fields to 9 fields)
+- [x] Simplify quick_facts (from 10 items to 5 items)
+- [x] Remove CROSS-REFERENCING REQUIREMENTS section (~80 lines)
+- [x] Remove SPECIFIC ANALYTICAL QUESTIONS section (~50 lines)
+- [x] Simplify section descriptions to single-sentence summaries
+- [x] Remove BOOKING PATTERNS section (~10 lines)
+- [x] Increase competitor display limit from 5 to 10 in PropertyAnalyzer
