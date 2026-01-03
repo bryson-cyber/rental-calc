@@ -95,6 +95,8 @@ import {
   type EnhancedNarrativeReport
 } from './gemini-analyzer-enhanced';
 
+import { generateEnhancedNarrativeWithPoe } from './poe-narrative';
+
 import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';
 import { progressTracker, withProgress } from './progress-tracker';
 
@@ -3158,14 +3160,13 @@ export async function generateFullArbitrageAnalysis(
   // Step 20: Generate comprehensive narrative report with retry logic
   let narrative_report: NarrativeReport | undefined;
   
-  // TEMPORARILY SKIP narrative report to fix timeout issue
-  // The Gemini API is taking too long to respond, causing the analysis to hang
-  // TODO: Re-enable once Gemini API performance improves
-  const SKIP_NARRATIVE_REPORT = true;
+  // Skip the basic narrative report since we're using the enhanced Poe AI report instead
+  // The enhanced report with Claude Opus provides better quality analysis
+  const SKIP_BASIC_NARRATIVE = true;
   
-  if (SKIP_NARRATIVE_REPORT) {
-    console.log('[ArbitrageAnalysis] Skipping narrative report (disabled for performance)');
-    if (sessionId) progressTracker.completeStep(sessionId, 'narrative', 'Analysis complete');
+  if (SKIP_BASIC_NARRATIVE) {
+    console.log('[ArbitrageAnalysis] Skipping basic narrative (using enhanced Poe AI report instead)');
+    if (sessionId) progressTracker.completeStep(sessionId, 'narrative', 'Using enhanced AI analysis');
   } else {
   const MAX_RETRIES = 2;
   
@@ -3532,15 +3533,64 @@ export async function generateFullArbitrageAnalysis(
     ]);
   };
   
-  // TEMPORARILY SKIP enhanced narrative report to fix timeout issue
-  // The Gemini API is taking too long to respond, causing the analysis to hang
-  // TODO: Re-enable once Gemini API performance improves or we implement streaming
-  const SKIP_ENHANCED_REPORT = true;
+  // Use Poe AI with Claude Opus for enhanced narrative report (faster and better quality)
+  const USE_POE_AI = true;
   
-  if (SKIP_ENHANCED_REPORT) {
-    console.log('[ArbitrageAnalysis] Skipping enhanced narrative report (disabled for performance)');
-    if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'Analysis complete');
-  } else {
+  if (USE_POE_AI) {
+    try {
+      console.log('[ArbitrageAnalysis] Generating enhanced narrative report with Poe AI (Claude Opus)...');
+      
+      // Get market name for the report
+      const marketNameForEnhanced = property_estimate?.property?.market_id 
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+        : 'Local Market';
+      
+      enhanced_narrative_report = await generateEnhancedNarrativeWithPoe({
+        address,
+        monthly_rent,
+        bedrooms: actualBedrooms,
+        bathrooms: actualBathrooms,
+        market_name: marketNameForEnhanced,
+        market_occupancy: marketData?.market?.metrics?.occupancy || 0.65,
+        market_adr: marketData?.market?.metrics?.adr || 150,
+        active_listings: marketData?.market?.listing_count || competitors.length,
+        revenue_low: percentiles.median,
+        revenue_mid: percentiles.top_25_percent,
+        revenue_high: percentiles.top_10_percent,
+        monthly_expenses: profitability.monthly_expenses.total,
+        annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
+        annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
+        annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
+        competitors: competitors.slice(0, 8).map(c => ({
+          name: c.name,
+          annual_revenue: c.annual_revenue,
+          occupancy: c.occupancy,
+          adr: c.adr,
+          rating: c.rating,
+          reviews: c.reviews,
+          airbnb_url: c.airbnb_url,
+          success_factor: c.key_success_factor
+        })),
+        seasonality: seasonality.map(s => ({
+          month: s.month,
+          revenue: s.revenue,
+          occupancy: s.occupancy,
+          adr: s.adr,
+          season_type: s.season_type
+        })),
+      });
+      
+      console.log('[ArbitrageAnalysis] Enhanced narrative report generated successfully with Poe AI');
+      if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'AI insights generated');
+    } catch (poeError: any) {
+      console.error('[ArbitrageAnalysis] Poe AI error:', poeError.message);
+      console.log('[ArbitrageAnalysis] Falling back to Gemini...');
+      // Fall through to Gemini fallback below
+    }
+  }
+  
+  // Fallback to Gemini if Poe AI fails or is disabled
+  if (!enhanced_narrative_report) {
   try {
     console.log('[ArbitrageAnalysis] Generating enhanced narrative report (60s timeout)...');
     

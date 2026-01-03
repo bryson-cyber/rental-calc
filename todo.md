@@ -1575,3 +1575,14 @@
 - [x] Reduce Gemini API retries from 3 to 1
 - [ ] Re-enable Gemini features once API performance improves
 - [ ] Implement streaming for Gemini responses to avoid timeouts
+
+
+## Poe AI Integration Sprint (Jan 2026)
+- [x] Export current report structure documentation
+- [x] Research Poe AI API integration
+- [x] Create Poe AI service for narrative generation (poe-ai.ts)
+- [x] Create Poe narrative generator with Claude Opus (poe-narrative.ts)
+- [x] Replace Gemini calls with Poe AI calls in sop-reports.ts
+- [x] Test Poe AI connection (vitest tests passed)
+- [x] Test full analysis with Poe AI narrative generation (completed in ~2 minutes)
+- [x] Export report structure documentation (docs/report-structure.md)
