@@ -1618,3 +1618,10 @@
 - [x] Create skeleton loading component for AI narrative section
 - [x] Implement progressive loading to show numeric results first
 - [x] Test the loading skeleton behavior
+
+
+## Fix Persistent AI Timeout
+- [ ] Investigate root cause of AI timeout
+- [ ] Implement fallback handling when AI times out - show numeric results with "AI insights unavailable" message
+- [x] Simplify AI prompt for faster responses
+- [ ] Test the fix
