@@ -254,49 +254,97 @@ export async function synthesizePropertyInsights(
   percentiles: PercentileData,
   seasonality: SeasonalityData[]
 ): Promise<AIInsight[]> {
-  const prompt = `You are an expert Airbnb arbitrage analyst. Analyze this specific property opportunity and generate 4-5 UNIQUE insights that are specific to THIS property - not generic advice.
+  // Pre-calculate key metrics for the prompt
+  const annualRent = property.monthly_rent * 12;
+  const minimumRevenue = annualRent * 2;
+  const revenueToRentRatio = percentiles.median / annualRent;
+  const top25Ratio = percentiles.top_25_percent / annualRent;
+  const competitorsMeetingThreshold = competitors.filter(c => c.annual_revenue >= minimumRevenue).length;
+  const qualificationRate = competitors.length > 0 ? (competitorsMeetingThreshold / competitors.length) * 100 : 0;
+  const topCompetitorRevenue = competitors[0]?.annual_revenue || 0;
+  const revenueGapToTop = topCompetitorRevenue - percentiles.median;
+  
+  // Seasonality calculations
+  const peakMonths = (seasonality || []).filter(s => s.season_type === 'peak');
+  const offMonths = (seasonality || []).filter(s => s.season_type === 'off');
+  const peakSeasonRevenue = peakMonths.length > 0 ? peakMonths.reduce((sum, s) => sum + s.revenue, 0) / peakMonths.length : 0;
+  const offSeasonRevenue = offMonths.length > 0 ? offMonths.reduce((sum, s) => sum + s.revenue, 0) / offMonths.length : 0;
+  const seasonalSwing = offSeasonRevenue > 0 ? ((peakSeasonRevenue - offSeasonRevenue) / offSeasonRevenue * 100) : 0;
+  
+  // Competitor analysis
+  const avgCompetitorRating = competitors.filter(c => c.rating).reduce((sum, c) => sum + (c.rating || 0), 0) / Math.max(1, competitors.filter(c => c.rating).length);
+  const avgCompetitorReviews = competitors.reduce((sum, c) => sum + c.reviews, 0) / Math.max(1, competitors.length);
+  const avgCompetitorADR = competitors.reduce((sum, c) => sum + c.adr, 0) / Math.max(1, competitors.length);
 
-PROPERTY:
+  const prompt = `You are an expert Airbnb arbitrage analyst. Generate 5 UNIQUE, DATA-DRIVEN insights specific to THIS property.
+
+PROPERTY FUNDAMENTALS:
 - Address: ${property.address}
 - Configuration: ${property.bedrooms}BR/${property.bathrooms}BA
 - Monthly Rent: $${property.monthly_rent.toLocaleString()}
-- Annual Rent: $${(property.monthly_rent * 12).toLocaleString()}
-- Minimum Revenue Needed (2x rule): $${(property.monthly_rent * 24).toLocaleString()}
+- Annual Rent: $${annualRent.toLocaleString()}
+- Minimum Revenue Needed (2x rule): $${minimumRevenue.toLocaleString()}
 
-MARKET DATA:
+KEY CALCULATED METRICS (USE THESE IN YOUR ANALYSIS):
+- Revenue-to-Rent Ratio (Median): ${revenueToRentRatio.toFixed(2)}x ${revenueToRentRatio >= 2.5 ? '✓ ABOVE 2.5x threshold' : revenueToRentRatio >= 2.0 ? '~ MARGINAL' : '⚠ BELOW 2.0x threshold'}
+- Revenue-to-Rent Ratio (Top 25%): ${top25Ratio.toFixed(2)}x
+- Qualification Rate: ${qualificationRate.toFixed(1)}% of competitors meet 2x threshold (${competitorsMeetingThreshold}/${competitors.length})
+- Revenue Gap to Top Performer: $${revenueGapToTop.toLocaleString()} between median and top
+- Seasonal Revenue Swing: ${seasonalSwing.toFixed(0)}% difference between peak and off-season
+
+MARKET CONTEXT:
 - Market: ${market.name}
 - Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - Average Daily Rate: $${market.adr}
 - Average Annual Revenue: $${market.revenue.toLocaleString()}
-- Active Listings: ${market.active_listings.toLocaleString()}
+- Active Listings: ${market.active_listings.toLocaleString()} (competition density)
 
 REVENUE PERCENTILES (${property.bedrooms}BR properties):
-- Top 10%: $${percentiles.top_10_percent.toLocaleString()}/year
-- Top 25%: $${percentiles.top_25_percent.toLocaleString()}/year
-- Median: $${percentiles.median.toLocaleString()}/year
+- Top 10% (Optimistic): $${percentiles.top_10_percent.toLocaleString()}/year
+- Top 25% (Realistic): $${percentiles.top_25_percent.toLocaleString()}/year  
+- Median (Conservative): $${percentiles.median.toLocaleString()}/year
+- Percentile Spread: $${(percentiles.top_10_percent - percentiles.median).toLocaleString()} between median and top 10%
 
-TOP COMPETITORS:
-${competitors.slice(0, 5).map((c, i) => `${i + 1}. "${c.name}" - $${c.annual_revenue.toLocaleString()}/yr, ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ, $${c.adr} ADR, ${c.rating || 'N/A'} rating, ${c.reviews} reviews - Success: ${c.success_factor}`).join('\n')}
+COMPETITOR ANALYSIS:
+${competitors.slice(0, 5).map((c, i) => `${i + 1}. "${c.name}"
+   Revenue: $${c.annual_revenue.toLocaleString()}/yr | Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% | ADR: $${c.adr}
+   Rating: ${c.rating || 'N/A'}★ (${c.reviews} reviews) | Success Factor: ${c.success_factor}`).join('\n')}
+- Average Competitor Rating: ${avgCompetitorRating.toFixed(1)}★
+- Average Competitor Reviews: ${Math.round(avgCompetitorReviews)}
+- Average Competitor ADR: $${avgCompetitorADR.toFixed(0)}
 
-SEASONALITY:
-${(seasonality || []).map(s => `${s.month}: $${s.revenue.toLocaleString()} (${s.season_type})`).join(', ') || 'No seasonality data available'}
+SEASONALITY BREAKDOWN:
+${(seasonality || []).map(s => `${s.month}: $${s.revenue.toLocaleString()} revenue, ${Math.round(s.occupancy > 1 ? s.occupancy : s.occupancy * 100)}% occ, $${s.adr} ADR (${s.season_type.toUpperCase()})`).join('\n') || 'No seasonality data available'}
+- Peak Season Avg: $${peakSeasonRevenue.toLocaleString()}/month
+- Off-Season Avg: $${offSeasonRevenue.toLocaleString()}/month
 
-Generate exactly 5 insights in this JSON format:
+GENERATE 5 INSIGHTS - EACH MUST ANSWER ONE OF THESE QUESTIONS:
+
+1. PROFITABILITY INSIGHT: With a ${revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio and ${qualificationRate.toFixed(0)}% qualification rate, what is the realistic probability of profitability? What specific performance level is needed?
+
+2. COMPETITIVE POSITION INSIGHT: The top performer earns $${topCompetitorRevenue.toLocaleString()}/yr while median is $${percentiles.median.toLocaleString()}/yr. What specific strategies do the top 3 competitors use that this property should replicate?
+
+3. PRICING OPPORTUNITY INSIGHT: With ${seasonalSwing.toFixed(0)}% seasonal swing and $${market.adr} market ADR, what specific pricing strategy would maximize revenue? Should this property price above or below market?
+
+4. REVIEW STRATEGY INSIGHT: Top competitors average ${avgCompetitorRating.toFixed(1)}★ with ${Math.round(avgCompetitorReviews)} reviews. How many reviews are needed to compete? At what booking rate, how long will this take?
+
+5. RISK/OPPORTUNITY INSIGHT: With ${market.active_listings.toLocaleString()} active listings and ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}% market occupancy, what is the biggest risk and the single best opportunity to exploit?
+
+JSON FORMAT:
 [
   {
     "title": "Brief title (5-7 words)",
-    "insight": "Specific insight about THIS property (2-3 sentences)",
+    "insight": "Specific insight with NUMBERS from the data (2-3 sentences). MUST reference specific metrics.",
     "impact": "High/Medium/Low",
-    "action": "Specific action to take (1 sentence)"
+    "action": "Specific, actionable step with target numbers (1 sentence)"
   }
 ]
 
-REQUIREMENTS:
-- Each insight must be SPECIFIC to this property, not generic
-- Reference actual numbers from the data
-- Compare to specific competitors when relevant
-- Focus on actionable intelligence
-- Be direct and confident in your analysis
+CRITICAL REQUIREMENTS:
+- EVERY insight must include specific numbers from the data above
+- NO generic advice - everything must be calculated from this property's data
+- Compare to specific competitors by name when relevant
+- Include dollar amounts, percentages, and timeframes in actions
 
 Return ONLY the JSON array, no other text.`;
 
@@ -329,38 +377,80 @@ export async function analyzeCompetitorPatterns(
   competitors: CompetitorData[],
   property: PropertyData
 ): Promise<CompetitorPattern[]> {
-  const prompt = `You are an expert at analyzing Airbnb competition. Study these top-performing listings and identify the PATTERNS that make them successful.
+  // Pre-calculate statistical patterns
+  const avgRevenue = competitors.reduce((sum, c) => sum + c.annual_revenue, 0) / Math.max(1, competitors.length);
+  const avgADR = competitors.reduce((sum, c) => sum + c.adr, 0) / Math.max(1, competitors.length);
+  const avgOccupancy = competitors.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / Math.max(1, competitors.length);
+  const avgRating = competitors.filter(c => c.rating).reduce((sum, c) => sum + (c.rating || 0), 0) / Math.max(1, competitors.filter(c => c.rating).length);
+  const avgReviews = competitors.reduce((sum, c) => sum + c.reviews, 0) / Math.max(1, competitors.length);
+  
+  // Identify strategy segments
+  const highADRCompetitors = competitors.filter(c => c.adr > avgADR * 1.1);
+  const highOccCompetitors = competitors.filter(c => (c.occupancy > 1 ? c.occupancy : c.occupancy * 100) > avgOccupancy * 1.1);
+  const highRatingCompetitors = competitors.filter(c => c.rating && c.rating >= 4.8);
+  const highReviewCompetitors = competitors.filter(c => c.reviews > avgReviews * 1.5);
+  
+  // Top vs bottom analysis
+  const top3 = competitors.slice(0, 3);
+  const bottom3 = competitors.slice(-3);
+  const top3AvgRevenue = top3.reduce((sum, c) => sum + c.annual_revenue, 0) / 3;
+  const bottom3AvgRevenue = bottom3.reduce((sum, c) => sum + c.annual_revenue, 0) / 3;
+  const revenueSpread = bottom3AvgRevenue > 0 ? ((top3AvgRevenue - bottom3AvgRevenue) / bottom3AvgRevenue * 100) : 0;
+  const top3AvgADR = top3.reduce((sum, c) => sum + c.adr, 0) / 3;
+  const top3AvgOcc = top3.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / 3;
 
-TOP PERFORMERS (sorted by revenue):
+  const prompt = `You are an expert at analyzing Airbnb competition patterns. Identify QUANTIFIED PATTERNS from this data.
+
+COMPETITOR DATA (${competitors.length} listings, sorted by revenue):
 ${competitors.map((c, i) => `
 ${i + 1}. "${c.name}"
-   - Revenue: $${c.annual_revenue.toLocaleString()}/year
-   - Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
-   - ADR: $${c.adr}/night
-   - Rating: ${c.rating || 'N/A'} (${c.reviews} reviews)
-   - Success Factor: ${c.success_factor}
-   - Airbnb URL: ${c.airbnb_url}
-`).join('')}
+   Revenue: $${c.annual_revenue.toLocaleString()}/yr (${((c.annual_revenue / avgRevenue - 1) * 100).toFixed(0)}% vs avg)
+   ADR: $${c.adr}/night (${((c.adr / avgADR - 1) * 100).toFixed(0)}% vs avg)
+   Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
+   Rating: ${c.rating || 'N/A'}★ | Reviews: ${c.reviews}
+   Success Factor: ${c.success_factor}`).join('')}
+
+PRE-CALCULATED STATISTICS:
+- Average Revenue: $${avgRevenue.toLocaleString()}/yr
+- Average ADR: $${Math.round(avgADR)}/night
+- Average Occupancy: ${avgOccupancy.toFixed(1)}%
+- Average Rating: ${avgRating.toFixed(2)}★
+- Average Reviews: ${Math.round(avgReviews)}
+- Top 3 vs Bottom 3 Revenue Gap: ${revenueSpread.toFixed(0)}%
+- High ADR Strategy (>10% above avg): ${highADRCompetitors.length}/${competitors.length} competitors
+- High Occupancy Strategy (>10% above avg): ${highOccCompetitors.length}/${competitors.length} competitors
+- Premium Rating (4.8+): ${highRatingCompetitors.length}/${competitors.length} competitors
+- High Review Count (>1.5x avg): ${highReviewCompetitors.length}/${competitors.length} competitors
+- Top 3 Average ADR: $${Math.round(top3AvgADR)}/night
+- Top 3 Average Occupancy: ${top3AvgOcc.toFixed(1)}%
 
 SUBJECT PROPERTY:
 - ${property.bedrooms}BR/${property.bathrooms}BA at $${property.monthly_rent}/month rent
+- Minimum Revenue Needed: $${(property.monthly_rent * 24).toLocaleString()}/yr (2x rule)
 
-Analyze these competitors and identify 4-5 patterns in this JSON format:
+IDENTIFY 5 PATTERNS - EACH MUST BE QUANTIFIED:
+
+1. PRICING STRATEGY: Do top earners use high ADR (${highADRCompetitors.length} listings) or high occupancy (${highOccCompetitors.length} listings)? What's the optimal balance?
+
+2. RATING/REVIEW CORRELATION: ${highRatingCompetitors.length} have 4.8+ ratings. What rating threshold correlates with top revenue?
+
+3. NAMING/BRANDING: Analyze listing names. What keywords appear in top performers vs bottom performers?
+
+4. REVENUE DISTRIBUTION: Top 3 earn ${revenueSpread.toFixed(0)}% more than bottom 3. What separates them?
+
+5. SUCCESS FACTOR THEMES: What common themes emerge in the "Success Factor" field?
+
+JSON FORMAT:
 [
   {
-    "pattern": "What the pattern is (e.g., 'Premium Pricing Strategy')",
-    "frequency": "How many of the top performers exhibit this (e.g., '4 of 5 top earners')",
-    "revenue_impact": "How this affects revenue (e.g., '+25% above market average')",
-    "recommendation": "How to apply this to the subject property"
+    "pattern": "Specific pattern with data (e.g., 'Premium ADR Strategy: $${Math.round(top3AvgADR)} avg among top 3')",
+    "frequency": "X of ${competitors.length} top performers (X%)",
+    "revenue_impact": "Quantified impact (e.g., '+$X,XXX/yr' or '+XX% revenue')",
+    "recommendation": "Specific action for subject property with target numbers"
   }
 ]
 
-Look for patterns in:
-- Pricing strategies (high ADR vs high occupancy)
-- Property naming/branding
-- Success factors mentioned
-- Rating and review patterns
-- Occupancy vs ADR tradeoffs
+CRITICAL: Every pattern MUST include specific numbers. No generic observations.
 
 Return ONLY the JSON array, no other text.`;
 
@@ -388,51 +478,113 @@ export async function generateInvestmentVerdict(
   profitability: { conservative: number; realistic: number; optimistic: number }
 ): Promise<InvestmentVerdict> {
   const minimumRevenue = property.monthly_rent * 24;
+  const annualRent = property.monthly_rent * 12;
   const competitorsList = competitors || [];
   const viableCompetitors = competitorsList.filter(c => c.annual_revenue >= minimumRevenue);
   
-  const prompt = `You are a senior real estate investment analyst. Provide a definitive investment verdict for this Airbnb arbitrage opportunity.
+  // Calculate comprehensive scoring metrics
+  const qualificationRate = competitorsList.length > 0 ? (viableCompetitors.length / competitorsList.length) * 100 : 0;
+  const revenueToRentMedian = percentiles.median / annualRent;
+  const revenueToRentTop25 = percentiles.top_25_percent / annualRent;
+  const revenueToRentTop10 = percentiles.top_10_percent / annualRent;
+  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  
+  // Break-even calculations
+  const monthlyExpenses = property.monthly_rent * 1.3; // Rent + ~30% operating costs
+  const breakEvenOccupancy = market.adr > 0 ? ((monthlyExpenses * 12) / (market.adr * 365)) * 100 : 100;
+  const cushionAboveBreakeven = marketOccupancy - breakEvenOccupancy;
+  
+  // Profit margins
+  const profitMarginConservative = percentiles.median > 0 ? (profitability.conservative / percentiles.median) * 100 : 0;
+  const profitMarginRealistic = percentiles.top_25_percent > 0 ? (profitability.realistic / percentiles.top_25_percent) * 100 : 0;
+  
+  // Score each factor (0-10 scale)
+  const qualificationScore = qualificationRate >= 50 ? 10 : qualificationRate >= 30 ? 7 : qualificationRate >= 15 ? 4 : 1;
+  const revenueRatioScore = revenueToRentTop25 >= 3.0 ? 10 : revenueToRentTop25 >= 2.5 ? 8 : revenueToRentTop25 >= 2.0 ? 5 : 2;
+  const occupancyScore = marketOccupancy >= 70 ? 10 : marketOccupancy >= 55 ? 7 : marketOccupancy >= 40 ? 4 : 1;
+  const profitScore = profitability.realistic >= 30000 ? 10 : profitability.realistic >= 15000 ? 7 : profitability.realistic >= 5000 ? 4 : 1;
+  const compositeScore = (qualificationScore + revenueRatioScore + occupancyScore + profitScore) / 4;
+  
+  // Downside scenario calculation
+  const occupancyDrop20 = marketOccupancy * 0.8;
+  const revenueAtLowerOcc = market.adr * 365 * (occupancyDrop20 / 100);
+  const monthlyLossAt20Drop = (monthlyExpenses * 12) - revenueAtLowerOcc;
+  
+  const prompt = `You are a senior real estate investment analyst. Provide a QUANTIFIED investment verdict.
 
-PROPERTY:
+PROPERTY FUNDAMENTALS:
 - Address: ${property.address}
 - Configuration: ${property.bedrooms}BR/${property.bathrooms}BA
 - Monthly Rent: $${property.monthly_rent.toLocaleString()}
+- Annual Rent: $${annualRent.toLocaleString()}
 - Minimum Revenue Needed (2x rule): $${minimumRevenue.toLocaleString()}/year
+
+KEY DECISION METRICS (PRE-CALCULATED):
+- Revenue-to-Rent Ratio (Median): ${revenueToRentMedian.toFixed(2)}x ${revenueToRentMedian >= 2.0 ? '✓' : '✗'}
+- Revenue-to-Rent Ratio (Top 25%): ${revenueToRentTop25.toFixed(2)}x ${revenueToRentTop25 >= 2.5 ? '✓ STRONG' : revenueToRentTop25 >= 2.0 ? '~ MARGINAL' : '✗ WEAK'}
+- Revenue-to-Rent Ratio (Top 10%): ${revenueToRentTop10.toFixed(2)}x
+- Qualification Rate: ${qualificationRate.toFixed(1)}% (${viableCompetitors.length}/${competitorsList.length} meet 2x threshold)
+- Break-Even Occupancy: ${breakEvenOccupancy.toFixed(1)}%
+- Market Occupancy: ${marketOccupancy.toFixed(1)}%
+- Cushion Above Break-Even: ${cushionAboveBreakeven.toFixed(1)} points ${cushionAboveBreakeven >= 15 ? '✓ SAFE' : cushionAboveBreakeven >= 5 ? '~ TIGHT' : '✗ RISKY'}
+
+SCORING BREAKDOWN (0-10 scale):
+- Qualification Score: ${qualificationScore}/10 (${qualificationRate.toFixed(0)}% profitable)
+- Revenue Ratio Score: ${revenueRatioScore}/10 (${revenueToRentTop25.toFixed(2)}x at Top 25%)
+- Occupancy Score: ${occupancyScore}/10 (${marketOccupancy.toFixed(0)}% market occ)
+- Profit Score: ${profitScore}/10 ($${profitability.realistic.toLocaleString()} realistic)
+- COMPOSITE SCORE: ${compositeScore.toFixed(1)}/10
 
 MARKET CONTEXT:
 - Market: ${market.name}
 - Active Listings: ${market.active_listings.toLocaleString()}
-- Market Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
 - Market ADR: $${market.adr}
 
-REVENUE POTENTIAL:
+REVENUE PERCENTILES (${property.bedrooms}BR):
 - Top 10%: $${percentiles.top_10_percent.toLocaleString()}/year
 - Top 25%: $${percentiles.top_25_percent.toLocaleString()}/year
 - Median: $${percentiles.median.toLocaleString()}/year
 
 PROFIT PROJECTIONS:
-- Conservative (Median): $${profitability.conservative.toLocaleString()}/year profit
-- Realistic (Top 25%): $${profitability.realistic.toLocaleString()}/year profit
-- Optimistic (Top 10%): $${profitability.optimistic.toLocaleString()}/year profit
+- Conservative: $${profitability.conservative.toLocaleString()}/year (${profitMarginConservative.toFixed(0)}% margin)
+- Realistic: $${profitability.realistic.toLocaleString()}/year (${profitMarginRealistic.toFixed(0)}% margin)
+- Optimistic: $${profitability.optimistic.toLocaleString()}/year
 
-COMPETITION:
-- ${viableCompetitors.length} of ${competitors.length} competitors meet the 2x revenue threshold
-- Top competitor earns: $${competitors[0]?.annual_revenue.toLocaleString() || 'N/A'}/year
+DOWNSIDE SCENARIO:
+- If occupancy drops 20% (to ${occupancyDrop20.toFixed(0)}%): ${monthlyLossAt20Drop > 0 ? 'LOSS of $' + Math.round(monthlyLossAt20Drop).toLocaleString() + '/year' : 'Still profitable'}
 
-Provide your verdict in this JSON format:
+VERDICT DECISION FRAMEWORK:
+
+GO (Composite ≥7):
+✓ Qualification rate ≥30%
+✓ Revenue-to-rent (Top 25%) ≥2.5x
+✓ Cushion above break-even ≥10 points
+✓ Realistic profit ≥$15,000/year
+
+CAUTION (Composite 4-7):
+~ Qualification rate 15-30%
+~ Revenue-to-rent 2.0-2.5x
+~ Tight margins requiring top-quartile performance
+
+PASS (Composite <4):
+✗ Qualification rate <15%
+✗ Revenue-to-rent <2.0x
+✗ Negative conservative profit
+
+Based on composite score of ${compositeScore.toFixed(1)}/10:
+
 {
   "rating": "GO" or "CAUTION" or "PASS",
-  "confidence": 1-10,
-  "summary": "2-3 sentence summary of your verdict",
-  "top_reasons": ["Reason 1", "Reason 2", "Reason 3"],
-  "key_risk": "The single biggest risk to watch",
-  "key_opportunity": "The single biggest opportunity to leverage"
+  "confidence": <1-10, align with composite score>,
+  "summary": "2-3 sentences with SPECIFIC NUMBERS from above",
+  "top_reasons": [
+    "Reason with specific metric (e.g., '${qualificationRate.toFixed(0)}% qualification rate...')",
+    "Reason with specific metric",
+    "Reason with specific metric"
+  ],
+  "key_risk": "Quantified risk (e.g., 'If occupancy drops 20%, annual loss of $X')",
+  "key_opportunity": "Quantified opportunity (e.g., 'Reaching top 25% adds $X/year')"
 }
-
-RATING CRITERIA (for rental arbitrage - they're RENTING, not buying):
-- GO: Revenue projections strongly support signing this lease. Top 25% revenue > 2x rent, good market.
-- CAUTION: Marginal profitability, needs specific conditions to work. Proceed carefully.
-- PASS: Don't sign this lease. High risk, low profit potential, or unfavorable market.
 
 Return ONLY the JSON object, no other text.`;
 
@@ -482,42 +634,100 @@ export async function generatePricingStrategy(
   const competitorsList = competitors || [];
   const peakMonths = seasonalityData.filter(s => s.season_type === 'peak');
   const slowMonths = seasonalityData.filter(s => s.season_type === 'off');
+  const shoulderMonths = seasonalityData.filter(s => s.season_type === 'shoulder');
+  
+  // Detailed seasonality calculations
   const avgPeakADR = peakMonths.length > 0 ? peakMonths.reduce((sum, m) => sum + m.adr, 0) / peakMonths.length : market.adr;
   const avgSlowADR = slowMonths.length > 0 ? slowMonths.reduce((sum, m) => sum + m.adr, 0) / slowMonths.length : market.adr * 0.8;
+  const avgShoulderADR = shoulderMonths.length > 0 ? shoulderMonths.reduce((sum, m) => sum + m.adr, 0) / shoulderMonths.length : market.adr * 0.9;
+  const seasonalSwing = avgSlowADR > 0 ? ((avgPeakADR - avgSlowADR) / avgSlowADR * 100) : 0;
   
-  const prompt = `You are a dynamic pricing expert for Airbnb. Create a pricing strategy for this property.
+  // Competitor pricing analysis
+  const competitorADRs = competitorsList.map(c => c.adr).filter(a => a > 0).sort((a, b) => a - b);
+  const minCompetitorADR = competitorADRs[0] || market.adr * 0.7;
+  const maxCompetitorADR = competitorADRs[competitorADRs.length - 1] || market.adr * 1.3;
+  const medianCompetitorADR = competitorADRs[Math.floor(competitorADRs.length / 2)] || market.adr;
+  const avgCompetitorADR = competitorADRs.reduce((a, b) => a + b, 0) / Math.max(1, competitorADRs.length);
+  
+  // Occupancy and strategy analysis
+  const avgCompetitorOccupancy = competitorsList.reduce((sum, c) => sum + (c.occupancy > 1 ? c.occupancy : c.occupancy * 100), 0) / Math.max(1, competitorsList.length);
+  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  const highADRCompetitors = competitorsList.filter(c => c.adr > avgCompetitorADR * 1.1);
+  const highOccCompetitors = competitorsList.filter(c => (c.occupancy > 1 ? c.occupancy : c.occupancy * 100) > avgCompetitorOccupancy * 1.1);
+  const topRevenueStrategy = highADRCompetitors.length > highOccCompetitors.length ? 'HIGH_ADR' : 'HIGH_OCCUPANCY';
+  
+  // Break-even and revenue calculations
+  const monthlyExpenses = property.monthly_rent * 1.3;
+  const breakEvenADR = marketOccupancy > 0 ? (monthlyExpenses * 12) / (365 * (marketOccupancy / 100)) : market.adr;
+  const targetOccupancy = marketOccupancy / 100;
+  const revenueAtMarketADR = market.adr * 365 * targetOccupancy;
+  const revenueAt10Above = market.adr * 1.1 * 365 * (targetOccupancy * 0.95);
+  const revenueAt10Below = market.adr * 0.9 * 365 * (targetOccupancy * 1.05);
+  const optimalStrategy = revenueAt10Above > revenueAtMarketADR ? 'PREMIUM' : 'VOLUME';
+  
+  const prompt = `You are a dynamic pricing expert for Airbnb. Create a DATA-DRIVEN pricing strategy.
 
-PROPERTY:
-- ${property.bedrooms}BR/${property.bathrooms}BA in ${market.name}
+PROPERTY CONTEXT:
+- Configuration: ${property.bedrooms}BR/${property.bathrooms}BA in ${market.name}
 - Monthly Rent: $${property.monthly_rent.toLocaleString()}
+- Monthly Expenses (est): $${Math.round(monthlyExpenses).toLocaleString()}
+- Break-Even ADR: $${breakEvenADR.toFixed(0)}/night (at ${marketOccupancy.toFixed(0)}% occupancy)
 
-MARKET DATA:
-- Average ADR: $${market.adr}
-- Average Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
+MARKET PRICING DATA:
+- Market Average ADR: $${market.adr}
+- Market Occupancy: ${marketOccupancy.toFixed(1)}%
+- Competitor ADR Range: $${minCompetitorADR.toFixed(0)} - $${maxCompetitorADR.toFixed(0)}
+- Competitor Median ADR: $${medianCompetitorADR.toFixed(0)}
+- Competitor Average ADR: $${avgCompetitorADR.toFixed(0)}
 
-COMPETITOR ADRs:
-${competitorsList.slice(0, 5).map(c => `- "${c.name}": $${c.adr}/night (${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}% occ)`).join('\n')}
+COMPETITOR BREAKDOWN:
+${competitorsList.slice(0, 7).map((c, i) => `${i + 1}. "${c.name}"
+   ADR: $${c.adr} (${((c.adr / avgCompetitorADR - 1) * 100).toFixed(0)}% vs avg)
+   Occupancy: ${Math.round(c.occupancy > 1 ? c.occupancy : c.occupancy * 100)}%
+   Revenue: $${c.annual_revenue.toLocaleString()}/yr
+   Strategy: ${c.adr > avgCompetitorADR * 1.1 ? 'PREMIUM' : c.adr < avgCompetitorADR * 0.9 ? 'VALUE' : 'MID-MARKET'}`).join('\n')}
 
-SEASONALITY:
-- Peak Season ADR: $${Math.round(avgPeakADR)} (${peakMonths.map(m => m.month).join(', ') || 'N/A'})
-- Slow Season ADR: $${Math.round(avgSlowADR)} (${slowMonths.map(m => m.month).join(', ') || 'N/A'})
+WINNING STRATEGY ANALYSIS:
+- High ADR Competitors (>10% above avg): ${highADRCompetitors.length}/${competitorsList.length}
+- High Occupancy Competitors (>10% above avg): ${highOccCompetitors.length}/${competitorsList.length}
+- Top Revenue Strategy in Market: ${topRevenueStrategy}
 
-Generate a pricing strategy in this JSON format:
+SEASONALITY ANALYSIS:
+- Peak Season: ${peakMonths.map(m => m.month).join(', ') || 'N/A'}
+  Average ADR: $${avgPeakADR.toFixed(0)} | Swing: +${seasonalSwing.toFixed(0)}% vs slow
+- Shoulder Season: ${shoulderMonths.map(m => m.month).join(', ') || 'N/A'}
+  Average ADR: $${avgShoulderADR.toFixed(0)}
+- Slow Season: ${slowMonths.map(m => m.month).join(', ') || 'N/A'}
+  Average ADR: $${avgSlowADR.toFixed(0)}
+
+REVENUE SCENARIOS (at ${marketOccupancy.toFixed(0)}% base occupancy):
+- At Market ADR ($${market.adr}): $${revenueAtMarketADR.toLocaleString()}/yr
+- At +10% Premium ($${(market.adr * 1.1).toFixed(0)}): $${revenueAt10Above.toLocaleString()}/yr (assumes 5% occ drop)
+- At -10% Discount ($${(market.adr * 0.9).toFixed(0)}): $${revenueAt10Below.toLocaleString()}/yr (assumes 5% occ gain)
+- OPTIMAL STRATEGY: ${optimalStrategy} pricing ${optimalStrategy === 'PREMIUM' ? 'wins (+$' + Math.round(revenueAt10Above - revenueAtMarketADR).toLocaleString() + '/yr)' : 'wins (+$' + Math.round(revenueAt10Below - revenueAtMarketADR).toLocaleString() + '/yr)'}
+
+PRICING STRATEGY REQUIREMENTS:
+
+1. BASE RATE: Position ${topRevenueStrategy === 'HIGH_ADR' ? 'at or above' : 'at or slightly below'} competitor median ($${medianCompetitorADR.toFixed(0)})
+
+2. PEAK PREMIUM: Based on ${seasonalSwing.toFixed(0)}% seasonal swing
+
+3. SLOW DISCOUNT: Calculate discount to maintain occupancy
+
+4. WEEKEND PREMIUM: Market typically supports 10-25%
+
+5. MINIMUM STAY: Balance booking frequency vs operational costs
+
+Generate pricing strategy:
 {
-  "base_rate": 250,
-  "peak_premium_percent": 30,
-  "slow_discount_percent": 20,
-  "weekend_premium_percent": 15,
-  "minimum_stay_peak": 2,
-  "minimum_stay_slow": 3,
-  "pricing_rationale": "2-3 sentence explanation of this strategy"
+  "base_rate": <your recommended base rate>,
+  "peak_premium_percent": <% increase for peak>,
+  "slow_discount_percent": <% decrease for slow>,
+  "weekend_premium_percent": <% increase for Fri-Sat>,
+  "minimum_stay_peak": <min nights in peak>,
+  "minimum_stay_slow": <min nights in slow>,
+  "pricing_rationale": "3-4 sentences: (1) positioning vs competitors, (2) expected revenue impact, (3) seasonal adjustments"
 }
-
-Consider:
-- Position relative to competitors (premium, mid-market, or value)
-- Occupancy vs ADR tradeoff
-- Seasonal demand patterns
-- Weekend vs weekday demand
 
 Return ONLY the JSON object, no other text.`;
 
@@ -655,52 +865,107 @@ export async function assessRisks(
   const competitorsList = competitors || [];
   const slowMonths = seasonalityData.filter(s => s.season_type === 'off');
   const peakMonths = seasonalityData.filter(s => s.season_type === 'peak');
-  const seasonalityVariance = peakMonths.length > 0 && slowMonths.length > 0
-    ? (peakMonths[0].revenue - slowMonths[0].revenue) / peakMonths[0].revenue
-    : 0;
   
-  const prompt = `You are a risk analyst for short-term rental investments. Assess the risks and opportunities for this arbitrage deal.
+  // Calculate detailed risk metrics
+  const avgPeakRevenue = peakMonths.length > 0 ? peakMonths.reduce((sum, m) => sum + m.revenue, 0) / peakMonths.length : 0;
+  const avgSlowRevenue = slowMonths.length > 0 ? slowMonths.reduce((sum, m) => sum + m.revenue, 0) / slowMonths.length : 0;
+  const seasonalityVariance = avgPeakRevenue > 0 && avgSlowRevenue > 0 ? ((avgPeakRevenue - avgSlowRevenue) / avgPeakRevenue) : 0;
+  
+  // Financial risk calculations
+  const monthlyExpenses = property.monthly_rent * 1.3;
+  const annualExpenses = monthlyExpenses * 12;
+  const marketOccupancy = market.occupancy > 1 ? market.occupancy : market.occupancy * 100;
+  const expectedRevenue = market.adr * 365 * (marketOccupancy / 100);
+  const breakEvenOccupancy = market.adr > 0 ? (annualExpenses / (market.adr * 365)) * 100 : 100;
+  const cushionAboveBreakeven = marketOccupancy - breakEvenOccupancy;
+  
+  // Downside scenarios
+  const revenueAt20PercentOccDrop = market.adr * 365 * ((marketOccupancy * 0.8) / 100);
+  const lossAt20PercentDrop = annualExpenses - revenueAt20PercentOccDrop;
+  const monthsOfSlowSeason = slowMonths.length;
+  const slowSeasonCashNeeded = monthsOfSlowSeason * (monthlyExpenses - (avgSlowRevenue || monthlyExpenses * 0.5));
+  
+  // Competition risk
+  const listingsPerThousandRevenue = market.revenue > 0 ? (market.active_listings / (market.revenue / 1000)) : 0;
+  const competitorDensity = market.active_listings > 5000 ? 'HIGH' : market.active_listings > 2000 ? 'MEDIUM' : 'LOW';
+  
+  // Calculate minimum viable revenue
+  const minimumRevenue = property.monthly_rent * 24;
+  const viableCompetitors = competitorsList.filter(c => c.annual_revenue >= minimumRevenue);
+  const qualificationRate = competitorsList.length > 0 ? (viableCompetitors.length / competitorsList.length) * 100 : 0;
+  
+  // Risk scoring (0-10, higher = more risky)
+  const seasonalityRiskScore = seasonalityVariance > 0.5 ? 9 : seasonalityVariance > 0.3 ? 6 : 3;
+  const competitionRiskScore = market.active_listings > 5000 ? 8 : market.active_listings > 2000 ? 5 : 2;
+  const financialRiskScore = cushionAboveBreakeven < 5 ? 9 : cushionAboveBreakeven < 15 ? 5 : 2;
+  const qualificationRiskScore = qualificationRate < 20 ? 9 : qualificationRate < 40 ? 5 : 2;
+  const compositeRiskScore = (seasonalityRiskScore + competitionRiskScore + financialRiskScore + qualificationRiskScore) / 4;
+  
+  const prompt = `You are a risk analyst for short-term rental investments. Provide a QUANTIFIED risk assessment.
 
-PROPERTY:
+PROPERTY FUNDAMENTALS:
 - ${property.bedrooms}BR/${property.bathrooms}BA at $${property.monthly_rent}/month
 - Location: ${property.address}
+- Annual Expenses (est): $${annualExpenses.toLocaleString()}
+- Minimum Revenue Needed (2x): $${minimumRevenue.toLocaleString()}
 
-MARKET:
-- ${market.name} with ${market.active_listings.toLocaleString()} active listings
-- Occupancy: ${Math.round(market.occupancy > 1 ? market.occupancy : market.occupancy * 100)}%
-- ADR: $${market.adr}
+MARKET RISK METRICS:
+- Market: ${market.name}
+- Active Listings: ${market.active_listings.toLocaleString()} (${competitorDensity} density)
+- Market Occupancy: ${marketOccupancy.toFixed(1)}%
+- Market ADR: $${market.adr}
+- Expected Revenue: $${expectedRevenue.toLocaleString()}/year
 
-SEASONALITY:
-- Revenue variance: ${Math.round(seasonalityVariance * 100)}% between peak and slow seasons
-- Slow months: ${slowMonths.map(m => m.month).join(', ') || 'None identified'}
-- Peak months: ${peakMonths.map(m => m.month).join(', ') || 'None identified'}
+FINANCIAL RISK METRICS:
+- Break-Even Occupancy: ${breakEvenOccupancy.toFixed(1)}%
+- Cushion Above Break-Even: ${cushionAboveBreakeven.toFixed(1)} points ${cushionAboveBreakeven >= 15 ? '✓ SAFE' : cushionAboveBreakeven >= 5 ? '~ TIGHT' : '✗ RISKY'}
+- If Occupancy Drops 20%: ${lossAt20PercentDrop > 0 ? 'LOSS of $' + Math.round(lossAt20PercentDrop).toLocaleString() + '/year' : 'Still profitable'}
+- Qualification Rate: ${qualificationRate.toFixed(1)}% of competitors are profitable
 
-COMPETITION:
-- ${competitorsList.length} comparable properties
+SEASONALITY RISK:
+- Revenue Variance: ${(seasonalityVariance * 100).toFixed(0)}% between peak and slow
+- Slow Months: ${slowMonths.map(m => m.month).join(', ') || 'None identified'} (${monthsOfSlowSeason} months)
+- Peak Months: ${peakMonths.map(m => m.month).join(', ') || 'None identified'}
+- Avg Peak Revenue: $${avgPeakRevenue.toLocaleString()}/month
+- Avg Slow Revenue: $${avgSlowRevenue.toLocaleString()}/month
+- Cash Reserves Needed for Slow Season: $${Math.max(0, Math.round(slowSeasonCashNeeded)).toLocaleString()}
+
+RISK SCORING (0-10, higher = riskier):
+- Seasonality Risk: ${seasonalityRiskScore}/10 (${(seasonalityVariance * 100).toFixed(0)}% variance)
+- Competition Risk: ${competitionRiskScore}/10 (${market.active_listings.toLocaleString()} listings)
+- Financial Risk: ${financialRiskScore}/10 (${cushionAboveBreakeven.toFixed(0)} pt cushion)
+- Qualification Risk: ${qualificationRiskScore}/10 (${qualificationRate.toFixed(0)}% profitable)
+- COMPOSITE RISK SCORE: ${compositeRiskScore.toFixed(1)}/10
+
+COMPETITOR CONTEXT:
+- ${competitorsList.length} comparable properties analyzed
 - Top earner: $${competitorsList[0]?.annual_revenue.toLocaleString() || 'N/A'}/year
+- ${viableCompetitors.length} competitors meet 2x threshold
 
-Provide risk assessment in this JSON format:
+PROVIDE RISK ASSESSMENT:
+
 {
-  "overall_risk": "Low/Medium/High",
+  "overall_risk": "${compositeRiskScore >= 7 ? 'High' : compositeRiskScore >= 4 ? 'Medium' : 'Low'}",
   "risks": [
     {
       "category": "Market/Financial/Operational/Regulatory",
-      "description": "Specific risk description",
+      "description": "Specific risk with NUMBERS (e.g., '${market.active_listings.toLocaleString()} listings creates...')",
       "severity": "Low/Medium/High",
-      "mitigation": "How to mitigate this risk"
+      "financial_impact": "$X,XXX potential loss or cost",
+      "mitigation": "Specific action to reduce this risk"
     }
   ],
   "opportunities": [
     {
       "category": "Market/Pricing/Differentiation/Timing",
-      "description": "Specific opportunity",
-      "potential_impact": "Revenue impact estimate",
-      "action": "How to capture this opportunity"
+      "description": "Specific opportunity with NUMBERS",
+      "potential_impact": "+$X,XXX/year or +X% revenue",
+      "action": "Specific steps to capture this"
     }
   ]
 }
 
-Include 3-4 risks and 2-3 opportunities. Be specific to this property and market.
+INCLUDE 4 RISKS (one from each category) and 3 OPPORTUNITIES with specific dollar amounts.
 
 Return ONLY the JSON object, no other text.`;
 
@@ -749,35 +1014,100 @@ export async function generateActionPlan(
   verdict: InvestmentVerdict,
   pricingStrategy: PricingStrategy
 ): Promise<ActionPlan[]> {
-  const prompt = `You are an Airbnb launch consultant. Create a step-by-step action plan to launch this property.
+  // Calculate startup costs and ROI projections
+  const furnishingCostPerBedroom = 3500;
+  const estimatedFurnishingCost = property.bedrooms * furnishingCostPerBedroom + 2000; // Base + per bedroom
+  const photographyCost = 300;
+  const essentialsCost = 500;
+  const totalStartupCost = estimatedFurnishingCost + photographyCost + essentialsCost;
+  
+  // Revenue projections
+  const monthlyRevenueAtBase = pricingStrategy.base_rate * 30 * 0.6; // 60% occupancy estimate
+  const monthlyExpenses = property.monthly_rent * 1.3;
+  const monthlyProfit = monthlyRevenueAtBase - monthlyExpenses;
+  const monthsToBreakeven = monthlyProfit > 0 ? Math.ceil(totalStartupCost / monthlyProfit) : 12;
+  
+  // Review timeline calculations
+  const avgStayLength = 3;
+  const bookingsPerMonthAt60Occ = Math.floor((30 * 0.6) / avgStayLength);
+  const reviewConversionRate = 0.5; // 50% of guests leave reviews
+  const reviewsPerMonth = Math.floor(bookingsPerMonthAt60Occ * reviewConversionRate);
+  const monthsTo10Reviews = reviewsPerMonth > 0 ? Math.ceil(10 / reviewsPerMonth) : 3;
+  
+  const prompt = `You are an Airbnb launch consultant. Create a DETAILED, QUANTIFIED action plan.
 
-PROPERTY:
-- ${property.bedrooms}BR/${property.bathrooms}BA
-- Monthly Rent: $${property.monthly_rent}
+PROPERTY DETAILS:
+- Configuration: ${property.bedrooms}BR/${property.bathrooms}BA
+- Monthly Rent: $${property.monthly_rent.toLocaleString()}
 - Investment Verdict: ${verdict.rating} (${verdict.confidence}/10 confidence)
+- Key Risk: ${verdict.key_risk}
+- Key Opportunity: ${verdict.key_opportunity}
 
 PRICING STRATEGY:
 - Base Rate: $${pricingStrategy.base_rate}/night
 - Peak Premium: +${pricingStrategy.peak_premium_percent}%
+- Slow Discount: -${pricingStrategy.slow_discount_percent}%
+- Weekend Premium: +${pricingStrategy.weekend_premium_percent}%
 - Minimum Stay: ${pricingStrategy.minimum_stay_peak}-${pricingStrategy.minimum_stay_slow} nights
 
-Create a launch action plan in this JSON format:
+FINANCIAL PROJECTIONS:
+- Estimated Startup Cost: $${totalStartupCost.toLocaleString()}
+  * Furnishing (${property.bedrooms}BR): $${estimatedFurnishingCost.toLocaleString()}
+  * Professional Photography: $${photographyCost}
+  * Essentials/Supplies: $${essentialsCost}
+- Monthly Revenue (at 60% occ): $${Math.round(monthlyRevenueAtBase).toLocaleString()}
+- Monthly Expenses: $${Math.round(monthlyExpenses).toLocaleString()}
+- Monthly Profit: $${Math.round(monthlyProfit).toLocaleString()}
+- Months to Break-Even: ${monthsToBreakeven}
+
+REVIEW TIMELINE:
+- Est. Bookings/Month (at 60% occ): ${bookingsPerMonthAt60Occ}
+- Est. Reviews/Month (50% conversion): ${reviewsPerMonth}
+- Months to 10 Reviews: ${monthsTo10Reviews}
+
+CREATE ACTION PLAN WITH 5 PHASES:
+
 [
   {
-    "phase": "Phase name (e.g., 'Pre-Launch Setup')",
-    "timeline": "Week 1-2",
-    "tasks": ["Task 1", "Task 2", "Task 3"],
-    "estimated_cost": "$X,XXX",
-    "expected_outcome": "What this phase achieves"
+    "phase": "Phase Name",
+    "timeline": "Week X-Y or Month X",
+    "tasks": [
+      "Task 1 with specific details and costs",
+      "Task 2 with specific details",
+      "Task 3 with measurable outcome"
+    ],
+    "estimated_cost": "$X,XXX (itemized)",
+    "expected_outcome": "Specific measurable outcome (e.g., 'Property live with X bookings')",
+    "kpis": ["KPI 1 to track", "KPI 2 to track"]
   }
 ]
 
-Include 4-5 phases covering:
-1. Pre-launch setup (furnishing, photos, listing creation)
-2. Launch strategy (pricing, promotion)
-3. First 30 days (building reviews)
-4. Optimization (pricing adjustments, improvements)
-5. Scaling (if applicable)
+PHASE REQUIREMENTS:
+
+1. PRE-LAUNCH (Weeks 1-3): $${totalStartupCost.toLocaleString()} budget
+   - Furnishing strategy for ${property.bedrooms}BR
+   - Photography checklist (hero shots, room shots, amenity shots)
+   - Listing optimization (title formulas, description structure)
+
+2. SOFT LAUNCH (Weeks 4-6): Launch pricing strategy
+   - Set initial rate at $${Math.round(pricingStrategy.base_rate * 0.85)}/night (15% below target)
+   - Instant Book settings
+   - Response time targets
+
+3. REVIEW BUILDING (Weeks 7-12): Target ${reviewsPerMonth * 2} reviews
+   - Guest communication templates
+   - Review request timing
+   - 5-star experience checklist
+
+4. OPTIMIZATION (Months 3-6): Reach target $${pricingStrategy.base_rate}/night
+   - Pricing adjustment milestones
+   - Amenity upgrades based on feedback
+   - Dynamic pricing tool setup
+
+5. SCALE/MAINTAIN (Month 6+): Maximize profitability
+   - Superhost qualification checklist
+   - Automation opportunities
+   - Expansion criteria
 
 Return ONLY the JSON array, no other text.`;
 
