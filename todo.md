@@ -1327,8 +1327,63 @@
 - [x] Pass image counts and photo quality metrics to Gemini
 - [x] Update AI prompt to analyze visual presentation standards
 
+### Iteration 19: Submarket Details (Geographic Context)
+- [x] Call getSubmarketDetails for property's submarket
+- [x] Pass parent market name, market type, and submarket metrics to Gemini
+- [x] Update AI prompt to analyze geographic hierarchy and market positioning
+
+### Iteration 20: All Submarkets Comparison (Neighborhood Ranking)
+- [x] Call getSubmarketsInMarket to get all neighborhoods in parent market
+- [x] Call getSubmarketMetrics for each submarket to get performance data
+- [x] Pass neighborhood ranking with property's position to Gemini
+- [x] Update AI prompt to analyze if property is in optimal neighborhood
+
+### Iteration 21: Enhanced Submarket Exploration (Multi-Factor Ranking)
+- [x] Call exploreSubmarketsWithMetrics for comprehensive neighborhood analysis
+- [x] Pass multi-factor rankings (revenue, occupancy, RevPAR, overall score) to Gemini
+- [x] Include top recommendation with specific reasoning
+- [x] Update AI prompt to analyze overall scores and recommend optimal neighborhoods
+
+### Iteration 22: Market Composition Insights (Host & Property Analysis)
+- [x] Call calculateMarketInsights to derive insights from collected listings
+- [x] Pass host quality metrics (superhosts, professional managers) to Gemini
+- [x] Pass property type breakdown with revenue by type to Gemini
+- [x] Pass host size distribution to Gemini
+- [x] Pass revenue percentile distribution (p10-p90) to Gemini
+- [x] Update AI prompt to analyze market composition and competition dynamics
+
+### Iteration 23: Direct Competitor Analysis (Same-Bedroom Radius Search)
+- [x] Call exploreListingsInRadius with bedroom filter for direct competitors
+- [x] Pass filtered competitor count and averages to Gemini
+- [x] Pass top performers in same bedroom category to Gemini
+- [x] Update AI prompt to analyze direct competition specifically
+
 ### Future Iterations
-- [ ] Integrate getListingComps for better comp matching
-- [ ] Integrate getTopPerformers with filters
-- [ ] Integrate calculateArbitrageFeasibility
-- [ ] Pass all additional data to Gemini
+- [ ] All major AirDNA functions now integrated
+- [ ] Consider adding more granular filters or custom analysis
+
+### Export Functionality
+- [x] Create PDF export endpoint for full analysis report
+- [x] Create Excel export endpoint with structured data
+- [x] Add export buttons to results UI
+- [x] Format PDF with professional styling (HTML to PDF via Puppeteer)
+- [x] Include all metrics in exports (Excel has multiple sheets)
+
+### API Caching Layer
+- [x] Implement in-memory cache for API responses
+- [x] Add cache key generation based on request parameters
+- [x] Set appropriate TTL (time-to-live) for cached data (5 min default)
+- [x] Add cache hit/miss logging
+
+### Stress Testing
+- [x] Create stress test script with 100 diverse property addresses
+- [x] Run test analysis on properties
+- [x] Collect and analyze error patterns
+- [x] Fix identified issues (retry logic, num_months param, error handling)
+- [x] Document test results: 100% success rate with graceful degradation
+
+### Bug Fixes - Stress Test Issues
+- [x] Fix getListingFuturePricing missing num_months parameter (400 error)
+- [x] Add retry logic for transient 500 errors in AirDNA API
+- [x] Improve error handling for network ECONNRESET errors
+- [x] Add exponential backoff for rate limiting

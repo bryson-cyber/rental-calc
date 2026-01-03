@@ -1,4 +1,5 @@
 import { ENV } from "./_core/env";
+import { apiCache } from './cache';
 
 const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 
@@ -226,7 +227,8 @@ export interface ComprehensiveMarketReport {
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" = "POST",
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  retries: number = 3
 ): Promise<T> {
   const url = `${AIRDNA_API_BASE}${endpoint}`;
   
@@ -242,14 +244,55 @@ async function makeApiRequest<T>(
     options.body = JSON.stringify(body);
   }
   
-  const response = await fetch(url, options);
+  let lastError: Error | null = null;
   
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AirDNA API error (${response.status}): ${errorText}`);
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        const statusCode = response.status;
+        
+        // Don't retry 4xx errors (client errors) except 429 (rate limit)
+        if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) {
+          throw new Error(`AirDNA API error (${statusCode}): ${errorText}`);
+        }
+        
+        // Retry on 5xx errors (server errors) and 429 (rate limit)
+        if (attempt < retries - 1) {
+          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000; // Exponential backoff with jitter
+          console.log(`[AirDNA] Retrying ${endpoint} in ${Math.round(delay)}ms (attempt ${attempt + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        throw new Error(`AirDNA API error (${statusCode}): ${errorText}`);
+      }
+      
+      return response.json();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Check if it's a network error (ECONNRESET, ETIMEDOUT, etc.)
+      const isNetworkError = lastError.message.includes('ECONNRESET') ||
+                             lastError.message.includes('ETIMEDOUT') ||
+                             lastError.message.includes('ENOTFOUND') ||
+                             lastError.message.includes('socket') ||
+                             lastError.message.includes('network');
+      
+      if (isNetworkError && attempt < retries - 1) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        console.log(`[AirDNA] Network error, retrying ${endpoint} in ${Math.round(delay)}ms (attempt ${attempt + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      throw lastError;
+    }
   }
   
-  return response.json();
+  throw lastError || new Error('Unknown error in makeApiRequest');
 }
 
 // ============================================
@@ -324,6 +367,10 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
 }
 
 export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
+  const cacheKey = apiCache.generateKey('search_markets', { searchTerm, limit });
+  const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
+  if (cached) return cached;
+  
   try {
     // Get all US markets from cache or API
     const allMarkets = await getAllUSMarkets();
@@ -360,13 +407,16 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
       console.log(`[searchMarkets] Top matches:`, matchedMarkets.slice(0, 5).map(m => ({ id: m.id, name: m.name, score: m.score })));
     }
     
-    return matchedMarkets.map((m) => ({
+    const results = matchedMarkets.map((m) => ({
       id: m.id,
       name: m.name,
       type: 'market' as const,
       listing_count: m.listing_count || 0,
       location_name: `${m.name}, United States`,
     }));
+    
+    apiCache.set(cacheKey, results, 'search_markets');
+    return results;
   } catch (error) {
     console.error('Error searching markets:', error);
     return [];
@@ -659,6 +709,17 @@ export async function getMarketDetails(marketId: string): Promise<{
     revpar: number;
   };
 } | null> {
+  const cacheKey = apiCache.generateKey('market_details', { marketId });
+  const cached = apiCache.get<{
+    id: string;
+    name: string;
+    listing_count: number;
+    location_name: string;
+    market_type?: string;
+    metrics?: { market_score: number; revenue: number; booked: number; daily_rate: number; revpar: number; };
+  }>(cacheKey);
+  if (cached) return cached;
+  
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -677,7 +738,7 @@ export async function getMarketDetails(marketId: string): Promise<{
       };
     }>(`/market/${marketId}`, "GET");
     
-    return {
+    const result = {
       id: response.payload.id,
       name: response.payload.name,
       listing_count: response.payload.listing_count || 0,
@@ -685,6 +746,9 @@ export async function getMarketDetails(marketId: string): Promise<{
       market_type: response.payload.market_type,
       metrics: response.payload.metrics,
     };
+    
+    apiCache.set(cacheKey, result, 'market_details');
+    return result;
   } catch (error) {
     console.error("Error fetching market details:", error);
     return null;
@@ -1573,6 +1637,20 @@ export async function exploreListingsInRadius(
 export async function getRentalizerEstimate(
   request: RentalizerRequest
 ): Promise<RentalizerResponse | null> {
+  // Generate cache key
+  const cacheKey = apiCache.generateKey('rentalizer', {
+    address: request.address,
+    bedrooms: request.bedrooms,
+    bathrooms: request.bathrooms,
+    accommodates: request.accommodates
+  });
+  
+  // Check cache first
+  const cached = apiCache.get<RentalizerResponse>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1671,7 +1749,7 @@ export async function getRentalizerEstimate(
       occupancy: m.occupancy,
     }));
     
-    return {
+    const result: RentalizerResponse = {
       property: {
         address: payload.details.address,
         address_lookup: payload.details.address_lookup,
@@ -1696,6 +1774,11 @@ export async function getRentalizerEstimate(
       monthly_forecast,
       comps,
     };
+    
+    // Cache the result
+    apiCache.set(cacheKey, result, 'rentalizer');
+    
+    return result;
   } catch (error) {
     console.error("Error getting rentalizer estimate:", error);
     return null;
@@ -3645,7 +3728,8 @@ export interface ListingFuturePricing {
 
 export async function getListingFuturePricing(
   listingId: string,
-  numDays: number = 90
+  numDays: number = 90,
+  numMonths: number = 3
 ): Promise<ListingFuturePricing | null> {
   try {
     const response = await makeApiRequest(
@@ -3653,6 +3737,7 @@ export async function getListingFuturePricing(
       "POST",
       {
         num_days: numDays,
+        num_months: numMonths,
       }
     );
 

@@ -2400,6 +2400,131 @@ export interface NarrativeReportInput {
       recommendation: string;
     };
   };
+  
+  // Submarket details (geographic context and parent market)
+  submarket_details?: {
+    submarket_id: string;
+    submarket_name: string;
+    parent_market_name: string | null;
+    parent_market_id: string | null;
+    market_type: string | null;
+    metrics: {
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+    } | null;
+  };
+  
+  // All submarkets in the parent market (neighborhood comparison)
+  all_submarkets?: {
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    total_submarkets: number;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+    }>;
+  };
+  
+  // Enhanced submarket exploration with rankings and recommendations
+  submarket_exploration?: {
+    market_name: string;
+    market_metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      active_listings: number;
+    };
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    property_submarket_overall_score: number;
+    top_recommendation: {
+      name: string;
+      overall_score: number;
+      revenue: number;
+      occupancy: number;
+      recommendation: string;
+    } | null;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      metrics: {
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revpar: number;
+      };
+      ranking: {
+        revenue_rank: number;
+        occupancy_rank: number;
+        revpar_rank: number;
+        overall_score: number;
+      };
+      recommendation?: string;
+    }>;
+  };
+  
+  // Market insights derived from listings
+  market_insights?: {
+    total_listings: number;
+    professionally_managed_count: number;
+    professionally_managed_pct: number;
+    superhost_count: number;
+    superhost_pct: number;
+    avg_rating: number;
+    avg_reviews: number;
+    property_type_breakdown: Array<{
+      type: string;
+      count: number;
+      pct: number;
+      avg_revenue: number;
+    }>;
+    host_size_breakdown: Array<{
+      size: string;
+      count: number;
+      pct: number;
+      avg_revenue: number;
+    }>;
+    revenue_percentiles: {
+      p10: number;
+      p25: number;
+      p50: number;
+      p75: number;
+      p90: number;
+    };
+  };
+  
+  // Same bedroom radius listings (filtered competitors)
+  same_bedroom_radius_listings?: {
+    search_radius_meters: number;
+    bedroom_filter: number;
+    total_found: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_count: number;
+    professional_count: number;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      bathrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
 }
 
 /**
@@ -3001,6 +3126,142 @@ Photo Quality Insights:
 - Recommendation: ${ci.photo_quality_insights.recommendation}`;
   }
 
+  // Build submarket details section
+  let submarketDetailsSection = '';
+  if (input.submarket_details) {
+    const sd = input.submarket_details;
+    submarketDetailsSection = `
+
+SUBMARKET GEOGRAPHIC CONTEXT:
+- Submarket: ${sd.submarket_name}
+- Parent Market: ${sd.parent_market_name || 'N/A'}
+- Market Type: ${sd.market_type || 'N/A'}
+${sd.metrics ? `
+Submarket Metrics:
+- Market Score: ${sd.metrics.market_score}/100
+- Average Revenue: $${sd.metrics.revenue.toLocaleString()}/year
+- Occupancy: ${(sd.metrics.occupancy * 100).toFixed(1)}%
+- ADR: $${sd.metrics.adr.toFixed(0)}/night
+- RevPAR: $${sd.metrics.revpar.toFixed(0)}` : ''}`;
+  }
+
+  // Build all submarkets comparison section
+  let allSubmarketsSection = '';
+  if (input.all_submarkets && input.all_submarkets.submarkets.length > 0) {
+    const as = input.all_submarkets;
+    const submarketList = as.submarkets.map((s, i) => {
+      const isPropertySubmarket = s.name.toLowerCase() === as.property_submarket_name.toLowerCase();
+      const marker = isPropertySubmarket ? ' ← YOUR PROPERTY' : '';
+      return `${i + 1}. ${s.name}${marker}: $${s.revenue.toLocaleString()}/yr revenue, ${(s.occupancy * 100).toFixed(0)}% occupancy, $${s.adr.toFixed(0)} ADR, ${s.listing_count} listings`;
+    }).join('\n');
+    
+    allSubmarketsSection = `
+
+NEIGHBORHOOD COMPARISON (All Submarkets in Market):
+Property's Submarket: ${as.property_submarket_name}
+Property's Rank: #${as.property_submarket_rank} of ${as.total_submarkets} neighborhoods (by revenue)
+
+All Neighborhoods Ranked by Revenue:
+${submarketList}`;
+  }
+
+  // Build enhanced submarket exploration section
+  let submarketExplorationSection = '';
+  if (input.submarket_exploration && input.submarket_exploration.submarkets.length > 0) {
+    const se = input.submarket_exploration;
+    const submarketRankings = se.submarkets.map((s, i) => {
+      const isPropertySubmarket = s.name.toLowerCase() === se.property_submarket_name.toLowerCase();
+      const marker = isPropertySubmarket ? ' ← YOUR PROPERTY' : '';
+      const recMarker = s.recommendation ? ` [${s.recommendation}]` : '';
+      return `${i + 1}. ${s.name}${marker}${recMarker}
+   Score: ${s.ranking.overall_score}/100 | Revenue Rank: #${s.ranking.revenue_rank} | Occupancy Rank: #${s.ranking.occupancy_rank} | RevPAR Rank: #${s.ranking.revpar_rank}
+   $${s.metrics.revenue.toLocaleString()}/yr | ${(s.metrics.occupancy * 100).toFixed(0)}% occ | $${s.metrics.adr.toFixed(0)} ADR | ${s.listing_count} listings`;
+    }).join('\n\n');
+    
+    const topRec = se.top_recommendation;
+    submarketExplorationSection = `
+
+ENHANCED NEIGHBORHOOD ANALYSIS (Multi-Factor Ranking):
+Market: ${se.market_name}
+Market Metrics: $${se.market_metrics.revenue.toLocaleString()}/yr avg revenue, ${(se.market_metrics.occupancy * 100).toFixed(0)}% occupancy, $${se.market_metrics.adr.toFixed(0)} ADR, ${se.market_metrics.active_listings} listings
+
+Property's Neighborhood: ${se.property_submarket_name}
+Property's Overall Score: ${se.property_submarket_overall_score}/100
+Property's Rank: #${se.property_submarket_rank} of ${se.submarkets.length} neighborhoods
+
+${topRec ? `TOP RECOMMENDATION: ${topRec.name}
+- Overall Score: ${topRec.overall_score}/100
+- Revenue: $${topRec.revenue.toLocaleString()}/year
+- Occupancy: ${(topRec.occupancy * 100).toFixed(0)}%
+- Why: ${topRec.recommendation}\n\n` : ''}Neighborhood Rankings (by Overall Score):
+${submarketRankings}`;
+  }
+
+  // Build market insights section
+  let marketInsightsSection = '';
+  if (input.market_insights) {
+    const mi = input.market_insights;
+    const propertyTypeList = mi.property_type_breakdown.map((pt, i) => 
+      `${i + 1}. ${pt.type}: ${pt.count} listings (${pt.pct}%) - Avg Revenue: $${pt.avg_revenue.toLocaleString()}/yr`
+    ).join('\n');
+    
+    const hostSizeList = mi.host_size_breakdown.map((hs, i) => 
+      `${i + 1}. ${hs.size}: ${hs.count} hosts (${hs.pct}%) - Avg Revenue: $${hs.avg_revenue.toLocaleString()}/yr`
+    ).join('\n');
+    
+    marketInsightsSection = `
+
+MARKET COMPOSITION INSIGHTS (Derived from ${mi.total_listings} Listings):
+Host Quality Metrics:
+- Superhosts: ${mi.superhost_count} (${mi.superhost_pct}%)
+- Professionally Managed: ${mi.professionally_managed_count} (${mi.professionally_managed_pct}%)
+- Average Rating: ${mi.avg_rating}★
+- Average Reviews: ${mi.avg_reviews}
+
+Property Type Breakdown:
+${propertyTypeList}
+
+Host Size Distribution:
+${hostSizeList}
+
+Revenue Distribution (Percentiles):
+- 10th percentile: $${mi.revenue_percentiles.p10.toLocaleString()}/yr (bottom performers)
+- 25th percentile: $${mi.revenue_percentiles.p25.toLocaleString()}/yr
+- 50th percentile (median): $${mi.revenue_percentiles.p50.toLocaleString()}/yr
+- 75th percentile: $${mi.revenue_percentiles.p75.toLocaleString()}/yr
+- 90th percentile: $${mi.revenue_percentiles.p90.toLocaleString()}/yr (top performers)`;
+  }
+
+  // Build same bedroom radius listings section
+  let sameBedroomRadiusSection = '';
+  if (input.same_bedroom_radius_listings) {
+    const sbr = input.same_bedroom_radius_listings;
+    const superhostPct = sbr.total_found > 0 ? Math.round((sbr.superhost_count / sbr.total_found) * 100) : 0;
+    const professionalPct = sbr.total_found > 0 ? Math.round((sbr.professional_count / sbr.total_found) * 100) : 0;
+    
+    const topPerformersList = sbr.top_performers.map((tp, i) => 
+      `${i + 1}. "${tp.title}" (${tp.property_type})
+   Revenue: $${tp.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(tp.adr)} | Occupancy: ${(tp.occupancy * 100).toFixed(0)}%
+   Rating: ${tp.rating || 'N/A'}★ | Reviews: ${tp.reviews} | ${tp.superhost ? 'Superhost' : ''} ${tp.professionally_managed ? '| Professional' : ''}`
+    ).join('\n\n');
+    
+    sameBedroomRadiusSection = `
+
+DIRECT COMPETITOR ANALYSIS (Same ${sbr.bedroom_filter}BR within ${(sbr.search_radius_meters / 1000).toFixed(1)}km):
+This shows ONLY ${sbr.bedroom_filter}-bedroom listings near the property - your direct competition.
+
+Summary:
+- Total Direct Competitors: ${sbr.total_found}
+- Average Revenue: $${Math.round(sbr.avg_revenue).toLocaleString()}/yr
+- Average ADR: $${Math.round(sbr.avg_adr)}/night
+- Average Occupancy: ${(sbr.avg_occupancy * 100).toFixed(0)}%
+- Superhosts: ${sbr.superhost_count} (${superhostPct}%)
+- Professionally Managed: ${sbr.professional_count} (${professionalPct}%)
+
+Top ${sbr.bedroom_filter}BR Performers Nearby:
+${topPerformersList}`;
+  }
+
   const prompt = `You are a professional short-term rental investment analyst writing a comprehensive report for an investor. Your job is to synthesize all the data into a narrative document that tells the complete story of this investment opportunity.
 
 Write in a professional but accessible tone. Use specific numbers from the data. Explain what the numbers mean and why they matter. Be honest about both opportunities and risks.
@@ -3063,6 +3324,11 @@ ${nearbyMarketsContext}
 ${airdnaFeasibilityContext}
 ${submarketDeepDiveContext}
 ${competitorImageryContext}
+${submarketDetailsSection}
+${allSubmarketsSection}
+${submarketExplorationSection}
+${marketInsightsSection}
+${sameBedroomRadiusSection}
 
 BOOKING PATTERNS:
 - Average Lead Time: ${input.booking_patterns?.avg_lead_time_days || 'N/A'} days
@@ -3076,11 +3342,11 @@ Return your response as JSON with this exact structure:
 {
   "executive_summary": "A compelling 2-3 paragraph overview that captures the essence of this investment opportunity. Start with the bottom line - is this a strong opportunity? Then summarize the key factors that support your assessment. End with what makes this property unique in its market.",
   
-  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. If SUBMARKET DEEP-DIVE data is available, analyze the specific neighborhood's health, trends, and growth potential - how does this submarket compare to the broader market? What does the bedroom performance breakdown reveal about optimal configurations? If NEARBY MARKETS COMPARISON data is available, compare this market against top alternatives. Explain what the revenue distribution means for realistic expectations.",
+  "market_overview": "2-3 paragraphs analyzing the ${input.market_name} short-term rental market. Use the MARKET SATURATION ANALYSIS data to discuss market size, bedroom distribution, revenue percentiles, and market concentration. If SUBMARKET GEOGRAPHIC CONTEXT is available, explain how this property fits within the larger market hierarchy. If ENHANCED NEIGHBORHOOD ANALYSIS is available, use the multi-factor ranking to assess the property's neighborhood - what is its overall score out of 100? How does it rank in revenue, occupancy, and RevPAR separately? Is the property in the TOP RECOMMENDATION neighborhood or should the investor consider relocating? What specific advantages do higher-ranked neighborhoods offer? If NEIGHBORHOOD COMPARISON data is available, analyze the revenue rankings. If SUBMARKET DEEP-DIVE data is available, analyze the specific neighborhood's health, trends, and growth potential. If NEARBY MARKETS COMPARISON data is available, compare this market against top alternatives. Explain what the revenue distribution means for realistic expectations.",
   
   "revenue_analysis": "2-3 paragraphs breaking down the revenue potential. Explain the three scenarios (conservative, realistic, optimistic) and what it takes to achieve each. Discuss the relationship between the rent ($${input.monthly_rent}) and projected revenue. CRITICALLY analyze the QUALIFYING COMPETITORS data - what percentage of similar properties actually meet the profitability threshold? What does this tell us about the realistic chances of success?",
   
-  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance. If COMPETITOR IMAGERY ANALYSIS is available, discuss photo quality standards - how many photos do top competitors have? What does this mean for listing presentation requirements? What does the listing density per sq km, superhost percentage, and professional manager presence reveal about competition intensity? How can this property differentiate itself?",
+  "competitive_landscape": "2-3 paragraphs analyzing the competition. What are the top performers doing right? Analyze the TOP PERFORMER'S COMPETITIVE SET, HOST QUALITY ANALYSIS, HYPER-LOCAL COMPETITION, and RADIUS LISTINGS data. If DIRECT COMPETITOR ANALYSIS is available, focus heavily on this data - it shows ONLY same-bedroom listings nearby, which are the true direct competitors. What is the average revenue for these direct competitors? How many are superhosts or professionally managed? What does the top performer in this specific bedroom category achieve? Use the PROPERTY TYPE ANALYSIS to compare entire home vs private room performance. If MARKET COMPOSITION INSIGHTS is available, analyze the host size distribution. If COMPETITOR IMAGERY ANALYSIS is available, discuss photo quality standards. How can this property differentiate itself from these specific direct competitors?",
   
   "seasonal_strategy": "2-3 paragraphs on seasonality and pricing strategy. When are the peak and off-peak periods? Analyze the TOP PERFORMER'S PRICING STRATEGY data - what does their weekday vs weekend pricing reveal? How should this property price to compete? What pricing and marketing strategies should be employed for each season?",
   

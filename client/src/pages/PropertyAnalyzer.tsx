@@ -47,6 +47,139 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { toast } from 'sonner';
+import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lucide-react';
+
+// Export PDF Button Component
+function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
+  address: string;
+  monthlyRent: number;
+  bedrooms: number;
+  bathrooms: number;
+}) {
+  const [isExporting, setIsExporting] = useState(false);
+  const exportMutation = trpc.export.pdf.useMutation();
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const result = await exportMutation.mutateAsync({
+        address,
+        monthly_rent: monthlyRent,
+        bedrooms,
+        bathrooms,
+      });
+      
+      if (result.success && result.data) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(result.data.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: result.data.mimeType });
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.data.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success('PDF report downloaded!');
+      } else {
+        toast.error(result.error || 'Failed to generate PDF');
+      }
+    } catch (error) {
+      toast.error('Failed to generate PDF report');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleExport}
+      disabled={isExporting}
+      className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+    >
+      {isExporting ? (
+        <ExportLoader className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <FileText className="w-4 h-4 mr-2" />
+      )}
+      {isExporting ? 'Generating PDF...' : 'Download PDF'}
+    </Button>
+  );
+}
+
+// Export Excel Button Component
+function ExportExcelButton({ address, monthlyRent, bedrooms, bathrooms }: {
+  address: string;
+  monthlyRent: number;
+  bedrooms: number;
+  bathrooms: number;
+}) {
+  const [isExporting, setIsExporting] = useState(false);
+  const exportMutation = trpc.export.excel.useMutation();
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const result = await exportMutation.mutateAsync({
+        address,
+        monthly_rent: monthlyRent,
+        bedrooms,
+        bathrooms,
+      });
+      
+      if (result.success && result.data) {
+        // Convert base64 to blob and download
+        const byteCharacters = atob(result.data.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: result.data.mimeType });
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.data.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success('Excel report downloaded!');
+      } else {
+        toast.error(result.error || 'Failed to generate Excel');
+      }
+    } catch (error) {
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleExport}
+      disabled={isExporting}
+      className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30"
+    >
+      {isExporting ? (
+        <ExportLoader className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <FileSpreadsheet className="w-4 h-4 mr-2" />
+      )}
+      {isExporting ? 'Generating Excel...' : 'Download Excel'}
+    </Button>
+  );
+}
 
 // Analysis result type
 interface AnalysisResult {
@@ -2170,6 +2303,35 @@ export default function PropertyAnalyzer() {
                 )}
               </div>
             )}
+            
+            {/* Export Buttons */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Download className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">Export Report</h3>
+                </div>
+              </div>
+              <p className="text-white/60 text-sm mb-4">
+                Download this analysis as a professional PDF report or Excel spreadsheet for your records.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <ExportPDFButton 
+                  address={result.address}
+                  monthlyRent={result.monthly_rent}
+                  bedrooms={result.bedrooms}
+                  bathrooms={result.bathrooms}
+                />
+                <ExportExcelButton 
+                  address={result.address}
+                  monthlyRent={result.monthly_rent}
+                  bedrooms={result.bedrooms}
+                  bathrooms={result.bathrooms}
+                />
+              </div>
+            </div>
             
             {/* CTA Section */}
             <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-sm rounded-2xl border border-amber-500/30 p-8 text-center">

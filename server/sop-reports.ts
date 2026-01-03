@@ -29,12 +29,20 @@ import {
   getSubmarketListings,
   getQualifyingCompetitors,
   getListingsInRadius,
+  exploreListingsInRadius,
   getAllMarketListings,
   getFilteredMarketListings,
   getCountryMarkets,
   calculateArbitrageFeasibility,
   getComprehensiveSubmarketReport,
   batchFetchPropertyImages,
+  getSubmarketDetails,
+  getSubmarketsInMarket,
+  getSubmarketMetrics,
+  calculateMarketInsights,
+  SubmarketData,
+  MarketInsights,
+  SubmarketExplorationResult,
   ArbitrageFeasibility,
   CountryMarket,
   AdvancedListingFilters,
@@ -1083,6 +1091,131 @@ export async function generateFullArbitrageAnalysis(
       recommendation: string;
     };
   };
+  // SUBMARKET DETAILS (geographic context and parent market)
+  submarket_details?: {
+    submarket_id: string;
+    submarket_name: string;
+    parent_market_name: string | null;
+    parent_market_id: string | null;
+    market_type: string | null;
+    metrics: {
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+    } | null;
+  };
+  // ALL SUBMARKETS IN MARKET (neighborhood comparison)
+  all_submarkets?: {
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    total_submarkets: number;
+    submarkets: Array<{
+      id: string;
+      name: string;
+      listing_count: number;
+      metrics: {
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revpar: number;
+      } | null;
+    }>;
+  };
+  // SUBMARKET EXPLORATION (enhanced rankings and recommendations)
+  submarket_exploration?: {
+    market_name: string;
+    market_metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      active_listings: number;
+    };
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    property_submarket_overall_score: number;
+    top_recommendation: {
+      name: string;
+      overall_score: number;
+      revenue: number;
+      occupancy: number;
+      recommendation: string;
+    } | null;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      metrics: {
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revpar: number;
+      };
+      ranking: {
+        revenue_rank: number;
+        occupancy_rank: number;
+        revpar_rank: number;
+        overall_score: number;
+      };
+      recommendation?: string;
+    }>;
+  };
+  // MARKET INSIGHTS (derived from listings)
+  market_insights?: {
+    total_listings: number;
+    professionally_managed_count: number;
+    professionally_managed_pct: number;
+    superhost_count: number;
+    superhost_pct: number;
+    avg_rating: number;
+    avg_reviews: number;
+    avg_days_available: number;
+    avg_days_reserved: number;
+    property_type_breakdown: Array<{
+      type: string;
+      count: number;
+      pct: number;
+      avg_revenue: number;
+    }>;
+    host_size_breakdown: Array<{
+      size: string;
+      count: number;
+      pct: number;
+      avg_revenue: number;
+    }>;
+    revenue_percentiles: {
+      p10: number;
+      p25: number;
+      p50: number;
+      p75: number;
+      p90: number;
+    };
+  };
+  // SAME BEDROOM RADIUS LISTINGS (filtered competitors)
+  same_bedroom_radius_listings?: {
+    search_radius_meters: number;
+    bedroom_filter: number;
+    total_found: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_count: number;
+    professional_count: number;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      bathrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
 }> {
   // Initialize progress tracking if sessionId provided
   if (sessionId) {
@@ -1300,8 +1433,8 @@ export async function generateFullArbitrageAnalysis(
     .slice(0, 5);
   
   if (top5Competitors.length > 0) {
-    try {
-      const historicalPromises = top5Competitors.map(async (comp) => {
+    const historicalPromises = top5Competitors.map(async (comp) => {
+      try {
         // Extract listing ID from Airbnb URL
         const urlMatch = comp.airbnb_url?.match(/rooms\/(\d+)/);
         const listingId = urlMatch ? urlMatch[1] : null;
@@ -1319,14 +1452,15 @@ export async function generateFullArbitrageAnalysis(
           avg_occupancy: historical.summary.avg_occupancy,
           revenue_trend: historical.summary.revenue_trend
         };
-      });
-      
-      const results = await Promise.all(historicalPromises);
-      competitor_historical = results.filter((r): r is NonNullable<typeof r> => r !== null);
-      console.log(`[ArbitrageAnalysis] Fetched historical data for ${competitor_historical.length} competitors`);
-    } catch (error) {
-      console.error('[ArbitrageAnalysis] Error fetching competitor historical data:', error);
-    }
+      } catch (error) {
+        // Silently handle individual listing errors - don't log each one
+        return null;
+      }
+    });
+    
+    const results = await Promise.all(historicalPromises);
+    competitor_historical = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    console.log(`[ArbitrageAnalysis] Fetched historical data for ${competitor_historical.length}/${top5Competitors.length} competitors`);
   }
   
   // Step 6.6: Fetch daily pricing intelligence
@@ -2396,6 +2530,315 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
+  // Step 15.13: Fetch submarket details for geographic context
+  let submarket_details: {
+    submarket_id: string;
+    submarket_name: string;
+    parent_market_name: string | null;
+    parent_market_id: string | null;
+    market_type: string | null;
+    metrics: {
+      market_score: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+    } | null;
+  } | undefined = undefined;
+  
+  // Get submarket ID from property estimate
+  const detailsSubmarketId = property_estimate?.property?.submarket_id;
+  if (detailsSubmarketId) {
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching submarket details for ${detailsSubmarketId}...`);
+      const details = await getSubmarketDetails(detailsSubmarketId);
+      
+      if (details) {
+        submarket_details = {
+          submarket_id: detailsSubmarketId,
+          submarket_name: details.name,
+          parent_market_name: details.parent_market_name || null,
+          parent_market_id: details.market_id || null,
+          market_type: details.market_type || null,
+          metrics: details.metrics ? {
+            market_score: details.metrics.market_score,
+            revenue: details.metrics.revenue,
+            occupancy: details.metrics.booked, // booked = occupancy rate
+            adr: details.metrics.daily_rate, // daily_rate = ADR
+            revpar: details.metrics.revpar
+          } : null
+        };
+        console.log(`[ArbitrageAnalysis] Submarket details: ${details.name} (parent: ${details.parent_market_name || 'N/A'}, type: ${details.market_type || 'N/A'})`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching submarket details:', error);
+    }
+  }
+  
+  // Step 15.14: Fetch all submarkets in the parent market for neighborhood comparison
+  let all_submarkets: {
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    total_submarkets: number;
+    submarkets: Array<{
+      id: string;
+      name: string;
+      listing_count: number;
+      metrics: {
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revpar: number;
+      } | null;
+    }>;
+  } | undefined = undefined;
+  
+  // Use parent market ID from submarket_details or property estimate
+  const parentMarketId = submarket_details?.parent_market_id || property_estimate?.property?.market_id;
+  const propertySubmarketName = submarket_details?.submarket_name || 'Unknown';
+  
+  if (parentMarketId) {
+    try {
+      console.log(`[ArbitrageAnalysis] Fetching all submarkets in parent market ${parentMarketId}...`);
+      const submarkets = await getSubmarketsInMarket(parentMarketId);
+      
+      if (submarkets.length > 0) {
+        // Fetch metrics for each submarket (limit to top 15 to avoid too many API calls)
+        const submarketWithMetrics: Array<{
+          id: string;
+          name: string;
+          listing_count: number;
+          metrics: { occupancy: number; adr: number; revenue: number; revpar: number } | null;
+        }> = [];
+        
+        for (const submarket of submarkets.slice(0, 15)) {
+          try {
+            const metrics = await getSubmarketMetrics(submarket.id);
+            submarketWithMetrics.push({
+              id: submarket.id,
+              name: submarket.name,
+              listing_count: submarket.listing_count,
+              metrics: metrics ? {
+                occupancy: metrics.occupancy,
+                adr: metrics.adr,
+                revenue: metrics.revenue,
+                revpar: metrics.revpar
+              } : null
+            });
+          } catch (error) {
+            // Add without metrics if fetch fails
+            submarketWithMetrics.push({
+              id: submarket.id,
+              name: submarket.name,
+              listing_count: submarket.listing_count,
+              metrics: null
+            });
+          }
+        }
+        
+        // Sort by revenue (highest first) for ranking
+        submarketWithMetrics.sort((a, b) => (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0));
+        
+        // Find property's submarket rank
+        const propertyRank = submarketWithMetrics.findIndex(
+          s => s.name.toLowerCase() === propertySubmarketName.toLowerCase()
+        ) + 1; // 1-indexed, 0 if not found
+        
+        all_submarkets = {
+          property_submarket_name: propertySubmarketName,
+          property_submarket_rank: propertyRank || submarketWithMetrics.length + 1, // Default to last if not found
+          total_submarkets: submarketWithMetrics.length,
+          submarkets: submarketWithMetrics
+        };
+        
+        console.log(`[ArbitrageAnalysis] Found ${submarketWithMetrics.length} submarkets. Property submarket "${propertySubmarketName}" ranks #${propertyRank || 'N/A'} by revenue`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error fetching all submarkets:', error);
+    }
+  }
+  
+  // Step 15.15: Fetch enhanced submarket exploration with rankings and recommendations
+  let submarket_exploration: {
+    market_name: string;
+    market_metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      active_listings: number;
+    };
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    property_submarket_overall_score: number;
+    top_recommendation: {
+      name: string;
+      overall_score: number;
+      revenue: number;
+      occupancy: number;
+      recommendation: string;
+    } | null;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      metrics: {
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revpar: number;
+      };
+      ranking: {
+        revenue_rank: number;
+        occupancy_rank: number;
+        revpar_rank: number;
+        overall_score: number;
+      };
+      recommendation?: string;
+    }>;
+  } | undefined = undefined;
+  
+  // Use parent market ID for exploration
+  const explorationMarketId = submarket_details?.parent_market_id || property_estimate?.property?.market_id;
+  
+  if (explorationMarketId) {
+    try {
+      console.log(`[ArbitrageAnalysis] Exploring submarkets with enhanced metrics for market ${explorationMarketId}...`);
+      const exploration = await exploreSubmarketsWithMetrics(explorationMarketId, {
+        sortBy: 'overall',
+        limit: 15
+      });
+      
+      if (exploration.submarkets.length > 0) {
+        // Find property's submarket in the results
+        const propertySubmarket = exploration.submarkets.find(
+          s => s.name.toLowerCase() === propertySubmarketName.toLowerCase()
+        );
+        
+        submarket_exploration = {
+          market_name: exploration.market.name,
+          market_metrics: exploration.market.metrics,
+          property_submarket_name: propertySubmarketName,
+          property_submarket_rank: propertySubmarket 
+            ? exploration.submarkets.findIndex(s => s.id === propertySubmarket.id) + 1 
+            : exploration.submarkets.length + 1,
+          property_submarket_overall_score: propertySubmarket?.ranking.overall_score || 0,
+          top_recommendation: exploration.topRecommendation ? {
+            name: exploration.topRecommendation.name,
+            overall_score: exploration.topRecommendation.ranking.overall_score,
+            revenue: exploration.topRecommendation.metrics.revenue,
+            occupancy: exploration.topRecommendation.metrics.occupancy,
+            recommendation: exploration.topRecommendation.recommendation || 'Top performing neighborhood'
+          } : null,
+          submarkets: exploration.submarkets.map(s => ({
+            name: s.name,
+            listing_count: s.listing_count,
+            metrics: s.metrics,
+            ranking: s.ranking,
+            recommendation: s.recommendation
+          }))
+        };
+        
+        console.log(`[ArbitrageAnalysis] Submarket exploration: ${exploration.submarkets.length} neighborhoods analyzed. Property in "${propertySubmarketName}" (score: ${propertySubmarket?.ranking.overall_score || 'N/A'}/100). Top pick: "${exploration.topRecommendation?.name}"`);
+      }
+    } catch (error) {
+      console.error('[ArbitrageAnalysis] Error exploring submarkets:', error);
+    }
+  }
+  
+  // Step 15.16: Calculate market insights from all collected listings
+  let market_insights: MarketInsights | undefined = undefined;
+  
+  // Combine all available listings for comprehensive insights
+  const allListings: ListingData[] = [];
+  if (radius_listings?.top_nearby) {
+    allListings.push(...radius_listings.top_nearby);
+  }
+  if (submarket_listings?.top_listings) {
+    // Add submarket listings that aren't already in radius listings
+    const existingIds = new Set(allListings.map(l => l.id));
+    submarket_listings.top_listings.forEach((l: ListingData) => {
+      if (!existingIds.has(l.id)) {
+        allListings.push(l);
+      }
+    });
+  }
+  
+  if (allListings.length > 0) {
+    console.log(`[ArbitrageAnalysis] Calculating market insights from ${allListings.length} listings...`);
+    market_insights = calculateMarketInsights(allListings);
+    console.log(`[ArbitrageAnalysis] Market insights: ${market_insights.total_listings} listings, ${market_insights.superhost_pct}% superhosts, ${market_insights.professionally_managed_pct}% professional, ${market_insights.property_type_breakdown.length} property types`);
+  }
+  
+  // Step 15.17: Fetch same-bedroom listings in radius for direct competitor analysis
+  let same_bedroom_radius_listings: {
+    search_radius_meters: number;
+    bedroom_filter: number;
+    total_found: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_count: number;
+    professional_count: number;
+    top_performers: Array<{
+      title: string;
+      bedrooms: number;
+      bathrooms: number;
+      property_type: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+      reviews: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  } | undefined = undefined;
+  
+  try {
+    const searchRadius = 3000; // 3km radius
+    console.log(`[ArbitrageAnalysis] Fetching same-bedroom (${actualBedrooms}BR) listings within ${searchRadius}m radius...`);
+    const filteredListings = await exploreListingsInRadius(address, searchRadius, {
+      bedrooms: actualBedrooms,
+      minRevenue: 10000 // Only include listings with meaningful revenue
+    }, 25);
+    
+    if (filteredListings.length > 0) {
+      const avgRevenue = filteredListings.reduce((sum, l) => sum + l.annual_revenue, 0) / filteredListings.length;
+      const avgAdr = filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length;
+      const avgOccupancy = filteredListings.reduce((sum, l) => sum + l.occupancy, 0) / filteredListings.length;
+      const superhostCount = filteredListings.filter(l => l.superhost).length;
+      const professionalCount = filteredListings.filter(l => l.professionally_managed).length;
+      
+      same_bedroom_radius_listings = {
+        search_radius_meters: searchRadius,
+        bedroom_filter: actualBedrooms,
+        total_found: filteredListings.length,
+        avg_revenue: avgRevenue,
+        avg_adr: avgAdr,
+        avg_occupancy: avgOccupancy,
+        superhost_count: superhostCount,
+        professional_count: professionalCount,
+        top_performers: filteredListings.slice(0, 10).map(l => ({
+          title: l.title,
+          bedrooms: l.bedrooms,
+          bathrooms: l.bathrooms,
+          property_type: l.property_type,
+          annual_revenue: l.annual_revenue,
+          adr: l.adr,
+          occupancy: l.occupancy,
+          rating: l.rating,
+          reviews: l.reviews,
+          superhost: l.superhost ?? false,
+          professionally_managed: l.professionally_managed ?? false
+        }))
+      };
+      
+      console.log(`[ArbitrageAnalysis] Found ${filteredListings.length} same-bedroom listings. Avg revenue: $${Math.round(avgRevenue).toLocaleString()}/yr, ${superhostCount} superhosts, ${professionalCount} professional`);
+    }
+  } catch (error) {
+    console.error('[ArbitrageAnalysis] Error fetching same-bedroom radius listings:', error);
+  }
+  
   // Calculate property ROI
   const startupBase = actualBedrooms * 3000;
   property_roi = {
@@ -2876,6 +3319,65 @@ export async function generateFullArbitrageAnalysis(
         min_image_count: competitor_imagery.min_image_count,
         top_competitors: competitor_imagery.top_competitors,
         photo_quality_insights: competitor_imagery.photo_quality_insights
+      } : undefined,
+      submarket_details: submarket_details ? {
+        submarket_id: submarket_details.submarket_id,
+        submarket_name: submarket_details.submarket_name,
+        parent_market_name: submarket_details.parent_market_name,
+        parent_market_id: submarket_details.parent_market_id,
+        market_type: submarket_details.market_type,
+        metrics: submarket_details.metrics
+      } : undefined,
+      all_submarkets: all_submarkets ? {
+        property_submarket_name: all_submarkets.property_submarket_name,
+        property_submarket_rank: all_submarkets.property_submarket_rank,
+        total_submarkets: all_submarkets.total_submarkets,
+        submarkets: all_submarkets.submarkets.slice(0, 10).map(s => ({
+          name: s.name,
+          listing_count: s.listing_count,
+          revenue: s.metrics?.revenue || 0,
+          occupancy: s.metrics?.occupancy || 0,
+          adr: s.metrics?.adr || 0,
+          revpar: s.metrics?.revpar || 0
+        }))
+      } : undefined,
+      submarket_exploration: submarket_exploration ? {
+        market_name: submarket_exploration.market_name,
+        market_metrics: submarket_exploration.market_metrics,
+        property_submarket_name: submarket_exploration.property_submarket_name,
+        property_submarket_rank: submarket_exploration.property_submarket_rank,
+        property_submarket_overall_score: submarket_exploration.property_submarket_overall_score,
+        top_recommendation: submarket_exploration.top_recommendation,
+        submarkets: submarket_exploration.submarkets.slice(0, 10).map(s => ({
+          name: s.name,
+          listing_count: s.listing_count,
+          metrics: s.metrics,
+          ranking: s.ranking,
+          recommendation: s.recommendation
+        }))
+      } : undefined,
+      market_insights: market_insights ? {
+        total_listings: market_insights.total_listings,
+        professionally_managed_count: market_insights.professionally_managed_count,
+        professionally_managed_pct: market_insights.professionally_managed_pct,
+        superhost_count: market_insights.superhost_count,
+        superhost_pct: market_insights.superhost_pct,
+        avg_rating: market_insights.avg_rating,
+        avg_reviews: market_insights.avg_reviews,
+        property_type_breakdown: market_insights.property_type_breakdown.slice(0, 5),
+        host_size_breakdown: market_insights.host_size_breakdown.slice(0, 5),
+        revenue_percentiles: market_insights.revenue_percentiles
+      } : undefined,
+      same_bedroom_radius_listings: same_bedroom_radius_listings ? {
+        search_radius_meters: same_bedroom_radius_listings.search_radius_meters,
+        bedroom_filter: same_bedroom_radius_listings.bedroom_filter,
+        total_found: same_bedroom_radius_listings.total_found,
+        avg_revenue: same_bedroom_radius_listings.avg_revenue,
+        avg_adr: same_bedroom_radius_listings.avg_adr,
+        avg_occupancy: same_bedroom_radius_listings.avg_occupancy,
+        superhost_count: same_bedroom_radius_listings.superhost_count,
+        professional_count: same_bedroom_radius_listings.professional_count,
+        top_performers: same_bedroom_radius_listings.top_performers.slice(0, 5)
       } : undefined
     });
     
@@ -3061,7 +3563,17 @@ export async function generateFullArbitrageAnalysis(
     // SUBMARKET DEEP DIVE
     submarket_deep_dive,
     // COMPETITOR IMAGERY
-    competitor_imagery
+    competitor_imagery,
+    // SUBMARKET DETAILS
+    submarket_details,
+    // ALL SUBMARKETS
+    all_submarkets,
+    // SUBMARKET EXPLORATION
+    submarket_exploration,
+    // MARKET INSIGHTS
+    market_insights,
+    // SAME BEDROOM RADIUS LISTINGS
+    same_bedroom_radius_listings
   };
 }
 
