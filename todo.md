@@ -1598,3 +1598,9 @@
 - [x] Investigate Poe AI timeout causing 'AI service is temporarily busy' error
 - [x] Increase timeout settings and add retry logic
 - [ ] Test the fix with a new analysis
+
+
+## Persistent Poe AI Timeout Fix
+- [x] Investigate root cause of Poe AI timeout on live site
+- [ ] Implement fallback to show results without AI narrative if timeout occurs
+- [ ] Test and deploy the fix

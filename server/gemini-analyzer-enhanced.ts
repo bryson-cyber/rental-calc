@@ -431,10 +431,10 @@ export async function generateEnhancedNarrativeReport(
   );
   const revenueToRentRatio = input.revenue_mid / (input.monthly_rent * 12);
   
-  // Wrap the entire generation in a global timeout (90 seconds max)
+  // Wrap the entire generation in a global timeout (180 seconds max)
   return withGlobalTimeout(
     generateEnhancedNarrativeReportInternal(input, cacheKey),
-    90000,
+    180000,
     () => {
       console.log('[GeminiEnhanced] Returning fallback report due to global timeout');
       return generateFallbackReport(input, marketContext, revenueToRentRatio);

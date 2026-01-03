@@ -3545,7 +3545,8 @@ export async function generateFullArbitrageAnalysis(
         ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
         : 'Local Market';
       
-      enhanced_narrative_report = await generateEnhancedNarrativeWithPoe({
+      // Wrap Poe AI call in a 180-second timeout
+      enhanced_narrative_report = await withTimeout(generateEnhancedNarrativeWithPoe({
         address,
         monthly_rent,
         bedrooms: actualBedrooms,
@@ -3578,7 +3579,7 @@ export async function generateFullArbitrageAnalysis(
           adr: s.adr,
           season_type: s.season_type
         })),
-      });
+      }), 180000); // 180 second timeout for Poe AI
       
       console.log('[ArbitrageAnalysis] Enhanced narrative report generated successfully with Poe AI');
       if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'AI insights generated');
