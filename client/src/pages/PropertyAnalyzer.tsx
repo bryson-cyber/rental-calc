@@ -1307,33 +1307,58 @@ export default function PropertyAnalyzer() {
               </div>
             </div>
             
-            {/* Competitors Section */}
+            {/* Competitors Section - Thumbnail Pod Style */}
             {result.competitors && result.competitors.length > 0 && (
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <h4 className="font-semibold text-[#0F172A] mb-4 font-serif">Your Competition ({result.competitors.length} similar properties)</h4>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {result.competitors.slice(0, 5).map((comp, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-[#FDF8F3] rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
-                          <Home className="w-5 h-5 text-[#C9A962]" />
+                    <div key={i} className="bg-[#FDF8F3] rounded-xl overflow-hidden border border-[#C9A962]/10 hover:shadow-md transition-shadow">
+                      {/* Property Thumbnail */}
+                      <div className="relative h-32 bg-gradient-to-br from-[#C9A962]/20 to-[#D4A84B]/10">
+                        {comp.image_url ? (
+                          <img 
+                            src={comp.image_url} 
+                            alt={comp.name || 'Competitor property'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`absolute inset-0 flex items-center justify-center ${comp.image_url ? 'hidden' : ''}`}>
+                          <Home className="w-12 h-12 text-[#C9A962]/40" />
                         </div>
-                        <div>
-                          <p className="font-medium text-[#0F172A] text-sm">{comp.name || `Competitor ${i + 1}`}</p>
-                          <p className="text-xs text-[#0F172A]/60">
-                            {formatPercent(comp.occupancy)} occupancy
-                            {comp.rating && (
-                              <span className="ml-2 inline-flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
-                                {comp.rating.toFixed(1)}
-                              </span>
-                            )}
-                          </p>
+                        {/* Revenue Badge */}
+                        <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm">
+                          <p className="font-bold text-[#0F172A] text-sm">{formatCurrency(comp.annual_revenue)}/yr</p>
                         </div>
+                        {/* Rating Badge */}
+                        {comp.rating && (
+                          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
+                            <span className="text-xs font-semibold text-[#0F172A]">{comp.rating.toFixed(1)}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-[#0F172A]">{formatCurrency(comp.annual_revenue)}</p>
-                        <p className="text-xs text-[#0F172A]/60">per year</p>
+                      {/* Property Info */}
+                      <div className="p-3">
+                        <p className="font-medium text-[#0F172A] text-sm line-clamp-2 mb-1">{comp.name || `Competitor ${i + 1}`}</p>
+                        <div className="flex items-center justify-between text-xs text-[#0F172A]/60">
+                          <span>{formatPercent(comp.occupancy)} occupancy</span>
+                          {comp.airbnb_url && (
+                            <a 
+                              href={comp.airbnb_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[#C9A962] hover:text-[#B8944D] flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
