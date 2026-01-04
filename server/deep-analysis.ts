@@ -209,7 +209,42 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
     const reportData = report[0];
     const fullData = reportData.fullAnalysisData as any;
 
-    // Run all AI analyses in parallel
+    // Extract key metrics from fullData (the JSON blob has the actual data)
+    // The database columns might be null, so we need to get data from fullData
+    // Note: profitability uses scenarios.realistic.projected_revenue and scenarios.realistic.estimated_profit
+    const profitability = fullData?.profitability;
+    const propertyEstimate = fullData?.property_estimate;
+    const monthlyRent = reportData.monthlyRent || profitability?.monthly_expenses?.rent || 0;
+    
+    const extractedData = {
+      address: reportData.address || fullData?.address || 'Unknown',
+      bedrooms: reportData.bedrooms || propertyEstimate?.bedrooms || 0,
+      bathrooms: reportData.bathrooms || propertyEstimate?.bathrooms || 0,
+      monthlyRent: monthlyRent,
+      marketName: reportData.marketName || propertyEstimate?.market_name || 'Unknown',
+      // Revenue comes from profitability.scenarios.X.projected_revenue
+      annualRevenueRealistic: reportData.annualRevenueRealistic || profitability?.scenarios?.realistic?.projected_revenue || propertyEstimate?.revenue || 0,
+      annualRevenueConservative: reportData.annualRevenueConservative || profitability?.scenarios?.conservative?.projected_revenue || 0,
+      annualRevenueOptimistic: reportData.annualRevenueOptimistic || profitability?.scenarios?.optimistic?.projected_revenue || 0,
+      // Profit comes from profitability.scenarios.X.estimated_profit
+      annualProfitRealistic: reportData.annualProfitRealistic || profitability?.scenarios?.realistic?.estimated_profit || 0,
+      annualProfitConservative: reportData.annualProfitConservative || profitability?.scenarios?.conservative?.estimated_profit || 0,
+      annualProfitOptimistic: reportData.annualProfitOptimistic || profitability?.scenarios?.optimistic?.estimated_profit || 0,
+      occupancyRate: reportData.occupancyRate || propertyEstimate?.occupancy || 0,
+      averageDailyRate: reportData.averageDailyRate || propertyEstimate?.adr || 0,
+      breakEvenOccupancy: reportData.breakEvenOccupancy || 0,
+      // Calculate revenue-to-rent ratio
+      revenueToRentRatio: monthlyRent > 0 
+        ? (profitability?.scenarios?.realistic?.projected_revenue || propertyEstimate?.revenue || 0) / (monthlyRent * 12) 
+        : 0,
+    };
+
+    console.log('[DeepAnalysis] Extracted data:', JSON.stringify(extractedData, null, 2));
+    console.log('[DeepAnalysis] fullData keys:', fullData ? Object.keys(fullData) : 'null');
+    console.log('[DeepAnalysis] fullData.profitability:', fullData?.profitability ? JSON.stringify(fullData.profitability).slice(0, 500) : 'null');
+    console.log('[DeepAnalysis] fullData.property_estimate:', fullData?.property_estimate ? JSON.stringify(fullData.property_estimate).slice(0, 500) : 'null');
+
+    // Run all AI analyses in parallel - use extractedData which has the correct values
     const [
       historicalContext,
       investmentThesis,
@@ -219,31 +254,31 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
       marketNarrative,
       actionPlan,
     ] = await Promise.all([
-      generateHistoricalContext(reportData, fullData).catch(err => {
+      generateHistoricalContext(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Historical context failed:', err);
         return null;
       }),
-      generateInvestmentThesis(reportData, fullData).catch(err => {
+      generateInvestmentThesis(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Investment thesis failed:', err);
         return null;
       }),
-      generateRiskNarrative(reportData, fullData).catch(err => {
+      generateRiskNarrative(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Risk narrative failed:', err);
         return null;
       }),
-      generatePricingStrategy(reportData, fullData).catch(err => {
+      generatePricingStrategy(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Pricing strategy failed:', err);
         return null;
       }),
-      generateEnhancedExecutiveSummary(reportData, fullData).catch(err => {
+      generateEnhancedExecutiveSummary(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Enhanced summary failed:', err);
         return null;
       }),
-      generateMarketNarrative(reportData, fullData).catch(err => {
+      generateMarketNarrative(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Market narrative failed:', err);
         return null;
       }),
-      generateActionPlan(reportData, fullData).catch(err => {
+      generateActionPlan(extractedData, fullData).catch(err => {
         console.error('[DeepAnalysis] Action plan failed:', err);
         return null;
       }),
@@ -369,7 +404,9 @@ Return a JSON object with this exact structure:
 }
 
 async function generateInvestmentThesis(reportData: any, fullData: any): Promise<InvestmentThesis | null> {
-  const revenueToRentRatio = reportData.annualRevenueRealistic / (reportData.monthlyRent * 12);
+  // Use pre-calculated ratio if available, otherwise calculate
+  const revenueToRentRatio = reportData.revenueToRentRatio || 
+    (reportData.monthlyRent > 0 ? reportData.annualRevenueRealistic / (reportData.monthlyRent * 12) : 0);
   const occupancy = reportData.occupancyRate;
   const competitors = fullData?.competitors?.length || 0;
   

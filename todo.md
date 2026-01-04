@@ -1972,3 +1972,12 @@
 - [x] Enhance frontend display for narrative content
 - [x] Renamed sections: Investment Thesis → Market Scenarios, Pricing Strategy → Market Pricing Data
 - [x] Test complete flow with Poe-generated content (6.6s generation time)
+
+
+## Bug Fix: Deep Analysis Shows Wrong Data (January 4, 2026) - COMPLETED
+- [x] Diagnose why Deep Analysis shows null/0 values instead of actual report data
+  - Issue: Was looking for profitability.realistic.annual_revenue but correct path is profitability.scenarios.realistic.projected_revenue
+- [x] Fix data passing from main report to Deep Analysis endpoint
+- [x] Ensure all fields (revenue, profit, occupancy, etc.) are correctly read from database
+- [x] Test end-to-end flow with correct data display
+  - Now correctly shows: $88,744 revenue, 3.70x ratio, $58,984 profit
