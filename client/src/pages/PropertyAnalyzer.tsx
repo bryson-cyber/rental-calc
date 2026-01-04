@@ -2147,12 +2147,12 @@ export default function PropertyAnalyzer() {
               </div>
             )}
             
-            {/* AirDNA Feasibility */}
+            {/* Feasibility Assessment */}
             {result.airdna_feasibility && (
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Shield className="w-5 h-5 text-[#C9A962]" />
-                  <h4 className="font-semibold text-[#0F172A] font-serif">AirDNA Feasibility Assessment</h4>
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Feasibility Assessment</h4>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">

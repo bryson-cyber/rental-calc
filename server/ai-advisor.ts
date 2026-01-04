@@ -1423,7 +1423,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
             }
             
             return { 
-              error: `Could not find rental data for zip code ${zipcode}. This zip code may not have enough short-term rental activity in the AirDNA database.`,
+              error: `Could not find rental data for zip code ${zipcode}. This zip code may not have enough short-term rental activity in our database.`,
               suggestion: "Try searching for the city name instead (e.g., 'St. Louis, MO' or 'Austin, TX')"
             };
           }
@@ -2269,7 +2269,7 @@ For each top performer, analyze REAL differentiators from the data:
 
 ---
 
-*This analysis is based on real-time AirDNA data. Ready to dive deeper? Coach Inayah's team can help you find the perfect property and handle the entire setup process.*
+*This analysis is based on real-time market data from Coach Inayah. Ready to dive deeper? Coach Inayah's team can help you find the perfect property and handle the entire setup process.*
 
 ---FOLLOW_UP_QUESTIONS---
 [Question about seasonality specific to this market]

@@ -1956,3 +1956,10 @@
 - [x] Add loading states and progress tracking for AI generation
 - [x] Test complete flow: Main Analysis → Deep Analysis
 - [x] All 7 sections working: Executive Summary, Investment Thesis, Historical Context, Risk Assessment, Pricing Strategy, Action Plan, Market Deep Dive
+
+## Deep Analysis Fixes - Data Presentation Only (January 4, 2026) - COMPLETED
+- [x] Remove all AirDNA references - use "Coach Inayah market data" or "our analysis"
+- [x] Remove Launch Action Plan section entirely
+- [x] Reframe all content as data/insights presentation, not prescriptive advice
+- [x] Updated AI prompts to not give recommendations or tell people what to do
+- [x] Keep only: data, trends, analysis, insights

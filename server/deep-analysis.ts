@@ -393,7 +393,7 @@ Return a JSON object with this exact structure:
   "investmentImplications": ["Implication 1", "Implication 2"]
 }`;
 
-  const response = await callAI(prompt, 'You are a real estate market analyst. Respond only with valid JSON.');
+  const response = await callAI(prompt, 'You are a market data analyst for Coach Inayah. Present historical data and trends only - do not give recommendations. Respond only with valid JSON.');
   return parseAIJson<HistoricalContext>(response);
 }
 
@@ -427,10 +427,10 @@ Return a JSON object with this exact structure:
   "catalysts": ["What could drive outperformance"],
   "risks": ["Key risks to thesis"],
   "confidenceLevel": "high|medium|low",
-  "recommendation": "Clear recommendation based on analysis"
+  "recommendation": "Summary of the data - do not give prescriptive advice"
 }`;
 
-  const response = await callAI(prompt, 'You are a real estate investment analyst. Respond only with valid JSON.');
+  const response = await callAI(prompt, 'You are a real estate data analyst. Present data and insights only - do not give investment advice or tell people what to do. Respond only with valid JSON.');
   return parseAIJson<InvestmentThesis>(response);
 }
 
@@ -449,7 +449,7 @@ MARKET DATA:
 - Active Listings: ${marketSaturation?.total_listings || 'Unknown'}
 - Same Bedroom Count: ${marketSaturation?.same_bedroom_count || 'Unknown'}
 
-AIRDNA FEASIBILITY:
+FEASIBILITY DATA:
 ${JSON.stringify(feasibility, null, 2)}
 
 Return a JSON object with this exact structure:
@@ -463,7 +463,7 @@ Return a JSON object with this exact structure:
   "summary": "2-3 sentence risk summary"
 }`;
 
-  const response = await callAI(prompt, 'You are a risk analyst specializing in real estate. Respond only with valid JSON.');
+  const response = await callAI(prompt, 'You are a risk data analyst for Coach Inayah. Present risk factors and data only - do not give recommendations. Respond only with valid JSON.');
   return parseAIJson<RiskNarrative>(response);
 }
 
@@ -500,7 +500,7 @@ Return a JSON object with this exact structure:
   "strategy": "2-3 sentence pricing strategy summary"
 }`;
 
-  const response = await callAI(prompt, 'You are a revenue management expert for short-term rentals. Respond only with valid JSON.');
+  const response = await callAI(prompt, 'You are a pricing data analyst for Coach Inayah. Present pricing data and market comparisons only - do not give recommendations. Respond only with valid JSON.');
   return parseAIJson<PricingStrategy>(response);
 }
 
@@ -535,7 +535,7 @@ Write a professional summary covering:
 
 Use **bold** for key metrics. Be specific with numbers. Do NOT give investment advice or recommendations.`;
 
-  return await callAI(prompt, 'You are a senior real estate analyst writing for sophisticated investors.');
+  return await callAI(prompt, 'You are a real estate data analyst for Coach Inayah. Present data and insights only - do not give investment advice or recommendations. Do not tell people what to do.');
 }
 
 async function generateMarketNarrative(reportData: any, fullData: any): Promise<string | null> {
@@ -568,39 +568,13 @@ Write a comprehensive market analysis covering:
 
 Use **bold** for key metrics. Be specific with numbers. Focus on facts, not recommendations.`;
 
-  return await callAI(prompt, 'You are a market research analyst specializing in short-term rentals.');
+  return await callAI(prompt, 'You are a market data analyst for Coach Inayah. Present data and insights only - do not give recommendations or tell people what to do.');
 }
 
-async function generateActionPlan(reportData: any, fullData: any): Promise<ActionPlan | null> {
-  const prompt = `Create a detailed action plan for launching this rental arbitrage property and return JSON.
-
-PROPERTY: ${reportData.bedrooms} bedrooms at ${reportData.address}
-MONTHLY RENT: $${reportData.monthlyRent}
-PROJECTED MONTHLY PROFIT: $${Math.round(reportData.annualProfitRealistic / 12)}
-
-Create a phased launch plan with specific tasks, timelines, and costs.
-
-Return a JSON object with this exact structure:
-{
-  "phases": [
-    {
-      "phase": 1,
-      "name": "Pre-Launch",
-      "duration": "2 weeks",
-      "tasks": [
-        {"task": "Sign lease", "priority": "high", "estimatedCost": "$0"},
-        {"task": "Verify STR regulations", "priority": "high", "estimatedCost": "$0"}
-      ],
-      "milestones": ["Lease signed", "Regulations verified"]
-    }
-  ],
-  "totalTimeline": "6-8 weeks",
-  "totalBudget": "$15,000-$25,000",
-  "criticalPath": ["Sign lease", "Furnish property", "Professional photos", "Go live"]
-}`;
-
-  const response = await callAI(prompt, 'You are a project manager specializing in short-term rental launches. Respond only with valid JSON.');
-  return parseAIJson<ActionPlan>(response);
+// Action Plan generation removed - we only present data and insights, not prescriptive advice
+async function generateActionPlan(_reportData: any, _fullData: any): Promise<ActionPlan | null> {
+  // Return null - we don't provide action plans, just data and insights
+  return null;
 }
 
 export { processDeepAnalysis };
