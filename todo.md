@@ -1832,3 +1832,18 @@
 ### Tests Status:
 - TypeScript compilation: 0 errors
 - Most unit tests passing (some slow API tests timeout)
+
+
+## Debugging Session - January 4, 2026 (Session 2)
+
+### Bugs Fixed:
+- [x] Market name "Local Market" in narrative reports - Updated all 3 places in sop-reports.ts to use submarket_details.parent_market_name first
+
+### Remaining Issues (Low Priority):
+- [ ] Property Type Analysis shows $0/0% - API returns empty results for listing_type filter (AirDNA API limitation)
+- [ ] Inconsistent competitor counts in different sections - Different data sources show different counts (by design - different filtering criteria)
+- [ ] AirDNA Feasibility shows -76% vs Our Estimate - Large discrepancy between AirDNA projection and our calculation (needs investigation)
+
+### Tests Status:
+- TypeScript compilation: 0 errors
+- All core functionality working

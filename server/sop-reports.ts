@@ -3187,10 +3187,12 @@ export async function generateFullArbitrageAnalysis(
     try {
       console.log(`[ArbitrageAnalysis] Generating comprehensive narrative report (attempt ${attempt}/${MAX_RETRIES})...`);
     
-    // Get market name for the report
-    const marketName = property_estimate?.property?.market_id 
-      ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
-      : 'Local Market';
+    // Get market name for the report - prefer submarket_details.parent_market_name if available
+    const marketName = submarket_details?.parent_market_name 
+      || submarket_exploration?.market_name
+      || (property_estimate?.property?.market_id 
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+        : 'Local Market');
     
     narrative_report = await generateNarrativeReport({
       address,
@@ -3555,10 +3557,12 @@ export async function generateFullArbitrageAnalysis(
     try {
       console.log('[ArbitrageAnalysis] Generating enhanced narrative report with Poe AI (Claude Opus)...');
       
-      // Get market name for the report
-      const marketNameForEnhanced = property_estimate?.property?.market_id 
-        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
-        : 'Local Market';
+      // Get market name for the report - prefer submarket_details.parent_market_name if available
+      const marketNameForEnhanced = submarket_details?.parent_market_name 
+        || submarket_exploration?.market_name
+        || (property_estimate?.property?.market_id 
+          ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+          : 'Local Market');
       
       // Wrap Poe AI call in a 180-second timeout
       enhanced_narrative_report = await withTimeout(generateEnhancedNarrativeWithPoe({
@@ -3610,10 +3614,12 @@ export async function generateFullArbitrageAnalysis(
   try {
     console.log('[ArbitrageAnalysis] Generating enhanced narrative report (60s timeout)...');
     
-    // Get market name for the report
-    const marketNameForEnhanced = property_estimate?.property?.market_id 
-      ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
-      : 'Local Market';
+    // Get market name for the report - prefer submarket_details.parent_market_name if available
+    const marketNameForEnhanced = submarket_details?.parent_market_name 
+      || submarket_exploration?.market_name
+      || (property_estimate?.property?.market_id 
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
+        : 'Local Market');
     
     // Wrap the enhanced report generation in a 60-second timeout
     enhanced_narrative_report = await withTimeout(generateEnhancedNarrativeReport({

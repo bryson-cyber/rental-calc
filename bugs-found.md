@@ -12,6 +12,7 @@
 **Issue:** Shows "$NaN" for Projected Revenue and "0%" for Projected Occupancy
 **Expected:** Should show actual projected revenue and occupancy values
 **Severity:** High - Data display bug
+**Status:** FIXED - Now shows $46,890 Projected Revenue, 39% Break-Even Occupancy, MEDIUM Risk Level
 
 ### 2. Property Type Analysis - $0 and 0% for all types
 **Location:** Property Type Analysis section
@@ -24,12 +25,14 @@
 **Issue:** Shows "The Local Market market has..." instead of actual market name (Denver)
 **Expected:** Should show "The Denver market has..."
 **Severity:** Medium - Market name not being properly extracted
+**Status:** FIXED - Now uses submarket_details.parent_market_name or submarket_exploration.market_name first
 
 ### 4. Competitive Landscape shows "7472% occupancy"
 **Location:** Competitive Landscape accordion section  
 **Issue:** Shows "earning $66,751/year with 7472% occupancy" - impossible percentage
 **Expected:** Should show 75% occupancy (as shown correctly in competitor card)
 **Severity:** High - Calculation/display bug
+**Status:** FIXED - Now shows 75% occupancy correctly
 
 ### 5. Inconsistent competitor counts
 **Location:** Multiple sections
