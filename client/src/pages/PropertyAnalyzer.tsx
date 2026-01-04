@@ -9,6 +9,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { trpc } from '@/lib/trpc';
 import { 
   Search,
@@ -1003,6 +1004,12 @@ export default function PropertyAnalyzer() {
     }
   };
 
+  // Safe toFixed helper to prevent undefined errors
+  const safeFixed = (value: number | undefined | null, decimals: number = 0): string => {
+    if (value === undefined || value === null || isNaN(value)) return '0';
+    return value.toFixed(decimals);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FDF8F3] via-[#FFF9F5] to-[#FDF5F0]">
       {/* Header */}
@@ -1285,7 +1292,7 @@ export default function PropertyAnalyzer() {
                     Executive Summary
                   </h3>
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-[#0F172A]/80 leading-relaxed whitespace-pre-line">{result.narrative_report.executive_summary}</p>
+                    <div className="text-[#0F172A]/80 leading-relaxed [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-[#0F172A]"><ReactMarkdown>{result.narrative_report.executive_summary}</ReactMarkdown></div>
                   </div>
                 </div>
                 
@@ -1484,7 +1491,7 @@ export default function PropertyAnalyzer() {
                       result.historical_analysis.confidence_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-700'
                     }`}>
-                      {result.historical_analysis.confidence_level.toUpperCase()}
+                      {(result.historical_analysis?.confidence_level || 'medium').toUpperCase()}
                     </span>
                   </div>
                 )}
@@ -1677,7 +1684,7 @@ export default function PropertyAnalyzer() {
                         {comp.rating && (
                           <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                             <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
-                            <span className="text-xs font-semibold text-[#0F172A]">{comp.rating.toFixed(1)}</span>
+                            <span className="text-xs font-semibold text-[#0F172A]">{safeFixed(comp.rating, 1)}</span>
                             {comp.reviews && <span className="text-xs text-[#0F172A]/50">({comp.reviews})</span>}
                           </div>
                         )}
@@ -1719,7 +1726,7 @@ export default function PropertyAnalyzer() {
                             <span className="text-[#C9A962]">
                               • {comp.distance_meters < 1000 
                                   ? `${Math.round(comp.distance_meters)}m` 
-                                  : `${(comp.distance_meters / 1000).toFixed(1)}km`}
+                                  : `${safeFixed((comp.distance_meters || 0) / 1000, 1)}km`}
                             </span>
                           )}
                         </div>
@@ -1778,7 +1785,7 @@ export default function PropertyAnalyzer() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-[#0F172A]/60">Revenue</span>
                       <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.revenue.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.revenue.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {result.five_year_summary.revenue.trend === 'increasing' ? '↑' : result.five_year_summary.revenue.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.revenue.percent_change).toFixed(1)}%
+                        {result.five_year_summary.revenue.trend === 'increasing' ? '↑' : result.five_year_summary.revenue.trend === 'decreasing' ? '↓' : '→'} {safeFixed(Math.abs(result.five_year_summary?.revenue?.percent_change || 0), 1)}%
                       </span>
                     </div>
                     <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(result.five_year_summary.revenue.current_year_avg)}</p>
@@ -1789,7 +1796,7 @@ export default function PropertyAnalyzer() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-[#0F172A]/60">Occupancy</span>
                       <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.occupancy.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.occupancy.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {result.five_year_summary.occupancy.trend === 'increasing' ? '↑' : result.five_year_summary.occupancy.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.occupancy.percent_change).toFixed(1)}%
+                        {result.five_year_summary.occupancy.trend === 'increasing' ? '↑' : result.five_year_summary.occupancy.trend === 'decreasing' ? '↓' : '→'} {safeFixed(Math.abs(result.five_year_summary?.occupancy?.percent_change || 0), 1)}%
                       </span>
                     </div>
                     <p className="text-xl font-bold text-[#0F172A]">{formatPercent(result.five_year_summary.occupancy.current_year_avg)}</p>
@@ -1800,7 +1807,7 @@ export default function PropertyAnalyzer() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-[#0F172A]/60">Avg Daily Rate</span>
                       <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.adr.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.adr.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {result.five_year_summary.adr.trend === 'increasing' ? '↑' : result.five_year_summary.adr.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.adr.percent_change).toFixed(1)}%
+                        {result.five_year_summary.adr.trend === 'increasing' ? '↑' : result.five_year_summary.adr.trend === 'decreasing' ? '↓' : '→'} {safeFixed(Math.abs(result.five_year_summary?.adr?.percent_change || 0), 1)}%
                       </span>
                     </div>
                     <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(result.five_year_summary.adr.current_year_avg)}</p>
@@ -1830,7 +1837,7 @@ export default function PropertyAnalyzer() {
                     <p className={`text-2xl font-bold ${result.supply_trend.net_change >= 0 ? 'text-yellow-600' : 'text-green-600'}`}>
                       {result.supply_trend.net_change >= 0 ? '+' : ''}{result.supply_trend.net_change}
                     </p>
-                    <p className="text-sm text-[#0F172A]/60">Net change ({result.supply_trend.percent_change.toFixed(1)}%)</p>
+                    <p className="text-sm text-[#0F172A]/60">Net change ({safeFixed(result.supply_trend?.percent_change, 1)}%)</p>
                   </div>
                 </div>
                 {result.supply_trend.insight && (
@@ -1848,11 +1855,11 @@ export default function PropertyAnalyzer() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.professional_stats.professional_percentage.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.professional_stats?.professional_percentage, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Professional Hosts</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.professional_stats.superhost_percentage.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.professional_stats?.superhost_percentage, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Superhosts</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -1866,7 +1873,7 @@ export default function PropertyAnalyzer() {
                 </div>
                 {result.professional_stats.avg_revenue_professional > result.professional_stats.avg_revenue_individual && (
                   <p className="mt-4 text-sm text-green-700 bg-green-50 rounded-lg p-3">
-                    💡 Professional hosts earn {((result.professional_stats.avg_revenue_professional / result.professional_stats.avg_revenue_individual - 1) * 100).toFixed(0)}% more than individual hosts in this market.
+                    💡 Professional hosts earn {safeFixed(((result.professional_stats?.avg_revenue_professional || 0) / (result.professional_stats?.avg_revenue_individual || 1) - 1) * 100, 0)}% more than individual hosts in this market.
                   </p>
                 )}
               </div>
@@ -1885,15 +1892,15 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Avg Lead Time (days)</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.booking_patterns.avg_length_of_stay.toFixed(1)}</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.booking_patterns?.avg_length_of_stay, 1)}</p>
                     <p className="text-sm text-[#0F172A]/60">Avg Stay (nights)</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">+{result.booking_patterns.weekend_premium_percent.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-green-600">+{safeFixed(result.booking_patterns?.weekend_premium_percent, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Weekend Premium</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.booking_patterns.last_minute_discount_percent.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.booking_patterns?.last_minute_discount_percent, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Last-Minute Discount</p>
                   </div>
                 </div>
@@ -1918,7 +1925,7 @@ export default function PropertyAnalyzer() {
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
                     <p className={`text-2xl font-bold ${result.market_saturation.market_concentration === 'low' ? 'text-green-600' : result.market_saturation.market_concentration === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {result.market_saturation.market_concentration.toUpperCase()}
+                      {(result.market_saturation?.market_concentration || 'moderate').toUpperCase()}
                     </p>
                     <p className="text-sm text-[#0F172A]/60">Concentration</p>
                   </div>
@@ -1949,7 +1956,7 @@ export default function PropertyAnalyzer() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.market_insights.avg_rating.toFixed(1)}</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.market_insights?.avg_rating, 1)}</p>
                     <p className="text-sm text-[#0F172A]/60">Avg Rating</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -1957,11 +1964,11 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Avg Reviews</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.market_insights.superhost_pct.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.market_insights?.superhost_pct, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Superhosts</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.market_insights.professionally_managed_pct.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.market_insights?.professionally_managed_pct, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Pro Managed</p>
                   </div>
                 </div>
@@ -1972,7 +1979,7 @@ export default function PropertyAnalyzer() {
                     <div className="flex flex-wrap gap-2">
                       {result.market_insights.property_type_breakdown.slice(0, 5).map((pt, i) => (
                         <span key={i} className="text-xs bg-white px-3 py-1 rounded-full border border-[#C9A962]/20">
-                          {pt.type}: {pt.percentage.toFixed(0)}%
+                          {pt.type}: {safeFixed(pt.percentage, 0)}%
                         </span>
                       ))}
                     </div>
@@ -1998,7 +2005,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Same Bedroom Total</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.qualifying_competitors.qualification_rate.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.qualifying_competitors?.qualification_rate, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Qualification Rate</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2017,7 +2024,7 @@ export default function PropertyAnalyzer() {
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin className="w-5 h-5 text-[#C9A962]" />
-                  <h4 className="font-semibold text-[#0F172A] font-serif">Nearby Listings ({(result.radius_listings.radius_meters / 1000).toFixed(1)}km radius)</h4>
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Nearby Listings ({safeFixed((result.radius_listings?.radius_meters || 0) / 1000, 1)}km radius)</h4>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2025,7 +2032,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Total Nearby</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.radius_listings.listings_per_sqkm.toFixed(1)}</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.radius_listings?.listings_per_sqkm, 1)}</p>
                     <p className="text-sm text-[#0F172A]/60">Per sq km</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2063,7 +2070,7 @@ export default function PropertyAnalyzer() {
                   <p className="font-medium text-green-700">Recommendation: {result.property_type_analysis.recommended_type}</p>
                   <p className="text-sm text-green-600 mt-1">{result.property_type_analysis.recommendation_reason}</p>
                   {result.property_type_analysis.revenue_premium > 0 && (
-                    <p className="text-sm text-green-700 mt-2">💰 Entire homes earn {result.property_type_analysis.revenue_premium.toFixed(0)}% more than private rooms</p>
+                    <p className="text-sm text-green-700 mt-2">💰 Entire homes earn {safeFixed(result.property_type_analysis?.revenue_premium, 0)}% more than private rooms</p>
                   )}
                 </div>
               </div>
@@ -2096,7 +2103,7 @@ export default function PropertyAnalyzer() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-[#0F172A]">{alt.name}</p>
-                          <p className="text-sm text-[#0F172A]/60">{formatCurrency(alt.revenue)} avg revenue • {alt.distance_km.toFixed(0)}km away</p>
+                          <p className="text-sm text-[#0F172A]/60">{formatCurrency(alt.revenue)} avg revenue • {safeFixed(alt.distance_km, 0)}km away</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-[#0F172A]/60">{formatPercent(alt.occupancy)} occ</p>
@@ -2129,13 +2136,13 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Projected Occupancy</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className={`text-2xl font-bold ${result.airdna_feasibility.risk_assessment.level === 'low' ? 'text-green-600' : result.airdna_feasibility.risk_assessment.level === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {result.airdna_feasibility.risk_assessment.level.toUpperCase()}
+                    <p className={`text-2xl font-bold ${result.airdna_feasibility?.risk_assessment?.level === 'low' ? 'text-green-600' : result.airdna_feasibility?.risk_assessment?.level === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                      {(result.airdna_feasibility?.risk_assessment?.level || 'medium').toUpperCase()}
                     </p>
                     <p className="text-sm text-[#0F172A]/60">Risk Level</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.airdna_feasibility.comparison.vs_market_avg > 0 ? '+' : ''}{result.airdna_feasibility.comparison.vs_market_avg.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.airdna_feasibility.comparison.vs_market_avg > 0 ? '+' : ''}{safeFixed(result.airdna_feasibility?.comparison?.vs_market_avg, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">vs Market Avg</p>
                   </div>
                 </div>
@@ -2214,7 +2221,7 @@ export default function PropertyAnalyzer() {
                     <div key={i} className="bg-[#FDF8F3] rounded-xl p-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-[#0F172A] text-sm">{listing.name}</p>
-                        <p className="text-xs text-[#0F172A]/60">{listing.bedrooms} bed • {listing.rating ? `${listing.rating.toFixed(1)}★` : 'No rating'}</p>
+                        <p className="text-xs text-[#0F172A]/60">{listing.bedrooms} bed • {listing.rating ? `${safeFixed(listing.rating, 1)}★` : 'No rating'}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-[#0F172A]">{formatCurrency(listing.annual_revenue)}</p>
@@ -2245,7 +2252,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Weekend Price</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">+{result.top_performer_pricing.weekend_premium_percent.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">+{safeFixed(result.top_performer_pricing?.weekend_premium_percent, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Weekend Premium</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2272,7 +2279,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Total Comps</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.rentalizer_comps.superhost_percentage.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.rentalizer_comps?.superhost_percentage, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Superhosts</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2280,7 +2287,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{(result.rentalizer_comps.avg_distance_meters / 1000).toFixed(1)}km</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed((result.rentalizer_comps?.avg_distance_meters || 0) / 1000, 1)}km</p>
                     <p className="text-sm text-[#0F172A]/60">Avg Distance</p>
                   </div>
                 </div>
@@ -2304,16 +2311,16 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Avg Superhost Revenue</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#C9A962]">{result.superhost_top_performers.avg_superhost_rating.toFixed(1)}★</p>
+                    <p className="text-2xl font-bold text-[#C9A962]">{safeFixed(result.superhost_top_performers?.avg_superhost_rating, 1)}★</p>
                     <p className="text-sm text-[#0F172A]/60">Avg Rating</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">+{result.superhost_top_performers.revenue_premium_vs_market.toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">+{safeFixed(result.superhost_top_performers?.revenue_premium_vs_market, 0)}%</p>
                     <p className="text-sm text-[#0F172A]/60">Revenue Premium</p>
                   </div>
                 </div>
                 <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3">
-                  💡 Superhosts earn {result.superhost_top_performers.revenue_premium_vs_market.toFixed(0)}% more than the market average. Achieving Superhost status could significantly boost your revenue.
+                  💡 Superhosts earn {safeFixed(result.superhost_top_performers?.revenue_premium_vs_market, 0)}% more than the market average. Achieving Superhost status could significantly boost your revenue.
                 </p>
               </div>
             )}
@@ -2331,7 +2338,7 @@ export default function PropertyAnalyzer() {
                     <p className="text-sm text-[#0F172A]/60">Analyzed</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.competitor_imagery.avg_image_count.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.competitor_imagery?.avg_image_count, 0)}</p>
                     <p className="text-sm text-[#0F172A]/60">Avg Photos</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2513,7 +2520,7 @@ export default function PropertyAnalyzer() {
                         <div className="text-right">
                           <p className="font-bold text-green-600">{formatCurrency(comp.annual_revenue)}/yr</p>
                           {comp.similarity_score && (
-                            <p className="text-xs text-[#C9A962]">{(comp.similarity_score * 100).toFixed(0)}% similar</p>
+                            <p className="text-xs text-[#C9A962]">{safeFixed((comp.similarity_score || 0) * 100, 0)}% similar</p>
                           )}
                         </div>
                       </div>
@@ -2553,7 +2560,7 @@ export default function PropertyAnalyzer() {
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <BedDouble className="w-5 h-5 text-[#C9A962]" />
-                  <h4 className="font-semibold text-[#0F172A] font-serif">Same-Bedroom Competitors ({result.same_bedroom_radius_listings.bedroom_filter} BR within {(result.same_bedroom_radius_listings.search_radius_meters / 1000).toFixed(1)}km)</h4>
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Same-Bedroom Competitors ({result.same_bedroom_radius_listings.bedroom_filter} BR within {safeFixed((result.same_bedroom_radius_listings?.search_radius_meters || 0) / 1000, 1)}km)</h4>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
@@ -2580,7 +2587,7 @@ export default function PropertyAnalyzer() {
                         <div>
                           <p className="font-medium text-[#0F172A] text-sm">{perf.title}</p>
                           <p className="text-xs text-[#0F172A]/60">
-                            {perf.rating?.toFixed(1) || 'N/A'}★ • {perf.distance_meters < 1000 ? `${Math.round(perf.distance_meters)}m` : `${(perf.distance_meters / 1000).toFixed(1)}km`} away
+                            {safeFixed(perf.rating, 1) || 'N/A'}★ {perf.distance_meters ? `• ${perf.distance_meters < 1000 ? `${Math.round(perf.distance_meters)}m` : `${safeFixed(perf.distance_meters / 1000, 1)}km`} away` : ''}
                           </p>
                         </div>
                         <div className="text-right">

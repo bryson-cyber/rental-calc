@@ -1163,6 +1163,26 @@ export const appRouter = router({
               // ENHANCED NARRATIVE REPORT (with action items and what_this_means)
               enhanced_narrative_report: analysis.enhanced_narrative_report,
               
+              // TIER 1-4 DATA: All collected data must be displayed
+              qualifying_competitors: analysis.qualifying_competitors,
+              radius_listings: analysis.radius_listings,
+              market_saturation: analysis.market_saturation,
+              property_type_analysis: analysis.property_type_analysis,
+              nearby_markets: analysis.nearby_markets,
+              airdna_feasibility: analysis.airdna_feasibility,
+              submarket_deep_dive: analysis.submarket_deep_dive,
+              competitor_imagery: analysis.competitor_imagery,
+              submarket_details: analysis.submarket_details,
+              submarket_exploration: analysis.submarket_exploration,
+              submarket_listings: analysis.submarket_listings,
+              top_performer_comps: analysis.top_performer_comps,
+              top_performer_pricing: analysis.top_performer_pricing,
+              rentalizer_comps: analysis.rentalizer_comps,
+              superhost_top_performers: analysis.superhost_top_performers,
+              same_bedroom_radius_listings: analysis.same_bedroom_radius_listings,
+              // competitor_historical and daily_pricing are not in the analysis return type
+              market_insights: analysis.market_insights,
+              
               // Full markdown report
               full_report: analysis.report
             }

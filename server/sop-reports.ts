@@ -1349,7 +1349,9 @@ export async function generateFullArbitrageAnalysis(
   const percentiles = calculateMarketPercentiles(listings);
   
   // Step 4: Filter competitors above threshold and analyze - show ALL viable competitors
+  console.log(`[ArbitrageAnalysis] Total listings before filtering: ${listings.length}`);
   const viableCompetitors = filterCompetitorsAboveThreshold(listings, monthly_rent);
+  console.log(`[ArbitrageAnalysis] Viable competitors after revenue filter: ${viableCompetitors.length}`);
   // Remove duplicates by title and show ALL viable competitors (not limited)
   const uniqueCompetitors = viableCompetitors.filter((comp, index, self) => 
     index === self.findIndex(c => c.title === comp.title || c.airbnb_url === comp.airbnb_url)
@@ -1400,7 +1402,7 @@ export async function generateFullArbitrageAnalysis(
       id: 'unknown',
       name: zipcode ? `ZIP ${zipcode}` : 'Local Market',
       listing_count: listings.length,
-      location_name: address.split(',').slice(-2).join(',').trim(),
+      location_name: typeof address === 'string' ? address.split(',').slice(-2).join(',').trim() : 'Local Market',
       metrics: {
         occupancy: property_estimate?.estimates.occupancy_rate || 65,
         adr: property_estimate?.estimates.average_daily_rate || 200,
