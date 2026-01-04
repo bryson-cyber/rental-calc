@@ -40,10 +40,18 @@ export async function generateEnhancedNarrativeWithPoe(
     ? `${topComp.name} ($${topComp.annual_revenue?.toLocaleString()}/yr, ${Math.round((topComp.occupancy || 0) * 100)}% occ)`
     : 'No comparable data';
   
-  // Format all competitors for analysis
+  // Format all competitors for analysis with ratings and reviews
   const competitorList = input.competitors.slice(0, 5).map((c, i) => 
-    `${i + 1}. ${c.name}: $${c.annual_revenue?.toLocaleString()}/yr, ${Math.round((c.occupancy || 0) * 100)}% occ, ${c.rating?.toFixed(1) || 'N/A'} rating`
+    `${i + 1}. ${c.name}: $${c.annual_revenue?.toLocaleString()}/yr, ${Math.round((c.occupancy || 0) * 100)}% occ, ${c.rating?.toFixed(1) || 'N/A'} rating (${c.reviews || 0} reviews)`
   ).join('\n');
+  
+  // Calculate benchmarking metrics for "So What?" context
+  const topPerformerRevenue = input.competitors[0]?.annual_revenue || input.revenue_high;
+  const realisticVsTopPct = Math.round((input.revenue_mid / topPerformerRevenue) * 100);
+  const breakEvenVsMarketMargin = Math.round(occupancyNormalized - breakEvenOccupancy);
+  const avgCompRating = input.competitors.length > 0 
+    ? (input.competitors.reduce((sum, c) => sum + (c.rating || 0), 0) / input.competitors.length).toFixed(1)
+    : 'N/A';
   
   // Calculate seasonality info
   const peakMonths = input.seasonality.filter(s => s.season_type === 'peak');
@@ -68,6 +76,7 @@ KEY DEFINITIONS (use these consistently):
 - Monthly Profit: (Monthly Revenue) - (Monthly Rent + Operating Expenses)
 - Break-even Occupancy: Minimum occupancy percentage needed to cover all costs
 - Direct Competitors: The ${input.active_listings} nearby same-bedroom properties analyzed
+- Average Daily Rate (ADR): The average nightly price guests pay
 
 PROPERTY ANALYSIS:
 - Address: ${input.address}
@@ -77,14 +86,15 @@ PROPERTY ANALYSIS:
 MARKET DATA:
 - Market: ${input.market_name}
 - Regional Market Occupancy: ${occupancyNormalized.toFixed(0)}% (broader market average)
-- Regional Average Daily Rate: $${input.market_adr.toFixed(0)} (broader market average)
+- Regional Average Daily Rate (ADR): $${input.market_adr.toFixed(0)}/night (broader market average)
 - Direct Competitors Analyzed: ${input.active_listings} (nearby same-bedroom properties - THIS is your competitive set)
+- Average Competitor Rating: ${avgCompRating} stars
 ${regionalListings ? `- Regional Active Listings: ${regionalListings.toLocaleString()} (total in broader market area)` : ''}
 
-IMPORTANT DATA CONTEXT:
-- The "Direct Competitors Analyzed" count (${input.active_listings}) represents nearby comparable properties.
-- Regional occupancy/ADR figures are broader market averages for context.
-- Revenue projections are based on the ${input.active_listings} direct competitors, not regional averages.
+DATA SOURCE CLARITY:
+- All revenue projections are based on ACTUAL PERFORMANCE DATA from ${input.active_listings} comparable properties
+- These are not estimates or guesses - they reflect what similar properties are actually earning
+- The "Direct Competitors Analyzed" count represents nearby same-bedroom properties with verified revenue data
 
 REVENUE PROJECTIONS:
 - Conservative (25th %ile): $${input.revenue_low.toLocaleString()}/year
@@ -92,19 +102,26 @@ REVENUE PROJECTIONS:
 - Optimistic (90th %ile): $${input.revenue_high.toLocaleString()}/year
 - Revenue-to-Rent Ratio: ${revenueToRentRatio.toFixed(2)}x (minimum 2x required for profitability)
 
+BENCHMARKING CONTEXT ("So What?" for beginners):
+- Your realistic projection ($${input.revenue_mid.toLocaleString()}) captures ${realisticVsTopPct}% of what the top performer earns
+- Break-even occupancy (${breakEvenOccupancy}%) vs market average (${occupancyNormalized.toFixed(0)}%) = ${breakEvenVsMarketMargin}% margin of safety
+- Revenue-to-rent ratio of ${revenueToRentRatio.toFixed(2)}x is ${revenueToRentRatio >= 2.5 ? 'EXCELLENT (well above 2x threshold)' : revenueToRentRatio >= 2 ? 'GOOD (meets 2x threshold)' : revenueToRentRatio >= 1.5 ? 'MARGINAL (below 2x threshold)' : 'CHALLENGING (significantly below 2x threshold)'}
+
 PROFITABILITY:
 - Monthly Expenses: $${input.monthly_expenses.toLocaleString()}
-- Break-Even Occupancy: ${breakEvenOccupancy}%
+- Break-Even Occupancy: ${breakEvenOccupancy}% (you need this occupancy just to cover costs)
 - Conservative Profit: $${input.annual_profit_conservative.toLocaleString()}/year
 - Realistic Profit: $${input.annual_profit_realistic.toLocaleString()}/year ($${monthlyProfit.toLocaleString()}/month)
 - Optimistic Profit: $${input.annual_profit_optimistic.toLocaleString()}/year
 
-TOP COMPETITORS:
+TOP COMPETITORS (with ratings):
 ${competitorList || 'No competitor data available'}
 
-SEASONALITY (${seasonalSwingPct}% swing):
-Peak months: ${peakMonths.map(s => s.month).join(', ') || 'N/A'}
-Off-peak months: ${offMonths.map(s => s.month).join(', ') || 'N/A'}
+SEASONALITY & CASH FLOW TIMING:
+- Seasonal swing: ${seasonalSwingPct}% difference between peak and off-peak
+- Peak months (higher income): ${peakMonths.map(s => s.month).join(', ') || 'N/A'}
+- Off-peak months (lower income): ${offMonths.map(s => s.month).join(', ') || 'N/A'}
+- Expect ${offMonths.length} months of below-average income each year
 
 DATA CONSISTENCY RULES:
 1. When stating "active listings" or "competitors", use the Direct Competitors count (${input.active_listings}), NOT regional totals
@@ -113,15 +130,16 @@ DATA CONSISTENCY RULES:
 4. Always cross-reference numbers you cite with the data sections provided above
 5. If any metrics seem inconsistent, acknowledge the limitation rather than fabricating explanations
 
-Write an EXECUTIVE SUMMARY (one comprehensive paragraph, 150-200 words) that SUMMARIZES the key findings from the analysis sections below. DO NOT give investment advice, verdicts, or recommendations like "GO", "STRONG GO", or "sign the lease". DO NOT suggest budgets or reserve amounts.
+Write an EXECUTIVE SUMMARY (one comprehensive paragraph, 150-200 words) that SUMMARIZES the key findings. DO NOT give investment advice, verdicts, or recommendations like "GO", "STRONG GO", or "sign the lease". DO NOT suggest budgets or reserve amounts.
 
 The summary should cover:
-1. **REVENUE POTENTIAL**: The projected revenue range ($${input.revenue_low.toLocaleString()} to $${input.revenue_high.toLocaleString()}/year) and revenue-to-rent ratio (${revenueToRentRatio.toFixed(2)}x)
-2. **PROFIT PROJECTIONS**: Monthly profit potential ($${monthlyProfit.toLocaleString()}/month realistic scenario)
-3. **MARKET CONTEXT**: The competitive landscape with ${input.active_listings} direct competitors in ${input.market_name}, regional occupancy of ${occupancyNormalized.toFixed(0)}%
-4. **TOP PERFORMERS**: What the leading competitors (${topCompInfo}) are achieving
-5. **SEASONALITY**: The ${seasonalSwingPct}% seasonal variation between peak and off-peak periods
-6. **BREAK-EVEN**: The ${breakEvenOccupancy}% occupancy needed to cover costs
+1. **REVENUE POTENTIAL**: The projected revenue range and revenue-to-rent ratio with context (is ${revenueToRentRatio.toFixed(2)}x good or bad?)
+2. **PROFIT PROJECTIONS**: Monthly profit potential with context on what that means
+3. **HOW YOU COMPARE**: The realistic projection captures ${realisticVsTopPct}% of top performer revenue
+4. **MARKET PRICING**: The $${input.market_adr.toFixed(0)}/night ADR and what it means for pricing strategy
+5. **COMPETITOR QUALITY**: The ${avgCompRating}-star average rating among competitors and what top performers achieve
+6. **SAFETY MARGIN**: Break-even of ${breakEvenOccupancy}% vs market occupancy of ${occupancyNormalized.toFixed(0)}% (${breakEvenVsMarketMargin}% cushion)
+7. **CASH FLOW TIMING**: Expect ${offMonths.length} months of lower income (${seasonalSwingPct}% seasonal swing)
 
 IMPORTANT RULES:
 - DO NOT say "GO", "STRONG GO", "sign the lease", "proceed", or any investment recommendation
@@ -129,6 +147,7 @@ IMPORTANT RULES:
 - DO NOT use phrases like "we recommend", "you should", "consider signing"
 - ONLY summarize the data and findings objectively
 - Write in a professional, informative tone - like a market research report
+- Help beginners understand if the numbers are GOOD or BAD by providing context
 
 Format as a single flowing paragraph with **bold** for key terms. No bullet points, no JSON.`;
 

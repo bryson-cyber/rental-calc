@@ -1765,3 +1765,38 @@
 - [x] Iterate and improve prompts based on findings
 - [x] Re-test improved prompts and verify A+ quality (8 edge cases all passed)
 
+
+## Prompt Improvements & Beginner Context (Jan 4, 2026)
+- [x] Add ADR context to executive summary prompt
+- [x] Add competitor rating/review context to prompt
+- [x] Add cash flow timing insight (months of lower income)
+- [x] Improve break-even context (compare to market occupancy)
+- [x] Add revenue tier positioning (% of top performer)
+- [x] Strengthen data source clarity in prompt
+- [x] Add "So What?" benchmarking context for beginners
+  - Help users understand if numbers are good/bad
+  - Compare to market averages
+  - Show where they stand vs top performers
+
+## AirDNA API Audit & Maximization (Jan 4, 2026)
+- [ ] Audit all AirDNA API endpoints currently in use
+- [ ] Identify unused AirDNA API capabilities
+- [ ] Verify competitor distance feature is working
+- [ ] Maximize API value - use all available data
+- [ ] Document what data is available vs what we're using
+
+## Complete Data Loop Audit (Jan 4, 2026)
+- [ ] Audit all AirDNA API data collected
+- [ ] Audit all backend data returned to frontend
+- [ ] Audit all data displayed in UI
+- [ ] Identify gaps (collected but not displayed)
+- [ ] Display ALL collected data in UI
+- [ ] Add AI analysis for new data sections
+
+## Data Loop Audit - Jan 4, 2026
+- [x] Audit all AirDNA API data collected
+- [x] Implement Tier 1: Major Data Sections (11 items)
+- [x] Implement Tier 2: Submarket Data (6 items)
+- [x] Implement Tier 3: Competitor Intelligence (8 items)
+- [x] Implement Tier 4: Competitor Card Fields (6 items)
+- [x] Complete data loop - all 31 data points now displayed to users

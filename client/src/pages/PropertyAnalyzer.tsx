@@ -276,6 +276,15 @@ interface AnalysisResult {
     airbnb_url?: string;
     image_url?: string;
     distance_meters?: number;
+    // Tier 4: Enhanced competitor fields
+    is_superhost?: boolean;
+    is_professional?: boolean;
+    property_type?: string;
+    last_review_date?: string;
+    amenities?: string[];
+    similarity_score?: number;
+    reviews?: number;
+    adr?: number;
   }>;
   
   seasonality: Array<{
@@ -407,6 +416,272 @@ interface AnalysisResult {
   };
   
   full_report?: string;
+  
+  // Tier 1: Major Data Sections
+  market_saturation?: {
+    total_listings: number;
+    same_bedroom_count: number;
+    bedroom_distribution: Array<{ bedrooms: number; count: number; percentage: number }>;
+    revenue_percentiles: { p25: number; p50: number; p75: number; p90: number };
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    market_concentration: 'low' | 'medium' | 'high';
+  };
+  
+  market_insights?: {
+    total_listings: number;
+    professionally_managed_count: number;
+    professionally_managed_pct: number;
+    superhost_count: number;
+    superhost_pct: number;
+    avg_rating: number;
+    avg_reviews: number;
+    property_type_breakdown: Array<{ type: string; count: number; percentage: number }>;
+    host_size_breakdown: Array<{ size: string; count: number; percentage: number }>;
+    revenue_percentiles: { p25: number; p50: number; p75: number; p90: number };
+  };
+  
+  qualifying_competitors?: {
+    qualifying_count: number;
+    total_same_bedroom: number;
+    qualification_rate: number;
+    revenue_threshold: number;
+    avg_qualifying_revenue: number;
+    avg_qualifying_occupancy: number;
+    avg_qualifying_adr: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    top_qualifiers: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
+  
+  radius_listings?: {
+    total_count: number;
+    radius_meters: number;
+    listings_per_sqkm: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_percentage: number;
+    professional_percentage: number;
+    same_bedroom_count: number;
+    top_nearby: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+      distance_meters: number;
+    }>;
+  };
+  
+  property_type_analysis?: {
+    entire_home: { count: number; avg_revenue: number; avg_occupancy: number };
+    private_room: { count: number; avg_revenue: number; avg_occupancy: number };
+    revenue_premium: number;
+    recommended_type: string;
+    recommendation_reason: string;
+  };
+  
+  nearby_markets?: {
+    current_market: { name: string; revenue: number; occupancy: number; adr: number };
+    alternatives: Array<{ name: string; revenue: number; occupancy: number; adr: number; distance_km: number }>;
+    best_alternative: string;
+    recommendation: string;
+  };
+  
+  airdna_feasibility?: {
+    projections: { revenue: number; occupancy: number; adr: number };
+    risk_assessment: { level: string; factors: string[] };
+    recommendation: string;
+    comparison: { vs_market_avg: number; vs_top_performers: number };
+  };
+  
+  // Tier 2: Submarket Data
+  submarket_deep_dive?: {
+    submarket_name: string;
+    listing_count: number;
+    metrics: { revenue: number; occupancy: number; adr: number; revpar: number };
+    bedroom_performance: Array<{ bedrooms: number; revenue: number; occupancy: number; adr: number }>;
+    top_performers: Array<{ title: string; revenue: number; rating: number }>;
+    insights: string[];
+  };
+  
+  submarket_details?: {
+    submarket_id: string;
+    submarket_name: string;
+    parent_market_name: string;
+    parent_market_id: string;
+    market_type: string;
+    metrics: { revenue: number; occupancy: number; adr: number; revpar: number; listing_count: number };
+  };
+  
+  submarket_exploration?: {
+    market_name: string;
+    market_metrics: { revenue: number; occupancy: number; adr: number };
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    property_submarket_overall_score: number;
+    top_recommendation: string;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      metrics: { revenue: number; occupancy: number; adr: number; revpar: number };
+      ranking: { revenue_rank: number; overall_rank: number };
+      recommendation: string;
+    }>;
+  };
+  
+  all_submarkets?: {
+    property_submarket_name: string;
+    property_submarket_rank: number;
+    total_submarkets: number;
+    submarkets: Array<{
+      name: string;
+      listing_count: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+    }>;
+  };
+  
+  submarket_listings?: {
+    submarket_name: string;
+    total_listings: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    top_listings: Array<{
+      name: string;
+      bedrooms: number;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number | null;
+    }>;
+  };
+  
+  submarket_analysis?: {
+    name: string;
+    metrics: { revenue: number; occupancy: number; adr: number };
+    comparison_to_market: { revenue_diff: number; occupancy_diff: number; adr_diff: number };
+  };
+  
+  // Tier 3: Competitor Intelligence
+  top_performer_comps?: Array<{
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    property_type: string;
+    annual_revenue: number;
+    adr: number;
+    occupancy: number;
+    rating: number;
+    reviews: number;
+    similarity_score: number;
+    amenities: string[];
+  }>;
+  
+  top_performer_pricing?: {
+    avg_weekday_price: number;
+    avg_weekend_price: number;
+    price_range_low: number;
+    price_range_high: number;
+    weekend_premium_percent: number;
+    days_of_data: number;
+  };
+  
+  competitor_historical?: Array<{
+    listing_id: string;
+    title: string;
+    monthly_data: Array<{ month: string; revenue: number; occupancy: number; adr: number }>;
+  }>;
+  
+  daily_pricing?: Array<{
+    date: string;
+    avg_price: number;
+    min_price: number;
+    max_price: number;
+    available_count: number;
+  }>;
+  
+  competitor_imagery?: {
+    total_competitors_analyzed: number;
+    competitors_with_images: number;
+    avg_image_count: number;
+    max_image_count: number;
+    min_image_count: number;
+    top_competitors: Array<{ title: string; image_count: number; images: string[] }>;
+    photo_quality_insights: string[];
+  };
+  
+  rentalizer_comps?: {
+    total_comps: number;
+    superhost_count: number;
+    superhost_percentage: number;
+    professional_count: number;
+    professional_percentage: number;
+    avg_distance_meters: number;
+    avg_revenue: number;
+    avg_rating: number;
+    avg_reviews: number;
+    top_comps: Array<{
+      title: string;
+      bedrooms: number;
+      annual_revenue: number;
+      rating: number;
+      reviews: number;
+      distance_meters: number;
+      superhost: boolean;
+      professionally_managed: boolean;
+    }>;
+  };
+  
+  superhost_top_performers?: {
+    total_superhosts_in_market: number;
+    avg_superhost_revenue: number;
+    avg_superhost_rating: number;
+    avg_superhost_reviews: number;
+    revenue_premium_vs_market: number;
+    top_superhosts: Array<{
+      title: string;
+      annual_revenue: number;
+      rating: number;
+      reviews: number;
+    }>;
+  };
+  
+  same_bedroom_radius_listings?: {
+    search_radius_meters: number;
+    bedroom_filter: number;
+    total_found: number;
+    avg_revenue: number;
+    avg_adr: number;
+    avg_occupancy: number;
+    superhost_count: number;
+    professional_count: number;
+    top_performers: Array<{
+      title: string;
+      annual_revenue: number;
+      adr: number;
+      occupancy: number;
+      rating: number;
+      distance_meters: number;
+    }>;
+  };
 }
 
 export default function PropertyAnalyzer() {
@@ -543,7 +818,16 @@ export default function PropertyAnalyzer() {
             rating: c.rating,
             airbnb_url: c.airbnb_url,
             image_url: c.image_url,
-            distance_meters: c.distance_meters
+            distance_meters: c.distance_meters,
+            // Tier 4: Enhanced competitor fields
+            is_superhost: c.is_superhost || c.superhost || false,
+            is_professional: c.is_professional || c.professionally_managed || false,
+            property_type: c.property_type,
+            last_review_date: c.last_review_date,
+            amenities: c.amenities || [],
+            similarity_score: c.similarity_score,
+            reviews: c.reviews || c.num_reviews,
+            adr: c.adr
           })),
           
           seasonality: data.seasonality || [],
@@ -611,7 +895,34 @@ export default function PropertyAnalyzer() {
           
           narrative_report: data.enhanced_narrative_report || data.narrative_report,
           
-          full_report: data.full_report || ''
+          full_report: data.full_report || '',
+          
+          // Tier 1: Major Data Sections
+          market_saturation: (data as any).market_saturation,
+          market_insights: (data as any).market_insights,
+          qualifying_competitors: (data as any).qualifying_competitors,
+          radius_listings: (data as any).radius_listings,
+          property_type_analysis: (data as any).property_type_analysis,
+          nearby_markets: (data as any).nearby_markets,
+          airdna_feasibility: (data as any).airdna_feasibility,
+          
+          // Tier 2: Submarket Data
+          submarket_deep_dive: (data as any).submarket_deep_dive,
+          submarket_details: (data as any).submarket_details,
+          submarket_exploration: (data as any).submarket_exploration,
+          all_submarkets: (data as any).all_submarkets,
+          submarket_listings: (data as any).submarket_listings,
+          submarket_analysis: (data as any).submarket_analysis,
+          
+          // Tier 3: Competitor Intelligence
+          top_performer_comps: (data as any).top_performer_comps,
+          top_performer_pricing: (data as any).top_performer_pricing,
+          competitor_historical: (data as any).competitor_historical,
+          daily_pricing: (data as any).daily_pricing,
+          competitor_imagery: (data as any).competitor_imagery,
+          rentalizer_comps: (data as any).rentalizer_comps,
+          superhost_top_performers: (data as any).superhost_top_performers,
+          same_bedroom_radius_listings: (data as any).same_bedroom_radius_listings
         };
         
         // If no narrative report yet, show skeleton and set flag
@@ -1335,7 +1646,7 @@ export default function PropertyAnalyzer() {
               </div>
             </div>
             
-            {/* Competitors Section - Thumbnail Pod Style */}
+            {/* Competitors Section - Enhanced Thumbnail Pod Style with Tier 4 Fields */}
             {result.competitors && result.competitors.length > 0 && (
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <h4 className="font-semibold text-[#0F172A] mb-4 font-serif">Your Competition ({result.competitors.length} similar properties)</h4>
@@ -1362,41 +1673,994 @@ export default function PropertyAnalyzer() {
                         <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm">
                           <p className="font-bold text-[#0F172A] text-sm">{formatCurrency(comp.annual_revenue)}/yr</p>
                         </div>
-                        {/* Rating Badge */}
+                        {/* Rating Badge with Reviews */}
                         {comp.rating && (
                           <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                             <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
                             <span className="text-xs font-semibold text-[#0F172A]">{comp.rating.toFixed(1)}</span>
+                            {comp.reviews && <span className="text-xs text-[#0F172A]/50">({comp.reviews})</span>}
+                          </div>
+                        )}
+                        {/* Superhost & Professional Badges */}
+                        <div className="absolute bottom-2 left-2 flex gap-1">
+                          {comp.is_superhost && (
+                            <div className="bg-[#FF5A5F] text-white px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-0.5">
+                              <Award className="w-2.5 h-2.5" />
+                              Superhost
+                            </div>
+                          )}
+                          {comp.is_professional && (
+                            <div className="bg-[#008489] text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                              Pro
+                            </div>
+                          )}
+                        </div>
+                        {/* Similarity Score Badge */}
+                        {comp.similarity_score && comp.similarity_score > 0 && (
+                          <div className="absolute bottom-2 right-2 bg-[#C9A962]/90 text-white px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                            {Math.round(comp.similarity_score * 100)}% match
                           </div>
                         )}
                       </div>
                       {/* Property Info */}
                       <div className="p-3">
-                        <p className="font-medium text-[#0F172A] text-sm line-clamp-2 mb-1">{comp.name || `Competitor ${i + 1}`}</p>
-                        <div className="flex items-center justify-between text-xs text-[#0F172A]/60">
-                          <div className="flex items-center gap-2">
-                            <span>{formatPercent(comp.occupancy)} occupancy</span>
-                            {comp.distance_meters && (
-                              <span className="text-[#C9A962]">
-                                • {comp.distance_meters < 1000 
-                                    ? `${Math.round(comp.distance_meters)}m away` 
-                                    : `${(comp.distance_meters / 1000).toFixed(1)}km away`}
+                        <div className="flex items-start justify-between mb-1">
+                          <p className="font-medium text-[#0F172A] text-sm line-clamp-2 flex-1">{comp.name || `Competitor ${i + 1}`}</p>
+                        </div>
+                        {/* Property Type */}
+                        {comp.property_type && (
+                          <p className="text-[10px] text-[#0F172A]/50 mb-1">{comp.property_type}</p>
+                        )}
+                        {/* Stats Row */}
+                        <div className="flex items-center gap-2 text-xs text-[#0F172A]/60 mb-1">
+                          <span>{formatPercent(comp.occupancy)} occ</span>
+                          {comp.adr && <span>• {formatCurrency(comp.adr)} ADR</span>}
+                          {comp.distance_meters && (
+                            <span className="text-[#C9A962]">
+                              • {comp.distance_meters < 1000 
+                                  ? `${Math.round(comp.distance_meters)}m` 
+                                  : `${(comp.distance_meters / 1000).toFixed(1)}km`}
+                            </span>
+                          )}
+                        </div>
+                        {/* Last Review Date */}
+                        {comp.last_review_date && (
+                          <p className="text-[10px] text-[#0F172A]/40 mb-1">
+                            Last review: {new Date(comp.last_review_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                          </p>
+                        )}
+                        {/* Amenities */}
+                        {comp.amenities && comp.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {comp.amenities.slice(0, 4).map((amenity, j) => (
+                              <span key={j} className="text-[9px] bg-white px-1.5 py-0.5 rounded border border-[#C9A962]/20 text-[#0F172A]/60">
+                                {amenity}
                               </span>
+                            ))}
+                            {comp.amenities.length > 4 && (
+                              <span className="text-[9px] text-[#0F172A]/40">+{comp.amenities.length - 4} more</span>
                             )}
                           </div>
+                        )}
+                        {/* View Link */}
+                        <div className="flex justify-end">
                           {comp.airbnb_url && (
                             <a 
                               href={comp.airbnb_url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-[#C9A962] hover:text-[#B8944D] flex items-center gap-1"
+                              className="text-[#C9A962] hover:text-[#B8944D] flex items-center gap-1 text-xs"
                             >
                               <ExternalLink className="w-3 h-3" />
-                              View
+                              View Listing
                             </a>
                           )}
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* ==================== TIER 1: MAJOR DATA SECTIONS ==================== */}
+            
+            {/* 5-Year Market Trends */}
+            {result.five_year_summary && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">5-Year Market Trends</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Revenue Trend */}
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-[#0F172A]/60">Revenue</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.revenue.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.revenue.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {result.five_year_summary.revenue.trend === 'increasing' ? '↑' : result.five_year_summary.revenue.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.revenue.percent_change).toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(result.five_year_summary.revenue.current_year_avg)}</p>
+                    <p className="text-xs text-[#0F172A]/40">5-yr avg: {formatCurrency(result.five_year_summary.revenue.five_year_avg)}</p>
+                  </div>
+                  {/* Occupancy Trend */}
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-[#0F172A]/60">Occupancy</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.occupancy.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.occupancy.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {result.five_year_summary.occupancy.trend === 'increasing' ? '↑' : result.five_year_summary.occupancy.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.occupancy.percent_change).toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-[#0F172A]">{formatPercent(result.five_year_summary.occupancy.current_year_avg)}</p>
+                    <p className="text-xs text-[#0F172A]/40">5-yr avg: {formatPercent(result.five_year_summary.occupancy.five_year_avg)}</p>
+                  </div>
+                  {/* ADR Trend */}
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-[#0F172A]/60">Avg Daily Rate</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${result.five_year_summary.adr.trend === 'increasing' ? 'bg-green-100 text-green-700' : result.five_year_summary.adr.trend === 'decreasing' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {result.five_year_summary.adr.trend === 'increasing' ? '↑' : result.five_year_summary.adr.trend === 'decreasing' ? '↓' : '→'} {Math.abs(result.five_year_summary.adr.percent_change).toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(result.five_year_summary.adr.current_year_avg)}</p>
+                    <p className="text-xs text-[#0F172A]/40">5-yr avg: {formatCurrency(result.five_year_summary.adr.five_year_avg)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Supply Trend */}
+            {result.supply_trend && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Market Supply Trend</h4>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${result.supply_trend.trend === 'growing' ? 'bg-yellow-50 text-yellow-700' : result.supply_trend.trend === 'declining' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'}`}>
+                    {result.supply_trend.trend === 'growing' ? <TrendingUp className="w-5 h-5" /> : result.supply_trend.trend === 'declining' ? <TrendingDown className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+                    <span className="font-semibold capitalize">{result.supply_trend.trend}</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.supply_trend.current_listings.toLocaleString()}</p>
+                    <p className="text-sm text-[#0F172A]/60">Current listings</p>
+                  </div>
+                  <div>
+                    <p className={`text-2xl font-bold ${result.supply_trend.net_change >= 0 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {result.supply_trend.net_change >= 0 ? '+' : ''}{result.supply_trend.net_change}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Net change ({result.supply_trend.percent_change.toFixed(1)}%)</p>
+                  </div>
+                </div>
+                {result.supply_trend.insight && (
+                  <p className="mt-4 text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">{result.supply_trend.insight}</p>
+                )}
+              </div>
+            )}
+            
+            {/* Professional vs Amateur Hosts */}
+            {result.professional_stats && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Professional vs Individual Hosts</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.professional_stats.professional_percentage.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Professional Hosts</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.professional_stats.superhost_percentage.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Superhosts</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(result.professional_stats.avg_revenue_professional)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Pro Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.professional_stats.avg_revenue_individual)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Individual Avg Revenue</p>
+                  </div>
+                </div>
+                {result.professional_stats.avg_revenue_professional > result.professional_stats.avg_revenue_individual && (
+                  <p className="mt-4 text-sm text-green-700 bg-green-50 rounded-lg p-3">
+                    💡 Professional hosts earn {((result.professional_stats.avg_revenue_professional / result.professional_stats.avg_revenue_individual - 1) * 100).toFixed(0)}% more than individual hosts in this market.
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Booking Patterns */}
+            {result.booking_patterns && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CalendarDays className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Booking Patterns</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.booking_patterns.avg_lead_time_days}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Lead Time (days)</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.booking_patterns.avg_length_of_stay.toFixed(1)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Stay (nights)</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">+{result.booking_patterns.weekend_premium_percent.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Weekend Premium</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.booking_patterns.last_minute_discount_percent.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Last-Minute Discount</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Market Saturation */}
+            {result.market_saturation && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <PieChart className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Market Saturation Analysis</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.market_saturation.total_listings.toLocaleString()}</p>
+                    <p className="text-sm text-[#0F172A]/60">Total Listings</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.market_saturation.same_bedroom_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Same Bedroom Count</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className={`text-2xl font-bold ${result.market_saturation.market_concentration === 'low' ? 'text-green-600' : result.market_saturation.market_concentration === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                      {result.market_saturation.market_concentration.toUpperCase()}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Concentration</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.market_saturation.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                </div>
+                {/* Revenue Percentiles */}
+                <div className="bg-[#FDF8F3] rounded-xl p-4">
+                  <p className="text-sm font-medium text-[#0F172A] mb-2">Revenue Percentiles</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#0F172A]/60">25th: {formatCurrency(result.market_saturation.revenue_percentiles.p25)}</span>
+                    <span className="text-[#0F172A]/60">50th: {formatCurrency(result.market_saturation.revenue_percentiles.p50)}</span>
+                    <span className="text-[#0F172A]/60">75th: {formatCurrency(result.market_saturation.revenue_percentiles.p75)}</span>
+                    <span className="text-[#C9A962] font-semibold">90th: {formatCurrency(result.market_saturation.revenue_percentiles.p90)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Market Insights */}
+            {result.market_insights && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Market Insights</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.market_insights.avg_rating.toFixed(1)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Rating</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{Math.round(result.market_insights.avg_reviews)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Reviews</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.market_insights.superhost_pct.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Superhosts</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.market_insights.professionally_managed_pct.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Pro Managed</p>
+                  </div>
+                </div>
+                {/* Property Type Breakdown */}
+                {result.market_insights.property_type_breakdown && result.market_insights.property_type_breakdown.length > 0 && (
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="text-sm font-medium text-[#0F172A] mb-2">Property Types</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.market_insights.property_type_breakdown.slice(0, 5).map((pt, i) => (
+                        <span key={i} className="text-xs bg-white px-3 py-1 rounded-full border border-[#C9A962]/20">
+                          {pt.type}: {pt.percentage.toFixed(0)}%
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Qualifying Competitors */}
+            {result.qualifying_competitors && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Qualifying Competitors</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{result.qualifying_competitors.qualifying_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Qualifying</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.qualifying_competitors.total_same_bedroom}</p>
+                    <p className="text-sm text-[#0F172A]/60">Same Bedroom Total</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.qualifying_competitors.qualification_rate.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Qualification Rate</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.qualifying_competitors.revenue_threshold)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Revenue Threshold</p>
+                  </div>
+                </div>
+                <p className="text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">
+                  💡 {result.qualifying_competitors.qualifying_count} out of {result.qualifying_competitors.total_same_bedroom} same-bedroom properties meet the revenue threshold of {formatCurrency(result.qualifying_competitors.revenue_threshold)}.
+                </p>
+              </div>
+            )}
+            
+            {/* Radius Listings / Nearby Density */}
+            {result.radius_listings && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Nearby Listings ({(result.radius_listings.radius_meters / 1000).toFixed(1)}km radius)</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.radius_listings.total_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Total Nearby</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.radius_listings.listings_per_sqkm.toFixed(1)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Per sq km</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.radius_listings.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.radius_listings.same_bedroom_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Same Bedrooms</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Property Type Analysis */}
+            {result.property_type_analysis && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Home className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Property Type Analysis</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="font-medium text-[#0F172A] mb-2">Entire Home</p>
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.property_type_analysis.entire_home.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">{result.property_type_analysis.entire_home.count} listings • {formatPercent(result.property_type_analysis.entire_home.avg_occupancy)} occ</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="font-medium text-[#0F172A] mb-2">Private Room</p>
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.property_type_analysis.private_room.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">{result.property_type_analysis.private_room.count} listings • {formatPercent(result.property_type_analysis.private_room.avg_occupancy)} occ</p>
+                  </div>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4">
+                  <p className="font-medium text-green-700">Recommendation: {result.property_type_analysis.recommended_type}</p>
+                  <p className="text-sm text-green-600 mt-1">{result.property_type_analysis.recommendation_reason}</p>
+                  {result.property_type_analysis.revenue_premium > 0 && (
+                    <p className="text-sm text-green-700 mt-2">💰 Entire homes earn {result.property_type_analysis.revenue_premium.toFixed(0)}% more than private rooms</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Nearby Markets */}
+            {result.nearby_markets && result.nearby_markets.alternatives && result.nearby_markets.alternatives.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Nearby Market Alternatives</h4>
+                </div>
+                <div className="space-y-3">
+                  {/* Current Market */}
+                  <div className="bg-[#C9A962]/10 rounded-xl p-4 border border-[#C9A962]/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-[#0F172A]">{result.nearby_markets.current_market.name} (Current)</p>
+                        <p className="text-sm text-[#0F172A]/60">{formatCurrency(result.nearby_markets.current_market.revenue)} avg revenue</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-[#0F172A]/60">{formatPercent(result.nearby_markets.current_market.occupancy)} occ</p>
+                        <p className="text-sm text-[#0F172A]/60">{formatCurrency(result.nearby_markets.current_market.adr)} ADR</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Alternatives */}
+                  {result.nearby_markets.alternatives.slice(0, 3).map((alt, i) => (
+                    <div key={i} className="bg-[#FDF8F3] rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-[#0F172A]">{alt.name}</p>
+                          <p className="text-sm text-[#0F172A]/60">{formatCurrency(alt.revenue)} avg revenue • {alt.distance_km.toFixed(0)}km away</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-[#0F172A]/60">{formatPercent(alt.occupancy)} occ</p>
+                          <p className="text-sm text-[#0F172A]/60">{formatCurrency(alt.adr)} ADR</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {result.nearby_markets.recommendation && (
+                  <p className="mt-4 text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">{result.nearby_markets.recommendation}</p>
+                )}
+              </div>
+            )}
+            
+            {/* AirDNA Feasibility */}
+            {result.airdna_feasibility && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">AirDNA Feasibility Assessment</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.airdna_feasibility.projections.revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Projected Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatPercent(result.airdna_feasibility.projections.occupancy)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Projected Occupancy</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className={`text-2xl font-bold ${result.airdna_feasibility.risk_assessment.level === 'low' ? 'text-green-600' : result.airdna_feasibility.risk_assessment.level === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                      {result.airdna_feasibility.risk_assessment.level.toUpperCase()}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Risk Level</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.airdna_feasibility.comparison.vs_market_avg > 0 ? '+' : ''}{result.airdna_feasibility.comparison.vs_market_avg.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">vs Market Avg</p>
+                  </div>
+                </div>
+                {result.airdna_feasibility.recommendation && (
+                  <p className="text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">{result.airdna_feasibility.recommendation}</p>
+                )}
+              </div>
+            )}
+            
+            {/* ==================== TIER 2: SUBMARKET DATA ==================== */}
+            
+            {/* Submarket Exploration */}
+            {result.submarket_exploration && result.submarket_exploration.submarkets && result.submarket_exploration.submarkets.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Submarket Analysis</h4>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-[#0F172A]/60">Your property is in:</p>
+                  <p className="text-lg font-semibold text-[#0F172A]">{result.submarket_exploration.property_submarket_name}</p>
+                  <p className="text-sm text-[#C9A962]">Rank #{result.submarket_exploration.property_submarket_rank} of {result.submarket_exploration.submarkets.length} submarkets</p>
+                </div>
+                <div className="space-y-2">
+                  {result.submarket_exploration.submarkets.slice(0, 5).map((sm, i) => (
+                    <div key={i} className={`rounded-xl p-3 ${sm.name === result.submarket_exploration?.property_submarket_name ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-[#FDF8F3]'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-[#0F172A]">
+                            #{i + 1} {sm.name}
+                            {sm.name === result.submarket_exploration?.property_submarket_name && <span className="ml-2 text-xs text-[#C9A962]">(Your Area)</span>}
+                          </p>
+                          <p className="text-sm text-[#0F172A]/60">{sm.listing_count} listings</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-[#0F172A]">{formatCurrency(sm.metrics.revenue)}</p>
+                          <p className="text-xs text-[#0F172A]/60">{formatPercent(sm.metrics.occupancy)} occ • {formatCurrency(sm.metrics.adr)} ADR</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {result.submarket_exploration.top_recommendation && (
+                  <p className="mt-4 text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">💡 {result.submarket_exploration.top_recommendation}</p>
+                )}
+              </div>
+            )}
+            
+            {/* Submarket Listings */}
+            {result.submarket_listings && result.submarket_listings.top_listings && result.submarket_listings.top_listings.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Top Performers in {result.submarket_listings.submarket_name}</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{result.submarket_listings.total_listings}</p>
+                    <p className="text-xs text-[#0F172A]/60">Total Listings</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.submarket_listings.avg_revenue)}</p>
+                    <p className="text-xs text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.submarket_listings.avg_adr)}</p>
+                    <p className="text-xs text-[#0F172A]/60">Avg ADR</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatPercent(result.submarket_listings.avg_occupancy)}</p>
+                    <p className="text-xs text-[#0F172A]/60">Avg Occupancy</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {result.submarket_listings.top_listings.slice(0, 5).map((listing, i) => (
+                    <div key={i} className="bg-[#FDF8F3] rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-[#0F172A] text-sm">{listing.name}</p>
+                        <p className="text-xs text-[#0F172A]/60">{listing.bedrooms} bed • {listing.rating ? `${listing.rating.toFixed(1)}★` : 'No rating'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-[#0F172A]">{formatCurrency(listing.annual_revenue)}</p>
+                        <p className="text-xs text-[#0F172A]/60">{formatPercent(listing.occupancy)} occ</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* ==================== TIER 3: COMPETITOR INTELLIGENCE ==================== */}
+            
+            {/* Top Performer Pricing Strategy */}
+            {result.top_performer_pricing && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Top Performer Pricing Strategy</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.top_performer_pricing.avg_weekday_price)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Weekday Price</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(result.top_performer_pricing.avg_weekend_price)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Weekend Price</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">+{result.top_performer_pricing.weekend_premium_percent.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Weekend Premium</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.top_performer_pricing.price_range_low)} - {formatCurrency(result.top_performer_pricing.price_range_high)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Price Range</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-[#0F172A]/70 bg-[#FDF8F3] rounded-lg p-3">
+                  💡 Based on {result.top_performer_pricing.days_of_data} days of pricing data from top performers.
+                </p>
+              </div>
+            )}
+            
+            {/* Rentalizer Comps Summary */}
+            {result.rentalizer_comps && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Comparable Properties Analysis</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.rentalizer_comps.total_comps}</p>
+                    <p className="text-sm text-[#0F172A]/60">Total Comps</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.rentalizer_comps.superhost_percentage.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Superhosts</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.rentalizer_comps.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{(result.rentalizer_comps.avg_distance_meters / 1000).toFixed(1)}km</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Distance</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Superhost Top Performers */}
+            {result.superhost_top_performers && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Superhost Performance</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.superhost_top_performers.total_superhosts_in_market}</p>
+                    <p className="text-sm text-[#0F172A]/60">Superhosts in Market</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(result.superhost_top_performers.avg_superhost_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Superhost Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.superhost_top_performers.avg_superhost_rating.toFixed(1)}★</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Rating</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">+{result.superhost_top_performers.revenue_premium_vs_market.toFixed(0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Revenue Premium</p>
+                  </div>
+                </div>
+                <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3">
+                  💡 Superhosts earn {result.superhost_top_performers.revenue_premium_vs_market.toFixed(0)}% more than the market average. Achieving Superhost status could significantly boost your revenue.
+                </p>
+              </div>
+            )}
+            
+            {/* Competitor Imagery Insights */}
+            {result.competitor_imagery && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Competitor Photo Analysis</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.competitor_imagery.total_competitors_analyzed}</p>
+                    <p className="text-sm text-[#0F172A]/60">Analyzed</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.competitor_imagery.avg_image_count.toFixed(0)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Photos</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{result.competitor_imagery.max_image_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Max Photos</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.competitor_imagery.min_image_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Min Photos</p>
+                  </div>
+                </div>
+                {result.competitor_imagery.photo_quality_insights && result.competitor_imagery.photo_quality_insights.length > 0 && (
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="text-sm font-medium text-[#0F172A] mb-2">Photo Quality Insights</p>
+                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
+                      {result.competitor_imagery.photo_quality_insights.slice(0, 3).map((insight, i) => (
+                        <li key={i}>• {insight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* ==================== REMAINING TIER 2: SUBMARKET DATA ==================== */}
+            
+            {/* Submarket Deep Dive */}
+            {result.submarket_deep_dive && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Submarket Deep Dive: {result.submarket_deep_dive.submarket_name}</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.submarket_deep_dive.listing_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Listings</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(result.submarket_deep_dive.metrics.revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatPercent(result.submarket_deep_dive.metrics.occupancy)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Occupancy</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{formatCurrency(result.submarket_deep_dive.metrics.revpar)}</p>
+                    <p className="text-sm text-[#0F172A]/60">RevPAR</p>
+                  </div>
+                </div>
+                {/* Bedroom Performance */}
+                {result.submarket_deep_dive.bedroom_performance && result.submarket_deep_dive.bedroom_performance.length > 0 && (
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 mb-4">
+                    <p className="text-sm font-medium text-[#0F172A] mb-2">Performance by Bedroom Count</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {result.submarket_deep_dive.bedroom_performance.slice(0, 4).map((bp, i) => (
+                        <div key={i} className="bg-white rounded-lg p-2 text-center">
+                          <p className="text-xs text-[#0F172A]/60">{bp.bedrooms} BR</p>
+                          <p className="font-semibold text-[#0F172A]">{formatCurrency(bp.revenue)}</p>
+                          <p className="text-xs text-[#0F172A]/40">{formatPercent(bp.occupancy)} occ</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Insights */}
+                {result.submarket_deep_dive.insights && result.submarket_deep_dive.insights.length > 0 && (
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="text-sm font-medium text-[#0F172A] mb-2">Key Insights</p>
+                    <ul className="text-sm text-[#0F172A]/70 space-y-1">
+                      {result.submarket_deep_dive.insights.slice(0, 3).map((insight, i) => (
+                        <li key={i}>• {insight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Submarket Details */}
+            {result.submarket_details && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Submarket Details</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="text-sm text-[#0F172A]/60 mb-1">Submarket</p>
+                    <p className="font-semibold text-[#0F172A]">{result.submarket_details.submarket_name}</p>
+                    <p className="text-xs text-[#0F172A]/40">Type: {result.submarket_details.market_type}</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4">
+                    <p className="text-sm text-[#0F172A]/60 mb-1">Parent Market</p>
+                    <p className="font-semibold text-[#0F172A]">{result.submarket_details.parent_market_name}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.submarket_details.metrics.revenue)}</p>
+                    <p className="text-xs text-[#0F172A]/60">Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatPercent(result.submarket_details.metrics.occupancy)}</p>
+                    <p className="text-xs text-[#0F172A]/60">Occupancy</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(result.submarket_details.metrics.adr)}</p>
+                    <p className="text-xs text-[#0F172A]/60">ADR</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-[#0F172A]">{result.submarket_details.metrics.listing_count}</p>
+                    <p className="text-xs text-[#0F172A]/60">Listings</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* All Submarkets Comparison */}
+            {result.all_submarkets && result.all_submarkets.submarkets && result.all_submarkets.submarkets.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">All Submarkets Comparison</h4>
+                </div>
+                <div className="mb-4">
+                  <p className="text-sm text-[#0F172A]/60">Your property is in:</p>
+                  <p className="text-lg font-semibold text-[#0F172A]">{result.all_submarkets.property_submarket_name}</p>
+                  <p className="text-sm text-[#C9A962]">Rank #{result.all_submarkets.property_submarket_rank} of {result.all_submarkets.total_submarkets} submarkets</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#C9A962]/20">
+                        <th className="text-left py-2 text-[#0F172A]/60">Submarket</th>
+                        <th className="text-right py-2 text-[#0F172A]/60">Listings</th>
+                        <th className="text-right py-2 text-[#0F172A]/60">Revenue</th>
+                        <th className="text-right py-2 text-[#0F172A]/60">Occupancy</th>
+                        <th className="text-right py-2 text-[#0F172A]/60">ADR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.all_submarkets.submarkets.slice(0, 8).map((sm, i) => (
+                        <tr key={i} className={`border-b border-[#C9A962]/10 ${sm.name === result.all_submarkets?.property_submarket_name ? 'bg-[#C9A962]/10' : ''}`}>
+                          <td className="py-2 font-medium text-[#0F172A]">
+                            {sm.name}
+                            {sm.name === result.all_submarkets?.property_submarket_name && <span className="ml-2 text-xs text-[#C9A962]">★</span>}
+                          </td>
+                          <td className="text-right py-2 text-[#0F172A]/70">{sm.listing_count}</td>
+                          <td className="text-right py-2 font-semibold text-[#0F172A]">{formatCurrency(sm.revenue)}</td>
+                          <td className="text-right py-2 text-[#0F172A]/70">{formatPercent(sm.occupancy)}</td>
+                          <td className="text-right py-2 text-[#0F172A]/70">{formatCurrency(sm.adr)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* ==================== REMAINING TIER 3: COMPETITOR INTELLIGENCE ==================== */}
+            
+            {/* Top Performer Comps - Detailed */}
+            {result.top_performer_comps && result.top_performer_comps.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Top Performer Details</h4>
+                </div>
+                <div className="space-y-3">
+                  {result.top_performer_comps.slice(0, 5).map((comp, i) => (
+                    <div key={i} className="bg-[#FDF8F3] rounded-xl p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-medium text-[#0F172A]">{comp.title}</p>
+                          <p className="text-sm text-[#0F172A]/60">{comp.bedrooms} bed • {comp.bathrooms} bath • {comp.property_type}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">{formatCurrency(comp.annual_revenue)}/yr</p>
+                          {comp.similarity_score && (
+                            <p className="text-xs text-[#C9A962]">{(comp.similarity_score * 100).toFixed(0)}% similar</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{formatCurrency(comp.adr)}</p>
+                          <p className="text-xs text-[#0F172A]/40">ADR</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{formatPercent(comp.occupancy)}</p>
+                          <p className="text-xs text-[#0F172A]/40">Occupancy</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{comp.rating?.toFixed(1) || 'N/A'}★</p>
+                          <p className="text-xs text-[#0F172A]/40">Rating</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{comp.reviews || 0}</p>
+                          <p className="text-xs text-[#0F172A]/40">Reviews</p>
+                        </div>
+                      </div>
+                      {comp.amenities && comp.amenities.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {comp.amenities.slice(0, 5).map((amenity, j) => (
+                            <span key={j} className="text-xs bg-white px-2 py-0.5 rounded-full border border-[#C9A962]/20">{amenity}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Same Bedroom Radius Listings */}
+            {result.same_bedroom_radius_listings && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BedDouble className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Same-Bedroom Competitors ({result.same_bedroom_radius_listings.bedroom_filter} BR within {(result.same_bedroom_radius_listings.search_radius_meters / 1000).toFixed(1)}km)</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.same_bedroom_radius_listings.total_found}</p>
+                    <p className="text-sm text-[#0F172A]/60">Total Found</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(result.same_bedroom_radius_listings.avg_revenue)}</p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Revenue</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.same_bedroom_radius_listings.superhost_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Superhosts</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.same_bedroom_radius_listings.professional_count}</p>
+                    <p className="text-sm text-[#0F172A]/60">Professionals</p>
+                  </div>
+                </div>
+                {result.same_bedroom_radius_listings.top_performers && result.same_bedroom_radius_listings.top_performers.length > 0 && (
+                  <div className="space-y-2">
+                    {result.same_bedroom_radius_listings.top_performers.slice(0, 5).map((perf, i) => (
+                      <div key={i} className="bg-[#FDF8F3] rounded-xl p-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-[#0F172A] text-sm">{perf.title}</p>
+                          <p className="text-xs text-[#0F172A]/60">
+                            {perf.rating?.toFixed(1) || 'N/A'}★ • {perf.distance_meters < 1000 ? `${Math.round(perf.distance_meters)}m` : `${(perf.distance_meters / 1000).toFixed(1)}km`} away
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-[#0F172A]">{formatCurrency(perf.annual_revenue)}</p>
+                          <p className="text-xs text-[#0F172A]/60">{formatPercent(perf.occupancy)} occ</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Daily Pricing Calendar */}
+            {result.daily_pricing && result.daily_pricing.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CalendarDays className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Daily Pricing Intelligence</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">
+                      {formatCurrency(result.daily_pricing.reduce((sum, d) => sum + d.avg_price, 0) / result.daily_pricing.length)}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Avg Daily Price</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-green-600">
+                      {formatCurrency(Math.max(...result.daily_pricing.map(d => d.max_price)))}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Peak Price</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#0F172A]">
+                      {formatCurrency(Math.min(...result.daily_pricing.map(d => d.min_price)))}
+                    </p>
+                    <p className="text-sm text-[#0F172A]/60">Low Price</p>
+                  </div>
+                  <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-[#C9A962]">{result.daily_pricing.length}</p>
+                    <p className="text-sm text-[#0F172A]/60">Days Analyzed</p>
+                  </div>
+                </div>
+                <div className="bg-[#FDF8F3] rounded-xl p-4">
+                  <p className="text-sm font-medium text-[#0F172A] mb-2">Price Range by Day</p>
+                  <div className="flex flex-wrap gap-1">
+                    {result.daily_pricing.slice(0, 14).map((day, i) => (
+                      <div key={i} className="text-xs bg-white px-2 py-1 rounded border border-[#C9A962]/20">
+                        <span className="text-[#0F172A]/60">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                        <span className="ml-1 font-semibold text-[#0F172A]">{formatCurrency(day.avg_price)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Competitor Historical Performance */}
+            {result.competitor_historical && result.competitor_historical.length > 0 && (
+              <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-5 h-5 text-[#C9A962]" />
+                  <h4 className="font-semibold text-[#0F172A] font-serif">Competitor Historical Performance</h4>
+                </div>
+                <div className="space-y-4">
+                  {result.competitor_historical.slice(0, 3).map((comp, i) => (
+                    <div key={i} className="bg-[#FDF8F3] rounded-xl p-4">
+                      <p className="font-medium text-[#0F172A] mb-2">{comp.title}</p>
+                      {comp.monthly_data && comp.monthly_data.length > 0 && (
+                        <div className="grid grid-cols-6 gap-1">
+                          {comp.monthly_data.slice(-6).map((month, j) => (
+                            <div key={j} className="text-center">
+                              <p className="text-xs text-[#0F172A]/40">{new Date(month.month).toLocaleDateString('en-US', { month: 'short' })}</p>
+                              <p className="text-sm font-semibold text-[#0F172A]">{formatCurrency(month.revenue / 1000)}K</p>
+                              <p className="text-xs text-[#0F172A]/60">{formatPercent(month.occupancy)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
