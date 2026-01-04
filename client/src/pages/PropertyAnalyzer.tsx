@@ -42,7 +42,9 @@ import {
   Banknote,
   AlertCircle,
   ExternalLink,
-  Award
+  Award,
+  Brain,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -701,6 +703,9 @@ interface AnalysisResult {
       distance_meters: number;
     }>;
   };
+  
+  // Report ID for deep analysis
+  reportId?: number | null;
 }
 
 export default function PropertyAnalyzer() {
@@ -941,7 +946,10 @@ export default function PropertyAnalyzer() {
           competitor_imagery: (data as any).competitor_imagery,
           rentalizer_comps: (data as any).rentalizer_comps,
           superhost_top_performers: (data as any).superhost_top_performers,
-          same_bedroom_radius_listings: (data as any).same_bedroom_radius_listings
+          same_bedroom_radius_listings: (data as any).same_bedroom_radius_listings,
+          
+          // Report ID for deep analysis
+          reportId: (data as any).reportId || null
         };
         
         // If no narrative report yet, show skeleton and set flag
@@ -2716,6 +2724,34 @@ export default function PropertyAnalyzer() {
                 />
               </div>
             </div>
+            
+            {/* Deep AI Analysis CTA */}
+            {result.reportId && (
+              <div className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-2xl border border-purple-500/20 p-8 text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Brain className="w-6 h-6 text-purple-500" />
+                  <h3 className="text-2xl font-bold text-[#0F172A] font-serif">
+                    Want Deeper Insights?
+                  </h3>
+                </div>
+                <p className="text-[#0F172A]/70 mb-6 max-w-xl mx-auto">
+                  Our AI can generate an in-depth analysis including investment thesis, 
+                  historical market context, risk assessment, and a detailed action plan.
+                </p>
+                <Button
+                  className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white border-0 shadow-lg"
+                  onClick={() => {
+                    window.location.href = `/deep-analysis/${result.reportId}`;
+                  }}
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Get Deep AI Analysis
+                </Button>
+                <p className="text-[#0F172A]/50 text-sm mt-4">
+                  Takes 2-3 minutes to generate comprehensive insights.
+                </p>
+              </div>
+            )}
             
             {/* CTA Section */}
             <div className="bg-gradient-to-r from-[#C9A962]/20 to-[#D4A84B]/20 rounded-2xl border border-[#C9A962]/30 p-8 text-center">

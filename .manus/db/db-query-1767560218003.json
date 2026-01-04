@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, address FROM analysis_reports LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address FROM analysis_reports LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "address": "300 Boylston Street, Boston, MA, USA"
+    },
+    {
+      "id": "30001",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA"
+    },
+    {
+      "id": "60001",
+      "address": "123 Main Street, Denver, Colorado, USA"
+    },
+    {
+      "id": "60002",
+      "address": "456 Oak Plaza, Austin, TX, USA"
+    },
+    {
+      "id": "90001",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\n1\t300 Boylston Street, Boston, MA, USA\n30001\t4665 West Kings Avenue, Glendale, AZ, USA\n60001\t123 Main Street, Denver, Colorado, USA\n60002\t456 Oak Plaza, Austin, TX, USA\n90001\t4665 West Kings Avenue, Glendale, AZ, USA\n",
+  "stderr": "",
+  "execution_time_ms": 110
+}

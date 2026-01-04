@@ -28,6 +28,7 @@ import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 import { generateFullArbitrageAnalysis } from "./sop-reports";
 import { generatePDFReport } from "./export-pdf";
 import { generateExcelReport } from "./export-excel";
+import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1094,8 +1095,11 @@ export const appRouter = router({
               };
               
               console.log('[LeadMagnet] Inserting report with address:', input.address);
-              await db.insert(analysisReports).values(insertData);
-              console.log('[LeadMagnet] Report saved to database successfully');
+              const insertResult = await db.insert(analysisReports).values(insertData);
+              const reportId = Number(insertResult[0].insertId);
+              console.log('[LeadMagnet] Report saved to database successfully with ID:', reportId);
+              // Store reportId in analysis for frontend access
+              (analysis as any).reportId = reportId;
             }
           } catch (dbError: any) {
             console.error('[LeadMagnet] Error saving report to database:', dbError?.message || dbError);
@@ -1184,7 +1188,10 @@ export const appRouter = router({
               market_insights: analysis.market_insights,
               
               // Full markdown report
-              full_report: analysis.report
+              full_report: analysis.report,
+              
+              // Report ID for deep analysis
+              reportId: (analysis as any).reportId || null
             }
           };
         } catch (error) {
@@ -1569,6 +1576,54 @@ export const appRouter = router({
             success: false,
             error: error instanceof Error ? error.message : 'Failed to generate Excel',
             data: null
+          };
+        }
+      }),
+  }),
+
+  // Deep Analysis endpoints
+  deepAnalysis: router({
+    // Start deep analysis for a report
+    start: publicProcedure
+      .input(z.object({
+        reportId: z.number().int().positive(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log(`[DeepAnalysis] Starting for report ${input.reportId}`);
+          const result = await startDeepAnalysis(input.reportId);
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error('[DeepAnalysis] Start error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to start deep analysis',
+            data: null,
+          };
+        }
+      }),
+
+    // Get deep analysis status and results
+    get: publicProcedure
+      .input(z.object({
+        reportId: z.number().int().positive(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getDeepAnalysis(input.reportId);
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error('[DeepAnalysis] Get error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get deep analysis',
+            data: null,
           };
         }
       }),

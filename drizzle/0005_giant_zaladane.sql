@@ -1,0 +1,20 @@
+CREATE TABLE `deep_analysis` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`reportId` int NOT NULL,
+	`status` enum('pending','processing','completed','failed') NOT NULL DEFAULT 'pending',
+	`errorMessage` text,
+	`historicalContext` json,
+	`investmentThesis` json,
+	`riskNarrative` json,
+	`pricingStrategy` json,
+	`competitorPhotoAnalysis` json,
+	`executiveSummaryEnhanced` text,
+	`marketNarrative` text,
+	`actionPlan` json,
+	`processingTimeMs` int,
+	`aiProvider` varchar(50),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`completedAt` timestamp,
+	CONSTRAINT `deep_analysis_id` PRIMARY KEY(`id`)
+);

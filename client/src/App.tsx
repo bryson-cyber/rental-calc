@@ -19,6 +19,7 @@ import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 
 import TopPerformers from "./pages/TopPerformers";
 import AdminReports from "./pages/AdminReports";
+import DeepAnalysis from "./pages/DeepAnalysis";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -39,6 +40,7 @@ function Router() {
 
       <Route path={"/top-performers"} component={TopPerformers} />
       <Route path={"/admin"} component={AdminReports} />
+      <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

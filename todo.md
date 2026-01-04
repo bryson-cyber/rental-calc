@@ -1941,3 +1941,18 @@
 - [x] Analysis now completes in ~2 minutes reliably
 - [x] All sections load correctly: Executive Summary, Market Overview, Revenue Analysis, Competitors, etc.
 - [x] Tested successfully on Nashville property (789 Music Square West)
+
+## Deep Analysis Feature - Separate AI-Heavy Page (January 4, 2026) - COMPLETED
+- [x] Create Deep Analysis backend endpoint (/api/deep-analysis)
+- [x] Move AI-heavy features to Deep Analysis:
+  - [x] Historical market context (5-year trends with AI interpretation)
+  - [x] Investment thesis generation
+  - [x] Risk assessment narrative
+  - [x] Pricing strategy recommendations
+  - [x] Competitor photo analysis (placeholder)
+- [x] Build Deep Analysis frontend page (/deep-analysis/:reportId)
+- [x] Add "Get Deep AI Analysis" button to main results page
+- [x] Store deep analysis results in database (linked to main report)
+- [x] Add loading states and progress tracking for AI generation
+- [x] Test complete flow: Main Analysis → Deep Analysis
+- [x] All 7 sections working: Executive Summary, Investment Thesis, Historical Context, Risk Assessment, Pricing Strategy, Action Plan, Market Deep Dive

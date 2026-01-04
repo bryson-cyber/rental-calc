@@ -221,3 +221,41 @@ export const analysisReports = mysqlTable("analysis_reports", {
 
 export type AnalysisReport = typeof analysisReports.$inferSelect;
 export type InsertAnalysisReport = typeof analysisReports.$inferInsert;
+
+
+/**
+ * Deep Analysis table for storing AI-heavy analysis results
+ * This is separate from the main analysis to allow async generation
+ */
+export const deepAnalysis = mysqlTable("deep_analysis", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Link to main analysis report
+  reportId: int("reportId").notNull(),
+  
+  // Status tracking
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  
+  // AI-generated content
+  historicalContext: json("historicalContext"), // 5-year market trends with AI interpretation
+  investmentThesis: json("investmentThesis"), // Full investment thesis
+  riskNarrative: json("riskNarrative"), // Detailed risk assessment
+  pricingStrategy: json("pricingStrategy"), // Pricing recommendations
+  competitorPhotoAnalysis: json("competitorPhotoAnalysis"), // Photo analysis of competitors
+  executiveSummaryEnhanced: text("executiveSummaryEnhanced"), // Enhanced AI executive summary
+  marketNarrative: text("marketNarrative"), // Full market narrative
+  actionPlan: json("actionPlan"), // Detailed action plan
+  
+  // Processing metadata
+  processingTimeMs: int("processingTimeMs"),
+  aiProvider: varchar("aiProvider", { length: 50 }), // Which AI provider was used
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export type DeepAnalysis = typeof deepAnalysis.$inferSelect;
+export type InsertDeepAnalysis = typeof deepAnalysis.$inferInsert;
