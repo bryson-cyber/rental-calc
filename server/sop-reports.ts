@@ -3004,6 +3004,17 @@ export async function generateFullArbitrageAnalysis(
       const urlsToScrape = competitorsWithUrls.map(c => c.airbnb_url);
       const scrapedImages = await batchScrapeAirbnbImages(urlsToScrape, 2);
       
+      // Update competitors with scraped images (for frontend display)
+      competitors.forEach(comp => {
+        if (comp.airbnb_url && scrapedImages.has(comp.airbnb_url)) {
+          const images = scrapedImages.get(comp.airbnb_url);
+          if (images && images.length > 0 && !comp.image_url) {
+            comp.image_url = images[0];
+          }
+        }
+      });
+      console.log(`[ArbitrageAnalysis] Updated ${scrapedImages.size} competitors with scraped images`);
+      
       // Analyze photos for competitors that have images
       const competitor_photos: Array<{ name: string; imageUrl: string; analysis: PhotoAnalysis }> = [];
       
@@ -3189,6 +3200,7 @@ export async function generateFullArbitrageAnalysis(
       market_adr: marketData?.market?.metrics?.adr || 150,
       active_listings: competitors.length,
       regional_active_listings: marketData?.market?.listing_count || marketData?.market?.metrics?.active_listings,
+      same_bedroom_regional_count: market_saturation?.same_bedroom_count,
       revenue_low: percentiles.median,
       revenue_mid: percentiles.top_25_percent,
       revenue_high: percentiles.top_10_percent,

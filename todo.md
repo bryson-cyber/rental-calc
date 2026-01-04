@@ -1692,4 +1692,19 @@
 - [x] Fix Executive Summary prompt - remove investment advice (STRONG GO, budget recommendations)
 - [x] Executive Summary should only summarize findings from other sections
 - [x] Improve Market Intelligence card labeling (Direct Competitors vs Regional Market)
-- [ ] Verify consistency across multiple property tests
+- [x] Verify consistency across multiple property tests
+
+## PDF Export Review (Jan 3, 2026)
+- [ ] Test PDF export with property that has good data
+- [ ] Verify Executive Summary renders correctly in PDF
+- [ ] Verify all sections and formatting are correct
+- [ ] Fix any rendering issues found
+- [x] Fix PDF export to use existing analysis data instead of re-running analysis
+
+## New Features & Fixes (Jan 4)
+- [ ] Add competitor distance from subject property
+- [x] Fix competitor photo loading/thumbnails
+- [x] Audit AI model assignments for production
+- [ ] Filter regional market data by bedroom count
+- [ ] Refine prompts - clarify direct vs regional data
+- [ ] Remove any remaining investment advice language

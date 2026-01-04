@@ -2649,6 +2649,7 @@ export interface NarrativeReportInput {
   market_adr: number;
   active_listings: number;  // Number of direct competitors analyzed (local)
   regional_active_listings?: number;  // Total active listings in the broader regional market
+  same_bedroom_regional_count?: number;  // Number of same-bedroom listings in the regional market
   
   // Revenue projections
   revenue_low: number;
@@ -4058,7 +4059,8 @@ MARKET OVERVIEW:
 - Regional Market Occupancy: ${formatOccupancy(input.market_occupancy)}% (broader market average)
 - Regional Market ADR: $${input.market_adr.toFixed(0)} (broader market average)
 - Direct Competitors Analyzed: ${input.active_listings} (nearby same-bedroom properties - THIS is your competitive set)
-${input.regional_active_listings ? `- Regional Active Listings: ${input.regional_active_listings.toLocaleString()} (total in broader market area)` : ''}
+${input.regional_active_listings ? `- Regional Active Listings: ${input.regional_active_listings.toLocaleString()} (total in broader market area, all bedroom types)` : ''}
+${input.same_bedroom_regional_count ? `- Same-Bedroom Regional Listings: ${input.same_bedroom_regional_count.toLocaleString()} (${input.bedrooms}-bedroom properties in the regional market)` : ''}
 
 IMPORTANT DATA CONTEXT:
 - When discussing "active listings" or "market size" in your analysis, use the Direct Competitors count (${input.active_listings}), NOT regional totals.

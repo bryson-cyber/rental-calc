@@ -52,15 +52,18 @@ import { FileText, FileSpreadsheet, Download, Loader2 as ExportLoader } from 'lu
 import NarrativeSkeleton, { InlineNarrativeSkeleton } from '@/components/NarrativeSkeleton';
 
 // Export PDF Button Component with Progress Indicator
-function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
+function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms, analysisData }: {
   address: string;
   monthlyRent: number;
   bedrooms: number;
   bathrooms: number;
+  analysisData?: any;
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
+  // Use pdfFromData if we have existing analysis data, otherwise fall back to pdf
+  const exportFromDataMutation = trpc.export.pdfFromData.useMutation();
   const exportMutation = trpc.export.pdf.useMutation();
   const abortRef = useRef(false);
 
@@ -70,8 +73,15 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
     setProgress(0);
     setStatusMessage('Preparing report data...');
     
-    // Simulate progress stages since actual PDF generation is server-side
-    const progressStages = [
+    // If we have existing analysis data, use fast path (no re-analysis)
+    const hasExistingData = !!analysisData;
+    
+    // Progress stages - much faster if using existing data
+    const progressStages = hasExistingData ? [
+      { progress: 30, message: 'Preparing report...', delay: 200 },
+      { progress: 60, message: 'Generating PDF layout...', delay: 500 },
+      { progress: 90, message: 'Finalizing document...', delay: 1000 },
+    ] : [
       { progress: 15, message: 'Gathering market data...', delay: 800 },
       { progress: 30, message: 'Analyzing competitors...', delay: 1500 },
       { progress: 45, message: 'Calculating projections...', delay: 2000 },
@@ -91,12 +101,15 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms }: {
     });
     
     try {
-      const result = await exportMutation.mutateAsync({
-        address,
-        monthly_rent: monthlyRent,
-        bedrooms,
-        bathrooms,
-      });
+      // Use existing data if available (fast path), otherwise re-run analysis
+      const result = hasExistingData 
+        ? await exportFromDataMutation.mutateAsync({ analysisData })
+        : await exportMutation.mutateAsync({
+            address,
+            monthly_rent: monthlyRent,
+            bedrooms,
+            bathrooms,
+          });
       
       setProgress(100);
       setStatusMessage('Download ready!');
@@ -262,6 +275,7 @@ interface AnalysisResult {
     rating: number;
     airbnb_url?: string;
     image_url?: string;
+    distance_meters?: number;
   }>;
   
   seasonality: Array<{
@@ -528,7 +542,8 @@ export default function PropertyAnalyzer() {
             occupancy: c.occupancy,
             rating: c.rating,
             airbnb_url: c.airbnb_url,
-            image_url: c.image_url
+            image_url: c.image_url,
+            distance_meters: c.distance_meters
           })),
           
           seasonality: data.seasonality || [],
@@ -1359,7 +1374,16 @@ export default function PropertyAnalyzer() {
                       <div className="p-3">
                         <p className="font-medium text-[#0F172A] text-sm line-clamp-2 mb-1">{comp.name || `Competitor ${i + 1}`}</p>
                         <div className="flex items-center justify-between text-xs text-[#0F172A]/60">
-                          <span>{formatPercent(comp.occupancy)} occupancy</span>
+                          <div className="flex items-center gap-2">
+                            <span>{formatPercent(comp.occupancy)} occupancy</span>
+                            {comp.distance_meters && (
+                              <span className="text-[#C9A962]">
+                                • {comp.distance_meters < 1000 
+                                    ? `${Math.round(comp.distance_meters)}m away` 
+                                    : `${(comp.distance_meters / 1000).toFixed(1)}km away`}
+                              </span>
+                            )}
+                          </div>
                           {comp.airbnb_url && (
                             <a 
                               href={comp.airbnb_url} 
@@ -1391,6 +1415,7 @@ export default function PropertyAnalyzer() {
                   monthlyRent={result.monthly_rent}
                   bedrooms={result.bedrooms}
                   bathrooms={result.bathrooms}
+                  analysisData={result}
                 />
                 <ExportExcelButton
                   address={result.address}

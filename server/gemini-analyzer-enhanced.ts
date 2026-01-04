@@ -540,6 +540,9 @@ CRITICAL INSTRUCTIONS:
 5. Write in flowing paragraphs, NOT bullet points
 6. Be honest - if the numbers are weak, say so clearly
 7. Include "What This Means For You" explanations in plain language
+8. DO NOT give investment advice - no "GO", "STRONG GO", "sign the lease", "proceed", or "we recommend"
+9. DO NOT suggest specific dollar amounts for reserves, budgets, or startup costs
+10. Write objectively like a market research report - present data and findings, let the reader decide
 
 MARKET CONTEXT:
 ${marketContext.description}
@@ -626,7 +629,7 @@ Return your response as JSON with this exact structure:
   
   "financial_outlook": "3 paragraphs on the financial picture. Calculate monthly cash flow in each scenario. Estimate break-even timeline on startup costs. Discuss whether this is a good use of capital compared to alternatives.",
   
-  "conclusion": "2 strong paragraphs. Summarize whether this property meets the criteria for a successful rental arbitrage. Provide a clear, honest assessment with specific conditions for success.",
+  "conclusion": "2 strong paragraphs. Summarize the key findings from the analysis. Present the data objectively - DO NOT say 'GO', 'proceed', or give investment recommendations. Simply state what the numbers show and what factors would need to be true for success.",
   
   "what_this_means": {
     "revenue": "One paragraph in plain language explaining what the revenue numbers mean for someone new to STR investing. Use analogies if helpful.",
