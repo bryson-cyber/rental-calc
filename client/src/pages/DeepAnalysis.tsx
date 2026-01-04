@@ -329,8 +329,8 @@ export default function DeepAnalysis() {
                         <Target className="w-5 h-5 text-green-500" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">Investment Thesis</CardTitle>
-                        <CardDescription>Bull, bear, and base case scenarios</CardDescription>
+                        <CardTitle className="text-lg">Market Scenarios</CardTitle>
+                        <CardDescription>Bull, bear, and base case analysis</CardDescription>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -395,7 +395,7 @@ export default function DeepAnalysis() {
                     </div>
 
                     <div className="p-4 bg-muted rounded-lg">
-                      <h4 className="font-semibold mb-2">Recommendation</h4>
+                      <h4 className="font-semibold mb-2">Summary</h4>
                       <p>{result.investmentThesis.recommendation}</p>
                     </div>
                   </CardContent>
@@ -571,8 +571,8 @@ export default function DeepAnalysis() {
                         <DollarSign className="w-5 h-5 text-yellow-500" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">Pricing Strategy</CardTitle>
-                        <CardDescription>Recommended pricing and dynamic adjustments</CardDescription>
+                        <CardTitle className="text-lg">Market Pricing Data</CardTitle>
+                        <CardDescription>Competitor pricing and market rates</CardDescription>
                       </div>
                     </div>
                     {expandedSections.pricing ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -645,7 +645,7 @@ export default function DeepAnalysis() {
                     </div>
 
                     <div className="p-4 bg-muted rounded-lg">
-                      <h4 className="font-semibold mb-2">Dynamic Pricing Recommendation</h4>
+                      <h4 className="font-semibold mb-2">Dynamic Pricing Insights</h4>
                       <p className="text-sm">{result.pricingStrategy.dynamicPricingRecommendation}</p>
                     </div>
 

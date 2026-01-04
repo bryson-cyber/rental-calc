@@ -1963,3 +1963,12 @@
 - [x] Reframe all content as data/insights presentation, not prescriptive advice
 - [x] Updated AI prompts to not give recommendations or tell people what to do
 - [x] Keep only: data, trends, analysis, insights
+
+
+## Deep Analysis with Poe Integration (January 4, 2026) - COMPLETED
+- [x] Review current Poe API integration (Claude Opus 4.5 for narratives)
+- [x] Update Deep Analysis backend to use Poe for AI narratives
+- [x] Generate AI conclusions and insights via Poe (Claude Opus)
+- [x] Enhance frontend display for narrative content
+- [x] Renamed sections: Investment Thesis → Market Scenarios, Pricing Strategy → Market Pricing Data
+- [x] Test complete flow with Poe-generated content (6.6s generation time)

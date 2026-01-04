@@ -16,9 +16,10 @@ import { getDb } from './db';
 import { deepAnalysis, analysisReports } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { ENV } from './_core/env';
+import { generateNarrativeWithPoe } from './poe-ai';
 
-// AI provider timeout - give more time since this runs in background
-const AI_TIMEOUT_MS = 60000; // 60 seconds per call
+// AI provider timeout - Poe has longer timeouts for quality responses
+const AI_TIMEOUT_MS = 120000; // 120 seconds per call for Poe
 
 // Types
 export interface DeepAnalysisResult {
@@ -286,54 +287,24 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
 }
 
 /**
- * Call AI with timeout
+ * Call AI using Poe API (Claude Opus for high-quality narratives)
  */
 async function callAI(prompt: string, systemPrompt: string = ''): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-
+  console.log('[DeepAnalysis] Calling Poe AI with Claude Opus...');
+  
   try {
-    const apiUrl = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-      ? `${ENV.forgeApiUrl.replace(/\/$/, '')}/v1/chat/completions`
-      : 'https://forge.manus.im/v1/chat/completions';
-
-    const messages = [];
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt });
-    }
-    messages.push({ role: 'user', content: prompt });
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ENV.forgeApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gemini-2.5-flash',
-        messages,
-        max_tokens: 2048,
-        temperature: 0.7,
-      }),
-      signal: controller.signal,
+    const response = await generateNarrativeWithPoe(prompt, {
+      systemPrompt: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.',
+      model: 'Claude-Opus-4.5',
+      maxTokens: 4096,
+      timeoutMs: AI_TIMEOUT_MS,
     });
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
     
-    if (typeof content === 'string') {
-      return content;
-    } else if (Array.isArray(content)) {
-      return content.map((c: any) => 'text' in c ? c.text : '').join('');
-    }
-    
-    throw new Error('Empty response from AI');
-  } finally {
-    clearTimeout(timeoutId);
+    console.log(`[DeepAnalysis] Poe response received: ${response.length} chars`);
+    return response;
+  } catch (error: any) {
+    console.error('[DeepAnalysis] Poe AI error:', error.message);
+    throw error;
   }
 }
 
