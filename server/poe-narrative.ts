@@ -1,36 +1,32 @@
 /**
- * Poe AI Narrative Generator - Uses Gemini 2.5 Pro for A-Tier Expert Analysis
+ * Poe AI Narrative Generator - A+ Expert Level Analysis
  * 
- * This generates comprehensive, expert-level investment reports using Gemini 2.5 Pro.
- * All sections are AI-generated with rich data integration for maximum insight.
- * 
- * A-TIER EXPERT MODE: Every section is powered by AI with full market data context.
+ * This generates comprehensive, expert-level investment analysis using Gemini 2.5 Pro.
+ * NO GO/NO GO verdicts - just expert analysis presenting the facts.
+ * All sections are complete, specific, and actionable.
  */
 
 import { generateNarrativeWithPoe } from './poe-ai';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './gemini-analyzer-enhanced';
 
 // Model configuration
-const AI_MODEL = 'Gemini-2.5-Pro';
-const EXPERT_TIMEOUT = 60000; // 60 seconds for comprehensive analysis
+const AI_MODEL = 'Claude-Sonnet-4'; // Claude gives complete responses, Gemini truncates
+const EXPERT_TIMEOUT = 60000;
+const SECTION_MAX_TOKENS = 1500; // Increased from 600 to ensure complete responses
 
 /**
- * Generate A-Tier Expert narrative report using Gemini 2.5 Pro via Poe
- * ALL sections are AI-generated with comprehensive data integration
+ * Generate A+ Expert narrative report using Gemini 2.5 Pro via Poe
  */
 export async function generateEnhancedNarrativeWithPoe(
   input: EnhancedNarrativeReportInput
 ): Promise<EnhancedNarrativeReport> {
-  console.log('[PoeNarrative] Generating A-TIER EXPERT report with Gemini 2.5 Pro...');
+  console.log('[PoeNarrative] Generating A+ EXPERT report with Gemini 2.5 Pro...');
   
-  // Calculate all key metrics upfront
   const metrics = calculateAllMetrics(input);
-  
-  // Build comprehensive data context for AI
   const dataContext = buildDataContext(input, metrics);
   
   try {
-    // Generate ALL sections with AI in parallel for speed
+    // Generate ALL sections with AI in parallel
     const [
       executiveSummary,
       marketOverview,
@@ -41,17 +37,16 @@ export async function generateEnhancedNarrativeWithPoe(
       financialOutlook,
       conclusion
     ] = await Promise.all([
-      generateExecutiveSummary(dataContext, metrics),
-      generateMarketOverview(dataContext, metrics),
-      generateRevenueAnalysis(dataContext, metrics),
-      generateCompetitiveLandscape(dataContext, metrics),
-      generateSeasonalStrategy(dataContext, metrics),
-      generateRiskAssessment(dataContext, metrics),
-      generateFinancialOutlook(dataContext, metrics),
-      generateConclusion(dataContext, metrics)
+      generateExecutiveSummary(dataContext, metrics, input),
+      generateMarketOverview(dataContext, metrics, input),
+      generateRevenueAnalysis(dataContext, metrics, input),
+      generateCompetitiveLandscape(dataContext, metrics, input),
+      generateSeasonalStrategy(dataContext, metrics, input),
+      generateRiskAssessment(dataContext, metrics, input),
+      generateFinancialOutlook(dataContext, metrics, input),
+      generateConclusion(dataContext, metrics, input)
     ]);
 
-    // Build the full report
     const report: EnhancedNarrativeReport = {
       executive_summary: executiveSummary,
       market_overview: marketOverview,
@@ -74,10 +69,9 @@ export async function generateEnhancedNarrativeWithPoe(
         revenue_to_rent_ratio: metrics.revenueToRentRatio,
       },
       quick_facts: [
-        `${metrics.recommendation} recommendation (${metrics.confidenceScore}/10 confidence)`,
         `Revenue-to-rent ratio: ${metrics.revenueToRentRatio.toFixed(2)}x`,
         `Projected profit: $${metrics.monthlyProfit.toLocaleString()}/month`,
-        `Break-even occupancy: ${metrics.breakEvenOccupancy}%`,
+        `Market ADR: $${input.market_adr.toFixed(0)}/night`,
       ],
       market_context: {
         type: determineMarketType(input.market_name),
@@ -88,11 +82,10 @@ export async function generateEnhancedNarrativeWithPoe(
       },
     };
 
-    console.log('[PoeNarrative] A-TIER EXPERT report generated successfully');
+    console.log('[PoeNarrative] A+ EXPERT report generated successfully');
     return report;
   } catch (error: any) {
-    console.error('[PoeNarrative] Error generating A-tier report:', error.message);
-    console.log('[PoeNarrative] Using fallback report generation');
+    console.error('[PoeNarrative] Error generating A+ report:', error.message);
     return generateFallbackReport(input, metrics);
   }
 }
@@ -108,7 +101,6 @@ interface CalculatedMetrics {
   annualRent: number;
   breakEvenOccupancy: number;
   breakEvenMonths: number;
-  recommendation: string;
   confidenceScore: number;
   seasonalSwingPct: number;
   peakMonths: string[];
@@ -117,7 +109,6 @@ interface CalculatedMetrics {
   avgOffRevenue: number;
   topCompetitor: any;
   competitorCount: number;
-  startupCosts: { low: number; high: number };
 }
 
 function calculateAllMetrics(input: EnhancedNarrativeReportInput): CalculatedMetrics {
@@ -126,7 +117,6 @@ function calculateAllMetrics(input: EnhancedNarrativeReportInput): CalculatedMet
   const monthlyProfit = Math.round(input.annual_profit_realistic / 12);
   const annualRent = input.monthly_rent * 12;
   
-  // Break-even calculations
   const dailyRate = input.market_adr;
   const daysPerMonth = 30;
   const maxMonthlyRevenue = dailyRate * daysPerMonth;
@@ -134,21 +124,13 @@ function calculateAllMetrics(input: EnhancedNarrativeReportInput): CalculatedMet
     ? Math.min(100, Math.round((input.monthly_expenses / maxMonthlyRevenue) * 100))
     : 100;
   
-  // Startup costs based on bedrooms
-  const startupCostsLow = input.bedrooms * 4000 + 3000;
-  const startupCostsHigh = input.bedrooms * 6000 + 5000;
-  const avgStartupCosts = (startupCostsLow + startupCostsHigh) / 2;
+  const avgStartupCosts = (input.bedrooms * 5000 + 4000);
   const breakEvenMonths = monthlyProfit > 0 ? Math.min(24, Math.round(avgStartupCosts / monthlyProfit)) : 24;
   
-  // Recommendation
-  const recommendation = revenueToRentRatio >= 2.5 ? 'STRONG GO' : 
-                         revenueToRentRatio >= 2 ? 'GO' : 
-                         revenueToRentRatio >= 1.5 ? 'CAUTION' : 'NO GO';
   const confidenceScore = revenueToRentRatio >= 2.5 ? 9 : 
                           revenueToRentRatio >= 2 ? 7 : 
                           revenueToRentRatio >= 1.5 ? 5 : 3;
   
-  // Seasonality
   const peakSeasons = input.seasonality.filter(s => s.season_type === 'peak');
   const offSeasons = input.seasonality.filter(s => s.season_type === 'off');
   const avgPeakRevenue = peakSeasons.reduce((sum, s) => sum + s.revenue, 0) / Math.max(1, peakSeasons.length);
@@ -162,7 +144,6 @@ function calculateAllMetrics(input: EnhancedNarrativeReportInput): CalculatedMet
     annualRent,
     breakEvenOccupancy,
     breakEvenMonths,
-    recommendation,
     confidenceScore,
     seasonalSwingPct,
     peakMonths: peakSeasons.map(s => s.month),
@@ -171,7 +152,6 @@ function calculateAllMetrics(input: EnhancedNarrativeReportInput): CalculatedMet
     avgOffRevenue,
     topCompetitor: input.competitors[0],
     competitorCount: input.competitors.length,
-    startupCosts: { low: startupCostsLow, high: startupCostsHigh },
   };
 }
 
@@ -203,25 +183,24 @@ Average Daily Rate (ADR): $${input.market_adr.toFixed(0)}/night
 Market RevPAR: $${(input.market_adr * (metrics.occupancyNormalized / 100)).toFixed(0)}/night
 
 === REVENUE PROJECTIONS ===
-Conservative (25th percentile): $${input.revenue_low.toLocaleString()}/year ($${Math.round(input.revenue_low / 12).toLocaleString()}/month)
-Realistic (75th percentile): $${input.revenue_mid.toLocaleString()}/year ($${Math.round(input.revenue_mid / 12).toLocaleString()}/month)
-Optimistic (90th percentile): $${input.revenue_high.toLocaleString()}/year ($${Math.round(input.revenue_high / 12).toLocaleString()}/month)
+Conservative (25th percentile): $${input.revenue_low.toLocaleString()}/year
+Realistic (75th percentile): $${input.revenue_mid.toLocaleString()}/year
+Optimistic (90th percentile): $${input.revenue_high.toLocaleString()}/year
 
 === KEY FINANCIAL METRICS ===
-Revenue-to-Rent Ratio: ${metrics.revenueToRentRatio.toFixed(2)}x (2x minimum required for profitability)
+Revenue-to-Rent Ratio: ${metrics.revenueToRentRatio.toFixed(2)}x
 Break-Even Occupancy: ${metrics.breakEvenOccupancy}%
-Estimated Startup Costs: $${metrics.startupCosts.low.toLocaleString()} - $${metrics.startupCosts.high.toLocaleString()}
-Break-Even Timeline: ${metrics.breakEvenMonths} months
+Monthly Profit (Realistic): $${metrics.monthlyProfit.toLocaleString()}
 
 === PROFIT PROJECTIONS ===
 Conservative Annual Profit: $${input.annual_profit_conservative.toLocaleString()}/year
-Realistic Annual Profit: $${input.annual_profit_realistic.toLocaleString()}/year ($${metrics.monthlyProfit.toLocaleString()}/month)
+Realistic Annual Profit: $${input.annual_profit_realistic.toLocaleString()}/year
 Optimistic Annual Profit: $${input.annual_profit_optimistic.toLocaleString()}/year
 
-=== TOP COMPETITORS (${input.bedrooms}-BEDROOM PROPERTIES) ===
+=== TOP COMPETITORS ===
 ${competitorList || 'No competitor data available'}
 
-=== SEASONALITY ANALYSIS (${metrics.seasonalSwingPct}% swing) ===
+=== SEASONALITY (${metrics.seasonalSwingPct}% swing) ===
 Peak Months: ${metrics.peakMonths.join(', ') || 'N/A'}
 Off-Peak Months: ${metrics.offMonths.join(', ') || 'N/A'}
 Average Peak Revenue: $${metrics.avgPeakRevenue.toLocaleString()}/month
@@ -229,237 +208,260 @@ Average Off-Peak Revenue: $${metrics.avgOffRevenue.toLocaleString()}/month
 
 Monthly Breakdown:
 ${seasonalityData || 'Seasonality data not available'}
-
-=== INVESTMENT VERDICT ===
-Recommendation: ${metrics.recommendation}
-Confidence Score: ${metrics.confidenceScore}/10
 `;
 }
 
 // ============================================================================
-// AI-POWERED SECTION GENERATORS
+// AI-POWERED SECTION GENERATORS - A+ EXPERT LEVEL
 // ============================================================================
 
-async function generateExecutiveSummary(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
-  const prompt = `You are a senior STR investment analyst with 20+ years of experience advising institutional investors on rental arbitrage deals. Write an EXPERT-LEVEL executive summary.
+async function generateExecutiveSummary(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
+  const prompt = `You are a senior short-term rental investment analyst presenting findings to a sophisticated investor. Write an expert executive summary.
 
 ${dataContext}
 
-Write a comprehensive EXECUTIVE SUMMARY (200-250 words, one flowing paragraph) that demonstrates deep expertise:
+CRITICAL INSTRUCTIONS:
+- DO NOT use "GO", "NO GO", "STRONG GO", or any verdict language
+- DO NOT give recommendations or tell them what to do
+- Present the facts and analysis professionally
+- Let the numbers speak for themselves
+- Write as an expert presenting findings, not making decisions for them
 
-1. **VERDICT**: Lead with "${metrics.recommendation}" and ${metrics.confidenceScore}/10 confidence - explain WHY in one sentence
-2. **INVESTMENT THESIS**: The core reason this deal works (or doesn't) - be specific about the ${metrics.revenueToRentRatio.toFixed(2)}x ratio
-3. **MARKET POSITIONING**: How this property fits in the competitive landscape - reference specific competitors
-4. **PROFIT MECHANICS**: Break down the $${metrics.monthlyProfit.toLocaleString()}/month profit - what drives it
-5. **SEASONALITY IMPACT**: The ${metrics.seasonalSwingPct}% swing - specific cash flow implications
-6. **RISK/REWARD**: Primary risk and primary opportunity - be specific
-7. **CAPITAL REQUIREMENTS**: Startup costs and break-even timeline
-8. **ACTION DIRECTIVE**: Specific next step with urgency if warranted
+Write a comprehensive EXECUTIVE SUMMARY (180-220 words) that:
 
-Write like you're advising a sophisticated investor who needs to make a decision TODAY. Use specific numbers throughout. Be confident but honest. Format with **bold** for key terms. One flowing paragraph, no bullets.`;
+1. Opens with the key financial finding: the ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio and what it means
+2. Contextualizes the $${metrics.monthlyProfit.toLocaleString()}/month profit projection within the market
+3. Explains the competitive positioning - reference the top competitor "${metrics.topCompetitor?.name || 'in this market'}" earning $${metrics.topCompetitor?.annual_revenue?.toLocaleString() || 'N/A'}/year
+4. Addresses the ${metrics.seasonalSwingPct}% seasonal revenue variation and its cash flow implications
+5. Notes the ${metrics.breakEvenOccupancy}% break-even occupancy threshold vs the ${metrics.occupancyNormalized.toFixed(0)}% market average
+6. Identifies the primary risk factor specific to THIS property and market
+7. Highlights the primary opportunity specific to THIS property and market
+
+Write in flowing prose. Use **bold** for key metrics. Be analytical and specific. Present facts, not opinions on whether to proceed.
+
+IMPORTANT: DO NOT include any markdown headers like ## or ### - write only prose paragraphs.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 1200,
+      maxTokens: 2000,
       timeoutMs: EXPERT_TIMEOUT,
     });
     return response.trim();
   } catch (error) {
-    return generateDefaultExecutiveSummary(metrics);
+    return `This ${input.bedrooms}-bedroom property at ${input.address} presents a **${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio** with projected monthly profit of **$${metrics.monthlyProfit.toLocaleString()}** after all expenses. The market shows ${metrics.occupancyNormalized.toFixed(0)}% average occupancy with ${input.active_listings.toLocaleString()} competing properties. Revenue varies ${metrics.seasonalSwingPct}% between peak and off-peak seasons, with break-even requiring ${metrics.breakEvenOccupancy}% occupancy. ${metrics.topCompetitor ? `The top comparable property "${metrics.topCompetitor.name}" generates $${metrics.topCompetitor.annual_revenue?.toLocaleString()}/year at ${Math.round((metrics.topCompetitor.occupancy || 0) * 100)}% occupancy.` : ''}`;
   }
 }
 
-async function generateMarketOverview(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
+async function generateMarketOverview(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
   const prompt = `You are a market research analyst specializing in short-term rental markets. Write an expert market overview.
 
 ${dataContext}
 
-Write a MARKET OVERVIEW (100-150 words) that provides institutional-grade market intelligence:
+Write a market overview (120-150 words) that provides institutional-grade market intelligence. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
-1. Market size and competitive density
-2. Supply/demand dynamics (what the occupancy rate tells us)
-3. Pricing power (ADR positioning)
-4. Market maturity and saturation indicators
-5. Competitive moat opportunities
+1. Market size: ${input.active_listings.toLocaleString()} active listings - what this means for supply
+2. Demand indicators: ${metrics.occupancyNormalized.toFixed(0)}% occupancy rate analysis
+3. Pricing dynamics: $${input.market_adr.toFixed(0)}/night ADR and RevPAR of $${(input.market_adr * (metrics.occupancyNormalized / 100)).toFixed(0)}
+4. Market saturation assessment based on the data
+5. Competitive intensity and what it takes to succeed here
 
-Be specific with numbers. Write in flowing prose, not bullets. This is for a sophisticated investor.`;
+Be specific with numbers. Write in flowing prose. This is expert analysis, not generic descriptions.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    return `The ${metrics.occupancyNormalized.toFixed(0)}% market occupancy and $${metrics.breakEvenOccupancy}% break-even threshold indicate a viable market opportunity.`;
+    return `The ${input.market_name} market comprises ${input.active_listings.toLocaleString()} active short-term rental listings operating at ${metrics.occupancyNormalized.toFixed(0)}% average occupancy. The market ADR of $${input.market_adr.toFixed(0)}/night yields a RevPAR of $${(input.market_adr * (metrics.occupancyNormalized / 100)).toFixed(0)}/night. ${input.active_listings > 1000 ? 'High listing density indicates a mature, competitive market requiring strong differentiation.' : input.active_listings > 500 ? 'Moderate competition suggests room for well-positioned properties.' : 'Lower listing density may indicate either an emerging market or regulatory constraints.'}`;
   }
 }
 
-async function generateRevenueAnalysis(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
+async function generateRevenueAnalysis(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
   const prompt = `You are a revenue management expert for short-term rentals. Write a detailed revenue analysis.
 
 ${dataContext}
 
-Write a REVENUE ANALYSIS (100-150 words) that explains the revenue projections like a CFO:
+Write a revenue analysis (120-150 words) that explains the revenue projections. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
-1. What drives the revenue range (conservative to optimistic)
-2. How this property compares to top performers
-3. Realistic revenue expectations and what it takes to achieve them
-4. Revenue per available night (RevPAR) implications
-5. Upside potential and what would unlock it
+1. The revenue range: $${input.revenue_low.toLocaleString()} (conservative) to $${input.revenue_high.toLocaleString()} (optimistic)
+2. What drives this range - occupancy and rate factors
+3. The realistic $${input.revenue_mid.toLocaleString()}/year projection and what performance level it requires
+4. Comparison to top performers in the market
+5. Revenue per available night (RevPAR) implications
 
-Use specific numbers. Write in flowing prose. Be analytical and precise.`;
+Use specific numbers. Write analytically. Explain what the numbers mean, don't just state them.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    return `Revenue projections range from $${metrics.avgOffRevenue.toLocaleString()} to $${metrics.avgPeakRevenue.toLocaleString()} monthly, with realistic annual revenue of ${metrics.revenueToRentRatio.toFixed(2)}x the annual rent.`;
+    return `Revenue projections range from $${input.revenue_low.toLocaleString()} (conservative, 25th percentile) to $${input.revenue_high.toLocaleString()} (optimistic, 90th percentile) annually. The realistic projection of $${input.revenue_mid.toLocaleString()}/year represents 75th percentile performance, requiring above-average but achievable execution. At the market ADR of $${input.market_adr.toFixed(0)}/night and ${metrics.occupancyNormalized.toFixed(0)}% occupancy, this property would need to match or exceed market averages to hit realistic targets. ${metrics.topCompetitor ? `The top comparable property achieves $${metrics.topCompetitor.annual_revenue?.toLocaleString()}/year, demonstrating the market's upside potential.` : ''}`;
   }
 }
 
-async function generateCompetitiveLandscape(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
+async function generateCompetitiveLandscape(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
+  const topComps = input.competitors.slice(0, 3);
+  const compDetails = topComps.map((c, i) => `"${c.name}" ($${c.annual_revenue?.toLocaleString()}/yr, ${Math.round((c.occupancy || 0) * 100)}% occ, ${c.rating?.toFixed(1)} stars)`).join(', ');
+
   const prompt = `You are a competitive intelligence analyst for the vacation rental industry. Write a strategic competitive analysis.
 
 ${dataContext}
 
-Write a COMPETITIVE LANDSCAPE analysis (100-150 words) that provides strategic intelligence:
+Write a competitive landscape analysis (120-150 words) that provides strategic intelligence. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
-1. Who are the top performers and what makes them successful
-2. Market positioning opportunities (gaps in the competition)
-3. Competitive threats and barriers to entry
-4. What it takes to compete with the best
-5. Differentiation strategies that work in this market
+1. The competitive set: ${metrics.competitorCount} comparable properties
+2. Top performers analysis: ${compDetails}
+3. What differentiates the winners - specific factors from the data
+4. Market positioning opportunities based on competitor gaps
+5. What it takes to compete at the top tier in this market
 
-Reference specific competitors by name and their metrics. Write strategically, not descriptively.`;
+Reference specific competitors by name and their actual metrics. Be strategic and specific.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    const topComp = metrics.topCompetitor;
-    return `The competitive landscape includes ${metrics.competitorCount} comparable properties. ${topComp ? `The top performer "${topComp.name}" generates $${topComp.annual_revenue?.toLocaleString()}/year at ${Math.round((topComp.occupancy || 0) * 100)}% occupancy, setting the benchmark for this market.` : ''}`;
+    return `The competitive landscape includes ${metrics.competitorCount} comparable ${input.bedrooms}-bedroom properties. ${metrics.topCompetitor ? `The top performer "${metrics.topCompetitor.name}" generates $${metrics.topCompetitor.annual_revenue?.toLocaleString()}/year at ${Math.round((metrics.topCompetitor.occupancy || 0) * 100)}% occupancy with a ${metrics.topCompetitor.rating?.toFixed(1)} star rating, setting the performance benchmark.` : ''} ${topComps.length > 1 ? `Other strong performers include ${topComps.slice(1).map(c => `"${c.name}" at $${c.annual_revenue?.toLocaleString()}/year`).join(' and ')}.` : ''} Success in this market requires matching or exceeding the occupancy and rating levels of top performers.`;
   }
 }
 
-async function generateSeasonalStrategy(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
-  const prompt = `You are a revenue management strategist specializing in seasonal pricing optimization. Write a seasonal strategy guide.
+async function generateSeasonalStrategy(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
+  const prompt = `You are a revenue management strategist specializing in seasonal pricing optimization. Write a seasonal analysis.
 
 ${dataContext}
 
-Write a SEASONAL STRATEGY (100-150 words) that provides actionable pricing and cash flow guidance:
+Write a seasonal strategy (120-150 words) that provides actionable insights. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
 1. The ${metrics.seasonalSwingPct}% seasonal swing - what it means for monthly cash flow
-2. Peak season strategy (when to maximize rates)
-3. Off-season strategy (how to maintain occupancy)
-4. Cash reserve recommendations based on seasonality
-5. Pricing tactics for shoulder seasons
+2. Peak season analysis: ${metrics.peakMonths.join(', ') || 'N/A'} - revenue of $${metrics.avgPeakRevenue.toLocaleString()}/month
+3. Off-season analysis: ${metrics.offMonths.join(', ') || 'N/A'} - revenue of $${metrics.avgOffRevenue.toLocaleString()}/month
+4. Cash flow implications - the gap between high and low months
+5. Pricing and occupancy patterns from the monthly data
 
-Be specific about which months and what to do. Write as actionable guidance.`;
+Be specific about which months and what the numbers show. Write analytically.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    return `Revenue varies by ${metrics.seasonalSwingPct}% between peak (${metrics.peakMonths.join(', ')}) and off-peak (${metrics.offMonths.join(', ')}) seasons. Plan cash reserves for ${Math.ceil(metrics.seasonalSwingPct / 25)} months of expenses.`;
+    return `This property exhibits a ${metrics.seasonalSwingPct}% seasonal revenue swing between peak and off-peak periods. Peak months (${metrics.peakMonths.join(', ') || 'N/A'}) average $${metrics.avgPeakRevenue.toLocaleString()}/month, while off-peak months (${metrics.offMonths.join(', ') || 'N/A'}) average $${metrics.avgOffRevenue.toLocaleString()}/month. This $${Math.round(metrics.avgPeakRevenue - metrics.avgOffRevenue).toLocaleString()} monthly variance requires cash flow planning to cover fixed costs during slower periods. ${metrics.seasonalSwingPct > 50 ? 'The high seasonality demands aggressive peak-season pricing and off-season occupancy strategies.' : metrics.seasonalSwingPct > 25 ? 'Moderate seasonality allows for balanced year-round operations.' : 'Low seasonality provides stable, predictable cash flow.'}`;
   }
 }
 
-async function generateRiskAssessment(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
+async function generateRiskAssessment(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
+  // Identify specific risks based on the data
+  const risks: string[] = [];
+  if (metrics.revenueToRentRatio < 2) risks.push(`thin margins at ${metrics.revenueToRentRatio.toFixed(2)}x ratio`);
+  if (metrics.seasonalSwingPct > 50) risks.push(`high seasonality with ${metrics.seasonalSwingPct}% revenue swing`);
+  if (input.active_listings > 1000) risks.push(`intense competition with ${input.active_listings.toLocaleString()} listings`);
+  if (metrics.occupancyNormalized < 55) risks.push(`below-average market occupancy at ${metrics.occupancyNormalized.toFixed(0)}%`);
+  if (metrics.breakEvenOccupancy > 50) risks.push(`high break-even threshold at ${metrics.breakEvenOccupancy}%`);
+  
+  const primaryRisk = risks[0] || 'standard STR operational risks';
+  const secondaryRisks = risks.slice(1).join(', ') || 'regulatory changes and market shifts';
+
   const prompt = `You are a risk management consultant for real estate investments. Write a comprehensive risk assessment.
 
 ${dataContext}
 
-Write a RISK ASSESSMENT (100-150 words) that identifies and quantifies risks:
+SPECIFIC RISKS IDENTIFIED FROM DATA:
+- Primary: ${primaryRisk}
+- Secondary: ${secondaryRisks}
 
-1. PRIMARY RISK: The biggest threat to this investment (be specific)
-2. FINANCIAL RISK: Margin of safety analysis (${metrics.revenueToRentRatio.toFixed(2)}x ratio implications)
-3. MARKET RISK: Competition and saturation concerns
-4. OPERATIONAL RISK: What could go wrong in execution
-5. MITIGATION STRATEGIES: Specific actions to reduce each risk
+Write a risk assessment (120-150 words) that identifies and analyzes risks. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
-Be direct about risks but also provide solutions. Write for a risk-aware investor.`;
+1. PRIMARY RISK: ${primaryRisk} - explain the specific impact on this investment
+2. MARKET RISK: Competition and saturation analysis for ${input.active_listings.toLocaleString()} listings
+3. FINANCIAL RISK: The ${metrics.revenueToRentRatio.toFixed(2)}x ratio and ${metrics.breakEvenOccupancy}% break-even implications
+4. OPERATIONAL RISK: What could affect performance
+5. MITIGATION FACTORS: What the data shows that reduces risk
+
+Be specific and direct. Quantify risks where possible. This is expert risk analysis.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    const risks: string[] = [];
-    if (metrics.revenueToRentRatio < 2) risks.push(`thin margins (${metrics.revenueToRentRatio.toFixed(2)}x ratio)`);
-    if (metrics.seasonalSwingPct > 40) risks.push(`high seasonality (${metrics.seasonalSwingPct}% swing)`);
-    if (metrics.competitorCount > 10) risks.push('competitive market');
-    return `Key risks include ${risks.join(', ') || 'standard STR operational risks'}. Mitigation: maintain 3+ months cash reserves, verify regulations, and focus on guest experience.`;
+    return `The primary risk factor is ${primaryRisk}, which directly impacts profitability margins. ${risks.length > 1 ? `Secondary concerns include ${secondaryRisks}.` : ''} The ${metrics.breakEvenOccupancy}% break-even occupancy threshold compared to the ${metrics.occupancyNormalized.toFixed(0)}% market average provides a ${Math.round(metrics.occupancyNormalized - metrics.breakEvenOccupancy)} percentage point buffer. ${input.active_listings > 1000 ? `High competition from ${input.active_listings.toLocaleString()} listings requires strong differentiation.` : ''} ${metrics.seasonalSwingPct > 40 ? `The ${metrics.seasonalSwingPct}% seasonal swing demands cash reserves for off-peak periods.` : ''} Standard STR risks including regulatory changes and market shifts apply.`;
   }
 }
 
-async function generateFinancialOutlook(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
+async function generateFinancialOutlook(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
   const prompt = `You are a financial analyst specializing in rental property investments. Write a financial outlook.
 
 ${dataContext}
 
-Write a FINANCIAL OUTLOOK (100-150 words) that provides clear financial guidance:
+Write a financial outlook (120-150 words) that provides clear financial analysis. DO NOT use markdown headers or formatting - write in plain prose paragraphs:
 
-1. Monthly cash flow expectations across scenarios
-2. Break-even analysis (${metrics.breakEvenOccupancy}% occupancy threshold)
-3. ROI timeline (${metrics.breakEvenMonths} months to recoup startup costs)
-4. Capital requirements and deployment strategy
-5. Financial milestones to track success
+1. Monthly cash flow: $${metrics.monthlyProfit.toLocaleString()}/month realistic profit
+2. Annual profit scenarios: $${input.annual_profit_conservative.toLocaleString()} to $${input.annual_profit_optimistic.toLocaleString()}
+3. Break-even analysis: ${metrics.breakEvenOccupancy}% occupancy threshold
+4. The ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio and what it indicates
+5. Cash flow stability given the ${metrics.seasonalSwingPct}% seasonal variation
 
-Use specific numbers. Write like a financial advisor giving clear guidance.`;
+Use specific numbers. Explain what the financial metrics mean for this investment. Be analytical.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 600,
-      timeoutMs: 30000,
+      maxTokens: SECTION_MAX_TOKENS,
+      timeoutMs: 45000,
     });
     return response.trim();
   } catch (error) {
-    return `With $${metrics.startupCosts.low.toLocaleString()}-$${metrics.startupCosts.high.toLocaleString()} startup investment and ${metrics.breakEvenOccupancy}% break-even occupancy, expect ${metrics.breakEvenMonths} months to profitability. Monthly profit of $${metrics.monthlyProfit.toLocaleString()} provides ${metrics.revenueToRentRatio >= 2 ? 'adequate' : 'thin'} margin for unexpected costs.`;
+    return `The financial outlook shows projected monthly profit of $${metrics.monthlyProfit.toLocaleString()} at realistic performance levels, with annual profit ranging from $${input.annual_profit_conservative.toLocaleString()} (conservative) to $${input.annual_profit_optimistic.toLocaleString()} (optimistic). The ${metrics.breakEvenOccupancy}% break-even occupancy sits ${Math.round(metrics.occupancyNormalized - metrics.breakEvenOccupancy)} percentage points below the ${metrics.occupancyNormalized.toFixed(0)}% market average, providing operational buffer. The ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio ${metrics.revenueToRentRatio >= 2 ? 'exceeds the 2x threshold typically required for profitable arbitrage' : 'falls below the 2x threshold, indicating tighter margins'}. ${metrics.seasonalSwingPct > 30 ? `The ${metrics.seasonalSwingPct}% seasonal swing requires cash reserves to cover fixed costs during slower months.` : 'Stable seasonality supports consistent cash flow.'}`;
   }
 }
 
-async function generateConclusion(dataContext: string, metrics: CalculatedMetrics): Promise<string> {
-  const prompt = `You are a senior investment advisor making a final recommendation. Write a decisive conclusion.
+async function generateConclusion(dataContext: string, metrics: CalculatedMetrics, input: EnhancedNarrativeReportInput): Promise<string> {
+  const prompt = `You are a senior investment analyst providing a summary conclusion. Write a professional conclusion.
 
 ${dataContext}
 
-Write a CONCLUSION (80-120 words) that provides a clear investment decision:
+CRITICAL INSTRUCTIONS:
+- DO NOT use "GO", "NO GO", "STRONG GO", or any verdict/recommendation language
+- DO NOT tell them what to do or whether to proceed
+- Summarize the key findings and let the investor decide
+- Present the facts professionally
 
-1. Final verdict: ${metrics.recommendation} - restate with conviction
-2. The ONE thing that makes or breaks this deal
-3. Specific conditions for success
-4. Clear next step with timeline
+Write a conclusion (80-100 words). DO NOT use markdown headers or formatting - write in plain prose paragraphs. The conclusion should:
 
-Be decisive. This is the final word that helps the investor act. Write with authority.`;
+1. Summarizes the key financial finding: ${metrics.revenueToRentRatio.toFixed(2)}x ratio, $${metrics.monthlyProfit.toLocaleString()}/month profit
+2. Notes the market context: ${metrics.occupancyNormalized.toFixed(0)}% occupancy, ${input.active_listings.toLocaleString()} competitors
+3. Highlights the primary consideration (risk or opportunity) specific to this property
+4. Ends with what due diligence items matter most for this specific situation
+
+Be decisive but factual. Summarize, don't recommend.`;
 
   try {
     const response = await generateNarrativeWithPoe(prompt, {
       model: AI_MODEL,
-      maxTokens: 500,
+      maxTokens: 1000,
       timeoutMs: 30000,
     });
     return response.trim();
   } catch (error) {
-    return generateDefaultConclusion(metrics);
+    return `This ${input.bedrooms}-bedroom property presents a ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio with $${metrics.monthlyProfit.toLocaleString()}/month projected profit. The ${metrics.occupancyNormalized.toFixed(0)}% market occupancy and ${input.active_listings.toLocaleString()} competing properties define the competitive context. ${metrics.revenueToRentRatio >= 2 ? 'The ratio exceeds typical profitability thresholds.' : 'The ratio indicates tighter margins requiring strong execution.'} Key due diligence: local STR regulations, property condition, and lease terms.`;
   }
 }
 
@@ -471,9 +473,9 @@ function generateHistoricalContext(input: EnhancedNarrativeReportInput, metrics:
   if (input.five_year_summary) {
     const trend = input.five_year_summary.revenue.trend;
     const change = input.five_year_summary.revenue.percent_change;
-    return `Historical analysis shows ${trend} revenue trends over ${input.five_year_summary.years_of_data} years with ${change > 0 ? '+' : ''}${change.toFixed(1)}% change. ${trend === 'increasing' ? 'The market is growing, supporting the investment thesis.' : trend === 'decreasing' ? 'Declining trends warrant caution and conservative projections.' : 'Stable trends indicate a mature market with predictable returns.'}`;
+    return `Historical analysis shows ${trend} revenue trends over ${input.five_year_summary.years_of_data} years with ${change > 0 ? '+' : ''}${change.toFixed(1)}% change. ${trend === 'increasing' ? 'Growing market trends support revenue projections.' : trend === 'decreasing' ? 'Declining trends suggest conservative projections may be appropriate.' : 'Stable trends indicate a mature market with predictable performance.'}`;
   }
-  return 'Historical trend data not available for this market. Rely on current market metrics and competitor performance for projections.';
+  return 'Historical trend data not available for this market. Current market metrics and competitor performance provide the basis for projections.';
 }
 
 function generateWhatThisMeans(metrics: CalculatedMetrics): {
@@ -483,25 +485,18 @@ function generateWhatThisMeans(metrics: CalculatedMetrics): {
   overall: string;
 } {
   return {
-    revenue: `You could earn approximately $${metrics.monthlyProfit.toLocaleString()} per month after all expenses. This represents a ${metrics.revenueToRentRatio.toFixed(2)}x return on your rent investment.`,
-    competition: `You'll compete with ${metrics.competitorCount} similar properties. ${metrics.topCompetitor ? `The top performer earns $${metrics.topCompetitor.annual_revenue?.toLocaleString()}/year - that's your upside target.` : 'Study top performers to identify winning strategies.'}`,
+    revenue: `Projected monthly profit of $${metrics.monthlyProfit.toLocaleString()} after all expenses, representing a ${metrics.revenueToRentRatio.toFixed(2)}x return on rent investment.`,
+    competition: `${metrics.competitorCount} similar properties compete in this market. ${metrics.topCompetitor ? `Top performer earns $${metrics.topCompetitor.annual_revenue?.toLocaleString()}/year.` : ''}`,
     seasonality: metrics.seasonalSwingPct > 30 
-      ? `Income will swing ${metrics.seasonalSwingPct}% between seasons. Save aggressively during ${metrics.peakMonths.slice(0, 2).join(' and ')} to cover ${metrics.offMonths.slice(0, 2).join(' and ')}.`
-      : `Income is relatively stable (${metrics.seasonalSwingPct}% variation). This reduces cash flow management complexity.`,
-    overall: metrics.recommendation === 'STRONG GO' 
-      ? `This is a strong opportunity. The ${metrics.revenueToRentRatio.toFixed(2)}x ratio provides excellent margin for profit and unexpected costs.`
-      : metrics.recommendation === 'GO'
-      ? `This deal works. The numbers support profitability with good execution.`
-      : metrics.recommendation === 'CAUTION'
-      ? `Proceed carefully. The ${metrics.revenueToRentRatio.toFixed(2)}x ratio leaves thin margins. Negotiate rent or ensure above-average performance.`
-      : `The numbers don't work. Find a property with better revenue potential or significantly lower rent.`,
+      ? `${metrics.seasonalSwingPct}% revenue swing between seasons. Peak months: ${metrics.peakMonths.slice(0, 2).join(', ')}. Off-peak: ${metrics.offMonths.slice(0, 2).join(', ')}.`
+      : `${metrics.seasonalSwingPct}% seasonal variation indicates relatively stable year-round income.`,
+    overall: `The ${metrics.revenueToRentRatio.toFixed(2)}x ratio ${metrics.revenueToRentRatio >= 2 ? 'exceeds' : 'falls below'} the 2x threshold typically used for rental arbitrage profitability assessment.`,
   };
 }
 
 function generateActionItems(metrics: CalculatedMetrics): Array<{priority: 'high' | 'medium' | 'low'; action: string; why: string; timeline: string}> {
   const items: Array<{priority: 'high' | 'medium' | 'low'; action: string; why: string; timeline: string}> = [];
   
-  // Always high priority
   items.push({
     priority: 'high',
     action: 'Verify local STR regulations and permit requirements',
@@ -512,65 +507,32 @@ function generateActionItems(metrics: CalculatedMetrics): Array<{priority: 'high
   items.push({
     priority: 'high',
     action: 'Conduct thorough property inspection',
-    why: 'Hidden repairs can eliminate 6+ months of profit',
+    why: 'Hidden repairs can significantly impact profitability',
     timeline: 'Before signing lease',
   });
-  
-  // Conditional based on ratio
-  if (metrics.revenueToRentRatio < 2) {
-    items.push({
-      priority: 'high',
-      action: `Negotiate rent reduction to achieve 2x ratio`,
-      why: `Current ${metrics.revenueToRentRatio.toFixed(2)}x ratio is below profitability threshold`,
-      timeline: 'Before signing lease',
-    });
-  }
   
   items.push({
     priority: 'medium',
     action: 'Analyze top competitor listings for amenities and positioning',
-    why: 'Understanding winners reveals the path to above-average performance',
-    timeline: 'Week 1 after signing',
+    why: 'Understanding winners reveals success factors in this market',
+    timeline: 'During due diligence',
   });
   
   items.push({
     priority: 'medium',
-    action: `Prepare $${metrics.startupCosts.low.toLocaleString()}-$${metrics.startupCosts.high.toLocaleString()} startup capital`,
-    why: 'Underfunding is the #1 cause of STR failure',
+    action: 'Review lease terms for subletting and STR provisions',
+    why: 'Lease restrictions can prevent or limit rental arbitrage',
     timeline: 'Before signing lease',
   });
   
   items.push({
-    priority: 'medium',
-    action: 'Build 3-month cash reserve for operating expenses',
-    why: `${metrics.seasonalSwingPct}% seasonal swing requires cash buffer`,
-    timeline: 'Before launch',
-  });
-  
-  items.push({
     priority: 'low',
-    action: 'Schedule professional photography session',
-    why: 'Professional photos increase bookings 20-40%',
-    timeline: 'After furnishing complete',
+    action: 'Research local events and demand drivers',
+    why: 'Understanding demand patterns informs pricing strategy',
+    timeline: 'During planning phase',
   });
   
   return items;
-}
-
-function generateDefaultExecutiveSummary(metrics: CalculatedMetrics): string {
-  return `**${metrics.recommendation}** (${metrics.confidenceScore}/10 confidence). This property demonstrates a **${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio** with projected monthly profit of **$${metrics.monthlyProfit.toLocaleString()}** after all expenses. ${metrics.revenueToRentRatio >= 2 ? 'The numbers exceed the 2x threshold required for rental arbitrage profitability.' : 'The ratio falls below the recommended 2x threshold - negotiate lower rent or proceed with caution.'} Break-even requires just ${metrics.breakEvenOccupancy}% occupancy, providing margin for seasonal fluctuations. ${metrics.seasonalSwingPct > 30 ? `The ${metrics.seasonalSwingPct}% seasonal swing requires careful cash flow management.` : 'Seasonal variation is manageable.'} Startup costs of $${metrics.startupCosts.low.toLocaleString()}-$${metrics.startupCosts.high.toLocaleString()} should be recovered within ${metrics.breakEvenMonths} months at realistic performance levels.`;
-}
-
-function generateDefaultConclusion(metrics: CalculatedMetrics): string {
-  if (metrics.recommendation === 'STRONG GO') {
-    return `This property represents an excellent rental arbitrage opportunity with a strong ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio. The projected $${metrics.monthlyProfit.toLocaleString()}/month profit provides substantial buffer for unexpected costs. Proceed with due diligence on regulations and property condition, then move quickly to secure this deal.`;
-  } else if (metrics.recommendation === 'GO') {
-    return `This property meets the criteria for profitable rental arbitrage with a ${metrics.revenueToRentRatio.toFixed(2)}x ratio. Verify local regulations, inspect the property, and proceed if both check out. The $${metrics.monthlyProfit.toLocaleString()}/month profit projection is achievable with solid execution.`;
-  } else if (metrics.recommendation === 'CAUTION') {
-    return `This property is borderline for rental arbitrage. The ${metrics.revenueToRentRatio.toFixed(2)}x ratio leaves thin margins for error. Consider negotiating lower rent to improve the ratio, or ensure you can achieve above-average occupancy and rates. Only proceed if you can improve the economics.`;
-  } else {
-    return `This property does not meet the criteria for profitable rental arbitrage. The ${metrics.revenueToRentRatio.toFixed(2)}x ratio is insufficient to cover costs and generate meaningful profit. Look for properties with better revenue potential or significantly lower rent.`;
-  }
 }
 
 function determineMarketType(marketName: string): 'urban' | 'suburban' | 'rural' | 'tourist' | 'business' | 'mixed' {
@@ -601,15 +563,15 @@ function generateFallbackReport(
   const topComp = metrics.topCompetitor;
   
   return {
-    executive_summary: generateDefaultExecutiveSummary(metrics),
-    market_overview: `The ${input.market_name} market has ${input.active_listings.toLocaleString()} active short-term rental listings with ${metrics.occupancyNormalized.toFixed(0)}% average occupancy and $${input.market_adr.toFixed(0)}/night ADR. This is a ${input.active_listings > 1000 ? 'highly competitive' : input.active_listings > 500 ? 'moderately competitive' : 'less saturated'} market.`,
-    revenue_analysis: `This ${input.bedrooms}-bedroom property could generate between $${input.revenue_low.toLocaleString()} (conservative) and $${input.revenue_high.toLocaleString()} (optimistic) annually. The realistic projection of $${input.revenue_mid.toLocaleString()}/year represents 75th percentile performance.`,
-    competitive_landscape: `There are ${metrics.competitorCount} comparable ${input.bedrooms}-bedroom properties. ${topComp ? `Top performer: "${topComp.name}" at $${topComp.annual_revenue?.toLocaleString()}/year with ${Math.round((topComp.occupancy || 0) * 100)}% occupancy.` : ''}`,
-    seasonal_strategy: `Revenue varies by ${metrics.seasonalSwingPct}% between peak (${metrics.peakMonths.join(', ') || 'N/A'}) and off-peak (${metrics.offMonths.join(', ') || 'N/A'}) seasons.`,
+    executive_summary: `This ${input.bedrooms}-bedroom property at ${input.address} presents a **${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio** with projected monthly profit of **$${metrics.monthlyProfit.toLocaleString()}** after all expenses. The ${input.market_name} market shows ${metrics.occupancyNormalized.toFixed(0)}% average occupancy with ${input.active_listings.toLocaleString()} competing properties. Revenue varies ${metrics.seasonalSwingPct}% between peak and off-peak seasons, with break-even requiring ${metrics.breakEvenOccupancy}% occupancy. ${topComp ? `The top comparable property "${topComp.name}" generates $${topComp.annual_revenue?.toLocaleString()}/year at ${Math.round((topComp.occupancy || 0) * 100)}% occupancy.` : ''}`,
+    market_overview: `The ${input.market_name} market comprises ${input.active_listings.toLocaleString()} active short-term rental listings operating at ${metrics.occupancyNormalized.toFixed(0)}% average occupancy with $${input.market_adr.toFixed(0)}/night ADR.`,
+    revenue_analysis: `Revenue projections range from $${input.revenue_low.toLocaleString()} (conservative) to $${input.revenue_high.toLocaleString()} (optimistic) annually. The realistic projection of $${input.revenue_mid.toLocaleString()}/year represents 75th percentile performance.`,
+    competitive_landscape: `${metrics.competitorCount} comparable ${input.bedrooms}-bedroom properties compete in this market. ${topComp ? `Top performer: "${topComp.name}" at $${topComp.annual_revenue?.toLocaleString()}/year with ${Math.round((topComp.occupancy || 0) * 100)}% occupancy.` : ''}`,
+    seasonal_strategy: `Revenue varies ${metrics.seasonalSwingPct}% between peak (${metrics.peakMonths.join(', ') || 'N/A'}) and off-peak (${metrics.offMonths.join(', ') || 'N/A'}) seasons. Peak months average $${metrics.avgPeakRevenue.toLocaleString()}/month vs $${metrics.avgOffRevenue.toLocaleString()}/month off-peak.`,
     historical_context: generateHistoricalContext(input, metrics),
-    risk_assessment: `Key risks: ${metrics.revenueToRentRatio < 2 ? 'thin margins, ' : ''}${metrics.seasonalSwingPct > 40 ? 'high seasonality, ' : ''}${input.active_listings > 1000 ? 'high competition' : 'standard STR risks'}. Maintain 3+ months cash reserves and verify local regulations.`,
-    financial_outlook: `Break-even requires ${metrics.breakEvenOccupancy}% occupancy. With $${metrics.startupCosts.low.toLocaleString()}-$${metrics.startupCosts.high.toLocaleString()} startup costs, expect ${metrics.breakEvenMonths} months to profitability.`,
-    conclusion: generateDefaultConclusion(metrics),
+    risk_assessment: `Key risk factors include ${metrics.revenueToRentRatio < 2 ? `tight margins at ${metrics.revenueToRentRatio.toFixed(2)}x ratio, ` : ''}${metrics.seasonalSwingPct > 40 ? `high seasonality (${metrics.seasonalSwingPct}% swing), ` : ''}${input.active_listings > 1000 ? `intense competition (${input.active_listings.toLocaleString()} listings)` : 'standard STR operational risks'}. The ${metrics.breakEvenOccupancy}% break-even occupancy vs ${metrics.occupancyNormalized.toFixed(0)}% market average defines the margin of safety.`,
+    financial_outlook: `Monthly profit projection of $${metrics.monthlyProfit.toLocaleString()} at realistic performance. Break-even requires ${metrics.breakEvenOccupancy}% occupancy. Annual profit ranges from $${input.annual_profit_conservative.toLocaleString()} to $${input.annual_profit_optimistic.toLocaleString()}.`,
+    conclusion: `This property presents a ${metrics.revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio with $${metrics.monthlyProfit.toLocaleString()}/month projected profit in a market with ${metrics.occupancyNormalized.toFixed(0)}% occupancy and ${input.active_listings.toLocaleString()} competitors. Key due diligence: local regulations, property condition, and lease terms.`,
     what_this_means: generateWhatThisMeans(metrics),
     action_items: generateActionItems(metrics),
     key_metrics: {
@@ -622,7 +584,6 @@ function generateFallbackReport(
       revenue_to_rent_ratio: metrics.revenueToRentRatio,
     },
     quick_facts: [
-      `${metrics.recommendation} (${metrics.confidenceScore}/10)`,
       `Ratio: ${metrics.revenueToRentRatio.toFixed(2)}x`,
       `Profit: $${metrics.monthlyProfit.toLocaleString()}/mo`,
       `Break-even: ${metrics.breakEvenOccupancy}%`,

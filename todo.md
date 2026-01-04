@@ -1680,3 +1680,22 @@
 - [x] Conclusion: Decisive investment recommendation
 - [x] All sections generated in parallel for speed
 - [x] Using Gemini 2.5 Pro for reliable responses
+
+
+## Prompt Engineering Fixes - URGENT
+- [ ] Remove startup costs and break-even from report (user requested before)
+- [ ] Fix conclusion - no GO/NO GO verdicts, just expert analysis
+- [ ] Fix risk assessment - currently showing blank "primary risk is" 
+- [ ] Make competitor cards fully clickable to go to Airbnb listing
+- [ ] Rewrite ALL AI prompts for true expert-level output
+
+
+## Prompt Engineering Fixes - A+ Expert Level (Completed)
+- [x] Remove startup costs and break-even sections from UI
+- [x] Fix blank Risk Assessment section - switched to Claude-Sonnet-4 for complete responses
+- [x] Make competitor cards fully clickable (entire card links to listing)
+- [x] Rewrite AI prompts for expert-level output without GO/NO GO verdicts
+- [x] Remove break-even badge from quick facts
+- [x] Add no-markdown instruction to all AI prompts
+- [x] Switch from Gemini-2.5-Pro to Claude-Sonnet-4 (Gemini was truncating responses)
+- [x] Increase maxTokens for all AI sections to ensure complete responses

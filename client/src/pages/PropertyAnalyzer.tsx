@@ -915,9 +915,9 @@ export default function PropertyAnalyzer() {
                     <p className="text-xs text-[#0F172A]/40">average</p>
                   </div>
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
-                    <p className="text-xs text-purple-600 uppercase tracking-wide font-medium">Break Even</p>
-                    <p className="text-2xl font-bold text-purple-700">{typeof result.narrative_report.key_metrics.break_even_months === 'number' ? result.narrative_report.key_metrics.break_even_months.toFixed(1) : result.narrative_report.key_metrics.break_even_months} mo</p>
-                    <p className="text-xs text-[#0F172A]/40">estimated</p>
+                    <p className="text-xs text-purple-600 uppercase tracking-wide font-medium">Revenue Ratio</p>
+                    <p className="text-2xl font-bold text-purple-700">{(result.narrative_report.key_metrics.projected_annual_revenue / (result.monthly_rent * 12)).toFixed(2)}x</p>
+                    <p className="text-xs text-[#0F172A]/40">revenue to rent</p>
                   </div>
                 </div>
                 
@@ -1206,28 +1206,7 @@ export default function PropertyAnalyzer() {
               </div>
             </div>
             
-            {/* Startup Costs & Break-Even */}
-            <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
-              <h4 className="font-semibold text-[#0F172A] mb-4 font-serif">Startup Costs & Break-Even</h4>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-[#0F172A]/60 mb-2">Estimated Startup Costs</p>
-                  <p className="text-lg font-bold text-[#0F172A]">
-                    {formatCurrency(result.startup.total_low)} - {formatCurrency(result.startup.total_high)}
-                  </p>
-                  <p className="text-xs text-[#0F172A]/40 mt-1">Furniture, supplies, setup</p>
-                </div>
-                <div>
-                  <p className="text-sm text-[#0F172A]/60 mb-2">Break-Even Timeline</p>
-                  <p className="text-lg font-bold text-[#0F172A]">
-                    {result.break_even.months_realistic} months
-                  </p>
-                  <p className="text-xs text-[#0F172A]/40 mt-1">
-                    Range: {result.break_even.months_optimistic}-{result.break_even.months_conservative} months
-                  </p>
-                </div>
-              </div>
-            </div>
+
             
             {/* Market Intelligence */}
             <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
@@ -1313,14 +1292,20 @@ export default function PropertyAnalyzer() {
                 <h4 className="font-semibold text-[#0F172A] mb-4 font-serif">Your Competition ({result.competitors.length} similar properties)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {result.competitors.slice(0, 5).map((comp, i) => (
-                    <div key={i} className="bg-[#FDF8F3] rounded-xl overflow-hidden border border-[#C9A962]/10 hover:shadow-md transition-shadow">
+                    <a 
+                      key={i} 
+                      href={comp.airbnb_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-[#FDF8F3] rounded-xl overflow-hidden border border-[#C9A962]/10 hover:shadow-lg hover:border-[#C9A962]/30 transition-all cursor-pointer group"
+                    >
                       {/* Property Thumbnail */}
                       <div className="relative h-32 bg-gradient-to-br from-[#C9A962]/20 to-[#D4A84B]/10">
                         {comp.image_url ? (
                           <img 
                             src={comp.image_url} 
                             alt={comp.name || 'Competitor property'}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                               (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
@@ -1344,23 +1329,16 @@ export default function PropertyAnalyzer() {
                       </div>
                       {/* Property Info */}
                       <div className="p-3">
-                        <p className="font-medium text-[#0F172A] text-sm line-clamp-2 mb-1">{comp.name || `Competitor ${i + 1}`}</p>
+                        <p className="font-medium text-[#0F172A] text-sm line-clamp-2 mb-1 group-hover:text-[#C9A962] transition-colors">{comp.name || `Competitor ${i + 1}`}</p>
                         <div className="flex items-center justify-between text-xs text-[#0F172A]/60">
                           <span>{formatPercent(comp.occupancy)} occupancy</span>
-                          {comp.airbnb_url && (
-                            <a 
-                              href={comp.airbnb_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-[#C9A962] hover:text-[#B8944D] flex items-center gap-1"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              View
-                            </a>
-                          )}
+                          <span className="text-[#C9A962] flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            View Listing
+                          </span>
                         </div>
                       </div>
-                    </div>
+                    </a>
                   ))}
                 </div>
               </div>
