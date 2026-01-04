@@ -440,7 +440,23 @@ function ReportDetail({ report, onBack }: { report: AnalysisReport; onBack: () =
 
   const formatPercent = (value: string | number | null | undefined) => {
     if (!value) return '-';
-    return `${parseFloat(String(value)).toFixed(1)}%`;
+    const numValue = parseFloat(String(value));
+    if (isNaN(numValue)) return '-';
+    
+    // Handle different formats:
+    // - Values > 100: cap at 100%
+    // - Values > 1: already a percentage (e.g., 80 = 80%)
+    // - Values > 0.01: decimal to convert (e.g., 0.80 = 80%)
+    // - Values <= 0.01: very small, show with decimal (e.g., 0.008 = 0.8%)
+    if (numValue > 100) {
+      return '100%';
+    } else if (numValue > 1) {
+      return `${Math.round(numValue)}%`;
+    } else if (numValue > 0.01) {
+      return `${Math.round(numValue * 100)}%`;
+    } else {
+      return `${(numValue * 100).toFixed(1)}%`;
+    }
   };
 
   const getVerdictColor = (verdict: string | null) => {

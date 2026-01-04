@@ -22,7 +22,7 @@ import { makeRequest, GeocodingResult } from './_core/map';
 import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
 import { SOPReports, generateFullArbitrageAnalysis } from './sop-reports';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
 
 // Define the tools/functions that Gemini can call
 const AVAILABLE_TOOLS = {

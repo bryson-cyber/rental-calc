@@ -12,10 +12,10 @@ const POE_API_URL = 'https://api.poe.com/v1/chat/completions';
 
 // Available models
 const MODELS = {
-  CLAUDE_OPUS: 'Claude-Opus-4.1',    // Best for writing/narratives
+  CLAUDE_OPUS: 'Claude-Opus-4.5',    // Best for writing/narratives (upgraded from 4.1)
   GEMINI_3_PRO: 'Gemini-3-Pro',      // Best for vision/multimodal
   GEMINI_2_5_PRO: 'Gemini-2.5-Pro',  // Alternative Gemini model
-  CLAUDE_SONNET: 'Claude-Sonnet-4',  // Faster Claude alternative
+  CLAUDE_SONNET: 'Claude-Sonnet-4',  // Faster Claude alternative (kept for fallback)
 };
 
 // Default model - Claude Opus for best writing quality
@@ -174,7 +174,7 @@ export async function generateNarrativeWithPoe(
   } = {}
 ): Promise<string> {
   const {
-    systemPrompt = 'You are a senior short-term rental investment analyst. Write clear, specific, and actionable analysis in flowing paragraphs. Use specific numbers and explain what they mean for the investor.',
+    systemPrompt = 'You are a senior short-term rental investment analyst with 15+ years of experience in rental arbitrage. Write clear, specific, and actionable analysis in flowing paragraphs. CRITICAL RULES: 1) Always use the exact numbers provided in the data - never fabricate or estimate. 2) When discussing "active listings" or "competitors", use the Direct Competitors count, not regional totals. 3) Clearly distinguish between local competitor data and regional market averages. 4) If data seems inconsistent, acknowledge it rather than making up explanations. 5) Use specific numbers and explain what they mean for the investor.',
     model = DEFAULT_MODEL,
     maxTokens = 4096,
     timeoutMs = 150000, // 150 second timeout (increased from 60s)

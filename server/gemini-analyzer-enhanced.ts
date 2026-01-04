@@ -12,7 +12,7 @@
 
 import { ENV } from './_core/env';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
 
 // ============================================
 // CACHING LAYER
@@ -244,7 +244,8 @@ export interface EnhancedNarrativeReportInput {
   market_name: string;
   market_occupancy: number;
   market_adr: number;
-  active_listings: number;
+  active_listings: number;  // Number of direct competitors analyzed (local)
+  regional_active_listings?: number;  // Total active listings in the broader regional market
   
   // Revenue projections
   revenue_low: number;
@@ -555,9 +556,15 @@ PROPERTY DETAILS:
 
 MARKET OVERVIEW:
 - Market: ${input.market_name}
-- Market Occupancy: ${occupancyNormalized.toFixed(1)}%
-- Market ADR: $${input.market_adr.toFixed(0)}/night
-- Active Listings: ${input.active_listings.toLocaleString()}
+- Regional Market Occupancy: ${occupancyNormalized.toFixed(1)}% (broader market average)
+- Regional Market ADR: $${input.market_adr.toFixed(0)}/night (broader market average)
+- Direct Competitors Analyzed: ${input.active_listings} (nearby same-bedroom properties - THIS is your competitive set)
+${input.regional_active_listings ? `- Regional Active Listings: ${input.regional_active_listings.toLocaleString()} (total in broader market area)` : ''}
+
+IMPORTANT DATA CONTEXT:
+- When discussing "active listings" or "market size", use the Direct Competitors count (${input.active_listings}), NOT regional totals.
+- The regional occupancy/ADR figures provide broader market context, but your revenue projections are based on the ${input.active_listings} direct competitors analyzed.
+- Always be clear about which data you're referencing: local competitors vs regional market.
 
 REVENUE PROJECTIONS:
 - Conservative (50th percentile): $${input.revenue_low.toLocaleString()}/year ($${Math.round(input.revenue_low / 12).toLocaleString()}/month)
@@ -657,6 +664,20 @@ Return your response as JSON with this exact structure:
   ]
 }
 
+KEY DEFINITIONS (use these consistently):
+- Revenue-to-Rent Ratio: Annual STR Revenue ÷ Annual Rent (target: 2x or higher for profitability)
+- Monthly Profit: (Monthly Revenue) - (Monthly Rent + Operating Expenses)
+- Break-even Occupancy: Minimum occupancy percentage needed to cover all costs
+- Direct Competitors: The ${input.active_listings} nearby same-bedroom properties analyzed
+
+DATA CONSISTENCY RULES:
+1. When stating "active listings" or "competitors", use the exact count from the data (${input.active_listings})
+2. The occupancy and ADR figures are REGIONAL averages - note this context when referencing them
+3. Revenue projections are based on LOCAL comparable performance, not regional averages
+4. Always cross-reference numbers you cite with the data sections provided above
+5. If occupancy exceeds 100%, note this as a data anomaly and use capped values
+6. If metrics seem inconsistent, acknowledge the limitation rather than fabricating explanations
+
 IMPORTANT:
 - Write in flowing paragraphs, NOT bullet points
 - Use SPECIFIC numbers from the data provided
@@ -664,7 +685,8 @@ IMPORTANT:
 - Be honest about both opportunities AND risks
 - Write for someone who may be new to STR investing
 - The tone should be professional but accessible, like a trusted advisor
-- Include 4-6 specific action items with clear priorities`;
+- Include 4-6 specific action items with clear priorities
+- When discussing market size, refer to the ${input.active_listings} direct competitors, not broader regional statistics`;
 
   try {
     const response = await callGeminiWithRetry(prompt, 8192, 60000);

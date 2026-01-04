@@ -1658,44 +1658,38 @@
 - [x] Enhance AI prompt for expert-level analysis (150-200 word comprehensive summaries)
 - [x] Test and verify the restored functionality
 
+## Data Consistency Fixes (January 2026)
+- [x] Update AI prompt to clarify local vs regional data sources
+- [x] Add data consistency rules to prompt
+- [x] Pass regional_listings count to AI for context
+- [x] Add data validation for occupancy anomalies (cap at 100%)
+- [x] Add key definitions section to prompt
 
-## Bug Fix - TRPC HTML Response Error
-- [ ] Fix API returning HTML instead of JSON (server crash or endpoint issue)
+## Poe AI Prompt Optimization (Jan 3, 2026)
+- [ ] Update Poe narrative prompt to clarify local vs regional data sources
+- [ ] Add data consistency rules to Poe prompt
+- [ ] Add key definitions section to Poe prompt
+- [ ] Improve Poe system prompt for better output quality
+- [ ] Add regional_active_listings to Poe input data
 
+## AI Model Upgrades (Jan 3, 2026)
+- [x] Upgrade poe-ai.ts CLAUDE_OPUS to Claude-Opus-4.5
+- [x] Upgrade poe-narrative.ts model to Claude-Opus-4.5
+- [x] Upgrade Gemini 2.0 Flash to Gemini 2.5 Pro in ai-advisor.ts
+- [x] Upgrade Gemini 2.0 Flash to Gemini 2.5 Pro in ai-advisor-enhanced.ts
+- [x] Upgrade Gemini 2.0 Flash to Gemini 2.5 Pro in gemini-analyzer.ts
+- [x] Upgrade Gemini 2.0 Flash to Gemini 2.5 Pro in gemini-analyzer-enhanced.ts
+- [x] Upgrade Gemini 2.0 Flash to Gemini 2.5 Pro in gemini.ts
+- [ ] Update tests to reflect new model names
+- [x] Increase maxTokens for better output quality
 
-## AI Model Fix - Switch to Gemini
-- [x] Fix Gemini-3-Pro thinking response issue - switched to Gemini-2.5-Pro
-- [x] Test alternative Gemini models - Gemini-2.5-Pro works without thinking tags
+## Bug Fixes (Jan 3, 2026 - Post Model Upgrade)
+- [x] Fix empty executive summary generation
+- [ ] Fix occupancy display formatting (0.8% should be 80%)
+- [ ] Fix revenue/profit card values not displaying
 
-
-## A-Tier Expert AI Prompts - COMPLETED
-- [x] Rewrote poe-narrative.ts with expert-level prompts for all sections
-- [x] Executive Summary: 200-250 word comprehensive investment thesis
-- [x] Market Overview: Institutional-grade market intelligence
-- [x] Revenue Analysis: CFO-level revenue breakdown
-- [x] Competitive Landscape: Strategic competitor analysis
-- [x] Seasonal Strategy: Actionable pricing guidance
-- [x] Risk Assessment: Quantified risk/mitigation matrix
-- [x] Financial Outlook: Clear financial projections
-- [x] Conclusion: Decisive investment recommendation
-- [x] All sections generated in parallel for speed
-- [x] Using Gemini 2.5 Pro for reliable responses
-
-
-## Prompt Engineering Fixes - URGENT
-- [ ] Remove startup costs and break-even from report (user requested before)
-- [ ] Fix conclusion - no GO/NO GO verdicts, just expert analysis
-- [ ] Fix risk assessment - currently showing blank "primary risk is" 
-- [ ] Make competitor cards fully clickable to go to Airbnb listing
-- [ ] Rewrite ALL AI prompts for true expert-level output
-
-
-## Prompt Engineering Fixes - A+ Expert Level (Completed)
-- [x] Remove startup costs and break-even sections from UI
-- [x] Fix blank Risk Assessment section - switched to Claude-Sonnet-4 for complete responses
-- [x] Make competitor cards fully clickable (entire card links to listing)
-- [x] Rewrite AI prompts for expert-level output without GO/NO GO verdicts
-- [x] Remove break-even badge from quick facts
-- [x] Add no-markdown instruction to all AI prompts
-- [x] Switch from Gemini-2.5-Pro to Claude-Sonnet-4 (Gemini was truncating responses)
-- [x] Increase maxTokens for all AI sections to ensure complete responses
+## Prompt Engineering Fixes (Jan 3, 2026)
+- [x] Fix Executive Summary prompt - remove investment advice (STRONG GO, budget recommendations)
+- [x] Executive Summary should only summarize findings from other sections
+- [x] Improve Market Intelligence card labeling (Direct Competitors vs Regional Market)
+- [ ] Verify consistency across multiple property tests

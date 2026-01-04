@@ -18,7 +18,7 @@
 import { ENV } from './_core/env';
 import { apiCache } from './cache';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
 
 // ============================================
 // GLOBAL HELPER FUNCTIONS
@@ -36,16 +36,29 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 function formatOccupancy(occ: number | undefined | null): string {
   if (occ === undefined || occ === null || isNaN(occ)) return 'N/A';
   
+  let normalized: number;
+  
   // If value is > 100, it's likely already multiplied by 100 twice (e.g., 7135 should be 71.35%)
   if (occ > 100) {
-    return (occ / 100).toFixed(1);
+    normalized = occ / 100;
   }
   // If value is > 1 but <= 100, it's already a percentage
-  if (occ > 1) {
-    return occ.toFixed(1);
+  else if (occ > 1) {
+    normalized = occ;
   }
   // If value is <= 1, it's a decimal that needs to be converted to percentage
-  return (occ * 100).toFixed(1);
+  else {
+    normalized = occ * 100;
+  }
+  
+  // Cap at 100% - occupancy cannot exceed 100%
+  // Values above 100% indicate data anomalies
+  if (normalized > 100) {
+    console.warn(`[formatOccupancy] Capping anomalous occupancy value: ${normalized}% -> 100%`);
+    normalized = 100;
+  }
+  
+  return normalized.toFixed(1);
 }
 
 /**
@@ -55,16 +68,27 @@ function formatOccupancy(occ: number | undefined | null): string {
 function normalizeOccupancy(occ: number | undefined | null): number {
   if (occ === undefined || occ === null || isNaN(occ)) return 0;
   
+  let normalized: number;
+  
   // If value is > 100, it's likely already multiplied by 100 twice
   if (occ > 100) {
-    return occ / 100;
+    normalized = occ / 100;
   }
   // If value is > 1 but <= 100, it's already a percentage
-  if (occ > 1) {
-    return occ;
+  else if (occ > 1) {
+    normalized = occ;
   }
   // If value is <= 1, it's a decimal that needs to be converted to percentage
-  return occ * 100;
+  else {
+    normalized = occ * 100;
+  }
+  
+  // Cap at 100% - occupancy cannot exceed 100%
+  if (normalized > 100) {
+    normalized = 100;
+  }
+  
+  return normalized;
 }
 
 // ============================================
@@ -2623,7 +2647,8 @@ export interface NarrativeReportInput {
   market_name: string;
   market_occupancy: number;
   market_adr: number;
-  active_listings: number;
+  active_listings: number;  // Number of direct competitors analyzed (local)
+  regional_active_listings?: number;  // Total active listings in the broader regional market
   
   // Revenue projections
   revenue_low: number;
@@ -4030,9 +4055,15 @@ PROPERTY DETAILS:
 
 MARKET OVERVIEW:
 - Market: ${input.market_name}
-- Market Occupancy: ${formatOccupancy(input.market_occupancy)}%
-- Market ADR: $${input.market_adr.toFixed(0)}
-- Active Listings: ${input.active_listings}
+- Regional Market Occupancy: ${formatOccupancy(input.market_occupancy)}% (broader market average)
+- Regional Market ADR: $${input.market_adr.toFixed(0)} (broader market average)
+- Direct Competitors Analyzed: ${input.active_listings} (nearby same-bedroom properties - THIS is your competitive set)
+${input.regional_active_listings ? `- Regional Active Listings: ${input.regional_active_listings.toLocaleString()} (total in broader market area)` : ''}
+
+IMPORTANT DATA CONTEXT:
+- When discussing "active listings" or "market size" in your analysis, use the Direct Competitors count (${input.active_listings}), NOT regional totals.
+- The regional occupancy/ADR figures provide broader market context, but your revenue projections are based on the ${input.active_listings} direct competitors analyzed.
+- Always be clear about which data you're referencing: local competitors vs regional market.
 
 REVENUE PROJECTIONS:
 - Conservative (50th percentile): $${input.revenue_low.toLocaleString()}/year
@@ -4105,13 +4136,28 @@ CRITICAL FORMATTING RULES:
 - Write for someone who may be new to STR investing
 - The tone should be professional but accessible, like a trusted advisor
 
+KEY DEFINITIONS (use these consistently):
+- Revenue-to-Rent Ratio: Annual STR Revenue ÷ Annual Rent (target: 2.5x or higher for profitability)
+- Monthly Profit: (Monthly Revenue) - (Monthly Rent + Operating Expenses)
+- Break-even Occupancy: Minimum occupancy percentage needed to cover all costs
+- Direct Competitors: The ${input.active_listings} nearby same-bedroom properties analyzed
+
+DATA CONSISTENCY RULES:
+1. When stating "active listings" or "competitors", use the exact count from TOP COMPETITORS section (${input.active_listings})
+2. The occupancy and ADR figures are REGIONAL averages - note this context when referencing them
+3. Revenue projections are based on LOCAL comparable performance, not regional averages
+4. Always cross-reference numbers you cite with the data sections provided above
+5. If occupancy exceeds 100%, note this as a data anomaly and use capped values
+6. If metrics seem inconsistent, acknowledge the limitation rather than fabricating explanations
+
 KEY REQUIREMENTS:
 1. Use specific numbers from data - no vague terms
 2. State revenue-to-rent ratio
 3. State qualification rate (% of competitors profitable)
 4. State break-even occupancy %
 5. Calculate monthly profit = (revenue/12) - expenses
-6. DO NOT include any GO/CAUTION/PASS verdict language - let the reader draw their own conclusions`;
+6. DO NOT include any GO/CAUTION/PASS verdict language - let the reader draw their own conclusions
+7. When discussing market size, refer to the ${input.active_listings} direct competitors, not broader regional statistics`;
 
   try {
     const response = await callGemini(prompt, 8192);

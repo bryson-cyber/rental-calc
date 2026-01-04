@@ -209,6 +209,24 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
       animate="visible"
       variants={containerVariants}
     >
+      {/* Executive Summary */}
+      {report.executive_summary && (
+        <motion.div 
+          className="bg-gradient-to-br from-[#C9A962]/20 to-[#C9A962]/5 border border-[#C9A962]/30 rounded-xl p-6"
+          variants={itemVariants}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-6 h-6 text-[#C9A962]" />
+            <h3 className="text-xl font-semibold text-white">Executive Summary</h3>
+          </div>
+          <div className="prose prose-invert max-w-none">
+            <p className="text-white/90 leading-relaxed whitespace-pre-line">
+              {report.executive_summary}
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Quick Facts Banner */}
       {report.quick_facts && report.quick_facts.length > 0 && (
         <motion.div 

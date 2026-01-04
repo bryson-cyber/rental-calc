@@ -3188,6 +3188,7 @@ export async function generateFullArbitrageAnalysis(
       market_occupancy: marketData?.market?.metrics?.occupancy || 0.65,
       market_adr: marketData?.market?.metrics?.adr || 150,
       active_listings: competitors.length,
+      regional_active_listings: marketData?.market?.listing_count || marketData?.market?.metrics?.active_listings,
       revenue_low: percentiles.median,
       revenue_mid: percentiles.top_25_percent,
       revenue_high: percentiles.top_10_percent,
