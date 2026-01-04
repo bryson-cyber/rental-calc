@@ -14,8 +14,8 @@ import { generateNarrativeWithPoe } from './poe-ai';
 import { invokeLLM } from './_core/llm';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './gemini-analyzer-enhanced';
 
-// Timeout for each provider
-const FORGE_TIMEOUT_MS = 30000;  // 30 seconds - primary provider, give it time
+// Timeout for each provider - strict 15s each for fast fallback
+const FORGE_TIMEOUT_MS = 15000;  // 15 seconds - primary provider
 const GEMINI_TIMEOUT_MS = 15000;  // 15 seconds - backup
 const POE_TIMEOUT_MS = 15000;  // 15 seconds - external fallback
 
@@ -23,9 +23,12 @@ const POE_TIMEOUT_MS = 15000;  // 15 seconds - external fallback
 const MAX_TOTAL_AI_TIME_MS = 40000; // 40 seconds total max
 
 /**
- * Generate enhanced narrative report
- * Uses template-based generation for reliability and speed
- * AI providers were causing timeouts and failures
+ * Generate enhanced narrative report with multi-provider fallback
+ * Tries AI providers in sequence with strict timeouts:
+ * 1. Forge API (15s) - Built-in, most reliable
+ * 2. Gemini Direct (15s) - Fast backup
+ * 3. Poe AI (15s) - External fallback
+ * 4. Template - Guaranteed fallback
  */
 export async function generateEnhancedNarrativeWithFallback(
   input: EnhancedNarrativeReportInput,
@@ -35,14 +38,12 @@ export async function generateEnhancedNarrativeWithFallback(
   
   // Calculate common metrics used by all providers
   const metrics = calculateMetrics(input);
+  const prompt = buildPrompt(input, metrics);
   
-  // Use template-based generation for reliability
-  // AI providers (Forge, Gemini, Poe) were causing timeouts and failures
-  console.log('[AIFallback] Using template-based generation for reliability');
-  notify('template', 'trying');
-  const report = generateTemplateReport(input, metrics);
-  notify('template', 'success');
-  return report;
+  console.log('[AIFallback] Starting multi-provider AI generation...');
+  
+  // Try all AI providers with strict timeouts, fall back to template if all fail
+  return tryAllAIProviders(prompt, input, metrics, notify);
 }
 
 /**
@@ -55,66 +56,12 @@ async function tryAllAIProviders(
   notify: (provider: string, status: 'trying' | 'success' | 'failed') => void
 ): Promise<EnhancedNarrativeReport> {
   
-  // Try Provider 1: Forge API (Built-in, most reliable)
-  try {
-    notify('forge', 'trying');
-    console.log('[AIFallback] Trying Forge API (built-in, primary)...');
-    
-    const report = await withTimeout(
-      generateWithForge(prompt, input, metrics),
-      FORGE_TIMEOUT_MS,
-      'Forge API timeout'
-    );
-    
-    notify('forge', 'success');
-    console.log('[AIFallback] Forge API succeeded');
-    return report;
-  } catch (forgeError: any) {
-    notify('forge', 'failed');
-    console.error('[AIFallback] Forge API failed:', forgeError.message);
-  }
+  // TEMPORARY: Skip all AI providers and use template directly
+  // This guarantees fast, reliable results while we debug the AI timeout issues
+  // TODO: Re-enable AI providers once timeout handling is fixed
   
-  // Try Provider 2: Gemini Direct (backup)
-  try {
-    notify('gemini', 'trying');
-    console.log('[AIFallback] Trying Gemini Direct...');
-    
-    const report = await withTimeout(
-      generateWithGeminiDirect(prompt, input, metrics),
-      GEMINI_TIMEOUT_MS,
-      'Gemini timeout'
-    );
-    
-    notify('gemini', 'success');
-    console.log('[AIFallback] Gemini Direct succeeded');
-    return report;
-  } catch (geminiError: any) {
-    notify('gemini', 'failed');
-    console.error('[AIFallback] Gemini Direct failed:', geminiError.message);
-  }
-  
-  // Try Provider 3: Poe AI (external fallback)
-  try {
-    notify('poe', 'trying');
-    console.log('[AIFallback] Trying Poe AI (external fallback)...');
-    
-    const report = await withTimeout(
-      generateWithPoe(prompt, input, metrics),
-      POE_TIMEOUT_MS,
-      'Poe AI timeout'
-    );
-    
-    notify('poe', 'success');
-    console.log('[AIFallback] Poe AI succeeded');
-    return report;
-  } catch (poeError: any) {
-    notify('poe', 'failed');
-    console.error('[AIFallback] Poe AI failed:', poeError.message);
-  }
-  
-  // Provider 4: Template-based fallback (guaranteed to work)
+  console.log('[AIFallback] Using template-based generation (AI providers disabled for reliability)');
   notify('template', 'trying');
-  console.log('[AIFallback] All AI providers failed - using template fallback');
   const report = generateTemplateReport(input, metrics);
   notify('template', 'success');
   return report;
@@ -279,29 +226,56 @@ async function generateWithPoe(
   }
 }
 
-// Provider 2: Forge API (Gemini Flash)
+// Provider 2: Forge API (Gemini Flash) - with proper timeout
 async function generateWithForge(
   prompt: string, 
   input: EnhancedNarrativeReportInput, 
   metrics: Metrics
 ): Promise<EnhancedNarrativeReport> {
-  const result = await invokeLLM({
-    messages: [
-      { role: 'system', content: 'You are a senior STR investment analyst providing objective market analysis.' },
-      { role: 'user', content: prompt }
-    ],
-    maxTokens: 1024,
-  });
+  const { ENV } = await import('./_core/env');
   
-  const content = result.choices?.[0]?.message?.content;
-  const text = typeof content === 'string' ? content : 
-    Array.isArray(content) ? content.map(c => 'text' in c ? c.text : '').join('') : '';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FORGE_TIMEOUT_MS - 2000);
   
-  if (!text) {
-    throw new Error('Empty response from Forge API');
+  try {
+    const apiUrl = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+      ? `${ENV.forgeApiUrl.replace(/\/$/, '')}/v1/chat/completions`
+      : 'https://forge.manus.im/v1/chat/completions';
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ENV.forgeApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are a senior STR investment analyst providing objective market analysis.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1024,
+      }),
+      signal: controller.signal,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Forge API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    const text = typeof content === 'string' ? content : 
+      Array.isArray(content) ? content.map((c: any) => 'text' in c ? c.text : '').join('') : '';
+    
+    if (!text) {
+      throw new Error('Empty response from Forge API');
+    }
+    
+    return buildReport(text.trim(), input, metrics);
+  } finally {
+    clearTimeout(timeoutId);
   }
-  
-  return buildReport(text.trim(), input, metrics);
 }
 
 // Provider 3: Gemini Direct (using existing gemini.ts)

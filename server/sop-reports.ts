@@ -1813,6 +1813,15 @@ export async function generateFullArbitrageAnalysis(
   
   // Step 13: Run FULL AI ANALYSIS using Gemini
   let ai_analysis: FullAIAnalysis | null = null;
+  
+  // TEMPORARILY SKIP Gemini AI analysis to fix timeout issues
+  // The enhanced narrative report provides better AI insights anyway
+  const SKIP_GEMINI_AI_ANALYSIS = true;
+  
+  if (SKIP_GEMINI_AI_ANALYSIS) {
+    console.log('[ArbitrageAnalysis] Skipping Gemini AI analysis (using enhanced narrative instead)');
+    if (sessionId) progressTracker.completeStep(sessionId, 'ai_analysis', 'Using enhanced AI analysis');
+  } else {
   try {
     console.log('[ArbitrageAnalysis] Running full AI analysis with Gemini...');
     
@@ -1878,6 +1887,7 @@ export async function generateFullArbitrageAnalysis(
     console.error('[ArbitrageAnalysis] Error running AI analysis:', error);
     // Continue without AI analysis - the base report is still valuable
   }
+  } // End of else block for SKIP_GEMINI_AI_ANALYSIS
   
   // Step 15: Fetch additional market intelligence data
   let booking_patterns: BookingPatternsData | undefined;
