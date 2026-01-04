@@ -1854,3 +1854,19 @@
 ### Tests Status:
 - TypeScript compilation: 0 errors
 - All core functionality working
+
+
+## Bug Fixes - January 4, 2026 (Session 4)
+
+- [x] Fix "Local Market" bug - Added fallback to get market name from market_id when parent_market_name is null in getSubmarketDetails
+- [x] Hide empty Property Type Analysis section when API returns $0/0% - Added conditional rendering
+- [ ] Implement bulletproof AI service with automatic retries and fallbacks (never fail)
+- [ ] Use 30% operating expense from AirDNA for consistency in comparisons
+
+
+## Bug Fixes - January 4, 2026 (Session 4)
+
+- [x] Fix "Local Market" bug - Added fallback to extract city name from address when parent_market_name is null
+- [x] Hide empty Property Type Analysis section when API returns $0/0% - Added conditional rendering
+- [x] Implement bulletproof AI service with automatic retries and fallbacks - Added template-based fallback report that always works
+- [x] Use 30% operating expense model from AirDNA for consistency - Updated expense model to align with AirDNA's approach

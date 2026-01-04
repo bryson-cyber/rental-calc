@@ -793,6 +793,8 @@ export async function getSubmarketDetails(submarketId: string): Promise<{
       };
     }>(`/submarket/${submarketId}`, "GET");
     
+    console.log(`[getSubmarketDetails] Raw API response for ${submarketId}:`, JSON.stringify(response.payload, null, 2));
+    
     return {
       id: response.payload.id,
       name: response.payload.name,

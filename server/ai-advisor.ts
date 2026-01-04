@@ -1969,7 +1969,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
           average: median
         };
         
-        const profitability = SOPReports.calculateSOPProfitability(monthlyRent, percentiles);
+        const profitability = SOPReports.calculateProfitability(monthlyRent, percentiles);
         
         return {
           monthly_rent: monthlyRent,

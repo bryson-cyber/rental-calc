@@ -2066,8 +2066,9 @@ export default function PropertyAnalyzer() {
               </div>
             )}
             
-            {/* Property Type Analysis */}
-            {result.property_type_analysis && (
+            {/* Property Type Analysis - Only show if we have actual data */}
+            {result.property_type_analysis && 
+             (result.property_type_analysis.entire_home.count > 0 || result.property_type_analysis.private_room.count > 0) && (
               <div className="bg-white rounded-2xl border border-[#C9A962]/20 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Home className="w-5 h-5 text-[#C9A962]" />
