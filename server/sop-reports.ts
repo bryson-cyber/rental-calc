@@ -96,6 +96,7 @@ import {
 } from './gemini-analyzer-enhanced';
 
 import { generateEnhancedNarrativeWithPoe } from './poe-narrative';
+import { generateEnhancedNarrativeWithFallback } from './ai-fallback';
 
 import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';
 import { progressTracker, withProgress } from './progress-tracker';
@@ -3563,64 +3564,45 @@ export async function generateFullArbitrageAnalysis(
   if (sessionId) progressTracker.completeStep(sessionId, 'narrative', 'Narrative report complete');
   if (sessionId) progressTracker.startStep(sessionId, 'enhanced', 'Creating enhanced insights...');
   
-  // Step 21: Generate ENHANCED narrative report with better prompts and action items
+  // Step 21: Generate ENHANCED narrative report with MULTI-PROVIDER FALLBACK
+  // This ensures AI summary ALWAYS loads by trying multiple providers in sequence
   let enhanced_narrative_report: EnhancedNarrativeReport | undefined;
   
-  // Helper function to add timeout to the enhanced report generation
-  const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) => 
-        setTimeout(() => reject(new Error(`Enhanced report timeout after ${timeoutMs}ms`)), timeoutMs)
-      )
-    ]);
-  };
+  // Get market name for the report
+  let marketNameForEnhanced = submarket_details?.parent_market_name 
+    || submarket_exploration?.market_name;
   
-  // Use Poe AI with Claude Opus for enhanced narrative report (faster and better quality)
-  const USE_POE_AI = true;
-  
-  if (USE_POE_AI) {
+  // If still no market name, try to get it from market_id
+  if (!marketNameForEnhanced && property_estimate?.property?.market_id) {
     try {
-      console.log('[ArbitrageAnalysis] Generating enhanced narrative report with Poe AI (Claude Opus)...');
-      
-      // Get market name for the report - prefer submarket_details.parent_market_name if available
-      console.log('[ArbitrageAnalysis] DEBUG market name sources:', {
-        submarket_parent: submarket_details?.parent_market_name,
-        submarket_exploration: submarket_exploration?.market_name,
-        market_id: property_estimate?.property?.market_id
-      });
-      
-      let marketNameForEnhanced = submarket_details?.parent_market_name 
-        || submarket_exploration?.market_name;
-      
-      // If still no market name, try to get it from market_id
-      if (!marketNameForEnhanced && property_estimate?.property?.market_id) {
-        try {
-          const marketDetails = await getMarketDetails(property_estimate.property.market_id);
-          marketNameForEnhanced = marketDetails?.name;
-          console.log(`[ArbitrageAnalysis] Got market name from market_id: ${marketNameForEnhanced}`);
-        } catch (e) {
-          console.log(`[ArbitrageAnalysis] Could not get market name from market_id: ${e}`);
-        }
-      }
-      
-      // Final fallback: extract city name from address
-      if (!marketNameForEnhanced) {
-        // Try to extract city from address (e.g., "123 Main St, Los Angeles, California, USA" -> "Los Angeles")
-        const addressParts = address.split(',').map(p => p.trim());
-        if (addressParts.length >= 2) {
-          // Second-to-last part is usually the city (before state/country)
-          marketNameForEnhanced = addressParts[1];
-          console.log(`[ArbitrageAnalysis] Extracted market name from address: ${marketNameForEnhanced}`);
-        } else {
-          marketNameForEnhanced = 'Local Market';
-        }
-      }
-      
-      console.log(`[ArbitrageAnalysis] Using market name: ${marketNameForEnhanced}`);
-      
-      // Wrap Poe AI call in a 180-second timeout
-      enhanced_narrative_report = await withTimeout(generateEnhancedNarrativeWithPoe({
+      const marketDetails = await getMarketDetails(property_estimate.property.market_id);
+      marketNameForEnhanced = marketDetails?.name;
+      console.log(`[ArbitrageAnalysis] Got market name from market_id: ${marketNameForEnhanced}`);
+    } catch (e) {
+      console.log(`[ArbitrageAnalysis] Could not get market name from market_id: ${e}`);
+    }
+  }
+  
+  // Final fallback: extract city name from address
+  if (!marketNameForEnhanced) {
+    const addressParts = address.split(',').map(p => p.trim());
+    if (addressParts.length >= 2) {
+      marketNameForEnhanced = addressParts[1];
+      console.log(`[ArbitrageAnalysis] Extracted market name from address: ${marketNameForEnhanced}`);
+    } else {
+      marketNameForEnhanced = 'Local Market';
+    }
+  }
+  
+  console.log(`[ArbitrageAnalysis] Using market name: ${marketNameForEnhanced}`);
+  
+  // Use the new multi-provider fallback service
+  // This tries: Poe AI -> Forge API -> Gemini Direct -> Template (guaranteed)
+  try {
+    console.log('[ArbitrageAnalysis] Starting multi-provider AI generation (Poe -> Forge -> Gemini -> Template)...');
+    
+    enhanced_narrative_report = await generateEnhancedNarrativeWithFallback(
+      {
         address,
         monthly_rent,
         bedrooms: actualBedrooms,
@@ -3653,242 +3635,40 @@ export async function generateFullArbitrageAnalysis(
           adr: s.adr,
           season_type: s.season_type
         })),
-      }), 180000); // 180 second timeout for Poe AI
-      
-      console.log('[ArbitrageAnalysis] Enhanced narrative report generated successfully with Poe AI');
-      if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'AI insights generated');
-    } catch (poeError: any) {
-      console.error('[ArbitrageAnalysis] Poe AI error:', poeError.message);
-      console.log('[ArbitrageAnalysis] Falling back to Gemini...');
-      // Fall through to Gemini fallback below
-    }
+      },
+      // Progress callback
+      (provider, status) => {
+        if (sessionId) {
+          if (status === 'trying') {
+            progressTracker.startStep(sessionId, 'enhanced', `Trying ${provider} AI...`);
+          } else if (status === 'success') {
+            progressTracker.completeStep(sessionId, 'enhanced', `AI insights generated (${provider})`);
+          } else if (status === 'failed') {
+            console.log(`[ArbitrageAnalysis] ${provider} failed, trying next provider...`);
+          }
+        }
+      }
+    );
+    
+    console.log('[ArbitrageAnalysis] Enhanced narrative report generated successfully');
+  } catch (fallbackError: any) {
+    // This should never happen since template fallback is guaranteed
+    console.error('[ArbitrageAnalysis] All AI providers failed (unexpected):', fallbackError.message);
+    if (sessionId) progressTracker.errorStep(sessionId, 'enhanced', 'AI generation failed');
   }
   
-  // Fallback to Gemini if Poe AI fails or is disabled
-  if (!enhanced_narrative_report) {
-  try {
-    console.log('[ArbitrageAnalysis] Generating enhanced narrative report (60s timeout)...');
-    
-    // Get market name for the report - prefer submarket_details.parent_market_name if available
-    let marketNameForEnhanced = submarket_details?.parent_market_name 
-      || submarket_exploration?.market_name;
-    
-    // Try to get from market_id if not available
-    if (!marketNameForEnhanced && property_estimate?.property?.market_id) {
-      try {
-        const marketDetails = await getMarketDetails(property_estimate.property.market_id);
-        marketNameForEnhanced = marketDetails?.name;
-      } catch (e) {
-        console.log(`[ArbitrageAnalysis] Could not get market name from market_id: ${e}`);
-      }
-    }
-    
-    // Final fallback: extract city name from address
-    if (!marketNameForEnhanced) {
-      const addressParts = address.split(',').map(p => p.trim());
-      if (addressParts.length >= 2) {
-        marketNameForEnhanced = addressParts[1];
-        console.log(`[ArbitrageAnalysis] Extracted market name from address: ${marketNameForEnhanced}`);
-      } else {
-        marketNameForEnhanced = 'Local Market';
-      }
-    }
-    
-    // Wrap the enhanced report generation in a 60-second timeout
-    enhanced_narrative_report = await withTimeout(generateEnhancedNarrativeReport({
-      address,
-      monthly_rent,
-      bedrooms: actualBedrooms,
-      bathrooms: actualBathrooms,
-      market_name: marketNameForEnhanced,
-      market_occupancy: marketData?.market?.metrics?.occupancy || 0.65,
-      market_adr: marketData?.market?.metrics?.adr || 150,
-      active_listings: marketData?.market?.listing_count || competitors.length,
-      revenue_low: percentiles.median,
-      revenue_mid: percentiles.top_25_percent,
-      revenue_high: percentiles.top_10_percent,
-      monthly_expenses: profitability.monthly_expenses.total,
-      annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
-      annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
-      annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
-      competitors: competitors.slice(0, 8).map(c => ({
-        name: c.name,
-        annual_revenue: c.annual_revenue,
-        occupancy: c.occupancy,
-        adr: c.adr,
-        rating: c.rating,
-        reviews: c.reviews,
-        airbnb_url: c.airbnb_url,
-        success_factor: c.key_success_factor
-      })),
-      seasonality: seasonality.map(s => ({
-        month: s.month,
-        revenue: s.revenue,
-        occupancy: s.occupancy,
-        adr: s.adr,
-        season_type: s.season_type
-      })),
-      five_year_summary: five_year_summary ? {
-        years_of_data: five_year_summary.years_of_data,
-        occupancy: {
-          current_year_avg: five_year_summary.occupancy.current_year_avg,
-          five_year_avg: five_year_summary.occupancy.five_year_avg,
-          trend: five_year_summary.occupancy.trend,
-          percent_change: five_year_summary.occupancy.percent_change
-        },
-        adr: {
-          current_year_avg: five_year_summary.adr.current_year_avg,
-          five_year_avg: five_year_summary.adr.five_year_avg,
-          trend: five_year_summary.adr.trend,
-          percent_change: five_year_summary.adr.percent_change
-        },
-        revenue: {
-          current_year_avg: five_year_summary.revenue.current_year_avg,
-          five_year_avg: five_year_summary.revenue.five_year_avg,
-          trend: five_year_summary.revenue.trend,
-          percent_change: five_year_summary.revenue.percent_change
-        },
-        market_maturity: five_year_summary.market_maturity
-      } : undefined,
-      supply_trend: supply_trend ? {
-        current_listings: supply_trend.current_listings,
-        net_change: supply_trend.net_change,
-        percent_change: supply_trend.percent_change,
-        trend: supply_trend.trend
-      } : undefined,
-      professional_stats: professional_host_stats ? {
-        professional_percentage: professional_host_stats.professional_percentage,
-        superhost_percentage: professional_host_stats.superhost_percentage,
-        revenue_premium_percent: professional_host_stats.revenue_premium_percent
-      } : undefined,
-      booking_patterns: booking_patterns ? {
-        avg_lead_time_days: booking_patterns.booking_lead_time.avg_days,
-        median_lead_time_days: booking_patterns.booking_lead_time.median_days,
-        last_minute_booking_percent: booking_patterns.booking_lead_time.last_minute_percent,
-        advance_booking_percent: booking_patterns.booking_lead_time.advance_booking_percent,
-        avg_length_of_stay: booking_patterns.length_of_stay.avg_nights,
-        median_length_of_stay: booking_patterns.length_of_stay.median_nights,
-        weekend_stay_percent: booking_patterns.length_of_stay.weekend_percent,
-        week_plus_stay_percent: booking_patterns.length_of_stay.week_percent,
-        insights: booking_patterns.insights
-      } : undefined,
-      amenities: amenity_analysis?.slice(0, 10).map(a => ({
-        amenity: a.amenity,
-        percentage_of_top_performers: a.percentage_of_top_performers
-      })),
-      risks: ai_analysis?.risk_assessment?.risks?.slice(0, 5).map(r => ({
-        category: r.category,
-        description: r.description,
-        severity: r.severity
-      })),
-      bedroom_performance: bedroom_performance,
-      property_bedrooms: actualBedrooms
-    }), 60000); // 60 second timeout
-    
-    console.log('[ArbitrageAnalysis] Enhanced narrative report generation complete');
-    if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'Enhanced insights created');
-  } catch (error: any) {
-    console.error('[ArbitrageAnalysis] Error generating enhanced narrative report:', error?.message || error);
-    if (sessionId) progressTracker.errorStep(sessionId, 'enhanced', 'Could not generate enhanced report');
-    // Continue without enhanced report - the standard narrative report is still available
-  }
-  } // End of else block for SKIP_ENHANCED_REPORT
+  // The new multi-provider fallback service handles everything above
+  // No need for additional fallback code - ai-fallback.ts guarantees a report
   
-  // BULLETPROOF FALLBACK: If all AI calls failed, generate a template-based report
-  // This ensures the user ALWAYS gets a complete report
-  if (!enhanced_narrative_report) {
-    console.log('[ArbitrageAnalysis] All AI calls failed - generating template-based fallback report');
-    if (sessionId) progressTracker.startStep(sessionId, 'enhanced', 'Generating fallback report...');
-    
-    // Extract market name from address as fallback
-    const addressParts = address.split(',').map(p => p.trim());
-    const fallbackMarketName = addressParts.length >= 2 ? addressParts[1] : 'Local Market';
-    
-    // Calculate key metrics
-    const revenueToRentRatio = percentiles.top_25_percent / (monthly_rent * 12);
-    const monthlyProfit = Math.round(profitability.scenarios.realistic.estimated_profit / 12);
-    const occupancyNormalized = marketData?.market?.metrics?.occupancy 
-      ? (marketData.market.metrics.occupancy < 1 ? marketData.market.metrics.occupancy * 100 : marketData.market.metrics.occupancy)
-      : 65;
-    const breakEvenOccupancy = Math.round((monthly_rent + profitability.monthly_expenses.total - monthly_rent) / (marketData?.market?.metrics?.adr || 150) / 30 * 100);
-    
-    // Calculate seasonality swing
-    const peakMonths = seasonality.filter(s => s.season_type === 'peak');
-    const offMonths = seasonality.filter(s => s.season_type === 'off');
-    const avgPeakRevenue = peakMonths.reduce((sum, s) => sum + s.revenue, 0) / Math.max(1, peakMonths.length);
-    const avgOffRevenue = offMonths.reduce((sum, s) => sum + s.revenue, 0) / Math.max(1, offMonths.length);
-    const seasonalSwingPct = avgOffRevenue > 0 ? Math.round(((avgPeakRevenue - avgOffRevenue) / avgOffRevenue) * 100) : 0;
-    
-    // Determine recommendation
-    const recommendation = revenueToRentRatio >= 2.5 ? 'STRONG GO' : 
-                           revenueToRentRatio >= 2 ? 'GO' : 
-                           revenueToRentRatio >= 1.5 ? 'CAUTION' : 'NO GO';
-    const confidenceScore = revenueToRentRatio >= 2.5 ? 9 : 
-                            revenueToRentRatio >= 2 ? 7 : 
-                            revenueToRentRatio >= 1.5 ? 5 : 3;
-    
-    const topComp = competitors[0];
-    const peakMonthNames = peakMonths.map(s => s.month).join(', ');
-    const offMonthNames = offMonths.map(s => s.month).join(', ');
-    
-    enhanced_narrative_report = {
-      executive_summary: `This ${actualBedrooms}-bedroom property at ${address.split(',')[0]} in ${fallbackMarketName} presents a ${recommendation.toLowerCase()} opportunity based on available market data. The revenue-to-rent ratio of ${revenueToRentRatio.toFixed(2)}x ${revenueToRentRatio >= 2 ? 'meets' : 'falls short of'} the 2x minimum threshold typically required for rental arbitrage profitability. The realistic annual revenue of $${percentiles.top_25_percent.toLocaleString()} translates to a monthly ${monthlyProfit >= 0 ? 'profit' : 'loss'} of approximately $${Math.abs(monthlyProfit).toLocaleString()}. The break-even occupancy of ${breakEvenOccupancy}% ${breakEvenOccupancy <= occupancyNormalized ? 'is below' : 'exceeds'} the regional market occupancy of ${occupancyNormalized.toFixed(0)}%. Cash flow timing presents ${seasonalSwingPct > 50 ? 'significant' : 'moderate'} challenges, with a ${seasonalSwingPct}% seasonal swing between peak and off-peak periods.`,
-      market_overview: `The ${fallbackMarketName} market has ${marketData?.market?.listing_count?.toLocaleString() || competitors.length} active short-term rental listings with an average occupancy of ${occupancyNormalized.toFixed(0)}% and ADR of $${(marketData?.market?.metrics?.adr || 150).toFixed(0)}/night. This is a ${(marketData?.market?.listing_count || competitors.length) > 1000 ? 'highly competitive' : (marketData?.market?.listing_count || competitors.length) > 500 ? 'moderately competitive' : 'less saturated'} market.`,
-      revenue_analysis: `Based on comparable properties, this ${actualBedrooms}-bedroom property could generate between $${percentiles.median.toLocaleString()} (conservative) and $${percentiles.top_10_percent.toLocaleString()} (optimistic) annually. The realistic projection of $${percentiles.top_25_percent.toLocaleString()}/year represents 75th percentile performance.`,
-      competitive_landscape: `There are ${competitors.length} comparable ${actualBedrooms}-bedroom properties in the area. The top performer is ${topComp?.name || 'not identified'}, earning $${topComp?.annual_revenue?.toLocaleString() || 'N/A'}/year with ${topComp?.occupancy ? Math.round(topComp.occupancy > 1 ? topComp.occupancy : topComp.occupancy * 100) : 0}% occupancy.`,
-      seasonal_strategy: `Revenue varies by ${seasonalSwingPct}% between peak and off-season. Peak months are ${peakMonthNames || 'not identified'}. Plan for lower income during ${offMonthNames || 'off-peak periods'}.`,
-      historical_context: 'Historical trend data is being analyzed. Check back for updates on market trajectory.',
-      risk_assessment: `Key risks: ${revenueToRentRatio < 2 ? 'Revenue-to-rent ratio below 2x leaves thin margins for unexpected costs. ' : ''}${seasonalSwingPct > 50 ? `High seasonality (${seasonalSwingPct}% swing) means inconsistent monthly income. ` : ''}Mitigation: Verify local regulations, maintain cash reserves for 3+ months of expenses, and focus on guest experience to stand out.`,
-      financial_outlook: `With monthly expenses of $${profitability.monthly_expenses.total.toLocaleString()} and rent of $${monthly_rent.toLocaleString()}, break-even requires ${breakEvenOccupancy}% occupancy. The conservative scenario yields $${profitability.scenarios.conservative.estimated_profit.toLocaleString()}/year profit.`,
-      conclusion: `This analysis shows a ${revenueToRentRatio.toFixed(2)}x revenue-to-rent ratio with projected monthly ${monthlyProfit >= 0 ? 'profit' : 'loss'} of $${Math.abs(monthlyProfit).toLocaleString()}. ${revenueToRentRatio >= 2 ? 'The ratio meets the typical 2.0x threshold.' : 'The ratio is below the typical 2.0x threshold.'} ${monthlyProfit >= 0 ? 'The projected margins are positive based on comparable property performance.' : 'The projected margins are narrow based on comparable property performance.'}`,
-      what_this_means: {
-        revenue: `Projected monthly ${monthlyProfit >= 0 ? 'profit' : 'loss'}: $${Math.abs(monthlyProfit).toLocaleString()}`,
-        competition: `${competitors.length} similar properties in the area.`,
-        seasonality: `${seasonalSwingPct}% seasonal variation between peak and off-peak.`,
-        overall: `Revenue-to-rent ratio: ${revenueToRentRatio.toFixed(2)}x. ${recommendation} recommendation.`,
-      },
-      action_items: revenueToRentRatio >= 2 
-        ? [
-            { priority: 'high' as const, action: 'Verify local STR regulations and licensing requirements', why: 'Legal compliance is essential before investing', timeline: 'Before signing lease' },
-            { priority: 'high' as const, action: 'Tour the property and assess condition', why: 'Verify property matches expectations', timeline: 'Within 1 week' },
-            { priority: 'medium' as const, action: 'Research top-performing listings for design inspiration', why: 'Learn from successful competitors', timeline: 'Within 2 weeks' },
-            { priority: 'medium' as const, action: 'Create a detailed startup budget', why: 'Ensure adequate capital for launch', timeline: 'Before signing lease' },
-            { priority: 'low' as const, action: 'Develop a marketing strategy for launch', why: 'Maximize visibility from day one', timeline: 'Before listing goes live' }
-          ]
-        : [
-            { priority: 'high' as const, action: 'Consider negotiating lower rent to improve margins', why: 'Current ratio is below profitability threshold', timeline: 'Before signing lease' },
-            { priority: 'high' as const, action: 'Explore alternative properties with better ratios', why: 'Better opportunities may exist', timeline: 'Within 2 weeks' },
-            { priority: 'medium' as const, action: 'If proceeding, focus on premium positioning to maximize ADR', why: 'Higher rates can offset thin margins', timeline: 'During setup' },
-            { priority: 'medium' as const, action: 'Build larger cash reserves for seasonal fluctuations', why: 'Protect against low-income months', timeline: 'Before launch' },
-            { priority: 'low' as const, action: 'Consider hybrid strategy (mid-term + short-term)', why: 'Diversify income streams', timeline: 'Ongoing' }
-          ],
-      key_metrics: {
-        projected_annual_revenue: percentiles.top_25_percent,
-        projected_monthly_profit: monthlyProfit,
-        market_occupancy: occupancyNormalized,
-        market_adr: marketData?.market?.metrics?.adr || 150,
-        break_even_months: Math.ceil(15000 / Math.max(monthlyProfit, 1)),
-        confidence_level: confidenceScore >= 7 ? 'high' : confidenceScore >= 5 ? 'medium' : 'low',
-        revenue_to_rent_ratio: revenueToRentRatio,
-      },
-      quick_facts: [
-        `Ratio: ${revenueToRentRatio.toFixed(2)}x`,
-        `${monthlyProfit >= 0 ? 'Profit' : 'Loss'}: $${Math.abs(monthlyProfit).toLocaleString()}/mo`,
-        `Break-even: ${breakEvenOccupancy}%`,
-        `${competitors.length} competitors`,
-      ],
-      market_context: {
-        type: 'urban',
-        seasonality: seasonalSwingPct > 50 ? 'high' : seasonalSwingPct > 25 ? 'moderate' : 'low',
-        competition: (marketData?.market?.listing_count || competitors.length) > 1000 ? 'high' : (marketData?.market?.listing_count || competitors.length) > 500 ? 'moderate' : 'low',
-        pricePoint: (marketData?.market?.metrics?.adr || 150) > 300 ? 'luxury' : (marketData?.market?.metrics?.adr || 150) > 100 ? 'mid-range' : 'budget',
-        description: `${fallbackMarketName} market analysis based on available data.`,
-      },
-    };
-    
-    console.log('[ArbitrageAnalysis] Fallback report generated successfully');
-    if (sessionId) progressTracker.completeStep(sessionId, 'enhanced', 'Report generated');
-  }
+  // LEGACY CODE REMOVED - was: Gemini fallback and template fallback
+  // Now handled by generateEnhancedNarrativeWithFallback which tries:
+  // 1. Poe AI (Claude Opus) - 45s timeout
+  // 2. Forge API (Gemini Flash) - 30s timeout  
+  // 3. Gemini Direct - 30s timeout
+  // 4. Template-based (guaranteed)
+  
+  // The multi-provider fallback guarantees we always have a report
+  // No additional fallback code needed - ai-fallback.ts handles everything
   
   // Finalize progress
   if (sessionId) {
