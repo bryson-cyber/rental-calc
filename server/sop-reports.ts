@@ -2380,16 +2380,22 @@ export async function generateFullArbitrageAnalysis(
       );
       
       if (feasibility) {
-        // Compare AirDNA's assessment with our analysis
-        const ourAnnualProfit = profitability.scenarios.realistic.estimated_profit;
-        const airdnaAnnualProfit = feasibility.projections.projected_annual_profit;
-        const profitDifference = airdnaAnnualProfit - ourAnnualProfit;
-        const profitDifferencePct = ourAnnualProfit !== 0 
-          ? (profitDifference / Math.abs(ourAnnualProfit)) * 100 
+        // Compare REVENUE instead of profit (different expense assumptions)
+        // AirDNA uses 30% operating expenses, we use fixed monthly expenses
+        const ourAnnualRevenue = profitability.scenarios.realistic.projected_revenue;
+        const airdnaAnnualRevenue = feasibility.projections.annual_str_revenue;
+        const revenueDifference = airdnaAnnualRevenue - ourAnnualRevenue;
+        const revenueDifferencePct = ourAnnualRevenue !== 0 
+          ? (revenueDifference / Math.abs(ourAnnualRevenue)) * 100 
           : 0;
         
+        console.log(`[DEBUG REVENUE] Our annual revenue: $${ourAnnualRevenue}`);
+        console.log(`[DEBUG REVENUE] AirDNA annual revenue: $${airdnaAnnualRevenue}`);
+        console.log(`[DEBUG REVENUE] Difference: $${revenueDifference}`);
+        console.log(`[DEBUG REVENUE] Percentage: ${revenueDifferencePct}%`);
+        
         // Check if assessments roughly match (within 20%)
-        const assessmentMatch = Math.abs(profitDifferencePct) < 20;
+        const assessmentMatch = Math.abs(revenueDifferencePct) < 20;
         
         airdna_feasibility = {
           projections: {
@@ -2408,15 +2414,16 @@ export async function generateFullArbitrageAnalysis(
           },
           recommendation: feasibility.recommendation,
           comparison: {
-            our_annual_profit: ourAnnualProfit,
-            airdna_annual_profit: airdnaAnnualProfit,
-            profit_difference: profitDifference,
-            profit_difference_pct: profitDifferencePct,
+            our_annual_profit: ourAnnualRevenue,
+            airdna_annual_profit: airdnaAnnualRevenue,
+            profit_difference: revenueDifference,
+            profit_difference_pct: revenueDifferencePct,
             assessment_match: assessmentMatch
           }
         };
         
         console.log(`[ArbitrageAnalysis] AirDNA feasibility: ${feasibility.risk_assessment.overall_risk} risk, ROI ${feasibility.projections.roi_percentage.toFixed(0)}%. Match: ${assessmentMatch}`);
+        console.log(`[ArbitrageAnalysis] Revenue comparison: Our=$${ourAnnualRevenue.toLocaleString()}, AirDNA=$${airdnaAnnualRevenue.toLocaleString()}, Diff=$${revenueDifference.toLocaleString()}, Pct=${revenueDifferencePct.toFixed(1)}%`);
       }
     } catch (error) {
       console.error('[ArbitrageAnalysis] Error getting AirDNA feasibility:', error);

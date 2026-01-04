@@ -1842,7 +1842,14 @@
 ### Remaining Issues (Low Priority):
 - [ ] Property Type Analysis shows $0/0% - API returns empty results for listing_type filter (AirDNA API limitation)
 - [ ] Inconsistent competitor counts in different sections - Different data sources show different counts (by design - different filtering criteria)
-- [ ] AirDNA Feasibility shows -76% vs Our Estimate - Large discrepancy between AirDNA projection and our calculation (needs investigation)
+- [x] AirDNA Feasibility shows -76% to -110% vs Our Estimate - INVESTIGATING: comparing AirDNA annual_profit vs our annual_profit
+
+## Debugging Session - January 4, 2026 (Session 3)
+
+### Bugs Found:
+- [ ] Market name STILL showing "Local Market" in narrative reports - fix not working, needs deeper investigation
+- [x] AirDNA Feasibility showing -92% to -110% - FIXED: Changed to compare REVENUE instead of profit (different expense assumptions)
+  - Now shows -9% which is reasonable (AirDNA $63,330 vs Our $69,307)
 
 ### Tests Status:
 - TypeScript compilation: 0 errors
