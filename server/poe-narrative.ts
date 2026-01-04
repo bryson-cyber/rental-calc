@@ -36,13 +36,21 @@ export async function generateEnhancedNarrativeWithPoe(
   
   // Format competitor info
   const topComp = input.competitors[0];
+  // Helper to format occupancy - AirDNA returns 0-100 values, not 0-1 decimals
+  const formatOccupancy = (occ: number | undefined) => {
+    if (!occ) return 0;
+    // If value is > 1, it's already a percentage (e.g., 75 = 75%)
+    // If value is <= 1, it's a decimal (e.g., 0.75 = 75%)
+    return occ > 1 ? Math.round(occ) : Math.round(occ * 100);
+  };
+  
   const topCompInfo = topComp 
-    ? `${topComp.name} ($${topComp.annual_revenue?.toLocaleString()}/yr, ${Math.round((topComp.occupancy || 0) * 100)}% occ)`
+    ? `${topComp.name} ($${topComp.annual_revenue?.toLocaleString()}/yr, ${formatOccupancy(topComp.occupancy)}% occ)`
     : 'No comparable data';
   
   // Format all competitors for analysis with ratings and reviews
   const competitorList = input.competitors.slice(0, 5).map((c, i) => 
-    `${i + 1}. ${c.name}: $${c.annual_revenue?.toLocaleString()}/yr, ${Math.round((c.occupancy || 0) * 100)}% occ, ${c.rating?.toFixed(1) || 'N/A'} rating (${c.reviews || 0} reviews)`
+    `${i + 1}. ${c.name}: $${c.annual_revenue?.toLocaleString()}/yr, ${formatOccupancy(c.occupancy)}% occ, ${c.rating?.toFixed(1) || 'N/A'} rating (${c.reviews || 0} reviews)`
   ).join('\n');
   
   // Calculate benchmarking metrics for "So What?" context
@@ -166,7 +174,7 @@ Format as a single flowing paragraph with **bold** for key terms. No bullet poin
       executive_summary: aiSummary || generateDefaultSummary(input, revenueToRentRatio, recommendation, confidenceScore),
       market_overview: `The ${input.market_name} market has ${input.active_listings.toLocaleString()} active short-term rental listings with an average occupancy of ${occupancyNormalized.toFixed(0)}% and ADR of $${input.market_adr.toFixed(0)}/night. This is a ${input.active_listings > 1000 ? 'highly competitive' : input.active_listings > 500 ? 'moderately competitive' : 'less saturated'} market.`,
       revenue_analysis: `Based on comparable properties, this ${input.bedrooms}-bedroom property could generate between $${input.revenue_low.toLocaleString()} (conservative) and $${input.revenue_high.toLocaleString()} (optimistic) annually. The realistic projection of $${input.revenue_mid.toLocaleString()}/year represents 75th percentile performance.`,
-      competitive_landscape: `There are ${input.competitors.length} comparable ${input.bedrooms}-bedroom properties in the area. The top performer is ${topComp?.name || 'not identified'}, earning $${topComp?.annual_revenue?.toLocaleString() || 'N/A'}/year with ${Math.round((topComp?.occupancy || 0) * 100)}% occupancy.`,
+      competitive_landscape: `There are ${input.competitors.length} comparable ${input.bedrooms}-bedroom properties in the area. The top performer is ${topComp?.name || 'not identified'}, earning $${topComp?.annual_revenue?.toLocaleString() || 'N/A'}/year with ${formatOccupancy(topComp?.occupancy)}% occupancy.`,
       seasonal_strategy: `Revenue varies by ${seasonalSwingPct}% between peak and off-season. Peak months are ${peakMonths.map(s => s.month).join(', ') || 'year-round'}. Plan for lower income during ${offMonths.map(s => s.month).join(', ') || 'slower periods'}.`,
       historical_context: input.five_year_summary 
         ? `The market has shown ${input.five_year_summary.revenue.trend} revenue trends over the past ${input.five_year_summary.years_of_data} years with ${input.five_year_summary.revenue.percent_change > 0 ? '+' : ''}${input.five_year_summary.revenue.percent_change.toFixed(1)}% change.`

@@ -504,10 +504,28 @@ interface AnalysisResult {
   };
   
   airdna_feasibility?: {
-    projections: { revenue: number; occupancy: number; adr: number };
-    risk_assessment: { level: string; factors: string[] };
+    projections: {
+      annual_revenue: number;
+      annual_profit: number;
+      monthly_profit: number;
+      roi_percentage: number;
+      break_even_occupancy: number;
+    };
+    risk_assessment: {
+      overall_risk: 'low' | 'medium' | 'high';
+      seasonality_risk: 'low' | 'medium' | 'high';
+      regulation_risk: 'low' | 'medium' | 'high';
+      market_saturation: 'low' | 'medium' | 'high';
+      factors: string[];
+    };
     recommendation: string;
-    comparison: { vs_market_avg: number; vs_top_performers: number };
+    comparison: {
+      our_annual_profit: number;
+      airdna_annual_profit: number;
+      profit_difference: number;
+      profit_difference_pct: number;
+      assessment_match: boolean;
+    };
   };
   
   // Tier 2: Submarket Data
@@ -806,7 +824,7 @@ export default function PropertyAnalyzer() {
           },
           
           market: {
-            name: (data.property_estimate?.property as any)?.market_name || 'Local Market',
+            name: data.submarket_details?.parent_market_name || data.submarket_exploration?.market_name || (data.property_estimate?.property as any)?.market_name || 'Local Market',
             occupancy: data.property_estimate?.estimates?.occupancy_rate || 65,
             adr: data.property_estimate?.estimates?.average_daily_rate || 150,
             active_listings: data.competitors?.length || 0
@@ -966,7 +984,8 @@ export default function PropertyAnalyzer() {
   };
   
   // Helper functions
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined | null) => {
+    if (value === undefined || value === null || isNaN(value)) return '$0';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -1646,7 +1665,7 @@ export default function PropertyAnalyzer() {
                   <div>
                     <p className="font-medium text-[#0F172A]">{result.market.name}</p>
                     <p className="text-sm text-[#0F172A]/60">
-                      This market has {result.market.active_listings} direct competitors (nearby {result.bedrooms || 'similar'}-bedroom properties) that guests will compare when booking.
+                      This market has {result.same_bedroom_radius_listings?.total_found || result.qualifying_competitors?.total_same_bedroom || result.market.active_listings} same-bedroom competitors that guests will compare when booking.
                     </p>
                   </div>
                 </div>
@@ -2128,22 +2147,22 @@ export default function PropertyAnalyzer() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.airdna_feasibility.projections.revenue)}</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{formatCurrency(result.airdna_feasibility.projections.annual_revenue)}</p>
                     <p className="text-sm text-[#0F172A]/60">Projected Revenue</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{formatPercent(result.airdna_feasibility.projections.occupancy)}</p>
-                    <p className="text-sm text-[#0F172A]/60">Projected Occupancy</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{safeFixed(result.airdna_feasibility.projections.break_even_occupancy, 0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">Break-Even Occupancy</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className={`text-2xl font-bold ${result.airdna_feasibility?.risk_assessment?.level === 'low' ? 'text-green-600' : result.airdna_feasibility?.risk_assessment?.level === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {(result.airdna_feasibility?.risk_assessment?.level || 'medium').toUpperCase()}
+                    <p className={`text-2xl font-bold ${result.airdna_feasibility?.risk_assessment?.overall_risk === 'low' ? 'text-green-600' : result.airdna_feasibility?.risk_assessment?.overall_risk === 'high' ? 'text-red-600' : 'text-yellow-600'}`}>
+                      {(result.airdna_feasibility?.risk_assessment?.overall_risk || 'medium').toUpperCase()}
                     </p>
                     <p className="text-sm text-[#0F172A]/60">Risk Level</p>
                   </div>
                   <div className="bg-[#FDF8F3] rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-[#0F172A]">{result.airdna_feasibility.comparison.vs_market_avg > 0 ? '+' : ''}{safeFixed(result.airdna_feasibility?.comparison?.vs_market_avg, 0)}%</p>
-                    <p className="text-sm text-[#0F172A]/60">vs Market Avg</p>
+                    <p className="text-2xl font-bold text-[#0F172A]">{result.airdna_feasibility.comparison.profit_difference_pct > 0 ? '+' : ''}{safeFixed(result.airdna_feasibility?.comparison?.profit_difference_pct, 0)}%</p>
+                    <p className="text-sm text-[#0F172A]/60">vs Our Estimate</p>
                   </div>
                 </div>
                 {result.airdna_feasibility.recommendation && (

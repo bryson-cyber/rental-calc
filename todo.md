@@ -301,6 +301,20 @@
   - [x] Streamline navigation - single AI chat interface
 
 
+## Debugging Session - January 4, 2026
+
+### Bugs Fixed:
+- [x] toUpperCase() on undefined values - Added null safety checks
+- [x] toFixed() on undefined values - Created safeFixed() helper function
+- [x] NaN distance display for competitors - Added conditional rendering
+- [x] Markdown not rendering in Executive Summary - Integrated ReactMarkdown with proper wrapper div
+- [x] Market name showing "Local Market" - Now uses submarket_details.parent_market_name or submarket_exploration.market_name
+- [x] Inconsistent competitor counts - Now uses same_bedroom_radius_listings or qualifying_competitors data
+
+### Tests Status:
+- TypeScript compilation: 0 errors
+- Most unit tests passing (some slow API tests timeout)
+
 ## Homepage Rebuild - AI-First Experience
 - [x] Redesign homepage with single smart input bar
   - [x] One input field: "Enter an address, Zillow link, zip code, or city"
@@ -1800,3 +1814,21 @@
 - [x] Implement Tier 3: Competitor Intelligence (8 items)
 - [x] Implement Tier 4: Competitor Card Fields (6 items)
 - [x] Complete data loop - all 31 data points now displayed to users
+
+
+## Debugging Session - January 4, 2026
+
+### Bugs Fixed:
+- [x] toUpperCase() on undefined values - Added null safety checks
+- [x] toFixed() on undefined values - Created safeFixed() helper function
+- [x] NaN distance display for competitors - Added conditional rendering
+- [x] Markdown not rendering in Executive Summary - Integrated ReactMarkdown with proper wrapper div
+- [x] Market name showing "Local Market" - Now uses submarket_details.parent_market_name or submarket_exploration.market_name
+- [x] Inconsistent competitor counts - Now uses same_bedroom_radius_listings or qualifying_competitors data
+- [x] formatCurrency showing $NaN - Added null/undefined/NaN checks
+- [x] 7472% occupancy in Competitive Landscape - Fixed occupancy formatting (AirDNA returns 0-100, not 0-1)
+- [x] AirDNA Feasibility type mismatch - Fixed frontend type to match backend structure (annual_revenue, overall_risk, profit_difference_pct)
+
+### Tests Status:
+- TypeScript compilation: 0 errors
+- Most unit tests passing (some slow API tests timeout)
