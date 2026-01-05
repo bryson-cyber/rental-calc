@@ -2042,3 +2042,9 @@
 - [x] Show ratings and reviews
 - [x] Show property images from API
 - [x] Add market insight summary with average revenue and occupancy
+
+
+## Bug Fixes - Competitor Cards (January 4, 2026) - COMPLETED
+- [x] Fix occupancy display showing 1% instead of actual percentage (now shows 25%, 81%, 98%, etc.)
+- [x] Make competitor cards clickable with Airbnb listing links (cards are now anchor tags)
+- [x] Add external link icon to indicate clickable cards (shows on hover with Airbnb red color)

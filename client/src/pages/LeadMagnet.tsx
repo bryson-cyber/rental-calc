@@ -28,7 +28,8 @@ import {
   Bath,
   Star,
   Users,
-  Home
+  Home,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,8 @@ interface Comparable {
   rating: number;
   reviews: number;
   imageUrl?: string;
+  airbnbUrl?: string;
+  airbnbListingId?: string;
 }
 
 interface AnalysisResult {
@@ -164,19 +167,33 @@ export default function LeadMagnet() {
         }
         
         // Extract comparables from API response
-        const comparables: Comparable[] = (data.comps || []).slice(0, 6).map((comp: any, index: number) => ({
-          id: comp.id || `comp-${index}`,
-          title: comp.title || `${comp.bedrooms || 2}BR Rental`,
-          bedrooms: comp.bedrooms || 2,
-          bathrooms: comp.bathrooms || 1,
-          accommodates: comp.accommodates || 4,
-          revenue: comp.revenue || comp.annual_revenue || 0,
-          adr: comp.adr || comp.average_daily_rate || 0,
-          occupancy: comp.occupancy || comp.occupancy_rate || 0,
-          rating: comp.rating || 4.5,
-          reviews: comp.reviews || comp.review_count || 0,
-          imageUrl: comp.image_url || comp.thumbnail_url || null
-        }));
+        const comparables: Comparable[] = (data.comps || []).slice(0, 6).map((comp: any, index: number) => {
+          // Fix occupancy - API returns as decimal (0.65) or percentage (65)
+          let occupancy = comp.occupancy || comp.occupancy_rate || 0;
+          if (occupancy > 0 && occupancy <= 1) {
+            occupancy = occupancy * 100; // Convert decimal to percentage
+          }
+          
+          // Build Airbnb URL from listing ID if available
+          const airbnbListingId = comp.airbnb_listing_id || comp.listing_id || null;
+          const airbnbUrl = comp.airbnb_url || (airbnbListingId ? `https://www.airbnb.com/rooms/${airbnbListingId}` : null);
+          
+          return {
+            id: comp.id || `comp-${index}`,
+            title: comp.title || `${comp.bedrooms || 2}BR Rental`,
+            bedrooms: comp.bedrooms || 2,
+            bathrooms: comp.bathrooms || 1,
+            accommodates: comp.accommodates || (comp.bedrooms || 2) * 2,
+            revenue: comp.revenue || comp.annual_revenue || 0,
+            adr: comp.adr || comp.average_daily_rate || 0,
+            occupancy: occupancy,
+            rating: comp.rating || 4.5,
+            reviews: comp.reviews || comp.review_count || 0,
+            imageUrl: comp.image_url || comp.thumbnail_url || null,
+            airbnbUrl: airbnbUrl,
+            airbnbListingId: airbnbListingId
+          };
+        });
         
         setResult({
           revenue: annualRevenue,
@@ -517,10 +534,18 @@ export default function LeadMagnet() {
                   {result.comparables.map((comp, index) => {
                     const profitability = getCompProfitability(comp, parseFloat(monthlyRent) || 2000);
                     
+                    const CardWrapper = comp.airbnbUrl ? 'a' : 'div';
+                    const cardProps = comp.airbnbUrl ? {
+                      href: comp.airbnbUrl,
+                      target: '_blank',
+                      rel: 'noopener noreferrer'
+                    } : {};
+                    
                     return (
-                      <div 
-                        key={comp.id} 
-                        className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                      <CardWrapper 
+                        key={comp.id}
+                        {...cardProps}
+                        className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all block ${comp.airbnbUrl ? 'cursor-pointer hover:border-[#FF5A5F] group' : ''}`}
                       >
                         {/* Property Image or Placeholder */}
                         <div className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 relative">
@@ -531,21 +556,35 @@ export default function LeadMagnet() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Home className="w-12 h-12 text-gray-400" />
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF5A5F]/10 to-[#FF5A5F]/5">
+                              <div className="text-center">
+                                <Home className="w-8 h-8 text-[#FF5A5F]/40 mx-auto mb-1" />
+                                <span className="text-xs text-gray-400">View on Airbnb</span>
+                              </div>
                             </div>
                           )}
                           {/* Profitability Badge */}
                           <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${profitability.bg} ${profitability.color}`}>
                             {profitability.label}
                           </div>
+                          {/* External Link Indicator */}
+                          {comp.airbnbUrl && (
+                            <div className="absolute top-2 left-2 p-1.5 rounded-full bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ExternalLink className="w-3 h-3 text-[#FF5A5F]" />
+                            </div>
+                          )}
                         </div>
                         
                         {/* Property Details */}
                         <div className="p-4">
-                          <h4 className="font-semibold text-gray-900 mb-2 truncate">
-                            {comp.title || `${comp.bedrooms}BR Rental #${index + 1}`}
-                          </h4>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="font-semibold text-gray-900 truncate flex-1 group-hover:text-[#FF5A5F] transition-colors">
+                              {comp.title || `${comp.bedrooms}BR Rental #${index + 1}`}
+                            </h4>
+                            {comp.airbnbUrl && (
+                              <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-[#FF5A5F] transition-colors" />
+                            )}
+                          </div>
                           
                           {/* Property Specs */}
                           <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
@@ -590,7 +629,7 @@ export default function LeadMagnet() {
                             </div>
                           )}
                         </div>
-                      </div>
+                      </CardWrapper>
                     );
                   })}
                 </div>
