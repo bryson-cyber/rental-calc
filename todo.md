@@ -88,3 +88,16 @@ From AirDNA Rentalizer endpoint:
   - Changed "ADR" to "price per night"
   - Shortened all sentences
   - Made all text easy to read
+
+
+## New Features (Jan 4, 2026 - Part 5)
+- [x] Add Compare Multiple Properties feature to main UI
+  - [x] Add tabs/toggle to switch between Single Property, Compare Properties, and Market Explorer
+  - [x] Build bulk address input (up to 25 addresses)
+  - [x] Display comparison results in a sortable table
+  - [x] Highlight best property by revenue potential
+- [x] Add Market Explorer feature to main UI
+  - [x] Add area/city search input
+  - [x] Display all active listings in the area
+  - [x] Add filters (bedrooms, price range, rating)
+  - [x] Show listing cards with key metrics
