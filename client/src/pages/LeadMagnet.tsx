@@ -645,11 +645,11 @@ export default function LeadMagnet() {
           </div>
           
           {/* Tab Navigation */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex bg-slate-800/50 border border-slate-700/50 rounded-xl p-1">
+          <div className="flex justify-center mb-8 px-2">
+            <div className="inline-flex bg-slate-800/50 border border-slate-700/50 rounded-xl p-1 overflow-x-auto max-w-full">
               <button
                 onClick={() => { setActiveTab('single'); setResult(null); }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'single'
                     ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
@@ -660,7 +660,7 @@ export default function LeadMagnet() {
               </button>
               <button
                 onClick={() => { setActiveTab('compare'); setBulkResults(null); }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'compare'
                     ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
@@ -671,7 +671,7 @@ export default function LeadMagnet() {
               </button>
               <button
                 onClick={() => { setActiveTab('explore'); setAreaListings(null); }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                   activeTab === 'explore'
                     ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
@@ -1089,84 +1089,84 @@ export default function LeadMagnet() {
             </div>
             
             {/* Cash Flow Breakdown */}
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-8">
-              <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-6 mb-8">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Airbnb Money</div>
-                  <div className="text-xl font-bold text-white">{formatCurrency(result.revenue)}</div>
-                  <div className="text-xs text-slate-500">{formatCurrency(Math.round(result.revenue / 12))}/month</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Airbnb Money</div>
+                  <div className="text-base sm:text-xl font-bold text-white">{formatCurrency(result.revenue)}</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500">{formatCurrency(Math.round(result.revenue / 12))}/mo</div>
                 </div>
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Rent You Pay</div>
-                  <div className="text-xl font-bold text-red-400">-{formatCurrency(result.rent)}</div>
-                  <div className="text-xs text-slate-500">-{formatCurrency(Math.round(result.rent / 12))}/month</div>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">Rent You Pay</div>
+                  <div className="text-base sm:text-xl font-bold text-red-400">-{formatCurrency(result.rent)}</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500">-{formatCurrency(Math.round(result.rent / 12))}/mo</div>
                 </div>
                 <div>
-                  <div className="text-sm text-slate-400 mb-1">Money You Keep</div>
-                  <div className={`text-xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">You Keep</div>
+                  <div className={`text-base sm:text-xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
                     {isProfitable ? '+' : ''}{formatCurrency(result.profit)}
                   </div>
-                  <div className="text-xs text-slate-500">
-                    {isProfitable ? '+' : ''}{formatCurrency(Math.round(result.profit / 12))}/month
+                  <div className="text-[10px] sm:text-xs text-slate-500">
+                    {isProfitable ? '+' : ''}{formatCurrency(Math.round(result.profit / 12))}/mo
                   </div>
                 </div>
               </div>
             </div>
             
             {/* Key Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Price Per Night</div>
-                <div className="text-2xl font-bold text-white">{formatCurrency(result.adr)}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-8">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Price Per Night</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">{formatCurrency(result.adr)}</div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Nights Booked</div>
-                <div className="text-2xl font-bold text-white">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Nights Booked</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">
                   {result.occupancy > 1 ? Math.round(result.occupancy) : Math.round(result.occupancy * 100)}%
                 </div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Money vs Rent</div>
-                <div className="text-2xl font-bold text-[#D4A84B]">{profitRatio.toFixed(1)}x</div>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Money vs Rent</div>
+                <div className="text-lg sm:text-2xl font-bold text-[#D4A84B]">{profitRatio.toFixed(1)}x</div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Nearby Airbnbs</div>
-                <div className="text-2xl font-bold text-white">{result.comparables.length}</div>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Nearby Airbnbs</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">{result.comparables.length}</div>
               </div>
             </div>
             
             {/* Monthly Forecast */}
             {result.monthlyForecast.length > 0 && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <BarChart3 className="w-5 h-5 text-[#4ECDC4]" />
-                  <h3 className="text-lg font-semibold text-white">Money Each Month</h3>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 sm:p-6 mb-8">
+                <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                  <BarChart3 className="w-4 sm:w-5 h-4 sm:h-5 text-[#4ECDC4]" />
+                  <h3 className="text-base sm:text-lg font-semibold text-white">Money Each Month</h3>
                 </div>
-                <p className="text-sm text-slate-400 mb-4">See which months make the most</p>
+                <p className="text-xs sm:text-sm text-slate-400 mb-4">See which months make the most</p>
                 
-                <div className="flex items-end justify-between gap-2 h-48">
+                <div className="flex items-end justify-between gap-1 sm:gap-2 h-32 sm:h-48">
                   {result.monthlyForecast.map((month, index) => {
                     const heightPercent = maxMonthlyRevenue > 0 ? (month.revenue / maxMonthlyRevenue) * 100 : 0;
                     const isHighMonth = month.revenue >= maxMonthlyRevenue * 0.8;
                     
                     return (
                       <div key={index} className="flex-1 flex flex-col items-center">
-                        <div className="text-xs text-slate-400 mb-1">{formatCurrency(month.revenue)}</div>
+                        <div className="text-[8px] sm:text-xs text-slate-400 mb-1 hidden sm:block">{formatCurrency(month.revenue)}</div>
                         <div 
                           className={`w-full rounded-t-lg transition-all ${
                             isHighMonth ? 'bg-emerald-500' : 'bg-slate-600'
                           }`}
                           style={{ height: `${Math.max(heightPercent, 5)}%` }}
                         />
-                        <div className="text-xs text-slate-500 mt-2">{getMonthAbbr(month.month)}</div>
+                        <div className="text-[8px] sm:text-xs text-slate-500 mt-1 sm:mt-2">{getMonthAbbr(month.month)}</div>
                       </div>
                     );
                   })}
                 </div>
                 
-                <div className="flex items-center gap-2 mt-4 text-sm text-slate-400">
-                  <Calendar className="w-4 h-4 text-emerald-400" />
-                  <span><span className="text-emerald-400 font-medium">Best months</span> are green — start your Airbnb before these!</span>
+                <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm text-slate-400">
+                  <Calendar className="w-3 sm:w-4 h-3 sm:h-4 text-emerald-400" />
+                  <span><span className="text-emerald-400 font-medium">Best months</span> are green</span>
                 </div>
               </div>
             )}
@@ -1369,17 +1369,17 @@ export default function LeadMagnet() {
       {activeTab === 'compare' && sortedBulkResults && (
         <section ref={resultsRef} className="py-12 md:py-16">
           <div className="container max-w-5xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-white">Your Home Comparison</h2>
-                <p className="text-slate-400">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Your Home Comparison</h2>
+                <p className="text-sm sm:text-base text-slate-400">
                   {sortedBulkResults.filter(r => r.success).length} homes checked • 
                   Best one is at the top
                 </p>
               </div>
               
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">Sort by:</span>
+                <span className="text-xs sm:text-sm text-slate-400">Sort by:</span>
                 <select
                   value={bulkSortBy}
                   onChange={(e) => setBulkSortBy(e.target.value as any)}
@@ -1424,9 +1424,9 @@ export default function LeadMagnet() {
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 items-center">
                         {/* Rank & Address */}
-                        <div className="md:col-span-2 flex items-center gap-3">
+                        <div className="col-span-2 sm:col-span-3 md:col-span-2 flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                             isWinner 
                               ? 'bg-emerald-500 text-white' 
@@ -1521,38 +1521,36 @@ export default function LeadMagnet() {
       {activeTab === 'explore' && areaListings && (
         <section ref={resultsRef} className="py-12 md:py-16">
           <div className="container max-w-5xl mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-white">Airbnbs in This Area</h2>
-                <p className="text-slate-400">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Airbnbs in This Area</h2>
+                <p className="text-sm sm:text-base text-slate-400">
                   Found {totalListings} Airbnbs • Showing top {areaListings.length}
                 </p>
               </div>
-              
-
             </div>
             
             {/* Stats Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Total Airbnbs</div>
-                <div className="text-2xl font-bold text-white">{totalListings}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Total Airbnbs</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">{totalListings}</div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Avg Money Made</div>
-                <div className="text-2xl font-bold text-emerald-400">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Avg Money Made</div>
+                <div className="text-lg sm:text-2xl font-bold text-emerald-400">
                   {formatCurrency(Math.round(areaListings.reduce((sum, l) => sum + l.annual_revenue, 0) / areaListings.length))}
                 </div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Avg Per Night</div>
-                <div className="text-2xl font-bold text-white">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Avg Per Night</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">
                   {formatCurrency(Math.round(areaListings.reduce((sum, l) => sum + l.adr, 0) / areaListings.length))}
                 </div>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Avg Booked</div>
-                <div className="text-2xl font-bold text-white">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 text-center">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">Avg Booked</div>
+                <div className="text-lg sm:text-2xl font-bold text-white">
                   {Math.round(areaListings.reduce((sum, l) => sum + l.occupancy, 0) / areaListings.length)}%
                 </div>
               </div>
@@ -1560,7 +1558,7 @@ export default function LeadMagnet() {
             
             {/* Listings Grid */}
             {areaListings.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {areaListings.map((listing) => (
                   <a
                     key={listing.id}
