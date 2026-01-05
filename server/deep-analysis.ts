@@ -148,17 +148,20 @@ export async function getDeepAnalysis(reportId: number): Promise<{
   result: DeepAnalysisResult | null;
   error: string | null;
   processingTimeMs: number | null;
+  currentStep: string | null;
+  completedSteps: string[];
 }> {
   const db = await getDb();
-  if (!db) return { status: 'error', result: null, error: 'Database not available', processingTimeMs: null };
+  if (!db) return { status: 'error', result: null, error: 'Database not available', processingTimeMs: null, currentStep: null, completedSteps: [] };
   
   const analysis = await db.select().from(deepAnalysis).where(eq(deepAnalysis.reportId, reportId)).limit(1);
   
   if (!analysis.length) {
-    return { status: 'not_started', result: null, error: null, processingTimeMs: null };
+    return { status: 'not_started', result: null, error: null, processingTimeMs: null, currentStep: null, completedSteps: [] };
   }
 
   const record = analysis[0];
+  const completedSteps = record.completedSteps ? (typeof record.completedSteps === 'string' ? JSON.parse(record.completedSteps) : record.completedSteps) : [];
   
   if (record.status === 'completed') {
     return {
@@ -175,6 +178,8 @@ export async function getDeepAnalysis(reportId: number): Promise<{
       },
       error: null,
       processingTimeMs: record.processingTimeMs,
+      currentStep: null,
+      completedSteps: ['executiveSummary', 'marketScenarios', 'historicalContext', 'riskAssessment', 'pricingData', 'marketDeepDive'],
     };
   }
 
@@ -183,6 +188,8 @@ export async function getDeepAnalysis(reportId: number): Promise<{
     result: null,
     error: record.errorMessage,
     processingTimeMs: record.processingTimeMs,
+    currentStep: record.currentStep,
+    completedSteps,
   };
 }
 
@@ -247,49 +254,61 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
     };
 
     console.log('[DeepAnalysis] Extracted data:', JSON.stringify(extractedData, null, 2));
-    console.log('[DeepAnalysis] fullData keys:', fullData ? Object.keys(fullData) : 'null');
-    console.log('[DeepAnalysis] fullData.profitability:', fullData?.profitability ? JSON.stringify(fullData.profitability).slice(0, 500) : 'null');
-    console.log('[DeepAnalysis] fullData.property_estimate:', fullData?.property_estimate ? JSON.stringify(fullData.property_estimate).slice(0, 500) : 'null');
 
-    // Run all AI analyses in parallel - use extractedData which has the correct values
-    const [
-      historicalContext,
-      investmentThesis,
-      riskNarrative,
-      pricingStrategy,
-      executiveSummaryEnhanced,
-      marketNarrative,
-      actionPlan,
-    ] = await Promise.all([
-      generateHistoricalContext(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Historical context failed:', err);
-        return null;
-      }),
-      generateInvestmentThesis(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Investment thesis failed:', err);
-        return null;
-      }),
-      generateRiskNarrative(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Risk narrative failed:', err);
-        return null;
-      }),
-      generatePricingStrategy(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Pricing strategy failed:', err);
-        return null;
-      }),
-      generateEnhancedExecutiveSummary(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Enhanced summary failed:', err);
-        return null;
-      }),
-      generateMarketNarrative(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Market narrative failed:', err);
-        return null;
-      }),
-      generateActionPlan(extractedData, fullData).catch(err => {
-        console.error('[DeepAnalysis] Action plan failed:', err);
-        return null;
-      }),
-    ]);
+    // Helper to update progress
+    const updateProgress = async (step: string, completedSteps: string[]) => {
+      await db.update(deepAnalysis)
+        .set({ currentStep: step, completedSteps: JSON.stringify(completedSteps) })
+        .where(eq(deepAnalysis.id, deepAnalysisId));
+    };
+
+    const completedSteps: string[] = [];
+
+    // Generate sections sequentially with progress tracking
+    await updateProgress('Generating Executive Summary...', completedSteps);
+    const executiveSummaryEnhanced = await generateEnhancedExecutiveSummary(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Enhanced summary failed:', err);
+      return null;
+    });
+    completedSteps.push('executiveSummary');
+
+    await updateProgress('Generating Market Scenarios...', completedSteps);
+    const investmentThesis = await generateInvestmentThesis(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Investment thesis failed:', err);
+      return null;
+    });
+    completedSteps.push('marketScenarios');
+
+    await updateProgress('Analyzing Historical Context...', completedSteps);
+    const historicalContext = await generateHistoricalContext(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Historical context failed:', err);
+      return null;
+    });
+    completedSteps.push('historicalContext');
+
+    await updateProgress('Assessing Risks...', completedSteps);
+    const riskNarrative = await generateRiskNarrative(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Risk narrative failed:', err);
+      return null;
+    });
+    completedSteps.push('riskAssessment');
+
+    await updateProgress('Analyzing Market Pricing...', completedSteps);
+    const pricingStrategy = await generatePricingStrategy(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Pricing strategy failed:', err);
+      return null;
+    });
+    completedSteps.push('pricingData');
+
+    await updateProgress('Generating Market Deep Dive...', completedSteps);
+    const marketNarrative = await generateMarketNarrative(extractedData, fullData).catch(err => {
+      console.error('[DeepAnalysis] Market narrative failed:', err);
+      return null;
+    });
+    completedSteps.push('marketDeepDive');
+
+    // Action plan is removed, but keep variable for compatibility
+    const actionPlan = null;
 
     const processingTimeMs = Date.now() - startTime;
 

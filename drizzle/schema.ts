@@ -235,6 +235,8 @@ export const deepAnalysis = mysqlTable("deep_analysis", {
   
   // Status tracking
   status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  currentStep: varchar("currentStep", { length: 100 }), // Current section being generated
+  completedSteps: json("completedSteps"), // Array of completed step names
   errorMessage: text("errorMessage"),
   
   // AI-generated content

@@ -1986,3 +1986,10 @@
 - [x] Add fallback logic for occupancy when property_estimate.occupancy is null/0
 - [x] Use market-level occupancy from percentiles or market_data as fallback
 - [x] Test with existing report to verify fix
+
+## Feature: Loading Progress Indicators for Deep Analysis (January 4, 2026) - COMPLETED
+- [x] Update backend to track which section is currently being generated
+- [x] Store progress status in database (e.g., "Generating Executive Summary...")
+- [x] Update frontend to poll and display section-specific progress
+- [x] Show checkmarks for completed sections
+- [x] Test the progress indicators end-to-end

@@ -128,13 +128,25 @@ export default function DeepAnalysis() {
   const status = analysisData?.data?.status || 'loading';
   const result = analysisData?.data?.result as DeepAnalysisData | null;
   const processingTimeMs = analysisData?.data?.processingTimeMs;
+  const currentStep = analysisData?.data?.currentStep || null;
+  const completedSteps = analysisData?.data?.completedSteps || [];
 
-  // Calculate progress based on status
+  // Define all steps with their display names
+  const allSteps = [
+    { id: 'executiveSummary', name: 'Executive Summary', icon: FileText },
+    { id: 'marketScenarios', name: 'Market Scenarios', icon: Target },
+    { id: 'historicalContext', name: 'Historical Context', icon: TrendingUp },
+    { id: 'riskAssessment', name: 'Risk Assessment', icon: Shield },
+    { id: 'pricingData', name: 'Market Pricing', icon: DollarSign },
+    { id: 'marketDeepDive', name: 'Market Deep Dive', icon: BarChart3 },
+  ];
+
+  // Calculate progress based on completed steps
   const getProgress = () => {
     if (status === 'completed') return 100;
-    if (status === 'processing') return 60;
-    if (status === 'pending') return 20;
-    return 0;
+    if (status === 'pending') return 5;
+    // Calculate based on completed steps
+    return Math.round((completedSteps.length / allSteps.length) * 100);
   };
 
   const getSeverityColor = (severity: string) => {
@@ -213,50 +225,64 @@ export default function DeepAnalysis() {
                   <Sparkles className="w-6 h-6 text-yellow-500 absolute -top-1 -right-1 animate-bounce" />
                 </div>
                 <h2 className="text-2xl font-bold mt-4 mb-2">AI Analysis in Progress</h2>
-                <p className="text-muted-foreground">
-                  Our AI is generating deep insights about your property...
-                </p>
+                {currentStep ? (
+                  <p className="text-primary font-medium animate-pulse">
+                    {currentStep}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Initializing AI analysis...
+                  </p>
+                )}
               </div>
 
-              <Progress value={getProgress()} className="h-2 mb-4" />
+              <Progress value={getProgress()} className="h-2 mb-6" />
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  {status === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  )}
-                  <span>Historical Context</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {status === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  )}
-                  <span>Investment Thesis</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {status === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  )}
-                  <span>Risk Assessment</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {status === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  )}
-                  <span>Pricing Strategy</span>
-                </div>
+              <div className="space-y-3">
+                {allSteps.map((step) => {
+                  const isCompleted = completedSteps.includes(step.id);
+                  const isActive = currentStep?.toLowerCase().includes(step.name.toLowerCase().split(' ')[0]);
+                  const StepIcon = step.icon;
+                  
+                  return (
+                    <div 
+                      key={step.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                        isCompleted 
+                          ? 'bg-green-500/10 border border-green-500/20' 
+                          : isActive 
+                            ? 'bg-primary/10 border border-primary/20' 
+                            : 'bg-muted/50 border border-transparent'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : isActive ? (
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                      )}
+                      <StepIcon className={`w-4 h-4 flex-shrink-0 ${
+                        isCompleted ? 'text-green-500' : isActive ? 'text-primary' : 'text-muted-foreground'
+                      }`} />
+                      <span className={`text-sm font-medium ${
+                        isCompleted ? 'text-green-600' : isActive ? 'text-primary' : 'text-muted-foreground'
+                      }`}>
+                        {step.name}
+                      </span>
+                      {isCompleted && (
+                        <span className="ml-auto text-xs text-green-500">Complete</span>
+                      )}
+                      {isActive && (
+                        <span className="ml-auto text-xs text-primary animate-pulse">Generating...</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <p className="text-center text-xs text-muted-foreground mt-6">
-                This typically takes 2-3 minutes. You can leave this page and come back.
+                This typically takes 1-2 minutes. You can leave this page and come back.
               </p>
             </CardContent>
           </Card>

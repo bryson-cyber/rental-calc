@@ -43,6 +43,13 @@
       "when": 1767559639497,
       "tag": "0005_giant_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1767571711326,
+      "tag": "0006_pretty_patriot",
+      "breakpoints": true
     }
   ]
 }
