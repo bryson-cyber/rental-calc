@@ -1981,3 +1981,8 @@
 - [x] Ensure all fields (revenue, profit, occupancy, etc.) are correctly read from database
 - [x] Test end-to-end flow with correct data display
   - Now correctly shows: $88,744 revenue, 3.70x ratio, $58,984 profit
+
+## Bug Fix: 0% Occupancy in Deep Analysis (January 4, 2026) - COMPLETED
+- [x] Add fallback logic for occupancy when property_estimate.occupancy is null/0
+- [x] Use market-level occupancy from percentiles or market_data as fallback
+- [x] Test with existing report to verify fix

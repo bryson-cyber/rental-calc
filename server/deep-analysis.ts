@@ -230,7 +230,14 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
       annualProfitRealistic: reportData.annualProfitRealistic || profitability?.scenarios?.realistic?.estimated_profit || 0,
       annualProfitConservative: reportData.annualProfitConservative || profitability?.scenarios?.conservative?.estimated_profit || 0,
       annualProfitOptimistic: reportData.annualProfitOptimistic || profitability?.scenarios?.optimistic?.estimated_profit || 0,
-      occupancyRate: reportData.occupancyRate || propertyEstimate?.occupancy || 0,
+      // Occupancy: try property_estimate first, then market_metrics, then historical_context, then same_bedroom_competitors
+      occupancyRate: reportData.occupancyRate || 
+        propertyEstimate?.occupancy || 
+        fullData?.submarket_exploration?.market_metrics?.occupancy ||
+        fullData?.historical_context?.occupancy?.current_year_avg ||
+        fullData?.same_bedroom_competitors?.avg_occupancy ||
+        fullData?.market_overview?.avg_occupancy ||
+        57, // Default to national average if all else fails
       averageDailyRate: reportData.averageDailyRate || propertyEstimate?.adr || 0,
       breakEvenOccupancy: reportData.breakEvenOccupancy || 0,
       // Calculate revenue-to-rent ratio
