@@ -1962,10 +1962,11 @@ export async function getComprehensivePropertyReport(
   }
   
   // Step 4: Get same-bedroom comps in radius (apples-to-apples)
+  // Increased from 20 to 30 for more comprehensive analysis
   const sameBedroomComps = await exploreListingsInRadius(address, 3000, {
     bedrooms: propertyBedrooms,
     minRevenue: 10000, // Filter out very low performers
-  }, 20);
+  }, 30);
   
   // Step 5: Get bedroom performance data from comps in radius
   const bedroomPerformance: Array<{

@@ -1,8 +1,8 @@
-/*
- * DESIGN: Luxe Real Estate - Premium Property Investment Aesthetic
- * - Deep navy (#0F172A) + warm gold (#C9A962) palette
+/**
+ * DESIGN: Coach Inayah Brand - Premium Property Investment Aesthetic
+ * - Gold/Mustard (#D4A84B) + Teal (#4ECDC4) + Blush (#FDF5F5) palette
  * - Playfair Display serif headlines + DM Sans body
- * - Warm off-white backgrounds with subtle texture
+ * - Warm blush backgrounds with subtle texture
  * - Sophisticated animations with 300-400ms transitions
  */
 
@@ -510,7 +510,7 @@ export default function RentalEstimator() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: 'url(/images/hero-property.jpg)' }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1e293b]/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A1A]/90 via-[#1A1A1A]/80 to-[#2D2D2D]/70" />
         </div>
         
         {/* Content */}
@@ -523,8 +523,8 @@ export default function RentalEstimator() {
           >
             {/* Header */}
             <motion.div className="text-center mb-10" variants={itemVariants}>
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-[#C9A962]/20 rounded-xl mb-6 backdrop-blur-sm border border-[#C9A962]/30">
-                <Home className="w-8 h-8 text-[#C9A962]" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-[#D4A84B]/20 rounded-xl mb-6 backdrop-blur-sm border border-[#D4A84B]/30">
+                <Home className="w-8 h-8 text-[#D4A84B]" />
               </div>
               <h1 className="text-4xl md:text-5xl font-serif font-semibold text-white mb-4 tracking-tight">
                 Rental Revenue Calculator
@@ -547,7 +547,7 @@ export default function RentalEstimator() {
                   onClick={() => setInputType('address')}
                   className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 font-sans text-sm ${
                     inputType === 'address'
-                      ? 'bg-[#0F172A] text-white'
+                      ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white'
                       : 'bg-[#0F172A]/5 text-[#0F172A]/60 hover:bg-[#0F172A]/10'
                   }`}
                 >
@@ -558,7 +558,7 @@ export default function RentalEstimator() {
                   onClick={() => setInputType('zillow')}
                   className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 font-sans text-sm ${
                     inputType === 'zillow'
-                      ? 'bg-[#0F172A] text-white'
+                      ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white'
                       : 'bg-[#0F172A]/5 text-[#0F172A]/60 hover:bg-[#0F172A]/10'
                   }`}
                 >
@@ -586,7 +586,7 @@ export default function RentalEstimator() {
                       value={zillowUrl}
                       onChange={(e) => setZillowUrl(e.target.value)}
                       placeholder="https://www.zillow.com/homedetails/..."
-                      className="flex-1 px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-base focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                      className="flex-1 px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-base focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white"
                     />
                     <button
                       type="button"
@@ -612,7 +612,7 @@ export default function RentalEstimator() {
                   onChange={(value) => setFormData({ ...formData, address: value })}
                   onSelect={(address) => setFormData({ ...formData, address })}
                   placeholder="Enter your property address..."
-                  inputClassName="border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                  inputClassName="border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white"
                 />
               </div>
               
@@ -628,7 +628,7 @@ export default function RentalEstimator() {
                     value={formData.monthlyRent || ''}
                     onChange={(e) => setFormData({ ...formData, monthlyRent: parseInt(e.target.value) || 0 })}
                     placeholder="e.g., 2500"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white"
                   />
                 </div>
                 <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
@@ -647,7 +647,7 @@ export default function RentalEstimator() {
                     <select
                       value={formData.bedrooms}
                       onChange={(e) => updateBedrooms(parseInt(e.target.value))}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
+                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
                         <option key={n} value={n}>{n} BR</option>
@@ -664,7 +664,7 @@ export default function RentalEstimator() {
                     <select
                       value={formData.bathrooms}
                       onChange={(e) => setFormData({ ...formData, bathrooms: parseFloat(e.target.value) })}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
+                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
                     >
                       {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
                         <option key={n} value={n}>{n} BA</option>
@@ -681,7 +681,7 @@ export default function RentalEstimator() {
                     <select
                       value={formData.accommodates}
                       onChange={(e) => setFormData({ ...formData, accommodates: parseInt(e.target.value) })}
-                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
+                      className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white appearance-none cursor-pointer"
                     >
                       {[2, 4, 6, 8, 10, 12, 14, 16].map(n => (
                         <option key={n} value={n}>{n} Guests</option>
@@ -694,7 +694,7 @@ export default function RentalEstimator() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-[#0F172A] text-white py-4 rounded-xl font-semibold hover:bg-[#1e293b] transition-all duration-300 flex items-center justify-center gap-2 font-sans shadow-lg hover:shadow-xl"
+                className="w-full bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-all duration-300 flex items-center justify-center gap-2 font-sans shadow-lg hover:shadow-xl"
               >
                 <Search className="w-5 h-5" />
                 Get Free Estimate
@@ -703,11 +703,11 @@ export default function RentalEstimator() {
               {/* Trust Indicators */}
               <div className="mt-6 flex items-center justify-center gap-4 text-sm text-[#0F172A]/50 font-sans">
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#C9A962] rounded-full" />
-                  Powered by Coach Inayah market data
+                  <span className="w-1.5 h-1.5 bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] rounded-full" />
+                  Powered by Coach Inayah | Data from Airbnb & Vrbo
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#C9A962] rounded-full" />
+                  <span className="w-1.5 h-1.5 bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] rounded-full" />
                   Trusted by 100,000+ hosts
                 </span>
               </div>
@@ -720,7 +720,7 @@ export default function RentalEstimator() {
                 <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6">
                   <a 
                     href="/market"
-                    className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
+                    className="inline-flex items-center gap-2 text-[#D4A84B] hover:text-[#b89a52] font-medium text-sm transition-colors"
                   >
                     <Building className="w-4 h-4" />
                     Explore Markets
@@ -729,7 +729,7 @@ export default function RentalEstimator() {
                   <span className="hidden sm:inline text-[#0F172A]/30">|</span>
                   <a 
                     href="/compare-properties"
-                    className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#b89a52] font-medium text-sm transition-colors"
+                    className="inline-flex items-center gap-2 text-[#D4A84B] hover:text-[#b89a52] font-medium text-sm transition-colors"
                   >
                     <BarChart3 className="w-4 h-4" />
                     Compare Properties
@@ -741,33 +741,33 @@ export default function RentalEstimator() {
                 <div className="border-t border-[#0F172A]/10 pt-6">
                   <p className="text-xs text-[#0F172A]/50 uppercase tracking-wider mb-4 text-center font-sans">Advanced Tools</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <a href="/scorecard" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <Award className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/scorecard" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Award className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Market Scorecard</span>
                     </a>
-                    <a href="/map" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <MapPin className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/map" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <MapPin className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Market Map</span>
                     </a>
-                    <a href="/radius" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <Target className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/radius" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Target className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Radius Search</span>
                     </a>
-                    <a href="/seasonality" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <Calendar className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/seasonality" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Calendar className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Seasonality</span>
                     </a>
-                    <a href="/advisor" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <Lightbulb className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/advisor" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Lightbulb className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">AI Advisor</span>
                     </a>
 
-                    <a href="/top-performers" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <TrendingUp className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/top-performers" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <TrendingUp className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Top Performers</span>
                     </a>
-                    <a href="/saved" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#C9A962]/10 transition-colors group">
-                      <Star className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#C9A962]" />
+                    <a href="/saved" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Star className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Saved Searches</span>
                     </a>
                   </div>
@@ -788,7 +788,7 @@ export default function RentalEstimator() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: 'url(/images/hero-property.jpg)' }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1e293b]/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A1A]/90 via-[#1A1A1A]/80 to-[#2D2D2D]/70" />
         </div>
         
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4 py-12">
@@ -799,8 +799,8 @@ export default function RentalEstimator() {
             variants={containerVariants}
           >
             <motion.div className="text-center mb-8" variants={itemVariants}>
-              <div className="inline-flex items-center justify-center w-14 h-14 bg-[#C9A962]/20 rounded-xl mb-5 backdrop-blur-sm border border-[#C9A962]/30">
-                <TrendingUp className="w-7 h-7 text-[#C9A962]" />
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-[#D4A84B]/20 rounded-xl mb-5 backdrop-blur-sm border border-[#D4A84B]/30">
+                <TrendingUp className="w-7 h-7 text-[#D4A84B]" />
               </div>
               <h2 className="text-3xl font-serif font-semibold text-white mb-3">
                 Your Estimate is Ready
@@ -816,7 +816,7 @@ export default function RentalEstimator() {
               variants={itemVariants}
             >
               <div className="flex items-center gap-3 text-white">
-                <MapPin className="w-4 h-4 text-[#C9A962]" />
+                <MapPin className="w-4 h-4 text-[#D4A84B]" />
                 <span className="font-sans text-sm truncate">{formData.address}</span>
               </div>
               <div className="flex items-center gap-4 mt-2 text-white/60 text-sm font-sans">
@@ -851,7 +851,7 @@ export default function RentalEstimator() {
                     onChange={(e) => setLeadData({ ...leadData, name: e.target.value })}
                     placeholder="John Smith"
                     required
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
                   />
                 </div>
                 <div>
@@ -864,7 +864,7 @@ export default function RentalEstimator() {
                     onChange={(e) => setLeadData({ ...leadData, email: e.target.value })}
                     placeholder="john@example.com"
                     required
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
                   />
                 </div>
                 <div>
@@ -876,14 +876,14 @@ export default function RentalEstimator() {
                     value={leadData.phone}
                     onChange={(e) => setLeadData({ ...leadData, phone: e.target.value })}
                     placeholder="(555) 123-4567"
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
                   />
                 </div>
               </div>
               
               <button
                 type="submit"
-                className="w-full mt-8 bg-[#C9A962] text-[#0F172A] py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-all duration-300 flex items-center justify-center gap-2 font-sans shadow-lg"
+                className="w-full mt-8 bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-all duration-300 flex items-center justify-center gap-2 font-sans shadow-lg"
               >
                 View My Estimate
                 <ChevronRight className="w-5 h-5" />

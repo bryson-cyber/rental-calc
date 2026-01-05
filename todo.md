@@ -31,6 +31,21 @@ From AirDNA Rentalizer endpoint:
 
 ---
 
+## New Requests (Jan 4, 2026)
+- [x] Remove AirDNA branding - attribute data to original sources (Airbnb, Vrbo, etc.)
+- [x] Add "Powered by Coach Inayah" branding
+- [x] Update color scheme to match Coach Inayah brand (gold/pink/teal from masterclass site)
+  - Updated LeadMagnet.tsx with gold (#D4A84B) and teal (#4ECDC4) colors
+  - Updated ChapterPropertyReport.tsx with brand colors
+  - Button gradients now gold-to-teal
+  - Badge and headline use brand colors
+- [x] Request more comps (increased from 20 to 30 same-bedroom comps, chart shows 15)
+- [x] Audit Rentalizer API for additional features to add to report
+  - API supports up to 10 comps (we show 6)
+  - Historical performance data available (12 months)
+  - Property value estimate field exists
+  - Each comp has 12 months historical data
+
 ## Future Ideas (Not Started)
 
 - [ ] Break-even occupancy calculator

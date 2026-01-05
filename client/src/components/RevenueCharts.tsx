@@ -444,7 +444,7 @@ interface CompetitorDistributionChartProps {
 export function CompetitorDistributionChart({ data, threshold, height = 200 }: CompetitorDistributionChartProps) {
   const chartData = useMemo(() => {
     return data
-      .slice(0, 10)
+      .slice(0, 15) // Increased from 10 to show more comps
       .sort((a, b) => b.annual_revenue - a.annual_revenue)
       .map((item, index) => ({
         ...item,
