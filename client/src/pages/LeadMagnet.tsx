@@ -532,14 +532,15 @@ export default function LeadMagnet() {
                 </div>
                 
                 {/* Bar Chart */}
-                <div className="flex items-end justify-between gap-2 h-48 mb-4">
+                <div className="flex items-end justify-between gap-1 md:gap-2 h-56 mb-4">
                   {result.monthlyForecast.map((month, index) => {
                     const heightPercent = maxMonthlyRevenue > 0 ? (month.revenue / maxMonthlyRevenue) * 100 : 0;
                     const isHighMonth = month.revenue >= maxMonthlyRevenue * 0.9;
+                    const barHeight = Math.max(heightPercent * 1.6, 20); // Scale up and set minimum
                     
                     return (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                        <div className="text-xs text-slate-400 font-medium">
+                      <div key={index} className="flex-1 flex flex-col items-center justify-end h-full">
+                        <div className="text-[10px] md:text-xs text-slate-400 font-medium mb-1 whitespace-nowrap">
                           {formatCurrency(month.revenue)}
                         </div>
                         <div 
@@ -548,9 +549,9 @@ export default function LeadMagnet() {
                               ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
                               : 'bg-gradient-to-t from-slate-600 to-slate-500'
                           }`}
-                          style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                          style={{ height: `${barHeight}px`, minHeight: '20px' }}
                         />
-                        <div className="text-xs text-slate-500 font-medium">
+                        <div className="text-[10px] md:text-xs text-slate-500 font-medium mt-1">
                           {getMonthAbbr(month.month)}
                         </div>
                       </div>
@@ -727,14 +728,14 @@ export default function LeadMagnet() {
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
                       <div className="font-medium text-white">Listing Launch</div>
-                      <div className="text-sm text-slate-400">Optimized photos & copy</div>
+                      <div className="text-sm text-slate-400">Professional photos & listing optimization</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
-                      <div className="font-medium text-white">Daily Coaching</div>
-                      <div className="text-sm text-slate-400">12 weeks of hands-on support</div>
+                      <div className="font-medium text-white">Ongoing Coaching</div>
+                      <div className="text-sm text-slate-400">12 months of hands-on support</div>
                     </div>
                   </div>
                 </div>
@@ -751,8 +752,22 @@ export default function LeadMagnet() {
                 </Button>
                 
                 <p className="mt-4 text-sm text-slate-500">
-                  Up to $125K in funding available • Start earning in 12 weeks
+                  Up to $125K in funding available • 12 months of coaching included
                 </p>
+              </div>
+            </div>
+            
+            {/* Data Source Attribution */}
+            <div className="mt-12 pt-8 border-t border-slate-700/50">
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4M12 8h.01" />
+                </svg>
+                <span>
+                  Data powered by <a href="https://www.airdna.co" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">AirDNA</a> — 
+                  aggregated from Airbnb, Vrbo, and other major booking platforms
+                </span>
               </div>
             </div>
             
