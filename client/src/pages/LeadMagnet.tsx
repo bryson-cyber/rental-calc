@@ -45,8 +45,10 @@ import {
   SortAsc,
   SortDesc,
   Filter,
-  X
+  X,
+  Map
 } from 'lucide-react';
+import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -153,6 +155,8 @@ interface AreaListing {
   airbnb_url?: string;
   image_url?: string;
   superhost?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 // ============================================
@@ -221,8 +225,12 @@ export default function LeadMagnet() {
   const [areaListings, setAreaListings] = useState<AreaListing[] | null>(null);
   const [isExploring, setIsExploring] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
+  const [showMapView, setShowMapView] = useState(false);
+  const [exploreCenter, setExploreCenter] = useState<{lat: number; lng: number} | null>(null);
   
   const resultsRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   
   // tRPC mutations
   const analysisMutation = trpc.rental.getEstimate.useMutation();
@@ -487,10 +495,19 @@ export default function LeadMagnet() {
           airbnb_url: l.airbnb_url,
           image_url: l.image_url,
           superhost: l.superhost,
+          latitude: l.latitude,
+          longitude: l.longitude,
         }));
         
         setAreaListings(listings);
         setTotalListings(response.data.total_count || listings.length);
+        
+        // Set map center from response or first listing
+        if (response.data.center?.latitude && response.data.center?.longitude) {
+          setExploreCenter({ lat: response.data.center.latitude, lng: response.data.center.longitude });
+        } else if (listings.length > 0 && listings[0].latitude && listings[0].longitude) {
+          setExploreCenter({ lat: listings[0].latitude, lng: listings[0].longitude });
+        }
         
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1416,6 +1433,32 @@ export default function LeadMagnet() {
                   Found {totalListings} Airbnbs • Showing top {areaListings.length}
                 </p>
               </div>
+              
+              {/* Map/List Toggle */}
+              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg p-1">
+                <button
+                  onClick={() => setShowMapView(false)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    !showMapView
+                      ? 'bg-[#D4A84B] text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                  List
+                </button>
+                <button
+                  onClick={() => setShowMapView(true)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    showMapView
+                      ? 'bg-[#D4A84B] text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Map className="w-4 h-4" />
+                  Map
+                </button>
+              </div>
             </div>
             
             {/* Stats Summary */}
@@ -1444,92 +1487,162 @@ export default function LeadMagnet() {
               </div>
             </div>
             
+            {/* Map View */}
+            {showMapView && exploreCenter && (
+              <div className="mb-8 rounded-xl overflow-hidden border border-slate-700/50">
+                <MapView
+                  className="h-[500px]"
+                  initialCenter={exploreCenter}
+                  initialZoom={13}
+                  onMapReady={(map) => {
+                    mapRef.current = map;
+                    
+                    // Clear existing markers
+                    markersRef.current.forEach(marker => marker.map = null);
+                    markersRef.current = [];
+                    
+                    // Add markers for each listing
+                    areaListings.forEach((listing) => {
+                      if (listing.latitude && listing.longitude) {
+                        // Create custom marker content
+                        const markerContent = document.createElement('div');
+                        markerContent.innerHTML = `
+                          <div style="
+                            background: linear-gradient(135deg, #10b981, #06b6d4);
+                            color: white;
+                            padding: 4px 8px;
+                            border-radius: 8px;
+                            font-size: 12px;
+                            font-weight: bold;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                            cursor: pointer;
+                            white-space: nowrap;
+                          ">
+                            ${formatCurrency(listing.annual_revenue)}/yr
+                          </div>
+                        `;
+                        
+                        const marker = new google.maps.marker.AdvancedMarkerElement({
+                          map,
+                          position: { lat: listing.latitude, lng: listing.longitude },
+                          title: listing.title,
+                          content: markerContent,
+                        });
+                        
+                        // Add click listener to open Airbnb listing
+                        marker.addListener('click', () => {
+                          if (listing.airbnb_url) {
+                            window.open(listing.airbnb_url, '_blank');
+                          }
+                        });
+                        
+                        markersRef.current.push(marker);
+                      }
+                    });
+                  }}
+                />
+              </div>
+            )}
+            
             {/* Listings Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {areaListings.map((listing) => (
-                <a
-                  key={listing.id}
-                  href={listing.airbnb_url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden hover:border-[#D4A84B]/50 transition-all"
-                >
-                  {/* Image */}
-                  <div className="aspect-[4/3] bg-slate-700 relative">
-                    {listing.image_url ? (
-                      <img 
-                        src={listing.image_url} 
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Home className="w-12 h-12 text-slate-500" />
-                      </div>
-                    )}
-                    
-                    {/* Revenue Badge */}
-                    <div className="absolute top-3 left-3 px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg">
-                      {formatCurrency(listing.annual_revenue)}/yr
-                    </div>
-                    
-                    {/* Superhost Badge */}
-                    {listing.superhost && (
-                      <div className="absolute top-3 right-3 px-2 py-1 bg-[#D4A84B] text-white text-xs font-bold rounded-lg">
-                        Superhost
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="p-4">
-                    <h4 className="font-medium text-white text-sm truncate mb-2 group-hover:text-[#D4A84B] transition-colors">
-                      {listing.title}
-                    </h4>
-                    
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mb-3">
-                      <span className="flex items-center gap-1">
-                        <Bed className="w-3 h-3" />
-                        {listing.bedrooms}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Bath className="w-3 h-3" />
-                        {listing.bathrooms}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {listing.accommodates}
-                      </span>
-                      {listing.rating && (
-                        <span className="flex items-center gap-1">
-                          <Star className="w-3 h-3 text-[#D4A84B] fill-[#D4A84B]" />
-                          {listing.rating.toFixed(1)}
+            {!showMapView && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {areaListings.map((listing) => (
+                  <a
+                    key={listing.id}
+                    href={listing.airbnb_url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden hover:border-[#D4A84B]/50 transition-all"
+                  >
+                    {/* Image Placeholder with Gradient */}
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      {/* Gradient Background based on property type */}
+                      <div className={`w-full h-full flex flex-col items-center justify-center ${
+                        listing.property_type?.toLowerCase().includes('house') 
+                          ? 'bg-gradient-to-br from-emerald-600 via-teal-500 to-cyan-400'
+                          : listing.property_type?.toLowerCase().includes('apartment') || listing.property_type?.toLowerCase().includes('condo')
+                            ? 'bg-gradient-to-br from-violet-600 via-purple-500 to-fuchsia-400'
+                            : listing.property_type?.toLowerCase().includes('cabin') || listing.property_type?.toLowerCase().includes('cottage')
+                              ? 'bg-gradient-to-br from-amber-600 via-orange-500 to-yellow-400'
+                              : 'bg-gradient-to-br from-slate-600 via-slate-500 to-slate-400'
+                      }`}>
+                        {/* Property Icon */}
+                        <Home className="w-10 h-10 text-white/80 mb-2" />
+                        <span className="text-white/90 text-xs font-medium px-2 py-1 bg-black/20 rounded-full">
+                          {listing.property_type || 'Property'}
                         </span>
+                        {/* Decorative Pattern */}
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-4 left-4 w-16 h-16 border-2 border-white rounded-full" />
+                          <div className="absolute bottom-4 right-4 w-24 h-24 border-2 border-white rounded-full" />
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-white rounded-full" />
+                        </div>
+                      </div>
+                      
+                      {/* Revenue Badge */}
+                      <div className="absolute top-3 left-3 px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg">
+                        {formatCurrency(listing.annual_revenue)}/yr
+                      </div>
+                      
+                      {/* Superhost Badge */}
+                      {listing.superhost && (
+                        <div className="absolute top-3 right-3 px-2 py-1 bg-[#D4A84B] text-white text-xs font-bold rounded-lg">
+                          Superhost
+                        </div>
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="text-slate-500">Per Night</div>
-                        <div className="text-white font-medium">{formatCurrency(listing.adr)}</div>
+                    {/* Content */}
+                    <div className="p-4">
+                      <h4 className="font-medium text-white text-sm truncate mb-2 group-hover:text-[#D4A84B] transition-colors">
+                        {listing.title}
+                      </h4>
+                      
+                      <div className="flex items-center gap-3 text-xs text-slate-400 mb-3">
+                        <span className="flex items-center gap-1">
+                          <Bed className="w-3 h-3" />
+                          {listing.bedrooms}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Bath className="w-3 h-3" />
+                          {listing.bathrooms}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {listing.accommodates}
+                        </span>
+                        {listing.rating && (
+                          <span className="flex items-center gap-1">
+                            <Star className="w-3 h-3 text-[#D4A84B] fill-[#D4A84B]" />
+                            {listing.rating.toFixed(1)}
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <div className="text-slate-500">Booked</div>
-                        <div className="text-white font-medium">{Math.round(listing.occupancy)}%</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-500">Distance</div>
-                        <div className="text-white font-medium">
-                          {listing.distance_meters < 1000 
-                            ? `${listing.distance_meters}m` 
-                            : `${(listing.distance_meters / 1000).toFixed(1)}km`}
+                      
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-slate-500">Per Night</div>
+                          <div className="text-white font-medium">{formatCurrency(listing.adr)}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Booked</div>
+                          <div className="text-white font-medium">{Math.round(listing.occupancy)}%</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Distance</div>
+                          <div className="text-white font-medium">
+                            {listing.distance_meters < 1000 
+                              ? `${Math.round(listing.distance_meters)}m` 
+                              : `${(listing.distance_meters / 1000).toFixed(1)}km`}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </a>
-              ))}
-            </div>
+                  </a>
+                ))}
+              </div>
+            )}
             
             {/* CTA */}
             <div className="mt-8 p-6 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 rounded-2xl text-center">

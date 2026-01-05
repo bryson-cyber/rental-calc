@@ -112,3 +112,8 @@ From AirDNA Rentalizer endpoint:
 ## Bug Fixes (Jan 4, 2026 - Part 7)
 - [x] Fix Explore Area API - was using wrong response field names (comps vs listings, revenue vs revenue_ltm)
 - [x] Fix page_size limit - API only allows max 25, was sending 50
+
+
+## New Features (Jan 4, 2026 - Part 8)
+- [x] Add map view to Explore Area results showing listing locations
+- [x] Add styled gradient placeholders to Airbnb listing cards in Explore Area (based on property type)
