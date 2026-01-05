@@ -802,7 +802,7 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Search Radius
@@ -835,21 +835,7 @@ export default function LeadMagnet() {
                     </select>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Min Rating
-                    </label>
-                    <select
-                      value={exploreMinRating || ''}
-                      onChange={(e) => setExploreMinRating(e.target.value ? parseFloat(e.target.value) : null)}
-                      className="w-full h-10 px-3 bg-slate-900/50 border border-slate-600 rounded-md text-white text-sm"
-                    >
-                      <option value="">Any</option>
-                      <option value="4">4+ Stars</option>
-                      <option value="4.5">4.5+ Stars</option>
-                      <option value="4.8">4.8+ Stars</option>
-                    </select>
-                  </div>
+
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -861,8 +847,6 @@ export default function LeadMagnet() {
                       className="w-full h-10 px-3 bg-slate-900/50 border border-slate-600 rounded-md text-white text-sm"
                     >
                       <option value="revenue">Most Money</option>
-                      <option value="rating">Best Rated</option>
-                      <option value="occupancy">Most Booked</option>
                       <option value="proximity">Closest</option>
                     </select>
                   </div>

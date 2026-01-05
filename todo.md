@@ -101,3 +101,9 @@ From AirDNA Rentalizer endpoint:
   - [x] Display all active listings in the area
   - [x] Add filters (bedrooms, price range, rating)
   - [x] Show listing cards with key metrics
+
+
+## Changes (Jan 4, 2026 - Part 6)
+- [x] Simplify Explore Area filters
+  - [x] Remove min rating filter options (keep only "Any")
+  - [x] Limit sort by options to "Most Money" and "Closest" only
