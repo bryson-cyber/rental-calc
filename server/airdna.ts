@@ -4624,3 +4624,270 @@ export async function getMarketSupplyTrend(
     return null;
   }
 }
+
+
+// ============================================
+// LISTINGS BY AREA (fetchListingsByArea)
+// ============================================
+
+export interface AreaListing {
+  id: string;
+  title: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  distance_meters: number;
+  airbnb_url?: string;
+  image_url?: string;
+  amenities?: string[];
+  superhost?: boolean;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface ListingsByAreaResponse {
+  listings: AreaListing[];
+  total_count: number;
+  page_size: number;
+  offset: number;
+  center: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  radius_meters: number;
+}
+
+export async function getListingsByArea(
+  address: string,
+  radiusMeters: number = 3000,
+  options?: {
+    bedrooms?: number;
+    bathrooms?: number;
+    minRating?: number;
+    minRevenue?: number;
+    maxRevenue?: number;
+    pageSize?: number;
+    offset?: number;
+    sortBy?: 'proximity' | 'revenue' | 'rating' | 'occupancy';
+    sortDirection?: 'ascending' | 'descending';
+  }
+): Promise<ListingsByAreaResponse | null> {
+  const cacheKey = `listings-area:${JSON.stringify({ address, radiusMeters, ...options })}`;
+  
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
+    return cached as ListingsByAreaResponse;
+  }
+  console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
+
+  try {
+    // Build filters array
+    const filters: Array<{ field: string; type: string; value: any }> = [];
+    
+    if (options?.bedrooms) {
+      filters.push({ field: 'bedrooms', type: 'select', value: options.bedrooms });
+    }
+    if (options?.bathrooms) {
+      filters.push({ field: 'bathrooms', type: 'select', value: options.bathrooms });
+    }
+    if (options?.minRating) {
+      filters.push({ field: 'rating', type: 'range', value: { min: options.minRating } });
+    }
+    if (options?.minRevenue || options?.maxRevenue) {
+      filters.push({ 
+        field: 'revenue', 
+        type: 'range', 
+        value: { 
+          min: options.minRevenue || 0, 
+          max: options.maxRevenue || 999999 
+        } 
+      });
+    }
+
+    const requestBody: Record<string, any> = {
+      address,
+      radius: radiusMeters,
+      currency: 'usd',
+      sort_order: options?.sortBy || 'proximity',
+      sort_direction: options?.sortDirection || 'ascending',
+      pagination: {
+        page_size: options?.pageSize || 25,
+        offset: options?.offset || 0,
+      },
+    };
+
+    if (filters.length > 0) {
+      requestBody.filters = filters;
+    }
+
+    const response = await makeApiRequest<{
+      payload: {
+        comps: Array<{
+          airbnb_listing_id?: string;
+          title?: string;
+          bedrooms?: number;
+          bathrooms?: number;
+          accommodates?: number;
+          property_type?: string;
+          overall_rating?: number;
+          review_count?: number;
+          revenue?: number;
+          adr?: number;
+          occupancy?: number;
+          distance?: number;
+          airbnb_url?: string;
+          image_url?: string;
+          amenities?: string[];
+          superhost?: boolean;
+          latitude?: number;
+          longitude?: number;
+        }>;
+        total_count?: number;
+        center?: {
+          lat?: number;
+          lng?: number;
+        };
+      };
+    }>('/listing/comps/area', 'POST', requestBody);
+
+    const listings: AreaListing[] = (response.payload.comps || []).map(comp => ({
+      id: comp.airbnb_listing_id || '',
+      title: comp.title || 'Untitled Listing',
+      bedrooms: comp.bedrooms || 0,
+      bathrooms: comp.bathrooms || 0,
+      accommodates: comp.accommodates || 0,
+      property_type: comp.property_type || 'Unknown',
+      rating: comp.overall_rating || null,
+      reviews: comp.review_count || 0,
+      annual_revenue: comp.revenue || 0,
+      adr: comp.adr || 0,
+      occupancy: comp.occupancy || 0,
+      distance_meters: comp.distance || 0,
+      airbnb_url: comp.airbnb_url,
+      image_url: comp.image_url,
+      amenities: comp.amenities,
+      superhost: comp.superhost,
+      latitude: comp.latitude,
+      longitude: comp.longitude,
+    }));
+
+    const result: ListingsByAreaResponse = {
+      listings,
+      total_count: response.payload.total_count || listings.length,
+      page_size: options?.pageSize || 25,
+      offset: options?.offset || 0,
+      center: {
+        latitude: response.payload.center?.lat || 0,
+        longitude: response.payload.center?.lng || 0,
+        address,
+      },
+      radius_meters: radiusMeters,
+    };
+
+    apiCache.set(cacheKey, result, 'rentalizer'); // 15 min cache
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching listings by area:', error);
+    return null;
+  }
+}
+
+// ============================================
+// BULK SUMMARY (rentalizerBulkSummary)
+// ============================================
+
+export interface BulkSummaryQuery {
+  address: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  accommodates?: number;
+}
+
+export interface BulkSummaryResult {
+  address: string;
+  adr: number;
+  revenue: number;
+  occupancy: number;
+  currency: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BulkSummaryResponse {
+  results: BulkSummaryResult[];
+  successful_count: number;
+  failed_count: number;
+}
+
+export async function getRentalizerBulkSummary(
+  queries: BulkSummaryQuery[]
+): Promise<BulkSummaryResponse | null> {
+  // Limit to 25 queries as per API spec
+  const limitedQueries = queries.slice(0, 25);
+  
+  const cacheKey = `bulk-summary:${JSON.stringify(limitedQueries)}`;
+  
+  const cached = apiCache.get(cacheKey);
+  if (cached) {
+    console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
+    return cached as BulkSummaryResponse;
+  }
+  console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
+
+  try {
+    const requestBody = {
+      queries: limitedQueries.map(q => ({
+        address: q.address,
+        bedrooms: q.bedrooms || null,
+        bathrooms: q.bathrooms || null,
+        accommodates: q.accommodates || null,
+        currency: 'usd',
+      })),
+    };
+
+    const response = await makeApiRequest<{
+      payload: {
+        results?: Array<{
+          address?: string;
+          adr?: number;
+          revenue?: number;
+          occupancy?: number;
+          currency?: string;
+          error?: string;
+        }>;
+      };
+    }>('/rentalizer/bulk_summary', 'POST', requestBody);
+
+    const results: BulkSummaryResult[] = (response.payload.results || []).map((r, i) => ({
+      address: r.address || limitedQueries[i]?.address || '',
+      adr: r.adr || 0,
+      revenue: r.revenue || 0,
+      occupancy: r.occupancy || 0,
+      currency: r.currency || 'USD',
+      success: !r.error,
+      error: r.error,
+    }));
+
+    const result: BulkSummaryResponse = {
+      results,
+      successful_count: results.filter(r => r.success).length,
+      failed_count: results.filter(r => !r.success).length,
+    };
+
+    apiCache.set(cacheKey, result, 'rentalizer'); // 15 min cache
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching bulk summary:', error);
+    return null;
+  }
+}

@@ -149,11 +149,11 @@ export default function LeadMagnet() {
   
   // Loading steps
   const loadingSteps = [
-    'Finding your property...',
-    'Analyzing market data...',
-    'Calculating revenue potential...',
-    'Finding comparable properties...',
-    'Building your report...'
+    'Looking for your home...',
+    'Checking the area...',
+    'Seeing how much you can make...',
+    'Finding nearby Airbnbs...',
+    'Making your report...'
   ];
   
   useEffect(() => {
@@ -168,11 +168,11 @@ export default function LeadMagnet() {
   
   const runAnalysis = async () => {
     if (!address.trim()) {
-      toast.error('Please enter a property address');
+      toast.error('Please type in an address');
       return;
     }
     if (!monthlyRent || parseFloat(monthlyRent) <= 0) {
-      toast.error('Please enter the monthly rent');
+      toast.error('Please type in the rent');
       return;
     }
     
@@ -259,11 +259,11 @@ export default function LeadMagnet() {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       } else {
-        toast.error('Could not analyze this property. Please try a different address.');
+        toast.error('We could not check this home. Try a different address.');
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      toast.error('Something went wrong. Please try again.');
+      toast.error('Oops! Something broke. Try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -293,16 +293,16 @@ export default function LeadMagnet() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A84B]/10 border border-[#D4A84B]/20 rounded-full text-[#D4A84B] text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              Free Property Analysis
+              Free Home Check
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
-              Will This Property
+              Can This Home
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4]">
-                Make Money on Airbnb?
+                Make You Money?
               </span>
             </h1>
             <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
-              Get instant revenue projections, monthly forecasts, and see what similar properties are earning.
+              See how much money this home can make. We show you what nearby Airbnbs earn.
             </p>
           </div>
           
@@ -312,12 +312,12 @@ export default function LeadMagnet() {
               {/* Address Input */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Property Address
+                  Home Address
                 </label>
                 <AddressAutocomplete
                   value={address}
                   onChange={setAddress}
-                  placeholder="Enter the full property address..."
+                  placeholder="Type the home address here..."
                   className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
                 />
               </div>
@@ -326,7 +326,7 @@ export default function LeadMagnet() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Monthly Rent
+                    Rent Per Month
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
@@ -385,7 +385,7 @@ export default function LeadMagnet() {
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    Analyze This Property
+                    Check This Home
                     <ArrowRight className="w-5 h-5" />
                   </span>
                 )}
@@ -439,17 +439,17 @@ export default function LeadMagnet() {
                         : 'bg-amber-500/20 text-amber-400'
                     }`}>
                       {isProfitable ? <CheckCircle2 className="w-4 h-4" /> : <Target className="w-4 h-4" />}
-                      {profitRatio >= 2 ? 'Strong Opportunity' : profitRatio >= 1.5 ? 'Looks Profitable' : profitRatio >= 1 ? 'Worth Exploring' : 'Needs Work'}
+                      {profitRatio >= 2 ? 'Great Deal!' : profitRatio >= 1.5 ? 'Good Deal' : profitRatio >= 1 ? 'Maybe' : 'Not Great'}
                     </div>
                     
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                      {isProfitable ? 'This Property Can Make Money' : 'This Property Needs Negotiation'}
+                      {isProfitable ? 'Yes! This Home Can Make Money' : 'You Need a Lower Rent'}
                     </h2>
                     
                     <p className="text-slate-400 text-lg">
                       {isProfitable 
-                        ? `At ${profitRatio.toFixed(1)}x your rent, you're in a strong position. Similar properties nearby are proving this works.`
-                        : `At ${profitRatio.toFixed(1)}x your rent, you'll need to negotiate lower rent or optimize aggressively to make this work.`
+                        ? `You can make ${profitRatio.toFixed(1)} times your rent! Other Airbnbs nearby are doing it too.`
+                        : `Right now you'd only make ${profitRatio.toFixed(1)} times your rent. Ask for lower rent to make more money.`
                       }
                     </p>
                   </div>
@@ -458,7 +458,7 @@ export default function LeadMagnet() {
                   <div className="space-y-4">
                     {/* Revenue Range */}
                     <div className="bg-slate-900/50 rounded-xl p-4">
-                      <div className="text-sm text-slate-400 mb-1">Projected Annual Revenue</div>
+                      <div className="text-sm text-slate-400 mb-1">Money You Can Make (Per Year)</div>
                       <div className="text-3xl font-bold text-white">{formatCurrency(result.revenue)}</div>
                       <div className="text-sm text-slate-500 mt-1">
                         Range: {formatCurrency(result.revenueLow)} – {formatCurrency(result.revenueHigh)}
@@ -472,7 +472,7 @@ export default function LeadMagnet() {
                             <TrendingDown className="w-4 h-4" />
                           )}
                           <span className="text-sm font-medium">
-                            {result.historical.summary.yearly_pct_change >= 0 ? '+' : ''}{result.historical.summary.yearly_pct_change.toFixed(1)}% market growth (YoY)
+                            {result.historical.summary.yearly_pct_change >= 0 ? '+' : ''}{result.historical.summary.yearly_pct_change.toFixed(1)}% more money this year
                           </span>
                         </div>
                       )}
@@ -480,7 +480,7 @@ export default function LeadMagnet() {
                     
                     {/* Profit */}
                     <div className={`rounded-xl p-4 ${isProfitable ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
-                      <div className="text-sm text-slate-400 mb-1">Estimated Annual Profit</div>
+                      <div className="text-sm text-slate-400 mb-1">Your Profit (Per Year)</div>
                       <div className={`text-3xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`}>
                         {result.profit >= 0 ? '+' : ''}{formatCurrency(result.profit)}
                       </div>
@@ -500,7 +500,7 @@ export default function LeadMagnet() {
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                     <TrendingUp className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <div className="text-sm text-slate-400">Airbnb Income</div>
+                  <div className="text-sm text-slate-400">Airbnb Money</div>
                 </div>
                 <div className="text-2xl font-bold text-white">{formatCurrency(result.revenue)}</div>
                 <div className="text-sm text-slate-500">{formatCurrency(result.revenue / 12)}/month</div>
@@ -511,7 +511,7 @@ export default function LeadMagnet() {
                   <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
                     <TrendingDown className="w-5 h-5 text-red-400" />
                   </div>
-                  <div className="text-sm text-slate-400">Annual Rent</div>
+                  <div className="text-sm text-slate-400">Rent You Pay</div>
                 </div>
                 <div className="text-2xl font-bold text-white">-{formatCurrency(result.rent)}</div>
                 <div className="text-sm text-slate-500">-{formatCurrency(result.rent / 12)}/month</div>
@@ -522,7 +522,7 @@ export default function LeadMagnet() {
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isProfitable ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}>
                     <DollarSign className={`w-5 h-5 ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`} />
                   </div>
-                  <div className="text-sm text-slate-400">Net Profit</div>
+                  <div className="text-sm text-slate-400">Money You Keep</div>
                 </div>
                 <div className={`text-2xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`}>
                   {result.profit >= 0 ? '+' : ''}{formatCurrency(result.profit)}
@@ -536,21 +536,21 @@ export default function LeadMagnet() {
             {/* Key Metrics Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
               <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Avg Nightly Rate</div>
+                <div className="text-sm text-slate-400 mb-1">Price Per Night</div>
                 <div className="text-xl font-bold text-white">{formatCurrency(result.adr)}</div>
               </div>
               <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Occupancy Rate</div>
+                <div className="text-sm text-slate-400 mb-1">Nights Booked</div>
                 <div className="text-xl font-bold text-white">
                   {result.occupancy > 1 ? result.occupancy.toFixed(0) : (result.occupancy * 100).toFixed(0)}%
                 </div>
               </div>
               <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Revenue-to-Rent</div>
+                <div className="text-sm text-slate-400 mb-1">Money vs Rent</div>
                 <div className="text-xl font-bold text-white">{profitRatio.toFixed(1)}x</div>
               </div>
               <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Nearby Comps</div>
+                <div className="text-sm text-slate-400 mb-1">Nearby Airbnbs</div>
                 <div className="text-xl font-bold text-white">{result.comparables.length}</div>
               </div>
             </div>
@@ -563,8 +563,8 @@ export default function LeadMagnet() {
                     <BarChart3 className="w-5 h-5 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Monthly Revenue Forecast</h3>
-                    <p className="text-sm text-slate-400">See which months earn the most</p>
+                    <h3 className="text-xl font-bold text-white">Money Each Month</h3>
+                    <p className="text-sm text-slate-400">See which months make the most</p>
                   </div>
                 </div>
                 
@@ -600,7 +600,7 @@ export default function LeadMagnet() {
                 <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 rounded-lg px-4 py-3">
                   <Calendar className="w-4 h-4 text-emerald-400" />
                   <span>
-                    <strong className="text-emerald-400">Peak months</strong> are highlighted — plan your launch accordingly
+                    <strong className="text-emerald-400">Best months</strong> are green — start your Airbnb before these!
                   </span>
                 </div>
               </div>
@@ -614,8 +614,8 @@ export default function LeadMagnet() {
                     <Home className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">Nearby Properties Making Money</h3>
-                    <p className="text-sm text-slate-400">Real data from {result.comparables.length} similar Airbnb listings in your area</p>
+                    <h3 className="text-xl font-bold text-white">Airbnbs Near You</h3>
+                    <p className="text-sm text-slate-400">Real numbers from {result.comparables.length} Airbnbs close to this home</p>
                   </div>
                 </div>
                 
@@ -652,7 +652,7 @@ export default function LeadMagnet() {
                           <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
                             compProfitable ? 'bg-emerald-500/90 text-white' : 'bg-amber-500/90 text-white'
                           }`}>
-                            {compProfitable ? `+${formatCurrency(compProfit)}/yr` : 'Below threshold'}
+                            {compProfitable ? `+${formatCurrency(compProfit)}/yr profit` : 'Not enough'}
                           </div>
                           
                           {/* Airbnb Link Icon */}
@@ -692,15 +692,15 @@ export default function LeadMagnet() {
                           {/* Revenue & Metrics */}
                           <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="bg-slate-900/50 rounded-lg py-2">
-                              <div className="text-xs text-slate-500">Revenue</div>
+                              <div className="text-xs text-slate-500">Made</div>
                               <div className="text-sm font-semibold text-white">{formatCurrency(comp.revenue)}</div>
                             </div>
                             <div className="bg-slate-900/50 rounded-lg py-2">
-                              <div className="text-xs text-slate-500">ADR</div>
+                              <div className="text-xs text-slate-500">Per Night</div>
                               <div className="text-sm font-semibold text-white">{formatCurrency(comp.adr)}</div>
                             </div>
                             <div className="bg-slate-900/50 rounded-lg py-2">
-                              <div className="text-xs text-slate-500">Occupancy</div>
+                              <div className="text-xs text-slate-500">Booked</div>
                               <div className="text-sm font-semibold text-white">{comp.occupancy.toFixed(0)}%</div>
                             </div>
                           </div>
@@ -714,10 +714,10 @@ export default function LeadMagnet() {
                 <div className="mt-6 bg-slate-900/50 rounded-xl p-4 flex items-start gap-3">
                   <Sparkles className="w-5 h-5 text-purple-400 mt-0.5" />
                   <div>
-                    <div className="text-sm font-medium text-white mb-1">Market Insight</div>
+                    <div className="text-sm font-medium text-white mb-1">Good News</div>
                     <div className="text-sm text-slate-400">
-                      {result.comparables.filter(c => (c.revenue - result.rent) > 0).length} out of {result.comparables.length} similar properties 
-                      are earning more than your rent cost. This market has proven demand.
+                      {result.comparables.filter(c => (c.revenue - result.rent) > 0).length} out of {result.comparables.length} nearby Airbnbs 
+                      make more than your rent. People want to stay here!
                     </div>
                   </div>
                 </div>
@@ -733,16 +733,16 @@ export default function LeadMagnet() {
               <div className="relative z-10 max-w-3xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-6">
                   <Sparkles className="w-4 h-4" />
-                  Done-For-You Setup
+                  We Do It For You
                 </div>
                 
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Ready to Turn This Into Reality?
+                  Want Us to Set This Up?
                 </h2>
                 
                 <p className="text-lg text-slate-300 mb-8">
-                  The numbers look good — but execution is everything. Our Turnkey Program handles the entire setup 
-                  so you can start earning without the headaches.
+                  The numbers look good! But setting up an Airbnb is hard work. 
+                  We can do it all for you so you can start making money fast.
                 </p>
                 
                 {/* What's Included */}
@@ -750,29 +750,29 @@ export default function LeadMagnet() {
                   <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
-                      <div className="font-medium text-white">Property Sourcing</div>
-                      <div className="text-sm text-slate-400">We find and negotiate the best deals</div>
+                      <div className="font-medium text-white">Find Your Home</div>
+                      <div className="text-sm text-slate-400">We find the best deals for you</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
-                      <div className="font-medium text-white">Full Furnishing</div>
-                      <div className="text-sm text-slate-400">Professional design & setup</div>
+                      <div className="font-medium text-white">Set Up Everything</div>
+                      <div className="text-sm text-slate-400">Furniture, decor, all of it</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
-                      <div className="font-medium text-white">Listing Launch</div>
-                      <div className="text-sm text-slate-400">Professional photos & listing optimization</div>
+                      <div className="font-medium text-white">Go Live on Airbnb</div>
+                      <div className="text-sm text-slate-400">Great photos and a perfect listing</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
                     <div>
-                      <div className="font-medium text-white">Ongoing Coaching</div>
-                      <div className="text-sm text-slate-400">12 months of hands-on support</div>
+                      <div className="font-medium text-white">Help For 12 Months</div>
+                      <div className="text-sm text-slate-400">We coach you the whole first year</div>
                     </div>
                   </div>
                 </div>
@@ -783,13 +783,13 @@ export default function LeadMagnet() {
                   className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25"
                 >
                   <a href="https://masterclass.coachinayah.com/the-turnkey-program-2" target="_blank" rel="noopener noreferrer">
-                    Learn About the Turnkey Program
+                    See How It Works
                     <ArrowUpRight className="w-5 h-5 ml-2" />
                   </a>
                 </Button>
                 
                 <p className="mt-4 text-sm text-slate-500">
-                  Up to $125K in funding available • 12 months of coaching included
+                  Get up to $125K to start • We help you for 12 months
                 </p>
               </div>
             </div>

@@ -77,3 +77,14 @@ From AirDNA Rentalizer endpoint:
   - Updated API to return up to 10 comps
   - Updated frontend to display all 10 comps
   - Added monthly metrics data for each comp
+
+## New Features (Jan 4, 2026 - Part 4)
+- [x] Implement Listings by Area API (fetchListingsByArea) - backend endpoint created
+- [x] Implement Bulk Summary API (rentalizerBulkSummary) - backend endpoint created
+- [x] Review Rentalizer Estimate API - all features implemented (10 comps, historical data)
+- [x] Simplify ALL text to 3rd grade reading level
+  - Changed "revenue" to "money"
+  - Changed "occupancy" to "nights booked"
+  - Changed "ADR" to "price per night"
+  - Shortened all sentences
+  - Made all text easy to read
