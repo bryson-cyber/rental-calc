@@ -1,11 +1,16 @@
 /**
- * Lead Magnet - Ultra Simple Rental Calculator
+ * Premium Property Report - Sales Qualified Lead Tool
  * 
- * Flow:
- * 1. Enter address + rent → Get instant verdict
- * 2. See 3 key numbers: Revenue, Rent, Profit
- * 3. See comparable properties in the area
- * 4. Email gate for full report
+ * Shows ALL Rentalizer data upfront - no email gate
+ * Designed to demonstrate value and warm up leads for Turnkey Program
+ * 
+ * Data displayed (all from /rentalizer/estimate):
+ * - Revenue estimate with confidence range (low/high)
+ * - Cash flow breakdown (revenue - rent = profit)
+ * - Average Daily Rate (ADR)
+ * - Occupancy rate
+ * - 12-month seasonality forecast
+ * - 6 comparable properties with Airbnb links
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -15,32 +20,33 @@ import {
   DollarSign,
   ArrowRight,
   CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Loader2,
-  Mail,
-  Phone,
-  Sparkles,
   TrendingUp,
-  Building2,
+  TrendingDown,
   Calendar,
   Bed,
   Bath,
   Star,
   Users,
   Home,
-  ExternalLink
+  ExternalLink,
+  BarChart3,
+  Target,
+  Sparkles,
+  ArrowUpRight,
+  Clock,
+  Percent
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { toast } from 'sonner';
 
-// Verdict thresholds - realistic for Airbnb arbitrage
-// Industry standard: 1.5x+ is profitable, 2x+ is excellent
-const GREAT_RATIO = 2.5; // 2.5x rent = exceptional opportunity
-const GOOD_RATIO = 1.5;  // 1.5x rent = solid deal (most successful investors operate here)
-const MARGINAL_RATIO = 1.2; // 1.2x rent = workable with good execution
+interface MonthlyForecast {
+  month: string;
+  revenue: number;
+  adr: number;
+  occupancy: number;
+}
 
 interface Comparable {
   id: string;
@@ -55,21 +61,52 @@ interface Comparable {
   reviews: number;
   imageUrl?: string;
   airbnbUrl?: string;
-  airbnbListingId?: string;
+  distanceMeters?: number;
 }
 
 interface AnalysisResult {
+  // Revenue data
   revenue: number;
+  revenueLow: number;
+  revenueHigh: number;
+  // Rates
+  adr: number;
+  occupancy: number;
+  // Cash flow
   rent: number;
   profit: number;
-  ratio: number;
-  verdict: 'great' | 'good' | 'risky' | 'bad';
-  marketName: string;
-  occupancy: number;
-  competitorCount: number;
-  aiSummary: string;
+  profitLow: number;
+  profitHigh: number;
+  // Property details
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  // Forecast & comps
+  monthlyForecast: MonthlyForecast[];
   comparables: Comparable[];
 }
+
+// Format currency
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// Format month name
+const formatMonth = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short' });
+};
+
+// Get month abbreviation
+const getMonthAbbr = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short' }).substring(0, 3);
+};
 
 export default function LeadMagnet() {
   // Form state
@@ -81,36 +118,28 @@ export default function LeadMagnet() {
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState('');
-  
-  // Email gate state
-  const [email, setEmail] = useState('');
-  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
-  const [hasUnlockedReport, setHasUnlockedReport] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   
   const resultsRef = useRef<HTMLDivElement>(null);
   
-  // tRPC mutations
+  // tRPC mutation
   const analysisMutation = trpc.rental.getEstimate.useMutation();
-  const leadMutation = trpc.rental.submitLead.useMutation();
   
-  // Loading messages
-  const loadingMessages = [
+  // Loading steps
+  const loadingSteps = [
     'Finding your property...',
-    'Analyzing the market...',
-    'Checking competitor data...',
+    'Analyzing market data...',
     'Calculating revenue potential...',
-    'Generating your verdict...'
+    'Finding comparable properties...',
+    'Building your report...'
   ];
   
   useEffect(() => {
     if (isAnalyzing) {
-      let index = 0;
-      setLoadingMessage(loadingMessages[0]);
+      setLoadingStep(0);
       const interval = setInterval(() => {
-        index = (index + 1) % loadingMessages.length;
-        setLoadingMessage(loadingMessages[index]);
-      }, 2000);
+        setLoadingStep(prev => (prev + 1) % loadingSteps.length);
+      }, 1500);
       return () => clearInterval(interval);
     }
   }, [isAnalyzing]);
@@ -127,7 +156,6 @@ export default function LeadMagnet() {
     
     setIsAnalyzing(true);
     setResult(null);
-    setHasUnlockedReport(false);
     
     try {
       const response = await analysisMutation.mutateAsync({
@@ -139,43 +167,32 @@ export default function LeadMagnet() {
       if (response.success && response.data) {
         const data = response.data;
         const annualRent = parseFloat(monthlyRent) * 12;
+        
+        // Extract revenue data with range
         const annualRevenue = data.estimates?.annual_revenue || 0;
+        const revenueLow = data.estimates?.annual_revenue_low || annualRevenue * 0.85;
+        const revenueHigh = data.estimates?.annual_revenue_high || annualRevenue * 1.15;
+        
+        // Calculate profits
         const profit = annualRevenue - annualRent;
-        const ratio = annualRevenue / annualRent;
+        const profitLow = revenueLow - annualRent;
+        const profitHigh = revenueHigh - annualRent;
         
-        // Determine verdict - more encouraging thresholds
-        let verdict: 'great' | 'good' | 'risky' | 'bad';
-        if (ratio >= GREAT_RATIO) {
-          verdict = 'great';
-        } else if (ratio >= GOOD_RATIO) {
-          verdict = 'good';
-        } else if (ratio >= MARGINAL_RATIO) {
-          verdict = 'risky';
-        } else {
-          verdict = 'bad';
-        }
+        // Extract monthly forecast
+        const monthlyForecast: MonthlyForecast[] = (data.monthly_forecast || []).map((m: any) => ({
+          month: m.month,
+          revenue: m.revenue,
+          adr: m.adr,
+          occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100, // Normalize to percentage
+        }));
         
-        // Generate AI summary based on verdict - positive framing
-        let aiSummary = '';
-        if (verdict === 'great') {
-          aiSummary = `This is an exceptional find! At ${ratio.toFixed(1)}x your rent, you're looking at strong profit potential. Properties like this don't come around often — the numbers speak for themselves.`;
-        } else if (verdict === 'good') {
-          aiSummary = `This is a solid opportunity. At ${ratio.toFixed(1)}x your rent, you're in the sweet spot where most successful Airbnb arbitrage investors operate. The math works in your favor here.`;
-        } else if (verdict === 'risky') {
-          aiSummary = `At ${ratio.toFixed(1)}x rent, this property can work with the right execution. Focus on great photos, competitive pricing, and quick response times. Consider negotiating the rent down to improve your margins.`;
-        } else {
-          aiSummary = `At ${ratio.toFixed(1)}x rent, the margins are tight. This could still work if you can negotiate lower rent, reduce operating costs, or if the property has unique features that command premium rates.`;
-        }
-        
-        // Extract comparables from API response
+        // Extract comparables
         const comparables: Comparable[] = (data.comps || []).slice(0, 6).map((comp: any, index: number) => {
-          // Fix occupancy - API returns as decimal (0.65) or percentage (65)
           let occupancy = comp.occupancy || comp.occupancy_rate || 0;
           if (occupancy > 0 && occupancy <= 1) {
-            occupancy = occupancy * 100; // Convert decimal to percentage
+            occupancy = occupancy * 100;
           }
           
-          // Build Airbnb URL from listing ID if available
           const airbnbListingId = comp.airbnb_listing_id || comp.listing_id || null;
           const airbnbUrl = comp.airbnb_url || (airbnbListingId ? `https://www.airbnb.com/rooms/${airbnbListingId}` : null);
           
@@ -192,21 +209,25 @@ export default function LeadMagnet() {
             reviews: comp.reviews || comp.review_count || 0,
             imageUrl: comp.image_url || comp.thumbnail_url || null,
             airbnbUrl: airbnbUrl,
-            airbnbListingId: airbnbListingId
+            distanceMeters: comp.distance_meters,
           };
         });
         
         setResult({
           revenue: annualRevenue,
+          revenueLow: revenueLow,
+          revenueHigh: revenueHigh,
+          adr: data.estimates?.average_daily_rate || 0,
+          occupancy: data.estimates?.occupancy_rate || 0,
           rent: annualRent,
           profit: profit,
-          ratio: ratio,
-          verdict: verdict,
-          marketName: (data.property as any)?.market_name || 'Local Market',
-          occupancy: data.estimates?.occupancy_rate || 65,
-          competitorCount: data.comps?.length || 0,
-          aiSummary: aiSummary,
-          comparables: comparables
+          profitLow: profitLow,
+          profitHigh: profitHigh,
+          address: data.property?.address || address,
+          bedrooms: data.property?.bedrooms || parseInt(bedrooms),
+          bathrooms: data.property?.bathrooms || parseFloat(bathrooms),
+          monthlyForecast: monthlyForecast,
+          comparables: comparables,
         });
         
         // Scroll to results
@@ -224,187 +245,104 @@ export default function LeadMagnet() {
     }
   };
   
-  const handleEmailSubmit = async () => {
-    if (!email.trim() || !email.includes('@')) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
-    
-    setIsSubmittingEmail(true);
-    
-    try {
-      // Save lead to database
-      await leadMutation.mutateAsync({
-        name: email.split('@')[0], // Use email prefix as name
-        email: email.trim(),
-        address: address,
-        bedrooms: parseInt(bedrooms) || 2,
-        bathrooms: parseFloat(bathrooms) || 1,
-      });
-      
-      setHasUnlockedReport(true);
-      toast.success('Report unlocked! Check your email for the full analysis.');
-    } catch (error) {
-      console.error('Lead submission error:', error);
-      toast.error('Something went wrong. Please try again.');
-    } finally {
-      setIsSubmittingEmail(false);
-    }
-  };
+  // Calculate max revenue for chart scaling
+  const maxMonthlyRevenue = result?.monthlyForecast.length 
+    ? Math.max(...result.monthlyForecast.map(m => m.revenue))
+    : 0;
   
-  const getVerdictConfig = (verdict: string) => {
-    switch (verdict) {
-      case 'great':
-        return {
-          icon: CheckCircle2,
-          color: 'text-emerald-500',
-          bg: 'bg-emerald-500/10',
-          border: 'border-emerald-500/30',
-          label: 'Great Opportunity',
-          emoji: '🎯'
-        };
-      case 'good':
-        return {
-          icon: CheckCircle2,
-          color: 'text-green-500',
-          bg: 'bg-green-500/10',
-          border: 'border-green-500/30',
-          label: 'Looks Profitable',
-          emoji: '✅'
-        };
-      case 'risky':
-        return {
-          icon: CheckCircle2,
-          color: 'text-amber-500',
-          bg: 'bg-amber-500/10',
-          border: 'border-amber-500/30',
-          label: 'Worth Exploring',
-          emoji: '💡'
-        };
-      default:
-        return {
-          icon: AlertTriangle,
-          color: 'text-orange-500',
-          bg: 'bg-orange-500/10',
-          border: 'border-orange-500/30',
-          label: 'Needs Negotiation',
-          emoji: '💬'
-        };
-    }
-  };
+  // Determine if profitable
+  const isProfitable = result ? result.profit > 0 : false;
+  const profitRatio = result ? result.revenue / result.rent : 0;
   
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-  
-  const getCompProfitability = (comp: Comparable, monthlyRentNum: number) => {
-    const annualRent = monthlyRentNum * 12;
-    const ratio = comp.revenue / annualRent;
-    if (ratio >= GOOD_RATIO) return { label: 'Profitable', color: 'text-emerald-600', bg: 'bg-emerald-100' };
-    if (ratio >= MARGINAL_RATIO) return { label: 'Marginal', color: 'text-amber-600', bg: 'bg-amber-100' };
-    return { label: 'Low Margin', color: 'text-red-600', bg: 'bg-red-100' };
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#0f0f18] to-[#0a0a0f]">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 overflow-hidden">
-        {/* Subtle gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-[#C9A962]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-[#C9A962]/5 rounded-full blur-3xl" />
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        </div>
         
-        <div className="container max-w-4xl mx-auto px-4 relative z-10">
+        <div className="container relative z-10 max-w-4xl mx-auto px-4">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#C9A962]/10 border border-[#C9A962]/20 mb-6">
-              <Sparkles className="w-4 h-4 text-[#C9A962]" />
-              <span className="text-sm text-[#C9A962] font-medium">Free Rental Analysis</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium mb-6">
+              <Sparkles className="w-4 h-4" />
+              Free Property Analysis
             </div>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-              Will This Property<br />
-              <span className="text-[#C9A962]">Make Money</span> on Airbnb?
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+              Will This Property
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                Make Money on Airbnb?
+              </span>
             </h1>
-            
-            <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
-              Enter any address and find out in 30 seconds if it's worth pursuing.
+            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto">
+              Get instant revenue projections, monthly forecasts, and see what similar properties are earning.
             </p>
           </div>
           
-          {/* Input Form */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 md:p-8">
-            <div className="space-y-6">
+          {/* Search Form */}
+          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 md:p-8 shadow-2xl">
+            <div className="grid gap-6">
               {/* Address Input */}
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
-                  <MapPin className="w-4 h-4 inline mr-2" />
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Property Address
                 </label>
                 <AddressAutocomplete
                   value={address}
                   onChange={setAddress}
                   placeholder="Enter the full property address..."
-                  className="w-full bg-white/10 border-white/20 text-white placeholder:text-white/40 h-14 text-lg rounded-xl"
+                  className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
                 />
               </div>
               
-              {/* Rent + Bedrooms Row */}
+              {/* Rent + Beds/Baths Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    <DollarSign className="w-4 h-4 inline mr-2" />
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Monthly Rent
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">$</span>
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <Input
                       type="number"
                       value={monthlyRent}
                       onChange={(e) => setMonthlyRent(e.target.value)}
                       placeholder="2,000"
-                      className="pl-8 bg-white/10 border-white/20 text-white placeholder:text-white/40 h-14 text-lg rounded-xl"
+                      className="h-12 pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    <Building2 className="w-4 h-4 inline mr-2" />
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Bedrooms
                   </label>
                   <select
                     value={bedrooms}
                     onChange={(e) => setBedrooms(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 text-white h-14 text-lg rounded-xl px-4 appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
                   >
-                    <option value="1" className="bg-[#0f0f18]">1 Bedroom</option>
-                    <option value="2" className="bg-[#0f0f18]">2 Bedrooms</option>
-                    <option value="3" className="bg-[#0f0f18]">3 Bedrooms</option>
-                    <option value="4" className="bg-[#0f0f18]">4 Bedrooms</option>
-                    <option value="5" className="bg-[#0f0f18]">5+ Bedrooms</option>
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <option key={num} value={num}>{num} {num === 1 ? 'Bedroom' : 'Bedrooms'}</option>
+                    ))}
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
-                    <Calendar className="w-4 h-4 inline mr-2" />
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Bathrooms
                   </label>
                   <select
                     value={bathrooms}
                     onChange={(e) => setBathrooms(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 text-white h-14 text-lg rounded-xl px-4 appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
                   >
-                    <option value="1" className="bg-[#0f0f18]">1 Bath</option>
-                    <option value="1.5" className="bg-[#0f0f18]">1.5 Baths</option>
-                    <option value="2" className="bg-[#0f0f18]">2 Baths</option>
-                    <option value="2.5" className="bg-[#0f0f18]">2.5 Baths</option>
-                    <option value="3" className="bg-[#0f0f18]">3+ Baths</option>
+                    {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
+                      <option key={num} value={num}>{num} {num === 1 ? 'Bathroom' : 'Bathrooms'}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -413,12 +351,13 @@ export default function LeadMagnet() {
               <Button
                 onClick={runAnalysis}
                 disabled={isAnalyzing}
-                className="w-full h-16 text-lg font-semibold bg-gradient-to-r from-[#C9A962] to-[#B8944F] hover:from-[#D4B06D] hover:to-[#C9A962] text-[#0a0a0f] rounded-xl transition-all duration-300 shadow-lg shadow-[#C9A962]/20"
+                size="lg"
+                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25"
               >
                 {isAnalyzing ? (
                   <span className="flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {loadingMessage}
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {loadingSteps[loadingStep]}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -429,127 +368,236 @@ export default function LeadMagnet() {
               </Button>
             </div>
           </div>
-          
-          {/* Trust indicators */}
-          <div className="flex flex-wrap justify-center gap-6 mt-8 text-white/40 text-sm">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-              Free forever
-            </span>
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-              No credit card required
-            </span>
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-              Results in 30 seconds
-            </span>
-          </div>
         </div>
       </section>
       
       {/* Results Section */}
       {result && (
-        <section ref={resultsRef} className="py-16 bg-white">
-          <div className="container max-w-4xl mx-auto px-4">
-            {/* Verdict Card */}
-            {(() => {
-              const config = getVerdictConfig(result.verdict);
-              const VerdictIcon = config.icon;
+        <section ref={resultsRef} className="py-12 md:py-16">
+          <div className="container max-w-6xl mx-auto px-4">
+            
+            {/* Property Header */}
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 text-slate-400 mb-2">
+                <MapPin className="w-4 h-4" />
+                <span>{result.address}</span>
+              </div>
+              <div className="flex items-center justify-center gap-4 text-slate-500 text-sm">
+                <span className="flex items-center gap-1">
+                  <Bed className="w-4 h-4" />
+                  {result.bedrooms} bed
+                </span>
+                <span className="flex items-center gap-1">
+                  <Bath className="w-4 h-4" />
+                  {result.bathrooms} bath
+                </span>
+              </div>
+            </div>
+            
+            {/* Main Verdict Card */}
+            <div className={`relative overflow-hidden rounded-3xl p-8 md:p-12 mb-8 ${
+              isProfitable 
+                ? 'bg-gradient-to-br from-emerald-900/50 to-emerald-950/50 border border-emerald-500/30' 
+                : 'bg-gradient-to-br from-amber-900/50 to-amber-950/50 border border-amber-500/30'
+            }`}>
+              {/* Background glow */}
+              <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20 ${
+                isProfitable ? 'bg-emerald-500' : 'bg-amber-500'
+              }`} />
               
-              return (
-                <div className={`rounded-2xl border-2 ${config.border} ${config.bg} p-8 mb-8`}>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className={`w-16 h-16 rounded-full ${config.bg} flex items-center justify-center`}>
-                      <VerdictIcon className={`w-8 h-8 ${config.color}`} />
+              <div className="relative z-10">
+                <div className="grid md:grid-cols-2 gap-8 items-center">
+                  {/* Left: Verdict */}
+                  <div>
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4 ${
+                      isProfitable 
+                        ? 'bg-emerald-500/20 text-emerald-400' 
+                        : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {isProfitable ? <CheckCircle2 className="w-4 h-4" /> : <Target className="w-4 h-4" />}
+                      {profitRatio >= 2 ? 'Strong Opportunity' : profitRatio >= 1.5 ? 'Looks Profitable' : profitRatio >= 1 ? 'Worth Exploring' : 'Needs Work'}
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500 uppercase tracking-wide">Our Verdict</p>
-                      <h2 className={`text-2xl md:text-3xl font-bold ${config.color}`}>
-                        {config.emoji} {config.label}
-                      </h2>
-                    </div>
+                    
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                      {isProfitable ? 'This Property Can Make Money' : 'This Property Needs Negotiation'}
+                    </h2>
+                    
+                    <p className="text-slate-400 text-lg">
+                      {isProfitable 
+                        ? `At ${profitRatio.toFixed(1)}x your rent, you're in a strong position. Similar properties nearby are proving this works.`
+                        : `At ${profitRatio.toFixed(1)}x your rent, you'll need to negotiate lower rent or optimize aggressively to make this work.`
+                      }
+                    </p>
                   </div>
                   
-                  {/* Key Numbers */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center p-4 bg-white rounded-xl">
-                      <p className="text-sm text-gray-500 mb-1">Projected Revenue</p>
-                      <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                        {formatCurrency(result.revenue)}
-                      </p>
-                      <p className="text-xs text-gray-400">per year</p>
+                  {/* Right: Key Numbers */}
+                  <div className="space-y-4">
+                    {/* Revenue Range */}
+                    <div className="bg-slate-900/50 rounded-xl p-4">
+                      <div className="text-sm text-slate-400 mb-1">Projected Annual Revenue</div>
+                      <div className="text-3xl font-bold text-white">{formatCurrency(result.revenue)}</div>
+                      <div className="text-sm text-slate-500 mt-1">
+                        Range: {formatCurrency(result.revenueLow)} – {formatCurrency(result.revenueHigh)}
+                      </div>
                     </div>
-                    <div className="text-center p-4 bg-white rounded-xl">
-                      <p className="text-sm text-gray-500 mb-1">Your Rent Cost</p>
-                      <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                        {formatCurrency(result.rent)}
-                      </p>
-                      <p className="text-xs text-gray-400">per year</p>
-                    </div>
-                    <div className="text-center p-4 bg-white rounded-xl">
-                      <p className="text-sm text-gray-500 mb-1">Estimated Profit</p>
-                      <p className={`text-2xl md:text-3xl font-bold ${result.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatCurrency(result.profit)}
-                      </p>
-                      <p className="text-xs text-gray-400">per year</p>
-                    </div>
-                  </div>
-                  
-                  {/* Ratio Badge */}
-                  <div className="flex items-center justify-center gap-2 mb-6">
-                    <span className="text-gray-600">Revenue-to-Rent Ratio:</span>
-                    <span className={`px-3 py-1 rounded-full font-bold ${config.bg} ${config.color}`}>
-                      {result.ratio.toFixed(1)}x
-                    </span>
-                    <span className="text-gray-400 text-sm">(1.5x+ is profitable)</span>
-                  </div>
-                  
-                  {/* AI Summary */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-100">
-                    <div className="flex items-start gap-3">
-                      <Sparkles className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-1" />
-                      <p className="text-gray-700 leading-relaxed">
-                        {result.aiSummary}
-                      </p>
+                    
+                    {/* Profit */}
+                    <div className={`rounded-xl p-4 ${isProfitable ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
+                      <div className="text-sm text-slate-400 mb-1">Estimated Annual Profit</div>
+                      <div className={`text-3xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {result.profit >= 0 ? '+' : ''}{formatCurrency(result.profit)}
+                      </div>
+                      <div className="text-sm text-slate-500 mt-1">
+                        {formatCurrency(result.profit / 12)}/month after rent
+                      </div>
                     </div>
                   </div>
                 </div>
-              );
-            })()}
+              </div>
+            </div>
             
-            {/* Comparable Properties Section */}
-            {result.comparables && result.comparables.length > 0 && (
-              <div className="bg-gray-50 rounded-2xl p-6 md:p-8 mb-8">
+            {/* Cash Flow Breakdown */}
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="text-sm text-slate-400">Airbnb Income</div>
+                </div>
+                <div className="text-2xl font-bold text-white">{formatCurrency(result.revenue)}</div>
+                <div className="text-sm text-slate-500">{formatCurrency(result.revenue / 12)}/month</div>
+              </div>
+              
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                    <TrendingDown className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div className="text-sm text-slate-400">Annual Rent</div>
+                </div>
+                <div className="text-2xl font-bold text-white">-{formatCurrency(result.rent)}</div>
+                <div className="text-sm text-slate-500">-{formatCurrency(result.rent / 12)}/month</div>
+              </div>
+              
+              <div className={`rounded-xl p-6 ${isProfitable ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isProfitable ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`}>
+                    <DollarSign className={`w-5 h-5 ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`} />
+                  </div>
+                  <div className="text-sm text-slate-400">Net Profit</div>
+                </div>
+                <div className={`text-2xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {result.profit >= 0 ? '+' : ''}{formatCurrency(result.profit)}
+                </div>
+                <div className="text-sm text-slate-500">
+                  {result.profit >= 0 ? '+' : ''}{formatCurrency(result.profit / 12)}/month
+                </div>
+              </div>
+            </div>
+            
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
+                <div className="text-sm text-slate-400 mb-1">Avg Nightly Rate</div>
+                <div className="text-xl font-bold text-white">{formatCurrency(result.adr)}</div>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
+                <div className="text-sm text-slate-400 mb-1">Occupancy Rate</div>
+                <div className="text-xl font-bold text-white">
+                  {result.occupancy > 1 ? result.occupancy.toFixed(0) : (result.occupancy * 100).toFixed(0)}%
+                </div>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
+                <div className="text-sm text-slate-400 mb-1">Revenue-to-Rent</div>
+                <div className="text-xl font-bold text-white">{profitRatio.toFixed(1)}x</div>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-center">
+                <div className="text-sm text-slate-400 mb-1">Nearby Comps</div>
+                <div className="text-xl font-bold text-white">{result.comparables.length}</div>
+              </div>
+            </div>
+            
+            {/* Monthly Forecast Chart */}
+            {result.monthlyForecast.length > 0 && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-12">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-full bg-[#C9A962]/10 flex items-center justify-center">
-                    <Home className="w-5 h-5 text-[#C9A962]" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Nearby Competitors</h3>
-                    <p className="text-sm text-gray-500">See what similar properties are earning in this area</p>
+                    <h3 className="text-xl font-bold text-white">Monthly Revenue Forecast</h3>
+                    <p className="text-sm text-slate-400">See which months earn the most</p>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {result.comparables.map((comp, index) => {
-                    const profitability = getCompProfitability(comp, parseFloat(monthlyRent) || 2000);
-                    
-                    const CardWrapper = comp.airbnbUrl ? 'a' : 'div';
-                    const cardProps = comp.airbnbUrl ? {
-                      href: comp.airbnbUrl,
-                      target: '_blank',
-                      rel: 'noopener noreferrer'
-                    } : {};
+                {/* Bar Chart */}
+                <div className="flex items-end justify-between gap-2 h-48 mb-4">
+                  {result.monthlyForecast.map((month, index) => {
+                    const heightPercent = maxMonthlyRevenue > 0 ? (month.revenue / maxMonthlyRevenue) * 100 : 0;
+                    const isHighMonth = month.revenue >= maxMonthlyRevenue * 0.9;
                     
                     return (
-                      <CardWrapper 
+                      <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="text-xs text-slate-400 font-medium">
+                          {formatCurrency(month.revenue)}
+                        </div>
+                        <div 
+                          className={`w-full rounded-t-lg transition-all ${
+                            isHighMonth 
+                              ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
+                              : 'bg-gradient-to-t from-slate-600 to-slate-500'
+                          }`}
+                          style={{ height: `${Math.max(heightPercent, 5)}%` }}
+                        />
+                        <div className="text-xs text-slate-500 font-medium">
+                          {getMonthAbbr(month.month)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Peak Season Callout */}
+                <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/50 rounded-lg px-4 py-3">
+                  <Calendar className="w-4 h-4 text-emerald-400" />
+                  <span>
+                    <strong className="text-emerald-400">Peak months</strong> are highlighted — plan your launch accordingly
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Comparable Properties */}
+            {result.comparables.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Nearby Properties Making Money</h3>
+                    <p className="text-sm text-slate-400">Real data from similar Airbnb listings in your area</p>
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {result.comparables.map((comp) => {
+                    const compProfit = comp.revenue - result.rent;
+                    const compProfitable = compProfit > 0;
+                    
+                    return (
+                      <a
                         key={comp.id}
-                        {...cardProps}
-                        className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all block ${comp.airbnbUrl ? 'cursor-pointer hover:border-[#FF5A5F] group' : ''}`}
+                        href={comp.airbnbUrl || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`group relative bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden hover:border-slate-600 transition-all ${
+                          comp.airbnbUrl ? 'cursor-pointer' : 'cursor-default'
+                        }`}
                       >
-                        {/* Property Image or Placeholder */}
-                        <div className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 relative">
+                        {/* Image or Placeholder */}
+                        <div className="relative h-32 bg-slate-900">
                           {comp.imageUrl ? (
                             <img 
                               src={comp.imageUrl} 
@@ -557,224 +605,160 @@ export default function LeadMagnet() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FF5A5F]/10 to-[#FF5A5F]/5">
-                              <div className="text-center">
-                                <Home className="w-8 h-8 text-[#FF5A5F]/40 mx-auto mb-1" />
-                                <span className="text-xs text-gray-400">View on Airbnb</span>
-                              </div>
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                              <Home className="w-8 h-8 text-slate-600" />
                             </div>
                           )}
-                          {/* Profitability Badge */}
-                          <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${profitability.bg} ${profitability.color}`}>
-                            {profitability.label}
+                          
+                          {/* Profit Badge */}
+                          <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
+                            compProfitable ? 'bg-emerald-500/90 text-white' : 'bg-amber-500/90 text-white'
+                          }`}>
+                            {compProfitable ? `+${formatCurrency(compProfit)}/yr` : 'Below threshold'}
                           </div>
-                          {/* External Link Indicator */}
+                          
+                          {/* Airbnb Link Icon */}
                           {comp.airbnbUrl && (
-                            <div className="absolute top-2 left-2 p-1.5 rounded-full bg-white/90 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                              <ExternalLink className="w-3 h-3 text-[#FF5A5F]" />
+                            <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ExternalLink className="w-4 h-4 text-[#FF5A5F]" />
                             </div>
                           )}
                         </div>
                         
-                        {/* Property Details */}
+                        {/* Content */}
                         <div className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="font-semibold text-gray-900 truncate flex-1 group-hover:text-[#FF5A5F] transition-colors">
-                              {comp.title || `${comp.bedrooms}BR Rental #${index + 1}`}
-                            </h4>
-                            {comp.airbnbUrl && (
-                              <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0 group-hover:text-[#FF5A5F] transition-colors" />
-                            )}
-                          </div>
+                          <h4 className="font-semibold text-white mb-2 line-clamp-1">{comp.title}</h4>
                           
-                          {/* Property Specs */}
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                          {/* Specs */}
+                          <div className="flex items-center gap-3 text-xs text-slate-400 mb-3">
                             <span className="flex items-center gap-1">
                               <Bed className="w-3 h-3" />
-                              {comp.bedrooms} bed
+                              {comp.bedrooms}
                             </span>
                             <span className="flex items-center gap-1">
                               <Bath className="w-3 h-3" />
-                              {comp.bathrooms} bath
+                              {comp.bathrooms}
                             </span>
                             <span className="flex items-center gap-1">
                               <Users className="w-3 h-3" />
-                              {comp.accommodates} guests
+                              {comp.accommodates}
                             </span>
+                            {comp.rating > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                {comp.rating.toFixed(1)}
+                              </span>
+                            )}
                           </div>
                           
                           {/* Revenue & Metrics */}
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-500">Annual Revenue</span>
-                              <span className="font-bold text-gray-900">{formatCurrency(comp.revenue)}</span>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-slate-900/50 rounded-lg py-2">
+                              <div className="text-xs text-slate-500">Revenue</div>
+                              <div className="text-sm font-semibold text-white">{formatCurrency(comp.revenue)}</div>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-500">Avg. Nightly Rate</span>
-                              <span className="font-medium text-gray-700">{formatCurrency(comp.adr)}</span>
+                            <div className="bg-slate-900/50 rounded-lg py-2">
+                              <div className="text-xs text-slate-500">ADR</div>
+                              <div className="text-sm font-semibold text-white">{formatCurrency(comp.adr)}</div>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-500">Occupancy</span>
-                              <span className="font-medium text-gray-700">{Math.round(comp.occupancy)}%</span>
+                            <div className="bg-slate-900/50 rounded-lg py-2">
+                              <div className="text-xs text-slate-500">Occupancy</div>
+                              <div className="text-sm font-semibold text-white">{comp.occupancy.toFixed(0)}%</div>
                             </div>
                           </div>
-                          
-                          {/* Rating */}
-                          {comp.rating > 0 && (
-                            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-100">
-                              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                              <span className="font-medium text-gray-900">{comp.rating.toFixed(1)}</span>
-                              {comp.reviews > 0 && (
-                                <span className="text-gray-400 text-sm">({comp.reviews} reviews)</span>
-                              )}
-                            </div>
-                          )}
                         </div>
-                      </CardWrapper>
+                      </a>
                     );
                   })}
                 </div>
                 
-                {/* Summary */}
-                <div className="mt-6 p-4 bg-white rounded-xl border border-gray-200">
-                  <div className="flex items-start gap-3">
-                    <TrendingUp className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-gray-900 mb-1">Market Insight</p>
-                      <p className="text-sm text-gray-600">
-                        {result.comparables.length} similar properties found nearby. 
-                        The average revenue is {formatCurrency(
-                          result.comparables.reduce((sum, c) => sum + c.revenue, 0) / result.comparables.length
-                        )}/year with {Math.round(
-                          result.comparables.reduce((sum, c) => sum + c.occupancy, 0) / result.comparables.length
-                        )}% average occupancy.
-                      </p>
+                {/* Market Insight */}
+                <div className="mt-6 bg-slate-900/50 rounded-xl p-4 flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-purple-400 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium text-white mb-1">Market Insight</div>
+                    <div className="text-sm text-slate-400">
+                      {result.comparables.filter(c => (c.revenue - result.rent) > 0).length} out of {result.comparables.length} similar properties 
+                      are earning more than your rent cost. This market has proven demand.
                     </div>
                   </div>
                 </div>
               </div>
             )}
             
-            {/* Email Gate or Unlocked Content */}
-            {!hasUnlockedReport ? (
-              <div className="bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2f] rounded-2xl p-8 text-center">
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  Ready to Start Your Airbnb Business?
-                </h3>
-                <p className="text-[#C9A962] font-medium mb-4">
-                  Without the Stress.
-                </p>
-                <p className="text-white/60 mb-6 max-w-lg mx-auto">
-                  Our Turnkey Program handles the hard parts for you — from finding properties to getting your first bookings.
-                </p>
-                
-                {/* What's included */}
-                <div className="grid grid-cols-2 gap-4 mb-8 max-w-md mx-auto text-left">
-                  <div className="flex items-center gap-2 text-white/80">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">We find the property</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">We negotiate with landlords</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">We furnish & design</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80">
-                    <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">We launch your listing</span>
-                  </div>
+            {/* Turnkey CTA */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-900/50 via-emerald-900/30 to-cyan-900/50 border border-emerald-500/30 p-8 md:p-12">
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl" />
+              
+              <div className="relative z-10 max-w-3xl mx-auto text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-medium mb-6">
+                  <Sparkles className="w-4 h-4" />
+                  Done-For-You Setup
                 </div>
                 
-                {/* Email Form */}
-                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="flex-1 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl"
-                  />
-                  <Button
-                    onClick={handleEmailSubmit}
-                    disabled={isSubmittingEmail}
-                    className="h-12 px-6 bg-[#C9A962] hover:bg-[#D4B06D] text-[#0a0a0f] font-semibold rounded-xl"
-                  >
-                    {isSubmittingEmail ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        Learn How It Works
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                  Ready to Turn This Into Reality?
+                </h2>
                 
-                <p className="text-white/40 text-xs mt-4">
-                  Get your free report + learn about our done-for-you Turnkey Program.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-gradient-to-br from-emerald-50 to-[#C9A962]/10 border border-emerald-200 rounded-2xl p-8 text-center">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  You're One Step Closer!
-                </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Check your inbox for the full analysis. Ready to start your Airbnb business the easy way?
+                <p className="text-lg text-slate-300 mb-8">
+                  The numbers look good — but execution is everything. Our Turnkey Program handles the entire setup 
+                  so you can start earning without the headaches.
                 </p>
                 
-                {/* Turnkey Benefits */}
-                <div className="bg-white rounded-xl p-6 mb-6 max-w-md mx-auto text-left">
-                  <h4 className="font-semibold text-gray-900 mb-3">The Turnkey Program includes:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
-                      <span>Up to $125K in 0% interest business funding</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
-                      <span>We find & negotiate properties for you</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
-                      <span>Full design, furnishing & listing setup</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
-                      <span>Daily coaching calls & ongoing support</span>
-                    </li>
-                  </ul>
+                {/* What's Included */}
+                <div className="grid sm:grid-cols-2 gap-4 mb-8 text-left">
+                  <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-white">Property Sourcing</div>
+                      <div className="text-sm text-slate-400">We find and negotiate the best deals</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-white">Full Furnishing</div>
+                      <div className="text-sm text-slate-400">Professional design & setup</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-white">Listing Launch</div>
+                      <div className="text-sm text-slate-400">Optimized photos & copy</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 bg-slate-900/30 rounded-xl p-4">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-white">Daily Coaching</div>
+                      <div className="text-sm text-slate-400">12 weeks of hands-on support</div>
+                    </div>
+                  </div>
                 </div>
                 
                 <Button
-                  onClick={() => window.open('https://coachinayahturnkey.com', '_blank')}
-                  className="bg-[#C9A962] hover:bg-[#D4B06D] text-[#0a0a0f] font-semibold px-8"
+                  asChild
+                  size="lg"
+                  className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25"
                 >
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  Learn About the Turnkey Program
+                  <a href="https://coachinayahturnkey.com" target="_blank" rel="noopener noreferrer">
+                    Learn About the Turnkey Program
+                    <ArrowUpRight className="w-5 h-5 ml-2" />
+                  </a>
                 </Button>
                 
-                <p className="text-gray-500 text-sm mt-4">
-                  Start earning in as little as 12 weeks
+                <p className="mt-4 text-sm text-slate-500">
+                  Up to $125K in funding available • Start earning in 12 weeks
                 </p>
               </div>
-            )}
+            </div>
+            
           </div>
         </section>
       )}
-      
-      {/* Footer */}
-      <footer className="py-8 border-t border-white/10">
-        <div className="container max-w-4xl mx-auto px-4 text-center">
-          <p className="text-white/40 text-sm">
-            Powered by Coach Inayah • Data from AirDNA
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
