@@ -48,6 +48,14 @@ interface MonthlyForecast {
   occupancy: number;
 }
 
+interface CompMonthlyMetric {
+  date: string;
+  occupancy: number;
+  adr: number;
+  revenue: number;
+  revenue_potential: number;
+}
+
 interface Comparable {
   id: string;
   title: string;
@@ -62,6 +70,18 @@ interface Comparable {
   imageUrl?: string;
   airbnbUrl?: string;
   distanceMeters?: number;
+  monthlyMetrics?: CompMonthlyMetric[];
+}
+
+interface HistoricalData {
+  summary: {
+    monthly_pct_change: number;
+    yearly_pct_change: number;
+  };
+  metrics: Array<{
+    date: string;
+    revenue_valuation: number;
+  }>;
 }
 
 interface AnalysisResult {
@@ -84,6 +104,8 @@ interface AnalysisResult {
   // Forecast & comps
   monthlyForecast: MonthlyForecast[];
   comparables: Comparable[];
+  // Historical market data
+  historical?: HistoricalData;
 }
 
 // Format currency
@@ -186,8 +208,8 @@ export default function LeadMagnet() {
           occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100, // Normalize to percentage
         }));
         
-        // Extract comparables
-        const comparables: Comparable[] = (data.comps || []).slice(0, 6).map((comp: any, index: number) => {
+        // Extract comparables (now up to 10 instead of 6)
+        const comparables: Comparable[] = (data.comps || []).slice(0, 10).map((comp: any, index: number) => {
           let occupancy = comp.occupancy || comp.occupancy_rate || 0;
           if (occupancy > 0 && occupancy <= 1) {
             occupancy = occupancy * 100;
@@ -210,6 +232,7 @@ export default function LeadMagnet() {
             imageUrl: comp.image_url || comp.thumbnail_url || null,
             airbnbUrl: airbnbUrl,
             distanceMeters: comp.distance_meters,
+            monthlyMetrics: comp.monthly_metrics,
           };
         });
         
@@ -228,6 +251,7 @@ export default function LeadMagnet() {
           bathrooms: data.property?.bathrooms || parseFloat(bathrooms),
           monthlyForecast: monthlyForecast,
           comparables: comparables,
+          historical: data.historical,
         });
         
         // Scroll to results
@@ -439,6 +463,19 @@ export default function LeadMagnet() {
                       <div className="text-sm text-slate-500 mt-1">
                         Range: {formatCurrency(result.revenueLow)} – {formatCurrency(result.revenueHigh)}
                       </div>
+                      {/* Historical Market Trend */}
+                      {result.historical && (
+                        <div className={`mt-3 pt-3 border-t border-slate-700/50 flex items-center gap-2 ${result.historical.summary.yearly_pct_change >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {result.historical.summary.yearly_pct_change >= 0 ? (
+                            <TrendingUp className="w-4 h-4" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-medium">
+                            {result.historical.summary.yearly_pct_change >= 0 ? '+' : ''}{result.historical.summary.yearly_pct_change.toFixed(1)}% market growth (YoY)
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Profit */}
@@ -578,7 +615,7 @@ export default function LeadMagnet() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white">Nearby Properties Making Money</h3>
-                    <p className="text-sm text-slate-400">Real data from similar Airbnb listings in your area</p>
+                    <p className="text-sm text-slate-400">Real data from {result.comparables.length} similar Airbnb listings in your area</p>
                   </div>
                 </div>
                 

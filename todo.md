@@ -68,3 +68,12 @@ From AirDNA Rentalizer endpoint:
   - Available but not using: historical data (12 months), up to 10 comps, comp historical trends
 - [x] Evaluate AI feature recommendations for the lead magnet
   - See detailed analysis below
+
+## New Features (Jan 4, 2026 - Part 3)
+- [x] Add historical market trends section showing past 12 months performance
+  - Added yearly % change indicator to revenue section
+  - Shows market growth trend (e.g., "+4.7% market growth (YoY)")
+- [x] Increase comparable properties from 6 to 10
+  - Updated API to return up to 10 comps
+  - Updated frontend to display all 10 comps
+  - Added monthly metrics data for each comp

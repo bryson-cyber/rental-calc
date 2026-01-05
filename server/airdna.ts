@@ -38,6 +38,15 @@ interface Comp {
   property_type?: string;
   last_review_date?: string;
   amenities?: string[];
+  accommodates?: number;
+  // Monthly performance data for each comp
+  monthly_metrics?: Array<{
+    date: string;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revenue_potential: number;
+  }>;
 }
 
 export interface RentalizerResponse {
@@ -64,6 +73,17 @@ export interface RentalizerResponse {
   };
   monthly_forecast: MonthlyForecast[];
   comps: Comp[];
+  // Historical data
+  historical?: {
+    summary: {
+      monthly_pct_change: number;
+      yearly_pct_change: number;
+    };
+    metrics: Array<{
+      date: string;
+      revenue_valuation: number;
+    }>;
+  };
 }
 
 export interface MarketSearchResult {
@@ -1721,6 +1741,18 @@ async function tryRentalizerRequest(
               revenue: number;
             }>;
           };
+          historical?: {
+            summary: {
+              revenue_valuation: {
+                monthly_pct_change: number;
+                yearly_pct_change: number;
+              };
+            };
+            metrics: Array<{
+              date: string;
+              revenue_valuation: number;
+            }>;
+          };
         };
         comps?: Array<{
           property_id: string;
@@ -1745,6 +1777,13 @@ async function tryRentalizerRequest(
               adr: number;
               revenue: number;
             };
+            metrics?: Array<{
+              date: string;
+              occupancy: number;
+              adr: number;
+              revenue: number;
+              revenue_potential: number;
+            }>;
           };
         }>;
       };
@@ -1758,8 +1797,8 @@ async function tryRentalizerRequest(
     
     const payload = response.payload;
     
-    // Map comps to our format
-    const comps: Comp[] = (payload.comps || []).map((comp) => ({
+    // Map comps to our format (take all available, up to 10)
+    const comps: Comp[] = (payload.comps || []).slice(0, 10).map((comp) => ({
       title: comp.details.title,
       bedrooms: comp.details.bedrooms,
       bathrooms: comp.details.bathrooms,
@@ -1774,6 +1813,15 @@ async function tryRentalizerRequest(
         (comp.platforms?.airbnb_property_id ? `https://www.airbnb.com/rooms/${comp.platforms.airbnb_property_id}` : undefined),
       image_url: comp.details.images?.[0] || (comp.details as any).thumbnail_url || (comp as any).thumbnail_url,
       property_type: comp.details.property_type,
+      accommodates: comp.details.accommodates,
+      // Include monthly performance data for each comp
+      monthly_metrics: comp.stats.metrics?.map(m => ({
+        date: m.date,
+        occupancy: m.occupancy,
+        adr: m.adr,
+        revenue: m.revenue,
+        revenue_potential: m.revenue_potential,
+      })),
     }));
     
     // Map monthly forecast
@@ -1808,6 +1856,17 @@ async function tryRentalizerRequest(
       },
       monthly_forecast,
       comps,
+      // Include historical data if available
+      historical: payload.stats.historical ? {
+        summary: {
+          monthly_pct_change: payload.stats.historical.summary.revenue_valuation.monthly_pct_change,
+          yearly_pct_change: payload.stats.historical.summary.revenue_valuation.yearly_pct_change,
+        },
+        metrics: payload.stats.historical.metrics.map(m => ({
+          date: m.date,
+          revenue_valuation: m.revenue_valuation,
+        })),
+      } : undefined,
     };
     
     return result;
