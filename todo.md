@@ -117,3 +117,7 @@ From AirDNA Rentalizer endpoint:
 ## New Features (Jan 4, 2026 - Part 8)
 - [x] Add map view to Explore Area results showing listing locations
 - [x] Add styled gradient placeholders to Airbnb listing cards in Explore Area (based on property type)
+
+
+## Bug Fixes (Jan 4, 2026 - Part 9)
+- [x] Fix Google Maps API multiple loading error - API being included multiple times on page

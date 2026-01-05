@@ -69,9 +69,9 @@
  *
  * -------------------------------
  * ✅ SUMMARY
- * - “map-attached” → AdvancedMarkerElement, DirectionsRenderer, Layers.
- * - “standalone” → Geocoder, DirectionsService, DistanceMatrixService, ElevationService.
- * - “data-only” → Place, Geometry utilities.
+ * - "map-attached" → AdvancedMarkerElement, DirectionsRenderer, Layers.
+ * - "standalone" → Geocoder, DirectionsService, DistanceMatrixService, ElevationService.
+ * - "data-only" → Place, Geometry utilities.
  */
 
 /// <reference types="@types/google.maps" />
@@ -83,6 +83,8 @@ import { cn } from "@/lib/utils";
 declare global {
   interface Window {
     google?: typeof google;
+    __googleMapsLoading?: Promise<void>;
+    __googleMapsLoaded?: boolean;
   }
 }
 
@@ -92,21 +94,57 @@ const FORGE_BASE_URL =
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
-function loadMapScript() {
-  return new Promise(resolve => {
+function loadMapScript(): Promise<void> {
+  // If already loaded, return immediately
+  if (window.__googleMapsLoaded && window.google?.maps) {
+    return Promise.resolve();
+  }
+  
+  // If currently loading, return the existing promise
+  if (window.__googleMapsLoading) {
+    return window.__googleMapsLoading;
+  }
+  
+  // Start loading
+  window.__googleMapsLoading = new Promise((resolve, reject) => {
+    // Check if script already exists in DOM
+    const existingScript = document.querySelector(
+      `script[src*="${MAPS_PROXY_URL}/maps/api/js"]`
+    );
+    
+    if (existingScript) {
+      // Script exists, wait for it to load
+      if (window.google?.maps) {
+        window.__googleMapsLoaded = true;
+        resolve();
+        return;
+      }
+      existingScript.addEventListener('load', () => {
+        window.__googleMapsLoaded = true;
+        resolve();
+      });
+      existingScript.addEventListener('error', () => {
+        reject(new Error('Failed to load Google Maps script'));
+      });
+      return;
+    }
+    
     const script = document.createElement("script");
     script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
+      window.__googleMapsLoaded = true;
+      resolve();
     };
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
+      reject(new Error('Failed to load Google Maps script'));
     };
     document.head.appendChild(script);
   });
+  
+  return window.__googleMapsLoading;
 }
 
 interface MapViewProps {
@@ -124,13 +162,33 @@ export function MapView({
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
+  const initialized = useRef(false);
 
   const init = usePersistFn(async () => {
-    await loadMapScript();
-    if (!mapContainer.current) {
-      console.error("Map container not found");
+    // Prevent double initialization
+    if (initialized.current) return;
+    initialized.current = true;
+    
+    try {
+      await loadMapScript();
+    } catch (error) {
+      console.error("Failed to load map:", error);
+      initialized.current = false;
       return;
     }
+    
+    if (!mapContainer.current) {
+      console.error("Map container not found");
+      initialized.current = false;
+      return;
+    }
+    
+    if (!window.google?.maps) {
+      console.error("Google Maps not available");
+      initialized.current = false;
+      return;
+    }
+    
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,
