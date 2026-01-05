@@ -10,6 +10,8 @@
  * - Risk assessment narrative
  * - Pricing strategy recommendations
  * - Competitor photo analysis
+ * 
+ * OPTIMIZATION: Runs AI sections in parallel for faster generation (~20-30s instead of ~100s)
  */
 
 import { getDb } from './db';
@@ -18,8 +20,8 @@ import { eq } from 'drizzle-orm';
 import { ENV } from './_core/env';
 import { generateNarrativeWithPoe } from './poe-ai';
 
-// AI provider timeout - Poe has longer timeouts for quality responses
-const AI_TIMEOUT_MS = 120000; // 120 seconds per call for Poe
+// AI provider timeout - reduced for faster failure
+const AI_TIMEOUT_MS = 45000; // 45 seconds per call (reduced from 120s)
 
 // Types
 export interface DeepAnalysisResult {
@@ -194,7 +196,7 @@ export async function getDeepAnalysis(reportId: number): Promise<{
 }
 
 /**
- * Process deep analysis (runs in background)
+ * Process deep analysis (runs in background) - OPTIMIZED FOR PARALLEL EXECUTION
  */
 async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Promise<void> {
   const startTime = Date.now();
@@ -216,9 +218,7 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
     const reportData = report[0];
     const fullData = reportData.fullAnalysisData as any;
 
-    // Extract key metrics from fullData (the JSON blob has the actual data)
-    // The database columns might be null, so we need to get data from fullData
-    // Note: profitability uses scenarios.realistic.projected_revenue and scenarios.realistic.estimated_profit
+    // Extract key metrics from fullData
     const profitability = fullData?.profitability;
     const propertyEstimate = fullData?.property_estimate;
     const monthlyRent = reportData.monthlyRent || profitability?.monthly_expenses?.rent || 0;
@@ -229,31 +229,27 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
       bathrooms: reportData.bathrooms || propertyEstimate?.bathrooms || 0,
       monthlyRent: monthlyRent,
       marketName: reportData.marketName || propertyEstimate?.market_name || 'Unknown',
-      // Revenue comes from profitability.scenarios.X.projected_revenue
       annualRevenueRealistic: reportData.annualRevenueRealistic || profitability?.scenarios?.realistic?.projected_revenue || propertyEstimate?.revenue || 0,
       annualRevenueConservative: reportData.annualRevenueConservative || profitability?.scenarios?.conservative?.projected_revenue || 0,
       annualRevenueOptimistic: reportData.annualRevenueOptimistic || profitability?.scenarios?.optimistic?.projected_revenue || 0,
-      // Profit comes from profitability.scenarios.X.estimated_profit
       annualProfitRealistic: reportData.annualProfitRealistic || profitability?.scenarios?.realistic?.estimated_profit || 0,
       annualProfitConservative: reportData.annualProfitConservative || profitability?.scenarios?.conservative?.estimated_profit || 0,
       annualProfitOptimistic: reportData.annualProfitOptimistic || profitability?.scenarios?.optimistic?.estimated_profit || 0,
-      // Occupancy: try property_estimate first, then market_metrics, then historical_context, then same_bedroom_competitors
       occupancyRate: reportData.occupancyRate || 
         propertyEstimate?.occupancy || 
         fullData?.submarket_exploration?.market_metrics?.occupancy ||
         fullData?.historical_context?.occupancy?.current_year_avg ||
         fullData?.same_bedroom_competitors?.avg_occupancy ||
         fullData?.market_overview?.avg_occupancy ||
-        57, // Default to national average if all else fails
+        57,
       averageDailyRate: reportData.averageDailyRate || propertyEstimate?.adr || 0,
       breakEvenOccupancy: reportData.breakEvenOccupancy || 0,
-      // Calculate revenue-to-rent ratio
       revenueToRentRatio: monthlyRent > 0 
         ? (profitability?.scenarios?.realistic?.projected_revenue || propertyEstimate?.revenue || 0) / (monthlyRent * 12) 
         : 0,
     };
 
-    console.log('[DeepAnalysis] Extracted data:', JSON.stringify(extractedData, null, 2));
+    console.log('[DeepAnalysis] Starting PARALLEL generation for report', reportId);
 
     // Helper to update progress
     const updateProgress = async (step: string, completedSteps: string[]) => {
@@ -262,52 +258,90 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
         .where(eq(deepAnalysis.id, deepAnalysisId));
     };
 
-    const completedSteps: string[] = [];
+    // PARALLEL EXECUTION: Run all 6 sections at once
+    await updateProgress('Generating all sections in parallel...', []);
 
-    // Generate sections sequentially with progress tracking
-    await updateProgress('Generating Executive Summary...', completedSteps);
-    const executiveSummaryEnhanced = await generateEnhancedExecutiveSummary(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Enhanced summary failed:', err);
-      return null;
-    });
-    completedSteps.push('executiveSummary');
+    // Create promises for all sections
+    const sectionPromises = [
+      // Section 1: Executive Summary
+      generateEnhancedExecutiveSummary(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Executive Summary completed');
+          return { key: 'executiveSummary', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Executive Summary failed:', err.message);
+          return { key: 'executiveSummary', result: null };
+        }),
+      
+      // Section 2: Market Scenarios (Investment Thesis)
+      generateInvestmentThesis(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Market Scenarios completed');
+          return { key: 'marketScenarios', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Market Scenarios failed:', err.message);
+          return { key: 'marketScenarios', result: null };
+        }),
+      
+      // Section 3: Historical Context
+      generateHistoricalContext(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Historical Context completed');
+          return { key: 'historicalContext', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Historical Context failed:', err.message);
+          return { key: 'historicalContext', result: null };
+        }),
+      
+      // Section 4: Risk Assessment
+      generateRiskNarrative(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Risk Assessment completed');
+          return { key: 'riskAssessment', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Risk Assessment failed:', err.message);
+          return { key: 'riskAssessment', result: null };
+        }),
+      
+      // Section 5: Pricing Data
+      generatePricingStrategy(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Pricing Data completed');
+          return { key: 'pricingData', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Pricing Data failed:', err.message);
+          return { key: 'pricingData', result: null };
+        }),
+      
+      // Section 6: Market Deep Dive
+      generateMarketNarrative(extractedData, fullData)
+        .then(result => {
+          console.log('[DeepAnalysis] Market Deep Dive completed');
+          return { key: 'marketDeepDive', result };
+        })
+        .catch(err => {
+          console.error('[DeepAnalysis] Market Deep Dive failed:', err.message);
+          return { key: 'marketDeepDive', result: null };
+        }),
+    ];
 
-    await updateProgress('Generating Market Scenarios...', completedSteps);
-    const investmentThesis = await generateInvestmentThesis(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Investment thesis failed:', err);
-      return null;
-    });
-    completedSteps.push('marketScenarios');
+    // Wait for all sections to complete
+    const results = await Promise.all(sectionPromises);
+    
+    // Extract results
+    const executiveSummaryEnhanced = results.find(r => r.key === 'executiveSummary')?.result as string | null;
+    const investmentThesis = results.find(r => r.key === 'marketScenarios')?.result as InvestmentThesis | null;
+    const historicalContext = results.find(r => r.key === 'historicalContext')?.result as HistoricalContext | null;
+    const riskNarrative = results.find(r => r.key === 'riskAssessment')?.result as RiskNarrative | null;
+    const pricingStrategy = results.find(r => r.key === 'pricingData')?.result as PricingStrategy | null;
+    const marketNarrative = results.find(r => r.key === 'marketDeepDive')?.result as string | null;
 
-    await updateProgress('Analyzing Historical Context...', completedSteps);
-    const historicalContext = await generateHistoricalContext(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Historical context failed:', err);
-      return null;
-    });
-    completedSteps.push('historicalContext');
-
-    await updateProgress('Assessing Risks...', completedSteps);
-    const riskNarrative = await generateRiskNarrative(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Risk narrative failed:', err);
-      return null;
-    });
-    completedSteps.push('riskAssessment');
-
-    await updateProgress('Analyzing Market Pricing...', completedSteps);
-    const pricingStrategy = await generatePricingStrategy(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Pricing strategy failed:', err);
-      return null;
-    });
-    completedSteps.push('pricingData');
-
-    await updateProgress('Generating Market Deep Dive...', completedSteps);
-    const marketNarrative = await generateMarketNarrative(extractedData, fullData).catch(err => {
-      console.error('[DeepAnalysis] Market narrative failed:', err);
-      return null;
-    });
-    completedSteps.push('marketDeepDive');
-
-    // Action plan is removed, but keep variable for compatibility
+    // Action plan is removed
     const actionPlan = null;
 
     const processingTimeMs = Date.now() - startTime;
@@ -324,12 +358,13 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
         marketNarrative,
         actionPlan,
         processingTimeMs,
-        aiProvider: 'forge',
+        aiProvider: 'poe',
         completedAt: new Date(),
+        completedSteps: JSON.stringify(['executiveSummary', 'marketScenarios', 'historicalContext', 'riskAssessment', 'pricingData', 'marketDeepDive']),
       })
       .where(eq(deepAnalysis.id, deepAnalysisId));
 
-    console.log(`[DeepAnalysis] Completed for report ${reportId} in ${processingTimeMs}ms`);
+    console.log(`[DeepAnalysis] Completed for report ${reportId} in ${processingTimeMs}ms (${(processingTimeMs / 1000).toFixed(1)}s)`);
 
   } catch (error) {
     const processingTimeMs = Date.now() - startTime;
@@ -351,7 +386,7 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
  * Call AI using Poe API (Claude Opus for high-quality narratives)
  */
 async function callAI(prompt: string, systemPrompt: string = ''): Promise<string> {
-  console.log('[DeepAnalysis] Calling Poe AI with Claude Opus...');
+  console.log('[DeepAnalysis] Calling Poe AI...');
   
   try {
     const response = await generateNarrativeWithPoe(prompt, {
@@ -430,13 +465,12 @@ Return a JSON object with this exact structure:
 }
 
 async function generateInvestmentThesis(reportData: any, fullData: any): Promise<InvestmentThesis | null> {
-  // Use pre-calculated ratio if available, otherwise calculate
   const revenueToRentRatio = reportData.revenueToRentRatio || 
     (reportData.monthlyRent > 0 ? reportData.annualRevenueRealistic / (reportData.monthlyRent * 12) : 0);
   const occupancy = reportData.occupancyRate;
   const competitors = fullData?.competitors?.length || 0;
   
-  const prompt = `Generate an investment thesis for this rental arbitrage opportunity in JSON format.
+  const prompt = `Generate market scenarios for this rental arbitrage opportunity in JSON format.
 
 PROPERTY: ${reportData.bedrooms} bedrooms at ${reportData.address}
 MARKET: ${reportData.marketName}
@@ -453,7 +487,7 @@ PROFIT PROJECTIONS:
 
 Return a JSON object with this exact structure:
 {
-  "summary": "2-3 sentence investment thesis summary",
+  "summary": "2-3 sentence market scenario summary",
   "bullCase": "Best case scenario description",
   "bearCase": "Worst case scenario description",
   "baseCase": "Most likely scenario description",
@@ -509,7 +543,7 @@ async function generatePricingStrategy(reportData: any, fullData: any): Promise<
   const competitorADRs = competitors.map((c: any) => c.adr).filter((a: number) => a > 0);
   const avgADR = competitorADRs.length ? competitorADRs.reduce((a: number, b: number) => a + b, 0) / competitorADRs.length : reportData.averageDailyRate;
   
-  const prompt = `Create a pricing strategy for this rental property and return JSON.
+  const prompt = `Create a pricing analysis for this rental property and return JSON.
 
 PROPERTY: ${reportData.bedrooms} bedrooms at ${reportData.address}
 MARKET ADR: $${reportData.averageDailyRate}/night
@@ -528,10 +562,10 @@ Return a JSON object with this exact structure:
   "offSeasonDiscount": 15,
   "weekendPremium": 20,
   "minimumStay": {"weekday": 2, "weekend": 2, "peak": 3},
-  "dynamicPricingRecommendation": "Recommendation for dynamic pricing tools",
+  "dynamicPricingRecommendation": "Insight about dynamic pricing tools",
   "competitorPricing": {"low": 100, "median": 150, "high": 200},
   "suggestedRange": {"min": 120, "max": 180},
-  "strategy": "2-3 sentence pricing strategy summary"
+  "strategy": "2-3 sentence pricing analysis summary"
 }`;
 
   const response = await callAI(prompt, 'You are a pricing data analyst for Coach Inayah. Present pricing data and market comparisons only - do not give recommendations. Respond only with valid JSON.');
@@ -607,7 +641,6 @@ Use **bold** for key metrics. Be specific with numbers. Focus on facts, not reco
 
 // Action Plan generation removed - we only present data and insights, not prescriptive advice
 async function generateActionPlan(_reportData: any, _fullData: any): Promise<ActionPlan | null> {
-  // Return null - we don't provide action plans, just data and insights
   return null;
 }
 

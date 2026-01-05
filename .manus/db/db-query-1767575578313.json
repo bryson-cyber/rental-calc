@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, address, marketName FROM analysis_reports ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, marketName FROM analysis_reports ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "720001",
+      "address": "4665 West Kings Avenue, Glendale, AZ, USA",
+      "marketName": "NULL"
+    },
+    {
+      "id": "690001",
+      "address": "456 Congress Ave., Austin, TX, USA",
+      "marketName": "NULL"
+    },
+    {
+      "id": "660004",
+      "address": "123 Main St, Austin, TX, USA",
+      "marketName": "NULL"
+    },
+    {
+      "id": "660003",
+      "address": "4218 Delmar Boulevard, St. Louis, MO, USA",
+      "marketName": "NULL"
+    },
+    {
+      "id": "660002",
+      "address": "789 Music Square West, Nashville, TN, USA",
+      "marketName": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\tmarketName\n720001\t4665 West Kings Avenue, Glendale, AZ, USA\tNULL\n690001\t456 Congress Ave., Austin, TX, USA\tNULL\n660004\t123 Main St, Austin, TX, USA\tNULL\n660003\t4218 Delmar Boulevard, St. Louis, MO, USA\tNULL\n660002\t789 Music Square West, Nashville, TN, USA\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

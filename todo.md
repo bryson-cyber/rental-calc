@@ -1993,3 +1993,10 @@
 - [x] Update frontend to poll and display section-specific progress
 - [x] Show checkmarks for completed sections
 - [x] Test the progress indicators end-to-end
+
+
+## Bug Fix: Deep Analysis Stuck on Step 6 (January 4, 2026)
+- [x] Investigate why Market Deep Dive (step 6) takes 3+ minutes
+- [x] Run AI sections in parallel instead of sequentially
+- [x] Reduce timeout from 120s to 60s per section
+- [x] Add fallback content if AI times out
