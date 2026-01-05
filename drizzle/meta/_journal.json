@@ -50,6 +50,13 @@
       "when": 1767571711326,
       "tag": "0006_pretty_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1767642717770,
+      "tag": "0007_slim_salo",
+      "breakpoints": true
     }
   ]
 }

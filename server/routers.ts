@@ -31,6 +31,7 @@ import { generateFullArbitrageAnalysis } from "./sop-reports";
 import { generatePDFReport } from "./export-pdf";
 import { generateExcelReport } from "./export-excel";
 import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
+import { marketResearchRouter } from "./market-research";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1689,6 +1690,9 @@ export const appRouter = router({
   }),
 
   // Bulk Summary API
+  // Market Research with Browser Use
+  marketResearch: marketResearchRouter,
+
   bulkSummary: router({
     get: publicProcedure
       .input(z.object({

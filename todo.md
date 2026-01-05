@@ -132,3 +132,133 @@ From AirDNA Rentalizer endpoint:
 ## Bug Fixes (Jan 5, 2026 - Part 11)
 - [x] Fix contradictory "Good News" message - shows "0 out of 6 nearby Airbnbs make more than your rent" but says "People want to stay here!"
 - [x] Remove map view from Explore Area (not working properly)
+
+
+## New Features (Jan 5, 2026 - Part 12) - Market Research Agent
+
+- [x] Add "Market Research" tab to main UI (4th tab alongside One Home, Compare Many, Explore Area)
+- [x] Integrate Browser Use Cloud API for automated browser tasks
+  - [x] Create browser-use.ts service with API integration
+  - [x] Store API key securely in environment variables
+  - [x] Create Browser Use profile for persistent login state
+- [x] Build Market Research UI
+  - [x] City/market name input field
+  - [x] Start Research button
+  - [x] Loading progress bar with 8 steps visualization
+  - [x] Step-by-step progress indicators
+- [x] Implement 8-step Market Research automation (prompts created)
+  - [x] Step 1: Navigate to coachinayah.com/market-charts and select market/ZIP codes
+  - [x] Step 2: Extract Market Explorer metrics (11 glossary metrics)
+  - [x] Step 3: Analyze bedroom size performance (1BR-5BR+)
+  - [x] Step 4: Favorite top 10-15 performers
+  - [x] Step 5: Map analysis for geographic clusters
+  - [x] Step 6: Seasonality analysis (charts tab)
+  - [x] Step 7: Visit Airbnb listings for photo/design analysis
+  - [x] Step 8: Compile comprehensive market research report
+- [x] Build Market Research Report display
+  - [x] Executive Summary section
+  - [x] Market Overview section (11 metrics)
+  - [x] Bedroom Size Analysis section with comparison table
+  - [x] Geographic Analysis section (target neighborhoods)
+  - [x] Top Performer Analysis section with design/vibe breakdown
+  - [x] Seasonality Insights section
+  - [x] Recommendations section
+- [x] Handle Browser Use login flow
+  - [x] Create persistent profile for coachinayah.com login
+  - [x] Prompt user to log in on first use (modal created)
+  - [x] Save session state for future requests
+
+
+## Bug Fixes (Jan 5, 2026 - Part 13)
+- [x] Fix Browser Use login persistence - should not require login every time
+  - [x] Ensure profile cookies are saved after successful login
+  - [x] Skip login check if profile has been authenticated recently (1 hour cache)
+  - [x] Add flag to track if profile is authenticated
+  - [x] Add confirmLogin endpoint to mark profile as authenticated after user logs in
+
+
+## Backend-Only Login (Jan 5, 2026 - Part 14)
+- [x] Remove user-facing login modal from Market Research UI
+- [x] Create admin-only setup page/endpoint for initial Browser Use login (adminSetupLogin, confirmLogin, getServiceStatus)
+- [x] Backend handles all authentication automatically
+- [x] If login fails, show generic error (not login prompt) to user
+- [ ] Store login state persistently (database instead of memory) - future enhancement
+
+
+## Login Persistence Fix (Jan 5, 2026 - Part 15)
+- [ ] Create database table for Browser Use settings (profile ID, auth status, last auth time)
+- [ ] Update market-research.ts to read/write auth state from database
+- [ ] Test that login persists across server restarts
+
+
+## Browser Use Optimization (Jan 5, 2026 - Part 16)
+- [ ] Update browser-use.ts
+  - [ ] Add saveBrowserData: true to session creation for persistent login
+  - [ ] Change default LLM from gemini-2.5-flash to gpt-4o
+  - [ ] Add structuredOutput support with JSON schemas
+- [ ] Consolidate 8 tasks into 3 comprehensive tasks
+  - [ ] Task 1: Data Collection (Dashboard, Market Explorer, Comp Data) - Steps 1-4
+  - [ ] Task 2: Geographic & Seasonality Analysis (Map, Charts) - Steps 5-6
+  - [ ] Task 3: Airbnb Deep Dive & Report Compilation - Steps 7-8
+- [ ] Create JSON schemas for structured output
+  - [ ] Schema for Task 1 (market metrics, bedroom analysis, top performers)
+  - [ ] Schema for Task 2 (geographic clusters, seasonality)
+  - [ ] Schema for Task 3 (listing analysis, recommendations)
+- [ ] Update frontend progress UI for 3-step flow
+- [ ] Test the optimized flow end-to-end
+
+
+## Skills Refactor (Jan 5, 2026 - Part 17)
+- [ ] Refactor Market Research to use Browser Use Skills instead of Tasks/Sessions
+- [ ] Add Skills API support to browser-use.ts (createSkill, invokeSkill, listSkills)
+- [ ] Create 3 Skills for Market Research:
+  - [ ] Skill 1: Data Collection (market metrics, submarkets, top performers)
+  - [ ] Skill 2: Geographic & Seasonality analysis
+  - [ ] Skill 3: Airbnb Deep Dive (visit listings, compile recommendations)
+- [ ] Update market-research.ts to invoke skills instead of managing sessions/tasks
+- [ ] Remove session management complexity
+- [ ] Test Skills-based flow for reliability
+
+
+## Single-Task Approach (Jan 5, 2026 - Final)
+- [ ] Rewrite market-research.ts with single comprehensive task per research
+- [ ] Use new session per request with profile for login
+- [ ] Use Claude Opus 4.5 with thinking mode and vision enabled
+- [ ] Set max steps to 100-150 for full research workflow
+- [ ] Enable saveBrowserData to persist login cookies
+- [ ] Create comprehensive prompt that covers all 8 research steps
+- [ ] Update frontend to match new API
+- [ ] Test the complete flow
+
+
+## Manus-Powered Market Research (Jan 5, 2026)
+
+Browser Use Cloud API ran out of credits. Rebuilding with Manus backend browser automation.
+
+- [ ] Design Manus-powered browser automation architecture
+  - [ ] Create scheduled task system for research requests
+  - [ ] Design data extraction pipeline
+  - [ ] Plan database storage for research results
+- [ ] Create backend service for browser-based data extraction
+  - [ ] Build manus-scraper.ts service
+  - [ ] Implement queue system for research requests
+  - [ ] Add progress tracking via database
+- [ ] Build scraping logic for each data section
+  - [ ] Dashboard metrics extraction
+  - [ ] Market Explorer submarket data
+  - [ ] Comp Data top performers
+  - [ ] Map geographic clusters
+  - [ ] Charts seasonality data
+- [ ] Update Market Research UI
+  - [ ] Connect to new Manus-powered backend
+  - [ ] Show real-time progress updates
+  - [ ] Display comprehensive report
+- [ ] Test complete flow and fix issues
+
+
+## Launch Preparation (Jan 5, 2026)
+
+- [x] Remove Market Research tab from main UI
+- [x] Clean up unused market research code (removed from App.tsx and LeadMagnet.tsx)
+- [x] Verify One Home, Compare Many, and Explore Area features work
+- [x] Save checkpoint for launch

@@ -10,4 +10,5 @@ export const ENV = {
   airdnaApiKey: process.env.AIRDNA_API_KEY ?? "",
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   poeApiKey: process.env.POE_API_KEY ?? "",
+  browserUseApiKey: process.env.BROWSER_USE_API_KEY ?? "",
 };

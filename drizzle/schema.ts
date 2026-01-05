@@ -261,3 +261,28 @@ export const deepAnalysis = mysqlTable("deep_analysis", {
 
 export type DeepAnalysis = typeof deepAnalysis.$inferSelect;
 export type InsertDeepAnalysis = typeof deepAnalysis.$inferInsert;
+
+
+/**
+ * Browser Use settings table for storing persistent configuration
+ * This includes profile IDs and authentication state that should survive server restarts
+ */
+export const browserUseSettings = mysqlTable("browser_use_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Setting key (e.g., 'coachinayah_profile_id', 'coachinayah_auth_status')
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  
+  // Setting value (stored as string, can be JSON for complex values)
+  settingValue: text("settingValue").notNull(),
+  
+  // Expiration time (optional, for time-limited settings like auth status)
+  expiresAt: timestamp("expiresAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BrowserUseSetting = typeof browserUseSettings.$inferSelect;
+export type InsertBrowserUseSetting = typeof browserUseSettings.$inferInsert;
