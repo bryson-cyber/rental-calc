@@ -765,8 +765,8 @@ export default function LeadMagnet() {
                   <path d="M12 16v-4M12 8h.01" />
                 </svg>
                 <span>
-                  Data powered by <a href="https://www.airdna.co" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">AirDNA</a> — 
-                  aggregated from Airbnb, Vrbo, and other major booking platforms
+                  Powered by <span className="text-[#D4A84B] font-medium">Coach Inayah Market Data</span> — 
+                  Data from Airbnb, Vrbo, and other major booking platforms
                 </span>
               </div>
             </div>

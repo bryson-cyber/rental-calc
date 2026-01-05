@@ -1653,6 +1653,39 @@ export async function getRentalizerEstimate(
     return cached;
   }
   
+  // Try the request with fallback bathroom counts if it fails
+  // AirDNA API sometimes returns 500 errors for certain bed/bath combinations
+  const bathroomOptions = [
+    request.bathrooms,
+    request.bathrooms === 1 ? 2 : request.bathrooms, // Try 2 baths if 1 fails
+    request.bathrooms === 1 ? 1.5 : request.bathrooms, // Try 1.5 baths if 1 fails
+    Math.max(1, (request.bedrooms || 2) - 1), // Try bedrooms - 1 baths
+  ].filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
+  
+  for (const bathrooms of bathroomOptions) {
+    try {
+      const result = await tryRentalizerRequest({
+        ...request,
+        bathrooms
+      });
+      if (result) {
+        // Cache and return the successful result
+        apiCache.set(cacheKey, result, 'rentalizer');
+        return result;
+      }
+    } catch (error) {
+      // Continue to next bathroom option
+      console.log(`Rentalizer failed for ${request.bedrooms} bed / ${bathrooms} bath, trying next option...`);
+    }
+  }
+  
+  console.error("Error getting rentalizer estimate: All bathroom configurations failed");
+  return null;
+}
+
+async function tryRentalizerRequest(
+  request: RentalizerRequest
+): Promise<RentalizerResponse | null> {
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1777,13 +1810,10 @@ export async function getRentalizerEstimate(
       comps,
     };
     
-    // Cache the result
-    apiCache.set(cacheKey, result, 'rentalizer');
-    
     return result;
   } catch (error) {
-    console.error("Error getting rentalizer estimate:", error);
-    return null;
+    // Re-throw to let the caller handle retry logic
+    throw error;
   }
 }
 

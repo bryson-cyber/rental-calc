@@ -54,3 +54,9 @@ From AirDNA Rentalizer endpoint:
 - [ ] Peak vs off-season revenue visualization
 - [ ] Mobile-optimized bar chart
 - [ ] Social proof / testimonials section
+
+## Bug Reports (Jan 4, 2026)
+- [x] Address "4218 Delmar Blvd, St. Louis, MO, USA" doesn't load - FIXED with retry logic for bathroom fallback
+  - AirDNA API returns 500 for certain bed/bath combinations (e.g., 2 bed / 1 bath at this address)
+  - Added automatic retry with alternative bathroom counts (1 → 2 → 1.5 → bedrooms-1)
+  - Successfully loads with 2 bed / 2 bath fallback
