@@ -658,30 +658,33 @@ export default function LeadMagnet() {
             {/* Email Gate or Unlocked Content */}
             {!hasUnlockedReport ? (
               <div className="bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2f] rounded-2xl p-8 text-center">
-                <h3 className="text-2xl font-bold text-white mb-4">
-                  Want the Full Breakdown?
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  Ready to Start Your Airbnb Business?
                 </h3>
+                <p className="text-[#C9A962] font-medium mb-4">
+                  Without the Stress.
+                </p>
                 <p className="text-white/60 mb-6 max-w-lg mx-auto">
-                  Get the complete analysis including detailed competitor data, seasonality insights, and a personalized action plan.
+                  Our Turnkey Program handles the hard parts for you — from finding properties to getting your first bookings.
                 </p>
                 
                 {/* What's included */}
                 <div className="grid grid-cols-2 gap-4 mb-8 max-w-md mx-auto text-left">
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">Full competitor analysis</span>
+                    <span className="text-sm">We find the property</span>
                   </div>
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">Monthly seasonality</span>
+                    <span className="text-sm">We negotiate with landlords</span>
                   </div>
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">Startup costs</span>
+                    <span className="text-sm">We furnish & design</span>
                   </div>
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">Risk assessment</span>
+                    <span className="text-sm">We launch your listing</span>
                   </div>
                 </div>
                 
@@ -703,33 +706,61 @@ export default function LeadMagnet() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Get Free Report
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                        Learn How It Works
                       </>
                     )}
                   </Button>
                 </div>
                 
                 <p className="text-white/40 text-xs mt-4">
-                  We'll also send you tips on maximizing your Airbnb income.
+                  Get your free report + learn about our done-for-you Turnkey Program.
                 </p>
               </div>
             ) : (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center">
+              <div className="bg-gradient-to-br from-emerald-50 to-[#C9A962]/10 border border-emerald-200 rounded-2xl p-8 text-center">
                 <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Report Sent!
+                  You're One Step Closer!
                 </h3>
-                <p className="text-gray-600 mb-6">
-                  Check your inbox for the full analysis. Want to discuss your investment strategy?
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Check your inbox for the full analysis. Ready to start your Airbnb business the easy way?
                 </p>
+                
+                {/* Turnkey Benefits */}
+                <div className="bg-white rounded-xl p-6 mb-6 max-w-md mx-auto text-left">
+                  <h4 className="font-semibold text-gray-900 mb-3">The Turnkey Program includes:</h4>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
+                      <span>Up to $125K in 0% interest business funding</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
+                      <span>We find & negotiate properties for you</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
+                      <span>Full design, furnishing & listing setup</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
+                      <span>Daily coaching calls & ongoing support</span>
+                    </li>
+                  </ul>
+                </div>
+                
                 <Button
-                  onClick={() => window.open('https://calendly.com', '_blank')}
-                  className="bg-[#C9A962] hover:bg-[#D4B06D] text-[#0a0a0f] font-semibold"
+                  onClick={() => window.open('https://coachinayahturnkey.com', '_blank')}
+                  className="bg-[#C9A962] hover:bg-[#D4B06D] text-[#0a0a0f] font-semibold px-8"
                 >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Schedule a Free Call
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Learn About the Turnkey Program
                 </Button>
+                
+                <p className="text-gray-500 text-sm mt-4">
+                  Start earning in as little as 12 weeks
+                </p>
               </div>
             )}
           </div>
