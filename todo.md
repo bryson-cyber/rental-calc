@@ -2048,3 +2048,9 @@
 - [x] Fix occupancy display showing 1% instead of actual percentage (now shows 25%, 81%, 98%, etc.)
 - [x] Make competitor cards clickable with Airbnb listing links (cards are now anchor tags)
 - [x] Add external link icon to indicate clickable cards (shows on hover with Airbnb red color)
+
+
+## Verdict Threshold Adjustment (January 4, 2026) - COMPLETED
+- [x] Lower thresholds to be more realistic (1.5x+ is now "good", 2.5x+ is "great")
+- [x] Reframe messaging to be more encouraging and positive
+- [x] Focus on opportunity rather than risk ("Worth Exploring" instead of "Proceed with Caution")

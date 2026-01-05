@@ -36,10 +36,11 @@ import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { toast } from 'sonner';
 
-// Verdict thresholds
-const GREAT_RATIO = 3.0; // 3x rent = great deal
-const GOOD_RATIO = 2.0;  // 2x rent = good deal
-const RISKY_RATIO = 1.5; // 1.5x rent = risky
+// Verdict thresholds - realistic for Airbnb arbitrage
+// Industry standard: 1.5x+ is profitable, 2x+ is excellent
+const GREAT_RATIO = 2.5; // 2.5x rent = exceptional opportunity
+const GOOD_RATIO = 1.5;  // 1.5x rent = solid deal (most successful investors operate here)
+const MARGINAL_RATIO = 1.2; // 1.2x rent = workable with good execution
 
 interface Comparable {
   id: string;
@@ -142,28 +143,28 @@ export default function LeadMagnet() {
         const profit = annualRevenue - annualRent;
         const ratio = annualRevenue / annualRent;
         
-        // Determine verdict
+        // Determine verdict - more encouraging thresholds
         let verdict: 'great' | 'good' | 'risky' | 'bad';
         if (ratio >= GREAT_RATIO) {
           verdict = 'great';
         } else if (ratio >= GOOD_RATIO) {
           verdict = 'good';
-        } else if (ratio >= RISKY_RATIO) {
+        } else if (ratio >= MARGINAL_RATIO) {
           verdict = 'risky';
         } else {
           verdict = 'bad';
         }
         
-        // Generate AI summary based on verdict
+        // Generate AI summary based on verdict - positive framing
         let aiSummary = '';
         if (verdict === 'great') {
-          aiSummary = `This property could earn ${ratio.toFixed(1)}x your rent — that's exceptional! Properties like this are rare finds. The market data shows strong demand with ${data.estimates?.occupancy_rate || 65}% average occupancy.`;
+          aiSummary = `This is an exceptional find! At ${ratio.toFixed(1)}x your rent, you're looking at strong profit potential. Properties like this don't come around often — the numbers speak for themselves.`;
         } else if (verdict === 'good') {
-          aiSummary = `This property shows solid potential at ${ratio.toFixed(1)}x your rent. Most successful Airbnb arbitrage investors target 2x or higher, and you're there. With good execution, this could be profitable.`;
+          aiSummary = `This is a solid opportunity. At ${ratio.toFixed(1)}x your rent, you're in the sweet spot where most successful Airbnb arbitrage investors operate. The math works in your favor here.`;
         } else if (verdict === 'risky') {
-          aiSummary = `At ${ratio.toFixed(1)}x rent, this property is on the edge. You'll need excellent reviews and smart pricing to make it work. Consider negotiating lower rent or finding a similar property in a better location.`;
+          aiSummary = `At ${ratio.toFixed(1)}x rent, this property can work with the right execution. Focus on great photos, competitive pricing, and quick response times. Consider negotiating the rent down to improve your margins.`;
         } else {
-          aiSummary = `The numbers don't look great here. At ${ratio.toFixed(1)}x rent, you'd be working hard for thin margins. Most experts recommend at least 2x rent to account for unexpected costs and vacancies.`;
+          aiSummary = `At ${ratio.toFixed(1)}x rent, the margins are tight. This could still work if you can negotiate lower rent, reduce operating costs, or if the property has unique features that command premium rates.`;
         }
         
         // Extract comparables from API response
@@ -273,21 +274,21 @@ export default function LeadMagnet() {
         };
       case 'risky':
         return {
-          icon: AlertTriangle,
+          icon: CheckCircle2,
           color: 'text-amber-500',
           bg: 'bg-amber-500/10',
           border: 'border-amber-500/30',
-          label: 'Proceed with Caution',
-          emoji: '⚠️'
+          label: 'Worth Exploring',
+          emoji: '💡'
         };
       default:
         return {
-          icon: XCircle,
-          color: 'text-red-500',
-          bg: 'bg-red-500/10',
-          border: 'border-red-500/30',
-          label: 'Not Recommended',
-          emoji: '❌'
+          icon: AlertTriangle,
+          color: 'text-orange-500',
+          bg: 'bg-orange-500/10',
+          border: 'border-orange-500/30',
+          label: 'Needs Negotiation',
+          emoji: '💬'
         };
     }
   };
@@ -305,7 +306,7 @@ export default function LeadMagnet() {
     const annualRent = monthlyRentNum * 12;
     const ratio = comp.revenue / annualRent;
     if (ratio >= GOOD_RATIO) return { label: 'Profitable', color: 'text-emerald-600', bg: 'bg-emerald-100' };
-    if (ratio >= RISKY_RATIO) return { label: 'Marginal', color: 'text-amber-600', bg: 'bg-amber-100' };
+    if (ratio >= MARGINAL_RATIO) return { label: 'Marginal', color: 'text-amber-600', bg: 'bg-amber-100' };
     return { label: 'Low Margin', color: 'text-red-600', bg: 'bg-red-100' };
   };
 
@@ -501,7 +502,7 @@ export default function LeadMagnet() {
                     <span className={`px-3 py-1 rounded-full font-bold ${config.bg} ${config.color}`}>
                       {result.ratio.toFixed(1)}x
                     </span>
-                    <span className="text-gray-400 text-sm">(2x+ is ideal)</span>
+                    <span className="text-gray-400 text-sm">(1.5x+ is profitable)</span>
                   </div>
                   
                   {/* AI Summary */}
