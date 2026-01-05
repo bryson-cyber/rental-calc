@@ -121,3 +121,14 @@ From AirDNA Rentalizer endpoint:
 
 ## Bug Fixes (Jan 4, 2026 - Part 9)
 - [x] Fix Google Maps API multiple loading error - API being included multiple times on page
+
+
+## New Features (Jan 5, 2026 - Part 10)
+- [ ] Add searched property marker to Explore Area map view
+  - [ ] Show the researched address with a distinct marker (different color/icon)
+  - [ ] Make it visually stand out from the Airbnb listing markers
+
+
+## Bug Fixes (Jan 5, 2026 - Part 11)
+- [x] Fix contradictory "Good News" message - shows "0 out of 6 nearby Airbnbs make more than your rent" but says "People want to stay here!"
+- [x] Remove map view from Explore Area (not working properly)

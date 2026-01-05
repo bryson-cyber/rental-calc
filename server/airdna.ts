@@ -4712,6 +4712,27 @@ export async function getListingsByArea(
       });
     }
 
+    // First, geocode the address to get coordinates for the center marker
+    let centerLat = 0;
+    let centerLng = 0;
+    try {
+      const { makeRequest } = await import('./_core/map');
+      const geocodeResult = await makeRequest<{
+        results: Array<{
+          geometry: { location: { lat: number; lng: number } };
+          formatted_address: string;
+        }>;
+        status: string;
+      }>('/maps/api/geocode/json', { address });
+      
+      if (geocodeResult.results && geocodeResult.results.length > 0) {
+        centerLat = geocodeResult.results[0].geometry.location.lat;
+        centerLng = geocodeResult.results[0].geometry.location.lng;
+      }
+    } catch (geocodeError) {
+      console.error('Error geocoding address:', geocodeError);
+    }
+
     const requestBody: Record<string, any> = {
       address,
       radius: radiusMeters,
@@ -4781,8 +4802,8 @@ export async function getListingsByArea(
       page_size: options?.pageSize || 25,
       offset: options?.offset || 0,
       center: {
-        latitude: 0, // API doesn't return center in this endpoint
-        longitude: 0,
+        latitude: centerLat,
+        longitude: centerLng,
         address,
       },
       radius_meters: radiusMeters,

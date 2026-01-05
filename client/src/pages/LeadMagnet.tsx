@@ -46,7 +46,8 @@ import {
   SortDesc,
   Filter,
   X,
-  Map
+  Map,
+  AlertCircle
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
@@ -227,10 +228,15 @@ export default function LeadMagnet() {
   const [totalListings, setTotalListings] = useState(0);
   const [showMapView, setShowMapView] = useState(false);
   const [exploreCenter, setExploreCenter] = useState<{lat: number; lng: number} | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   
   const resultsRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const exploreCenterRef = useRef<{lat: number; lng: number} | null>(null);
+  
+  // Keep ref in sync with state
+  exploreCenterRef.current = exploreCenter;
   
   // tRPC mutations
   const analysisMutation = trpc.rental.getEstimate.useMutation();
@@ -255,6 +261,78 @@ export default function LeadMagnet() {
       return () => clearInterval(interval);
     }
   }, [isAnalyzing]);
+  
+  // Add YOUR PROPERTY marker when map and center are both ready
+  const yourPropertyMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  
+  // Create YOUR PROPERTY marker when both map and center are available
+  useEffect(() => {
+    // Only proceed if we have a map instance, center coordinates, and Google Maps API is loaded
+    if (!mapRef.current || !exploreCenter || !showMapView || !mapReady) {
+      return;
+    }
+    
+    // Check if Google Maps marker API is available
+    if (typeof google === 'undefined' || !google.maps?.marker?.AdvancedMarkerElement) {
+      console.log('Google Maps marker API not yet available');
+      return;
+    }
+    
+    // Remove existing YOUR PROPERTY marker if any
+    if (yourPropertyMarkerRef.current) {
+      yourPropertyMarkerRef.current.map = null;
+      yourPropertyMarkerRef.current = null;
+    }
+    
+    // Create the marker content
+    const searchedMarkerContent = document.createElement('div');
+    searchedMarkerContent.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #D4A84B, #F59E0B);
+        color: #1a1a2e;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 4px 16px rgba(212, 168, 75, 0.6);
+        cursor: default;
+        white-space: nowrap;
+        border: 3px solid white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      ">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        YOUR PROPERTY
+      </div>
+    `;
+    
+    try {
+      // Create the marker
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
+        position: exploreCenter,
+        title: 'Your Property',
+        content: searchedMarkerContent,
+        zIndex: 9999,
+      });
+      
+      yourPropertyMarkerRef.current = marker;
+    } catch (error) {
+      console.error('Error creating YOUR PROPERTY marker:', error);
+    }
+    
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (yourPropertyMarkerRef.current) {
+        yourPropertyMarkerRef.current.map = null;
+        yourPropertyMarkerRef.current = null;
+      }
+    };
+  }, [exploreCenter, showMapView, mapReady]);
   
   // ============================================
   // SINGLE PROPERTY ANALYSIS
@@ -503,7 +581,9 @@ export default function LeadMagnet() {
         setTotalListings(response.data.total_count || listings.length);
         
         // Set map center from response or first listing
+        console.log('Explore response center:', response.data.center);
         if (response.data.center?.latitude && response.data.center?.longitude) {
+          console.log('Setting explore center to:', response.data.center.latitude, response.data.center.longitude);
           setExploreCenter({ lat: response.data.center.latitude, lng: response.data.center.longitude });
         } else if (listings.length > 0 && listings[0].latitude && listings[0].longitude) {
           setExploreCenter({ lat: listings[0].latitude, lng: listings[0].longitude });
@@ -1191,15 +1271,30 @@ export default function LeadMagnet() {
                 </div>
                 
                 {/* Market Insight */}
-                <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                  <div className="flex items-center gap-2 text-emerald-400 font-medium mb-1">
-                    <CheckCircle2 className="w-5 h-5" />
-                    Good News
-                  </div>
-                  <p className="text-sm text-slate-300">
-                    {result.comparables.filter(c => c.revenue > result.rent).length} out of {result.comparables.length} nearby Airbnbs make more than your rent. People want to stay here!
-                  </p>
-                </div>
+                {(() => {
+                  const profitableCount = result.comparables.filter(c => c.revenue > result.rent).length;
+                  const totalCount = result.comparables.length;
+                  const isGoodNews = profitableCount >= Math.ceil(totalCount / 2); // Good if at least half are profitable
+                  
+                  return (
+                    <div className={`mt-6 p-4 rounded-xl ${isGoodNews ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                      <div className={`flex items-center gap-2 font-medium mb-1 ${isGoodNews ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {isGoodNews ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                        {isGoodNews ? 'Good News' : 'Heads Up'}
+                      </div>
+                      <p className="text-sm text-slate-300">
+                        {profitableCount === 0 
+                          ? `None of the ${totalCount} nearby Airbnbs make more than your rent. This area may be tough for short-term rentals.`
+                          : profitableCount === totalCount
+                            ? `All ${totalCount} nearby Airbnbs make more than your rent. This is a hot market!`
+                            : profitableCount >= Math.ceil(totalCount / 2)
+                              ? `${profitableCount} out of ${totalCount} nearby Airbnbs make more than your rent. People want to stay here!`
+                              : `Only ${profitableCount} out of ${totalCount} nearby Airbnbs make more than your rent. Do your research before jumping in.`
+                        }
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             
@@ -1434,31 +1529,7 @@ export default function LeadMagnet() {
                 </p>
               </div>
               
-              {/* Map/List Toggle */}
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded-lg p-1">
-                <button
-                  onClick={() => setShowMapView(false)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    !showMapView
-                      ? 'bg-[#D4A84B] text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                  List
-                </button>
-                <button
-                  onClick={() => setShowMapView(true)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    showMapView
-                      ? 'bg-[#D4A84B] text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Map className="w-4 h-4" />
-                  Map
-                </button>
-              </div>
+
             </div>
             
             {/* Stats Summary */}
@@ -1487,65 +1558,8 @@ export default function LeadMagnet() {
               </div>
             </div>
             
-            {/* Map View */}
-            {showMapView && exploreCenter && (
-              <div className="mb-8 rounded-xl overflow-hidden border border-slate-700/50">
-                <MapView
-                  className="h-[500px]"
-                  initialCenter={exploreCenter}
-                  initialZoom={13}
-                  onMapReady={(map) => {
-                    mapRef.current = map;
-                    
-                    // Clear existing markers
-                    markersRef.current.forEach(marker => marker.map = null);
-                    markersRef.current = [];
-                    
-                    // Add markers for each listing
-                    areaListings.forEach((listing) => {
-                      if (listing.latitude && listing.longitude) {
-                        // Create custom marker content
-                        const markerContent = document.createElement('div');
-                        markerContent.innerHTML = `
-                          <div style="
-                            background: linear-gradient(135deg, #10b981, #06b6d4);
-                            color: white;
-                            padding: 4px 8px;
-                            border-radius: 8px;
-                            font-size: 12px;
-                            font-weight: bold;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                            cursor: pointer;
-                            white-space: nowrap;
-                          ">
-                            ${formatCurrency(listing.annual_revenue)}/yr
-                          </div>
-                        `;
-                        
-                        const marker = new google.maps.marker.AdvancedMarkerElement({
-                          map,
-                          position: { lat: listing.latitude, lng: listing.longitude },
-                          title: listing.title,
-                          content: markerContent,
-                        });
-                        
-                        // Add click listener to open Airbnb listing
-                        marker.addListener('click', () => {
-                          if (listing.airbnb_url) {
-                            window.open(listing.airbnb_url, '_blank');
-                          }
-                        });
-                        
-                        markersRef.current.push(marker);
-                      }
-                    });
-                  }}
-                />
-              </div>
-            )}
-            
             {/* Listings Grid */}
-            {!showMapView && (
+            {areaListings.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {areaListings.map((listing) => (
                   <a
