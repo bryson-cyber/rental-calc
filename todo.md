@@ -60,3 +60,11 @@ From AirDNA Rentalizer endpoint:
   - AirDNA API returns 500 for certain bed/bath combinations (e.g., 2 bed / 1 bath at this address)
   - Added automatic retry with alternative bathroom counts (1 → 2 → 1.5 → bedrooms-1)
   - Successfully loads with 2 bed / 2 bath fallback
+
+## New Requests (Jan 4, 2026 - Part 2)
+- [x] Update Turnkey Program link to https://masterclass.coachinayah.com/the-turnkey-program-2
+- [x] Audit Rentalizer API to verify we're using all available features
+  - Currently using: revenue estimates, ADR, occupancy, 12-month forecast, 6 comps
+  - Available but not using: historical data (12 months), up to 10 comps, comp historical trends
+- [x] Evaluate AI feature recommendations for the lead magnet
+  - See detailed analysis below

@@ -745,7 +745,7 @@ export default function LeadMagnet() {
                   size="lg"
                   className="h-14 px-8 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white shadow-lg shadow-emerald-500/25"
                 >
-                  <a href="https://coachinayahturnkey.com" target="_blank" rel="noopener noreferrer">
+                  <a href="https://masterclass.coachinayah.com/the-turnkey-program-2" target="_blank" rel="noopener noreferrer">
                     Learn About the Turnkey Program
                     <ArrowUpRight className="w-5 h-5 ml-2" />
                   </a>
