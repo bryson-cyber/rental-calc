@@ -2026,3 +2026,19 @@
 - [x] Full report includes: competitors, seasonality, market context
 - [x] Clear CTA: "Get Your Free Report" → Email capture → Deliver report
 - [x] Add "Schedule a Call" CTA for done-for-you service
+
+
+## Comparable Properties Section (January 5, 2026)
+- [ ] Add comparable properties section to results page
+- [ ] Show nearby Airbnb listings with revenue/occupancy data
+- [ ] Display profitability metrics for each comp
+
+
+## Comparable Properties Section (January 4, 2026) - COMPLETED
+- [x] Add comparable properties section to results page
+- [x] Show nearby Airbnb listings with revenue data
+- [x] Display profitability indicators for each comp (Profitable/Marginal/Low Margin)
+- [x] Include property specs (beds, baths, guests)
+- [x] Show ratings and reviews
+- [x] Show property images from API
+- [x] Add market insight summary with average revenue and occupancy

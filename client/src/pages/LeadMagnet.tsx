@@ -4,7 +4,8 @@
  * Flow:
  * 1. Enter address + rent → Get instant verdict
  * 2. See 3 key numbers: Revenue, Rent, Profit
- * 3. Email gate for full report
+ * 3. See comparable properties in the area
+ * 4. Email gate for full report
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -22,7 +23,12 @@ import {
   Sparkles,
   TrendingUp,
   Building2,
-  Calendar
+  Calendar,
+  Bed,
+  Bath,
+  Star,
+  Users,
+  Home
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +40,20 @@ const GREAT_RATIO = 3.0; // 3x rent = great deal
 const GOOD_RATIO = 2.0;  // 2x rent = good deal
 const RISKY_RATIO = 1.5; // 1.5x rent = risky
 
+interface Comparable {
+  id: string;
+  title: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  revenue: number;
+  adr: number;
+  occupancy: number;
+  rating: number;
+  reviews: number;
+  imageUrl?: string;
+}
+
 interface AnalysisResult {
   revenue: number;
   rent: number;
@@ -44,6 +64,7 @@ interface AnalysisResult {
   occupancy: number;
   competitorCount: number;
   aiSummary: string;
+  comparables: Comparable[];
 }
 
 export default function LeadMagnet() {
@@ -59,7 +80,6 @@ export default function LeadMagnet() {
   const [loadingMessage, setLoadingMessage] = useState('');
   
   // Email gate state
-  const [showEmailGate, setShowEmailGate] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [hasUnlockedReport, setHasUnlockedReport] = useState(false);
@@ -103,7 +123,6 @@ export default function LeadMagnet() {
     
     setIsAnalyzing(true);
     setResult(null);
-    setShowEmailGate(false);
     setHasUnlockedReport(false);
     
     try {
@@ -144,6 +163,21 @@ export default function LeadMagnet() {
           aiSummary = `The numbers don't look great here. At ${ratio.toFixed(1)}x rent, you'd be working hard for thin margins. Most experts recommend at least 2x rent to account for unexpected costs and vacancies.`;
         }
         
+        // Extract comparables from API response
+        const comparables: Comparable[] = (data.comps || []).slice(0, 6).map((comp: any, index: number) => ({
+          id: comp.id || `comp-${index}`,
+          title: comp.title || `${comp.bedrooms || 2}BR Rental`,
+          bedrooms: comp.bedrooms || 2,
+          bathrooms: comp.bathrooms || 1,
+          accommodates: comp.accommodates || 4,
+          revenue: comp.revenue || comp.annual_revenue || 0,
+          adr: comp.adr || comp.average_daily_rate || 0,
+          occupancy: comp.occupancy || comp.occupancy_rate || 0,
+          rating: comp.rating || 4.5,
+          reviews: comp.reviews || comp.review_count || 0,
+          imageUrl: comp.image_url || comp.thumbnail_url || null
+        }));
+        
         setResult({
           revenue: annualRevenue,
           rent: annualRent,
@@ -153,7 +187,8 @@ export default function LeadMagnet() {
           marketName: (data.property as any)?.market_name || 'Local Market',
           occupancy: data.estimates?.occupancy_rate || 65,
           competitorCount: data.comps?.length || 0,
-          aiSummary: aiSummary
+          aiSummary: aiSummary,
+          comparables: comparables
         });
         
         // Scroll to results
@@ -190,7 +225,6 @@ export default function LeadMagnet() {
       });
       
       setHasUnlockedReport(true);
-      setShowEmailGate(false);
       toast.success('Report unlocked! Check your email for the full analysis.');
     } catch (error) {
       console.error('Lead submission error:', error);
@@ -248,6 +282,14 @@ export default function LeadMagnet() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  };
+  
+  const getCompProfitability = (comp: Comparable, monthlyRentNum: number) => {
+    const annualRent = monthlyRentNum * 12;
+    const ratio = comp.revenue / annualRent;
+    if (ratio >= GOOD_RATIO) return { label: 'Profitable', color: 'text-emerald-600', bg: 'bg-emerald-100' };
+    if (ratio >= RISKY_RATIO) return { label: 'Marginal', color: 'text-amber-600', bg: 'bg-amber-100' };
+    return { label: 'Low Margin', color: 'text-red-600', bg: 'bg-red-100' };
   };
 
   return (
@@ -458,6 +500,121 @@ export default function LeadMagnet() {
               );
             })()}
             
+            {/* Comparable Properties Section */}
+            {result.comparables && result.comparables.length > 0 && (
+              <div className="bg-gray-50 rounded-2xl p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-[#C9A962]/10 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-[#C9A962]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Nearby Competitors</h3>
+                    <p className="text-sm text-gray-500">See what similar properties are earning in this area</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {result.comparables.map((comp, index) => {
+                    const profitability = getCompProfitability(comp, parseFloat(monthlyRent) || 2000);
+                    
+                    return (
+                      <div 
+                        key={comp.id} 
+                        className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                      >
+                        {/* Property Image or Placeholder */}
+                        <div className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 relative">
+                          {comp.imageUrl ? (
+                            <img 
+                              src={comp.imageUrl} 
+                              alt={comp.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Home className="w-12 h-12 text-gray-400" />
+                            </div>
+                          )}
+                          {/* Profitability Badge */}
+                          <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${profitability.bg} ${profitability.color}`}>
+                            {profitability.label}
+                          </div>
+                        </div>
+                        
+                        {/* Property Details */}
+                        <div className="p-4">
+                          <h4 className="font-semibold text-gray-900 mb-2 truncate">
+                            {comp.title || `${comp.bedrooms}BR Rental #${index + 1}`}
+                          </h4>
+                          
+                          {/* Property Specs */}
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                            <span className="flex items-center gap-1">
+                              <Bed className="w-3 h-3" />
+                              {comp.bedrooms} bed
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Bath className="w-3 h-3" />
+                              {comp.bathrooms} bath
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {comp.accommodates} guests
+                            </span>
+                          </div>
+                          
+                          {/* Revenue & Metrics */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Annual Revenue</span>
+                              <span className="font-bold text-gray-900">{formatCurrency(comp.revenue)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Avg. Nightly Rate</span>
+                              <span className="font-medium text-gray-700">{formatCurrency(comp.adr)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-500">Occupancy</span>
+                              <span className="font-medium text-gray-700">{Math.round(comp.occupancy)}%</span>
+                            </div>
+                          </div>
+                          
+                          {/* Rating */}
+                          {comp.rating > 0 && (
+                            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-100">
+                              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                              <span className="font-medium text-gray-900">{comp.rating.toFixed(1)}</span>
+                              {comp.reviews > 0 && (
+                                <span className="text-gray-400 text-sm">({comp.reviews} reviews)</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Summary */}
+                <div className="mt-6 p-4 bg-white rounded-xl border border-gray-200">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-gray-900 mb-1">Market Insight</p>
+                      <p className="text-sm text-gray-600">
+                        {result.comparables.length} similar properties found nearby. 
+                        The average revenue is {formatCurrency(
+                          result.comparables.reduce((sum, c) => sum + c.revenue, 0) / result.comparables.length
+                        )}/year with {Math.round(
+                          result.comparables.reduce((sum, c) => sum + c.occupancy, 0) / result.comparables.length
+                        )}% average occupancy.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Email Gate or Unlocked Content */}
             {!hasUnlockedReport ? (
               <div className="bg-gradient-to-br from-[#0a0a0f] to-[#1a1a2f] rounded-2xl p-8 text-center">
@@ -465,14 +622,14 @@ export default function LeadMagnet() {
                   Want the Full Breakdown?
                 </h3>
                 <p className="text-white/60 mb-6 max-w-lg mx-auto">
-                  Get the complete analysis including competitor data, seasonality insights, and a personalized action plan.
+                  Get the complete analysis including detailed competitor data, seasonality insights, and a personalized action plan.
                 </p>
                 
                 {/* What's included */}
                 <div className="grid grid-cols-2 gap-4 mb-8 max-w-md mx-auto text-left">
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-sm">Top 10 competitors</span>
+                    <span className="text-sm">Full competitor analysis</span>
                   </div>
                   <div className="flex items-center gap-2 text-white/80">
                     <CheckCircle2 className="w-4 h-4 text-[#C9A962]" />
