@@ -4730,63 +4730,59 @@ export async function getListingsByArea(
 
     const response = await makeApiRequest<{
       payload: {
-        comps: Array<{
-          airbnb_listing_id?: string;
+        listings: Array<{
+          property_id?: string;
+          airbnb_property_id?: string;
+          airbnb_property_url?: string;
           title?: string;
           bedrooms?: number;
           bathrooms?: number;
           accommodates?: number;
           property_type?: string;
-          overall_rating?: number;
-          review_count?: number;
-          revenue?: number;
-          adr?: number;
-          occupancy?: number;
+          rating?: number;
+          reviews?: number;
+          revenue_ltm?: number;
+          average_daily_rate_ltm?: number;
+          occupancy_rate_ltm?: number;
           distance?: number;
-          airbnb_url?: string;
-          image_url?: string;
-          amenities?: string[];
           superhost?: boolean;
-          latitude?: number;
-          longitude?: number;
+          location?: { lat?: number; lng?: number };
         }>;
-        total_count?: number;
-        center?: {
-          lat?: number;
-          lng?: number;
+        page_info?: {
+          total_count?: number;
         };
       };
     }>('/listing/comps/area', 'POST', requestBody);
 
-    const listings: AreaListing[] = (response.payload.comps || []).map(comp => ({
-      id: comp.airbnb_listing_id || '',
-      title: comp.title || 'Untitled Listing',
-      bedrooms: comp.bedrooms || 0,
-      bathrooms: comp.bathrooms || 0,
-      accommodates: comp.accommodates || 0,
-      property_type: comp.property_type || 'Unknown',
-      rating: comp.overall_rating || null,
-      reviews: comp.review_count || 0,
-      annual_revenue: comp.revenue || 0,
-      adr: comp.adr || 0,
-      occupancy: comp.occupancy || 0,
-      distance_meters: comp.distance || 0,
-      airbnb_url: comp.airbnb_url,
-      image_url: comp.image_url,
-      amenities: comp.amenities,
-      superhost: comp.superhost,
-      latitude: comp.latitude,
-      longitude: comp.longitude,
+    const listings: AreaListing[] = (response.payload.listings || []).map(listing => ({
+      id: listing.property_id || listing.airbnb_property_id || '',
+      title: listing.title || 'Untitled Listing',
+      bedrooms: listing.bedrooms || 0,
+      bathrooms: listing.bathrooms || 0,
+      accommodates: listing.accommodates || 0,
+      property_type: listing.property_type || 'Unknown',
+      rating: listing.rating || null,
+      reviews: listing.reviews || 0,
+      annual_revenue: listing.revenue_ltm || 0,
+      adr: listing.average_daily_rate_ltm || 0,
+      occupancy: listing.occupancy_rate_ltm || 0,
+      distance_meters: listing.distance || 0,
+      airbnb_url: listing.airbnb_property_url || (listing.airbnb_property_id ? `https://www.airbnb.com/rooms/${listing.airbnb_property_id}` : undefined),
+      image_url: undefined, // API doesn't return images in this endpoint
+      amenities: undefined,
+      superhost: listing.superhost,
+      latitude: listing.location?.lat,
+      longitude: listing.location?.lng,
     }));
 
     const result: ListingsByAreaResponse = {
       listings,
-      total_count: response.payload.total_count || listings.length,
+      total_count: response.payload.page_info?.total_count || listings.length,
       page_size: options?.pageSize || 25,
       offset: options?.offset || 0,
       center: {
-        latitude: response.payload.center?.lat || 0,
-        longitude: response.payload.center?.lng || 0,
+        latitude: 0, // API doesn't return center in this endpoint
+        longitude: 0,
         address,
       },
       radius_meters: radiusMeters,

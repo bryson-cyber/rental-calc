@@ -107,3 +107,8 @@ From AirDNA Rentalizer endpoint:
 - [x] Simplify Explore Area filters
   - [x] Remove min rating filter options (keep only "Any")
   - [x] Limit sort by options to "Most Money" and "Closest" only
+
+
+## Bug Fixes (Jan 4, 2026 - Part 7)
+- [x] Fix Explore Area API - was using wrong response field names (comps vs listings, revenue vs revenue_ltm)
+- [x] Fix page_size limit - API only allows max 25, was sending 50

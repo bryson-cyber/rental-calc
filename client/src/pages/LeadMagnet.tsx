@@ -465,7 +465,7 @@ export default function LeadMagnet() {
         radiusMeters: exploreRadius,
         bedrooms: exploreBedroomFilter || undefined,
         minRating: exploreMinRating || undefined,
-        pageSize: 50,
+        pageSize: 25,
         sortBy: exploreSortBy,
         sortDirection: 'descending',
       });
