@@ -2000,3 +2000,29 @@
 - [x] Run AI sections in parallel instead of sequentially
 - [x] Reduce timeout from 120s to 60s per section
 - [x] Add fallback content if AI times out
+
+
+## Lead Magnet Simplification Rebuild (January 4, 2026) - COMPLETED
+
+### Phase 1: Simplified User Flow
+- [x] Remove all complex features (AI Advisor, Market Comparison, Deep Analysis)
+- [x] Single-purpose tool: "Will this property make money?"
+- [x] 3-step flow: Enter Property → See Results → Get Full Report (lead capture)
+
+### Phase 2: Simplified Homepage
+- [x] Clean, minimal design with one clear action
+- [x] Single input: Property address + Monthly rent
+- [x] Keep bedroom/bathroom as simple dropdowns for accuracy
+- [x] Big, clear CTA button
+
+### Phase 3: Simplified Results Page
+- [x] Show only 3 key numbers: Revenue, Profit, Verdict (Go/No-Go)
+- [x] Simple visual indicator (green checkmark or red X)
+- [x] One-paragraph explanation a beginner can understand
+- [x] Gate the detailed report behind email capture
+
+### Phase 4: Lead Capture Flow
+- [x] After showing basic results, require email for full report
+- [x] Full report includes: competitors, seasonality, market context
+- [x] Clear CTA: "Get Your Free Report" → Email capture → Deliver report
+- [x] Add "Schedule a Call" CTA for done-for-you service

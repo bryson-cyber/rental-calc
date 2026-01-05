@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, name, email, address, createdAt FROM leads ORDER BY id DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, name, email, address, createdAt FROM leads ORDER BY id DESC LIMIT 3;",
+  "rows": [
+    {
+      "id": "330001",
+      "name": "test",
+      "email": "test@example.com",
+      "address": "456 Congress Ave., Austin, TX, USA",
+      "createdAt": "2026-01-05 01:36:01"
+    },
+    {
+      "id": "300013",
+      "name": "Test User",
+      "email": "test@example.com",
+      "address": "123 Main St, Denver, Colorado, USA",
+      "createdAt": "2025-12-31 19:57:53"
+    },
+    {
+      "id": "300012",
+      "name": "Test User",
+      "email": "test@example.com",
+      "address": "123 Main St, Denver, Colorado, USA",
+      "createdAt": "2025-12-31 19:45:47"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\taddress\tcreatedAt\n330001\ttest\ttest@example.com\t456 Congress Ave., Austin, TX, USA\t2026-01-05 01:36:01\n300013\tTest User\ttest@example.com\t123 Main St, Denver, Colorado, USA\t2025-12-31 19:57:53\n300012\tTest User\ttest@example.com\t123 Main St, Denver, Colorado, USA\t2025-12-31 19:45:47\n",
+  "stderr": "",
+  "execution_time_ms": 80
+}
