@@ -158,6 +158,10 @@ interface BulkPropertyResult {
   occupancy: number;
   status: 'success' | 'error';
   error?: string;
+  imageUrl?: string;
+  propertyType?: string;
+  rating?: number;
+  reviews?: number;
 }
 
 interface MarketResearchResult {
@@ -431,6 +435,13 @@ export default function LeadMagnet() {
         const monthlyRevenue = annualRevenue / 12;
         const profit = monthlyRevenue - prop.rent;
         
+        // Get image from first comparable property if available
+        const firstComp = data.property.comps?.[0];
+        const imageUrl = firstComp?.image_url || undefined;
+        const propertyType = firstComp?.property_type || undefined;
+        const rating = firstComp?.rating || undefined;
+        const reviews = firstComp?.reviews || undefined;
+        
         results.push({
           id: prop.id,
           address: prop.address,
@@ -443,6 +454,10 @@ export default function LeadMagnet() {
           adr: data.property.estimates?.average_daily_rate || 0,
           occupancy: data.property.estimates?.occupancy_rate || 0,
           status: 'success',
+          imageUrl,
+          propertyType,
+          rating,
+          reviews,
         });
       } catch (error) {
         results.push({
@@ -1756,38 +1771,86 @@ export default function LeadMagnet() {
               {sortedBulkResults.map((result, idx) => (
                 <div 
                   key={result.id} 
-                  className={`border rounded-xl p-4 flex items-center gap-4 ${
+                  className={`border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${
                     idx === 0 && result.status === 'success'
                       ? 'bg-amber-500/10 border-amber-500/30'
                       : result.status === 'error'
                       ? 'bg-red-500/10 border-red-500/30'
-                      : 'bg-slate-800/50 border-slate-700/50'
+                      : 'bg-white border-[oklch(0.90_0_0)]'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${
+                  {/* Rank Badge */}
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
                     idx === 0 && result.status === 'success'
                       ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
                       : 'bg-[oklch(0.92_0_0)] text-[oklch(0.35_0_0)]'
                   }`}>
                     {idx === 0 && result.status === 'success' ? (
-                      <Trophy className="w-6 h-6" />
+                      <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
                     ) : (
                       idx + 1
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-[oklch(0.25_0_0)] font-medium">{result.address}</h4>
+                  
+                  {/* Property Image */}
+                  {result.imageUrl ? (
+                    <div className="w-full sm:w-24 h-32 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
+                      <img 
+                        src={result.imageUrl} 
+                        alt={result.address}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.parentElement!.classList.add('bg-gradient-to-br', 'from-amber-100', 'to-orange-100');
+                        }}
+                      />
+                      {result.propertyType && (
+                        <span className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
+                          {result.propertyType}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-full sm:w-24 h-32 sm:h-20 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                      <Home className="w-8 h-8 text-amber-400" />
+                    </div>
+                  )}
+                  
+                  {/* Property Details */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[oklch(0.25_0_0)] font-medium truncate">{result.address}</h4>
                     <p className="text-sm text-[oklch(0.50_0_0)]">
                       {result.bedrooms} BR · {result.bathrooms} BA · {formatCurrency(result.rent)}/mo rent
                     </p>
+                    {result.status === 'success' && (result.rating || result.reviews) && (
+                      <div className="flex items-center gap-2 mt-1">
+                        {result.rating && (
+                          <span className="flex items-center gap-1 text-xs text-amber-500">
+                            <Star className="w-3 h-3 fill-current" />
+                            {result.rating.toFixed(1)}
+                          </span>
+                        )}
+                        {result.reviews && (
+                          <span className="text-xs text-[oklch(0.50_0_0)]">
+                            {result.reviews} reviews
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Financial Results */}
                   {result.status === 'success' ? (
-                    <div className="text-right">
-                      <p className={`text-xl font-bold ${result.profit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <div className="text-left sm:text-right w-full sm:w-auto">
+                      <p className={`text-xl font-bold ${result.profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {formatCurrency(result.profit)}/mo
                       </p>
                       <p className="text-sm text-[oklch(0.50_0_0)]">
-                        {formatCurrency(result.revenue)}/mo revenue · {result.ratio.toFixed(1)}x ratio
+                        {formatCurrency(result.revenue)}/mo · {result.ratio.toFixed(1)}x ratio
+                      </p>
+                      <p className="text-xs text-[oklch(0.60_0_0)] mt-1">
+                        {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}% occ · ${Math.round(result.adr)}/night
                       </p>
                     </div>
                   ) : (

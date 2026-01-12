@@ -394,3 +394,13 @@ From AirDNA Rentalizer endpoint:
 - [x] Add monthly forecast chart to Step 3 (12-month bar chart with revenue)
 - [x] Add market percentile ranking to Step 3 (percentile bar, vs market avg, rank)
 - [x] Fix forecast occupancy calculation (convert decimal to percentage)
+
+
+## Step 4 Property Images Enhancement (Jan 12, 2026)
+
+### Add Property Images to Bulk Comparison:
+- [x] Analyze current Step 4 implementation and data structure
+- [x] Update bulk comparison API to include property images (added imageUrl, propertyType, rating, reviews)
+- [x] Update Step 4 UI to display property thumbnails with badges and ratings
+- [x] Test the enhanced comparison display - verified working with Atlanta properties
+- [x] Save checkpoint
