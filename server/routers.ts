@@ -33,6 +33,7 @@ import { generateExcelReport } from "./export-excel";
 import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
 import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
+import { marketResearchSimpleRouter } from "./market-research-simple";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1693,6 +1694,9 @@ export const appRouter = router({
   // Bulk Summary API
   // Market Research with Browser Use
   marketResearch: marketResearchRouter,
+
+  // Simplified Market Research (AirDNA only - instant results)
+  marketResearchSimple: marketResearchSimpleRouter,
 
   // Opportunity Finder (Zillow + AirDNA + Coach Inayah)
   opportunityFinder: opportunityFinderRouter,

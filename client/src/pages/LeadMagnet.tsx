@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
+import { EbookViewer } from '@/components/EbookViewer';
 import { 
   MapPin,
   DollarSign,
@@ -32,6 +33,7 @@ import {
   Home,
   ExternalLink,
   BarChart3,
+  BookOpen,
   Target,
   Sparkles,
   ArrowUpRight,
@@ -186,8 +188,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-
-type TabType = 'single' | 'compare' | 'explore' | 'research' | 'opportunities';
+type TabType = 'single' | 'compare' | 'explore' | 'research' | 'ebook';
 
 export default function LeadMagnet() {
   // Tab state
@@ -231,9 +232,17 @@ export default function LeadMagnet() {
   const [mapReady, setMapReady] = useState(false);
   
   // ============================================
+  // EBOOK STATE
+  // ============================================
+  const [isEbookOpen, setIsEbookOpen] = useState(false);
+  
+  // ============================================
   // MARKET RESEARCH STATE
   // ============================================
   const [researchMarket, setResearchMarket] = useState('');
+  const [selectedMarketId, setSelectedMarketId] = useState<number | null>(null);
+  const [showMarketSuggestions, setShowMarketSuggestions] = useState(false);
+  const [marketSearchResults, setMarketSearchResults] = useState<Array<{id: number, name: string, country: string}>>([]);
   const [isResearching, setIsResearching] = useState(false);
   const [researchProgress, setResearchProgress] = useState(0);
   const [researchStep, setResearchStep] = useState('');
@@ -250,7 +259,8 @@ export default function LeadMagnet() {
   const [oppStep, setOppStep] = useState('');
   const [oppResult, setOppResult] = useState<any | null>(null);
   const [oppError, setOppError] = useState<string | null>(null);
-  const [oppTaskIds, setOppTaskIds] = useState<{amenityTaskId: string; zillowTaskId: string; amenitySessionId: string; zillowSessionId: string} | null>(null);
+  const [oppTaskId, setOppTaskId] = useState<string | null>(null);
+  const [oppSessionId, setOppSessionId] = useState<string | null>(null);
   
   const resultsRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -264,17 +274,15 @@ export default function LeadMagnet() {
   const analysisMutation = trpc.rental.getEstimate.useMutation();
   const bulkMutation = trpc.bulkSummary.get.useMutation();
   const areaMutation = trpc.listingsByArea.get.useMutation();
-  const startResearchMutation = trpc.marketResearch.startResearch.useMutation();
-  const researchStatusQuery = trpc.marketResearch.getResearchStatus.useQuery(
-    { researchId: researchId! },
-    { enabled: !!researchId && isResearching, refetchInterval: 2000 }
-  );
+  // Simplified Market Research (AirDNA only - instant results)
+  const searchMarketsMutation = trpc.marketResearchSimple.searchMarkets.useMutation();
+  const getMarketReportMutation = trpc.marketResearchSimple.getMarketReport.useMutation();
   
-  // Opportunity Finder mutations
+  // Opportunity Finder mutations (simplified)
   const findOpportunitiesMutation = trpc.opportunityFinder.findOpportunities.useMutation();
   const oppStatusQuery = trpc.opportunityFinder.getSearchStatus.useQuery(
-    { amenityTaskId: oppTaskIds?.amenityTaskId!, zillowTaskId: oppTaskIds?.zillowTaskId! },
-    { enabled: !!oppTaskIds && isSearchingOpportunities, refetchInterval: 3000 }
+    { taskId: oppTaskId! },
+    { enabled: !!oppTaskId && isSearchingOpportunities, refetchInterval: 3000 }
   );
   const processResultsMutation = trpc.opportunityFinder.processResults.useMutation();
   const cleanupMutation = trpc.opportunityFinder.cleanup.useMutation();
@@ -644,60 +652,87 @@ export default function LeadMagnet() {
   // ============================================
   
   const runResearch = async () => {
-    if (!researchMarket.trim()) {
-      toast.error('Please enter a city or market name');
+    if (!selectedMarketId || !researchMarket.trim()) {
+      toast.error('Please select a market from the suggestions');
       return;
     }
     
     setIsResearching(true);
-    setResearchProgress(0);
-    setResearchStep('Starting research...');
+    setResearchProgress(10);
+    setResearchStep('Fetching market data...');
     setResearchResult(null);
     setResearchError(null);
     
     try {
-      const response = await startResearchMutation.mutateAsync({
-        market: researchMarket.trim(),
+      setResearchProgress(30);
+      setResearchStep('Analyzing market metrics...');
+      
+      const report = await getMarketReportMutation.mutateAsync({
+        marketId: String(selectedMarketId),
+        marketName: researchMarket.trim(),
       });
       
-      if (response.success) {
-        setResearchId(response.researchId);
-        toast.success('Market research started!');
-      } else {
-        throw new Error('Failed to start research');
-      }
+      setResearchProgress(100);
+      setResearchStep('Complete!');
+      
+      // Transform to match existing result format
+      const transformedResult = {
+        market: report.market.name,
+        executiveSummary: {
+          optimalBedroomSize: report.bedroomBreakdown.length > 0 
+            ? `${[...report.bedroomBreakdown].sort((a, b) => b.avgRevenue - a.avgRevenue)[0]?.bedrooms || 2} BR` 
+            : '2 BR',
+          targetNeighborhoods: report.submarkets.slice(0, 3).map(s => s.name),
+          keyFinding: report.insights[0] || 'Market data analyzed successfully.',
+        },
+        marketOverview: {
+          totalListings: report.overview.totalListings,
+          avgOccupancy: report.overview.avgOccupancy,
+          avgAdr: report.overview.avgAdr,
+          avgRevenue: report.overview.avgRevenue,
+          topPropertyTypes: ['House', 'Apartment', 'Condo'],
+        },
+        bedroomAnalysis: report.bedroomBreakdown.map(b => ({
+          bedrooms: b.bedrooms,
+          occupancy: b.avgOccupancy,
+          adr: 0,
+          revenue: b.avgRevenue,
+          count: b.count,
+        })),
+        topSubmarkets: report.submarkets.map(s => ({
+          name: s.name,
+          listings: s.listingCount,
+          occupancy: s.avgOccupancy,
+          revenue: s.avgRevenue,
+        })),
+        topPerformers: report.topPerformers.map(p => ({
+          title: p.title,
+          revenue: p.revenue,
+          occupancy: p.occupancy,
+          bedrooms: p.bedrooms,
+          airbnbUrl: p.airbnbUrl,
+        })),
+        seasonality: {
+          peakMonths: report.seasonality.peakMonths,
+          lowMonths: report.seasonality.lowMonths,
+          yoyTrend: '+0%',
+        },
+        recommendations: report.insights,
+      };
+      
+      setResearchResult(transformedResult);
+      setIsResearching(false);
+      toast.success('Market research completed!');
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (error) {
       console.error('Research error:', error);
-      toast.error('Failed to start market research');
+      toast.error('Failed to get market data');
       setIsResearching(false);
-      setResearchError('Failed to start research');
+      setResearchError('Failed to get market data. Please try a different market.');
     }
   };
-  
-  // Poll for research status updates
-  useEffect(() => {
-    if (researchStatusQuery.data) {
-      const { status, progress, currentStep, result, error } = researchStatusQuery.data;
-      
-      setResearchProgress(progress);
-      setResearchStep(currentStep);
-      
-      if (status === 'completed' && result) {
-        setResearchResult(result);
-        setIsResearching(false);
-        toast.success('Market research completed!');
-        setTimeout(() => {
-          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      }
-      
-      if (status === 'error') {
-        setResearchError(error || 'Research failed');
-        setIsResearching(false);
-        toast.error(error || 'Market research failed');
-      }
-    }
-  }, [researchStatusQuery.data]);
   
   // ============================================
   // OPPORTUNITY FINDER FUNCTIONS
@@ -723,12 +758,8 @@ export default function LeadMagnet() {
       });
       
       if (response.success) {
-        setOppTaskIds({
-          amenityTaskId: response.amenityTaskId,
-          zillowTaskId: response.zillowTaskId,
-          amenitySessionId: response.amenitySessionId,
-          zillowSessionId: response.zillowSessionId,
-        });
+        setOppTaskId(response.taskId);
+        setOppSessionId(response.sessionId);
         toast.success('Opportunity search started!');
       } else {
         throw new Error('Failed to start search');
@@ -741,33 +772,32 @@ export default function LeadMagnet() {
     }
   };
   
-  // Poll for opportunity search status
+  // Poll for opportunity search status (simplified)
   useEffect(() => {
     if (oppStatusQuery.data) {
-      const { status, progress, currentStep, amenityOutput, zillowOutput } = oppStatusQuery.data;
+      const { status, progress, currentStep, output } = oppStatusQuery.data;
       
       setOppProgress(progress);
       setOppStep(currentStep);
       
-      if (status === 'ready' && amenityOutput && zillowOutput && oppTaskIds) {
-        // Process the results
+      if (status === 'ready' && output && oppTaskId) {
+        // Process the rental results with AirDNA
         processResultsMutation.mutate(
           {
             city: oppCity,
-            amenityOutput,
-            zillowOutput,
+            rentalOutput: output,
           },
           {
             onSuccess: (result) => {
               setOppResult(result);
               setIsSearchingOpportunities(false);
+              setOppProgress(100);
               toast.success('Found opportunities!');
               
-              // Cleanup sessions
-              cleanupMutation.mutate({
-                amenitySessionId: oppTaskIds.amenitySessionId,
-                zillowSessionId: oppTaskIds.zillowSessionId,
-              });
+              // Cleanup session
+              if (oppSessionId) {
+                cleanupMutation.mutate({ sessionId: oppSessionId });
+              }
               
               setTimeout(() => {
                 resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -780,6 +810,10 @@ export default function LeadMagnet() {
             },
           }
         );
+      } else if (status === 'error') {
+        setOppError('Search failed. Please try again.');
+        setIsSearchingOpportunities(false);
+        toast.error('Search failed');
       }
     }
   }, [oppStatusQuery.data]);
@@ -873,16 +907,17 @@ export default function LeadMagnet() {
                 Market Research
               </button>
               <button
-                onClick={() => { setActiveTab('opportunities'); }}
+                onClick={() => { setActiveTab('ebook'); }}
                 className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                  activeTab === 'opportunities'
+                  activeTab === 'ebook'
                     ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Sparkles className="w-4 h-4" />
-                Find Deals
+                <BookOpen className="w-4 h-4" />
+                Free Ebook
               </button>
+
             </div>
           </div>
           
@@ -1182,14 +1217,46 @@ export default function LeadMagnet() {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     City or Market Name
                   </label>
-                  <Input
-                    type="text"
-                    value={researchMarket}
-                    onChange={(e) => setResearchMarket(e.target.value)}
-                    placeholder="e.g., Austin, TX or Atlanta"
-                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
-                    disabled={isResearching}
-                  />
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={researchMarket}
+                      onChange={(e) => {
+                        setResearchMarket(e.target.value);
+                        setShowMarketSuggestions(true);
+                      }}
+                      onFocus={() => setShowMarketSuggestions(true)}
+                      placeholder="Type or select a market..."
+                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                      disabled={isResearching}
+                    />
+                    {showMarketSuggestions && !isResearching && (
+                      <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        {[
+                          'Atlanta, GA', 'Austin, TX', 'Boston, MA', 'Charlotte, NC', 'Chicago, IL',
+                          'Dallas, TX', 'Denver, CO', 'Houston, TX', 'Las Vegas, NV', 'Los Angeles, CA',
+                          'Miami, FL', 'Nashville, TN', 'New Orleans, LA', 'New York, NY', 'Orlando, FL',
+                          'Phoenix, AZ', 'Portland, OR', 'San Antonio, TX', 'San Diego, CA', 'San Francisco, CA',
+                          'Seattle, WA', 'St. Louis, MO', 'Tampa, FL', 'Washington, DC'
+                        ].filter(city => 
+                          city.toLowerCase().includes(researchMarket.toLowerCase()) || researchMarket === ''
+                        ).map((city) => (
+                          <button
+                            key={city}
+                            type="button"
+                            onClick={() => {
+                              setResearchMarket(city);
+                              setShowMarketSuggestions(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                          >
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Select from popular markets or type your own</p>
                 </div>
                 
                 <Button
@@ -1232,103 +1299,7 @@ export default function LeadMagnet() {
                 )}
               </div>
             )}
-            
-            {/* ============================================ */}
-            {/* OPPORTUNITY FINDER TAB */}
-            {/* ============================================ */}
-            {activeTab === 'opportunities' && (
-              <div className="grid gap-6">
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-semibold text-white mb-2">Find Arbitrage Deals</h3>
-                  <p className="text-slate-400 text-sm">Discover rental properties in your area that could be profitable Airbnbs</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    City or Zip Code
-                  </label>
-                  <Input
-                    type="text"
-                    value={oppCity}
-                    onChange={(e) => setOppCity(e.target.value)}
-                    placeholder="e.g., Atlanta, GA or 30301"
-                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
-                    disabled={isSearchingOpportunities}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Min Rent
-                    </label>
-                    <Input
-                      type="number"
-                      value={oppMinRent}
-                      onChange={(e) => setOppMinRent(Number(e.target.value))}
-                      placeholder="1000"
-                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
-                      disabled={isSearchingOpportunities}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Max Rent
-                    </label>
-                    <Input
-                      type="number"
-                      value={oppMaxRent}
-                      onChange={(e) => setOppMaxRent(Number(e.target.value))}
-                      placeholder="3500"
-                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
-                      disabled={isSearchingOpportunities}
-                    />
-                  </div>
-                </div>
-                
-                <Button
-                  onClick={runOpportunitySearch}
-                  disabled={isSearchingOpportunities || !oppCity.trim()}
-                  size="lg"
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] hover:from-[#C9A43E] hover:to-[#45B8B0] text-white shadow-lg shadow-[#D4A84B]/25"
-                >
-                  {isSearchingOpportunities ? (
-                    <span className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Searching... {oppProgress}%
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      Find Opportunities
-                      <Sparkles className="w-5 h-5" />
-                    </span>
-                  )}
-                </Button>
-                
-                {isSearchingOpportunities && (
-                  <div className="space-y-3">
-                    <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] transition-all duration-500"
-                        style={{ width: `${oppProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-sm text-slate-400 text-center">
-                      {oppStep || 'Processing...'}
-                    </p>
-                    <p className="text-xs text-slate-500 text-center">
-                      This may take 5-10 minutes as we analyze the market and find rentals
-                    </p>
-                  </div>
-                )}
-                
-                {oppError && (
-                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                    {oppError}
-                  </div>
-                )}
-              </div>
-            )}
+
           </div>
         </div>
       </section>
@@ -2049,23 +2020,23 @@ export default function LeadMagnet() {
       {/* MARKET RESEARCH TAB RESULTS */}
       {/* ============================================ */}
       {activeTab === 'research' && researchResult && (
-        <section ref={resultsRef} className="py-12 md:py-16">
-          <div className="max-w-6xl mx-auto px-4">
+        <section ref={resultsRef} className="py-8 md:py-16">
+          <div className="max-w-6xl mx-auto px-3 sm:px-4">
             {/* Header */}
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <div className="text-center mb-8 md:mb-12">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 md:mb-4">
                 {researchResult.market} Market Research
               </h2>
-              <p className="text-lg text-slate-400">
+              <p className="text-sm sm:text-base md:text-lg text-slate-400 px-2">
                 {researchResult.executiveSummary?.keyFinding || 'Comprehensive market analysis'}
               </p>
             </div>
             
             {/* Executive Summary */}
             {researchResult.executiveSummary && (
-              <div className="bg-gradient-to-br from-[#D4A84B]/10 to-[#4ECDC4]/10 border border-[#D4A84B]/30 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-2xl font-bold text-white mb-4">Executive Summary</h3>
-                <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-[#D4A84B]/10 to-[#4ECDC4]/10 border border-[#D4A84B]/30 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 md:mb-4">Executive Summary</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <div className="text-slate-400 text-sm">Optimal Bedroom Size</div>
                     <div className="text-white font-semibold text-lg">{researchResult.executiveSummary.optimalBedroomSize}</div>
@@ -2080,24 +2051,24 @@ export default function LeadMagnet() {
             
             {/* Market Overview */}
             {researchResult.marketOverview && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-2xl font-bold text-white mb-6">Market Overview</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 md:mb-6">Market Overview</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                   <div>
-                    <div className="text-slate-400 text-sm mb-1">Total Listings</div>
-                    <div className="text-white font-bold text-2xl">{researchResult.marketOverview.totalListings?.toLocaleString() || 'N/A'}</div>
+                    <div className="text-slate-400 text-xs sm:text-sm mb-1">Total Listings</div>
+                    <div className="text-white font-bold text-lg sm:text-2xl">{researchResult.marketOverview.totalListings?.toLocaleString() || 'N/A'}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400 text-sm mb-1">Avg Occupancy</div>
-                    <div className="text-white font-bold text-2xl">{((researchResult.marketOverview.avgOccupancy || 0) * 100).toFixed(0)}%</div>
+                    <div className="text-slate-400 text-xs sm:text-sm mb-1">Avg Occupancy</div>
+                    <div className="text-white font-bold text-lg sm:text-2xl">{((researchResult.marketOverview.avgOccupancy || 0) * 100).toFixed(0)}%</div>
                   </div>
                   <div>
-                    <div className="text-slate-400 text-sm mb-1">Avg ADR</div>
-                    <div className="text-white font-bold text-2xl">${researchResult.marketOverview.avgADR?.toFixed(0) || 'N/A'}</div>
+                    <div className="text-slate-400 text-xs sm:text-sm mb-1">Avg ADR</div>
+                    <div className="text-white font-bold text-lg sm:text-2xl">${researchResult.marketOverview.avgADR?.toFixed(0) || 'N/A'}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400 text-sm mb-1">Avg Revenue</div>
-                    <div className="text-white font-bold text-2xl">${(researchResult.marketOverview.avgRevenue || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                    <div className="text-slate-400 text-xs sm:text-sm mb-1">Avg Revenue</div>
+                    <div className="text-white font-bold text-lg sm:text-2xl">${(researchResult.marketOverview.avgRevenue || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
                   </div>
                 </div>
               </div>
@@ -2105,15 +2076,15 @@ export default function LeadMagnet() {
             
             {/* Bedroom Analysis */}
             {researchResult.bedroomAnalysis && researchResult.bedroomAnalysis.length > 0 && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-2xl font-bold text-white mb-6">Bedroom Analysis</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 md:mb-6">Bedroom Analysis</h3>
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
                   {researchResult.bedroomAnalysis.map((br: any, idx: number) => (
-                    <div key={idx} className="bg-slate-900/50 rounded-lg p-4 text-center">
-                      <div className="text-slate-400 text-sm mb-1">{br.bedroomSize}</div>
-                      <div className="text-white font-bold text-xl">{((br.occupancy || 0) * 100).toFixed(0)}%</div>
+                    <div key={idx} className="bg-slate-900/50 rounded-lg p-2 sm:p-4 text-center">
+                      <div className="text-slate-400 text-xs sm:text-sm mb-1">{br.bedroomSize}</div>
+                      <div className="text-white font-bold text-base sm:text-xl">{((br.occupancy || 0) * 100).toFixed(0)}%</div>
                       {br.avgRevenue && (
-                        <div className="text-slate-500 text-xs mt-1">${(br.avgRevenue).toLocaleString(undefined, {maximumFractionDigits: 0})}/yr</div>
+                        <div className="text-slate-500 text-[10px] sm:text-xs mt-1">${(br.avgRevenue).toLocaleString(undefined, {maximumFractionDigits: 0})}/yr</div>
                       )}
                     </div>
                   ))}
@@ -2123,27 +2094,27 @@ export default function LeadMagnet() {
             
             {/* Top Submarkets */}
             {researchResult.submarkets && researchResult.submarkets.length > 0 && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-2xl font-bold text-white mb-6">Top Submarkets</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 md:mb-6">Top Submarkets</h3>
+                <div className="overflow-x-auto -mx-2 sm:mx-0">
+                  <table className="w-full min-w-[400px] text-xs sm:text-sm">
                     <thead>
                       <tr className="border-b border-slate-700">
-                        <th className="text-left py-3 px-4 text-slate-400 font-medium">Submarket</th>
-                        <th className="text-right py-3 px-4 text-slate-400 font-medium">Listings</th>
-                        <th className="text-right py-3 px-4 text-slate-400 font-medium">Occupancy</th>
-                        <th className="text-right py-3 px-4 text-slate-400 font-medium">ADR</th>
-                        <th className="text-right py-3 px-4 text-slate-400 font-medium">RevPAR</th>
+                        <th className="text-left py-2 sm:py-3 px-2 sm:px-4 text-slate-400 font-medium">Submarket</th>
+                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 text-slate-400 font-medium">Listings</th>
+                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 text-slate-400 font-medium">Occ.</th>
+                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 text-slate-400 font-medium">ADR</th>
+                        <th className="text-right py-2 sm:py-3 px-2 sm:px-4 text-slate-400 font-medium">RevPAR</th>
                       </tr>
                     </thead>
                     <tbody>
                       {researchResult.submarkets.slice(0, 10).map((sm: any, idx: number) => (
                         <tr key={idx} className="border-b border-slate-700/50">
-                          <td className="py-3 px-4 text-white font-medium">{sm.name}</td>
-                          <td className="py-3 px-4 text-right text-slate-300">{sm.listings}</td>
-                          <td className="py-3 px-4 text-right text-slate-300">{((sm.occupancy || 0) * 100).toFixed(1)}%</td>
-                          <td className="py-3 px-4 text-right text-slate-300">${sm.adr?.toFixed(0)}</td>
-                          <td className="py-3 px-4 text-right text-white font-semibold">${sm.revpar?.toFixed(0)}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-white font-medium truncate max-w-[120px] sm:max-w-none">{sm.name}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-right text-slate-300">{sm.listings}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-right text-slate-300">{((sm.occupancy || 0) * 100).toFixed(0)}%</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-right text-slate-300">${sm.adr?.toFixed(0)}</td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 text-right text-white font-semibold">${sm.revpar?.toFixed(0)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2154,9 +2125,9 @@ export default function LeadMagnet() {
             
             {/* Top Performers */}
             {researchResult.topPerformers && researchResult.topPerformers.length > 0 && (
-              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-2xl font-bold text-white mb-6">Top Performing Properties</h3>
-                <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-6 md:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 md:mb-6">Top Performing Properties</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                   {researchResult.topPerformers.slice(0, 6).map((prop: any, idx: number) => (
                     <div key={idx} className="bg-slate-900/50 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
@@ -2189,8 +2160,8 @@ export default function LeadMagnet() {
             
             {/* Recommendations */}
             {researchResult.recommendations && researchResult.recommendations.length > 0 && (
-              <div className="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-2xl p-6 md:p-8">
-                <h3 className="text-2xl font-bold text-white mb-4">Recommendations</h3>
+              <div className="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 md:mb-4">Recommendations</h3>
                 <ul className="space-y-3">
                   {researchResult.recommendations.map((rec: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-3">
@@ -2204,178 +2175,25 @@ export default function LeadMagnet() {
           </div>
         </section>
       )}
-      
+
       {/* ============================================ */}
-      {/* OPPORTUNITY FINDER RESULTS */}
+      {/* EBOOK TAB */}
       {/* ============================================ */}
-      {activeTab === 'opportunities' && oppResult && (
-        <section ref={resultsRef} className="py-12 md:py-16">
-          <div className="max-w-6xl mx-auto px-4">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                {oppResult.market} Opportunities
-              </h2>
-              <p className="text-lg text-slate-400">
-                {oppResult.opportunities?.length || 0} rental properties that could be profitable Airbnbs
-              </p>
-            </div>
-            
-            {/* Section 1: Market Snapshot */}
-            <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
-              <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-[#D4A84B]" />
-                Market Snapshot
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-white">
-                    {oppResult.marketSnapshot?.totalListings?.toLocaleString() || '—'}
-                  </div>
-                  <div className="text-sm text-slate-400">Active Airbnbs</div>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-emerald-400">
-                    {oppResult.marketSnapshot?.avgOccupancy ? `${Math.round(oppResult.marketSnapshot.avgOccupancy * 100)}%` : '—'}
-                  </div>
-                  <div className="text-sm text-slate-400">Avg Occupancy</div>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className="text-2xl md:text-3xl font-bold text-[#D4A84B]">
-                    ${oppResult.marketSnapshot?.avgMonthlyRevenue?.toLocaleString() || '—'}
-                  </div>
-                  <div className="text-sm text-slate-400">Avg Monthly Revenue</div>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
-                  <div className="text-lg md:text-xl font-bold text-cyan-400 leading-tight">
-                    {oppResult.marketSnapshot?.hotNeighborhoods?.slice(0, 2).join(', ') || '—'}
-                  </div>
-                  <div className="text-sm text-slate-400">Hot Neighborhoods</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Section 2: What Makes Properties Win Here */}
-            {oppResult.winningAmenities && oppResult.winningAmenities.length > 0 && (
-              <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-2xl p-6 md:p-8 mb-8">
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
-                  What Makes Properties Win Here
-                </h3>
-                <p className="text-slate-400 text-sm mb-6">Top performers in this market have these amenities</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {oppResult.winningAmenities.map((amenity: any, idx: number) => (
-                    <div key={idx} className="bg-slate-900/50 rounded-xl p-4 flex items-center gap-3">
-                      <span className="text-2xl">{amenity.icon}</span>
-                      <div>
-                        <div className="font-medium text-white">{amenity.amenity}</div>
-                        <div className="text-sm text-emerald-400">{amenity.percentage}% of top earners</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Section 3: Real Rental Opportunities */}
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <Home className="w-5 h-5 text-[#4ECDC4]" />
-                Rental Opportunities
-              </h3>
-              <div className="grid gap-4">
-                {oppResult.opportunities?.map((opp: any, idx: number) => (
-                  <div key={idx} className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 md:p-6 hover:border-[#D4A84B]/50 transition-all">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      {/* Property Image */}
-                      <div className="w-full md:w-48 h-32 md:h-36 rounded-xl overflow-hidden bg-slate-700 flex-shrink-0">
-                        {opp.rental.photoUrl ? (
-                          <img 
-                            src={opp.rental.photoUrl} 
-                            alt={opp.rental.address}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Home className="w-12 h-12 text-slate-500" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Property Details */}
-                      <div className="flex-1">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
-                          <div>
-                            <h4 className="font-semibold text-white text-lg">
-                              {opp.rental.bedrooms}BR in {opp.rental.neighborhood || 'Unknown Area'}
-                            </h4>
-                            <p className="text-sm text-slate-400">{opp.rental.address}</p>
-                          </div>
-                          {opp.profit > 0 && (
-                            <div className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium self-start">
-                              +${opp.profit.toLocaleString()}/mo profit
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          <div>
-                            <div className="text-sm text-slate-400">Rent</div>
-                            <div className="text-lg font-semibold text-white">${opp.rental.rent?.toLocaleString()}/mo</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-slate-400">Projected Airbnb</div>
-                            <div className="text-lg font-semibold text-[#D4A84B]">${opp.projectedRevenue?.toLocaleString()}/mo</div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-slate-400">Occupancy</div>
-                            <div className="text-lg font-semibold text-cyan-400">{Math.round((opp.occupancy || 0) * 100)}%</div>
-                          </div>
-                        </div>
-                        
-                        {opp.similarAirbnbRevenue && (
-                          <p className="text-sm text-slate-400 mb-3">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 inline mr-1" />
-                            Similar Airbnbs nearby are making ${opp.similarAirbnbRevenue.toLocaleString()}/mo
-                          </p>
-                        )}
-                        
-                        <a 
-                          href={opp.rental.listingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-[#4ECDC4] hover:text-[#5EDFD6] text-sm font-medium"
-                        >
-                          View on Zillow <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Section 4: CTA */}
-            <div className="bg-gradient-to-r from-[#D4A84B]/20 to-[#4ECDC4]/20 border border-[#D4A84B]/30 rounded-2xl p-8 text-center">
-              <h3 className="text-2xl font-bold text-white mb-3">
-                Ready to Turn One of These Into a Profitable Airbnb?
-              </h3>
-              <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
-                Learn the exact steps to secure a rental property, set it up for Airbnb, and start generating passive income.
-              </p>
-              <a 
-                href="https://coachinayah.com/turnkey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white font-semibold rounded-xl hover:from-[#C9A43E] hover:to-[#45B8B0] transition-all shadow-lg shadow-[#D4A84B]/25"
-              >
-                Watch the Turnkey Training
-                <ArrowRight className="w-5 h-5" />
-              </a>
-            </div>
+      {activeTab === 'ebook' && (
+        <div className="w-full h-screen flex flex-col bg-gradient-to-br from-slate-900 to-slate-800">
+          {/* Ebook Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-6 text-white">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Rental Riches</h2>
+            <p className="text-blue-100">Master Short-Term Rentals for Long-Term Wealth</p>
           </div>
-        </section>
+
+          {/* Ebook Viewer */}
+          <div className="flex-1 overflow-auto">
+            <EbookViewer isOpen={activeTab === 'ebook'} onClose={() => setActiveTab('single')} />
+          </div>
+        </div>
       )}
+
     </div>
   );
 }
