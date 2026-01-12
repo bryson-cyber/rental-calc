@@ -1,0 +1,23 @@
+CREATE TABLE `opportunity_searches` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`searchId` varchar(100) NOT NULL,
+	`city` varchar(255) NOT NULL,
+	`minRent` int,
+	`maxRent` int,
+	`status` enum('pending','running','completed','error') NOT NULL DEFAULT 'pending',
+	`progress` int DEFAULT 0,
+	`currentStep` varchar(255),
+	`errorMessage` text,
+	`zillowTaskId` varchar(100),
+	`amenityTaskId` varchar(100),
+	`marketSnapshot` json,
+	`winningAmenities` json,
+	`opportunities` json,
+	`userId` int,
+	`sessionToken` varchar(64),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`completedAt` timestamp,
+	CONSTRAINT `opportunity_searches_id` PRIMARY KEY(`id`),
+	CONSTRAINT `opportunity_searches_searchId_unique` UNIQUE(`searchId`)
+);

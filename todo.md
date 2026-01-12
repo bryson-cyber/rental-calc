@@ -322,3 +322,17 @@ Browser Use Cloud API ran out of credits. Rebuilding with Manus backend browser 
 - [ ] Test complete flow with real city
 - [ ] Verify all data sources integrate correctly
 - [ ] Test error handling and loading states
+
+
+## Fixes and Simplification (Jan 12, 2026)
+
+### Market Research Fixes
+- [ ] Add city/market name autocomplete
+- [ ] Fix mobile formatting issues
+
+### Find Deals Simplification
+- [ ] Remove Coach Inayah scraping (too slow)
+- [ ] Use single Browser Use task for Apartments.com/Trulia
+- [ ] Keep AirDNA Rentalizer API for projections
+- [ ] Simplify UI to show rental opportunities with profit
+- [ ] Target ~6 minute completion time
