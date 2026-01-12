@@ -1246,6 +1246,43 @@ export default function LeadMagnet() {
               </div>
             )}
             
+            
+            {/* Seasonality Summary */}
+            {researchResult.seasonality && researchResult.seasonality.length > 0 && (
+              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Occupancy by Month</p>
+                    <div className="space-y-2">
+                      {researchResult.seasonality.slice(0, 6).map((month, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <span className="text-xs text-[oklch(0.50_0_0)] w-12">{month.month}</span>
+                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-6 overflow-hidden">
+                            <div 
+                              className="bg-gradient-to-r from-emerald-400 to-teal-400 h-full transition-all"
+                              style={{width: `${month.occupancy}%`}}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold text-[oklch(0.25_0_0)] w-10 text-right">{Math.round(month.occupancy)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Average Daily Rate by Month</p>
+                    <div className="space-y-2">
+                      {researchResult.seasonality.slice(6, 12).map((month, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <span className="text-xs text-[oklch(0.50_0_0)]">{month.month}</span>
+                          <span className="text-xs font-semibold text-emerald-500">{formatCurrency(month.adr)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Next Step CTA */}
             <div className="text-center">
               <p className="text-[oklch(0.50_0_0)] mb-4">Ready to find specific opportunities in this market?</p>
@@ -1281,6 +1318,48 @@ export default function LeadMagnet() {
               </p>
             </div>
             
+            
+            {/* Filters and Sorting */}
+            <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Sort By</label>
+                  <select className="w-full input-apple h-10 text-sm">
+                    <option>Most Revenue</option>
+                    <option>Highest Occupancy</option>
+                    <option>Best Rating</option>
+                    <option>Highest RevPAR</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Property Type</label>
+                  <select className="w-full input-apple h-10 text-sm">
+                    <option>All Types</option>
+                    <option>Entire Home</option>
+                    <option>Private Room</option>
+                    <option>Shared Room</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Rating</label>
+                  <select className="w-full input-apple h-10 text-sm">
+                    <option>Any</option>
+                    <option>4.5+</option>
+                    <option>4.7+</option>
+                    <option>4.9+</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Occupancy</label>
+                  <select className="w-full input-apple h-10 text-sm">
+                    <option>Any</option>
+                    <option>50%+</option>
+                    <option>70%+</option>
+                    <option>85%+</option>
+                  </select>
+                </div>
+              </div>
+            </div>
             {/* View Toggle */}
             <div className="flex justify-center gap-2 mb-6">
               <button

@@ -13,6 +13,9 @@ interface PropertyCardProps {
   annualRevenue: number;
   occupancy: number;
   adr: number;
+  revpar?: number; // Revenue Per Available Room
+  distance?: number; // Distance in meters
+  lastReviewDate?: string; // Last review date
   airbnbUrl?: string;
   superhost?: boolean;
   index?: number;
@@ -33,6 +36,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   airbnbUrl,
   superhost,
   index = 0,
+  revpar,
+  distance,
+  lastReviewDate,
 }) => {
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -43,6 +49,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     }).format(value);
   };
 
+  const calculateRevPAR = (): number => {
+    if (revpar) return revpar;
+    return annualRevenue / 365;
+  };
+
+  const formatDistance = (meters: number): string => {
+    if (meters < 1000) return `${Math.round(meters)}m away`;
+    return `${(meters / 1000).toFixed(1)}km away`;
+  };
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = 'none';
   };
@@ -107,20 +122,32 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         )}
 
         {/* Financial Metrics */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <div>
             <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Annual Revenue</p>
             <p className="text-emerald-500 font-bold text-sm">{formatCurrency(annualRevenue)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Daily Rate</p>
+            <p className="text-[oklch(0.25_0_0)] font-bold text-sm">{formatCurrency(adr)}</p>
           </div>
           <div>
             <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Occupancy</p>
             <p className="text-[oklch(0.25_0_0)] font-bold text-sm">{Math.round(occupancy)}%</p>
           </div>
           <div>
-            <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Nightly Rate</p>
-            <p className="text-[oklch(0.25_0_0)] font-bold text-sm">{formatCurrency(adr)}</p>
+            <p className="text-xs text-[oklch(0.50_0_0)] mb-1">RevPAR</p>
+            <p className="text-[oklch(0.25_0_0)] font-bold text-sm">{formatCurrency(calculateRevPAR())}</p>
           </div>
         </div>
+        
+        {/* Distance and Last Review */}
+        {(distance || lastReviewDate) && (
+          <div className="text-xs text-[oklch(0.50_0_0)] space-y-1 pb-3 border-b border-[oklch(0.90_0_0)]">
+            {distance && <p>{formatDistance(distance)}</p>}
+            {lastReviewDate && <p>Last reviewed: {new Date(lastReviewDate).toLocaleDateString()}</p>}
+          </div>
+        )}
 
         {/* View on Airbnb Link */}
         {airbnbUrl && (
