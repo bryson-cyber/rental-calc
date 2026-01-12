@@ -267,7 +267,9 @@ export default function LeadMagnet() {
   const [exploreRadius, setExploreRadius] = useState(3000);
   const [exploreBedroomFilter, setExploreBedroomFilter] = useState<number | null>(null);
   const [exploreMinRating, setExploreMinRating] = useState<number | null>(null);
-  const [exploreSortBy, setExploreSortBy] = useState<'proximity' | 'revenue' | 'rating' | 'occupancy'>('revenue');
+  const [exploreSortBy, setExploreSortBy] = useState<'proximity' | 'revenue' | 'rating' | 'occupancy' | 'revpar'>('revenue');
+  const [explorePropertyType, setExplorePropertyType] = useState<string | null>(null);
+  const [exploreMinOccupancy, setExploreMinOccupancy] = useState<number | null>(null);
   const [areaListings, setAreaListings] = useState<AreaListing[] | null>(null);
   const [isExploring, setIsExploring] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
@@ -348,7 +350,12 @@ export default function LeadMagnet() {
           monthlyRent: rent,
           monthlyProfit: monthlyRevenue - rent,
         },
-        forecast: [],
+        forecast: (data.property?.monthly_forecast || []).map((m: any) => ({
+          month: m.month,
+          revenue: m.revenue || 0,
+          adr: m.adr || 0,
+          occupancy: (m.occupancy || 0) > 1 ? m.occupancy : (m.occupancy || 0) * 100,
+        })),
         comparables: (data.same_bedroom_comps || []).map((c: any) => ({
           id: c.id || String(Math.random()),
           title: c.title || `${c.bedrooms}BR Property`,
@@ -475,7 +482,7 @@ export default function LeadMagnet() {
         radiusMeters: exploreRadius,
         bedrooms: exploreBedroomFilter || undefined,
         minRating: exploreMinRating || undefined,
-        sortBy: exploreSortBy,
+        sortBy: exploreSortBy === 'revpar' ? 'revenue' : exploreSortBy,
         sortDirection: exploreSortBy === 'revenue' ? 'descending' : 'ascending',
       });
       
@@ -1257,7 +1264,7 @@ export default function LeadMagnet() {
                     <div className="space-y-2">
                       {researchResult.seasonality.slice(0, 6).map((month, idx) => (
                         <div key={idx} className="flex items-center gap-3">
-                          <span className="text-xs text-[oklch(0.50_0_0)] w-12">{month.month}</span>
+                          <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
                           <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-6 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-emerald-400 to-teal-400 h-full transition-all"
@@ -1274,7 +1281,7 @@ export default function LeadMagnet() {
                     <div className="space-y-2">
                       {researchResult.seasonality.slice(6, 12).map((month, idx) => (
                         <div key={idx} className="flex items-center justify-between">
-                          <span className="text-xs text-[oklch(0.50_0_0)]">{month.month}</span>
+                          <span className="text-xs text-[oklch(0.50_0_0)]">{formatMonth(month.month)}</span>
                           <span className="text-xs font-semibold text-emerald-500">{formatCurrency(month.adr)}</span>
                         </div>
                       ))}
@@ -1324,38 +1331,54 @@ export default function LeadMagnet() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Sort By</label>
-                  <select className="w-full input-apple h-10 text-sm">
-                    <option>Most Revenue</option>
-                    <option>Highest Occupancy</option>
-                    <option>Best Rating</option>
-                    <option>Highest RevPAR</option>
+                  <select 
+                    className="w-full input-apple h-10 text-sm"
+                    value={exploreSortBy}
+                    onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
+                  >
+                    <option value="revenue">Most Revenue</option>
+                    <option value="occupancy">Highest Occupancy</option>
+                    <option value="rating">Best Rating</option>
+                    <option value="revpar">Highest RevPAR</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Property Type</label>
-                  <select className="w-full input-apple h-10 text-sm">
-                    <option>All Types</option>
-                    <option>Entire Home</option>
-                    <option>Private Room</option>
-                    <option>Shared Room</option>
+                  <select 
+                    className="w-full input-apple h-10 text-sm"
+                    value={explorePropertyType || ''}
+                    onChange={(e) => setExplorePropertyType(e.target.value || null)}
+                  >
+                    <option value="">All Types</option>
+                    <option value="entire_home">Entire Home</option>
+                    <option value="private_room">Private Room</option>
+                    <option value="shared_room">Shared Room</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Rating</label>
-                  <select className="w-full input-apple h-10 text-sm">
-                    <option>Any</option>
-                    <option>4.5+</option>
-                    <option>4.7+</option>
-                    <option>4.9+</option>
+                  <select 
+                    className="w-full input-apple h-10 text-sm"
+                    value={exploreMinRating || ''}
+                    onChange={(e) => setExploreMinRating(e.target.value ? parseFloat(e.target.value) : null)}
+                  >
+                    <option value="">Any</option>
+                    <option value="4.5">4.5+</option>
+                    <option value="4.7">4.7+</option>
+                    <option value="4.9">4.9+</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Occupancy</label>
-                  <select className="w-full input-apple h-10 text-sm">
-                    <option>Any</option>
-                    <option>50%+</option>
-                    <option>70%+</option>
-                    <option>85%+</option>
+                  <select 
+                    className="w-full input-apple h-10 text-sm"
+                    value={exploreMinOccupancy || ''}
+                    onChange={(e) => setExploreMinOccupancy(e.target.value ? parseFloat(e.target.value) : null)}
+                  >
+                    <option value="">Any</option>
+                    <option value="50">50%+</option>
+                    <option value="70">70%+</option>
+                    <option value="85">85%+</option>
                   </select>
                 </div>
               </div>
@@ -1385,7 +1408,27 @@ export default function LeadMagnet() {
             {/* Listings */}
             {!showMapView ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {areaListings.slice(0, 15).map((listing, idx) => (
+                {areaListings
+                  // Filter by property type
+                  .filter(listing => !explorePropertyType || listing.property_type?.toLowerCase().replace(/\s+/g, '_') === explorePropertyType)
+                  // Filter by min rating
+                  .filter(listing => !exploreMinRating || (listing.rating && listing.rating >= exploreMinRating))
+                  // Filter by min occupancy
+                  .filter(listing => !exploreMinOccupancy || (listing.occupancy && listing.occupancy >= exploreMinOccupancy))
+                  // Sort by selected criteria
+                  .sort((a, b) => {
+                    if (exploreSortBy === 'revenue') return (b.annual_revenue || 0) - (a.annual_revenue || 0);
+                    if (exploreSortBy === 'occupancy') return (b.occupancy || 0) - (a.occupancy || 0);
+                    if (exploreSortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+                    if (exploreSortBy === 'revpar') {
+                      const revparA = (a.adr || 0) * ((a.occupancy || 0) / 100);
+                      const revparB = (b.adr || 0) * ((b.occupancy || 0) / 100);
+                      return revparB - revparA;
+                    }
+                    return 0;
+                  })
+                  .slice(0, 15)
+                  .map((listing, idx) => (
                   <PropertyCard
                     key={listing.id}
                     id={listing.id}
@@ -1505,6 +1548,111 @@ export default function LeadMagnet() {
                 </p>
               </div>
             </div>
+            
+            {/* Monthly Revenue Forecast */}
+            {result.forecast && result.forecast.length > 0 && (
+              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">12-Month Revenue Forecast</h4>
+                <div className="grid grid-cols-12 gap-1 h-40 items-end mb-4">
+                  {result.forecast.slice(0, 12).map((month, idx) => {
+                    const maxRevenue = Math.max(...result.forecast.map(m => m.revenue));
+                    const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+                    return (
+                      <div key={idx} className="flex flex-col items-center h-full justify-end">
+                        <div className="text-xs text-[oklch(0.50_0_0)] mb-1 hidden md:block">
+                          {formatCurrency(month.revenue)}
+                        </div>
+                        <div 
+                          className="w-full bg-gradient-to-t from-emerald-500 to-teal-400 rounded-t transition-all hover:from-emerald-400 hover:to-teal-300"
+                          style={{ height: `${Math.max(heightPct, 5)}%` }}
+                          title={`${formatMonth(month.month)}: ${formatCurrency(month.revenue)} (${Math.round(month.occupancy)}% occ)`}
+                        />
+                        <div className="text-xs text-[oklch(0.50_0_0)] mt-1">
+                          {formatMonth(month.month)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[oklch(0.90_0_0)]">
+                  <div className="text-center">
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Monthly Revenue</p>
+                    <p className="text-lg font-bold text-emerald-500">
+                      {formatCurrency(result.forecast.reduce((sum, m) => sum + m.revenue, 0) / result.forecast.length)}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Peak Month</p>
+                    <p className="text-lg font-bold text-[oklch(0.15_0_0)]">
+                      {formatMonth(result.forecast.reduce((max, m) => m.revenue > max.revenue ? m : max, result.forecast[0]).month)}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Occupancy</p>
+                    <p className="text-lg font-bold text-[oklch(0.15_0_0)]">
+                      {Math.round(result.forecast.reduce((sum, m) => sum + m.occupancy, 0) / result.forecast.length)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Market Percentile Ranking */}
+            {result.comparables && result.comparables.length > 0 && (
+              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">How Your Property Ranks</h4>
+                {(() => {
+                  const allRevenues = result.comparables.map(c => c.revenue).sort((a, b) => a - b);
+                  const propertyRevenue = result.revenue.projected;
+                  const rank = allRevenues.filter(r => r < propertyRevenue).length;
+                  const percentile = Math.round((rank / allRevenues.length) * 100);
+                  const avgCompRevenue = allRevenues.reduce((sum, r) => sum + r, 0) / allRevenues.length;
+                  const vsAvg = ((propertyRevenue - avgCompRevenue) / avgCompRevenue) * 100;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-[oklch(0.50_0_0)]">Market Percentile</span>
+                            <span className="font-semibold text-[oklch(0.15_0_0)]">{percentile}th percentile</span>
+                          </div>
+                          <div className="h-3 bg-[oklch(0.92_0_0)] rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${
+                                percentile >= 75 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
+                                percentile >= 50 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                                'bg-gradient-to-r from-red-500 to-orange-400'
+                              }`}
+                              style={{ width: `${percentile}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-[oklch(0.50_0_0)] mt-1">
+                            <span>Bottom 25%</span>
+                            <span>Median</span>
+                            <span>Top 25%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[oklch(0.90_0_0)]">
+                        <div className="text-center">
+                          <p className="text-sm text-[oklch(0.50_0_0)] mb-1">vs. Market Average</p>
+                          <p className={`text-xl font-bold ${vsAvg >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {vsAvg >= 0 ? '+' : ''}{Math.round(vsAvg)}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Rank Among Comps</p>
+                          <p className="text-xl font-bold text-[oklch(0.15_0_0)]">
+                            #{allRevenues.length - rank} of {allRevenues.length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             
             {/* Comparables */}
             {result.comparables && result.comparables.length > 0 && (

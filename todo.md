@@ -384,3 +384,13 @@ From AirDNA Rentalizer endpoint:
 - Complete Step 3 and Step 4 enhancements
 - Comprehensive testing across all 4 tools
 - Final checkpoint and deployment
+
+
+## Bug Fixes (Jan 12, 2026 - 5:30 PM)
+
+### Critical Fixes:
+- [x] Fix month label formatting in Step 1 seasonality (2025-01 -> Jan)
+- [x] Implement filter functionality in Step 2 (Sort By, Property Type, Min Rating, Min Occupancy)
+- [x] Add monthly forecast chart to Step 3 (12-month bar chart with revenue)
+- [x] Add market percentile ranking to Step 3 (percentile bar, vs market avg, rank)
+- [x] Fix forecast occupancy calculation (convert decimal to percentage)
