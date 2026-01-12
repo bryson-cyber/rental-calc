@@ -18,6 +18,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { EbookViewer } from '@/components/EbookViewer';
+import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { 
   MapPin,
   DollarSign,
@@ -235,6 +236,14 @@ export default function LeadMagnet() {
   // EBOOK STATE
   // ============================================
   const [isEbookOpen, setIsEbookOpen] = useState(false);
+  
+  // ============================================
+  // ONBOARDING STATE
+  // ============================================
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('tutorialSeen');
+  });
   
   // ============================================
   // MARKET RESEARCH STATE
@@ -830,6 +839,11 @@ export default function LeadMagnet() {
   // ============================================
   // RENDER
   // ============================================
+  
+  // Show tutorial for new users
+  if (showTutorial) {
+    return <OnboardingTutorial onDismiss={() => setShowTutorial(false)} />;
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">

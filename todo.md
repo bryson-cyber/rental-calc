@@ -120,3 +120,31 @@ From AirDNA Rentalizer endpoint:
 - [x] Use single Browser Use task for Apartments.com/Trulia
 - [x] Keep AirDNA Rentalizer API for projections
 - [x] Simplify UI to show rental opportunities with profit
+
+
+## Interactive Onboarding Tutorial (Jan 12, 2026)
+
+- [x] Create OnboardingTutorial component with 4 tool cards
+- [x] Add tutorial state management to LeadMagnet
+- [x] Implement localStorage to track first-time visitors
+- [x] Build step-by-step guides for each tool:
+  - [x] One Home - single property analysis
+  - [x] Compare Many - bulk property comparison
+  - [x] Explore Area - area listings exploration
+  - [x] Market Research - instant market insights
+- [x] Add "See it in action" interactive section for each tool
+- [x] Add progress bar showing tool progress (1 of 4, 2 of 4, etc.)
+- [x] Add Previous/Next navigation
+- [x] Add Skip tutorial button
+- [x] Test complete tutorial flow
+- [x] Verify tutorial shows only on first visit
+- [x] Verify smooth transition to main app after tutorial
+
+## Next Steps
+
+- [ ] Restructure main page layout:
+  - [ ] Move ebook viewer to top of page (always visible)
+  - [ ] Position 4 tool tabs below ebook
+  - [ ] Remove "Free Ebook" tab (ebook now always visible)
+- [ ] Upload new ebook file and integrate
+- [ ] Test new layout on desktop and mobile
