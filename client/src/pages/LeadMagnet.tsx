@@ -18,7 +18,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { EbookViewer } from '@/components/EbookViewer';
-import { OnboardingTutorial } from '@/components/OnboardingTutorial';
+import { HelpSection } from '@/components/HelpSection';
+
 import { 
   MapPin,
   DollarSign,
@@ -238,12 +239,11 @@ export default function LeadMagnet() {
   const [isEbookOpen, setIsEbookOpen] = useState(false);
   
   // ============================================
-  // ONBOARDING STATE
+  // HELP STATE
   // ============================================
-  const [showTutorial, setShowTutorial] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('tutorialSeen');
-  });
+  const [showHelp, setShowHelp] = useState<TabType | null>(null);
+  
+
   
   // ============================================
   // MARKET RESEARCH STATE
@@ -840,11 +840,7 @@ export default function LeadMagnet() {
   // RENDER
   // ============================================
   
-  // Show tutorial for new users
-  if (showTutorial) {
-    return <OnboardingTutorial onDismiss={() => setShowTutorial(false)} />;
-  }
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       {/* Hero Section */}
@@ -943,6 +939,19 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'single' && (
               <div className="grid gap-6">
+                <HelpSection
+                  title="How to Use: One Home"
+                  description="Analyze a single property to see how much money it could make on Airbnb"
+                  steps={[
+                    'Enter the property address',
+                    'Enter the monthly rent you\'d pay',
+                    'Select number of bedrooms and bathrooms',
+                    'Click "Check This Home"',
+                    'See revenue, profit, and comparable properties'
+                  ]}
+                  isOpen={showHelp === 'single'}
+                  onToggle={() => setShowHelp(showHelp === 'single' ? null : 'single')}
+                />
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Home Address
@@ -1029,6 +1038,19 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'compare' && (
               <div className="grid gap-6">
+                <HelpSection
+                  title="How to Use: Compare Many"
+                  description="Compare up to 25 properties side-by-side to find the best opportunity"
+                  steps={[
+                    'Add multiple property addresses (up to 25)',
+                    'Enter rent and bedroom/bathroom info for each',
+                    'Click "Compare Properties"',
+                    'See all properties ranked by profit',
+                    'Sort by Money Made, Profit, or Money vs Rent ratio'
+                  ]}
+                  isOpen={showHelp === 'compare'}
+                  onToggle={() => setShowHelp(showHelp === 'compare' ? null : 'compare')}
+                />
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-white">Compare Up to 25 Homes</h3>
@@ -1134,6 +1156,19 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'explore' && (
               <div className="grid gap-6">
+                <HelpSection
+                  title="How to Use: Explore Area"
+                  description="See all Airbnb listings in an area and find what's working"
+                  steps={[
+                    'Enter a city or neighborhood',
+                    'Filter by number of bedrooms',
+                    'See all active Airbnb listings nearby',
+                    'Sort by "Most Money" or "Closest"',
+                    'Click any listing to view on Airbnb'
+                  ]}
+                  isOpen={showHelp === 'explore'}
+                  onToggle={() => setShowHelp(showHelp === 'explore' ? null : 'explore')}
+                />
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-1">See All Airbnbs in an Area</h3>
                   <p className="text-sm text-slate-400">Find out what's already making money near any address</p>
@@ -1227,6 +1262,19 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'research' && (
               <div className="grid gap-6">
+                <HelpSection
+                  title="How to Use: Market Research"
+                  description="Get instant market data and insights for any city"
+                  steps={[
+                    'Enter a city or market name',
+                    'Click "Get Market Data"',
+                    'See average revenue, occupancy rates, and trends',
+                    'Learn what property types perform best',
+                    'Understand seasonal patterns'
+                  ]}
+                  isOpen={showHelp === 'research'}
+                  onToggle={() => setShowHelp(showHelp === 'research' ? null : 'research')}
+                />
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     City or Market Name

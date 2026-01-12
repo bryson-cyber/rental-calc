@@ -122,23 +122,22 @@ From AirDNA Rentalizer endpoint:
 - [x] Simplify UI to show rental opportunities with profit
 
 
-## Interactive Onboarding Tutorial (Jan 12, 2026)
+## Integrated Contextual Help (Jan 12, 2026)
 
-- [x] Create OnboardingTutorial component with 4 tool cards
-- [x] Add tutorial state management to LeadMagnet
-- [x] Implement localStorage to track first-time visitors
-- [x] Build step-by-step guides for each tool:
-  - [x] One Home - single property analysis
-  - [x] Compare Many - bulk property comparison
-  - [x] Explore Area - area listings exploration
-  - [x] Market Research - instant market insights
-- [x] Add "See it in action" interactive section for each tool
-- [x] Add progress bar showing tool progress (1 of 4, 2 of 4, etc.)
-- [x] Add Previous/Next navigation
-- [x] Add Skip tutorial button
-- [x] Test complete tutorial flow
-- [x] Verify tutorial shows only on first visit
-- [x] Verify smooth transition to main app after tutorial
+- [x] Remove full-screen OnboardingTutorial component
+- [x] Create HelpSection component for toggleable help
+- [x] Add help state management to LeadMagnet
+- [x] Integrate help sections into each tool tab:
+  - [x] One Home - 5-step guide
+  - [x] Compare Many - 5-step guide
+  - [x] Explore Area - 5-step guide
+  - [x] Market Research - 5-step guide
+- [x] Style help sections with gold/teal gradient theme
+- [x] Add numbered step indicators
+- [x] Make help sections toggleable with click
+- [x] Test help functionality on all tabs
+- [x] Verify design matches app aesthetic
+- [x] Verify help sections collapse/expand smoothly
 
 ## Next Steps
 
