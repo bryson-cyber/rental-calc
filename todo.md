@@ -246,3 +246,66 @@ From AirDNA Rentalizer endpoint:
 - [x] Fix broken "Read the Guide First" button - now scrolls to top
 - [x] Fix broken "Explore the Turnkey Program" button - now links to coachinayah.com/turnkey
 - [x] Test all UI changes - verified working
+
+
+## Light Theme & Headline (Jan 12, 2026)
+
+### Add Headline Section:
+- [ ] Add hero headline at top of page explaining what this tool is
+- [ ] Include subheadline with value proposition
+- [ ] Add Coach Inayah branding/attribution
+
+### Switch to Light Theme:
+- [ ] Update background to white/light gray
+- [ ] Update text colors for light background
+- [ ] Update card styling for light theme
+- [ ] Update input styling for light theme
+- [ ] Update button styling for light theme
+- [ ] Maintain gold accent color
+
+### Verify API Data:
+- [ ] Test Step 1 (See Real Revenue) - verify all data fields
+- [ ] Test Step 2 (Explore Listings) - verify all data fields
+- [ ] Test Step 3 (Validate the Deal) - verify all data fields
+- [ ] Test Step 4 (Find the Best Deal) - verify all data fields
+
+
+## Full AirDNA Data Maximization & Property Images (Jan 12, 2026)
+
+### Phase 1: Audit & Setup
+- [ ] Check AirDNA API response for property images and additional fields
+- [ ] Update data types to include images, ratings, reviews, property type, distance, RevPAR
+
+### Phase 2: Step 2 (Explore Listings) Enhancements
+- [ ] Add property images to listing cards
+- [ ] Add guest ratings/reviews count
+- [ ] Add property type (entire home, private room, shared room)
+- [ ] Add distance from search location
+- [ ] Add last review date (freshness indicator)
+
+### Phase 3: Step 3 (Validate the Deal) Enhancements
+- [ ] Add monthly forecast chart showing revenue trends
+- [ ] Add comparable properties with images
+- [ ] Add comparable property ratings
+- [ ] Add RevPAR metric (Revenue Per Available Room)
+- [ ] Add amenities list
+
+### Phase 4: Step 4 (Find the Best Deal) Enhancements
+- [ ] Add property images to comparison cards
+- [ ] Add RevPAR metric for each property
+- [ ] Add property types
+- [ ] Add ratings/reviews
+- [ ] Add amenities comparison
+
+### Final Testing & Delivery
+- [ ] Test all 4 tools with multiple markets
+- [ ] Verify images load correctly
+- [ ] Verify all data displays properly
+- [ ] Save checkpoint with all enhancements
+
+## Step 2 Complete - Jan 12, 2026
+- [x] PropertyCard component created with full AirDNA data display
+- [x] Step 2 (Explore Listings) fully integrated and tested
+- [x] All property data displaying correctly (images, ratings, reviews, revenue, occupancy, nightly rate)
+- [x] Responsive grid layout (1/2/3 columns for mobile/tablet/desktop)
+- [x] Tested with Miami, FL - 5,956 opportunities found and displayed correctly

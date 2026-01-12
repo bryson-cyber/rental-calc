@@ -4,13 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /* 
- * APPLE-INSPIRED DESIGN SYSTEM
- * Based on Apple.com design principles:
- * - SF Pro font family with system fallbacks
- * - Clean black/white/gray palette with blue accents
- * - Generous whitespace and breathing room
- * - Subtle, smooth transitions (0.3s ease)
- * - Pill-shaped buttons with refined hover states
+ * LIGHT THEME DESIGN SYSTEM
+ * Clean, professional light theme with gold accents
+ * Based on Apple.com design principles
  */
 
 @theme inline {
@@ -54,101 +50,51 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   
-  /* Apple-Inspired Color Palette */
-  --color-apple-blue: oklch(0.55 0.20 255);
-  --color-apple-blue-hover: oklch(0.50 0.22 255);
-  --color-apple-gray-50: oklch(0.98 0 0);
-  --color-apple-gray-100: oklch(0.96 0 0);
-  --color-apple-gray-200: oklch(0.92 0 0);
-  --color-apple-gray-300: oklch(0.85 0 0);
-  --color-apple-gray-400: oklch(0.70 0 0);
-  --color-apple-gray-500: oklch(0.55 0 0);
-  --color-apple-gray-600: oklch(0.45 0 0);
-  --color-apple-gray-700: oklch(0.35 0 0);
-  --color-apple-gray-800: oklch(0.22 0 0);
-  --color-apple-gray-900: oklch(0.15 0 0);
-  --color-apple-gray-950: oklch(0.10 0 0);
+  /* Brand Gold */
+  --color-gold: oklch(0.55 0.14 75);
+  --color-gold-light: oklch(0.65 0.12 75);
+  --color-gold-dark: oklch(0.45 0.14 75);
   
-  /* Brand Gold - refined */
-  --color-gold: oklch(0.75 0.14 75);
-  --color-gold-light: oklch(0.85 0.10 75);
-  --color-gold-dark: oklch(0.65 0.14 75);
-  
-  /* Typography - Apple SF Pro with system fallbacks */
+  /* Typography */
   --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
-  --primary: oklch(0.75 0.14 75);
-  --primary-foreground: oklch(0.10 0 0);
-  --sidebar-primary: oklch(0.75 0.14 75);
-  --sidebar-primary-foreground: oklch(0.10 0 0);
-  --chart-1: oklch(0.55 0.20 255);
-  --chart-2: oklch(0.75 0.14 75);
-  --chart-3: oklch(0.60 0.15 160);
-  --chart-4: oklch(0.65 0.18 30);
-  --chart-5: oklch(0.70 0.15 300);
+  --primary: oklch(0.55 0.14 75);
+  --primary-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.55 0.14 75);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --chart-1: oklch(0.55 0.14 75);
+  --chart-2: oklch(0.50 0.18 255);
+  --chart-3: oklch(0.55 0.15 160);
+  --chart-4: oklch(0.60 0.18 30);
+  --chart-5: oklch(0.65 0.15 300);
   --radius: 0.75rem;
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.14 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.92 0 0);
-  --muted: oklch(0.18 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.55 0.20 255);
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(0.98 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.55 0.14 75);
   --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.16 0 0);
-  --ring: oklch(0.55 0.20 255);
-  --sidebar: oklch(0.10 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.55 0.20 255);
-}
-
-.dark {
-  --primary: oklch(0.75 0.14 75);
-  --primary-foreground: oklch(0.10 0 0);
-  --sidebar-primary: oklch(0.75 0.14 75);
-  --sidebar-primary-foreground: oklch(0.10 0 0);
-  --background: oklch(0.06 0 0);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.10 0 0);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.16 0 0);
-  --secondary-foreground: oklch(0.92 0 0);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.55 0.20 255);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.20 0 0);
-  --input: oklch(0.14 0 0);
-  --ring: oklch(0.55 0.20 255);
-  --chart-1: oklch(0.55 0.20 255);
-  --chart-2: oklch(0.75 0.14 75);
-  --chart-3: oklch(0.60 0.15 160);
-  --chart-4: oklch(0.65 0.18 30);
-  --chart-5: oklch(0.70 0.15 300);
-  --sidebar: oklch(0.08 0 0);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.14 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.20 0 0);
-  --sidebar-ring: oklch(0.55 0.20 255);
+  --border: oklch(0.90 0 0);
+  --input: oklch(0.97 0 0);
+  --ring: oklch(0.55 0.14 75);
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.96 0 0);
+  --sidebar-accent-foreground: oklch(0.15 0 0);
+  --sidebar-border: oklch(0.90 0 0);
+  --sidebar-ring: oklch(0.55 0.14 75);
 }
 
 @layer base {
@@ -172,12 +118,12 @@
     font-weight: 400;
   }
   
-  /* Apple-style typography hierarchy */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.1;
+    color: oklch(0.15 0 0);
   }
   
   h1 {
@@ -201,23 +147,18 @@
   p {
     font-size: 1.0625rem;
     line-height: 1.6;
-    color: oklch(0.70 0 0);
+    color: oklch(0.40 0 0);
   }
   
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
   a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
+  select:not(:disabled) {
     @apply cursor-pointer;
   }
   
   ::selection {
-    background-color: oklch(0.55 0.20 255 / 0.3);
+    background-color: oklch(0.55 0.14 75 / 0.2);
   }
 }
 
@@ -228,11 +169,6 @@
     margin-right: auto;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
-  }
-
-  .flex {
-    min-height: 0;
-    min-width: 0;
   }
 
   @media (min-width: 640px) {
@@ -250,66 +186,71 @@
     }
   }
   
-  /* Apple-Style Card */
+  /* Light Theme Card */
   .apple-card {
     @apply relative overflow-hidden;
-    background: oklch(0.12 0 0);
-    border: 1px solid oklch(0.20 0 0);
+    background: oklch(0.99 0 0);
+    border: 1px solid oklch(0.90 0 0);
     border-radius: 1.25rem;
+    box-shadow: 0 1px 3px oklch(0 0 0 / 0.05), 0 4px 12px oklch(0 0 0 / 0.05);
     transition: all 0.3s ease;
   }
   
   .apple-card:hover {
-    border-color: oklch(0.28 0 0);
-    box-shadow: 0 8px 30px oklch(0 0 0 / 0.3);
+    border-color: oklch(0.85 0 0);
+    box-shadow: 0 4px 20px oklch(0 0 0 / 0.08);
   }
   
-  /* Apple-Style Primary Button (Blue pill) */
-  .btn-apple-primary {
+  /* Gold Primary Button (Light theme) */
+  .btn-gold-light {
     @apply inline-flex items-center justify-center font-medium;
-    background: oklch(0.55 0.20 255);
+    background: oklch(0.55 0.14 75);
     color: oklch(0.98 0 0);
     border-radius: 980px;
-    padding: 0.75rem 1.5rem;
+    padding: 0.875rem 2rem;
     font-size: 1rem;
+    font-weight: 500;
     letter-spacing: -0.01em;
     transition: all 0.3s ease;
     border: none;
     text-decoration: none;
   }
   
-  .btn-apple-primary:hover {
-    background: oklch(0.50 0.22 255);
+  .btn-gold-light:hover {
+    background: oklch(0.50 0.14 75);
     transform: scale(1.02);
+    box-shadow: 0 4px 20px oklch(0.55 0.14 75 / 0.3);
   }
   
-  .btn-apple-primary:active {
+  .btn-gold-light:active {
     transform: scale(0.98);
   }
   
-  /* Apple-Style Secondary Button (Outline pill) */
-  .btn-apple-secondary {
+  /* Outline Button (Light theme) */
+  .btn-outline-light {
     @apply inline-flex items-center justify-center font-medium;
     background: transparent;
-    color: oklch(0.55 0.20 255);
-    border: 1px solid oklch(0.55 0.20 255);
+    color: oklch(0.35 0 0);
+    border: 1px solid oklch(0.80 0 0);
     border-radius: 980px;
-    padding: 0.75rem 1.5rem;
+    padding: 0.875rem 2rem;
     font-size: 1rem;
+    font-weight: 500;
     letter-spacing: -0.01em;
     transition: all 0.3s ease;
     text-decoration: none;
   }
   
-  .btn-apple-secondary:hover {
-    background: oklch(0.55 0.20 255 / 0.1);
+  .btn-outline-light:hover {
+    background: oklch(0.96 0 0);
+    border-color: oklch(0.70 0 0);
   }
   
-  /* Gold Primary Button (Brand) */
+  /* Gold Button (for dark sections) */
   .btn-gold {
     @apply inline-flex items-center justify-center font-medium;
-    background: oklch(0.75 0.14 75);
-    color: oklch(0.10 0 0);
+    background: oklch(0.55 0.14 75);
+    color: oklch(0.98 0 0);
     border-radius: 980px;
     padding: 0.875rem 2rem;
     font-size: 1rem;
@@ -321,21 +262,17 @@
   }
   
   .btn-gold:hover {
-    background: oklch(0.70 0.14 75);
+    background: oklch(0.50 0.14 75);
     transform: scale(1.02);
-    box-shadow: 0 4px 20px oklch(0.75 0.14 75 / 0.3);
-  }
-  
-  .btn-gold:active {
-    transform: scale(0.98);
+    box-shadow: 0 4px 20px oklch(0.55 0.14 75 / 0.3);
   }
   
   /* Gold Outline Button */
   .btn-gold-outline {
     @apply inline-flex items-center justify-center font-medium;
     background: transparent;
-    color: oklch(0.75 0.14 75);
-    border: 1px solid oklch(0.75 0.14 75);
+    color: oklch(0.55 0.14 75);
+    border: 1px solid oklch(0.55 0.14 75);
     border-radius: 980px;
     padding: 0.875rem 2rem;
     font-size: 1rem;
@@ -346,43 +283,32 @@
   }
   
   .btn-gold-outline:hover {
-    background: oklch(0.75 0.14 75 / 0.1);
+    background: oklch(0.55 0.14 75 / 0.1);
   }
   
-  /* Apple-Style Text Link */
-  .link-apple {
-    color: oklch(0.55 0.20 255);
-    text-decoration: none;
-    transition: color 0.3s ease;
-  }
-  
-  .link-apple:hover {
-    text-decoration: underline;
-  }
-  
-  /* Apple-Style Input */
+  /* Light Theme Input */
   .input-apple {
     @apply w-full;
-    background: oklch(0.14 0 0);
-    border: 1px solid oklch(0.25 0 0);
+    background: oklch(0.98 0 0);
+    border: 1px solid oklch(0.88 0 0);
     border-radius: 0.75rem;
     padding: 1rem 1.25rem;
     font-size: 1rem;
-    color: oklch(0.98 0 0);
+    color: oklch(0.15 0 0);
     transition: all 0.3s ease;
   }
   
   .input-apple::placeholder {
-    color: oklch(0.45 0 0);
+    color: oklch(0.60 0 0);
   }
   
   .input-apple:focus {
     outline: none;
-    border-color: oklch(0.55 0.20 255);
-    box-shadow: 0 0 0 4px oklch(0.55 0.20 255 / 0.15);
+    border-color: oklch(0.55 0.14 75);
+    box-shadow: 0 0 0 4px oklch(0.55 0.14 75 / 0.12);
   }
   
-  /* Section Spacing - Apple-style generous whitespace */
+  /* Section Spacing */
   .section-padding {
     padding-top: 5rem;
     padding-bottom: 5rem;
@@ -418,7 +344,7 @@
   
   .hover-lift:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px oklch(0 0 0 / 0.2);
+    box-shadow: 0 12px 40px oklch(0 0 0 / 0.1);
   }
   
   /* Step indicator badge */
@@ -426,8 +352,8 @@
     @apply inline-flex items-center justify-center;
     width: 2.5rem;
     height: 2.5rem;
-    background: oklch(0.75 0.14 75);
-    color: oklch(0.10 0 0);
+    background: oklch(0.55 0.14 75);
+    color: oklch(0.98 0 0);
     border-radius: 50%;
     font-weight: 600;
     font-size: 0.875rem;
@@ -435,8 +361,8 @@
   
   /* Metric card */
   .metric-card {
-    background: oklch(0.14 0 0);
-    border: 1px solid oklch(0.22 0 0);
+    background: oklch(0.98 0 0);
+    border: 1px solid oklch(0.90 0 0);
     border-radius: 1rem;
     padding: 1.5rem;
     text-align: center;
@@ -444,19 +370,20 @@
   }
   
   .metric-card:hover {
-    border-color: oklch(0.30 0 0);
+    border-color: oklch(0.85 0 0);
+    box-shadow: 0 4px 16px oklch(0 0 0 / 0.06);
   }
   
   .metric-value {
     font-size: 2rem;
     font-weight: 700;
-    color: oklch(0.75 0.14 75);
+    color: oklch(0.55 0.14 75);
     letter-spacing: -0.02em;
   }
   
   .metric-label {
     font-size: 0.875rem;
-    color: oklch(0.55 0 0);
+    color: oklch(0.50 0 0);
     margin-top: 0.25rem;
   }
   
@@ -466,7 +393,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 0;
-    border-bottom: 1px solid oklch(0.18 0 0);
+    border-bottom: 1px solid oklch(0.92 0 0);
   }
   
   .bedroom-item:last-child {
@@ -478,8 +405,8 @@
     @apply inline-block;
     width: 1.25rem;
     height: 1.25rem;
-    border: 2px solid oklch(0.98 0 0 / 0.3);
-    border-top-color: oklch(0.98 0 0);
+    border: 2px solid oklch(0.55 0.14 75 / 0.3);
+    border-top-color: oklch(0.55 0.14 75);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -490,14 +417,14 @@
     }
   }
   
-  /* Tab navigation - Apple style */
+  /* Tab navigation */
   .tab-nav {
     display: flex;
     gap: 0.5rem;
     padding: 0.5rem;
-    background: oklch(0.12 0 0);
+    background: oklch(0.96 0 0);
     border-radius: 1rem;
-    border: 1px solid oklch(0.20 0 0);
+    border: 1px solid oklch(0.90 0 0);
   }
   
   .tab-item {
@@ -506,26 +433,26 @@
     border-radius: 0.75rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: oklch(0.60 0 0);
+    color: oklch(0.45 0 0);
     transition: all 0.3s ease;
     background: transparent;
     border: none;
   }
   
   .tab-item:hover {
-    color: oklch(0.85 0 0);
-    background: oklch(0.16 0 0);
+    color: oklch(0.25 0 0);
+    background: oklch(0.98 0 0);
   }
   
   .tab-item.active {
-    background: oklch(0.75 0.14 75);
-    color: oklch(0.10 0 0);
+    background: oklch(0.55 0.14 75);
+    color: oklch(0.98 0 0);
   }
   
-  /* Results success banner */
+  /* Success banner */
   .success-banner {
-    background: linear-gradient(135deg, oklch(0.55 0.15 160 / 0.15), oklch(0.55 0.15 160 / 0.05));
-    border: 1px solid oklch(0.55 0.15 160 / 0.3);
+    background: oklch(0.55 0.15 160 / 0.08);
+    border: 1px solid oklch(0.55 0.15 160 / 0.2);
     border-radius: 1rem;
     padding: 1rem 1.5rem;
     display: flex;
@@ -548,7 +475,7 @@
 @layer utilities {
   /* Text gradient */
   .text-gradient-gold {
-    background: linear-gradient(135deg, oklch(0.80 0.12 75), oklch(0.70 0.14 75));
+    background: linear-gradient(135deg, oklch(0.60 0.14 75), oklch(0.50 0.14 75));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -556,27 +483,23 @@
   
   /* Subtle glow */
   .glow-gold {
-    box-shadow: 0 0 40px oklch(0.75 0.14 75 / 0.2);
+    box-shadow: 0 0 40px oklch(0.55 0.14 75 / 0.15);
   }
   
-  /* Text colors */
-  .text-primary-white {
-    color: oklch(0.98 0 0);
+  /* Text colors for light theme */
+  .text-primary-dark {
+    color: oklch(0.15 0 0);
   }
   
   .text-secondary-gray {
-    color: oklch(0.55 0 0);
-  }
-  
-  .text-tertiary-gray {
     color: oklch(0.45 0 0);
   }
   
-  .text-gold {
-    color: oklch(0.75 0.14 75);
+  .text-tertiary-gray {
+    color: oklch(0.55 0 0);
   }
   
-  .text-blue {
-    color: oklch(0.55 0.20 255);
+  .text-gold {
+    color: oklch(0.55 0.14 75);
   }
 }

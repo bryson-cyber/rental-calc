@@ -20,7 +20,6 @@ import { trpc } from '@/lib/trpc';
 import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
-import PropertyCard from '@/components/PropertyCard';
 
 import { 
   MapPin,
@@ -1305,25 +1304,33 @@ export default function LeadMagnet() {
             
             {/* Listings */}
             {!showMapView ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {areaListings.slice(0, 15).map((listing, idx) => (
-                  <PropertyCard
-                    key={listing.id}
-                    id={listing.id}
-                    title={listing.title}
-                    imageUrl={listing.image_url}
-                    bedrooms={listing.bedrooms}
-                    bathrooms={listing.bathrooms}
-                    propertyType={listing.property_type}
-                    rating={listing.rating}
-                    reviews={listing.reviews}
-                    annualRevenue={listing.annual_revenue}
-                    occupancy={listing.occupancy}
-                    adr={listing.adr}
-                    airbnbUrl={listing.airbnb_url}
-                    superhost={listing.superhost}
-                    index={idx}
-                  />
+              <div className="grid gap-4">
+                {areaListings.slice(0, 10).map((listing, idx) => (
+                  <div key={listing.id} className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-[oklch(0.25_0_0)] font-medium">{listing.title}</h4>
+                      <p className="text-sm text-[oklch(0.50_0_0)]">
+                        {listing.bedrooms} BR · {listing.bathrooms} BA · {listing.property_type}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-emerald-400 font-bold">{formatCurrency(listing.annual_revenue)}/yr</p>
+                      <p className="text-sm text-[oklch(0.50_0_0)]">{Math.round(listing.occupancy)}% occupied</p>
+                    </div>
+                    {listing.airbnb_url && (
+                      <a
+                        href={listing.airbnb_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-[oklch(0.92_0_0)] rounded-lg hover:bg-slate-600 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4 text-[oklch(0.35_0_0)]" />
+                      </a>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
