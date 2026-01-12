@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, BookOpen, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, BookOpen, CheckCircle2, ArrowRight } from 'lucide-react';
 import ebookContent from '../data/ebook-content.md?raw';
 
 interface Chapter {
@@ -217,10 +217,6 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
               Master the mindset, strategy, and execution of successful short-term rental hosts
             </p>
             <div className="flex items-center gap-4 mt-3">
-              <div className="flex items-center gap-1.5 text-slate-400 text-sm">
-                <Clock className="w-4 h-4" />
-                <span>{totalReadTime} min read</span>
-              </div>
               <div className="flex items-center gap-1.5 text-slate-400 text-sm">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>{readCount}/{chapters.length} chapters read</span>

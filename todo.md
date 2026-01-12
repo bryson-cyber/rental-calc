@@ -189,3 +189,20 @@ From AirDNA Rentalizer endpoint:
 - [x] Style to match app design (dark theme, amber/teal accents)
 - [x] Test chapter expansion and content display
 - [x] Test scroll to tools functionality
+
+
+## UI Fixes & Ebook Rewrite (Jan 12, 2026)
+
+### UI Fixes:
+- [x] Fix Step 1/2 distinction - make them clearly different:
+  - Step 1: "See Real Revenue" (proves it works with actual data)
+  - Step 2: "Explore Listings" (see what's working in any area)
+- [x] Change market input to free-text (any market, zip code, or neighborhood)
+- [x] Remove "109 min read" from ebook header (just show chapters read)
+
+### Ebook Rewrite for Airbnb Arbitrage:
+- [x] Draft new ebook outline focused on arbitrage business model
+- [x] Integrate tools throughout the ebook content
+- [x] Cover: finding landlords, negotiating leases, calculating profit, scaling
+- [ ] Get user approval on outline before writing full content
+- [ ] Write full ebook content based on approved outline

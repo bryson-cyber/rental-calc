@@ -582,16 +582,16 @@ export default function LeadMagnet() {
   // ============================================
   const jobDescriptions = {
     prove: {
-      title: "Prove the Market Works",
-      subtitle: "See real revenue data that proves short-term rentals make money",
-      job: "Answer: Can I actually make money doing this?",
-      icon: Shield,
+      title: "See Real Revenue",
+      subtitle: "View actual Airbnb earnings data from any market",
+      job: "Answer: How much do hosts actually make here?",
+      icon: DollarSign,
       color: "from-emerald-500 to-teal-500"
     },
     find: {
-      title: "Find Your Market",
-      subtitle: "Discover which areas have the most profitable opportunities",
-      job: "Answer: Where should I invest?",
+      title: "Explore Listings",
+      subtitle: "Browse active rentals and see what's working in any area",
+      job: "Answer: What properties are succeeding here?",
       icon: Search,
       color: "from-blue-500 to-cyan-500"
     },
@@ -751,7 +751,7 @@ export default function LeadMagnet() {
                         setShowMarketSuggestions(true);
                       }}
                       onFocus={() => setShowMarketSuggestions(true)}
-                      placeholder="Type or select a market..."
+                      placeholder="Enter any market (e.g., Austin, TX or 78701)..."
                       className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
                       disabled={isResearching}
                     />
@@ -780,7 +780,7 @@ export default function LeadMagnet() {
                     )}
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    Select from popular markets or type your own
+                    Type any city, neighborhood, or zip code
                   </p>
                 </div>
                 
