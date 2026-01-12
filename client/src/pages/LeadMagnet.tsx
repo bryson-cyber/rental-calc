@@ -620,7 +620,7 @@ export default function LeadMagnet() {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-[oklch(0.10_0.02_265)]">
+    <div className="min-h-screen bg-[oklch(0.06_0_0)]">
       
       {/* ============================================ */}
       {/* INLINE EBOOK - ALWAYS VISIBLE AT TOP */}
@@ -639,28 +639,28 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {/* TOOLS SECTION - JOB-FOCUSED */}
       {/* ============================================ */}
-      <section id="tools-section" className="relative py-12 md:py-16">
+      <section id="tools-section" className="section-padding">
         <div className="container max-w-4xl mx-auto">
           
           {/* Section Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[oklch(0.78_0.12_75)]/8 border border-[oklch(0.78_0.12_75)]/15 rounded-full text-[oklch(0.82_0.10_75)] text-sm font-medium mb-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[oklch(0.75_0.14_75)]/10 border border-[oklch(0.75_0.14_75)]/20 rounded-full text-gold text-sm font-medium mb-8">
               <Zap className="w-4 h-4" />
               Free Tools That Do The Work For You
             </div>
-            <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4 tracking-tight">
+            <h2 className="text-4xl md:text-5xl font-semibold text-white mb-6">
               Your Journey to{' '}
-              <span className="text-gradient">
+              <span className="text-gradient-gold">
                 Rental Riches
               </span>
             </h2>
-            <p className="text-[oklch(0.55_0.02_265)] text-lg max-w-xl mx-auto leading-relaxed">
+            <p className="text-secondary-gray text-xl max-w-xl mx-auto leading-relaxed">
               Each tool answers a specific question on your path to profitable short-term rentals
             </p>
           </div>
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-12">
             {(['prove', 'find', 'validate', 'compare'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
@@ -670,26 +670,26 @@ export default function LeadMagnet() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative p-5 rounded-2xl transition-all duration-200 text-left ${
+                  className={`relative p-6 rounded-2xl transition-all duration-300 text-left hover-lift ${
                     isActive
-                      ? 'premium-card shadow-xl ring-1 ring-[oklch(0.78_0.12_75)]/20'
-                      : 'bg-[oklch(0.14_0.02_265)] border border-[oklch(0.25_0.02_265)]/50 hover:border-[oklch(0.35_0.02_265)] hover:bg-[oklch(0.16_0.02_265)]'
+                      ? 'apple-card bg-[oklch(0.14_0_0)] ring-2 ring-[oklch(0.75_0.14_75)]/30'
+                      : 'apple-card bg-[oklch(0.10_0_0)]'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`step-badge ${
                       isActive 
-                        ? 'bg-[oklch(0.78_0.12_75)] shadow-lg shadow-[oklch(0.78_0.12_75)]/20' 
-                        : 'bg-[oklch(0.22_0.02_265)]'
+                        ? 'bg-[oklch(0.75_0.14_75)]' 
+                        : 'bg-[oklch(0.20_0_0)]'
                     }`}>
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-[oklch(0.12_0.02_265)]' : 'text-[oklch(0.65_0.02_265)]'}`} />
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-[oklch(0.10_0_0)]' : 'text-[oklch(0.55_0_0)]'}`} />
                     </div>
-                    <span className="text-xs text-[oklch(0.50_0.02_265)] font-medium uppercase tracking-wide">Step {index + 1}</span>
+                    <span className="text-xs text-tertiary-gray font-medium uppercase tracking-wider">Step {index + 1}</span>
                   </div>
-                  <h3 className={`font-semibold text-sm mb-1.5 ${isActive ? 'text-white' : 'text-[oklch(0.78_0.01_265)]'}`}>
+                  <h3 className={`font-semibold text-base mb-2 ${isActive ? 'text-white' : 'text-[oklch(0.85_0_0)]'}`}>
                     {job.title}
                   </h3>
-                  <p className="text-xs text-[oklch(0.50_0.02_265)] hidden md:block leading-relaxed">
+                  <p className="text-sm text-tertiary-gray hidden md:block leading-relaxed">
                     {job.job}
                   </p>
                 </button>
@@ -698,28 +698,28 @@ export default function LeadMagnet() {
           </div>
           
           {/* Tool Content Area */}
-          <div className="premium-card p-8 md:p-10">
+          <div className="apple-card p-8 md:p-12">
             
             {/* Current Job Header */}
-            <div className="mb-8 pb-8 border-b border-[oklch(0.25_0.02_265)]/50">
-              <div className="flex items-center gap-4 mb-3">
+            <div className="mb-10 pb-10 border-b border-[oklch(0.20_0_0)]">
+              <div className="flex items-center gap-5 mb-4">
                 {(() => {
                   const job = jobDescriptions[activeTab];
                   const Icon = job.icon;
                   return (
                     <>
-                      <div className="w-12 h-12 rounded-2xl bg-[oklch(0.78_0.12_75)] flex items-center justify-center shadow-lg shadow-[oklch(0.78_0.12_75)]/20">
-                        <Icon className="w-6 h-6 text-[oklch(0.12_0.02_265)]" />
+                      <div className="w-14 h-14 rounded-2xl bg-[oklch(0.75_0.14_75)] flex items-center justify-center glow-gold">
+                        <Icon className="w-7 h-7 text-[oklch(0.10_0_0)]" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-semibold text-white tracking-tight">{job.title}</h3>
-                        <p className="text-[oklch(0.55_0.02_265)]">{job.subtitle}</p>
+                        <h3 className="text-2xl md:text-3xl font-semibold text-white">{job.title}</h3>
+                        <p className="text-secondary-gray text-lg">{job.subtitle}</p>
                       </div>
                     </>
                   );
                 })()}
               </div>
-              <p className="text-[oklch(0.78_0.12_75)] font-medium mt-4">
+              <p className="text-gold font-medium text-lg mt-5">
                 {jobDescriptions[activeTab].job}
               </p>
             </div>
@@ -743,8 +743,8 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'prove' ? null : 'prove')}
                 />
                 
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
+                <div className="space-y-4">
+                  <label className="block text-base font-medium text-[oklch(0.85_0_0)]">
                     City or Market Name
                   </label>
                   <div className="relative">
@@ -757,7 +757,7 @@ export default function LeadMagnet() {
                       }}
                       onFocus={() => setShowMarketSuggestions(true)}
                       placeholder="Enter any market (e.g., Austin, TX or 78701)..."
-                      className="input-premium h-14 text-base"
+                      className="input-apple h-14 text-base"
                       disabled={isResearching}
                     />
                     {showMarketSuggestions && !isResearching && (
@@ -792,7 +792,7 @@ export default function LeadMagnet() {
                 <button
                   onClick={handleResearch}
                   disabled={isResearching || !researchMarket}
-                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isResearching ? (
                     <>
@@ -836,7 +836,7 @@ export default function LeadMagnet() {
                     value={exploreAddress}
                     onChange={setExploreAddress}
                     placeholder="Type an address or city name..."
-                    className="input-premium h-14 text-base"
+                    className="input-apple h-14 text-base"
                   />
                 </div>
                 
@@ -848,7 +848,7 @@ export default function LeadMagnet() {
                     <select
                       value={exploreRadius}
                       onChange={(e) => setExploreRadius(parseInt(e.target.value))}
-                      className="input-premium h-14"
+                      className="input-apple h-14"
                     >
                       <option value={1000}>1 km (~0.6 mi)</option>
                       <option value={3000}>3 km (~2 mi)</option>
@@ -864,7 +864,7 @@ export default function LeadMagnet() {
                     <select
                       value={exploreBedroomFilter ?? ''}
                       onChange={(e) => setExploreBedroomFilter(e.target.value ? parseInt(e.target.value) : null)}
-                      className="input-premium h-14"
+                      className="input-apple h-14"
                     >
                       <option value="">Any</option>
                       <option value="1">1 BR</option>
@@ -881,7 +881,7 @@ export default function LeadMagnet() {
                     <select
                       value={exploreSortBy}
                       onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
-                      className="input-premium h-14"
+                      className="input-apple h-14"
                     >
                       <option value="revenue">Most Money</option>
                       <option value="proximity">Closest</option>
@@ -892,7 +892,7 @@ export default function LeadMagnet() {
                 <button
                   onClick={handleExplore}
                   disabled={isExploring || !exploreAddress}
-                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isExploring ? (
                     <>
@@ -936,7 +936,7 @@ export default function LeadMagnet() {
                     value={address}
                     onChange={setAddress}
                     placeholder="Enter the property address..."
-                    className="input-premium h-14 text-base"
+                    className="input-apple h-14 text-base"
                   />
                 </div>
                 
@@ -952,7 +952,7 @@ export default function LeadMagnet() {
                         value={monthlyRent}
                         onChange={(e) => setMonthlyRent(e.target.value)}
                         placeholder="2,000"
-                        className="input-premium h-14 pl-12"
+                        className="input-apple h-14 pl-12"
                       />
                     </div>
                   </div>
@@ -964,7 +964,7 @@ export default function LeadMagnet() {
                     <select
                       value={bedrooms}
                       onChange={(e) => setBedrooms(e.target.value)}
-                      className="input-premium h-14"
+                      className="input-apple h-14"
                     >
                       {[1, 2, 3, 4, 5, 6].map(num => (
                         <option key={num} value={num}>{num} Bedroom{num > 1 ? 's' : ''}</option>
@@ -979,7 +979,7 @@ export default function LeadMagnet() {
                     <select
                       value={bathrooms}
                       onChange={(e) => setBathrooms(e.target.value)}
-                      className="input-premium h-14"
+                      className="input-apple h-14"
                     >
                       {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
                         <option key={num} value={num}>{num} Bathroom{num > 1 ? 's' : ''}</option>
@@ -991,7 +991,7 @@ export default function LeadMagnet() {
                 <button
                   onClick={handleAnalyze}
                   disabled={isAnalyzing || !address}
-                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAnalyzing ? (
                     <>
@@ -1059,7 +1059,7 @@ export default function LeadMagnet() {
                             value={prop.address}
                             onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
                             placeholder="Property address..."
-                            className="input-premium h-12 text-sm"
+                            className="input-apple h-12 text-sm"
                           />
                         </div>
                         <div className="relative">
@@ -1069,14 +1069,14 @@ export default function LeadMagnet() {
                             value={prop.rent || ''}
                             onChange={(e) => updateBulkProperty(prop.id, 'rent', parseFloat(e.target.value) || 0)}
                             placeholder="Rent/mo"
-                            className="input-premium h-12 pl-9 text-sm"
+                            className="input-apple h-12 pl-9 text-sm"
                           />
                         </div>
                         <div className="flex gap-3">
                           <select
                             value={prop.bedrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bedrooms', parseInt(e.target.value))}
-                            className="input-premium flex-1 h-12 text-sm"
+                            className="input-apple flex-1 h-12 text-sm"
                           >
                             {[1, 2, 3, 4, 5, 6].map(num => (
                               <option key={num} value={num}>{num}BR</option>
@@ -1085,7 +1085,7 @@ export default function LeadMagnet() {
                           <select
                             value={prop.bathrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bathrooms', parseFloat(e.target.value))}
-                            className="input-premium flex-1 h-12 text-sm"
+                            className="input-apple flex-1 h-12 text-sm"
                           >
                             {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
                               <option key={num} value={num}>{num}BA</option>
@@ -1109,7 +1109,7 @@ export default function LeadMagnet() {
                 <button
                   onClick={handleBulkAnalyze}
                   disabled={isBulkAnalyzing || bulkProperties.every(p => !p.address.trim())}
-                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isBulkAnalyzing ? (
                     <>
@@ -1538,27 +1538,34 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {/* FOOTER CTA */}
       {/* ============================================ */}
-      <section className="py-20 border-t border-[oklch(0.20_0.02_265)]">
+      <section className="section-padding border-t border-[oklch(0.20_0_0)]">
         <div className="container max-w-2xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4 tracking-tight">
             Ready to Start Your Journey?
           </h2>
-          <p className="text-[oklch(0.55_0.02_265)] text-lg mb-10 leading-relaxed">
+          <p className="text-secondary-gray text-lg mb-10 leading-relaxed">
             These free tools prove the opportunity is real. When you're ready for personalized guidance, 
             Coach Inayah's Turnkey Program will help you take action.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
-              onClick={() => setIsEbookOpen(true)}
-              className="btn-secondary flex items-center justify-center gap-2"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn-gold-outline flex items-center justify-center gap-2"
             >
               <BookOpen className="w-4 h-4" />
               Read the Guide First
             </button>
-            <button className="btn-premium flex items-center justify-center gap-2">
+            <a 
+              href="https://coachinayah.com/turnkey"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-gold flex items-center justify-center gap-2"
+            >
               Explore the Turnkey Program
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </a>
           </div>
         </div>
       </section>

@@ -201,38 +201,37 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
   const progress = chapters.length > 0 ? Math.round((readCount / chapters.length) * 100) : 0;
   
   return (
-    <div className="premium-card overflow-hidden">
+    <div className="apple-card overflow-hidden">
       {/* Header */}
-      <div className="relative p-8 border-b border-[oklch(0.25_0.02_265)]/50">
-        <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.78_0.12_75)]/5 via-transparent to-[oklch(0.72_0.10_185)]/5" />
-        <div className="relative flex items-start gap-5">
-          <div className="p-4 bg-[oklch(0.78_0.12_75)] rounded-2xl shadow-lg shadow-[oklch(0.78_0.12_75)]/20">
-            <BookOpen className="w-8 h-8 text-[oklch(0.12_0.02_265)]" />
+      <div className="relative p-8 md:p-10 border-b border-[oklch(0.20_0_0)]">
+        <div className="relative flex items-start gap-6">
+          <div className="p-4 bg-[oklch(0.75_0.14_75)] rounded-2xl glow-gold">
+            <BookOpen className="w-8 h-8 text-[oklch(0.10_0_0)]" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-semibold text-white mb-2 tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-2">
               Rental Riches: Your Guide to Success
             </h2>
-            <p className="text-[oklch(0.55_0.02_265)] leading-relaxed">
+            <p className="text-secondary-gray text-lg leading-relaxed">
               Master the mindset, strategy, and execution of successful short-term rental hosts
             </p>
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex items-center gap-2 text-[oklch(0.55_0.02_265)] text-sm">
-                <CheckCircle2 className="w-4 h-4 text-[oklch(0.72_0.10_185)]" />
+            <div className="flex items-center gap-4 mt-5">
+              <div className="flex items-center gap-2 text-secondary-gray text-sm">
+                <CheckCircle2 className="w-4 h-4 text-[oklch(0.55_0.20_255)]" />
                 <span>{readCount}/{chapters.length} chapters read</span>
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-4xl font-semibold text-[oklch(0.78_0.12_75)] tracking-tight">{progress}%</div>
-            <div className="text-xs text-[oklch(0.50_0.02_265)] uppercase tracking-wide mt-1">Complete</div>
+          <div className="text-right hidden sm:block">
+            <div className="text-5xl font-semibold text-gold">{progress}%</div>
+            <div className="text-xs text-tertiary-gray uppercase tracking-wider mt-2">Complete</div>
           </div>
         </div>
         
         {/* Progress bar */}
-        <div className="relative mt-6 h-1.5 bg-[oklch(0.22_0.02_265)] rounded-full overflow-hidden">
+        <div className="relative mt-8 h-2 bg-[oklch(0.18_0_0)] rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-[oklch(0.78_0.12_75)] to-[oklch(0.72_0.10_185)] transition-all duration-500 ease-out"
+            className="h-full bg-[oklch(0.75_0.14_75)] transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -245,43 +244,39 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
           const isRead = readChapters.has(chapter.id);
           
           return (
-            <div key={chapter.id} className="border-b border-[oklch(0.22_0.02_265)]/50 last:border-b-0">
+            <div key={chapter.id} className="border-b border-[oklch(0.18_0_0)] last:border-b-0">
               {/* Chapter header */}
               <button
                 onClick={() => toggleChapter(chapter.id)}
-                className={`w-full p-5 flex items-center gap-4 transition-all duration-200 text-left ${
+                className={`w-full p-5 md:p-6 flex items-center gap-4 transition-all duration-300 text-left ${
                   isExpanded 
-                    ? 'bg-[oklch(0.16_0.02_265)]' 
-                    : 'hover:bg-[oklch(0.14_0.02_265)]'
+                    ? 'bg-[oklch(0.14_0_0)]' 
+                    : 'hover:bg-[oklch(0.12_0_0)]'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all ${
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                   isRead 
-                    ? 'bg-[oklch(0.72_0.10_185)]/15 text-[oklch(0.72_0.10_185)] border border-[oklch(0.72_0.10_185)]/30' 
-                    : 'bg-[oklch(0.22_0.02_265)] text-[oklch(0.55_0.02_265)] border border-[oklch(0.28_0.02_265)]'
+                    ? 'bg-[oklch(0.55_0.20_255)]/15 text-[oklch(0.55_0.20_255)]' 
+                    : 'bg-[oklch(0.18_0_0)] text-[oklch(0.50_0_0)]'
                 }`}>
                   {isRead ? <CheckCircle2 className="w-5 h-5" /> : index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className={`font-medium truncate ${isRead ? 'text-[oklch(0.70_0.01_265)]' : 'text-white'}`}>
+                  <h3 className={`font-medium text-base truncate ${isRead ? 'text-[oklch(0.60_0_0)]' : 'text-white'}`}>
                     {chapter.title}
                   </h3>
-                  <p className="text-xs text-[oklch(0.50_0.02_265)] mt-0.5">{chapter.readTime} min read</p>
+                  <p className="text-sm text-tertiary-gray mt-1">{chapter.readTime} min read</p>
                 </div>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                  isExpanded ? 'bg-[oklch(0.22_0.02_265)]' : ''
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  isExpanded ? 'bg-[oklch(0.20_0_0)] rotate-180' : ''
                 }`}>
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-[oklch(0.55_0.02_265)]" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-[oklch(0.55_0.02_265)]" />
-                  )}
+                  <ChevronDown className="w-5 h-5 text-secondary-gray" />
                 </div>
               </button>
               
               {/* Chapter content */}
               {isExpanded && (
-                <div className="px-8 pb-8 pt-2 bg-[oklch(0.14_0.02_265)]">
+                <div className="px-6 md:px-10 pb-10 pt-4 bg-[oklch(0.10_0_0)]">
                   <div className="prose prose-invert max-w-none">
                     {renderMarkdown(chapter.content)}
                   </div>
@@ -290,7 +285,7 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
                   {index < chapters.length - 1 && (
                     <button
                       onClick={() => toggleChapter(chapters[index + 1].id)}
-                      className="mt-8 flex items-center gap-2 text-[oklch(0.78_0.12_75)] hover:text-[oklch(0.85_0.10_75)] transition-colors font-medium"
+                      className="mt-10 flex items-center gap-2 text-gold hover:text-[oklch(0.80_0.12_75)] transition-colors font-medium"
                     >
                       <span>Next: {chapters[index + 1].title}</span>
                       <ArrowRight className="w-4 h-4" />
@@ -301,7 +296,7 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
                   {index === chapters.length - 1 && onStartTools && (
                     <button
                       onClick={onStartTools}
-                      className="btn-premium w-full mt-8 flex items-center justify-center gap-2"
+                      className="btn-gold w-full mt-10 flex items-center justify-center gap-2"
                     >
                       <span>Now Use the Tools Below</span>
                       <ArrowRight className="w-4 h-4" />
@@ -316,10 +311,10 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
       
       {/* Footer CTA */}
       {onStartTools && (
-        <div className="p-5 bg-[oklch(0.14_0.02_265)] border-t border-[oklch(0.22_0.02_265)]/50">
+        <div className="p-5 md:p-6 bg-[oklch(0.10_0_0)] border-t border-[oklch(0.18_0_0)]">
           <button
             onClick={onStartTools}
-            className="btn-secondary w-full flex items-center justify-center gap-2"
+            className="btn-gold-outline w-full flex items-center justify-center gap-2"
           >
             <span>Skip to Tools</span>
             <ArrowRight className="w-4 h-4" />

@@ -227,3 +227,22 @@ From AirDNA Rentalizer endpoint:
 
 ### Ebook Content:
 - [x] Write full 13-chapter arbitrage-focused ebook (Welcome + 12 chapters)
+
+
+## Apple.com-Inspired UI Redesign (Jan 12, 2026) - COMPLETE
+
+### Design Analysis:
+- [x] Study Apple.com fonts (SF Pro Display, SF Pro Text)
+- [x] Study Apple.com color palette (pure black, white, grays)
+- [x] Study Apple.com transitions and animations
+- [x] Study Apple.com button styles and hover effects
+- [x] Study Apple.com spacing and typography hierarchy
+
+### Implementation:
+- [x] Update font stack to match Apple aesthetic (SF Pro, Inter, system fonts)
+- [x] Update color palette to cleaner black/white/gray with gold accent
+- [x] Add smooth transitions and micro-animations (300ms ease-out)
+- [x] Update button styles with Apple-like hover effects (btn-gold, btn-gold-outline)
+- [x] Fix broken "Read the Guide First" button - now scrolls to top
+- [x] Fix broken "Explore the Turnkey Program" button - now links to coachinayah.com/turnkey
+- [x] Test all UI changes - verified working
