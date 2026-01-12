@@ -147,3 +147,45 @@ From AirDNA Rentalizer endpoint:
   - [ ] Remove "Free Ebook" tab (ebook now always visible)
 - [ ] Upload new ebook file and integrate
 - [ ] Test new layout on desktop and mobile
+
+## Job-Focused Restructure (Jan 12, 2026) - COMPLETE
+
+### Core Jobs Accomplished:
+1. ✅ "Prove to myself I can make money with short-term rentals" (validation/confidence)
+2. ✅ "Find the best market to invest in right now" (market discovery)
+3. ✅ "Find if this specific property is worth investing in" (property validation)
+
+### Restructure Page Flow:
+- [x] Ebook at top as belief-building entry point
+- [x] Tools below in logical job sequence
+- [x] Remove "Free Ebook" tab - ebook always visible
+
+### Reframe Tools with Job-Focused Messaging:
+- [x] Market Research → "Prove the Market Works" (show real revenue proving it's possible)
+- [x] Explore Area → "Find Your Market" (identify high-opportunity markets)
+- [x] One Home → "Validate the Deal" (does THIS property work for MY goals?)
+- [x] Compare Many → "Find the Best Deal" (which property is the winner?)
+
+### Ebook as Entry Point:
+- [x] Display ebook prominently at top of page
+- [x] Add CTA at end of ebook leading to tools
+- [x] Position ebook as belief-builder before tools
+
+### Update Tab Order (Job Sequence):
+- [x] Tab 1: Prove the Market (Market Research)
+- [x] Tab 2: Find Your Market (Explore Area)
+- [x] Tab 3: Validate the Deal (One Home)
+- [x] Tab 4: Find the Best Deal (Compare Many)
+
+## Inline Ebook Integration (Jan 12, 2026) - COMPLETE
+
+- [x] Create InlineEbook component with chapter-based reader
+- [x] Parse markdown ebook content into 23 chapters
+- [x] Add progress tracking (% complete, chapters read)
+- [x] Add expandable chapter sections with full content
+- [x] Add "Next chapter" navigation within chapters
+- [x] Add "Skip to Tools" button that scrolls to tools section
+- [x] Track read chapters in localStorage
+- [x] Style to match app design (dark theme, amber/teal accents)
+- [x] Test chapter expansion and content display
+- [x] Test scroll to tools functionality
