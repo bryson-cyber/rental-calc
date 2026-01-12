@@ -335,7 +335,11 @@ export default function LeadMagnet() {
         },
         metrics: {
           adr: data.property.estimates?.average_daily_rate || 0,
-          occupancy: data.property.estimates?.occupancy_rate || 0,
+          // Convert occupancy from decimal to percentage if needed (API returns 0.57 for 57%)
+          occupancy: (() => {
+            const occ = data.property.estimates?.occupancy_rate || 0;
+            return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
+          })(),
         },
         cashFlow: {
           monthlyRevenue,
@@ -616,13 +620,13 @@ export default function LeadMagnet() {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-[oklch(0.10_0.02_265)]">
       
       {/* ============================================ */}
       {/* INLINE EBOOK - ALWAYS VISIBLE AT TOP */}
       {/* ============================================ */}
-      <section className="relative py-8 md:py-12 border-b border-slate-800">
-        <div className="container max-w-5xl mx-auto px-4">
+      <section className="relative py-12 md:py-16">
+        <div className="container max-w-4xl mx-auto">
           <InlineEbook onStartTools={() => {
             const toolsSection = document.getElementById('tools-section');
             if (toolsSection) {
@@ -636,27 +640,27 @@ export default function LeadMagnet() {
       {/* TOOLS SECTION - JOB-FOCUSED */}
       {/* ============================================ */}
       <section id="tools-section" className="relative py-12 md:py-16">
-        <div className="container max-w-5xl mx-auto px-4">
+        <div className="container max-w-4xl mx-auto">
           
           {/* Section Header */}
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4A84B]/10 border border-[#D4A84B]/20 rounded-full text-[#D4A84B] text-sm font-medium mb-4">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[oklch(0.78_0.12_75)]/8 border border-[oklch(0.78_0.12_75)]/15 rounded-full text-[oklch(0.82_0.10_75)] text-sm font-medium mb-6">
               <Zap className="w-4 h-4" />
               Free Tools That Do The Work For You
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4 tracking-tight">
               Your Journey to{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4]">
+              <span className="text-gradient">
                 Rental Riches
               </span>
             </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
+            <p className="text-[oklch(0.55_0.02_265)] text-lg max-w-xl mx-auto leading-relaxed">
               Each tool answers a specific question on your path to profitable short-term rentals
             </p>
           </div>
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
             {(['prove', 'find', 'validate', 'compare'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
@@ -666,55 +670,56 @@ export default function LeadMagnet() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative p-4 rounded-xl border transition-all text-left ${
+                  className={`relative p-5 rounded-2xl transition-all duration-200 text-left ${
                     isActive
-                      ? 'bg-slate-800/80 border-slate-600 shadow-lg'
-                      : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-800/50'
+                      ? 'premium-card shadow-xl ring-1 ring-[oklch(0.78_0.12_75)]/20'
+                      : 'bg-[oklch(0.14_0.02_265)] border border-[oklch(0.25_0.02_265)]/50 hover:border-[oklch(0.35_0.02_265)] hover:bg-[oklch(0.16_0.02_265)]'
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${job.color} flex items-center justify-center`}>
-                      <Icon className="w-4 h-4 text-white" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isActive 
+                        ? 'bg-[oklch(0.78_0.12_75)] shadow-lg shadow-[oklch(0.78_0.12_75)]/20' 
+                        : 'bg-[oklch(0.22_0.02_265)]'
+                    }`}>
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-[oklch(0.12_0.02_265)]' : 'text-[oklch(0.65_0.02_265)]'}`} />
                     </div>
-                    <span className="text-xs text-slate-500 font-medium">Step {index + 1}</span>
+                    <span className="text-xs text-[oklch(0.50_0.02_265)] font-medium uppercase tracking-wide">Step {index + 1}</span>
                   </div>
-                  <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                  <h3 className={`font-semibold text-sm mb-1.5 ${isActive ? 'text-white' : 'text-[oklch(0.78_0.01_265)]'}`}>
                     {job.title}
                   </h3>
-                  <p className="text-xs text-slate-500 hidden md:block">
+                  <p className="text-xs text-[oklch(0.50_0.02_265)] hidden md:block leading-relaxed">
                     {job.job}
                   </p>
-                  {isActive && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3 h-3 bg-slate-800 border-l border-b border-slate-600 rotate-[-45deg]" />
-                  )}
                 </button>
               );
             })}
           </div>
           
           {/* Tool Content Area */}
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 md:p-8 shadow-2xl">
+          <div className="premium-card p-8 md:p-10">
             
             {/* Current Job Header */}
-            <div className="mb-6 pb-6 border-b border-slate-700/50">
-              <div className="flex items-center gap-3 mb-2">
+            <div className="mb-8 pb-8 border-b border-[oklch(0.25_0.02_265)]/50">
+              <div className="flex items-center gap-4 mb-3">
                 {(() => {
                   const job = jobDescriptions[activeTab];
                   const Icon = job.icon;
                   return (
                     <>
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${job.color} flex items-center justify-center`}>
-                        <Icon className="w-5 h-5 text-white" />
+                      <div className="w-12 h-12 rounded-2xl bg-[oklch(0.78_0.12_75)] flex items-center justify-center shadow-lg shadow-[oklch(0.78_0.12_75)]/20">
+                        <Icon className="w-6 h-6 text-[oklch(0.12_0.02_265)]" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-white">{job.title}</h3>
-                        <p className="text-sm text-slate-400">{job.subtitle}</p>
+                        <h3 className="text-2xl font-semibold text-white tracking-tight">{job.title}</h3>
+                        <p className="text-[oklch(0.55_0.02_265)]">{job.subtitle}</p>
                       </div>
                     </>
                   );
                 })()}
               </div>
-              <p className="text-[#D4A84B] font-medium text-sm mt-3">
+              <p className="text-[oklch(0.78_0.12_75)] font-medium mt-4">
                 {jobDescriptions[activeTab].job}
               </p>
             </div>
@@ -723,7 +728,7 @@ export default function LeadMagnet() {
             {/* PROVE THE MARKET TAB */}
             {/* ============================================ */}
             {activeTab === 'prove' && (
-              <div className="grid gap-6">
+              <div className="space-y-8">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="See real revenue data from actual Airbnb hosts to prove that short-term rentals make money in any market"
@@ -738,8 +743,8 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'prove' ? null : 'prove')}
                 />
                 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                     City or Market Name
                   </label>
                   <div className="relative">
@@ -752,11 +757,11 @@ export default function LeadMagnet() {
                       }}
                       onFocus={() => setShowMarketSuggestions(true)}
                       placeholder="Enter any market (e.g., Austin, TX or 78701)..."
-                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                      className="input-premium h-14 text-base"
                       disabled={isResearching}
                     />
                     {showMarketSuggestions && !isResearching && (
-                      <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      <div className="absolute z-50 w-full mt-2 bg-[oklch(0.16_0.02_265)] border border-[oklch(0.28_0.02_265)] rounded-xl shadow-2xl max-h-60 overflow-y-auto">
                         {[
                           'Atlanta, GA', 'Austin, TX', 'Boston, MA', 'Charlotte, NC', 'Chicago, IL',
                           'Dallas, TX', 'Denver, CO', 'Houston, TX', 'Las Vegas, NV', 'Los Angeles, CA',
@@ -771,7 +776,7 @@ export default function LeadMagnet() {
                                 setResearchMarket(market);
                                 setShowMarketSuggestions(false);
                               }}
-                              className="w-full px-4 py-2 text-left text-slate-300 hover:bg-slate-700 transition-colors"
+                              className="w-full px-4 py-3 text-left text-[oklch(0.85_0.01_265)] hover:bg-[oklch(0.22_0.02_265)] transition-colors first:rounded-t-xl last:rounded-b-xl"
                             >
                               {market}
                             </button>
@@ -779,28 +784,28 @@ export default function LeadMagnet() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-sm text-[oklch(0.50_0.02_265)]">
                     Type any city, neighborhood, or zip code
                   </p>
                 </div>
                 
-                <Button
+                <button
                   onClick={handleResearch}
                   disabled={isResearching || !researchMarket}
-                  className="w-full h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-lg rounded-xl shadow-lg"
+                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isResearching ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Proving the Market...
-                    </span>
+                    <>
+                      <div className="w-5 h-5 border-2 border-[oklch(0.12_0.02_265)]/30 border-t-[oklch(0.12_0.02_265)] rounded-full animate-spin" />
+                      <span>Proving the Market...</span>
+                    </>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <>
                       <Shield className="w-5 h-5" />
-                      Prove This Market
-                    </span>
+                      <span>Prove This Market</span>
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
             )}
             
@@ -808,7 +813,7 @@ export default function LeadMagnet() {
             {/* FIND YOUR MARKET TAB */}
             {/* ============================================ */}
             {activeTab === 'find' && (
-              <div className="grid gap-6">
+              <div className="space-y-8">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Discover all the profitable Airbnb properties in any area to find where the opportunities are"
@@ -823,27 +828,27 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'find' ? null : 'find')}
                 />
                 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                     Address or City
                   </label>
                   <AddressAutocomplete
                     value={exploreAddress}
                     onChange={setExploreAddress}
                     placeholder="Type an address or city name..."
-                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className="input-premium h-14 text-base"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Search Radius
                     </label>
                     <select
                       value={exploreRadius}
                       onChange={(e) => setExploreRadius(parseInt(e.target.value))}
-                      className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
+                      className="input-premium h-14"
                     >
                       <option value={1000}>1 km (~0.6 mi)</option>
                       <option value={3000}>3 km (~2 mi)</option>
@@ -852,14 +857,14 @@ export default function LeadMagnet() {
                     </select>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Bedrooms
                     </label>
                     <select
                       value={exploreBedroomFilter ?? ''}
                       onChange={(e) => setExploreBedroomFilter(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
+                      className="input-premium h-14"
                     >
                       <option value="">Any</option>
                       <option value="1">1 BR</option>
@@ -869,14 +874,14 @@ export default function LeadMagnet() {
                     </select>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Sort By
                     </label>
                     <select
                       value={exploreSortBy}
                       onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
-                      className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
+                      className="input-premium h-14"
                     >
                       <option value="revenue">Most Money</option>
                       <option value="proximity">Closest</option>
@@ -884,23 +889,23 @@ export default function LeadMagnet() {
                   </div>
                 </div>
                 
-                <Button
+                <button
                   onClick={handleExplore}
                   disabled={isExploring || !exploreAddress}
-                  className="w-full h-14 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-lg rounded-xl shadow-lg"
+                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isExploring ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Finding Opportunities...
-                    </span>
+                    <>
+                      <div className="w-5 h-5 border-2 border-[oklch(0.12_0.02_265)]/30 border-t-[oklch(0.12_0.02_265)] rounded-full animate-spin" />
+                      <span>Finding Opportunities...</span>
+                    </>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <>
                       <Search className="w-5 h-5" />
-                      Find Opportunities
-                    </span>
+                      <span>Find Opportunities</span>
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
             )}
             
@@ -908,7 +913,7 @@ export default function LeadMagnet() {
             {/* VALIDATE THE DEAL TAB */}
             {/* ============================================ */}
             {activeTab === 'validate' && (
-              <div className="grid gap-6">
+              <div className="space-y-8">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Check if a specific property will actually make you money by comparing it to nearby successful Airbnbs"
@@ -923,43 +928,43 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'validate' ? null : 'validate')}
                 />
                 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                     Property Address
                   </label>
                   <AddressAutocomplete
                     value={address}
                     onChange={setAddress}
                     placeholder="Enter the property address..."
-                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    className="input-premium h-14 text-base"
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Monthly Rent
                     </label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[oklch(0.50_0.02_265)]" />
                       <Input
                         type="number"
                         value={monthlyRent}
                         onChange={(e) => setMonthlyRent(e.target.value)}
                         placeholder="2,000"
-                        className="h-12 pl-10 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                        className="input-premium h-14 pl-12"
                       />
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Bedrooms
                     </label>
                     <select
                       value={bedrooms}
                       onChange={(e) => setBedrooms(e.target.value)}
-                      className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
+                      className="input-premium h-14"
                     >
                       {[1, 2, 3, 4, 5, 6].map(num => (
                         <option key={num} value={num}>{num} Bedroom{num > 1 ? 's' : ''}</option>
@@ -967,14 +972,14 @@ export default function LeadMagnet() {
                     </select>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Bathrooms
                     </label>
                     <select
                       value={bathrooms}
                       onChange={(e) => setBathrooms(e.target.value)}
-                      className="w-full h-12 px-4 bg-slate-900/50 border border-slate-600 rounded-md text-white"
+                      className="input-premium h-14"
                     >
                       {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
                         <option key={num} value={num}>{num} Bathroom{num > 1 ? 's' : ''}</option>
@@ -983,23 +988,23 @@ export default function LeadMagnet() {
                   </div>
                 </div>
                 
-                <Button
+                <button
                   onClick={handleAnalyze}
                   disabled={isAnalyzing || !address}
-                  className="w-full h-14 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold text-lg rounded-xl shadow-lg"
+                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAnalyzing ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Validating Deal...
-                    </span>
+                    <>
+                      <div className="w-5 h-5 border-2 border-[oklch(0.12_0.02_265)]/30 border-t-[oklch(0.12_0.02_265)] rounded-full animate-spin" />
+                      <span>Validating Deal...</span>
+                    </>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <>
                       <Target className="w-5 h-5" />
-                      Validate This Deal
-                    </span>
+                      <span>Validate This Deal</span>
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
             )}
             
@@ -1007,7 +1012,7 @@ export default function LeadMagnet() {
             {/* FIND THE BEST DEAL TAB */}
             {/* ============================================ */}
             {activeTab === 'compare' && (
-              <div className="grid gap-6">
+              <div className="space-y-8">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Compare up to 25 properties side-by-side to find which one will make you the most money"
@@ -1025,53 +1030,53 @@ export default function LeadMagnet() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-white">Compare Up to 25 Properties</h3>
-                    <p className="text-sm text-slate-400">Add properties to find which one makes the most money</p>
+                    <p className="text-sm text-[oklch(0.55_0.02_265)]">Add properties to find which one makes the most money</p>
                   </div>
-                  <span className="text-sm text-slate-500">{bulkProperties.length}/25 properties</span>
+                  <span className="text-sm text-[oklch(0.50_0.02_265)]">{bulkProperties.length}/25 properties</span>
                 </div>
                 
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                   {bulkProperties.map((prop, index) => (
-                    <div key={prop.id} className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="w-6 h-6 rounded-full bg-[#D4A84B]/20 text-[#D4A84B] text-xs font-bold flex items-center justify-center">
+                    <div key={prop.id} className="bg-[oklch(0.12_0.02_265)] border border-[oklch(0.22_0.02_265)]/50 rounded-xl p-5">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="w-7 h-7 rounded-lg bg-[oklch(0.78_0.12_75)]/15 text-[oklch(0.78_0.12_75)] text-xs font-bold flex items-center justify-center">
                           {index + 1}
                         </span>
-                        <span className="text-sm text-slate-400">Property {index + 1}</span>
+                        <span className="text-sm text-[oklch(0.55_0.02_265)]">Property {index + 1}</span>
                         {bulkProperties.length > 1 && (
                           <button
                             onClick={() => removeBulkProperty(prop.id)}
-                            className="ml-auto text-slate-500 hover:text-red-400 transition-colors"
+                            className="ml-auto text-[oklch(0.50_0.02_265)] hover:text-red-400 transition-colors p-1"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="md:col-span-2">
                           <AddressAutocomplete
                             value={prop.address}
                             onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
                             placeholder="Property address..."
-                            className="h-10 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 text-sm"
+                            className="input-premium h-12 text-sm"
                           />
                         </div>
                         <div className="relative">
-                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(0.50_0.02_265)]" />
                           <Input
                             type="number"
                             value={prop.rent || ''}
                             onChange={(e) => updateBulkProperty(prop.id, 'rent', parseFloat(e.target.value) || 0)}
                             placeholder="Rent/mo"
-                            className="h-10 pl-7 bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 text-sm"
+                            className="input-premium h-12 pl-9 text-sm"
                           />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                           <select
                             value={prop.bedrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bedrooms', parseInt(e.target.value))}
-                            className="flex-1 h-10 px-2 bg-slate-800/50 border border-slate-600 rounded-md text-white text-sm"
+                            className="input-premium flex-1 h-12 text-sm"
                           >
                             {[1, 2, 3, 4, 5, 6].map(num => (
                               <option key={num} value={num}>{num}BR</option>
@@ -1080,7 +1085,7 @@ export default function LeadMagnet() {
                           <select
                             value={prop.bathrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bathrooms', parseFloat(e.target.value))}
-                            className="flex-1 h-10 px-2 bg-slate-800/50 border border-slate-600 rounded-md text-white text-sm"
+                            className="input-premium flex-1 h-12 text-sm"
                           >
                             {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
                               <option key={num} value={num}>{num}BA</option>
@@ -1095,29 +1100,29 @@ export default function LeadMagnet() {
                 <button
                   onClick={addBulkProperty}
                   disabled={bulkProperties.length >= 25}
-                  className="w-full py-3 border-2 border-dashed border-slate-600 rounded-xl text-slate-400 hover:text-white hover:border-slate-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-4 border-2 border-dashed border-[oklch(0.28_0.02_265)] rounded-xl text-[oklch(0.55_0.02_265)] hover:text-white hover:border-[oklch(0.40_0.02_265)] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Plus className="w-5 h-5" />
                   Add Another Property
                 </button>
                 
-                <Button
+                <button
                   onClick={handleBulkAnalyze}
                   disabled={isBulkAnalyzing || bulkProperties.every(p => !p.address.trim())}
-                  className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-lg rounded-xl shadow-lg"
+                  className="btn-premium w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isBulkAnalyzing ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Finding the Winner...
-                    </span>
+                    <>
+                      <div className="w-5 h-5 border-2 border-[oklch(0.12_0.02_265)]/30 border-t-[oklch(0.12_0.02_265)] rounded-full animate-spin" />
+                      <span>Finding the Winner...</span>
+                    </>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <>
                       <Trophy className="w-5 h-5" />
-                      Find the Winner
-                    </span>
+                      <span>Find the Winner</span>
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
             )}
           </div>
@@ -1131,7 +1136,7 @@ export default function LeadMagnet() {
       {/* Prove the Market Results */}
       {activeTab === 'prove' && researchResult && (
         <section className="py-12 bg-slate-900/50">
-          <div className="container max-w-5xl mx-auto px-4">
+          <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium mb-4">
                 <CheckCircle2 className="w-4 h-4" />
@@ -1204,7 +1209,7 @@ export default function LeadMagnet() {
       {/* Find Your Market Results */}
       {activeTab === 'find' && areaListings && (
         <section className="py-12 bg-slate-900/50">
-          <div className="container max-w-5xl mx-auto px-4">
+          <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-sm font-medium mb-4">
                 <CheckCircle2 className="w-4 h-4" />
@@ -1301,7 +1306,7 @@ export default function LeadMagnet() {
       {/* Validate the Deal Results */}
       {activeTab === 'validate' && result && (
         <section className="py-12 bg-slate-900/50">
-          <div className="container max-w-5xl mx-auto px-4">
+          <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
                 result.cashFlow.monthlyProfit > 0 
@@ -1430,7 +1435,7 @@ export default function LeadMagnet() {
       {/* Find the Best Deal Results */}
       {activeTab === 'compare' && sortedBulkResults && (
         <section className="py-12 bg-slate-900/50">
-          <div className="container max-w-5xl mx-auto px-4">
+          <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-medium mb-4">
                 <Trophy className="w-4 h-4" />
@@ -1533,28 +1538,27 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {/* FOOTER CTA */}
       {/* ============================================ */}
-      <section className="py-16 border-t border-slate-800">
-        <div className="container max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+      <section className="py-20 border-t border-[oklch(0.20_0.02_265)]">
+        <div className="container max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4 tracking-tight">
             Ready to Start Your Journey?
           </h2>
-          <p className="text-slate-400 mb-8 max-w-2xl mx-auto">
+          <p className="text-[oklch(0.55_0.02_265)] text-lg mb-10 leading-relaxed">
             These free tools prove the opportunity is real. When you're ready for personalized guidance, 
             Coach Inayah's Turnkey Program will help you take action.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
+            <button 
               onClick={() => setIsEbookOpen(true)}
-              variant="outline" 
-              className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              className="btn-secondary flex items-center justify-center gap-2"
             >
-              <BookOpen className="w-4 h-4 mr-2" />
+              <BookOpen className="w-4 h-4" />
               Read the Guide First
-            </Button>
-            <Button className="bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] hover:opacity-90">
+            </button>
+            <button className="btn-premium flex items-center justify-center gap-2">
               Explore the Turnkey Program
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </section>

@@ -206,3 +206,24 @@ From AirDNA Rentalizer endpoint:
 - [x] Cover: finding landlords, negotiating leases, calculating profit, scaling
 - [ ] Get user approval on outline before writing full content
 - [ ] Write full ebook content based on approved outline
+
+
+## Critical Bug Fixes & UI Redesign (Jan 12, 2026)
+
+### Data Bugs to Fix:
+- [x] Step 1 (See Real Revenue): Bedroom listings starting at 3BR instead of 1BR - FIXED: now shows 1BR-6BR
+- [x] Step 3 (Validate the Deal): Occupancy showing 1% instead of correct percentage - FIXED: now shows 56%
+- [x] Test all 4 tools with Atlanta - all working correctly
+- [x] Verify all data outputs are correct and properly formatted
+
+### UI Redesign - Premium Apple-Inspired:
+- [x] Clean, minimal typography with proper hierarchy
+- [x] Generous white space and padding
+- [x] Subtle shadows and refined borders
+- [x] Smooth micro-animations
+- [x] Professional color palette (less garish gradients)
+- [x] Consistent spacing system
+- [x] Polished form inputs and buttons
+
+### Ebook Content:
+- [x] Write full 13-chapter arbitrage-focused ebook (Welcome + 12 chapters)

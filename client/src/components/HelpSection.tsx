@@ -20,30 +20,30 @@ export const HelpSection: React.FC<HelpSectionProps> = ({
     <div className="mb-6">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 rounded-lg transition-all group"
+        className="w-full flex items-center justify-between p-4 bg-[oklch(0.14_0.02_265)] hover:bg-[oklch(0.16_0.02_265)] border border-[oklch(0.25_0.02_265)]/50 rounded-xl transition-all duration-200"
       >
         <div className="flex items-center gap-3">
-          <HelpCircle className="w-5 h-5 text-[#D4A84B] flex-shrink-0" />
-          <span className="font-medium text-slate-200">{title}</span>
+          <HelpCircle className="w-5 h-5 text-[oklch(0.78_0.12_75)] flex-shrink-0" />
+          <span className="font-medium text-[oklch(0.85_0.01_265)]">{title}</span>
         </div>
         <ChevronDown
-          className={`w-5 h-5 text-slate-400 transition-transform ${
+          className={`w-5 h-5 text-[oklch(0.50_0.02_265)] transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className="mt-3 p-4 bg-slate-800/50 border border-slate-600/30 rounded-lg space-y-4 animate-in fade-in slide-in-from-top-2">
-          <p className="text-slate-300 text-sm">{description}</p>
+        <div className="mt-3 p-5 bg-[oklch(0.12_0.02_265)] border border-[oklch(0.22_0.02_265)]/50 rounded-xl space-y-5 animate-fade-in-up">
+          <p className="text-[oklch(0.70_0.01_265)] leading-relaxed">{description}</p>
 
-          <ol className="space-y-2">
+          <ol className="space-y-3">
             {steps.map((step, idx) => (
               <li key={idx} className="flex gap-3">
-                <div className="flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white text-xs font-semibold flex-shrink-0">
+                <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-[oklch(0.78_0.12_75)] text-[oklch(0.12_0.02_265)] text-xs font-semibold flex-shrink-0">
                   {idx + 1}
                 </div>
-                <span className="text-slate-300 text-sm pt-0.5">{step}</span>
+                <span className="text-[oklch(0.70_0.01_265)] text-sm pt-0.5">{step}</span>
               </li>
             ))}
           </ol>
