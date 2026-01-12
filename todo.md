@@ -284,3 +284,41 @@ Browser Use Cloud API ran out of credits. Rebuilding with Manus backend browser 
 - [x] Create comprehensive 8-step prompt
 - [x] Test complete flow end-to-end
 - [x] Add database persistence for research results
+
+
+## Opportunity Finder Feature (Jan 12, 2026)
+
+**Goal:** Show beginners real arbitrage opportunities in their area with market data, rental properties, and what amenities they need to compete.
+
+### Architecture
+- [x] Design data flow: User input → Browser Use (Zillow + Coach Inayah) → AirDNA API → Display
+- [x] Create opportunity-finder.ts backend service
+
+### Browser Use - Zillow Scraping
+- [x] Create Zillow rental search scraper
+- [x] Extract: address, rent, bedrooms, bathrooms, photos, listing URL
+- [x] Handle pagination for 15-25 results
+
+### Browser Use - Amenity Analysis
+- [x] Scrape top 10 Airbnb performers in the area (from Coach Inayah Comp Data)
+- [x] Visit each Airbnb listing to extract amenities
+- [x] Identify common amenities among top performers (hot tub, pool, parking, etc.)
+- [x] Generate "What Makes Properties Win Here" insights
+
+### AirDNA Integration
+- [x] For each Zillow rental, call AirDNA Rentalizer API
+- [x] Get projected revenue, occupancy, ADR
+- [x] Calculate profit (Revenue - Rent - Estimated Expenses)
+
+### UI - Opportunity Finder Tab
+- [x] Add new "Opportunity Finder" tab to main UI
+- [x] Section 1: Market Snapshot (from Coach Inayah)
+- [x] Section 2: What Makes Properties Win Here (amenity analysis)
+- [x] Section 3: Real Rental Opportunities (Zillow + AirDNA)
+- [x] Section 4: CTA to Turnkey VSL
+- [x] Mobile responsive design
+
+### Testing
+- [ ] Test complete flow with real city
+- [ ] Verify all data sources integrate correctly
+- [ ] Test error handling and loading states

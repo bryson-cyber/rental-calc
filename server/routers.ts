@@ -32,6 +32,7 @@ import { generatePDFReport } from "./export-pdf";
 import { generateExcelReport } from "./export-excel";
 import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
 import { marketResearchRouter } from "./market-research-v2";
+import { opportunityFinderRouter } from "./opportunity-finder";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1692,6 +1693,9 @@ export const appRouter = router({
   // Bulk Summary API
   // Market Research with Browser Use
   marketResearch: marketResearchRouter,
+
+  // Opportunity Finder (Zillow + AirDNA + Coach Inayah)
+  opportunityFinder: opportunityFinderRouter,
 
   bulkSummary: router({
     get: publicProcedure

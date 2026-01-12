@@ -187,7 +187,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // MAIN COMPONENT
 // ============================================
 
-type TabType = 'single' | 'compare' | 'explore' | 'research';
+type TabType = 'single' | 'compare' | 'explore' | 'research' | 'opportunities';
 
 export default function LeadMagnet() {
   // Tab state
@@ -241,6 +241,17 @@ export default function LeadMagnet() {
   const [researchError, setResearchError] = useState<string | null>(null);
   const [researchId, setResearchId] = useState<string | null>(null);
   
+  // Opportunity Finder state
+  const [oppCity, setOppCity] = useState('');
+  const [oppMinRent, setOppMinRent] = useState(1000);
+  const [oppMaxRent, setOppMaxRent] = useState(3500);
+  const [isSearchingOpportunities, setIsSearchingOpportunities] = useState(false);
+  const [oppProgress, setOppProgress] = useState(0);
+  const [oppStep, setOppStep] = useState('');
+  const [oppResult, setOppResult] = useState<any | null>(null);
+  const [oppError, setOppError] = useState<string | null>(null);
+  const [oppTaskIds, setOppTaskIds] = useState<{amenityTaskId: string; zillowTaskId: string; amenitySessionId: string; zillowSessionId: string} | null>(null);
+  
   const resultsRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -258,6 +269,15 @@ export default function LeadMagnet() {
     { researchId: researchId! },
     { enabled: !!researchId && isResearching, refetchInterval: 2000 }
   );
+  
+  // Opportunity Finder mutations
+  const findOpportunitiesMutation = trpc.opportunityFinder.findOpportunities.useMutation();
+  const oppStatusQuery = trpc.opportunityFinder.getSearchStatus.useQuery(
+    { amenityTaskId: oppTaskIds?.amenityTaskId!, zillowTaskId: oppTaskIds?.zillowTaskId! },
+    { enabled: !!oppTaskIds && isSearchingOpportunities, refetchInterval: 3000 }
+  );
+  const processResultsMutation = trpc.opportunityFinder.processResults.useMutation();
+  const cleanupMutation = trpc.opportunityFinder.cleanup.useMutation();
   
   // Loading steps
   const loadingSteps = [
@@ -679,6 +699,91 @@ export default function LeadMagnet() {
     }
   }, [researchStatusQuery.data]);
   
+  // ============================================
+  // OPPORTUNITY FINDER FUNCTIONS
+  // ============================================
+  
+  const runOpportunitySearch = async () => {
+    if (!oppCity.trim()) {
+      toast.error('Please enter a city name');
+      return;
+    }
+    
+    setIsSearchingOpportunities(true);
+    setOppProgress(0);
+    setOppStep('Starting search...');
+    setOppResult(null);
+    setOppError(null);
+    
+    try {
+      const response = await findOpportunitiesMutation.mutateAsync({
+        city: oppCity.trim(),
+        minRent: oppMinRent,
+        maxRent: oppMaxRent,
+      });
+      
+      if (response.success) {
+        setOppTaskIds({
+          amenityTaskId: response.amenityTaskId,
+          zillowTaskId: response.zillowTaskId,
+          amenitySessionId: response.amenitySessionId,
+          zillowSessionId: response.zillowSessionId,
+        });
+        toast.success('Opportunity search started!');
+      } else {
+        throw new Error('Failed to start search');
+      }
+    } catch (error) {
+      console.error('Opportunity search error:', error);
+      toast.error('Failed to start opportunity search');
+      setIsSearchingOpportunities(false);
+      setOppError('Failed to start search');
+    }
+  };
+  
+  // Poll for opportunity search status
+  useEffect(() => {
+    if (oppStatusQuery.data) {
+      const { status, progress, currentStep, amenityOutput, zillowOutput } = oppStatusQuery.data;
+      
+      setOppProgress(progress);
+      setOppStep(currentStep);
+      
+      if (status === 'ready' && amenityOutput && zillowOutput && oppTaskIds) {
+        // Process the results
+        processResultsMutation.mutate(
+          {
+            city: oppCity,
+            amenityOutput,
+            zillowOutput,
+          },
+          {
+            onSuccess: (result) => {
+              setOppResult(result);
+              setIsSearchingOpportunities(false);
+              toast.success('Found opportunities!');
+              
+              // Cleanup sessions
+              cleanupMutation.mutate({
+                amenitySessionId: oppTaskIds.amenitySessionId,
+                zillowSessionId: oppTaskIds.zillowSessionId,
+              });
+              
+              setTimeout(() => {
+                resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            },
+            onError: (error) => {
+              setOppError('Failed to process results');
+              setIsSearchingOpportunities(false);
+              toast.error('Failed to process results');
+            },
+          }
+        );
+      }
+    }
+  }, [oppStatusQuery.data]);
+  
   // Calculate max revenue for chart scaling
   const maxMonthlyRevenue = result?.monthlyForecast.length 
     ? Math.max(...result.monthlyForecast.map(m => m.revenue))
@@ -766,6 +871,17 @@ export default function LeadMagnet() {
               >
                 <BarChart3 className="w-4 h-4" />
                 Market Research
+              </button>
+              <button
+                onClick={() => { setActiveTab('opportunities'); }}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === 'opportunities'
+                    ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                Find Deals
               </button>
             </div>
           </div>
@@ -1112,6 +1228,103 @@ export default function LeadMagnet() {
                 {researchError && (
                   <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
                     {researchError}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* ============================================ */}
+            {/* OPPORTUNITY FINDER TAB */}
+            {/* ============================================ */}
+            {activeTab === 'opportunities' && (
+              <div className="grid gap-6">
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-semibold text-white mb-2">Find Arbitrage Deals</h3>
+                  <p className="text-slate-400 text-sm">Discover rental properties in your area that could be profitable Airbnbs</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    City or Zip Code
+                  </label>
+                  <Input
+                    type="text"
+                    value={oppCity}
+                    onChange={(e) => setOppCity(e.target.value)}
+                    placeholder="e.g., Atlanta, GA or 30301"
+                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    disabled={isSearchingOpportunities}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Min Rent
+                    </label>
+                    <Input
+                      type="number"
+                      value={oppMinRent}
+                      onChange={(e) => setOppMinRent(Number(e.target.value))}
+                      placeholder="1000"
+                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                      disabled={isSearchingOpportunities}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Max Rent
+                    </label>
+                    <Input
+                      type="number"
+                      value={oppMaxRent}
+                      onChange={(e) => setOppMaxRent(Number(e.target.value))}
+                      placeholder="3500"
+                      className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                      disabled={isSearchingOpportunities}
+                    />
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={runOpportunitySearch}
+                  disabled={isSearchingOpportunities || !oppCity.trim()}
+                  size="lg"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] hover:from-[#C9A43E] hover:to-[#45B8B0] text-white shadow-lg shadow-[#D4A84B]/25"
+                >
+                  {isSearchingOpportunities ? (
+                    <span className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Searching... {oppProgress}%
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Find Opportunities
+                      <Sparkles className="w-5 h-5" />
+                    </span>
+                  )}
+                </Button>
+                
+                {isSearchingOpportunities && (
+                  <div className="space-y-3">
+                    <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] transition-all duration-500"
+                        style={{ width: `${oppProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-slate-400 text-center">
+                      {oppStep || 'Processing...'}
+                    </p>
+                    <p className="text-xs text-slate-500 text-center">
+                      This may take 5-10 minutes as we analyze the market and find rentals
+                    </p>
+                  </div>
+                )}
+                
+                {oppError && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    {oppError}
                   </div>
                 )}
               </div>
@@ -1988,6 +2201,178 @@ export default function LeadMagnet() {
                 </ul>
               </div>
             )}
+          </div>
+        </section>
+      )}
+      
+      {/* ============================================ */}
+      {/* OPPORTUNITY FINDER RESULTS */}
+      {/* ============================================ */}
+      {activeTab === 'opportunities' && oppResult && (
+        <section ref={resultsRef} className="py-12 md:py-16">
+          <div className="max-w-6xl mx-auto px-4">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                {oppResult.market} Opportunities
+              </h2>
+              <p className="text-lg text-slate-400">
+                {oppResult.opportunities?.length || 0} rental properties that could be profitable Airbnbs
+              </p>
+            </div>
+            
+            {/* Section 1: Market Snapshot */}
+            <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
+              <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-[#D4A84B]" />
+                Market Snapshot
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-white">
+                    {oppResult.marketSnapshot?.totalListings?.toLocaleString() || '—'}
+                  </div>
+                  <div className="text-sm text-slate-400">Active Airbnbs</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-emerald-400">
+                    {oppResult.marketSnapshot?.avgOccupancy ? `${Math.round(oppResult.marketSnapshot.avgOccupancy * 100)}%` : '—'}
+                  </div>
+                  <div className="text-sm text-slate-400">Avg Occupancy</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-[#D4A84B]">
+                    ${oppResult.marketSnapshot?.avgMonthlyRevenue?.toLocaleString() || '—'}
+                  </div>
+                  <div className="text-sm text-slate-400">Avg Monthly Revenue</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-xl p-4 text-center">
+                  <div className="text-lg md:text-xl font-bold text-cyan-400 leading-tight">
+                    {oppResult.marketSnapshot?.hotNeighborhoods?.slice(0, 2).join(', ') || '—'}
+                  </div>
+                  <div className="text-sm text-slate-400">Hot Neighborhoods</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Section 2: What Makes Properties Win Here */}
+            {oppResult.winningAmenities && oppResult.winningAmenities.length > 0 && (
+              <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  What Makes Properties Win Here
+                </h3>
+                <p className="text-slate-400 text-sm mb-6">Top performers in this market have these amenities</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {oppResult.winningAmenities.map((amenity: any, idx: number) => (
+                    <div key={idx} className="bg-slate-900/50 rounded-xl p-4 flex items-center gap-3">
+                      <span className="text-2xl">{amenity.icon}</span>
+                      <div>
+                        <div className="font-medium text-white">{amenity.amenity}</div>
+                        <div className="text-sm text-emerald-400">{amenity.percentage}% of top earners</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Section 3: Real Rental Opportunities */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <Home className="w-5 h-5 text-[#4ECDC4]" />
+                Rental Opportunities
+              </h3>
+              <div className="grid gap-4">
+                {oppResult.opportunities?.map((opp: any, idx: number) => (
+                  <div key={idx} className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4 md:p-6 hover:border-[#D4A84B]/50 transition-all">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Property Image */}
+                      <div className="w-full md:w-48 h-32 md:h-36 rounded-xl overflow-hidden bg-slate-700 flex-shrink-0">
+                        {opp.rental.photoUrl ? (
+                          <img 
+                            src={opp.rental.photoUrl} 
+                            alt={opp.rental.address}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Home className="w-12 h-12 text-slate-500" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Property Details */}
+                      <div className="flex-1">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
+                          <div>
+                            <h4 className="font-semibold text-white text-lg">
+                              {opp.rental.bedrooms}BR in {opp.rental.neighborhood || 'Unknown Area'}
+                            </h4>
+                            <p className="text-sm text-slate-400">{opp.rental.address}</p>
+                          </div>
+                          {opp.profit > 0 && (
+                            <div className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium self-start">
+                              +${opp.profit.toLocaleString()}/mo profit
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <div className="text-sm text-slate-400">Rent</div>
+                            <div className="text-lg font-semibold text-white">${opp.rental.rent?.toLocaleString()}/mo</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-slate-400">Projected Airbnb</div>
+                            <div className="text-lg font-semibold text-[#D4A84B]">${opp.projectedRevenue?.toLocaleString()}/mo</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-slate-400">Occupancy</div>
+                            <div className="text-lg font-semibold text-cyan-400">{Math.round((opp.occupancy || 0) * 100)}%</div>
+                          </div>
+                        </div>
+                        
+                        {opp.similarAirbnbRevenue && (
+                          <p className="text-sm text-slate-400 mb-3">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 inline mr-1" />
+                            Similar Airbnbs nearby are making ${opp.similarAirbnbRevenue.toLocaleString()}/mo
+                          </p>
+                        )}
+                        
+                        <a 
+                          href={opp.rental.listingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-[#4ECDC4] hover:text-[#5EDFD6] text-sm font-medium"
+                        >
+                          View on Zillow <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Section 4: CTA */}
+            <div className="bg-gradient-to-r from-[#D4A84B]/20 to-[#4ECDC4]/20 border border-[#D4A84B]/30 rounded-2xl p-8 text-center">
+              <h3 className="text-2xl font-bold text-white mb-3">
+                Ready to Turn One of These Into a Profitable Airbnb?
+              </h3>
+              <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
+                Learn the exact steps to secure a rental property, set it up for Airbnb, and start generating passive income.
+              </p>
+              <a 
+                href="https://coachinayah.com/turnkey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white font-semibold rounded-xl hover:from-[#C9A43E] hover:to-[#45B8B0] transition-all shadow-lg shadow-[#D4A84B]/25"
+              >
+                Watch the Turnkey Training
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </section>
       )}
