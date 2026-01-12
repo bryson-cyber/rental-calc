@@ -11,4 +11,6 @@ export const ENV = {
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   poeApiKey: process.env.POE_API_KEY ?? "",
   browserUseApiKey: process.env.BROWSER_USE_API_KEY ?? "",
+  coachinayahEmail: process.env.COACHINAYAH_EMAIL ?? "",
+  coachinayahPassword: process.env.COACHINAYAH_PASSWORD ?? "",
 };

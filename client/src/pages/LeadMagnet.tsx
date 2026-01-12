@@ -187,7 +187,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // MAIN COMPONENT
 // ============================================
 
-type TabType = 'single' | 'compare' | 'explore';
+type TabType = 'single' | 'compare' | 'explore' | 'research';
 
 export default function LeadMagnet() {
   // Tab state
@@ -230,6 +230,17 @@ export default function LeadMagnet() {
   const [exploreCenter, setExploreCenter] = useState<{lat: number; lng: number} | null>(null);
   const [mapReady, setMapReady] = useState(false);
   
+  // ============================================
+  // MARKET RESEARCH STATE
+  // ============================================
+  const [researchMarket, setResearchMarket] = useState('');
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchProgress, setResearchProgress] = useState(0);
+  const [researchStep, setResearchStep] = useState('');
+  const [researchResult, setResearchResult] = useState<any | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
+  const [researchId, setResearchId] = useState<string | null>(null);
+  
   const resultsRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -242,6 +253,11 @@ export default function LeadMagnet() {
   const analysisMutation = trpc.rental.getEstimate.useMutation();
   const bulkMutation = trpc.bulkSummary.get.useMutation();
   const areaMutation = trpc.listingsByArea.get.useMutation();
+  const startResearchMutation = trpc.marketResearch.startResearch.useMutation();
+  const researchStatusQuery = trpc.marketResearch.getResearchStatus.useQuery(
+    { researchId: researchId! },
+    { enabled: !!researchId && isResearching, refetchInterval: 2000 }
+  );
   
   // Loading steps
   const loadingSteps = [
@@ -603,6 +619,66 @@ export default function LeadMagnet() {
     }
   };
   
+  // ============================================
+  // MARKET RESEARCH FUNCTIONS
+  // ============================================
+  
+  const runResearch = async () => {
+    if (!researchMarket.trim()) {
+      toast.error('Please enter a city or market name');
+      return;
+    }
+    
+    setIsResearching(true);
+    setResearchProgress(0);
+    setResearchStep('Starting research...');
+    setResearchResult(null);
+    setResearchError(null);
+    
+    try {
+      const response = await startResearchMutation.mutateAsync({
+        market: researchMarket.trim(),
+      });
+      
+      if (response.success) {
+        setResearchId(response.researchId);
+        toast.success('Market research started!');
+      } else {
+        throw new Error('Failed to start research');
+      }
+    } catch (error) {
+      console.error('Research error:', error);
+      toast.error('Failed to start market research');
+      setIsResearching(false);
+      setResearchError('Failed to start research');
+    }
+  };
+  
+  // Poll for research status updates
+  useEffect(() => {
+    if (researchStatusQuery.data) {
+      const { status, progress, currentStep, result, error } = researchStatusQuery.data;
+      
+      setResearchProgress(progress);
+      setResearchStep(currentStep);
+      
+      if (status === 'completed' && result) {
+        setResearchResult(result);
+        setIsResearching(false);
+        toast.success('Market research completed!');
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+      
+      if (status === 'error') {
+        setResearchError(error || 'Research failed');
+        setIsResearching(false);
+        toast.error(error || 'Market research failed');
+      }
+    }
+  }, [researchStatusQuery.data]);
+  
   // Calculate max revenue for chart scaling
   const maxMonthlyRevenue = result?.monthlyForecast.length 
     ? Math.max(...result.monthlyForecast.map(m => m.revenue))
@@ -679,6 +755,17 @@ export default function LeadMagnet() {
               >
                 <Search className="w-4 h-4" />
                 Explore Area
+              </button>
+              <button
+                onClick={() => { setActiveTab('research'); }}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === 'research'
+                    ? 'bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Market Research
               </button>
             </div>
           </div>
@@ -967,6 +1054,66 @@ export default function LeadMagnet() {
                     </span>
                   )}
                 </Button>
+              </div>
+            )}
+
+            {/* ============================================ */}
+            {/* MARKET RESEARCH TAB */}
+            {/* ============================================ */}
+            {activeTab === 'research' && (
+              <div className="grid gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    City or Market Name
+                  </label>
+                  <Input
+                    type="text"
+                    value={researchMarket}
+                    onChange={(e) => setResearchMarket(e.target.value)}
+                    placeholder="e.g., Austin, TX or Atlanta"
+                    className="h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                    disabled={isResearching}
+                  />
+                </div>
+                
+                <Button
+                  onClick={runResearch}
+                  disabled={isResearching || !researchMarket.trim()}
+                  size="lg"
+                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] hover:from-[#C9A43E] hover:to-[#45B8B0] text-white shadow-lg shadow-[#D4A84B]/25"
+                >
+                  {isResearching ? (
+                    <span className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Researching... {researchProgress}%
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Start Market Research
+                      <BarChart3 className="w-5 h-5" />
+                    </span>
+                  )}
+                </Button>
+                
+                {isResearching && (
+                  <div className="space-y-3">
+                    <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] transition-all duration-500"
+                        style={{ width: `${researchProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-slate-400 text-center">
+                      {researchStep || 'Processing...'}
+                    </p>
+                  </div>
+                )}
+                
+                {researchError && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    {researchError}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1681,6 +1828,166 @@ export default function LeadMagnet() {
                 </span>
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================================ */}
+      {/* MARKET RESEARCH TAB RESULTS */}
+      {/* ============================================ */}
+      {activeTab === 'research' && researchResult && (
+        <section ref={resultsRef} className="py-12 md:py-16">
+          <div className="max-w-6xl mx-auto px-4">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                {researchResult.market} Market Research
+              </h2>
+              <p className="text-lg text-slate-400">
+                {researchResult.executiveSummary?.keyFinding || 'Comprehensive market analysis'}
+              </p>
+            </div>
+            
+            {/* Executive Summary */}
+            {researchResult.executiveSummary && (
+              <div className="bg-gradient-to-br from-[#D4A84B]/10 to-[#4ECDC4]/10 border border-[#D4A84B]/30 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-4">Executive Summary</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-slate-400 text-sm">Optimal Bedroom Size</div>
+                    <div className="text-white font-semibold text-lg">{researchResult.executiveSummary.optimalBedroomSize}</div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-slate-400 text-sm">Target Neighborhoods</div>
+                    <div className="text-white font-semibold">{researchResult.executiveSummary.targetNeighborhoods?.join(', ') || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Market Overview */}
+            {researchResult.marketOverview && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-6">Market Overview</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <div className="text-slate-400 text-sm mb-1">Total Listings</div>
+                    <div className="text-white font-bold text-2xl">{researchResult.marketOverview.totalListings?.toLocaleString() || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-sm mb-1">Avg Occupancy</div>
+                    <div className="text-white font-bold text-2xl">{((researchResult.marketOverview.avgOccupancy || 0) * 100).toFixed(0)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-sm mb-1">Avg ADR</div>
+                    <div className="text-white font-bold text-2xl">${researchResult.marketOverview.avgADR?.toFixed(0) || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400 text-sm mb-1">Avg Revenue</div>
+                    <div className="text-white font-bold text-2xl">${(researchResult.marketOverview.avgRevenue || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Bedroom Analysis */}
+            {researchResult.bedroomAnalysis && researchResult.bedroomAnalysis.length > 0 && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-6">Bedroom Analysis</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {researchResult.bedroomAnalysis.map((br: any, idx: number) => (
+                    <div key={idx} className="bg-slate-900/50 rounded-lg p-4 text-center">
+                      <div className="text-slate-400 text-sm mb-1">{br.bedroomSize}</div>
+                      <div className="text-white font-bold text-xl">{((br.occupancy || 0) * 100).toFixed(0)}%</div>
+                      {br.avgRevenue && (
+                        <div className="text-slate-500 text-xs mt-1">${(br.avgRevenue).toLocaleString(undefined, {maximumFractionDigits: 0})}/yr</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Top Submarkets */}
+            {researchResult.submarkets && researchResult.submarkets.length > 0 && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-6">Top Submarkets</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="text-left py-3 px-4 text-slate-400 font-medium">Submarket</th>
+                        <th className="text-right py-3 px-4 text-slate-400 font-medium">Listings</th>
+                        <th className="text-right py-3 px-4 text-slate-400 font-medium">Occupancy</th>
+                        <th className="text-right py-3 px-4 text-slate-400 font-medium">ADR</th>
+                        <th className="text-right py-3 px-4 text-slate-400 font-medium">RevPAR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {researchResult.submarkets.slice(0, 10).map((sm: any, idx: number) => (
+                        <tr key={idx} className="border-b border-slate-700/50">
+                          <td className="py-3 px-4 text-white font-medium">{sm.name}</td>
+                          <td className="py-3 px-4 text-right text-slate-300">{sm.listings}</td>
+                          <td className="py-3 px-4 text-right text-slate-300">{((sm.occupancy || 0) * 100).toFixed(1)}%</td>
+                          <td className="py-3 px-4 text-right text-slate-300">${sm.adr?.toFixed(0)}</td>
+                          <td className="py-3 px-4 text-right text-white font-semibold">${sm.revpar?.toFixed(0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* Top Performers */}
+            {researchResult.topPerformers && researchResult.topPerformers.length > 0 && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 mb-8">
+                <h3 className="text-2xl font-bold text-white mb-6">Top Performing Properties</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {researchResult.topPerformers.slice(0, 6).map((prop: any, idx: number) => (
+                    <div key={idx} className="bg-slate-900/50 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="text-white font-semibold">{prop.title}</h4>
+                        {prop.airbnbUrl && (
+                          <a href={prop.airbnbUrl} target="_blank" rel="noopener noreferrer" className="text-[#4ECDC4] hover:underline text-sm">
+                            View →
+                          </a>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <div className="text-slate-500">Revenue</div>
+                          <div className="text-white font-semibold">${(prop.revenue || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Occupancy</div>
+                          <div className="text-white font-semibold">{((prop.occupancy || 0) * 100).toFixed(0)}%</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-500">Bedrooms</div>
+                          <div className="text-white font-semibold">{prop.bedrooms} BR</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Recommendations */}
+            {researchResult.recommendations && researchResult.recommendations.length > 0 && (
+              <div className="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-2xl p-6 md:p-8">
+                <h3 className="text-2xl font-bold text-white mb-4">Recommendations</h3>
+                <ul className="space-y-3">
+                  {researchResult.recommendations.map((rec: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-slate-300">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
       )}
