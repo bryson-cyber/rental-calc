@@ -509,3 +509,25 @@ From AirDNA Rentalizer endpoint:
 - Zip Code dropdown (optional) for hyper-local data
 - Selected path displayed as breadcrumb (Arizona → Phoenix/Scottsdale → Glendale)
 - Data returned at selected level (Glendale shows $39,712 avg revenue, 52% occupancy)
+
+
+## Hierarchical Location Selector Stress Testing (Jan 13, 2026)
+
+### Critical Bug Found and Fixed:
+- [x] Fix critical bug: submarket data returning $0 for all metrics
+- [x] Add getSubmarketReport endpoint to backend router
+- [x] Update frontend to route to correct endpoint based on selection type
+- [x] Test fix with Missouri → St. Louis → Central West End (verified working)
+
+### Stress Testing Results:
+- [x] Test 1: Arizona → Phoenix/Scottsdale → Glendale (✅ PASS)
+- [x] Test 2: Missouri → St. Louis → Central West End (✅ FIXED)
+
+### Additional Tests Needed:
+- [ ] California → Los Angeles → Hollywood
+- [ ] Texas → Austin → Downtown Austin
+- [ ] Florida → Miami → South Beach
+- [ ] New York → New York City → Manhattan
+- [ ] Test markets without submarkets
+- [ ] Test submarkets with very few listings
+- [ ] Test switching between market and submarket selections

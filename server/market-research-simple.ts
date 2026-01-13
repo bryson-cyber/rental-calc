@@ -507,6 +507,81 @@ export const marketResearchSimpleRouter = router({
       };
     }),
 
+  // Get submarket report (for neighborhoods)
+  getSubmarketReport: publicProcedure
+    .input(z.object({
+      submarketId: z.string(),
+      submarketName: z.string()
+    }))
+    .mutation(async ({ input }): Promise<SimplifiedMarketReport> => {
+      const { submarketId, submarketName } = input;
+      
+      console.log(`[getSubmarketReport] Fetching report for submarket: ${submarketId} (${submarketName})`);
+      
+      // Import the comprehensive submarket report function
+      const { getComprehensiveSubmarketReport } = await import('./airdna');
+      const report = await getComprehensiveSubmarketReport(submarketId);
+      
+      if (!report) {
+        throw new Error(`Could not find data for submarket: ${submarketName}`);
+      }
+      
+      // Transform to SimplifiedMarketReport format
+      const overview = {
+        totalListings: report.submarket.listing_count || 0,
+        avgOccupancy: report.submarket.metrics.occupancy,
+        avgAdr: report.submarket.metrics.adr,
+        avgRevenue: report.submarket.metrics.revenue,
+        avgRevpar: report.submarket.metrics.revpar,
+        marketScore: report.submarket.metrics.market_score
+      };
+      
+      // Process top performers
+      const topPerformers = report.top_listings.slice(0, 10).map(l => ({
+        title: l.title,
+        bedrooms: l.bedrooms,
+        revenue: l.annual_revenue,
+        occupancy: Math.round(l.occupancy),
+        adr: l.adr,
+        propertyType: l.property_type,
+        airbnbUrl: l.airbnb_url
+      }));
+      
+      // Process bedroom breakdown
+      const bedroomBreakdown = report.bedroom_performance.map(b => ({
+        bedrooms: b.bedrooms,
+        count: b.count,
+        avgRevenue: b.avg_revenue,
+        avgOccupancy: b.avg_occupancy
+      }));
+      
+      // Seasonality - for submarkets, we'll use empty data for now
+      // as the comprehensive report doesn't include seasonality
+      const seasonalityData = {
+        peakMonths: [] as string[],
+        lowMonths: [] as string[],
+        monthlyData: [] as Array<{ month: string; occupancy: number; adr: number; revenue: number }>
+      };
+      
+      // Generate insights
+      const insights = generateInsights(overview, seasonalityData, topPerformers, bedroomBreakdown);
+      
+      return {
+        market: {
+          id: submarketId,
+          name: submarketName,
+          state: undefined,
+          listingCount: report.submarket.listing_count || 0
+        },
+        overview,
+        seasonality: seasonalityData,
+        topPerformers,
+        submarkets: [], // Submarkets don't have sub-submarkets
+        bedroomBreakdown,
+        insights
+      };
+    }),
+
   // ============================================
   // HIERARCHICAL LOCATION ENDPOINTS
   // ============================================

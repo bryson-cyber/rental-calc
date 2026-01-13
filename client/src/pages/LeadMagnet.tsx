@@ -323,6 +323,7 @@ export default function LeadMagnet() {
   const getAreaListings = trpc.listingsByArea.get.useMutation();
   const searchMarkets = trpc.marketResearchSimple.searchMarkets.useMutation();
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
+  const getSubmarketReport = trpc.marketResearchSimple.getSubmarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
 
   // ============================================
@@ -612,11 +613,18 @@ export default function LeadMagnet() {
       
       // If we have a hierarchical selection with a market/submarket ID, use that directly
       if (hasHierarchicalSelection) {
-        // Use the market-level endpoint for more accurate data
-        const marketId = locationSelection.submarket?.id || locationSelection.market?.id;
-        const marketName = locationSelection.submarket?.name || locationSelection.market?.name || '';
-        
-        if (marketId) {
+        // Check if we have a submarket or market selection
+        if (locationSelection.submarket?.id) {
+          // Use submarket endpoint for neighborhood-level data
+          const submarketId = locationSelection.submarket.id;
+          const submarketName = locationSelection.submarket.name;
+          console.log(`[handleResearch] Using submarket endpoint for ${submarketName} (${submarketId})`);
+          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+        } else if (locationSelection.market?.id) {
+          // Use market endpoint for city-level data
+          const marketId = locationSelection.market.id;
+          const marketName = locationSelection.market.name;
+          console.log(`[handleResearch] Using market endpoint for ${marketName} (${marketId})`);
           report = await getMarketReport.mutateAsync({ marketId, marketName });
         } else {
           // Fallback to location-based search
