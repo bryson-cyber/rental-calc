@@ -555,12 +555,19 @@ export const marketResearchSimpleRouter = router({
         avgOccupancy: b.avg_occupancy
       }));
       
-      // Seasonality - for submarkets, we'll use empty data for now
-      // as the comprehensive report doesn't include seasonality
+      // Seasonality - use parent market seasonality from comprehensive report
+      const monthlyData = report.seasonality.map(s => ({
+        month: s.month,
+        occupancy: s.occupancy,
+        adr: s.adr,
+        revenue: s.revenue
+      }));
+      
+      const sortedByRevenue = [...monthlyData].sort((a, b) => b.revenue - a.revenue);
       const seasonalityData = {
-        peakMonths: [] as string[],
-        lowMonths: [] as string[],
-        monthlyData: [] as Array<{ month: string; occupancy: number; adr: number; revenue: number }>
+        peakMonths: sortedByRevenue.slice(0, 3).map(m => m.month),
+        lowMonths: sortedByRevenue.slice(-3).map(m => m.month),
+        monthlyData
       };
       
       // Generate insights

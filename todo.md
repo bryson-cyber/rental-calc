@@ -531,3 +531,33 @@ From AirDNA Rentalizer endpoint:
 - [ ] Test markets without submarkets
 - [ ] Test submarkets with very few listings
 - [ ] Test switching between market and submarket selections
+
+### Continued Stress Testing & Seasonality Enhancement (Jan 13, 2026):
+- [ ] Verify if submarket API actually returns seasonality data
+- [ ] Check actual API response structure from getComprehensiveSubmarketReport
+- [ ] Add seasonality data display for submarkets if available
+- [ ] Continue stress testing with California → Los Angeles → Hollywood
+- [ ] Continue stress testing with Texas → Austin → Downtown Austin
+- [ ] Continue stress testing with Florida → Miami → South Beach
+- [ ] Continue stress testing with New York → New York City → Manhattan
+
+
+## Stress Testing & Submarket Seasonality (Jan 13, 2026)
+
+### Critical Bug Fixes:
+- [x] Fix submarket data returning $0 for all metrics (Central West End, St. Louis)
+- [x] Add getSubmarketReport endpoint to backend router
+- [x] Update frontend to route to correct endpoint based on selection type (market vs submarket)
+- [x] Test fix with Central West End - verified $37,204 revenue, 66% occupancy, $155 ADR
+
+### Seasonality Data for Submarkets:
+- [x] Verify submarket API response structure (no direct seasonality data available)
+- [x] Implement parent market seasonality fallback for submarkets
+- [x] Update getComprehensiveSubmarketReport to fetch parent market seasonality
+- [x] Update getSubmarketReport endpoint to process and return seasonality data
+- [x] Test Hollywood submarket - verified seasonality displays correctly (Jan-Dec occupancy and ADR)
+
+### Stress Testing Results:
+- [x] Test Missouri → St. Louis → Central West End (fixed $0 bug)
+- [x] Test California → Los Angeles → Hollywood (verified seasonality display)
+- [x] Verify hierarchical location selector works for both markets and submarkets

@@ -2305,6 +2305,7 @@ export async function getComprehensiveSubmarketReport(
     avg_adr: number;
     avg_occupancy: number;
   }>;
+  seasonality: SeasonalityData[];
   insights: MarketInsights;
   generated_at: string;
 } | null> {
@@ -2387,6 +2388,13 @@ export async function getComprehensiveSubmarketReport(
     }))
     .sort((a, b) => a.bedrooms - b.bedrooms);
   
+  // Fetch parent market seasonality data as fallback
+  let seasonality: SeasonalityData[] = [];
+  if (submarketDetails.market_id) {
+    console.log(`[getComprehensiveSubmarketReport] Fetching parent market seasonality for ${submarketDetails.market_id}`);
+    seasonality = await getMarketSeasonality(submarketDetails.market_id);
+  }
+
   return {
     submarket: {
       id: submarketId,
@@ -2405,6 +2413,7 @@ export async function getComprehensiveSubmarketReport(
     },
     top_listings: topListingsResult.listings,
     bedroom_performance: bedroomPerformance,
+    seasonality,
     insights,
     generated_at: new Date().toISOString(),
   };
