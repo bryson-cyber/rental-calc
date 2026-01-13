@@ -963,3 +963,13 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 
 - [x] Reduce meta keywords from 10 to 5 focused keywords
 - [x] Update page title to 52 characters (within 30-60 range)
+
+
+## Use Saved Property & Compare from Saved (Jan 13, 2026)
+
+- [x] Add "Use in Step 3" button to saved properties in SavedItemsPanel (already exists)
+- [x] Auto-fill Step 3 form when clicking "Use in Step 3" button (already exists)
+- [x] Add multi-select checkboxes to saved properties
+- [x] Add "Compare Selected in Step 4" button when 2+ properties selected
+- [x] Auto-fill Step 4 comparison form with selected properties
+- [x] Test both features end-to-end

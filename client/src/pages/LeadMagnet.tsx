@@ -891,6 +891,26 @@ export default function LeadMagnet() {
                   }, 100);
                   toast.success('Property loaded! Enter the monthly rent to validate.');
                 }}
+                onCompareProperties={(properties) => {
+                  // Auto-fill Step 4 form with selected properties
+                  const bulkInputs = properties.map((prop, index) => ({
+                    id: String(index + 1),
+                    address: prop.address,
+                    bedrooms: prop.bedrooms,
+                    bathrooms: prop.bathrooms,
+                    rent: 0 // User will need to enter rent
+                  }));
+                  setBulkProperties(bulkInputs);
+                  // Switch to compare tab
+                  setActiveTab('compare');
+                  // Close the saved panel
+                  setShowSavedPanel(false);
+                  // Scroll to the form
+                  setTimeout(() => {
+                    document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                  toast.success(`${properties.length} properties loaded! Enter the monthly rent for each to compare.`);
+                }}
               />
             </div>
           )}

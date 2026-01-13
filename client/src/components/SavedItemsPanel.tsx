@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, X, ExternalLink, Trash2, DollarSign, Percent, Bed, Bath, MapPin, FileDown, CheckCircle, Loader2, StickyNote, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bookmark, X, ExternalLink, Trash2, DollarSign, Percent, Bed, Bath, MapPin, FileDown, CheckCircle, Loader2, StickyNote, ChevronDown, ChevronUp, Square, CheckSquare, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SavedMarket, SavedProperty } from '@/hooks/useSavedItems';
 import { exportSavedItemsToPdf } from '@/utils/exportPdf';
@@ -12,6 +12,7 @@ interface SavedItemsPanelProps {
   onSelectMarket?: (market: SavedMarket) => void;
   onSelectProperty?: (property: SavedProperty) => void;
   onUseProperty?: (property: SavedProperty) => void;
+  onCompareProperties?: (properties: SavedProperty[]) => void;
   onUpdateMarketNote?: (id: string, notes: string) => void;
   onUpdatePropertyNote?: (id: string, notes: string) => void;
   onClearAll: () => void;
@@ -33,6 +34,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
   onSelectMarket,
   onSelectProperty,
   onUseProperty,
+  onCompareProperties,
   onUpdateMarketNote,
   onUpdatePropertyNote,
   onClearAll,
@@ -40,6 +42,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [expandedMarketNotes, setExpandedMarketNotes] = useState<Set<string>>(new Set());
   const [expandedPropertyNotes, setExpandedPropertyNotes] = useState<Set<string>>(new Set());
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<Set<string>>(new Set());
   const totalItems = savedMarkets.length + savedProperties.length;
 
   const handleExportPdf = async () => {
@@ -75,6 +78,34 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
       }
       return newSet;
     });
+  };
+
+  const togglePropertySelection = (id: string) => {
+    setSelectedPropertyIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllProperties = () => {
+    if (selectedPropertyIds.size === savedProperties.length) {
+      setSelectedPropertyIds(new Set());
+    } else {
+      setSelectedPropertyIds(new Set(savedProperties.map(p => p.id)));
+    }
+  };
+
+  const handleCompareSelected = () => {
+    const selectedProperties = savedProperties.filter(p => selectedPropertyIds.has(p.id));
+    if (selectedProperties.length >= 2 && onCompareProperties) {
+      onCompareProperties(selectedProperties);
+      setSelectedPropertyIds(new Set());
+    }
   };
 
   if (totalItems === 0) {
@@ -227,17 +258,65 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
       {/* Saved Properties */}
       {savedProperties.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-[oklch(0.45_0_0)] mb-3 flex items-center gap-2">
-            <Bed className="w-4 h-4" />
-            Saved Properties ({savedProperties.length})
-          </h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-[oklch(0.45_0_0)] flex items-center gap-2">
+              <Bed className="w-4 h-4" />
+              Saved Properties ({savedProperties.length})
+            </h4>
+            {savedProperties.length >= 2 && onCompareProperties && (
+              <button
+                onClick={selectAllProperties}
+                className="text-xs text-[oklch(0.50_0_0)] hover:text-[oklch(0.78_0.12_75)] transition-colors"
+              >
+                {selectedPropertyIds.size === savedProperties.length ? 'Deselect All' : 'Select All'}
+              </button>
+            )}
+          </div>
+          
+          {/* Compare Selected Button */}
+          {selectedPropertyIds.size >= 2 && onCompareProperties && (
+            <div className="mb-3 p-3 bg-[oklch(0.78_0.12_75)]/10 border border-[oklch(0.78_0.12_75)]/30 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[oklch(0.35_0.08_75)]">
+                  {selectedPropertyIds.size} properties selected
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleCompareSelected}
+                  className="bg-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.70_0.12_75)] text-white"
+                >
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  Compare in Step 4
+                </Button>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-2">
             {savedProperties.map((property) => (
               <div
                 key={property.id}
-                className="p-3 bg-white border border-[oklch(0.90_0_0)] rounded-lg hover:border-[oklch(0.78_0.12_75)]/50 transition-colors"
+                className={`p-3 bg-white border rounded-lg transition-colors ${
+                  selectedPropertyIds.has(property.id)
+                    ? 'border-[oklch(0.78_0.12_75)] bg-[oklch(0.78_0.12_75)]/5'
+                    : 'border-[oklch(0.90_0_0)] hover:border-[oklch(0.78_0.12_75)]/50'
+                }`}
               >
                 <div className="flex items-center justify-between">
+                  {/* Checkbox for multi-select */}
+                  {onCompareProperties && (
+                    <button
+                      onClick={() => togglePropertySelection(property.id)}
+                      className="mr-3 flex-shrink-0"
+                    >
+                      {selectedPropertyIds.has(property.id) ? (
+                        <CheckSquare className="w-5 h-5 text-[oklch(0.78_0.12_75)]" />
+                      ) : (
+                        <Square className="w-5 h-5 text-[oklch(0.70_0_0)]" />
+                      )}
+                    </button>
+                  )}
+                  
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[oklch(0.15_0_0)] truncate">
                       {property.title}
