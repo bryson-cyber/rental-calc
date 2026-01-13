@@ -68,7 +68,11 @@ interface Market {
   id: string;
   name: string;
   listingCount: number;
+  locationName?: string;
   state?: string;
+  type?: string;
+  isVirtual?: boolean;
+  virtualSubmarkets?: string[];
 }
 
 interface Submarket {
@@ -153,6 +157,14 @@ export function HierarchicalLocationSelector({
     'WA': ['Seattle', 'Tacoma', 'Spokane', 'Bellevue'],
   };
 
+  // Define virtual markets for cities that only exist as submarkets in AirDNA
+  // These will be created by grouping orphaned submarkets under a virtual market
+  const VIRTUAL_MARKETS: Record<string, { name: string; searchTerms: string[] }> = {
+    'MO': { name: 'Kansas City Area', searchTerms: ['Kansas City', 'Midtown Westport', 'Independence', 'Grandview'] },
+    'TN': { name: 'Nashville Area', searchTerms: ['Nashville'] },
+    'NC': { name: 'Charlotte Area', searchTerms: ['Charlotte'] },
+  };
+
   useEffect(() => {
     if (!selectedState) {
       setMarkets([]);
@@ -168,32 +180,60 @@ export function HierarchicalLocationSelector({
         // Search for each city and collect unique markets
         const allMarkets: Market[] = [];
         const seenIds = new Set<string>();
+        const orphanedSubmarkets: any[] = [];
         
         for (const city of citiesToSearch) {
           try {
             const results = await searchMarkets.mutateAsync({ query: city });
             console.log(`[HierarchicalLocationSelector] Search results for "${city}":`, results.map((r: any) => ({ name: r.name, type: r.type, state: r.state, locationName: r.locationName })));
             
-            // Filter to only show markets (not submarkets) in the selected state
-            const stateMarkets = results.filter(
-              (m: any) => {
-                const isMarket = m.type === 'market';
-                const matchesState = m.state?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-                                     m.locationName?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-                                     m.locationName?.includes(selectedState.code);
-                console.log(`[HierarchicalLocationSelector] ${m.name}: type=${m.type}, isMarket=${isMarket}, matchesState=${matchesState}`);
-                return isMarket && matchesState;
-              }
-            );
-            
-            for (const market of stateMarkets) {
-              if (!seenIds.has(market.id)) {
-                seenIds.add(market.id);
-                allMarkets.push(market);
+            // Separate markets and submarkets
+            for (const result of results) {
+              const matchesState = result.state?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
+                                   result.locationName?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
+                                   result.locationName?.includes(selectedState.code);
+              
+              if (!matchesState) continue;
+              
+              if (result.type === 'market') {
+                if (!seenIds.has(result.id)) {
+                  seenIds.add(result.id);
+                  allMarkets.push(result);
+                }
+              } else if (result.type === 'submarket') {
+                // Collect orphaned submarkets for potential virtual market creation
+                orphanedSubmarkets.push(result);
               }
             }
           } catch (e) {
             console.error(`Error searching for ${city}:`, e);
+          }
+        }
+        
+        // Check if we should create a virtual market for orphaned submarkets
+        const virtualMarketConfig = VIRTUAL_MARKETS[selectedState.code];
+        if (virtualMarketConfig && orphanedSubmarkets.length > 0) {
+          // Check if we already have a market covering these submarkets
+          const virtualMarketName = virtualMarketConfig.name;
+          const hasExistingMarket = allMarkets.some(m => 
+            m.name.toLowerCase().includes(virtualMarketName.toLowerCase().replace(' area', ''))
+          );
+          
+          if (!hasExistingMarket) {
+            // Create a virtual market that will show these orphaned submarkets
+            const totalListings = orphanedSubmarkets.reduce((sum, s) => sum + (s.listingCount || 0), 0);
+            const virtualMarket: Market = {
+              id: `virtual-${selectedState.code}-${virtualMarketName.replace(/\s+/g, '-').toLowerCase()}`,
+              name: virtualMarketName,
+              type: 'market',
+              listingCount: totalListings,
+              state: selectedState.name,
+              locationName: `${virtualMarketName}, ${selectedState.name}, United States`,
+              isVirtual: true,
+              virtualSubmarkets: orphanedSubmarkets.map(s => s.id)
+            };
+            allMarkets.push(virtualMarket as any);
+            console.log(`[HierarchicalLocationSelector] Created virtual market: ${virtualMarketName} with ${orphanedSubmarkets.length} submarkets`);
           }
         }
         
@@ -221,8 +261,34 @@ export function HierarchicalLocationSelector({
     const fetchSubmarkets = async () => {
       setLoadingSubmarkets(true);
       try {
-        const results = await getSubmarkets.mutateAsync({ marketId: selectedMarket.id });
-        setSubmarkets(results);
+        // Handle virtual markets differently - search for their submarkets
+        if (selectedMarket.isVirtual && selectedMarket.virtualSubmarkets) {
+          // For virtual markets, we already have the submarket IDs from the search
+          // We need to fetch details for each one
+          const virtualMarketName = selectedMarket.name.replace(' Area', '');
+          const searchResults = await searchMarkets.mutateAsync({ query: virtualMarketName });
+          
+          // Filter to only submarkets in the selected state
+          const stateSubmarkets = searchResults.filter(
+            (r: any) => r.type === 'submarket' && 
+              (r.state?.toLowerCase().includes(selectedState?.name.toLowerCase() || '') ||
+               r.locationName?.toLowerCase().includes(selectedState?.name.toLowerCase() || ''))
+          ).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            listingCount: s.listingCount || 0,
+            revenue: s.revenue,
+            occupancy: s.occupancy
+          }));
+          
+          // Sort by listing count
+          stateSubmarkets.sort((a: Submarket, b: Submarket) => b.listingCount - a.listingCount);
+          setSubmarkets(stateSubmarkets);
+        } else {
+          // Regular market - fetch from API
+          const results = await getSubmarkets.mutateAsync({ marketId: selectedMarket.id });
+          setSubmarkets(results);
+        }
       } catch (error) {
         console.error('Error fetching submarkets:', error);
         setSubmarkets([]);
@@ -232,7 +298,7 @@ export function HierarchicalLocationSelector({
     };
     
     fetchSubmarkets();
-  }, [selectedMarket]);
+  }, [selectedMarket, selectedState]);
   
   // Fetch zip codes when submarket is selected
   useEffect(() => {

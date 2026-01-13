@@ -1464,41 +1464,91 @@ export default function LeadMagnet() {
                 </div>
               </div>
             )}
-            {!isResearching && researchResult.seasonality && researchResult.seasonality.length > 0 && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Occupancy by Month</p>
-                    <div className="space-y-2">
-                      {researchResult.seasonality.map((month, idx) => (
-                        <div key={idx} className="flex items-center gap-3">
-                          <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
-                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden">
-                            <div 
-                              className="bg-gradient-to-r from-emerald-400 to-teal-400 h-full transition-all"
-                              style={{width: `${month.occupancy}%`}}
-                            />
-                          </div>
-                          <span className="text-xs font-semibold text-[oklch(0.25_0_0)] w-10 text-right">{Math.round(month.occupancy)}%</span>
+            {!isResearching && researchResult.seasonality && researchResult.seasonality.length > 0 && (() => {
+              // Calculate averages for the guide lines
+              const avgOccupancy = researchResult.seasonality.reduce((sum, m) => sum + m.occupancy, 0) / researchResult.seasonality.length;
+              const avgAdr = researchResult.seasonality.reduce((sum, m) => sum + m.adr, 0) / researchResult.seasonality.length;
+              const maxAdr = Math.max(...researchResult.seasonality.map(m => m.adr));
+              const minAdr = Math.min(...researchResult.seasonality.map(m => m.adr));
+              const adrRange = maxAdr - minAdr || 1;
+              
+              return (
+                <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                  <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Occupancy Chart */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-[oklch(0.50_0_0)]">Occupancy by Month</p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-0.5 bg-amber-500"></div>
+                          <span className="text-xs text-amber-600 font-medium">Avg: {Math.round(avgOccupancy)}%</span>
                         </div>
-                      ))}
+                      </div>
+                      <div className="space-y-2">
+                        {researchResult.seasonality.map((month, idx) => {
+                          const isAboveAvg = month.occupancy >= avgOccupancy;
+                          return (
+                            <div key={idx} className="flex items-center gap-3">
+                              <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
+                              <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden relative">
+                                {/* Average line indicator */}
+                                <div 
+                                  className="absolute top-0 bottom-0 w-0.5 bg-amber-500 z-10"
+                                  style={{left: `${avgOccupancy}%`}}
+                                />
+                                <div 
+                                  className={`h-full transition-all ${isAboveAvg ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gradient-to-r from-amber-300 to-amber-400'}`}
+                                  style={{width: `${month.occupancy}%`}}
+                                />
+                              </div>
+                              <span className={`text-xs font-semibold w-10 text-right ${isAboveAvg ? 'text-emerald-600' : 'text-amber-600'}`}>{Math.round(month.occupancy)}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-[oklch(0.50_0_0)] mt-3 italic">Green = above average, Amber = below average</p>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Average Daily Rate by Month</p>
-                    <div className="space-y-2">
-                      {researchResult.seasonality.map((month, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-xs text-[oklch(0.50_0_0)]">{formatMonth(month.month)}</span>
-                          <span className="text-xs font-semibold text-emerald-500">{formatCurrency(month.adr)}</span>
+                    {/* ADR Chart */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-[oklch(0.50_0_0)]">Average Daily Rate by Month</p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-0.5 bg-blue-500"></div>
+                          <span className="text-xs text-blue-600 font-medium">Avg: {formatCurrency(avgAdr)}</span>
                         </div>
-                      ))}
+                      </div>
+                      <div className="space-y-2">
+                        {researchResult.seasonality.map((month, idx) => {
+                          // Calculate bar width as percentage of range (min 20%, max 100%)
+                          const barWidth = 20 + ((month.adr - minAdr) / adrRange) * 80;
+                          const isAboveAvg = month.adr >= avgAdr;
+                          const avgPosition = 20 + ((avgAdr - minAdr) / adrRange) * 80;
+                          return (
+                            <div key={idx} className="flex items-center gap-3">
+                              <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
+                              <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden relative">
+                                {/* Average line indicator */}
+                                <div 
+                                  className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10"
+                                  style={{left: `${avgPosition}%`}}
+                                />
+                                <div 
+                                  className={`h-full transition-all ${isAboveAvg ? 'bg-gradient-to-r from-blue-400 to-cyan-400' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}
+                                  style={{width: `${barWidth}%`}}
+                                />
+                              </div>
+                              <span className={`text-xs font-semibold w-14 text-right ${isAboveAvg ? 'text-blue-600' : 'text-slate-500'}`}>{formatCurrency(month.adr)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-[oklch(0.50_0_0)] mt-3 italic">Blue = above average, Gray = below average</p>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {/* Next Step CTA */}
             <div className="text-center">
               <p className="text-[oklch(0.50_0_0)] mb-4">Ready to find specific opportunities in this market?</p>

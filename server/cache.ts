@@ -30,36 +30,37 @@ class APICache {
   };
   
   // Default TTLs for different types of data (in milliseconds)
-  private readonly DEFAULT_TTL = 30 * 60 * 1000; // 30 minutes
+  // AirDNA updates data monthly, so 7 days is safe and reduces API calls
+  private readonly DEFAULT_TTL = 24 * 60 * 60 * 1000; // 1 day default
   private readonly TTL_CONFIG: Record<string, number> = {
-    // Market data - changes slowly (AirDNA updates monthly)
-    'market_details': 24 * 60 * 60 * 1000, // 24 hours
-    'market_historical': 24 * 60 * 60 * 1000, // 24 hours
-    'market_seasonality': 24 * 60 * 60 * 1000, // 24 hours
-    'market_listings': 24 * 60 * 60 * 1000, // 24 hours
-    'submarket_details': 24 * 60 * 60 * 1000, // 24 hours
-    'submarkets_in_market': 24 * 60 * 60 * 1000, // 24 hours
-    'submarket_seasonality': 24 * 60 * 60 * 1000, // 24 hours
-    'submarket_comprehensive': 24 * 60 * 60 * 1000, // 24 hours
-    'market_comprehensive': 24 * 60 * 60 * 1000, // 24 hours
+    // Market data - changes slowly (AirDNA updates monthly) - 7 days
+    'market_details': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'market_historical': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'market_seasonality': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'market_listings': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'submarket_details': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'submarkets_in_market': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'submarket_seasonality': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'submarket_comprehensive': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'market_comprehensive': 7 * 24 * 60 * 60 * 1000, // 7 days
     
-    // Property data - more dynamic
-    'rentalizer': 15 * 60 * 1000, // 15 minutes
-    'listing_comps': 15 * 60 * 1000, // 15 minutes
-    'listing_pricing': 15 * 60 * 1000, // 15 minutes
-    'property_details': 15 * 60 * 1000, // 15 minutes
+    // Property data - more dynamic (24 hours)
+    'rentalizer': 24 * 60 * 60 * 1000, // 24 hours
+    'listing_comps': 24 * 60 * 60 * 1000, // 24 hours
+    'listing_pricing': 24 * 60 * 60 * 1000, // 24 hours
+    'property_details': 24 * 60 * 60 * 1000, // 24 hours
     
-    // Search results - moderate
-    'search_markets': 30 * 60 * 1000, // 30 minutes
-    'search_zipcode': 30 * 60 * 1000, // 30 minutes
+    // Search results - 7 days (markets don't change often)
+    'search_markets': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'search_zipcode': 7 * 24 * 60 * 60 * 1000, // 7 days
     
-    // Analysis results - cache longer since they're expensive
-    'full_analysis': 60 * 60 * 1000, // 1 hour
+    // Analysis results - cache for 7 days since they're expensive
+    'full_analysis': 7 * 24 * 60 * 60 * 1000, // 7 days
     
-    // AI analysis results - cache for 24 hours since they're expensive to generate
-    'ai_analysis': 24 * 60 * 60 * 1000, // 24 hours
-    'ai_narrative': 24 * 60 * 60 * 1000, // 24 hours
-    'ai_structured': 24 * 60 * 60 * 1000, // 24 hours
+    // AI analysis results - cache for 7 days since they're expensive to generate
+    'ai_analysis': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'ai_narrative': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'ai_structured': 7 * 24 * 60 * 60 * 1000, // 7 days
   };
   
   /**

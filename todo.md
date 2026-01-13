@@ -669,3 +669,19 @@ From AirDNA Rentalizer endpoint:
 ### Neighborhood Listing Count (Jan 13, 2026)
 - [x] Fetch listing count for neighborhoods via submarket listings API (total_count from page_info)
 - [x] Display listing count in neighborhood dropdown
+
+
+## Bug Fixes & Features (Jan 13, 2026)
+### ADR Chart Data Issue
+- [x] Fix ADR chart data not loading - Was loading, added visual bar chart
+- [x] Investigate why ADR data is missing - Data was there, just needed visual display
+### Chart Improvements
+- [x] Add average line/guide to Occupancy chart - Shows "Avg: 68%" with dashed line
+- [x] Add average line/guide to ADR chart - Shows "Avg: $147" with dashed line
+- [x] Make charts easier to understand with visual guides - Both charts now have avg indicators
+### Virtual Markets for Orphaned Submarkets
+- [x] Implement virtual "Kansas City Area" market for orphaned MO submarkets
+- [x] Test across various states to find other orphaned submarkets - Config added for TN, NC
+- [x] Group orphaned submarkets under virtual markets - Kansas City Area shows 7 neighborhoods
+### Cache Extension
+- [x] Extend cache TTL from 24 hours to 7 days (604800000ms)
