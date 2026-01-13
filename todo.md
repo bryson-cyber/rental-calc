@@ -889,3 +889,11 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Fix input-apple CSS class for proper text alignment
 - [x] Ensure placeholder text is vertically centered
 - [x] Test on Steps 2, 3, and 4
+
+
+## Improve Help Sections for Steps 2 and 3 (Jan 13, 2026)
+
+- [x] Update Step 2 "How This Tool Helps You" to be clearer about exploring market listings
+- [x] Update Step 3 "How This Tool Helps You" to be clearer about validating a specific deal
+- [x] Make clear distinction between the two tools' purposes
+- [x] Update placeholder text to be more specific to each tool

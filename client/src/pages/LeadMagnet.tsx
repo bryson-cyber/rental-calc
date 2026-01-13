@@ -943,14 +943,14 @@ export default function LeadMagnet() {
             {activeTab === 'find' && (
               <div className="space-y-8">
                 <HelpSection
-                  title="How This Tool Helps You"
-                  description="Discover all the profitable Airbnb properties in any area to find where the opportunities are"
+                  title="What You'll Discover"
+                  description="See every successful Airbnb in your target area. Perfect for finding which neighborhoods and property types perform best before you start looking at specific deals."
                   steps={[
-                    'Enter any city or neighborhood',
-                    'Set your search radius',
-                    'Filter by bedrooms if needed',
-                    'Click "Find Opportunities"',
-                    'See all properties ranked by revenue'
+                    'Enter a city or neighborhood you want to explore',
+                    'Adjust the search radius (1-10 km)',
+                    'Filter by bedroom count if you have a preference',
+                    'Click "Find Opportunities" to search',
+                    'Browse all active listings ranked by annual revenue'
                   ]}
                   isOpen={showHelp === 'find'}
                   onToggle={() => setShowHelp(showHelp === 'find' ? null : 'find')}
@@ -958,12 +958,12 @@ export default function LeadMagnet() {
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Address or City
+                    Location to Explore
                   </label>
                   <AddressAutocomplete
                     value={exploreAddress}
                     onChange={setExploreAddress}
-                    placeholder="Enter address..."
+                    placeholder="Enter a city or neighborhood..."
                     className="input-apple h-12"
                   />
                 </div>
@@ -1046,14 +1046,14 @@ export default function LeadMagnet() {
             {activeTab === 'validate' && (
               <div className="space-y-8">
                 <HelpSection
-                  title="How This Tool Helps You"
-                  description="Check if a specific property will actually make you money by comparing it to nearby successful Airbnbs"
+                  title="Run the Numbers on Your Deal"
+                  description="Found a property you like? Enter the exact address and rent amount to see projected revenue, profit margins, and how it compares to similar properties nearby."
                   steps={[
-                    'Enter the property address you\'re considering',
-                    'Enter the monthly rent you\'d pay',
-                    'Select bedrooms and bathrooms',
-                    'Click "Validate This Deal"',
-                    'See if the numbers work for you'
+                    'Enter the exact property address you found',
+                    'Enter the monthly rent the landlord is asking',
+                    'Select the bedroom and bathroom count',
+                    'Click "Validate This Deal" to analyze',
+                    'Review projected revenue, profit, and market comparison'
                   ]}
                   isOpen={showHelp === 'validate'}
                   onToggle={() => setShowHelp(showHelp === 'validate' ? null : 'validate')}
@@ -1061,12 +1061,12 @@ export default function LeadMagnet() {
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Address
+                    Property Address
                   </label>
                   <AddressAutocomplete
                     value={address}
                     onChange={setAddress}
-                    placeholder="Enter address..."
+                    placeholder="Enter the property address..."
                     className="input-apple h-12"
                   />
                 </div>
