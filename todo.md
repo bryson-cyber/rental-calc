@@ -770,3 +770,7 @@ From AirDNA Rentalizer endpoint:
 - [x] Update Turnkey Program link to https://masterclass.coachinayah.com/the-turnkey-program
 - [x] Fix button text from "Learn About Turnkey Program" to "Learn About the Turnkey Program"
 - [x] Fix Step 3 validation timeout issue (added 45s timeout with user-friendly error message)
+
+
+## Bug Fixes - Stress Test Session (Jan 13, 2026)
+- [x] BUG: Step 2 listings - improved fallback placeholder when images fail to load (gold gradient with ranking number)

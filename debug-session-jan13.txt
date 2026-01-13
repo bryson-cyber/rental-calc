@@ -1,0 +1,104 @@
+Debug Session - January 13, 2026
+
+Current UI State:
+- Step 1 (See Real Revenue) visible with market selector
+- State dropdown, City/Metro dropdown, Neighborhood dropdown, Zip Code dropdown all visible
+- Search buttons visible next to City/Metro, Neighborhood, and Zip Code dropdowns
+- "How This Tool Helps You" accordion visible
+
+Observations:
+1. The UI looks correct - all 4 dropdowns are showing
+2. Search buttons are visible (gold/yellow color)
+3. Need to test the actual functionality
+
+Next test: Click on State dropdown and select a state to test the flow
+
+
+BUG FOUND #1: Neighborhoods stuck on "Loading..."
+- Selected Arizona > Phoenix/Scottsdale
+- Neighborhood dropdown shows "Loading..." indefinitely
+- This is a potential API issue or frontend bug
+
+Next: Check server logs for errors
+
+
+UPDATE: Neighborhoods are loading correctly for Denver!
+- Neighborhoods show with revenue and listing counts
+- Arvada: $54k/yr, 927 listings
+- Aurora: $30k/yr, 1,067 listings
+- Baker: $39k/yr, 13 listings
+- etc.
+
+The neighborhoods ARE sorted alphabetically (Arvada, Aurora, Baker, Bear Valley, Berkeley, Brighton...)
+
+BUG OBSERVATION: The neighborhoods dropdown initially showed "Loading..." for a long time.
+This may be an API latency issue, not a bug.
+
+NEXT: Check if neighborhoods are sorted alphabetically (they appear to be)
+
+
+BUG FOUND #2: Zip codes stuck on "Loading..." indefinitely
+- Selected Colorado > Denver > Arvada
+- Zip Code dropdown shows "Loading..." and never completes
+- This is likely an API issue with the getZipcodesInSubmarket endpoint
+
+PRIORITY: HIGH - This blocks users from selecting zip codes
+
+NEXT: Check the server-side getZipcodesInSubmarket function
+
+
+UPDATE: Zip codes ARE loading correctly now!
+- After page refresh, zip codes for Arvada show:
+  - 80002: 40 listings
+  - 80003: 79 listings
+  - 80004: 66 listings
+  - 80005: 15 listings
+
+The previous "Loading..." issue was likely a temporary API delay, not a bug.
+
+STEP 1 STATUS: WORKING CORRECTLY
+- State selection: OK
+- City/Metro selection: OK
+- Neighborhood selection: OK (alphabetically sorted)
+- Zip code selection: OK (with listing counts)
+- Reset All button: OK
+- Search buttons at each level: OK
+
+NEXT: Test Step 2 (Explore Listings)
+
+
+STEP 2 (Explore Listings) TEST RESULTS:
+- Tested with TX-130, Austin, TX, USA
+- Found 30 opportunities in the market
+- Listings display with revenue, daily rate, occupancy, and RevPAR
+- Top listing: "Relaxing*King Bed*FirePit*Minutes to Tesla*Airport" - $36,504/yr, 69% occupancy
+- Filter options work: Sort By, Property Type, Min Rating, Min Occupancy
+- List View and Map View options available
+- "View on Airbnb" links present
+
+STATUS: WORKING CORRECTLY
+
+NEXT: Test Step 3 (Validate the Deal)
+
+
+BUG FOUND - Step 2 Listings:
+All property listings show "No image available" placeholder instead of actual Airbnb property images. This is a significant UI issue that makes the tool less useful and less visually appealing. The images should be fetched from AirDNA API or Airbnb.
+
+NEXT: Continue to Step 3 to test Validate the Deal
+
+
+## Image Bug Analysis (Jan 13, 2026)
+
+**Observation:** The property card for "Rustic New Bunkhouse on Wicked Snakes Winery" shows a gray placeholder instead of an actual image.
+
+**Root Cause Analysis:**
+The Airbnb CDN URL pattern `https://a0.muscache.com/im/pictures/miso/Hosting-{id}/original/listing-photo.jpg` doesn't work for all listings. The CDN requires:
+1. The listing to have a specific image format
+2. The image to be publicly accessible without authentication
+
+**Possible Solutions:**
+1. Use a fallback placeholder image when the CDN URL fails to load
+2. Add error handling in the frontend to detect broken images and show a placeholder
+3. Use the Airbnb scraper to fetch actual images (slower but more reliable)
+
+**Next Step:** Add frontend error handling to show a nice placeholder when images fail to load.

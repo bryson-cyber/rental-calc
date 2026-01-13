@@ -58,8 +58,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     if (meters < 1000) return `${Math.round(meters)}m away`;
     return `${(meters / 1000).toFixed(1)}km away`;
   };
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.display = 'none';
+  const [imageError, setImageError] = React.useState(false);
+  
+  const handleImageError = () => {
+    setImageError(true);
   };
 
   return (
@@ -71,7 +73,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     >
       {/* Image Container */}
       <div className="relative w-full h-48 bg-[oklch(0.92_0_0)] overflow-hidden">
-        {imageUrl ? (
+        {imageUrl && !imageError ? (
           <img
             src={imageUrl}
             alt={title}
@@ -79,12 +81,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             onError={handleImageError}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[oklch(0.92_0_0)] to-[oklch(0.88_0_0)]">
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[oklch(0.75_0.08_70)] to-[oklch(0.85_0.05_70)]">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-[oklch(0.85_0_0)] flex items-center justify-center mx-auto mb-2">
-                <span className="text-[oklch(0.50_0_0)] font-bold text-lg">#{index + 1}</span>
+              <div className="w-16 h-16 rounded-full bg-white/80 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                <span className="text-[oklch(0.55_0.12_70)] font-bold text-xl">#{index + 1}</span>
               </div>
-              <p className="text-xs text-[oklch(0.50_0_0)]">No image available</p>
+              <p className="text-xs text-white/90 font-medium">View on Airbnb</p>
             </div>
           </div>
         )}

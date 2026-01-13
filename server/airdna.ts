@@ -5080,7 +5080,15 @@ export async function getListingsByArea(
       occupancy: listing.occupancy_rate_ltm || 0,
       distance_meters: listing.distance || 0,
       airbnb_url: listing.airbnb_property_url || (listing.airbnb_property_id ? `https://www.airbnb.com/rooms/${listing.airbnb_property_id}` : undefined),
-      image_url: undefined, // API doesn't return images in this endpoint
+      // Construct image URL from Airbnb listing ID using their CDN pattern
+      image_url: (() => {
+        const airbnbId = listing.airbnb_property_id || (listing.airbnb_property_url?.match(/rooms\/(\d+)/)?.[1]);
+        if (airbnbId) {
+          // Use Airbnb's public image CDN - this works for most listings
+          return `https://a0.muscache.com/im/pictures/miso/Hosting-${airbnbId}/original/listing-photo.jpg`;
+        }
+        return undefined;
+      })(),
       amenities: undefined,
       superhost: listing.superhost,
       latitude: listing.location?.lat,
