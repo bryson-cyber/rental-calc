@@ -255,7 +255,7 @@ export function AddressAutocomplete({
   return (
     <div ref={containerRef} className={cn("relative w-full", className)}>
       <div className="relative w-full">
-        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           ref={inputRef}
           type="text"
@@ -270,18 +270,18 @@ export function AddressAutocomplete({
           placeholder={placeholder}
           disabled={disabled || !isInitialized}
           className={cn(
-            "w-full pl-12 pr-10 py-4 text-lg border border-border rounded-lg",
+            "w-full pl-10 pr-8 py-3 text-base border border-border rounded-lg",
             "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
             "transition-all duration-200",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "bg-white",
-            "truncate",
+            "overflow-hidden",
             inputClassName
           )}
           autoComplete="off"
         />
         {isLoading && (
-          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
         )}
       </div>
 

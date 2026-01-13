@@ -866,3 +866,10 @@ The fix involved:
 4. Adding `bg-white` to input for better contrast
 
 Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
+
+
+## UI Simplification: Address Field (Jan 13, 2026)
+
+- [x] Simplify AddressAutocomplete component to prevent text overflow
+- [x] Remove complex styling from address input
+- [x] Test simplified address field on all steps
