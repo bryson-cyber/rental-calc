@@ -622,3 +622,50 @@ From AirDNA Rentalizer endpoint:
 - [x] Implement caching for getSubmarketSeasonality
 - [x] Test caching with Hollywood submarket (multiple requests)
 - [x] Verify cache improves performance for repeated queries
+
+
+## Bug Fixes & API Audit - Jan 13, 2026
+
+### AirDNA Endpoint Audit
+- [x] Audit all AirDNA endpoint calls in server/airdna.ts
+- [x] Verify market endpoints are using correct paths
+- [x] Verify submarket endpoints are using correct paths
+- [x] Check for any other incorrect endpoint usage
+- [x] Document correct endpoint patterns
+
+### Missouri Market Selector Issue
+- [x] Investigate why Missouri only shows 2 cities - AirDNA only has 3 market-level entries for MO
+- [x] Check API response for Missouri state - Returns Missouri Area, St. Louis, Springfield
+- [x] Verify if this is an API limitation or our code issue - API limitation, not our code
+- [x] Fix to show all available Missouri markets - Now shows all 3 available markets
+
+### Neighborhood Display Issues
+- [x] Fix neighborhood showing "0" next to name (now uses listing_count from API)
+- [x] Fix incorrect zip codes for neighborhoods (increased sampling to 200 listings)
+- [x] Investigate what the "0" represents in neighborhood display (was hardcoded to 0)
+- [x] Fix zip code display logic (now samples 200 listings instead of 25)
+- [ ] Test with multiple neighborhoods to verify fix
+
+### Cache TTL Extension
+- [x] Extend market data cache from 1 hour to 24 hours (AirDNA updates monthly)
+- [x] Extend submarket data cache from 1 hour to 24 hours
+- [x] Extend seasonality cache from 30 minutes to 24 hours
+- [x] Update cache documentation with new TTL values
+
+### Testing
+- [ ] Test Missouri market selector with fix
+- [ ] Test neighborhood display with multiple markets
+- [ ] Test zip code display accuracy
+- [ ] Verify all endpoint calls are correct
+- [ ] Save checkpoint after all fixes verified
+
+
+### Rentalizer Endpoint Audit (Jan 13, 2026)
+- [x] Audit all Rentalizer endpoint calls in server/airdna.ts
+- [x] Verify /rentalizer/estimate endpoint usage - CORRECT
+- [x] Verify /rentalizer/comps endpoint usage - CORRECT
+- [x] Verify /rentalizer/bulk_summary endpoint usage - CORRECT
+
+### Neighborhood Listing Count (Jan 13, 2026)
+- [x] Fetch listing count for neighborhoods via submarket listings API (total_count from page_info)
+- [x] Display listing count in neighborhood dropdown

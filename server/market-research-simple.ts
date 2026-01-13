@@ -659,10 +659,36 @@ export const marketResearchSimpleRouter = router({
           (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0)
         );
         
-        return allSubmarkets.map((s: any) => ({
+        // Fetch listing counts for each submarket in parallel (limit to top 50 to avoid too many API calls)
+        const topSubmarkets = allSubmarkets.slice(0, 50);
+        const listingCounts = await Promise.all(
+          topSubmarkets.map(async (s: any) => {
+            try {
+              const listingsResponse = await fetch(
+                `https://api.airdna.co/api/enterprise/v2/submarket/${s.id}/listings`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    pagination: { page_size: 1, offset: 0 }
+                  })
+                }
+              );
+              const listingsData = await listingsResponse.json();
+              return listingsData.payload?.page_info?.total_count || 0;
+            } catch {
+              return 0;
+            }
+          })
+        );
+        
+        return topSubmarkets.map((s: any, index: number) => ({
           id: s.id,
           name: s.name,
-          listingCount: 0, // Not provided in this endpoint
+          listingCount: listingCounts[index],
           revenue: s.metrics?.revenue ? Math.round(s.metrics.revenue) : undefined,
           occupancy: s.metrics?.booked ? Math.round(s.metrics.booked * 100) : undefined
         }));
@@ -714,9 +740,10 @@ export const marketResearchSimpleRouter = router({
           if (zip) zipcodes.add(zip);
         });
         
-        // Fetch more pages if we need more zip codes
-        if (totalCount > 25 && zipcodes.size < 10) {
-          for (let offset = 25; offset < Math.min(totalCount, 100); offset += 25) {
+        // Fetch more pages to get comprehensive zip code coverage
+        // Sample up to 200 listings to get accurate zip code representation
+        if (totalCount > 25) {
+          for (let offset = 25; offset < Math.min(totalCount, 200); offset += 25) {
             const moreResponse = await fetch(
               `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
               {

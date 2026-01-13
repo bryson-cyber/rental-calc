@@ -32,13 +32,16 @@ class APICache {
   // Default TTLs for different types of data (in milliseconds)
   private readonly DEFAULT_TTL = 30 * 60 * 1000; // 30 minutes
   private readonly TTL_CONFIG: Record<string, number> = {
-    // Market data - changes slowly
-    'market_details': 60 * 60 * 1000, // 1 hour
-    'market_historical': 60 * 60 * 1000, // 1 hour
-    'market_seasonality': 60 * 60 * 1000, // 1 hour
-    'market_listings': 30 * 60 * 1000, // 30 minutes
-    'submarket_details': 60 * 60 * 1000, // 1 hour
-    'submarkets_in_market': 60 * 60 * 1000, // 1 hour
+    // Market data - changes slowly (AirDNA updates monthly)
+    'market_details': 24 * 60 * 60 * 1000, // 24 hours
+    'market_historical': 24 * 60 * 60 * 1000, // 24 hours
+    'market_seasonality': 24 * 60 * 60 * 1000, // 24 hours
+    'market_listings': 24 * 60 * 60 * 1000, // 24 hours
+    'submarket_details': 24 * 60 * 60 * 1000, // 24 hours
+    'submarkets_in_market': 24 * 60 * 60 * 1000, // 24 hours
+    'submarket_seasonality': 24 * 60 * 60 * 1000, // 24 hours
+    'submarket_comprehensive': 24 * 60 * 60 * 1000, // 24 hours
+    'market_comprehensive': 24 * 60 * 60 * 1000, // 24 hours
     
     // Property data - more dynamic
     'rentalizer': 15 * 60 * 1000, // 15 minutes

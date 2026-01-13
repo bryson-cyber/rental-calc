@@ -138,7 +138,7 @@ export function HierarchicalLocationSelector({
     'LA': ['New Orleans', 'Baton Rouge', 'Lafayette'],
     'MA': ['Boston', 'Cambridge', 'Cape Cod', 'Martha\'s Vineyard'],
     'MI': ['Detroit', 'Grand Rapids', 'Ann Arbor', 'Traverse City'],
-    'MO': ['St. Louis', 'Kansas City', 'Branson', 'Springfield'],
+    'MO': ['St. Louis', 'Springfield', 'Missouri'], // Only St. Louis and Springfield have market-level entries; 'Missouri' gets the Missouri Area market
     'NC': ['Charlotte', 'Raleigh', 'Asheville', 'Wilmington', 'Durham'],
     'NV': ['Las Vegas', 'Reno', 'Lake Tahoe'],
     'NY': ['New York', 'Buffalo', 'Albany', 'Rochester', 'Long Island', 'Hamptons'],
@@ -172,12 +172,18 @@ export function HierarchicalLocationSelector({
         for (const city of citiesToSearch) {
           try {
             const results = await searchMarkets.mutateAsync({ query: city });
+            console.log(`[HierarchicalLocationSelector] Search results for "${city}":`, results.map((r: any) => ({ name: r.name, type: r.type, state: r.state, locationName: r.locationName })));
+            
             // Filter to only show markets (not submarkets) in the selected state
             const stateMarkets = results.filter(
-              (m: any) => m.type === 'market' && 
-              (m.state?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-               m.locationName?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-               m.locationName?.includes(selectedState.code))
+              (m: any) => {
+                const isMarket = m.type === 'market';
+                const matchesState = m.state?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
+                                     m.locationName?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
+                                     m.locationName?.includes(selectedState.code);
+                console.log(`[HierarchicalLocationSelector] ${m.name}: type=${m.type}, isMarket=${isMarket}, matchesState=${matchesState}`);
+                return isMarket && matchesState;
+              }
             );
             
             for (const market of stateMarkets) {
@@ -527,7 +533,9 @@ export function HierarchicalLocationSelector({
                       {submarket.revenue && (
                         <span className="text-emerald-600">${Math.round(submarket.revenue / 1000)}k/yr</span>
                       )}
-                      <span>{submarket.listingCount.toLocaleString()}</span>
+                      {submarket.listingCount > 0 && (
+                        <span>{submarket.listingCount.toLocaleString()} listings</span>
+                      )}
                     </div>
                   </div>
                 </button>
