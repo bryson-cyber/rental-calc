@@ -839,3 +839,30 @@ From AirDNA Rentalizer endpoint:
 - [ ] Test Step 3 form on mobile
 - [ ] Test Step 4 form on mobile
 - [ ] Fix any mobile layout issues
+
+
+## Bug Fix: Autocomplete Dropdown Overflow (Jan 13, 2026)
+
+- [ ] Fix autocomplete dropdown overflow on Step 2 (Explore Listings)
+- [ ] Fix autocomplete dropdown overflow on Step 3 (Validate the Deal)
+- [ ] Fix autocomplete dropdown overflow on Step 4 (Find the Best Deal)
+- [ ] Verify dropdown stays within input box bounds on all steps
+- [ ] Test on desktop and mobile
+
+
+## Test Results - Autocomplete Dropdown Fix (Jan 13, 2026)
+
+✅ **FIXED**: The autocomplete dropdown now stays within the input box bounds on Step 2. The dropdown is properly positioned below the input with:
+- Correct z-index (z-50)
+- Proper positioning (top-full, left-0)
+- Max height constraint (max-h-64)
+- Overflow scrolling (overflow-y-auto)
+- No longer extends outside the form container
+
+The fix involved:
+1. Adding `w-full` to the container and inner div
+2. Changing dropdown positioning to `absolute z-50 w-full mt-1 top-full left-0`
+3. Adding `max-h-64 overflow-y-auto` for scrollable dropdown
+4. Adding `bg-white` to input for better contrast
+
+Next: Test on Step 3 and Step 4 to verify the fix works across all steps.

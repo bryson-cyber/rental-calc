@@ -253,8 +253,8 @@ export function AddressAutocomplete({
   }, []);
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      <div className="relative">
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <div className="relative w-full">
         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <input
           ref={inputRef}
@@ -274,6 +274,7 @@ export function AddressAutocomplete({
             "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
             "transition-all duration-200",
             "disabled:opacity-50 disabled:cursor-not-allowed",
+            "bg-white",
             inputClassName
           )}
           autoComplete="off"
@@ -285,7 +286,7 @@ export function AddressAutocomplete({
 
       {/* Predictions Dropdown */}
       {isOpen && predictions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-[#1a2744] border border-white/20 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-[#1a2744] border border-white/20 rounded-lg shadow-lg overflow-y-auto max-h-64 top-full left-0">
           {predictions.map((prediction, index) => (
             <button
               key={prediction.placeId}
