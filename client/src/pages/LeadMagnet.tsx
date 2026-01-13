@@ -968,7 +968,8 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Search Filters - 2 rows for better spacing */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Search Radius
@@ -976,7 +977,7 @@ export default function LeadMagnet() {
                     <select
                       value={exploreRadius}
                       onChange={(e) => setExploreRadius(parseInt(e.target.value))}
-                      className="input-apple h-14"
+                      className="input-apple h-14 text-base"
                     >
                       <option value={1000}>1 km (~0.6 mi)</option>
                       <option value={3000}>3 km (~2 mi)</option>
@@ -992,29 +993,31 @@ export default function LeadMagnet() {
                     <select
                       value={exploreBedroomFilter ?? ''}
                       onChange={(e) => setExploreBedroomFilter(e.target.value ? parseInt(e.target.value) : null)}
-                      className="input-apple h-14"
+                      className="input-apple h-14 text-base"
                     >
                       <option value="">Any</option>
-                      <option value="1">1 BR</option>
-                      <option value="2">2 BR</option>
-                      <option value="3">3 BR</option>
-                      <option value="4">4 BR</option>
+                      <option value="1">1 Bedroom</option>
+                      <option value="2">2 Bedrooms</option>
+                      <option value="3">3 Bedrooms</option>
+                      <option value="4">4+ Bedrooms</option>
                     </select>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
-                      Sort By
-                    </label>
-                    <select
-                      value={exploreSortBy}
-                      onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
-                      className="input-apple h-14"
-                    >
-                      <option value="revenue">Most Money</option>
-                      <option value="proximity">Closest</option>
-                    </select>
-                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
+                    Sort By
+                  </label>
+                  <select
+                    value={exploreSortBy}
+                    onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
+                    className="input-apple h-14 text-base"
+                  >
+                    <option value="revenue">Highest Revenue</option>
+                    <option value="proximity">Closest to Address</option>
+                    <option value="occupancy">Highest Occupancy</option>
+                    <option value="rating">Best Rated</option>
+                  </select>
                 </div>
                 
                 <button
@@ -1068,23 +1071,25 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
-                      Monthly Rent
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[oklch(0.50_0.02_265)]" />
-                      <Input
-                        type="number"
-                        value={monthlyRent}
-                        onChange={(e) => setMonthlyRent(e.target.value)}
-                        placeholder="2,000"
-                        className="input-apple h-14 pl-12"
-                      />
-                    </div>
+                {/* Monthly Rent - Full Width */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
+                    Monthly Rent
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[oklch(0.50_0.02_265)]" />
+                    <Input
+                      type="number"
+                      value={monthlyRent}
+                      onChange={(e) => setMonthlyRent(e.target.value)}
+                      placeholder="2,000"
+                      className="input-apple h-14 pl-12 text-base"
+                    />
                   </div>
-                  
+                </div>
+                
+                {/* Bedrooms & Bathrooms - Side by Side */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">
                       Bedrooms
@@ -1092,7 +1097,7 @@ export default function LeadMagnet() {
                     <select
                       value={bedrooms}
                       onChange={(e) => setBedrooms(e.target.value)}
-                      className="input-apple h-14"
+                      className="input-apple h-14 text-base"
                     >
                       {[1, 2, 3, 4, 5, 6].map(num => (
                         <option key={num} value={num}>{num} Bedroom{num > 1 ? 's' : ''}</option>
@@ -1107,7 +1112,7 @@ export default function LeadMagnet() {
                     <select
                       value={bathrooms}
                       onChange={(e) => setBathrooms(e.target.value)}
-                      className="input-apple h-14"
+                      className="input-apple h-14 text-base"
                     >
                       {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
                         <option key={num} value={num}>{num} Bathroom{num > 1 ? 's' : ''}</option>
@@ -1163,60 +1168,76 @@ export default function LeadMagnet() {
                   <span className="text-sm text-[oklch(0.50_0.02_265)]">{bulkProperties.length}/25 properties</span>
                 </div>
                 
-                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                   {bulkProperties.map((prop, index) => (
-                    <div key={prop.id} className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-5">
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="w-7 h-7 rounded-lg bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)] text-xs font-bold flex items-center justify-center">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm text-[oklch(0.55_0.02_265)]">Property {index + 1}</span>
+                    <div key={prop.id} className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 shadow-sm">
+                      {/* Property Header */}
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-lg bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)] text-sm font-bold flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <span className="font-medium text-[oklch(0.25_0.02_265)]">Property {index + 1}</span>
+                        </div>
                         {bulkProperties.length > 1 && (
                           <button
                             onClick={() => removeBulkProperty(prop.id)}
-                            className="ml-auto text-[oklch(0.50_0.02_265)] hover:text-red-400 transition-colors p-1"
+                            className="text-[oklch(0.50_0.02_265)] hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="md:col-span-2">
-                          <AddressAutocomplete
-                            value={prop.address}
-                            onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
-                            placeholder="Property address..."
-                            className="input-apple h-12 text-sm"
-                          />
-                        </div>
+                      {/* Address - Full Width */}
+                      <div className="space-y-3 mb-5">
+                        <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">Property Address</label>
+                        <AddressAutocomplete
+                          value={prop.address}
+                          onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
+                          placeholder="Enter property address..."
+                          className="input-apple h-14 text-base"
+                        />
+                      </div>
+                      
+                      {/* Monthly Rent - Full Width */}
+                      <div className="space-y-3 mb-5">
+                        <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">Monthly Rent</label>
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(0.50_0.02_265)]" />
+                          <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[oklch(0.50_0.02_265)]" />
                           <Input
                             type="number"
                             value={prop.rent || ''}
                             onChange={(e) => updateBulkProperty(prop.id, 'rent', parseFloat(e.target.value) || 0)}
-                            placeholder="Rent/mo"
-                            className="input-apple h-12 pl-9 text-sm"
+                            placeholder="2,000"
+                            className="input-apple h-14 pl-11 text-base"
                           />
                         </div>
-                        <div className="flex gap-3">
+                      </div>
+                      
+                      {/* Bedrooms & Bathrooms - 2 Column Row */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">Bedrooms</label>
                           <select
                             value={prop.bedrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bedrooms', parseInt(e.target.value))}
-                            className="input-apple flex-1 h-12 text-sm"
+                            className="input-apple w-full h-14 text-base"
                           >
                             {[1, 2, 3, 4, 5, 6].map(num => (
-                              <option key={num} value={num}>{num}BR</option>
+                              <option key={num} value={num}>{num} {num === 1 ? 'Bedroom' : 'Bedrooms'}</option>
                             ))}
                           </select>
+                        </div>
+                        <div className="space-y-3">
+                          <label className="block text-sm font-medium text-[oklch(0.78_0.01_265)]">Bathrooms</label>
                           <select
                             value={prop.bathrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bathrooms', parseFloat(e.target.value))}
-                            className="input-apple flex-1 h-12 text-sm"
+                            className="input-apple w-full h-14 text-base"
                           >
                             {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
-                              <option key={num} value={num}>{num}BA</option>
+                              <option key={num} value={num}>{num} {num === 1 ? 'Bathroom' : 'Bathrooms'}</option>
                             ))}
                           </select>
                         </div>
@@ -1563,8 +1584,10 @@ export default function LeadMagnet() {
             
             {/* Listings */}
             {!showMapView ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {areaListings
+                  // Filter to only show Airbnb listings
+                  .filter(listing => listing.airbnb_url && listing.airbnb_url.includes('airbnb.com'))
                   // Filter by property type
                   .filter(listing => !explorePropertyType || listing.property_type?.toLowerCase().replace(/\s+/g, '_') === explorePropertyType)
                   // Filter by min rating

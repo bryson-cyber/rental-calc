@@ -774,3 +774,68 @@ From AirDNA Rentalizer endpoint:
 
 ## Bug Fixes - Stress Test Session (Jan 13, 2026)
 - [x] BUG: Step 2 listings - improved fallback placeholder when images fail to load (gold gradient with ranking number)
+
+
+## UI & Functionality Testing (Jan 13, 2026)
+
+### AirDNA Image Investigation:
+- [ ] Investigate why property images aren't loading from AirDNA API
+- [ ] Check if AirDNA API provides image URLs in response
+- [ ] Implement proper image loading or improve fallback
+
+### Step 2 (Explore Listings) UI Fixes:
+- [ ] Fix layout issues on desktop
+- [ ] Fix layout issues on mobile
+- [ ] Ensure consistent card sizing and spacing
+
+### Step 3 (Validate the Deal) UI Fixes:
+- [ ] Fix weird layout on desktop
+- [ ] Fix layout on mobile
+- [ ] Test functionality and timeout handling
+
+### Step 4 (Find the Best Deal) UI Fixes:
+- [ ] Test bulk comparison functionality
+- [ ] Fix layout issues on desktop
+- [ ] Fix layout issues on mobile
+
+### General UI Polish:
+- [ ] Ensure all steps look consistent and polished
+- [ ] Test mobile responsiveness across all tools
+
+
+## Step 2 Property Card Redesign (Jan 13, 2026)
+
+- [ ] Filter Step 2 listings to only show Airbnb properties (must have airbnb_url)
+- [ ] Remove gold gradient placeholder from property cards
+- [ ] Redesign cards: left side = "View on Airbnb" link, right side = stats
+- [ ] Add market rank badge if available
+- [ ] Make cards cleaner and more compact
+
+
+## UI & Functionality Testing (Jan 13, 2026)
+
+### AirDNA Image Investigation:
+- [x] Investigate why images don't load from AirDNA API
+- [x] Finding: AirDNA /listing/comps/area endpoint does not return image URLs
+- [x] Solution: Redesigned property cards without images
+
+### Step 2 Property Card Redesign:
+- [x] Filter Step 2 to only show Airbnb listings (with valid Airbnb URLs)
+- [x] Redesign property cards - remove gold gradient placeholder
+- [x] Add "View Listing" button on left side of card
+- [x] Show property stats on right side (revenue, ADR, occupancy, RevPAR)
+- [x] Add market rank badge (#1, #2, etc.)
+- [x] Horizontal card layout with rank, property info, and stats
+
+### Step 3 & Step 4 UI Improvements:
+- [x] Improve Step 3 form layout - stacked fields with better spacing
+- [x] Improve Step 4 form layout - stacked fields with better spacing
+- [x] Change labels from uppercase to sentence case
+- [x] Increase input field heights (h-14) for better usability
+- [x] Change dropdown options to full words (e.g., "2 Bedrooms" instead of "2 BR")
+
+### Mobile Responsiveness:
+- [ ] Test Step 2 property cards on mobile
+- [ ] Test Step 3 form on mobile
+- [ ] Test Step 4 form on mobile
+- [ ] Fix any mobile layout issues
