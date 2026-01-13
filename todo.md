@@ -973,3 +973,31 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Add "Compare Selected in Step 4" button when 2+ properties selected
 - [x] Auto-fill Step 4 comparison form with selected properties
 - [x] Test both features end-to-end
+
+
+## Debug All Tools (Jan 13, 2026)
+
+### Step 1 (See Real Revenue)
+- [ ] Test state/city/neighborhood/zip selection flow
+- [ ] Test search button at each level
+- [ ] Verify results display correctly
+- [ ] Check "What's Working" section shows all bedroom types
+
+### Step 2 (Explore Listings)
+- [ ] Test address autocomplete
+- [ ] Test search with different filters
+- [ ] Verify property cards display correctly
+- [ ] Test "Save Property" functionality
+- [ ] Test "View Listing" links
+
+### Step 3 (Validate the Deal)
+- [ ] Test address autocomplete
+- [ ] Test form submission
+- [ ] Verify results display correctly
+- [ ] Test "Compare With Other Properties" button
+
+### Step 4 (Find the Best Deal)
+- [ ] Test adding multiple properties
+- [ ] Test form submission
+- [ ] Verify comparison results display correctly
+- [ ] Test winner determination
