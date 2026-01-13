@@ -843,11 +843,11 @@ From AirDNA Rentalizer endpoint:
 
 ## Bug Fix: Autocomplete Dropdown Overflow (Jan 13, 2026)
 
-- [ ] Fix autocomplete dropdown overflow on Step 2 (Explore Listings)
-- [ ] Fix autocomplete dropdown overflow on Step 3 (Validate the Deal)
-- [ ] Fix autocomplete dropdown overflow on Step 4 (Find the Best Deal)
-- [ ] Verify dropdown stays within input box bounds on all steps
-- [ ] Test on desktop and mobile
+- [x] Fix autocomplete dropdown overflow on Step 2 (Explore Listings)
+- [x] Fix autocomplete dropdown overflow on Step 3 (Validate the Deal)
+- [x] Fix autocomplete dropdown overflow on Step 4 (Find the Best Deal)
+- [x] Verify dropdown stays within input box bounds on all steps
+- [x] Test on desktop and mobile
 
 
 ## Test Results - Autocomplete Dropdown Fix (Jan 13, 2026)

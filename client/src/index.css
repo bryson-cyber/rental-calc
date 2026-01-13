@@ -188,7 +188,7 @@
   
   /* Light Theme Card */
   .apple-card {
-    @apply relative overflow-hidden;
+    @apply relative overflow-visible;
     background: oklch(0.99 0 0);
     border: 1px solid oklch(0.90 0 0);
     border-radius: 1.25rem;
