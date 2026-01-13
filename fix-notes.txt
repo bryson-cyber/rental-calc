@@ -1,0 +1,23 @@
+Fix Notes - January 13, 2026
+
+1. Turnkey Program Link Fix - VERIFIED
+   - Button text now says "Learn About the Turnkey Program" (with "the")
+   - Link URL updated to https://masterclass.coachinayah.com/the-turnkey-program
+   - Both hero section and footer section links updated
+
+2. Step 3 Validation Timeout Investigation
+   - The getComprehensivePropertyReport function makes multiple sequential API calls:
+     a. getRentalizerEstimate - property estimate
+     b. searchMarkets - find market ID
+     c. getMarketDetails, getMarketHistoricalData, getSubmarketsInMarket - market data
+     d. exploreListingsInRadius - same bedroom comps (30 listings)
+     e. exploreListingsInRadius x 5 - bedroom performance (1-5 BR, 100 each)
+   
+   - Total API calls: 8-10+ sequential calls
+   - This explains the timeout - too many API calls in sequence
+   
+   - Potential fixes:
+     a. Add timeout handling with user-friendly error message
+     b. Use Promise.all for parallel API calls where possible
+     c. Reduce the number of bedroom performance calls
+     d. Add caching for repeated requests

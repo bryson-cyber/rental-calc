@@ -372,11 +372,19 @@ export default function LeadMagnet() {
         setLoadingStep(prev => prev < 4 ? prev + 1 : prev);
       }, 1500);
       
-      const response = await analyzeProperty.mutateAsync({
-        address,
-        bedrooms: parseInt(bedrooms),
-        bathrooms: parseFloat(bathrooms),
+      // Add timeout handling - 45 second timeout
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out. The property analysis is taking longer than expected. Please try again.')), 45000);
       });
+      
+      const response = await Promise.race([
+        analyzeProperty.mutateAsync({
+          address,
+          bedrooms: parseInt(bedrooms),
+          bathrooms: parseFloat(bathrooms),
+        }),
+        timeoutPromise
+      ]);
       
       clearInterval(loadingInterval);
       
@@ -434,7 +442,8 @@ export default function LeadMagnet() {
       toast.success('Property validated! See your results below.');
     } catch (error) {
       console.error('Analysis error:', error);
-      toast.error('Could not analyze this property. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Could not analyze this property. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsAnalyzing(false);
       setLoadingStep(0);
@@ -773,12 +782,12 @@ export default function LeadMagnet() {
               Start Analyzing Now
             </button>
             <a 
-              href="https://coachinayah.com/turnkey"
+              href="https://masterclass.coachinayah.com/the-turnkey-program"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-outline-light flex items-center justify-center gap-2"
             >
-              Learn About Turnkey Program
+              Learn About the Turnkey Program
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -2030,7 +2039,7 @@ export default function LeadMagnet() {
               Read the Guide First
             </button>
             <a 
-              href="https://coachinayah.com/turnkey"
+              href="https://masterclass.coachinayah.com/the-turnkey-program"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-gold flex items-center justify-center gap-2"

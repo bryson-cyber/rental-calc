@@ -701,3 +701,72 @@ From AirDNA Rentalizer endpoint:
 ### Additional Improvements (Jan 13, 2026)
 - [x] Sort neighborhoods alphabetically in dropdown
 - [x] Add listing counts to zip codes in dropdown
+
+
+## Comprehensive Stress Test (Jan 13, 2026)
+
+### Step 1 (See Real Revenue) Testing
+- [ ] Test with major markets (NYC, LA, Miami, Austin, Denver)
+- [ ] Test with small markets (rural areas, small towns)
+- [ ] Test with invalid market names
+- [ ] Test with special characters in market names
+- [ ] Test Reset All button functionality
+- [ ] Test neighborhood dropdown sorting (alphabetical verification)
+- [ ] Test zip code listing counts display
+- [ ] Test search buttons at each level (state, city, neighborhood, zip)
+- [ ] Test rapid state/city/neighborhood changes
+- [ ] Test loading states and error handling
+
+### Step 2 (Explore Listings) Testing
+- [ ] Test with 0 results markets
+- [ ] Test with high-volume markets (1000+ listings)
+- [ ] Test all filter combinations (sort, property type, rating, occupancy)
+- [ ] Test filter persistence when scrolling
+- [ ] Test image loading for all properties
+- [ ] Test responsive grid layout (mobile/tablet/desktop)
+- [ ] Test property card hover states
+- [ ] Test Airbnb link functionality
+- [ ] Test rapid filter changes
+- [ ] Test pagination/infinite scroll
+
+### Step 3 (Validate the Deal) Testing
+- [ ] Test with high-revenue properties
+- [ ] Test with low-revenue properties
+- [ ] Test with properties in different states
+- [ ] Test monthly forecast chart rendering
+- [ ] Test market percentile ranking display
+- [ ] Test comparable properties section
+- [ ] Test RevPAR metric calculation
+- [ ] Test seasonality breakdown
+- [ ] Test responsive design for charts
+- [ ] Test data accuracy for revenue projections
+
+### Step 4 (Find the Best Deal) Testing
+- [ ] Test with 2 properties (minimum)
+- [ ] Test with 25 properties (maximum)
+- [ ] Test with properties from different markets
+- [ ] Test comparison table scrolling (horizontal)
+- [ ] Test property images in comparison
+- [ ] Test sorting by different columns
+- [ ] Test filtering within comparison
+- [ ] Test responsive design for table
+- [ ] Test data accuracy in comparison
+- [ ] Test rapid property additions/removals
+
+### Cross-Tool Testing
+- [ ] Test navigation between all 4 tools
+- [ ] Test data consistency across tools
+- [ ] Test browser back/forward buttons
+- [ ] Test page refresh (state persistence)
+- [ ] Test mobile responsiveness for all tools
+- [ ] Test keyboard navigation
+- [ ] Test accessibility (ARIA labels, color contrast)
+- [ ] Test performance with large datasets
+- [ ] Test error messages and recovery
+- [ ] Test API timeout handling
+
+
+## Bug Fixes (Jan 13, 2026 - Ongoing)
+- [x] Update Turnkey Program link to https://masterclass.coachinayah.com/the-turnkey-program
+- [x] Fix button text from "Learn About Turnkey Program" to "Learn About the Turnkey Program"
+- [x] Fix Step 3 validation timeout issue (added 45s timeout with user-friendly error message)
