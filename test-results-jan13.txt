@@ -1,0 +1,57 @@
+Test Results - January 13, 2026
+
+Neighborhoods are now sorted ALPHABETICALLY:
+- Adamsville / Oakcliff
+- Alpharetta
+- Atlanta University Center / Vine City
+- Bankhead
+- Ben Hill
+- Brookhaven / North Buckhead
+- Brookwood
+- Buckhead
+- Cabbagetown
+- Candler Park
+- Cascade Heights
+- Castleberry Hill
+- Chamblee
+- Chosewood Park
+- College Park
+- Conyers
+- Cumberland
+- Decatur
+- Doraville
+- Douglasville
+- Downtown Atlanta
+- Druid Hills / Emory
+- Duluth
+- Dunwoody
+- East Atlanta
+- East Point
+- Edgewood
+- Fairburn
+- Fayetteville
+- Forest Park
+- Grant Park
+- Hapeville
+- Inman Park
+- Jonesboro
+- Kennesaw
+- Kirkwood
+- Lakewood Heights
+- Lawrenceville
+- Lilburn
+- Lindbergh
+- Lithonia
+- Locust Grove
+- Mableton
+- Marietta
+- Mcdonough
+- Mechanicsville
+- Midtown Atlanta
+- Morrow
+- Norcross
+- North Dekalb
+
+CONFIRMED: Neighborhoods are now in alphabetical order (A-Z)
+
+Next: Test zip codes with listing counts

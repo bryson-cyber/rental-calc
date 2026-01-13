@@ -118,7 +118,7 @@ export function HierarchicalLocationSelector({
   // Data state
   const [markets, setMarkets] = useState<Market[]>([]);
   const [submarkets, setSubmarkets] = useState<Submarket[]>([]);
-  const [zipcodes, setZipcodes] = useState<string[]>([]);
+  const [zipcodes, setZipcodes] = useState<{ zipcode: string; listingCount: number }[]>([]);
   
   // Loading state
   const [loadingMarkets, setLoadingMarkets] = useState(false);
@@ -282,8 +282,8 @@ export function HierarchicalLocationSelector({
             occupancy: s.occupancy
           }));
           
-          // Sort by listing count
-          stateSubmarkets.sort((a: Submarket, b: Submarket) => b.listingCount - a.listingCount);
+          // Sort alphabetically by name
+          stateSubmarkets.sort((a: Submarket, b: Submarket) => a.name.localeCompare(b.name));
           setSubmarkets(stateSubmarkets);
         } else {
           // Regular market - fetch from API
@@ -673,15 +673,16 @@ export function HierarchicalLocationSelector({
               
               {zipcodeOpen && zipcodes.length > 0 && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                  {zipcodes.map((zipcode) => (
+                  {zipcodes.map((zip) => (
                     <button
-                      key={zipcode}
-                      onClick={() => handleZipcodeSelect(zipcode)}
-                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                        selectedZipcode === zipcode ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                      key={zip.zipcode}
+                      onClick={() => handleZipcodeSelect(zip.zipcode)}
+                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl flex items-center justify-between ${
+                        selectedZipcode === zip.zipcode ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
                       }`}
                     >
-                      {zipcode}
+                      <span>{zip.zipcode}</span>
+                      <span className="text-xs text-[oklch(0.50_0_0)]">{zip.listingCount} listings</span>
                     </button>
                   ))}
                 </div>

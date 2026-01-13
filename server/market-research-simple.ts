@@ -654,9 +654,9 @@ export const marketResearchSimpleRouter = router({
         
         console.log(`[getSubmarkets] Found ${allSubmarkets.length} submarkets`);
         
-        // Sort by revenue descending
+        // Sort alphabetically by name
         allSubmarkets.sort((a: any, b: any) => 
-          (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0)
+          (a.name || '').localeCompare(b.name || '')
         );
         
         // Fetch listing counts for each submarket in parallel (limit to top 50 to avoid too many API calls)
@@ -698,7 +698,7 @@ export const marketResearchSimpleRouter = router({
       }
     }),
 
-  // Get all zip codes within a submarket
+  // Get all zip codes within a submarket with listing counts
   getZipcodesInSubmarket: publicProcedure
     .input(z.object({
       submarketId: z.string()
@@ -708,7 +708,7 @@ export const marketResearchSimpleRouter = router({
       console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId}`);
       
       try {
-        // Fetch listings to extract zip codes
+        // Fetch listings to extract zip codes and count them
         const response = await fetch(
           `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
           {
@@ -733,11 +733,13 @@ export const marketResearchSimpleRouter = router({
         const listings = data.payload?.listings || [];
         const totalCount = data.payload?.page_info?.total_count || 0;
         
-        // Extract unique zip codes
-        const zipcodes = new Set<string>();
+        // Count listings per zip code
+        const zipcodeCounts = new Map<string, number>();
         listings.forEach((l: any) => {
           const zip = l.zipcode || l.zip_code;
-          if (zip) zipcodes.add(zip);
+          if (zip) {
+            zipcodeCounts.set(zip, (zipcodeCounts.get(zip) || 0) + 1);
+          }
         });
         
         // Fetch more pages to get comprehensive zip code coverage
@@ -761,15 +763,21 @@ export const marketResearchSimpleRouter = router({
             const moreData = await moreResponse.json();
             (moreData.payload?.listings || []).forEach((l: any) => {
               const zip = l.zipcode || l.zip_code;
-              if (zip) zipcodes.add(zip);
+              if (zip) {
+                zipcodeCounts.set(zip, (zipcodeCounts.get(zip) || 0) + 1);
+              }
             });
           }
         }
         
-        const sortedZipcodes = Array.from(zipcodes).sort();
-        console.log(`[getZipcodesInSubmarket] Found ${sortedZipcodes.length} unique zip codes`);
+        // Convert to array with listing counts and sort by zip code
+        const zipcodesWithCounts = Array.from(zipcodeCounts.entries())
+          .map(([zipcode, count]) => ({ zipcode, listingCount: count }))
+          .sort((a, b) => a.zipcode.localeCompare(b.zipcode));
         
-        return sortedZipcodes;
+        console.log(`[getZipcodesInSubmarket] Found ${zipcodesWithCounts.length} unique zip codes`);
+        
+        return zipcodesWithCounts;
       } catch (error) {
         console.error(`[getZipcodesInSubmarket] Error:`, error);
         return [];

@@ -697,3 +697,7 @@ From AirDNA Rentalizer endpoint:
 - [x] Add zip code dropdown after neighborhood selection
 - [x] Fetch zip codes for selected neighborhood/submarket
 - [x] Display zip code data when selected
+
+### Additional Improvements (Jan 13, 2026)
+- [x] Sort neighborhoods alphabetically in dropdown
+- [x] Add listing counts to zip codes in dropdown
