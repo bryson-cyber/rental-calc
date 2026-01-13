@@ -269,11 +269,8 @@ export function AddressAutocomplete({
           placeholder={placeholder}
           disabled={disabled || !isInitialized}
           className={cn(
-            "w-full px-4 py-3 text-base border border-border rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
-            "transition-all duration-200",
+            "w-full",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            "bg-white",
             inputClassName
           )}
           autoComplete="off"

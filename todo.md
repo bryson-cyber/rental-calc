@@ -881,3 +881,11 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Simplify Step 3 form - remove complex styling, use basic inputs  
 - [x] Simplify Step 4 form - remove complex styling, use basic inputs
 - [x] Test all steps for text overflow
+
+
+## Bug Fix: Input Text Centering (Jan 13, 2026)
+
+- [x] Fix AddressAutocomplete input text vertical centering
+- [x] Fix input-apple CSS class for proper text alignment
+- [x] Ensure placeholder text is vertically centered
+- [x] Test on Steps 2, 3, and 4
