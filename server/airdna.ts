@@ -1000,6 +1000,137 @@ async function getMarketMetric(
   }
 }
 
+// ============================================
+// SUBMARKET METRICS (Historical Data)
+// ============================================
+
+async function getSubmarketMetric(
+  submarketId: string,
+  metricType: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count" | "booking_lead_time" | "los",
+  numMonths: number = 12
+): Promise<HistoricalDataPoint[]> {
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        metrics?: Array<{
+          month?: string;
+          date?: string;
+          value?: number;
+          occupancy?: number;
+          occupancy_rate?: number;
+          avg_revenue?: number;
+          revenue?: number;
+          adr?: number;
+          revpar?: number;
+          active_listings_count?: number;
+          active_listings?: number;
+          available_listings?: number;
+          booking_lead_time?: number;
+          los?: number;
+        }>;
+      };
+    }>(`/submarket/${submarketId}/metrics/${metricType}`, "POST", {
+      num_months: numMonths,
+    });
+    
+    // API returns payload.metrics, not payload.results
+    const results = response.payload.metrics || [];
+    
+    if (results.length === 0) {
+      console.log(`[AirDNA] Submarket ${metricType} returned 0 results for ${numMonths} months`);
+    } else {
+      console.log(`[AirDNA] Submarket ${metricType} returned ${results.length} results for ${numMonths} months`);
+    }
+    
+    return results.map((r) => {
+      const date = r.month || r.date || "";
+      let value = r.value;
+      
+      // Handle different response field names
+      if (value === undefined) {
+        switch (metricType) {
+          case "occupancy": value = r.occupancy_rate || r.occupancy; break;
+          case "avg_revenue": value = r.revenue || r.avg_revenue; break;
+          case "adr": value = r.adr; break;
+          case "revpar": value = r.revpar; break;
+          case "active_listings_count": value = r.active_listings || r.active_listings_count; break;
+          case "booking_lead_time": value = r.booking_lead_time; break;
+          case "los": value = r.los; break;
+        }
+      }
+      
+      return { date, value: value || 0 };
+    });
+  } catch (error) {
+    console.error(`Error fetching ${metricType} for submarket ${submarketId}:`, error);
+    return [];
+  }
+}
+
+export async function getSubmarketSeasonality(
+  submarketId: string
+): Promise<SeasonalityData[]> {
+  try {
+    // Fetch 12 months of historical data for submarket
+    const [occupancyData, adrData, revenueData] = await Promise.all([
+      getSubmarketMetric(submarketId, "occupancy", 12),
+      getSubmarketMetric(submarketId, "adr", 12),
+      getSubmarketMetric(submarketId, "avg_revenue", 12),
+    ]);
+
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    // Calculate average values for season classification
+    const avgOccupancy = occupancyData.reduce((sum, d) => sum + d.value, 0) / occupancyData.length;
+    const avgRevenue = revenueData.reduce((sum, d) => sum + d.value, 0) / revenueData.length;
+
+    const seasonalityData: SeasonalityData[] = [];
+    
+    // Check if we have actual data
+    const hasData = occupancyData.some(d => d.value > 0) || adrData.some(d => d.value > 0) || revenueData.some(d => d.value > 0);
+    
+    if (!hasData) {
+      console.log(`[getSubmarketSeasonality] No historical data available for submarket ${submarketId}`);
+      return [];
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const occupancy = occupancyData[i]?.value || 0;
+      const adr = adrData[i]?.value || 0;
+      const revenue = revenueData[i]?.value || 0;
+      const month = occupancyData[i]?.date || adrData[i]?.date || revenueData[i]?.date || "";
+
+      // Determine season type based on occupancy and revenue
+      let seasonType: "peak" | "shoulder" | "off";
+      if (occupancy >= avgOccupancy * 1.1 && revenue >= avgRevenue * 1.1) {
+        seasonType = "peak";
+      } else if (occupancy < avgOccupancy * 0.9 || revenue < avgRevenue * 0.9) {
+        seasonType = "off";
+      } else {
+        seasonType = "shoulder";
+      }
+
+      seasonalityData.push({
+        month,
+        month_name: monthNames[i],
+        occupancy: Math.round(occupancy),
+        adr: Math.round(adr),
+        revenue: Math.round(revenue),
+        season_type: seasonType,
+      });
+    }
+
+    console.log(`[getSubmarketSeasonality] Successfully fetched seasonality for submarket ${submarketId}`);
+    return seasonalityData;
+  } catch (error) {
+    console.error(`Error fetching seasonality for submarket ${submarketId}:`, error);
+    return [];
+  }
+}
+
 // Helper function to add delay between requests
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -2388,10 +2519,13 @@ export async function getComprehensiveSubmarketReport(
     }))
     .sort((a, b) => a.bedrooms - b.bedrooms);
   
-  // Fetch parent market seasonality data as fallback
-  let seasonality: SeasonalityData[] = [];
-  if (submarketDetails.market_id) {
-    console.log(`[getComprehensiveSubmarketReport] Fetching parent market seasonality for ${submarketDetails.market_id}`);
+  // Fetch submarket-specific seasonality data
+  console.log(`[getComprehensiveSubmarketReport] Fetching submarket seasonality for ${submarketId}`);
+  let seasonality: SeasonalityData[] = await getSubmarketSeasonality(submarketId);
+  
+  // If submarket seasonality is empty, fall back to parent market
+  if (seasonality.length === 0 && submarketDetails.market_id) {
+    console.log(`[getComprehensiveSubmarketReport] No submarket data, falling back to parent market ${submarketDetails.market_id}`);
     seasonality = await getMarketSeasonality(submarketDetails.market_id);
   }
 

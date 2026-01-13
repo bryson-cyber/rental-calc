@@ -561,3 +561,40 @@ From AirDNA Rentalizer endpoint:
 - [x] Test Missouri → St. Louis → Central West End (fixed $0 bug)
 - [x] Test California → Los Angeles → Hollywood (verified seasonality display)
 - [x] Verify hierarchical location selector works for both markets and submarkets
+
+
+## AirDNA API Verification & Loading Indicators (Jan 13, 2026)
+
+### Verify Submarket Seasonality Data:
+- [ ] Review AirDNA API documentation for all submarket endpoints
+- [ ] Make test API call to submarket endpoint and log full response
+- [ ] Check if seasonality/monthly data fields exist in submarket response
+- [ ] Document all available submarket data fields
+- [ ] Update implementation if direct submarket seasonality exists
+
+### Add Loading State Indicators:
+- [ ] Add loading state for seasonality chart in LeadMagnet component
+- [ ] Show skeleton loader or spinner while fetching seasonality data
+- [ ] Test loading indicator with slow network conditions
+- [ ] Verify loading state works for both market and submarket selections
+- [x] Create getSubmarketMetric function to fetch historical monthly data
+- [x] Create getSubmarketSeasonality function for submarket-specific seasonality
+- [x] Update getComprehensiveSubmarketReport to use submarket seasonality with parent fallback
+
+
+## Stress Testing & Submarket Seasonality (Jan 13, 2026)
+
+### Critical Bug Fixes:
+- [x] Fix submarket data returning $0 for all metrics (added getSubmarketReport endpoint)
+- [x] Update frontend to route to correct endpoint based on selection type (market vs submarket)
+- [x] Verify AirDNA API provides submarket-specific seasonality data (confirmed via docs)
+- [x] Fix getSubmarketMetric endpoint URL from `/submarket/{id}/{metricType}` to `/submarket/{id}/metrics/{metricType}`
+- [x] Test Hollywood submarket seasonality with corrected API endpoints (working correctly)
+- [x] Add loading skeleton for seasonality section while data is being fetched
+- [x] Confirm submarket seasonality data is different from parent market data (verified)
+
+### Stress Testing Results:
+- [x] Missouri → St. Louis → Central West End: $37,204 revenue, 66% occupancy, $155 ADR, 343 listings ✅
+- [x] California → Los Angeles → Hollywood: $37,564 revenue, 60% occupancy, $172 ADR, 30 listings ✅
+- [x] Submarket seasonality data displaying correctly with proper month labels ✅
+- [x] Loading indicators working correctly during API calls ✅

@@ -1434,7 +1434,37 @@ export default function LeadMagnet() {
             
             
             {/* Seasonality Summary */}
-            {researchResult.seasonality && researchResult.seasonality.length > 0 && (
+            {isResearching && (
+              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Occupancy by Month</p>
+                    <div className="space-y-2">
+                      {[...Array(12)].map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <div className="w-12 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 animate-pulse" />
+                          <div className="w-10 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Average Daily Rate by Month</p>
+                    <div className="space-y-2">
+                      {[...Array(12)].map((_, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <div className="w-12 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                          <div className="w-16 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!isResearching && researchResult.seasonality && researchResult.seasonality.length > 0 && (
               <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
                 <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
