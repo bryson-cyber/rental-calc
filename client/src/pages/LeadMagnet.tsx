@@ -270,8 +270,10 @@ export default function LeadMagnet() {
     savedProperties,
     saveMarket,
     removeMarket,
+    updateMarketNote,
     saveProperty,
     removeProperty,
+    updatePropertyNote,
     isMarketSaved,
     isPropertySaved,
     clearAll,
@@ -871,6 +873,8 @@ export default function LeadMagnet() {
                 savedProperties={savedProperties}
                 onRemoveMarket={removeMarket}
                 onRemoveProperty={removeProperty}
+                onUpdateMarketNote={updateMarketNote}
+                onUpdatePropertyNote={updatePropertyNote}
                 onClearAll={clearAll}
                 onUseProperty={(property) => {
                   // Auto-fill Step 3 form with saved property data
@@ -1377,36 +1381,85 @@ export default function LeadMagnet() {
               </div>
             </div>
             
-            {/* Property Types */}
-            {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">What's Working in This Market</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {researchResult.propertyTypes.slice(0, 6).map((type, idx) => (
-                    <div key={idx} className="p-4 bg-[oklch(0.97_0_0)] rounded-lg border border-[oklch(0.90_0_0)]">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-[oklch(0.25_0_0)] font-semibold">{type.type}</p>
-                        <p className="text-sm text-[oklch(0.50_0_0)]">{type.count} listings</p>
+            {/* Property Types - Show all bedroom types */}
+            {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
+              // Ensure we show all bedroom types from Studio to 5+
+              const allBedroomTypes = [0, 1, 2, 3, 4, 5];
+              const existingTypesMap: Record<number, typeof researchResult.propertyTypes[0]> = {};
+              researchResult.propertyTypes.forEach(t => {
+                const bedroomNum = parseInt(t.type.split(' ')[0]) || 0;
+                existingTypesMap[bedroomNum] = t;
+              });
+              
+              // Create complete list with placeholders for missing types
+              const completeTypes = allBedroomTypes.map(bedrooms => {
+                const existing = existingTypesMap[bedrooms];
+                if (existing) return existing;
+                return {
+                  type: bedrooms === 0 ? 'Studio' : `${bedrooms} Bedroom`,
+                  count: 0,
+                  avgRevenue: 0,
+                  occupancy: 0
+                };
+              });
+              
+              // Filter to only show types with data or common types (1-4 BR)
+              const typesToShow = completeTypes.filter(t => {
+                const bedroomNum = t.type === 'Studio' ? 0 : parseInt(t.type.split(' ')[0]);
+                return t.count > 0 || (bedroomNum >= 1 && bedroomNum <= 4);
+              });
+              
+              return (
+                <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)]">What's Working in This Market</h4>
+                    <span className="text-xs text-[oklch(0.50_0_0)] bg-[oklch(0.95_0_0)] px-2 py-1 rounded">By Bedroom Count</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {typesToShow.map((type, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`p-4 rounded-lg border ${
+                          type.count > 0 
+                            ? 'bg-[oklch(0.97_0_0)] border-[oklch(0.90_0_0)]' 
+                            : 'bg-[oklch(0.98_0_0)] border-dashed border-[oklch(0.85_0_0)]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <p className={`font-semibold ${type.count > 0 ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.60_0_0)]'}`}>
+                            {type.type}
+                          </p>
+                          <p className="text-sm text-[oklch(0.50_0_0)]">
+                            {type.count > 0 ? `${type.count} listings` : 'No data'}
+                          </p>
+                        </div>
+                        {type.count > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Revenue/yr</p>
+                              <p className="text-emerald-500 font-bold text-sm">{formatCurrency(type.avgRevenue)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Occupancy</p>
+                              <p className="text-[oklch(0.25_0_0)] font-semibold text-sm">{type.occupancy}%</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[oklch(0.55_0_0)] italic">
+                            Limited data in this area for this bedroom count
+                          </p>
+                        )}
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Revenue/yr</p>
-                          <p className="text-emerald-500 font-bold text-sm">{formatCurrency(type.avgRevenue)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Occupancy</p>
-                          <p className="text-[oklch(0.25_0_0)] font-semibold text-sm">{type.occupancy}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Avg Rate</p>
-                          <p className="text-[oklch(0.25_0_0)] font-semibold text-sm">{formatCurrency(researchResult.avgAdr)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  {typesToShow.some(t => t.count === 0) && (
+                    <p className="mt-4 text-xs text-[oklch(0.50_0_0)] italic">
+                      💡 Tip: Some bedroom types show "No data" because there are few active listings in this specific area. Try searching a broader market for more complete data.
+                    </p>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             
             
             {/* Seasonality Summary */}

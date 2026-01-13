@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, X, ExternalLink, Trash2, DollarSign, Percent, Bed, Bath, MapPin, FileDown, CheckCircle, Loader2 } from 'lucide-react';
+import { Bookmark, X, ExternalLink, Trash2, DollarSign, Percent, Bed, Bath, MapPin, FileDown, CheckCircle, Loader2, StickyNote, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SavedMarket, SavedProperty } from '@/hooks/useSavedItems';
 import { exportSavedItemsToPdf } from '@/utils/exportPdf';
@@ -12,6 +12,8 @@ interface SavedItemsPanelProps {
   onSelectMarket?: (market: SavedMarket) => void;
   onSelectProperty?: (property: SavedProperty) => void;
   onUseProperty?: (property: SavedProperty) => void;
+  onUpdateMarketNote?: (id: string, notes: string) => void;
+  onUpdatePropertyNote?: (id: string, notes: string) => void;
   onClearAll: () => void;
 }
 
@@ -31,9 +33,13 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
   onSelectMarket,
   onSelectProperty,
   onUseProperty,
+  onUpdateMarketNote,
+  onUpdatePropertyNote,
   onClearAll,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [expandedMarketNotes, setExpandedMarketNotes] = useState<Set<string>>(new Set());
+  const [expandedPropertyNotes, setExpandedPropertyNotes] = useState<Set<string>>(new Set());
   const totalItems = savedMarkets.length + savedProperties.length;
 
   const handleExportPdf = async () => {
@@ -45,6 +51,30 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const toggleMarketNotes = (id: string) => {
+    setExpandedMarketNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const togglePropertyNotes = (id: string) => {
+    setExpandedPropertyNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   if (totalItems === 0) {
@@ -110,34 +140,84 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
             {savedMarkets.map((market) => (
               <div
                 key={market.id}
-                className="flex items-center justify-between p-3 bg-white border border-[oklch(0.90_0_0)] rounded-lg hover:border-[oklch(0.78_0.12_75)]/50 transition-colors cursor-pointer"
-                onClick={() => onSelectMarket?.(market)}
+                className="p-3 bg-white border border-[oklch(0.90_0_0)] rounded-lg hover:border-[oklch(0.78_0.12_75)]/50 transition-colors"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[oklch(0.15_0_0)] truncate">
-                    {market.name}
-                  </p>
-                  <p className="text-sm text-[oklch(0.50_0_0)]">{market.state}</p>
-                </div>
-                <div className="flex items-center gap-4 ml-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-emerald-600">
-                      {formatCurrency(market.avgRevenue)}/yr
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => onSelectMarket?.(market)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[oklch(0.15_0_0)] truncate">
+                      {market.name}
                     </p>
-                    <p className="text-xs text-[oklch(0.50_0_0)]">
-                      {Math.round(market.avgOccupancy)}% occ
-                    </p>
+                    <p className="text-sm text-[oklch(0.50_0_0)]">{market.state}</p>
                   </div>
-                  <button
+                  <div className="flex items-center gap-4 ml-4">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-emerald-600">
+                        {formatCurrency(market.avgRevenue)}/yr
+                      </p>
+                      <p className="text-xs text-[oklch(0.50_0_0)]">
+                        {Math.round(market.avgOccupancy)}% occ
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMarketNotes(market.id);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        market.notes || expandedMarketNotes.has(market.id)
+                          ? 'text-[oklch(0.78_0.12_75)] bg-[oklch(0.78_0.12_75)]/10'
+                          : 'text-[oklch(0.50_0_0)] hover:text-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.78_0.12_75)]/10'
+                      }`}
+                      title={market.notes ? 'Edit note' : 'Add note'}
+                    >
+                      <StickyNote className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveMarket(market.id);
+                      }}
+                      className="p-1.5 text-[oklch(0.50_0_0)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Notes Section */}
+                {expandedMarketNotes.has(market.id) && onUpdateMarketNote && (
+                  <div className="mt-3 pt-3 border-t border-[oklch(0.92_0_0)]">
+                    <label className="text-xs font-medium text-[oklch(0.45_0_0)] mb-1 block">
+                      Your Notes
+                    </label>
+                    <textarea
+                      value={market.notes || ''}
+                      onChange={(e) => onUpdateMarketNote(market.id, e.target.value)}
+                      placeholder="Add your thoughts about this market..."
+                      className="w-full p-2 text-sm border border-[oklch(0.90_0_0)] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[oklch(0.78_0.12_75)]/30 focus:border-[oklch(0.78_0.12_75)]"
+                      rows={2}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+                
+                {/* Show note preview if collapsed but has notes */}
+                {!expandedMarketNotes.has(market.id) && market.notes && (
+                  <div 
+                    className="mt-2 pt-2 border-t border-[oklch(0.92_0_0)] cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemoveMarket(market.id);
+                      toggleMarketNotes(market.id);
                     }}
-                    className="p-1.5 text-[oklch(0.50_0_0)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                    <p className="text-xs text-[oklch(0.50_0_0)] italic truncate">
+                      📝 {market.notes}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -183,6 +263,20 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePropertyNotes(property.id);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          property.notes || expandedPropertyNotes.has(property.id)
+                            ? 'text-[oklch(0.78_0.12_75)] bg-[oklch(0.78_0.12_75)]/10'
+                            : 'text-[oklch(0.50_0_0)] hover:text-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.78_0.12_75)]/10'
+                        }`}
+                        title={property.notes ? 'Edit note' : 'Add note'}
+                      >
+                        <StickyNote className="w-4 h-4" />
+                      </button>
                       {property.airbnbUrl && (
                         <a
                           href={property.airbnbUrl}
@@ -208,6 +302,38 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                     </div>
                   </div>
                 </div>
+                
+                {/* Notes Section */}
+                {expandedPropertyNotes.has(property.id) && onUpdatePropertyNote && (
+                  <div className="mt-3 pt-3 border-t border-[oklch(0.92_0_0)]">
+                    <label className="text-xs font-medium text-[oklch(0.45_0_0)] mb-1 block">
+                      Your Notes
+                    </label>
+                    <textarea
+                      value={property.notes || ''}
+                      onChange={(e) => onUpdatePropertyNote(property.id, e.target.value)}
+                      placeholder="Add your thoughts about this property..."
+                      className="w-full p-2 text-sm border border-[oklch(0.90_0_0)] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[oklch(0.78_0.12_75)]/30 focus:border-[oklch(0.78_0.12_75)]"
+                      rows={2}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+                
+                {/* Show note preview if collapsed but has notes */}
+                {!expandedPropertyNotes.has(property.id) && property.notes && (
+                  <div 
+                    className="mt-2 pt-2 border-t border-[oklch(0.92_0_0)] cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePropertyNotes(property.id);
+                    }}
+                  >
+                    <p className="text-xs text-[oklch(0.50_0_0)] italic truncate">
+                      📝 {property.notes}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Use Property Button */}
                 {onUseProperty && (

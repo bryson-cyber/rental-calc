@@ -931,3 +931,29 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Add "Use Saved Property" button to auto-fill Step 3 validation form
 - [x] Test PDF export downloads correctly
 - [x] Test Use Saved Property fills Step 3 form correctly
+
+
+## Add Notes to Saved Items (Jan 13, 2026)
+
+- [ ] Update SavedMarket and SavedProperty interfaces to include notes field
+- [ ] Add updateMarketNote and updatePropertyNote functions to useSavedItems hook
+- [ ] Add notes input UI to SavedItemsPanel for each saved item
+- [ ] Include notes in PDF export
+- [ ] Test notes save and persist correctly
+
+
+## Step 1 (See Real Revenue) Fixes (Jan 13, 2026)
+
+- [ ] Add clear loading state when zip codes are being fetched
+- [ ] Show confirmation when zip codes are loaded (e.g., "5 zip codes found")
+- [ ] Make the search/analyze button more prominent and obvious
+- [ ] Fix "What's Working" section to include 1-bedroom and 2-bedroom data
+- [ ] Test with California > San Diego > Mission Beach
+
+
+## Step 1 (See Real Revenue) Fixes (Jan 13, 2026)
+
+- [x] Add zip code count confirmation after loading
+- [x] Make search buttons more prominent with text labels
+- [x] Show all bedroom types (1-4 BR) in What's Working section
+- [x] Add tip for missing bedroom data

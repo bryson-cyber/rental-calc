@@ -36,6 +36,31 @@ export async function exportSavedItemsToPdf(
     }
   };
   
+  // Helper function to wrap text
+  const wrapText = (text: string, maxWidth: number): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = doc.getTextWidth(testLine);
+      
+      if (testWidth > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+    
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    
+    return lines;
+  };
+  
   // Title
   doc.setFontSize(24);
   doc.setTextColor(139, 92, 42); // Gold color
@@ -68,11 +93,22 @@ export async function exportSavedItemsToPdf(
     
     // Markets list
     savedMarkets.forEach((market, index) => {
-      checkNewPage(35);
+      // Calculate card height based on notes
+      const hasNotes = market.notes && market.notes.trim().length > 0;
+      let cardHeight = 28;
+      let noteLines: string[] = [];
+      
+      if (hasNotes) {
+        doc.setFontSize(9);
+        noteLines = wrapText(market.notes!, pageWidth - margin * 2 - 20);
+        cardHeight += 10 + (noteLines.length * 5);
+      }
+      
+      checkNewPage(cardHeight + 10);
       
       // Market card background
       doc.setFillColor(248, 248, 248);
-      doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 28, 3, 3, 'F');
+      doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, cardHeight, 3, 3, 'F');
       
       // Market name
       doc.setFontSize(12);
@@ -90,7 +126,19 @@ export async function exportSavedItemsToPdf(
       doc.setTextColor(150, 150, 150);
       doc.text(`Saved: ${formatDate(market.savedAt)}`, pageWidth - margin - 40, yPos + 5);
       
-      yPos += 33;
+      // Notes
+      if (hasNotes) {
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('📝 Notes:', margin + 5, yPos + 28);
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        noteLines.forEach((line, lineIndex) => {
+          doc.text(line, margin + 20, yPos + 33 + (lineIndex * 5));
+        });
+      }
+      
+      yPos += cardHeight + 5;
     });
     
     yPos += 10;
@@ -110,11 +158,22 @@ export async function exportSavedItemsToPdf(
     
     // Properties list
     savedProperties.forEach((property, index) => {
-      checkNewPage(45);
+      // Calculate card height based on notes
+      const hasNotes = property.notes && property.notes.trim().length > 0;
+      let cardHeight = 38;
+      let noteLines: string[] = [];
+      
+      if (hasNotes) {
+        doc.setFontSize(9);
+        noteLines = wrapText(property.notes!, pageWidth - margin * 2 - 20);
+        cardHeight += 10 + (noteLines.length * 5);
+      }
+      
+      checkNewPage(cardHeight + 10);
       
       // Property card background
       doc.setFillColor(248, 248, 248);
-      doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 38, 3, 3, 'F');
+      doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, cardHeight, 3, 3, 'F');
       
       // Property title (truncated if too long)
       doc.setFontSize(11);
@@ -141,7 +200,19 @@ export async function exportSavedItemsToPdf(
       doc.setTextColor(150, 150, 150);
       doc.text(`Saved: ${formatDate(property.savedAt)}`, pageWidth - margin - 40, yPos + 5);
       
-      yPos += 43;
+      // Notes
+      if (hasNotes) {
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('📝 Notes:', margin + 5, yPos + 36);
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        noteLines.forEach((line, lineIndex) => {
+          doc.text(line, margin + 20, yPos + 41 + (lineIndex * 5));
+        });
+      }
+      
+      yPos += cardHeight + 5;
     });
   }
   

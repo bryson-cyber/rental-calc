@@ -567,12 +567,13 @@ export function HierarchicalLocationSelector({
             <button
               onClick={() => handleSearchAtLevel('market')}
               disabled={disabled || !selectedMarket}
-              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
-                disabled || !selectedMarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
+                disabled || !selectedMarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)] shadow-lg'
               }`}
               title="Search this city/metro"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
         </div>
@@ -639,12 +640,13 @@ export function HierarchicalLocationSelector({
             <button
               onClick={() => handleSearchAtLevel('submarket')}
               disabled={disabled || !selectedSubmarket}
-              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
-                disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
+                disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)] shadow-lg'
               }`}
               title="Search this neighborhood"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
           
@@ -688,6 +690,13 @@ export function HierarchicalLocationSelector({
                 </div>
               )}
               
+              {/* Show zip code count when loaded */}
+              {!zipcodeOpen && !loadingZipcodes && zipcodes.length > 0 && !selectedZipcode && (
+                <div className="absolute -bottom-5 left-0 text-xs text-emerald-600 font-medium">
+                  ✓ {zipcodes.length} zip codes found
+                </div>
+              )}
+              
               {zipcodeOpen && zipcodes.length === 0 && !loadingZipcodes && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
                   No zip codes found
@@ -699,12 +708,13 @@ export function HierarchicalLocationSelector({
             <button
               onClick={() => handleSearchAtLevel('zipcode')}
               disabled={disabled || !selectedZipcode}
-              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
-                disabled || !selectedZipcode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
+                disabled || !selectedZipcode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)] shadow-lg'
               }`}
               title="Search this zip code"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
         </div>

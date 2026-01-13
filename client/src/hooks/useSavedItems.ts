@@ -7,6 +7,7 @@ export interface SavedMarket {
   avgRevenue: number;
   avgOccupancy: number;
   savedAt: string;
+  notes?: string;
 }
 
 export interface SavedProperty {
@@ -20,6 +21,7 @@ export interface SavedProperty {
   occupancy: number;
   airbnbUrl?: string;
   savedAt: string;
+  notes?: string;
 }
 
 const SAVED_MARKETS_KEY = 'rental-calculator-saved-markets';
@@ -76,6 +78,17 @@ export function useSavedItems() {
     });
   }, []);
 
+  // Update market notes
+  const updateMarketNote = useCallback((id: string, notes: string) => {
+    setSavedMarkets(prev => {
+      const updated = prev.map(m => 
+        m.id === id ? { ...m, notes } : m
+      );
+      localStorage.setItem(SAVED_MARKETS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   // Save property
   const saveProperty = useCallback((property: Omit<SavedProperty, 'id' | 'savedAt'>) => {
     const newProperty: SavedProperty = {
@@ -106,6 +119,17 @@ export function useSavedItems() {
     });
   }, []);
 
+  // Update property notes
+  const updatePropertyNote = useCallback((id: string, notes: string) => {
+    setSavedProperties(prev => {
+      const updated = prev.map(p => 
+        p.id === id ? { ...p, notes } : p
+      );
+      localStorage.setItem(SAVED_PROPERTIES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   // Check if market is saved
   const isMarketSaved = useCallback((name: string, state: string) => {
     return savedMarkets.some(m => m.name === name && m.state === state);
@@ -129,8 +153,10 @@ export function useSavedItems() {
     savedProperties,
     saveMarket,
     removeMarket,
+    updateMarketNote,
     saveProperty,
     removeProperty,
+    updatePropertyNote,
     isMarketSaved,
     isPropertySaved,
     clearAll,
