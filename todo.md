@@ -1075,3 +1075,15 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [ ] Test PDF export functionality
 - [ ] Verify PDF content is complete and formatted correctly
 - [ ] Test saved items persist after page refresh
+
+## Debounce API Calls Implementation (Jan 13, 2026)
+
+### Debounce Search Functionality:
+- [x] Create useDebounce hook for 400ms delay
+- [x] Apply debounce to market search API calls
+- [x] Test debouncing with rapid typing
+- [x] Verify API calls are reduced during typing
+- [x] Ensure results still display correctly after debounce
+  - Tested with "los" search - results display correctly after debounce delay
+  - API calls are properly delayed by 400ms
+  - Search functionality remains responsive to user input

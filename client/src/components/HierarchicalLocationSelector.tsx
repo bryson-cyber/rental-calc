@@ -419,40 +419,64 @@ export function HierarchicalLocationSelector({
   };
   
   // Handle market search - filter predefined and search API for new cities
-  const handleMarketSearch = async (query: string) => {
+  // Debounce hook for search queries
+  const useDebounce = (value: string, delay: number) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      
+      return () => clearTimeout(handler);
+    }, [value, delay]);
+    
+    return debouncedValue;
+  };
+  
+  const debouncedSearchQuery = useDebounce(marketSearchQuery, 400);
+  
+  // Effect to handle debounced search
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!debouncedSearchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        // Filter predefined markets by search query
+        const queryLower = debouncedSearchQuery.toLowerCase();
+        const filteredPredefined = markets.filter(m => 
+          m.name.toLowerCase().includes(queryLower)
+        );
+        
+        // Search API for additional cities not in predefined list
+        const apiResults = await searchMarkets.mutateAsync({ query: debouncedSearchQuery });
+        const results = Array.isArray(apiResults) ? apiResults : ((apiResults as any)?.data || apiResults || []);
+        
+        // Filter to markets only and remove duplicates
+        const apiMarkets = (results as any[]).filter(r => r.type === 'market');
+        const seenIds = new Set(filteredPredefined.map(m => m.id));
+        const newApiMarkets = apiMarkets.filter(m => !seenIds.has(m.id));
+        
+        // Combine filtered predefined and new API results
+        const combined = [...filteredPredefined, ...newApiMarkets];
+        setSearchResults(combined);
+      } catch (error) {
+        console.error('Error searching markets:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    performSearch();
+  }, [debouncedSearchQuery, markets, searchMarkets]);
+  
+  const handleMarketSearch = (query: string) => {
     setMarketSearchQuery(query);
-    
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      // Filter predefined markets by search query
-      const queryLower = query.toLowerCase();
-      const filteredPredefined = markets.filter(m => 
-        m.name.toLowerCase().includes(queryLower)
-      );
-      
-      // Search API for additional cities not in predefined list
-      const apiResults = await searchMarkets.mutateAsync({ query });
-      const results = Array.isArray(apiResults) ? apiResults : ((apiResults as any)?.data || apiResults || []);
-      
-      // Filter to markets only and remove duplicates
-      const apiMarkets = (results as any[]).filter(r => r.type === 'market');
-      const seenIds = new Set(filteredPredefined.map(m => m.id));
-      const newApiMarkets = apiMarkets.filter(m => !seenIds.has(m.id));
-      
-      // Combine filtered predefined and new API results
-      const combined = [...filteredPredefined, ...newApiMarkets];
-      setSearchResults(combined);
-    } catch (error) {
-      console.error('Error searching markets:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
   };
   
   // Handle search at current level
