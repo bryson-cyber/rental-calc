@@ -275,6 +275,7 @@ export function AddressAutocomplete({
             "transition-all duration-200",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "bg-white",
+            "truncate",
             inputClassName
           )}
           autoComplete="off"
