@@ -872,6 +872,21 @@ export default function LeadMagnet() {
                 onRemoveMarket={removeMarket}
                 onRemoveProperty={removeProperty}
                 onClearAll={clearAll}
+                onUseProperty={(property) => {
+                  // Auto-fill Step 3 form with saved property data
+                  setAddress(property.address);
+                  setBedrooms(String(property.bedrooms));
+                  setBathrooms(String(property.bathrooms));
+                  // Switch to validate tab
+                  setActiveTab('validate');
+                  // Close the saved panel
+                  setShowSavedPanel(false);
+                  // Scroll to the form
+                  setTimeout(() => {
+                    document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                  toast.success('Property loaded! Enter the monthly rent to validate.');
+                }}
               />
             </div>
           )}

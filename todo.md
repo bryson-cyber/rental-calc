@@ -922,3 +922,12 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 
 - [x] Add meta keywords for the page
 - [x] Update page title to 30-60 characters (currently 25)
+
+
+## PDF Export & Use Saved Property (Jan 13, 2026)
+
+- [x] Add PDF export functionality for saved markets and properties
+- [x] Create PDF generation with saved items data
+- [x] Add "Use Saved Property" button to auto-fill Step 3 validation form
+- [x] Test PDF export downloads correctly
+- [x] Test Use Saved Property fills Step 3 form correctly
