@@ -873,3 +873,11 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Simplify AddressAutocomplete component to prevent text overflow
 - [x] Remove complex styling from address input
 - [x] Test simplified address field on all steps
+
+
+## UI Simplification: All Steps (Jan 13, 2026)
+
+- [x] Simplify Step 2 form - remove complex styling, use basic inputs
+- [x] Simplify Step 3 form - remove complex styling, use basic inputs  
+- [x] Simplify Step 4 form - remove complex styling, use basic inputs
+- [x] Test all steps for text overflow
