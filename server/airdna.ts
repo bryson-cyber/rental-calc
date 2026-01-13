@@ -72,6 +72,19 @@ export interface RentalizerResponse {
     currency_symbol: string;
   };
   monthly_forecast: MonthlyForecast[];
+  // The actual API returns stats.future.metrics with monthly forecast data
+  stats?: {
+    future?: {
+      metrics?: Array<{
+        date: string;
+        occupancy: number;
+        adr: number;
+        revenue: number;
+        revenue_lower?: number;
+        revenue_upper?: number;
+      }>;
+    };
+  };
   comps: Comp[];
   // Historical data
   historical?: {

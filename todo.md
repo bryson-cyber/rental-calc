@@ -404,3 +404,49 @@ From AirDNA Rentalizer endpoint:
 - [x] Update Step 4 UI to display property thumbnails with badges and ratings
 - [x] Test the enhanced comparison display - verified working with Atlanta properties
 - [x] Save checkpoint
+
+
+## Step 1 (Prove the Market) Fixes (Jan 12, 2026)
+
+### Location Search Issues:
+- [ ] Fix San Diego returning San Juan - wrong geocoding results
+- [ ] Investigate AirDNA location API for supported locations
+- [ ] Add location autocomplete for cities, neighborhoods, zip codes
+- [ ] Support all US locations available in AirDNA data
+
+### Performance:
+- [ ] Add results caching to improve performance
+
+### Formatting Issues:
+- [ ] Fix desktop layout formatting
+- [ ] Fix mobile layout formatting
+
+
+## Step 1 Location Autocomplete & Seasonality Fixes (Jan 12, 2026)
+
+### Location Autocomplete:
+- [ ] Integrate Google Places API for location autocomplete (any US city/neighborhood/zip)
+- [ ] Replace current limited AirDNA market search with Places autocomplete
+- [ ] Handle location selection and pass to market analysis
+
+### Seasonality Data Fixes:
+- [ ] Fix data aggregation to average across all comps (not just one property)
+- [ ] Filter out comps that are in different countries (e.g., Tijuana for San Diego)
+- [ ] Show all 12 months for both occupancy and ADR
+- [ ] Verify occupancy numbers are realistic (not 5%)
+
+
+## Step 1 Location & Seasonality Fixes (Jan 12, 2026)
+
+### Completed Fixes:
+- [x] San Diego returning San Juan - fixed by using Rentalizer API directly with sample address
+- [x] Expanded autocomplete from 20 to 60+ US cities (major metros + vacation destinations)
+- [x] Any text input now works - users can type any city, neighborhood, or zip code
+- [x] Seasonality now shows all 12 months for both occupancy and ADR
+- [x] Month labels now display correctly (Jan, Feb, etc.)
+
+### Known Issues:
+- [ ] Seasonality ADR values are lower than summary ADR (different data sources)
+- [ ] Desktop/mobile formatting needs review
+- [ ] Results caching not yet implemented
+

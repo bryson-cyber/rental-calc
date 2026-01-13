@@ -217,8 +217,23 @@ const formatCurrency = (value: number): string => {
 };
 
 const formatMonth = (dateStr: string): string => {
+  // Handle short month names like "Jan", "Feb"
+  if (dateStr && dateStr.length <= 3) {
+    return dateStr;
+  }
+  // Handle YYYY-MM format like "2026-01"
+  if (dateStr && dateStr.includes('-') && dateStr.length === 7) {
+    const [year, monthNum] = dateStr.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthIndex = parseInt(monthNum, 10) - 1;
+    return monthNames[monthIndex] || dateStr;
+  }
+  // Try parsing as date
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'short' });
+  if (!isNaN(date.getTime())) {
+    return date.toLocaleDateString('en-US', { month: 'short' });
+  }
+  return dateStr || 'N/A';
 };
 
 const getMonthAbbr = (dateStr: string): string => {
@@ -296,6 +311,7 @@ export default function LeadMagnet() {
   const getAreaListings = trpc.listingsByArea.get.useMutation();
   const searchMarkets = trpc.marketResearchSimple.searchMarkets.useMutation();
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
+  const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
 
   // ============================================
   // HANDLERS
@@ -550,23 +566,11 @@ export default function LeadMagnet() {
     setShowMarketSuggestions(false);
     
     try {
-      // First search for the market to get its ID
-      const searchResults = await searchMarkets.mutateAsync({ query: researchMarket });
+      // Use the new location-based endpoint that works for ANY US location
+      // This uses Rentalizer to get comparable properties data
+      const report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
       
-      if (!searchResults || searchResults.length === 0) {
-        toast.error('Market not found. Please try a different city.');
-        setIsResearching(false);
-        return;
-      }
-      
-      const market = searchResults[0];
-      setSelectedMarketId(market.id);
-      
-      // Now get the full market report
-      const report = await getMarketReport.mutateAsync({
-        marketId: market.id,
-        marketName: market.name
-      });
+      setSelectedMarketId(report.market.id);
       
       // Transform to our result format
       setResearchResult({
@@ -827,15 +831,38 @@ export default function LeadMagnet() {
                       className="input-apple h-14 text-base"
                       disabled={isResearching}
                     />
-                    {showMarketSuggestions && !isResearching && (
+                    {showMarketSuggestions && !isResearching && researchMarket.length > 0 && (
                       <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {/* Show user's input as first option */}
+                        <button
+                          onClick={() => {
+                            setShowMarketSuggestions(false);
+                          }}
+                          className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors rounded-t-xl border-b border-[oklch(0.92_0_0)] flex items-center gap-2"
+                        >
+                          <Search className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                          <span>{researchMarket}</span>
+                        </button>
+                        {/* Expanded list of US cities */}
                         {[
-                          'Atlanta, GA', 'Austin, TX', 'Boston, MA', 'Charlotte, NC', 'Chicago, IL',
-                          'Dallas, TX', 'Denver, CO', 'Houston, TX', 'Las Vegas, NV', 'Los Angeles, CA',
-                          'Miami, FL', 'Nashville, TN', 'New York, NY', 'Orlando, FL', 'Phoenix, AZ',
-                          'Portland, OR', 'San Diego, CA', 'San Francisco, CA', 'Seattle, WA', 'Tampa, FL'
+                          // Major metros
+                          'Atlanta, GA', 'Austin, TX', 'Baltimore, MD', 'Boston, MA', 'Charlotte, NC',
+                          'Chicago, IL', 'Cincinnati, OH', 'Cleveland, OH', 'Columbus, OH', 'Dallas, TX',
+                          'Denver, CO', 'Detroit, MI', 'Fort Worth, TX', 'Houston, TX', 'Indianapolis, IN',
+                          'Jacksonville, FL', 'Kansas City, MO', 'Las Vegas, NV', 'Los Angeles, CA',
+                          'Louisville, KY', 'Memphis, TN', 'Miami, FL', 'Milwaukee, WI', 'Minneapolis, MN',
+                          'Nashville, TN', 'New Orleans, LA', 'New York, NY', 'Oakland, CA', 'Oklahoma City, OK',
+                          'Orlando, FL', 'Philadelphia, PA', 'Phoenix, AZ', 'Pittsburgh, PA', 'Portland, OR',
+                          'Raleigh, NC', 'Sacramento, CA', 'Salt Lake City, UT', 'San Antonio, TX',
+                          'San Diego, CA', 'San Francisco, CA', 'San Jose, CA', 'Seattle, WA', 'St. Louis, MO',
+                          'Tampa, FL', 'Tucson, AZ', 'Virginia Beach, VA', 'Washington, DC',
+                          // Popular vacation destinations
+                          'Asheville, NC', 'Charleston, SC', 'Gatlinburg, TN', 'Gulf Shores, AL',
+                          'Hilton Head, SC', 'Key West, FL', 'Myrtle Beach, SC', 'Palm Springs, CA',
+                          'Park City, UT', 'Savannah, GA', 'Scottsdale, AZ', 'Sedona, AZ'
                         ]
                           .filter(m => m.toLowerCase().includes(researchMarket.toLowerCase()))
+                          .slice(0, 8)
                           .map(market => (
                             <button
                               key={market}
@@ -843,7 +870,7 @@ export default function LeadMagnet() {
                                 setResearchMarket(market);
                                 setShowMarketSuggestions(false);
                               }}
-                              className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl"
+                              className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl"
                             >
                               {market}
                             </button>
@@ -1277,10 +1304,10 @@ export default function LeadMagnet() {
                   <div>
                     <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Occupancy by Month</p>
                     <div className="space-y-2">
-                      {researchResult.seasonality.slice(0, 6).map((month, idx) => (
+                      {researchResult.seasonality.map((month, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                           <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
-                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-6 overflow-hidden">
+                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-emerald-400 to-teal-400 h-full transition-all"
                               style={{width: `${month.occupancy}%`}}
@@ -1294,7 +1321,7 @@ export default function LeadMagnet() {
                   <div>
                     <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Average Daily Rate by Month</p>
                     <div className="space-y-2">
-                      {researchResult.seasonality.slice(6, 12).map((month, idx) => (
+                      {researchResult.seasonality.map((month, idx) => (
                         <div key={idx} className="flex items-center justify-between">
                           <span className="text-xs text-[oklch(0.50_0_0)]">{formatMonth(month.month)}</span>
                           <span className="text-xs font-semibold text-emerald-500">{formatCurrency(month.adr)}</span>
