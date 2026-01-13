@@ -65,6 +65,7 @@ import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { HierarchicalLocationSelector, type LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { toast } from 'sonner';
 
 // ============================================
@@ -313,6 +314,7 @@ export default function LeadMagnet() {
     parentMarket?: { id: string; name: string };
   }>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
 
   // ============================================
   // TRPC MUTATIONS
@@ -594,8 +596,11 @@ export default function LeadMagnet() {
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   
   const handleResearch = async () => {
-    if (!researchMarket) {
-      toast.error('Please enter a market name');
+    // Support both old text input and new hierarchical selection
+    const hasHierarchicalSelection = locationSelection && (locationSelection.market || locationSelection.submarket);
+    
+    if (!researchMarket && !hasHierarchicalSelection) {
+      toast.error('Please select a location');
       return;
     }
     
@@ -603,9 +608,24 @@ export default function LeadMagnet() {
     setShowMarketSuggestions(false);
     
     try {
-      // Use the new location-based endpoint that works for ANY US location
-      // This uses Rentalizer to get comparable properties data
-      const report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
+      let report;
+      
+      // If we have a hierarchical selection with a market/submarket ID, use that directly
+      if (hasHierarchicalSelection) {
+        // Use the market-level endpoint for more accurate data
+        const marketId = locationSelection.submarket?.id || locationSelection.market?.id;
+        const marketName = locationSelection.submarket?.name || locationSelection.market?.name || '';
+        
+        if (marketId) {
+          report = await getMarketReport.mutateAsync({ marketId, marketName });
+        } else {
+          // Fallback to location-based search
+          report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
+        }
+      } else {
+        // Use the location-based endpoint for text search
+        report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
+      }
       
       setSelectedMarketId(report.market.id);
       
@@ -636,6 +656,26 @@ export default function LeadMagnet() {
     } finally {
       setIsResearching(false);
     }
+  };
+  
+  // Handle hierarchical location search
+  const handleHierarchicalSearch = async (selection: LocationSelection) => {
+    setLocationSelection(selection);
+    
+    // Build a display name for the selection
+    let displayName = '';
+    if (selection.zipcode) {
+      displayName = `${selection.zipcode}, ${selection.submarket?.name}`;
+    } else if (selection.submarket) {
+      displayName = `${selection.submarket.name}, ${selection.market?.name}`;
+    } else if (selection.market) {
+      displayName = selection.market.name;
+    }
+    
+    setResearchMarket(displayName);
+    
+    // Trigger the research
+    handleResearch();
   };
   
   // Sorted bulk results
@@ -851,9 +891,29 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'prove' ? null : 'prove')}
                 />
                 
+                {/* Hierarchical Location Selector */}
                 <div className="space-y-4">
                   <label className="block text-base font-medium text-[oklch(0.25_0_0)]">
-                    City or Market Name
+                    Select Your Market
+                  </label>
+                  <HierarchicalLocationSelector
+                    onSelectionChange={setLocationSelection}
+                    onSearch={handleHierarchicalSearch}
+                    disabled={isResearching}
+                  />
+                </div>
+                
+                {/* OR divider */}
+                <div className="flex items-center gap-4 my-6">
+                  <div className="flex-1 h-px bg-[oklch(0.90_0_0)]" />
+                  <span className="text-sm text-[oklch(0.50_0_0)] font-medium">OR</span>
+                  <div className="flex-1 h-px bg-[oklch(0.90_0_0)]" />
+                </div>
+                
+                {/* Quick Search Input */}
+                <div className="space-y-4">
+                  <label className="block text-base font-medium text-[oklch(0.25_0_0)]">
+                    Quick Search
                   </label>
                   <div className="relative">
                     <Input
@@ -862,9 +922,11 @@ export default function LeadMagnet() {
                       onChange={(e) => {
                         setResearchMarket(e.target.value);
                         setShowMarketSuggestions(true);
+                        // Clear hierarchical selection when typing
+                        setLocationSelection(null);
                       }}
                       onFocus={() => setShowMarketSuggestions(true)}
-                      placeholder="Enter any market (e.g., Austin, TX or 78701)..."
+                      placeholder="Type any city, neighborhood, or zip code..."
                       className="input-apple h-14 text-base"
                       disabled={isResearching}
                     />
@@ -874,28 +936,15 @@ export default function LeadMagnet() {
                         {isLoadingSuggestions && (
                           <div className="px-4 py-3 text-[oklch(0.50_0_0)] flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-[oklch(0.50_0_0)]/30 border-t-[oklch(0.50_0_0)] rounded-full animate-spin" />
-                            <span>Searching AirDNA...</span>
+                            <span>Finding markets...</span>
                           </div>
                         )}
                         
-                        {/* Show user's input as first option to search directly */}
-                        {!isLoadingSuggestions && (
-                          <button
-                            onClick={() => {
-                              setShowMarketSuggestions(false);
-                            }}
-                            className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors rounded-t-xl border-b border-[oklch(0.92_0_0)] flex items-center gap-2"
-                          >
-                            <Search className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-                            <span>Search "{researchMarket}"</span>
-                          </button>
-                        )}
-                        
-                        {/* AirDNA-powered suggestions - guaranteed to have data */}
+                        {/* Market suggestions - guaranteed to have data */}
                         {!isLoadingSuggestions && marketSuggestions.length > 0 && (
                           <>
                             <div className="px-4 py-2 text-xs font-medium text-[oklch(0.50_0_0)] bg-[oklch(0.97_0_0)] border-b border-[oklch(0.92_0_0)]">
-                              Markets with AirDNA data
+                              Markets with data
                             </div>
                             {marketSuggestions.map((market) => (
                               <button
@@ -904,6 +953,24 @@ export default function LeadMagnet() {
                                   setResearchMarket(market.name);
                                   setSelectedMarketId(market.id);
                                   setShowMarketSuggestions(false);
+                                  // Also set the location selection for proper data fetching
+                                  setLocationSelection({
+                                    level: market.type === 'submarket' ? 'submarket' : 'market',
+                                    market: market.type === 'market' ? {
+                                      id: market.id,
+                                      name: market.name,
+                                      listingCount: market.listingCount
+                                    } : market.parentMarket ? {
+                                      id: market.parentMarket.id,
+                                      name: market.parentMarket.name,
+                                      listingCount: 0
+                                    } : undefined,
+                                    submarket: market.type === 'submarket' ? {
+                                      id: market.id,
+                                      name: market.name,
+                                      listingCount: market.listingCount
+                                    } : undefined
+                                  });
                                 }}
                                 className="w-full px-4 py-3 text-left hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl"
                               >
@@ -937,20 +1004,17 @@ export default function LeadMagnet() {
                         {/* No results message */}
                         {!isLoadingSuggestions && marketSuggestions.length === 0 && researchMarket.length >= 2 && (
                           <div className="px-4 py-3 text-[oklch(0.50_0_0)] text-sm">
-                            No exact matches found. Try a different search or click above to search anyway.
+                            No exact matches found. Try selecting from the dropdowns above.
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                  <p className="text-sm text-[oklch(0.50_0.02_265)]">
-                    Type any city, neighborhood, or zip code
-                  </p>
                 </div>
                 
                 <button
                   onClick={handleResearch}
-                  disabled={isResearching || !researchMarket}
+                  disabled={isResearching || (!researchMarket && !locationSelection?.market)}
                   className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isResearching ? (

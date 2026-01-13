@@ -505,6 +505,166 @@ export const marketResearchSimpleRouter = router({
         bedroomBreakdown,
         insights
       };
+    }),
+
+  // ============================================
+  // HIERARCHICAL LOCATION ENDPOINTS
+  // ============================================
+
+  // Get all submarkets within a market
+  getSubmarkets: publicProcedure
+    .input(z.object({
+      marketId: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const { marketId } = input;
+      console.log(`[getSubmarkets] Getting submarkets for market ${marketId}`);
+      
+      try {
+        // Use the AirDNA /market/{market_id}/submarkets endpoint
+        const response = await fetch(
+          `https://api.airdna.co/api/enterprise/v2/market/${marketId}/submarkets`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              pagination: { page_size: 25, offset: 0 }
+            })
+          }
+        );
+        
+        const data = await response.json();
+        
+        if (data.status?.type === 'error') {
+          console.error(`[getSubmarkets] API error:`, data.status.message);
+          return [];
+        }
+        
+        const submarkets = data.payload?.submarkets || [];
+        const totalCount = data.payload?.page_info?.total_count || 0;
+        
+        // Fetch additional pages if needed
+        let allSubmarkets = [...submarkets];
+        let offset = 25;
+        
+        while (offset < totalCount) {
+          const moreResponse = await fetch(
+            `https://api.airdna.co/api/enterprise/v2/market/${marketId}/submarkets`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                pagination: { page_size: 25, offset }
+              })
+            }
+          );
+          
+          const moreData = await moreResponse.json();
+          allSubmarkets.push(...(moreData.payload?.submarkets || []));
+          offset += 25;
+        }
+        
+        console.log(`[getSubmarkets] Found ${allSubmarkets.length} submarkets`);
+        
+        // Sort by revenue descending
+        allSubmarkets.sort((a: any, b: any) => 
+          (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0)
+        );
+        
+        return allSubmarkets.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          listingCount: 0, // Not provided in this endpoint
+          revenue: s.metrics?.revenue ? Math.round(s.metrics.revenue) : undefined,
+          occupancy: s.metrics?.booked ? Math.round(s.metrics.booked * 100) : undefined
+        }));
+      } catch (error) {
+        console.error(`[getSubmarkets] Error:`, error);
+        return [];
+      }
+    }),
+
+  // Get all zip codes within a submarket
+  getZipcodesInSubmarket: publicProcedure
+    .input(z.object({
+      submarketId: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const { submarketId } = input;
+      console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId}`);
+      
+      try {
+        // Fetch listings to extract zip codes
+        const response = await fetch(
+          `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              pagination: { page_size: 25, offset: 0 }
+            })
+          }
+        );
+        
+        const data = await response.json();
+        
+        if (data.status?.type === 'error') {
+          console.error(`[getZipcodesInSubmarket] API error:`, data.status.message);
+          return [];
+        }
+        
+        const listings = data.payload?.listings || [];
+        const totalCount = data.payload?.page_info?.total_count || 0;
+        
+        // Extract unique zip codes
+        const zipcodes = new Set<string>();
+        listings.forEach((l: any) => {
+          const zip = l.zipcode || l.zip_code;
+          if (zip) zipcodes.add(zip);
+        });
+        
+        // Fetch more pages if we need more zip codes
+        if (totalCount > 25 && zipcodes.size < 10) {
+          for (let offset = 25; offset < Math.min(totalCount, 100); offset += 25) {
+            const moreResponse = await fetch(
+              `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  pagination: { page_size: 25, offset }
+                })
+              }
+            );
+            
+            const moreData = await moreResponse.json();
+            (moreData.payload?.listings || []).forEach((l: any) => {
+              const zip = l.zipcode || l.zip_code;
+              if (zip) zipcodes.add(zip);
+            });
+          }
+        }
+        
+        const sortedZipcodes = Array.from(zipcodes).sort();
+        console.log(`[getZipcodesInSubmarket] Found ${sortedZipcodes.length} unique zip codes`);
+        
+        return sortedZipcodes;
+      } catch (error) {
+        console.error(`[getZipcodesInSubmarket] Error:`, error);
+        return [];
+      }
     })
 });
 

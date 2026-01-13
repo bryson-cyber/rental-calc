@@ -472,3 +472,40 @@ From AirDNA Rentalizer endpoint:
 - Displays listing count for each suggestion
 - 300ms debounce to avoid excessive API calls
 - Loading state shows "Searching AirDNA..."
+
+
+## Hierarchical Location Selector (Jan 12, 2026)
+
+### Problem:
+- Current autocomplete narrows down to zip code even when user wants city-level data
+- "Searching AirDNA" text should not mention AirDNA
+- Need cascading selection: State → City → Submarket → Zip Code
+- Data returned should match the specificity level selected
+
+### Requirements:
+- [x] Remove "Searching AirDNA" text - use generic "Finding markets..."
+- [x] Build cascading dropdown: State → City → Submarket → Zip Code
+- [x] Each level shows options available at that level
+- [x] User can stop at any level (city, submarket, or zip)
+- [x] Data returned matches selected level (not auto-narrowed)
+- [x] Selecting State shows all cities in that state
+- [x] Selecting City shows all submarkets in that city
+- [x] Selecting Submarket shows all zip codes in that submarket
+
+### Implementation:
+- [x] Create state list dropdown (all US states)
+- [x] Create city dropdown (populated when state selected)
+- [x] Create submarket dropdown (populated when city selected)
+- [x] Create zip code dropdown (populated when submarket selected)
+- [x] Update market research to use selected level's data
+- [x] Test with Arizona → Phoenix/Scottsdale → Glendale flow - WORKS!
+- [ ] Test with St. Louis → Central West End flow
+
+### Completed Features:
+- HierarchicalLocationSelector component with 4 cascading dropdowns
+- State dropdown with all 50 US states + DC
+- City/Metro dropdown searches major cities per state
+- Neighborhood dropdown shows all submarkets (44 for Phoenix/Scottsdale)
+- Zip Code dropdown (optional) for hyper-local data
+- Selected path displayed as breadcrumb (Arizona → Phoenix/Scottsdale → Glendale)
+- Data returned at selected level (Glendale shows $39,712 avg revenue, 52% occupancy)
