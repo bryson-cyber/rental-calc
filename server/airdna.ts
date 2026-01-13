@@ -1070,6 +1070,13 @@ async function getSubmarketMetric(
 export async function getSubmarketSeasonality(
   submarketId: string
 ): Promise<SeasonalityData[]> {
+  // Check cache first
+  const cacheKey = `submarket_seasonality:${submarketId}`;
+  const cached = apiCache.get<SeasonalityData[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     // Fetch 12 months of historical data for submarket
     const [occupancyData, adrData, revenueData] = await Promise.all([
@@ -1124,6 +1131,10 @@ export async function getSubmarketSeasonality(
     }
 
     console.log(`[getSubmarketSeasonality] Successfully fetched seasonality for submarket ${submarketId}`);
+    
+    // Cache the result
+    apiCache.set(cacheKey, seasonalityData, 'market_seasonality');
+    
     return seasonalityData;
   } catch (error) {
     console.error(`Error fetching seasonality for submarket ${submarketId}:`, error);
@@ -2336,6 +2347,13 @@ export async function getComprehensivePropertyReport(
 export async function getComprehensiveMarketReport(
   marketId: string
 ): Promise<ComprehensiveMarketReport | null> {
+  // Check cache first
+  const cacheKey = `market_comprehensive:${marketId}`;
+  const cached = apiCache.get<ComprehensiveMarketReport>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // Step 1: Get market details
   const marketDetails = await getMarketDetails(marketId);
   if (!marketDetails) {
@@ -2388,7 +2406,7 @@ export async function getComprehensiveMarketReport(
     }))
     .sort((a, b) => a.bedrooms - b.bedrooms);
   
-  return {
+  const result = {
     market: {
       id: marketId,
       name: marketDetails.name,
@@ -2411,6 +2429,11 @@ export async function getComprehensiveMarketReport(
     insights,
     generated_at: new Date().toISOString(),
   };
+
+  // Cache the result
+  apiCache.set(cacheKey, result, 'market_details');
+  
+  return result;
 }
 
 // ============================================
@@ -2440,6 +2463,13 @@ export async function getComprehensiveSubmarketReport(
   insights: MarketInsights;
   generated_at: string;
 } | null> {
+  // Check cache first
+  const cacheKey = `submarket_comprehensive:${submarketId}`;
+  const cached = apiCache.get<NonNullable<Awaited<ReturnType<typeof getComprehensiveSubmarketReport>>>>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // Step 1: Get submarket details
   const submarketDetails = await getSubmarketDetails(submarketId);
   if (!submarketDetails) {
@@ -2529,7 +2559,7 @@ export async function getComprehensiveSubmarketReport(
     seasonality = await getMarketSeasonality(submarketDetails.market_id);
   }
 
-  return {
+  const result = {
     submarket: {
       id: submarketId,
       name: submarketDetails.name,
@@ -2551,6 +2581,11 @@ export async function getComprehensiveSubmarketReport(
     insights,
     generated_at: new Date().toISOString(),
   };
+
+  // Cache the result
+  apiCache.set(cacheKey, result, 'submarket_details');
+  
+  return result;
 }
 
 
@@ -3383,6 +3418,13 @@ export interface SeasonalityData {
 export async function getMarketSeasonality(
   marketId: string
 ): Promise<SeasonalityData[]> {
+  // Check cache first
+  const cacheKey = `market_seasonality:${marketId}`;
+  const cached = apiCache.get<SeasonalityData[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     // Fetch 12 months of historical data
     const [occupancyData, adrData, revenueData] = await Promise.all([
@@ -3474,6 +3516,9 @@ export async function getMarketSeasonality(
       });
     }
 
+    // Cache the result
+    apiCache.set(cacheKey, seasonalityData, 'market_seasonality');
+    
     return seasonalityData;
   } catch (error) {
     console.error("Error fetching market seasonality:", error);
