@@ -395,6 +395,22 @@ From AirDNA Rentalizer endpoint:
 - [x] Add market percentile ranking to Step 3 (percentile bar, vs market avg, rank)
 - [x] Fix forecast occupancy calculation (convert decimal to percentage)
 
+## Bug Fixes (Jan 13, 2026)
+
+### City/Metro Dropdown Bug Fix:
+- [x] Fixed City/Metro dropdown not showing cities after selecting a state
+- [x] Root cause: Overly strict state matching logic filtering out fallback results
+- [x] Solution: Made state matching more lenient to allow results without state info
+- [x] Added state extraction to fallback search function
+
+### Search Functionality Implementation:
+- [x] Add search input field to City/Metro dropdown (implemented as separate element)
+- [x] Implement filtering of predefined cities by search query
+- [x] Implement API calls to search for cities not in predefined list
+- [x] Display search results in dropdown with listing counts
+- [x] Test search with various city names
+- [x] Verify search works for both predefined and API-found cities
+
 
 ## Step 4 Property Images Enhancement (Jan 12, 2026)
 

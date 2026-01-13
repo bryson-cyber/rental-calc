@@ -120,6 +120,11 @@ export function HierarchicalLocationSelector({
   const [submarkets, setSubmarkets] = useState<Submarket[]>([]);
   const [zipcodes, setZipcodes] = useState<{ zipcode: string; listingCount: number }[]>([]);
   
+  // Search state
+  const [marketSearchQuery, setMarketSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Market[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
   // Loading state
   const [loadingMarkets, setLoadingMarkets] = useState(false);
   const [loadingSubmarkets, setLoadingSubmarkets] = useState(false);
@@ -413,6 +418,43 @@ export function HierarchicalLocationSelector({
     setZipcodeOpen(false);
   };
   
+  // Handle market search - filter predefined and search API for new cities
+  const handleMarketSearch = async (query: string) => {
+    setMarketSearchQuery(query);
+    
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Filter predefined markets by search query
+      const queryLower = query.toLowerCase();
+      const filteredPredefined = markets.filter(m => 
+        m.name.toLowerCase().includes(queryLower)
+      );
+      
+      // Search API for additional cities not in predefined list
+      const apiResults = await searchMarkets.mutateAsync({ query });
+      const results = Array.isArray(apiResults) ? apiResults : ((apiResults as any)?.data || apiResults || []);
+      
+      // Filter to markets only and remove duplicates
+      const apiMarkets = (results as any[]).filter(r => r.type === 'market');
+      const seenIds = new Set(filteredPredefined.map(m => m.id));
+      const newApiMarkets = apiMarkets.filter(m => !seenIds.has(m.id));
+      
+      // Combine filtered predefined and new API results
+      const combined = [...filteredPredefined, ...newApiMarkets];
+      setSearchResults(combined);
+    } catch (error) {
+      console.error('Error searching markets:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  
   // Handle search at current level
   const handleSearchAtLevel = (level: 'market' | 'submarket' | 'zipcode') => {
     if (level === 'zipcode' && selectedZipcode) {
@@ -523,9 +565,24 @@ export function HierarchicalLocationSelector({
             )}
           </div>
           
-          {/* Market/City Dropdown with Search Button */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          {/* Market/City Dropdown with Search */}
+          <div className="space-y-2 flex-1">
+            {/* Search Input - Always visible when state is selected */}
+            {selectedState && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Search cities..."
+                  value={marketSearchQuery}
+                  onChange={(e) => handleMarketSearch(e.target.value)}
+                  disabled={disabled}
+                  className="flex-1 h-10 px-3 border border-[oklch(0.90_0_0)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.75_0.15_75)]/20 disabled:opacity-50"
+                />
+              </div>
+            )}
+            
+            {/* Market Dropdown Button */}
+            <div className="relative">
               <button
                 onClick={() => !disabled && selectedState && setMarketOpen(!marketOpen)}
                 disabled={disabled || !selectedState}
@@ -546,35 +603,56 @@ export function HierarchicalLocationSelector({
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${marketOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {marketOpen && markets.length > 0 && (
+              {/* Dropdown Menu */}
+              {marketOpen && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                  {markets.map((market) => (
-                    <button
-                      key={market.id}
-                      onClick={() => handleMarketSelect(market)}
-                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                        selectedMarket?.id === market.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{market.name}</span>
-                        <span className="text-xs text-[oklch(0.50_0_0)]">
-                          {market.listingCount.toLocaleString()} listings
-                        </span>
+                  {marketSearchQuery ? (
+                    isSearching ? (
+                      <div className="px-4 py-8 text-center text-[oklch(0.50_0_0)] text-sm">
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                        Searching...
                       </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {marketOpen && markets.length === 0 && !loadingMarkets && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
-                  No markets found in {selectedState?.name}
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((market) => (
+                        <button
+                          key={market.id}
+                          onClick={() => handleMarketSelect(market)}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors ${selectedMarket?.id === market.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{market.name}</span>
+                            <span className="text-xs text-[oklch(0.50_0_0)]">{market.listingCount.toLocaleString()} listings</span>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-8 text-center text-[oklch(0.50_0_0)] text-sm">No cities found matching "{marketSearchQuery}"</div>
+                    )
+                  ) : (
+                    markets.length > 0 ? (
+                      markets.map((market) => (
+                        <button
+                          key={market.id}
+                          onClick={() => handleMarketSelect(market)}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors ${selectedMarket?.id === market.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{market.name}</span>
+                            <span className="text-xs text-[oklch(0.50_0_0)]">{market.listingCount.toLocaleString()} listings</span>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-8 text-center text-[oklch(0.50_0_0)] text-sm">No markets found in {selectedState?.name}</div>
+                    )
+                  )}
                 </div>
               )}
             </div>
-            
-            {/* Search at City/Metro level */}
+          </div>
+          
+          {/* Search Button - Kept for consistency with other levels */}
+          <div className="flex gap-2">            {/* Search at City/Metro level */}
             <button
               onClick={() => handleSearchAtLevel('market')}
               disabled={disabled || !selectedMarket}
