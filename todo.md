@@ -1001,3 +1001,61 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [ ] Test form submission
 - [ ] Verify comparison results display correctly
 - [ ] Test winner determination
+
+
+## Comprehensive Debugging - All Tools (Jan 13, 2026)
+
+### Step 1 Debugging
+- [ ] Test state selection
+- [ ] Test city/metro loading and selection
+- [ ] Test neighborhood loading and selection
+- [ ] Test zip code loading and selection
+- [ ] Test search button functionality
+- [ ] Verify market report generates
+- [ ] Verify "What's Working" shows all bedroom types
+- [ ] Verify "Save Market" button works
+- [ ] Check for API errors in console
+
+### Step 2 Debugging
+- [ ] Test location autocomplete
+- [ ] Test search radius filter
+- [ ] Test bedroom filter
+- [ ] Test sort by options
+- [ ] Verify property cards display correctly
+- [ ] Test "View Listing" button links to Airbnb
+- [ ] Test "Save Property" button functionality
+- [ ] Verify property stats display (Revenue, ADR, Occupancy, RevPAR)
+- [ ] Check for API errors in console
+
+### Step 3 Debugging
+- [ ] Test address autocomplete
+- [ ] Test monthly rent input
+- [ ] Test bedroom/bathroom selection
+- [ ] Test "Validate This Deal" button
+- [ ] Verify validation results display
+- [ ] Verify revenue forecast chart displays
+- [ ] Verify comparable properties display
+- [ ] Test "Use in Step 4" button
+- [ ] Check for API errors in console
+
+### Step 4 Debugging
+- [ ] Test adding first property
+- [ ] Test adding multiple properties (2-5)
+- [ ] Test "Add Another Property" button
+- [ ] Test "Find the Winner" button
+- [ ] Verify comparison results display
+- [ ] Verify best deal is highlighted
+- [ ] Test removing properties from comparison
+- [ ] Check for API errors in console
+
+### Saved Items & Features Debugging
+- [ ] Test saving markets from Step 1
+- [ ] Test saving properties from Step 2
+- [ ] Test viewing saved items
+- [ ] Test "Use in Step 3" from saved properties
+- [ ] Test multi-select for comparison
+- [ ] Test "Compare in Step 4" from saved properties
+- [ ] Test adding notes to saved items
+- [ ] Test PDF export functionality
+- [ ] Verify PDF content is complete and formatted correctly
+- [ ] Test saved items persist after page refresh
