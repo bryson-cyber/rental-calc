@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Star, Home, Bed, Bath, TrendingUp, Calendar, MapPin } from 'lucide-react';
+import { ExternalLink, Star, Home, Bed, Bath, TrendingUp, Calendar, MapPin, Bookmark, BookmarkCheck } from 'lucide-react';
 
 interface PropertyCardProps {
   id: string;
@@ -19,7 +19,9 @@ interface PropertyCardProps {
   airbnbUrl?: string;
   superhost?: boolean;
   index?: number;
-  rank?: number; // Market rank if available
+  rank?: number;
+  isSaved?: boolean;
+  onSave?: () => void;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -41,6 +43,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   distance,
   lastReviewDate,
   rank,
+  isSaved = false,
+  onSave,
 }) => {
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -108,20 +112,50 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           )}
           
-          {/* View on Airbnb Button */}
-          {airbnbUrl ? (
-            <a
-              href={airbnbUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[oklch(0.75_0.12_70)] hover:bg-[oklch(0.65_0.14_70)] text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full justify-center"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View Listing
-            </a>
-          ) : (
-            <div className="text-xs text-[oklch(0.60_0_0)] italic">No Airbnb link</div>
-          )}
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            {/* View on Airbnb Button */}
+            {airbnbUrl ? (
+              <a
+                href={airbnbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-[oklch(0.75_0.12_70)] hover:bg-[oklch(0.65_0.14_70)] text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full justify-center"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Listing
+              </a>
+            ) : (
+              <div className="text-xs text-[oklch(0.60_0_0)] italic">No Airbnb link</div>
+            )}
+            
+            {/* Save Button */}
+            {onSave && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave();
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full justify-center border ${
+                  isSaved 
+                    ? 'bg-[oklch(0.78_0.12_75)]/10 border-[oklch(0.78_0.12_75)] text-[oklch(0.78_0.12_75)]' 
+                    : 'border-[oklch(0.85_0_0)] text-[oklch(0.45_0_0)] hover:border-[oklch(0.78_0.12_75)] hover:text-[oklch(0.78_0.12_75)]'
+                }`}
+              >
+                {isSaved ? (
+                  <>
+                    <BookmarkCheck className="w-4 h-4" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4" />
+                    Save
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Right Side - Stats */}

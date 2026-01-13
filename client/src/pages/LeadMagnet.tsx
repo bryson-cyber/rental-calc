@@ -59,7 +59,11 @@ import {
   Play,
   Zap,
   Trophy,
-  Shield
+  Shield,
+  Bookmark,
+  BookmarkCheck,
+  Heart,
+  HeartOff
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
@@ -67,6 +71,8 @@ import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { HierarchicalLocationSelector, type LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { toast } from 'sonner';
+import { useSavedItems } from '@/hooks/useSavedItems';
+import { SavedItemsPanel } from '@/components/SavedItemsPanel';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -257,6 +263,21 @@ export default function LeadMagnet() {
   
   // Help state
   const [showHelp, setShowHelp] = useState<TabType | null>(null);
+  
+  // Saved items
+  const {
+    savedMarkets,
+    savedProperties,
+    saveMarket,
+    removeMarket,
+    saveProperty,
+    removeProperty,
+    isMarketSaved,
+    isPropertySaved,
+    clearAll,
+    totalSaved,
+  } = useSavedItems();
+  const [showSavedPanel, setShowSavedPanel] = useState(false);
   
   // ============================================
   // VALIDATE THE DEAL STATE (formerly Single Property)
@@ -829,7 +850,31 @@ export default function LeadMagnet() {
             <p className="text-[oklch(0.45_0_0)] text-xl max-w-xl mx-auto leading-relaxed">
               Each tool answers a specific question on your path to profitable short-term rentals
             </p>
+            
+            {/* Saved Items Button */}
+            {totalSaved > 0 && (
+              <button
+                onClick={() => setShowSavedPanel(!showSavedPanel)}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-[oklch(0.78_0.12_75)]/10 border border-[oklch(0.78_0.12_75)]/30 rounded-full text-[oklch(0.78_0.12_75)] text-sm font-medium hover:bg-[oklch(0.78_0.12_75)]/20 transition-colors"
+              >
+                <Bookmark className="w-4 h-4" />
+                {totalSaved} Saved Item{totalSaved !== 1 ? 's' : ''}
+              </button>
+            )}
           </div>
+          
+          {/* Saved Items Panel */}
+          {showSavedPanel && (
+            <div className="mb-12 bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-2xl p-6">
+              <SavedItemsPanel
+                savedMarkets={savedMarkets}
+                savedProperties={savedProperties}
+                onRemoveMarket={removeMarket}
+                onRemoveProperty={removeProperty}
+                onClearAll={clearAll}
+              />
+            </div>
+          )}
           
           {/* Job-Focused Tab Navigation */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-12">
@@ -1478,6 +1523,33 @@ export default function LeadMagnet() {
                 <Search className="w-4 h-4 mr-2" />
                 Find Opportunities in {researchResult.marketName}
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const marketName = researchResult.marketName.split(',')[0].trim();
+                  const state = researchResult.marketName.split(',')[1]?.trim() || '';
+                  saveMarket({
+                    name: marketName,
+                    state: state,
+                    avgRevenue: researchResult.avgRevenue,
+                    avgOccupancy: researchResult.avgOccupancy,
+                  });
+                  toast.success(`Saved ${marketName} to your list!`);
+                }}
+                className={`border-[oklch(0.78_0.12_75)] text-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.78_0.12_75)]/10 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-[oklch(0.78_0.12_75)]/10' : ''}`}
+              >
+                {isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? (
+                  <>
+                    <BookmarkCheck className="w-4 h-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Save Market
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </section>
@@ -1622,6 +1694,20 @@ export default function LeadMagnet() {
                     airbnbUrl={listing.airbnb_url}
                     superhost={listing.superhost}
                     index={idx}
+                    isSaved={isPropertySaved(listing.title)}
+                    onSave={() => {
+                      saveProperty({
+                        title: listing.title,
+                        address: exploreAddress,
+                        bedrooms: listing.bedrooms,
+                        bathrooms: listing.bathrooms,
+                        revenue: listing.annual_revenue,
+                        adr: listing.adr,
+                        occupancy: listing.occupancy,
+                        airbnbUrl: listing.airbnb_url,
+                      });
+                      toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
+                    }}
                   />
                 ))}
               </div>

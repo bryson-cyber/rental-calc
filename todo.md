@@ -905,3 +905,14 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Add example scenario to Step 2 (Explore Listings)
 - [x] Add example scenario to Step 3 (Validate the Deal)
 - [x] Add example scenario to Step 4 (Find the Best Deal)
+
+
+## Next Step Navigation & Saved Searches (Jan 13, 2026)
+
+- [x] Add "Next Step" button after Step 1 results → suggests Step 2 (already exists)
+- [x] Add "Next Step" button after Step 2 results → suggests Step 3 (already exists)
+- [x] Add "Next Step" button after Step 3 results → suggests Step 4 (already exists)
+- [x] Create saved searches functionality with localStorage
+- [x] Add "Save Market" button in Step 1 results
+- [x] Add "Save Property" button in Step 2 property cards
+- [x] Add "Saved Items" section to view saved markets and properties
