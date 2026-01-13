@@ -1,0 +1,21 @@
+UI Changes - Jan 13, 2026
+
+Step 1 Market Selector Improvements:
+1. Quick search input has been REMOVED
+2. OR divider has been REMOVED
+3. Main "Prove This Market" button has been REMOVED
+4. Search buttons now appear at each level:
+   - City/Metro level (index 9)
+   - Neighborhood level (index 11)
+   - Zip Code level (index 13)
+5. The dropdowns are arranged in a 2x2 grid:
+   - Row 1: State, City/Metro + Search
+   - Row 2: Neighborhood + Search, Zip Code + Search
+6. Helper text shows: "Start by selecting a state, then drill down to city, neighborhood, or zip code"
+
+Testing needed:
+- Select a state (Arkansas)
+- Select a city
+- Click search button at city level
+- Verify data loads
+- Test reset functionality

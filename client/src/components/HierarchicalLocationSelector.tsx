@@ -3,11 +3,12 @@
  * 
  * Cascading dropdown for: State → City/Market → Submarket → Zip Code
  * Each level shows data at that specificity when selected.
+ * Includes search buttons at each level and a reset button.
  */
 
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { ChevronDown, MapPin, Building2, Map, Hash, X, Loader2 } from 'lucide-react';
+import { ChevronDown, MapPin, Building2, Map, Hash, X, Loader2, Search, RotateCcw } from 'lucide-react';
 
 // US States list
 const US_STATES = [
@@ -386,8 +387,8 @@ export function HierarchicalLocationSelector({
     setZipcodeOpen(false);
   };
   
-  // Clear all selections
-  const handleClear = () => {
+  // Clear all selections (Reset All)
+  const handleReset = () => {
     setSelectedState(null);
     setSelectedMarket(null);
     setSelectedSubmarket(null);
@@ -395,28 +396,15 @@ export function HierarchicalLocationSelector({
     setMarkets([]);
     setSubmarkets([]);
     setZipcodes([]);
+    setStateOpen(false);
+    setMarketOpen(false);
+    setSubmarketOpen(false);
+    setZipcodeOpen(false);
   };
   
-  // Get current selection label
-  const getSelectionLabel = () => {
-    if (selectedZipcode) {
-      return `${selectedZipcode}, ${selectedSubmarket?.name}`;
-    }
-    if (selectedSubmarket) {
-      return `${selectedSubmarket.name}, ${selectedMarket?.name}`;
-    }
-    if (selectedMarket) {
-      return selectedMarket.name;
-    }
-    if (selectedState) {
-      return selectedState.name;
-    }
-    return 'Select a location...';
-  };
-  
-  // Handle search button click
-  const handleSearchClick = () => {
-    if (selectedZipcode) {
+  // Handle search at current level
+  const handleSearchAtLevel = (level: 'market' | 'submarket' | 'zipcode') => {
+    if (level === 'zipcode' && selectedZipcode) {
       onSearch({
         level: 'zipcode',
         state: selectedState!,
@@ -424,14 +412,14 @@ export function HierarchicalLocationSelector({
         submarket: selectedSubmarket!,
         zipcode: selectedZipcode
       });
-    } else if (selectedSubmarket) {
+    } else if (level === 'submarket' && selectedSubmarket) {
       onSearch({
         level: 'submarket',
         state: selectedState!,
         market: selectedMarket!,
         submarket: selectedSubmarket
       });
-    } else if (selectedMarket) {
+    } else if (level === 'market' && selectedMarket) {
       onSearch({
         level: 'market',
         state: selectedState!,
@@ -440,8 +428,25 @@ export function HierarchicalLocationSelector({
     }
   };
   
+  // Check if any selection is made
+  const hasSelection = selectedState || selectedMarket || selectedSubmarket || selectedZipcode;
+  
   return (
     <div className="space-y-4">
+      {/* Reset All Button - only show when there's a selection */}
+      {hasSelection && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleReset}
+            disabled={disabled}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[oklch(0.50_0_0)] hover:text-[oklch(0.30_0_0)] hover:bg-[oklch(0.96_0_0)] rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset All
+          </button>
+        </div>
+      )}
+      
       {/* Selection breadcrumb */}
       {selectedState && (
         <div className="flex items-center gap-2 text-sm text-[oklch(0.50_0_0)] flex-wrap">
@@ -465,219 +470,252 @@ export function HierarchicalLocationSelector({
               <span className="bg-[oklch(0.96_0_0)] px-2 py-1 rounded">{selectedZipcode}</span>
             </>
           )}
-          <button
-            onClick={handleClear}
-            className="ml-2 text-[oklch(0.50_0_0)] hover:text-[oklch(0.30_0_0)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
       )}
       
-      {/* Dropdown grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* State Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => !disabled && setStateOpen(!stateOpen)}
-            disabled={disabled}
-            className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
-              stateOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
-          >
-            <div className="flex items-center gap-2">
-              <Map className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-              <span className={selectedState ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                {selectedState?.name || 'State'}
-              </span>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
-          </button>
+      {/* Dropdown grid with search buttons */}
+      <div className="space-y-3">
+        {/* Row 1: State and City/Metro */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* State Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => !disabled && setStateOpen(!stateOpen)}
+              disabled={disabled}
+              className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
+                stateOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Map className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                <span className={selectedState ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                  {selectedState?.name || 'State'}
+                </span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {stateOpen && (
+              <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {US_STATES.map((state) => (
+                  <button
+                    key={state.code}
+                    onClick={() => handleStateSelect(state)}
+                    className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                      selectedState?.code === state.code ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                    }`}
+                  >
+                    {state.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           
-          {stateOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-              {US_STATES.map((state) => (
-                <button
-                  key={state.code}
-                  onClick={() => handleStateSelect(state)}
-                  className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                    selectedState?.code === state.code ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                  }`}
-                >
-                  {state.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        {/* Market/City Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => !disabled && selectedState && setMarketOpen(!marketOpen)}
-            disabled={disabled || !selectedState}
-            className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
-              marketOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-            } ${disabled || !selectedState ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
-          >
-            <div className="flex items-center gap-2">
-              {loadingMarkets ? (
-                <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
-              ) : (
-                <Building2 className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-              )}
-              <span className={selectedMarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                {loadingMarkets ? 'Loading...' : selectedMarket?.name || 'City/Metro'}
-              </span>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${marketOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {marketOpen && markets.length > 0 && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-              {markets.map((market) => (
-                <button
-                  key={market.id}
-                  onClick={() => handleMarketSelect(market)}
-                  className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                    selectedMarket?.id === market.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{market.name}</span>
-                    <span className="text-xs text-[oklch(0.50_0_0)]">
-                      {market.listingCount.toLocaleString()} listings
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          
-          {marketOpen && markets.length === 0 && !loadingMarkets && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
-              No markets found in {selectedState?.name}
-            </div>
-          )}
-        </div>
-        
-        {/* Submarket/Neighborhood Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => !disabled && selectedMarket && setSubmarketOpen(!submarketOpen)}
-            disabled={disabled || !selectedMarket}
-            className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
-              submarketOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-            } ${disabled || !selectedMarket ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
-          >
-            <div className="flex items-center gap-2">
-              {loadingSubmarkets ? (
-                <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
-              ) : (
-                <MapPin className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-              )}
-              <span className={selectedSubmarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                {loadingSubmarkets ? 'Loading...' : selectedSubmarket?.name || 'Neighborhood'}
-              </span>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${submarketOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {submarketOpen && submarkets.length > 0 && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-              {submarkets.map((submarket) => (
-                <button
-                  key={submarket.id}
-                  onClick={() => handleSubmarketSelect(submarket)}
-                  className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                    selectedSubmarket?.id === submarket.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{submarket.name}</span>
-                    <div className="flex items-center gap-2 text-xs text-[oklch(0.50_0_0)]">
-                      {submarket.revenue && (
-                        <span className="text-emerald-600">${Math.round(submarket.revenue / 1000)}k/yr</span>
-                      )}
-                      {submarket.listingCount > 0 && (
-                        <span>{submarket.listingCount.toLocaleString()} listings</span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          
-          {submarketOpen && submarkets.length === 0 && !loadingSubmarkets && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
-              No neighborhoods found
-            </div>
-          )}
-        </div>
-        
-        {/* Zip Code Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => !disabled && selectedSubmarket && setZipcodeOpen(!zipcodeOpen)}
-            disabled={disabled || !selectedSubmarket}
-            className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
-              zipcodeOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-            } ${disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
-          >
-            <div className="flex items-center gap-2">
-              {loadingZipcodes ? (
-                <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
-              ) : (
-                <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-              )}
-              <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                {loadingZipcodes ? 'Loading...' : selectedZipcode || 'Zip Code (optional)'}
-              </span>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${zipcodeOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {zipcodeOpen && zipcodes.length > 0 && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+          {/* Market/City Dropdown with Search Button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
               <button
-                onClick={() => {
-                  setSelectedZipcode(null);
-                  setZipcodeOpen(false);
-                }}
-                className="w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors rounded-t-xl text-[oklch(0.50_0_0)] italic"
+                onClick={() => !disabled && selectedState && setMarketOpen(!marketOpen)}
+                disabled={disabled || !selectedState}
+                className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
+                  marketOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
+                } ${disabled || !selectedState ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
               >
-                All zip codes
+                <div className="flex items-center gap-2">
+                  {loadingMarkets ? (
+                    <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
+                  ) : (
+                    <Building2 className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                  )}
+                  <span className={selectedMarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                    {loadingMarkets ? 'Loading...' : selectedMarket?.name || 'City/Metro'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${marketOpen ? 'rotate-180' : ''}`} />
               </button>
-              {zipcodes.map((zipcode) => (
-                <button
-                  key={zipcode}
-                  onClick={() => handleZipcodeSelect(zipcode)}
-                  className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl ${
-                    selectedZipcode === zipcode ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                  }`}
-                >
-                  {zipcode}
-                </button>
-              ))}
+              
+              {marketOpen && markets.length > 0 && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {markets.map((market) => (
+                    <button
+                      key={market.id}
+                      onClick={() => handleMarketSelect(market)}
+                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                        selectedMarket?.id === market.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{market.name}</span>
+                        <span className="text-xs text-[oklch(0.50_0_0)]">
+                          {market.listingCount.toLocaleString()} listings
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {marketOpen && markets.length === 0 && !loadingMarkets && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
+                  No markets found in {selectedState?.name}
+                </div>
+              )}
             </div>
-          )}
+            
+            {/* Search at City/Metro level */}
+            <button
+              onClick={() => handleSearchAtLevel('market')}
+              disabled={disabled || !selectedMarket}
+              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
+                disabled || !selectedMarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              }`}
+              title="Search this city/metro"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Row 2: Neighborhood and Zip Code */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Submarket/Neighborhood Dropdown with Search Button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <button
+                onClick={() => !disabled && selectedMarket && setSubmarketOpen(!submarketOpen)}
+                disabled={disabled || !selectedMarket}
+                className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
+                  submarketOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
+                } ${disabled || !selectedMarket ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
+              >
+                <div className="flex items-center gap-2">
+                  {loadingSubmarkets ? (
+                    <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
+                  ) : (
+                    <MapPin className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                  )}
+                  <span className={selectedSubmarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                    {loadingSubmarkets ? 'Loading...' : selectedSubmarket?.name || 'Neighborhood'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${submarketOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {submarketOpen && submarkets.length > 0 && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {submarkets.map((submarket) => (
+                    <button
+                      key={submarket.id}
+                      onClick={() => handleSubmarketSelect(submarket)}
+                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                        selectedSubmarket?.id === submarket.id ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{submarket.name}</span>
+                        <div className="flex items-center gap-2 text-xs text-[oklch(0.50_0_0)]">
+                          {submarket.revenue && (
+                            <span className="text-emerald-600">${Math.round(submarket.revenue / 1000)}k/yr</span>
+                          )}
+                          {submarket.listingCount > 0 && (
+                            <span>{submarket.listingCount.toLocaleString()} listings</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {submarketOpen && submarkets.length === 0 && !loadingSubmarkets && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
+                  No neighborhoods found
+                </div>
+              )}
+            </div>
+            
+            {/* Search at Neighborhood level */}
+            <button
+              onClick={() => handleSearchAtLevel('submarket')}
+              disabled={disabled || !selectedSubmarket}
+              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
+                disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              }`}
+              title="Search this neighborhood"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
           
-          {zipcodeOpen && zipcodes.length === 0 && !loadingZipcodes && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
-              No zip codes found
+          {/* Zip Code Dropdown with Search Button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <button
+                onClick={() => !disabled && selectedSubmarket && setZipcodeOpen(!zipcodeOpen)}
+                disabled={disabled || !selectedSubmarket}
+                className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
+                  zipcodeOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
+                } ${disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
+              >
+                <div className="flex items-center gap-2">
+                  {loadingZipcodes ? (
+                    <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
+                  ) : (
+                    <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                  )}
+                  <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                    {loadingZipcodes ? 'Loading...' : selectedZipcode || 'Zip Code'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${zipcodeOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {zipcodeOpen && zipcodes.length > 0 && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {zipcodes.map((zipcode) => (
+                    <button
+                      key={zipcode}
+                      onClick={() => handleZipcodeSelect(zipcode)}
+                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                        selectedZipcode === zipcode ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                      }`}
+                    >
+                      {zipcode}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {zipcodeOpen && zipcodes.length === 0 && !loadingZipcodes && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
+                  No zip codes found
+                </div>
+              )}
             </div>
-          )}
+            
+            {/* Search at Zip Code level */}
+            <button
+              onClick={() => handleSearchAtLevel('zipcode')}
+              disabled={disabled || !selectedZipcode}
+              className={`h-14 px-4 flex items-center justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all ${
+                disabled || !selectedZipcode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[oklch(0.65_0.15_75)]'
+              }`}
+              title="Search this zip code"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
       
       {/* Helper text */}
       <p className="text-sm text-[oklch(0.50_0.02_265)]">
         {!selectedState && 'Start by selecting a state, then drill down to city, neighborhood, or zip code'}
-        {selectedState && !selectedMarket && 'Select a city/metro area to see market data, or continue to narrow down'}
-        {selectedMarket && !selectedSubmarket && 'Select a neighborhood for more specific data, or search the entire metro'}
-        {selectedSubmarket && !selectedZipcode && 'Optionally select a zip code for hyper-local data'}
-        {selectedZipcode && 'Ready to search! Click the button below to see data for this zip code'}
+        {selectedState && !selectedMarket && 'Select a city/metro area to see market data'}
+        {selectedMarket && !selectedSubmarket && 'Click the search button to see city data, or select a neighborhood for more specific data'}
+        {selectedSubmarket && !selectedZipcode && 'Click the search button to see neighborhood data, or select a zip code for hyper-local data'}
+        {selectedZipcode && 'Click the search button to see data for this zip code'}
       </p>
     </div>
   );

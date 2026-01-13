@@ -685,3 +685,15 @@ From AirDNA Rentalizer endpoint:
 - [x] Group orphaned submarkets under virtual markets - Kansas City Area shows 7 neighborhoods
 ### Cache Extension
 - [x] Extend cache TTL from 24 hours to 7 days (604800000ms)
+
+## Step 1 Market Selector Improvements (Jan 13, 2026)
+### UI Changes
+- [x] Remove quick search input field
+- [x] Add "Reset All" button to clear all selections at once
+- [x] Add search/analyze button at City/Metro level
+- [x] Add search/analyze button at Neighborhood level
+- [x] Add search/analyze button at Zip Code level
+### Zip Code Integration
+- [x] Add zip code dropdown after neighborhood selection
+- [x] Fetch zip codes for selected neighborhood/submarket
+- [x] Display zip code data when selected

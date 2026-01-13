@@ -597,8 +597,8 @@ export default function LeadMagnet() {
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   
   const handleResearch = async () => {
-    // Support both old text input and new hierarchical selection
-    const hasHierarchicalSelection = locationSelection && (locationSelection.market || locationSelection.submarket);
+    // Support hierarchical selection at any level
+    const hasHierarchicalSelection = locationSelection && (locationSelection.market || locationSelection.submarket || locationSelection.zipcode);
     
     if (!researchMarket && !hasHierarchicalSelection) {
       toast.error('Please select a location');
@@ -611,10 +611,17 @@ export default function LeadMagnet() {
     try {
       let report;
       
-      // If we have a hierarchical selection with a market/submarket ID, use that directly
+      // If we have a hierarchical selection, use the appropriate endpoint
       if (hasHierarchicalSelection) {
-        // Check if we have a submarket or market selection
-        if (locationSelection.submarket?.id) {
+        // Check the selection level: zipcode > submarket > market
+        if (locationSelection.zipcode && locationSelection.submarket?.id) {
+          // For zip code, we use the submarket data but display with zip code context
+          // The submarket endpoint gives us the most specific data available
+          const submarketId = locationSelection.submarket.id;
+          const submarketName = `${locationSelection.zipcode} (${locationSelection.submarket.name})`;
+          console.log(`[handleResearch] Using submarket endpoint for zip code ${locationSelection.zipcode} in ${locationSelection.submarket.name}`);
+          report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+        } else if (locationSelection.submarket?.id) {
           // Use submarket endpoint for neighborhood-level data
           const submarketId = locationSelection.submarket.id;
           const submarketName = locationSelection.submarket.name;
@@ -889,11 +896,11 @@ export default function LeadMagnet() {
                   title="How This Tool Helps You"
                   description="See real revenue data from actual Airbnb hosts to prove that short-term rentals make money in any market"
                   steps={[
-                    'Enter any city or market name',
-                    'Click "Prove This Market"',
+                    'Select a state from the dropdown',
+                    'Choose a city/metro, then optionally narrow down to neighborhood or zip code',
+                    'Click the search button at your desired level',
                     'See average revenue hosts are actually making',
-                    'View occupancy rates and seasonal trends',
-                    'Understand which property types perform best'
+                    'View occupancy rates and seasonal trends'
                   ]}
                   isOpen={showHelp === 'prove'}
                   onToggle={() => setShowHelp(showHelp === 'prove' ? null : 'prove')}
@@ -911,132 +918,13 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                {/* OR divider */}
-                <div className="flex items-center gap-4 my-6">
-                  <div className="flex-1 h-px bg-[oklch(0.90_0_0)]" />
-                  <span className="text-sm text-[oklch(0.50_0_0)] font-medium">OR</span>
-                  <div className="flex-1 h-px bg-[oklch(0.90_0_0)]" />
-                </div>
-                
-                {/* Quick Search Input */}
-                <div className="space-y-4">
-                  <label className="block text-base font-medium text-[oklch(0.25_0_0)]">
-                    Quick Search
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      value={researchMarket}
-                      onChange={(e) => {
-                        setResearchMarket(e.target.value);
-                        setShowMarketSuggestions(true);
-                        // Clear hierarchical selection when typing
-                        setLocationSelection(null);
-                      }}
-                      onFocus={() => setShowMarketSuggestions(true)}
-                      placeholder="Type any city, neighborhood, or zip code..."
-                      className="input-apple h-14 text-base"
-                      disabled={isResearching}
-                    />
-                    {showMarketSuggestions && !isResearching && researchMarket.length >= 2 && (
-                      <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                        {/* Loading state */}
-                        {isLoadingSuggestions && (
-                          <div className="px-4 py-3 text-[oklch(0.50_0_0)] flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-[oklch(0.50_0_0)]/30 border-t-[oklch(0.50_0_0)] rounded-full animate-spin" />
-                            <span>Finding markets...</span>
-                          </div>
-                        )}
-                        
-                        {/* Market suggestions - guaranteed to have data */}
-                        {!isLoadingSuggestions && marketSuggestions.length > 0 && (
-                          <>
-                            <div className="px-4 py-2 text-xs font-medium text-[oklch(0.50_0_0)] bg-[oklch(0.97_0_0)] border-b border-[oklch(0.92_0_0)]">
-                              Markets with data
-                            </div>
-                            {marketSuggestions.map((market) => (
-                              <button
-                                key={market.id}
-                                onClick={() => {
-                                  setResearchMarket(market.name);
-                                  setSelectedMarketId(market.id);
-                                  setShowMarketSuggestions(false);
-                                  // Also set the location selection for proper data fetching
-                                  setLocationSelection({
-                                    level: market.type === 'submarket' ? 'submarket' : 'market',
-                                    market: market.type === 'market' ? {
-                                      id: market.id,
-                                      name: market.name,
-                                      listingCount: market.listingCount
-                                    } : market.parentMarket ? {
-                                      id: market.parentMarket.id,
-                                      name: market.parentMarket.name,
-                                      listingCount: 0
-                                    } : undefined,
-                                    submarket: market.type === 'submarket' ? {
-                                      id: market.id,
-                                      name: market.name,
-                                      listingCount: market.listingCount
-                                    } : undefined
-                                  });
-                                }}
-                                className="w-full px-4 py-3 text-left hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-[oklch(0.25_0_0)] font-medium">{market.name}</span>
-                                    {market.parentMarket && (
-                                      <span className="text-[oklch(0.50_0_0)] text-sm ml-2">
-                                        in {market.parentMarket.name}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                      market.type === 'submarket' 
-                                        ? 'bg-blue-100 text-blue-700' 
-                                        : 'bg-emerald-100 text-emerald-700'
-                                    }`}>
-                                      {market.type === 'submarket' ? 'Neighborhood' : 'City'}
-                                    </span>
-                                    <span className="text-xs text-[oklch(0.50_0_0)]">
-                                      {market.listingCount.toLocaleString()} listings
-                                    </span>
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                          </>
-                        )}
-                        
-                        {/* No results message */}
-                        {!isLoadingSuggestions && marketSuggestions.length === 0 && researchMarket.length >= 2 && (
-                          <div className="px-4 py-3 text-[oklch(0.50_0_0)] text-sm">
-                            No exact matches found. Try selecting from the dropdowns above.
-                          </div>
-                        )}
-                      </div>
-                    )}
+                {/* Loading indicator when researching */}
+                {isResearching && (
+                  <div className="flex items-center justify-center gap-3 py-8">
+                    <div className="w-6 h-6 border-2 border-[oklch(0.75_0.15_75)]/30 border-t-[oklch(0.75_0.15_75)] rounded-full animate-spin" />
+                    <span className="text-[oklch(0.50_0_0)] text-lg">Analyzing market data...</span>
                   </div>
-                </div>
-                
-                <button
-                  onClick={handleResearch}
-                  disabled={isResearching || (!researchMarket && !locationSelection?.market)}
-                  className="btn-gold w-full h-14 text-base disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isResearching ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-[oklch(0.55_0.14_75)]/30 border-t-[oklch(0.55_0.14_75)] rounded-full animate-spin" />
-                      <span>Proving the Market...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="w-5 h-5" />
-                      <span>Prove This Market</span>
-                    </>
-                  )}
-                </button>
+                )}
               </div>
             )}
             
