@@ -456,6 +456,96 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
   }
 }
 
+/**
+ * Search for markets and submarkets using AirDNA's /market/search API.
+ * This searches DIRECTLY in AirDNA's database, so every result is guaranteed to have data.
+ * Supports: city names, neighborhood names, zip codes, and any location AirDNA knows about.
+ */
+export async function searchMarketsAPI(searchTerm: string, limit: number = 15): Promise<MarketSearchResult[]> {
+  const cacheKey = apiCache.generateKey('search_markets_api', { searchTerm, limit });
+  const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
+  if (cached) return cached;
+  
+  try {
+    console.log(`[searchMarketsAPI] Searching AirDNA for: "${searchTerm}"`);
+    
+    const searchResponse = await makeApiRequest<{
+      payload: {
+        results: Array<{
+          id: string;
+          name: string;
+          type: "market" | "submarket";
+          listing_count: number;
+          location_name: string;
+          location?: {
+            state?: string;
+            country?: string;
+          };
+          legacy_location?: {
+            zipcodes?: string[];
+            neighborhoods?: string[];
+          };
+          parent_market?: {
+            id: string;
+            name: string;
+          };
+        }>;
+      };
+      status: {
+        type: string;
+        message: string;
+      };
+    }>('/market/search', 'POST', {
+      search_term: searchTerm,
+      pagination: {
+        page_size: limit,
+        offset: 0
+      }
+    });
+    
+    const results = searchResponse.payload?.results || [];
+    console.log(`[searchMarketsAPI] Found ${results.length} results for "${searchTerm}"`);
+    
+    // Filter to prioritize US results and sort by listing count
+    const processedResults = results
+      .filter(r => {
+        // Filter out non-US results (unless they have many listings)
+        const country = r.location?.country?.toLowerCase();
+        if (country && country !== 'us' && country !== 'united states' && r.listing_count < 1000) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        // Prioritize exact name matches
+        const aExact = a.name.toLowerCase() === searchTerm.toLowerCase() ? 1 : 0;
+        const bExact = b.name.toLowerCase() === searchTerm.toLowerCase() ? 1 : 0;
+        if (aExact !== bExact) return bExact - aExact;
+        
+        // Then by listing count (more listings = more relevant)
+        return b.listing_count - a.listing_count;
+      })
+      .slice(0, limit)
+      .map((r): MarketSearchResult => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        listing_count: r.listing_count,
+        location_name: r.location_name || r.name,
+        state: r.location?.state,
+        country: r.location?.country,
+        parent_market: r.parent_market,
+        zipcodes: r.legacy_location?.zipcodes,
+      }));
+    
+    apiCache.set(cacheKey, processedResults, 'search_markets_api');
+    return processedResults;
+  } catch (error) {
+    console.error('[searchMarketsAPI] Error:', error);
+    return [];
+  }
+}
+
 // ============================================
 // ZIP CODE SEARCH (Using AirDNA Market Search API)
 // ============================================

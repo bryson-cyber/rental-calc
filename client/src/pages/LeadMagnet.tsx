@@ -303,6 +303,16 @@ export default function LeadMagnet() {
   const [researchResult, setResearchResult] = useState<MarketResearchResult | null>(null);
   const [isResearching, setIsResearching] = useState(false);
   const [showMarketSuggestions, setShowMarketSuggestions] = useState(false);
+  const [marketSuggestions, setMarketSuggestions] = useState<Array<{
+    id: string;
+    name: string;
+    type: 'market' | 'submarket';
+    listingCount: number;
+    state?: string;
+    locationName?: string;
+    parentMarket?: { id: string; name: string };
+  }>>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   // ============================================
   // TRPC MUTATIONS
@@ -312,6 +322,33 @@ export default function LeadMagnet() {
   const searchMarkets = trpc.marketResearchSimple.searchMarkets.useMutation();
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
+
+  // ============================================
+  // DEBOUNCED MARKET SEARCH
+  // ============================================
+  useEffect(() => {
+    // Don't search if input is too short or empty
+    if (researchMarket.length < 2) {
+      setMarketSuggestions([]);
+      return;
+    }
+    
+    // Debounce the search
+    const timeoutId = setTimeout(async () => {
+      setIsLoadingSuggestions(true);
+      try {
+        const results = await searchMarkets.mutateAsync({ query: researchMarket });
+        setMarketSuggestions(results);
+      } catch (error) {
+        console.error('Error searching markets:', error);
+        setMarketSuggestions([]);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [researchMarket]);
 
   // ============================================
   // HANDLERS
@@ -831,50 +868,78 @@ export default function LeadMagnet() {
                       className="input-apple h-14 text-base"
                       disabled={isResearching}
                     />
-                    {showMarketSuggestions && !isResearching && researchMarket.length > 0 && (
-                      <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {/* Show user's input as first option */}
-                        <button
-                          onClick={() => {
-                            setShowMarketSuggestions(false);
-                          }}
-                          className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors rounded-t-xl border-b border-[oklch(0.92_0_0)] flex items-center gap-2"
-                        >
-                          <Search className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-                          <span>{researchMarket}</span>
-                        </button>
-                        {/* Expanded list of US cities */}
-                        {[
-                          // Major metros
-                          'Atlanta, GA', 'Austin, TX', 'Baltimore, MD', 'Boston, MA', 'Charlotte, NC',
-                          'Chicago, IL', 'Cincinnati, OH', 'Cleveland, OH', 'Columbus, OH', 'Dallas, TX',
-                          'Denver, CO', 'Detroit, MI', 'Fort Worth, TX', 'Houston, TX', 'Indianapolis, IN',
-                          'Jacksonville, FL', 'Kansas City, MO', 'Las Vegas, NV', 'Los Angeles, CA',
-                          'Louisville, KY', 'Memphis, TN', 'Miami, FL', 'Milwaukee, WI', 'Minneapolis, MN',
-                          'Nashville, TN', 'New Orleans, LA', 'New York, NY', 'Oakland, CA', 'Oklahoma City, OK',
-                          'Orlando, FL', 'Philadelphia, PA', 'Phoenix, AZ', 'Pittsburgh, PA', 'Portland, OR',
-                          'Raleigh, NC', 'Sacramento, CA', 'Salt Lake City, UT', 'San Antonio, TX',
-                          'San Diego, CA', 'San Francisco, CA', 'San Jose, CA', 'Seattle, WA', 'St. Louis, MO',
-                          'Tampa, FL', 'Tucson, AZ', 'Virginia Beach, VA', 'Washington, DC',
-                          // Popular vacation destinations
-                          'Asheville, NC', 'Charleston, SC', 'Gatlinburg, TN', 'Gulf Shores, AL',
-                          'Hilton Head, SC', 'Key West, FL', 'Myrtle Beach, SC', 'Palm Springs, CA',
-                          'Park City, UT', 'Savannah, GA', 'Scottsdale, AZ', 'Sedona, AZ'
-                        ]
-                          .filter(m => m.toLowerCase().includes(researchMarket.toLowerCase()))
-                          .slice(0, 8)
-                          .map(market => (
-                            <button
-                              key={market}
-                              onClick={() => {
-                                setResearchMarket(market);
-                                setShowMarketSuggestions(false);
-                              }}
-                              className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl"
-                            >
-                              {market}
-                            </button>
-                          ))}
+                    {showMarketSuggestions && !isResearching && researchMarket.length >= 2 && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-72 overflow-y-auto">
+                        {/* Loading state */}
+                        {isLoadingSuggestions && (
+                          <div className="px-4 py-3 text-[oklch(0.50_0_0)] flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-[oklch(0.50_0_0)]/30 border-t-[oklch(0.50_0_0)] rounded-full animate-spin" />
+                            <span>Searching AirDNA...</span>
+                          </div>
+                        )}
+                        
+                        {/* Show user's input as first option to search directly */}
+                        {!isLoadingSuggestions && (
+                          <button
+                            onClick={() => {
+                              setShowMarketSuggestions(false);
+                            }}
+                            className="w-full px-4 py-3 text-left text-[oklch(0.25_0_0)] hover:bg-[oklch(0.96_0_0)] transition-colors rounded-t-xl border-b border-[oklch(0.92_0_0)] flex items-center gap-2"
+                          >
+                            <Search className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                            <span>Search "{researchMarket}"</span>
+                          </button>
+                        )}
+                        
+                        {/* AirDNA-powered suggestions - guaranteed to have data */}
+                        {!isLoadingSuggestions && marketSuggestions.length > 0 && (
+                          <>
+                            <div className="px-4 py-2 text-xs font-medium text-[oklch(0.50_0_0)] bg-[oklch(0.97_0_0)] border-b border-[oklch(0.92_0_0)]">
+                              Markets with AirDNA data
+                            </div>
+                            {marketSuggestions.map((market) => (
+                              <button
+                                key={market.id}
+                                onClick={() => {
+                                  setResearchMarket(market.name);
+                                  setSelectedMarketId(market.id);
+                                  setShowMarketSuggestions(false);
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-[oklch(0.96_0_0)] transition-colors last:rounded-b-xl"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="text-[oklch(0.25_0_0)] font-medium">{market.name}</span>
+                                    {market.parentMarket && (
+                                      <span className="text-[oklch(0.50_0_0)] text-sm ml-2">
+                                        in {market.parentMarket.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      market.type === 'submarket' 
+                                        ? 'bg-blue-100 text-blue-700' 
+                                        : 'bg-emerald-100 text-emerald-700'
+                                    }`}>
+                                      {market.type === 'submarket' ? 'Neighborhood' : 'City'}
+                                    </span>
+                                    <span className="text-xs text-[oklch(0.50_0_0)]">
+                                      {market.listingCount.toLocaleString()} listings
+                                    </span>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        
+                        {/* No results message */}
+                        {!isLoadingSuggestions && marketSuggestions.length === 0 && researchMarket.length >= 2 && (
+                          <div className="px-4 py-3 text-[oklch(0.50_0_0)] text-sm">
+                            No exact matches found. Try a different search or click above to search anyway.
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -450,3 +450,25 @@ From AirDNA Rentalizer endpoint:
 - [ ] Desktop/mobile formatting needs review
 - [ ] Results caching not yet implemented
 
+
+## AirDNA-Powered Location Autocomplete (Jan 12, 2026)
+
+### Problem:
+- Google Places API could return locations that AirDNA doesn't have data for
+- Need autocomplete that ONLY suggests locations with valid AirDNA data
+- Must support submarkets like "Central West End, St. Louis"
+
+### Solution:
+- [x] Investigate AirDNA market/submarket search endpoints
+- [x] Create backend endpoint for AirDNA location search (searchMarketsAPI in airdna.ts)
+- [x] Update frontend autocomplete to use AirDNA suggestions
+- [x] Test with submarkets like "Central West End, St. Louis" - WORKS!
+- [x] Ensure all autocomplete suggestions have valid AirDNA data
+
+### Implementation Details:
+- Uses AirDNA `/market/search` API directly
+- Supports city names, neighborhood names, and zip codes
+- Shows parent market for submarkets (e.g., "Central West End in St. Louis")
+- Displays listing count for each suggestion
+- 300ms debounce to avoid excessive API calls
+- Loading state shows "Searching AirDNA..."

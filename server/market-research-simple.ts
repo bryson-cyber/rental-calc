@@ -13,6 +13,7 @@ import { router, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import {
   searchMarkets,
+  searchMarketsAPI,
   getMarketDetails,
   getMarketSeasonality,
   getTopPerformers,
@@ -81,95 +82,43 @@ interface SimplifiedMarketReport {
 // ============================================
 
 export const marketResearchSimpleRouter = router({
-  // Search for markets by name
-  // Uses a two-step approach:
-  // 1. First try the markets list (fast but limited coverage)
-  // 2. If no exact match, use Rentalizer with a sample address to get the correct market
+  // Search for markets by name using AirDNA's /market/search API
+  // This searches DIRECTLY in AirDNA's database, so every result is guaranteed to have data.
+  // Supports: city names, neighborhood names, zip codes, and any location AirDNA knows about.
   searchMarkets: publicProcedure
     .input(z.object({
       query: z.string().min(2)
     }))
     .mutation(async ({ input }) => {
       const searchQuery = input.query.trim();
-      const searchLower = searchQuery.toLowerCase();
       
-      // First try the standard market search
-      const results = await searchMarkets(searchQuery, 20);
+      console.log(`[searchMarkets] Searching for: "${searchQuery}"`);
       
-      // Check if we have an exact or very close match
-      const exactMatch = results.find(r => 
-        r.name.toLowerCase() === searchLower ||
-        r.name.toLowerCase().replace(/[^a-z0-9]/g, '') === searchLower.replace(/[^a-z0-9]/g, '')
-      );
+      // Use the new AirDNA /market/search API directly
+      // This finds markets, submarkets (neighborhoods), and zip codes
+      const apiResults = await searchMarketsAPI(searchQuery, 15);
       
-      if (exactMatch) {
-        // Return exact match first, then others
-        const otherResults = results.filter(r => r.id !== exactMatch.id);
-        return [exactMatch, ...otherResults].slice(0, 10).map((r: MarketSearchResult) => ({
+      if (apiResults.length > 0) {
+        console.log(`[searchMarkets] Found ${apiResults.length} results from AirDNA API`);
+        return apiResults.map((r: MarketSearchResult) => ({
           id: r.id,
           name: r.name,
           type: r.type,
           listingCount: r.listing_count,
           state: r.state,
-          locationName: r.location_name
+          locationName: r.location_name,
+          parentMarket: r.parent_market ? {
+            id: r.parent_market.id,
+            name: r.parent_market.name
+          } : undefined
         }));
       }
       
-      // No exact match - try using Rentalizer with a sample address
-      // This works for cities not in the markets list (like San Diego)
-      console.log(`[searchMarkets] No exact match for "${searchQuery}", trying Rentalizer lookup...`);
+      // Fallback to the old market list search if API returns nothing
+      console.log(`[searchMarkets] No API results, falling back to market list search`);
+      const fallbackResults = await searchMarkets(searchQuery, 15);
       
-      try {
-        // Create a sample address for the city
-        // Format: "123 Main St, [City], [State if provided]"
-        let sampleAddress = `123 Main St, ${searchQuery}`;
-        
-        // Try to get market info via Rentalizer
-        const estimate = await getRentalizerEstimate({
-          address: sampleAddress,
-          bedrooms: 2,
-          bathrooms: 1
-        });
-        
-        if (estimate?.property?.market_id) {
-          // Get the market details
-          const marketDetails = await getMarketDetails(estimate.property.market_id);
-          
-          if (marketDetails) {
-            console.log(`[searchMarkets] Found market via Rentalizer: ${marketDetails.name} (${estimate.property.market_id})`);
-            
-            // Return this market as the first result
-            const rentalizerResult = {
-              id: estimate.property.market_id,
-              name: marketDetails.name || searchQuery,
-              type: 'market' as const,
-              listingCount: marketDetails.listing_count || 0,
-              state: (marketDetails as any)?.state,
-              locationName: `${marketDetails.name}, United States`
-            };
-            
-            // Combine with other results (excluding duplicates)
-            const otherResults = results
-              .filter(r => r.id !== rentalizerResult.id)
-              .slice(0, 9)
-              .map((r: MarketSearchResult) => ({
-                id: r.id,
-                name: r.name,
-                type: r.type,
-                listingCount: r.listing_count,
-                state: r.state,
-                locationName: r.location_name
-              }));
-            
-            return [rentalizerResult, ...otherResults];
-          }
-        }
-      } catch (error) {
-        console.log(`[searchMarkets] Rentalizer lookup failed for "${searchQuery}":`, error);
-      }
-      
-      // Fallback to original results
-      return results.map((r: MarketSearchResult) => ({
+      return fallbackResults.map((r: MarketSearchResult) => ({
         id: r.id,
         name: r.name,
         type: r.type,
