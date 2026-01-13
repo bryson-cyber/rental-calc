@@ -446,6 +446,8 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
       type: 'market' as const,
       listing_count: m.listing_count || 0,
       location_name: `${m.name}, United States`,
+      // Try to extract state from market name (e.g., "Phoenix, AZ" -> "Arizona")
+      state: m.name.includes(',') ? m.name.split(',')[1].trim() : undefined,
     }));
     
     apiCache.set(cacheKey, results, 'search_markets');

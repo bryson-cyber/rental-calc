@@ -185,14 +185,25 @@ export function HierarchicalLocationSelector({
         
         for (const city of citiesToSearch) {
           try {
-            const results = await searchMarkets.mutateAsync({ query: city });
-            console.log(`[HierarchicalLocationSelector] Search results for "${city}":`, results.map((r: any) => ({ name: r.name, type: r.type, state: r.state, locationName: r.locationName })));
+            const response = await searchMarkets.mutateAsync({ query: city });
+            // Handle both array and wrapped response formats
+            const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
             
             // Separate markets and submarkets
             for (const result of results) {
-              const matchesState = result.state?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-                                   result.locationName?.toLowerCase().includes(selectedState.name.toLowerCase()) ||
-                                   result.locationName?.includes(selectedState.code);
+              // More robust state matching
+              const stateName = selectedState.name.toLowerCase();
+              const stateCode = selectedState.code.toLowerCase();
+              const resultState = (result.state || '').toLowerCase();
+              const resultLocation = (result.locationName || '').toLowerCase();
+              
+              // If result has state information, check if it matches
+              // If result doesn't have state information, include it anyway (fallback results)
+              const matchesState = !result.state || 
+                                   resultState.includes(stateName) ||
+                                   resultLocation.includes(stateName) ||
+                                   resultLocation.includes(stateCode) ||
+                                   resultState.includes(stateCode);
               
               if (!matchesState) continue;
               
@@ -206,8 +217,8 @@ export function HierarchicalLocationSelector({
                 orphanedSubmarkets.push(result);
               }
             }
-          } catch (e) {
-            console.error(`Error searching for ${city}:`, e);
+          } catch (error) {
+            console.error(`Error searching for ${city}:`, error);
           }
         }
         
