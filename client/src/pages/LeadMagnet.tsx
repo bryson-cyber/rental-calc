@@ -904,6 +904,7 @@ export default function LeadMagnet() {
                 <HelpSection
                   title="How This Tool Helps You"
                   description="See real revenue data from actual Airbnb hosts to prove that short-term rentals make money in any market"
+                  example="You're curious about Nashville and want to see if hosts there are actually making good money before you invest any time researching properties."
                   steps={[
                     'Select a state from the dropdown',
                     'Choose a city/metro, then optionally narrow down to neighborhood or zip code',
@@ -945,6 +946,7 @@ export default function LeadMagnet() {
                 <HelpSection
                   title="What You'll Discover"
                   description="See every successful Airbnb in your target area. Perfect for finding which neighborhoods and property types perform best before you start looking at specific deals."
+                  example="You've decided Nashville looks promising and now you want to see which specific neighborhoods have the highest-earning properties before you start searching Zillow."
                   steps={[
                     'Enter a city or neighborhood you want to explore',
                     'Adjust the search radius (1-10 km)',
@@ -1048,6 +1050,7 @@ export default function LeadMagnet() {
                 <HelpSection
                   title="Run the Numbers on Your Deal"
                   description="Found a property you like? Enter the exact address and rent amount to see projected revenue, profit margins, and how it compares to similar properties nearby."
+                  example="You found a 2-bedroom apartment on Zillow for $1,800/month in East Nashville and want to know if it will actually make you money as a short-term rental."
                   steps={[
                     'Enter the exact property address you found',
                     'Enter the monthly rent the landlord is asking',
@@ -1146,6 +1149,7 @@ export default function LeadMagnet() {
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Compare up to 25 properties side-by-side to find which one will make you the most money"
+                  example="You've found 3 different apartments in Nashville and can't decide which one to pursue. Add all 3 and instantly see which one has the highest profit potential."
                   steps={[
                     'Add multiple property addresses',
                     'Enter rent and details for each',

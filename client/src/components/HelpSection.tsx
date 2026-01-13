@@ -1,10 +1,11 @@
 import React from 'react';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronDown, HelpCircle, Lightbulb } from 'lucide-react';
 
 interface HelpSectionProps {
   title: string;
   description: string;
   steps: string[];
+  example?: string;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -13,6 +14,7 @@ export const HelpSection: React.FC<HelpSectionProps> = ({
   title,
   description,
   steps,
+  example,
   isOpen,
   onToggle
 }) => {
@@ -36,6 +38,16 @@ export const HelpSection: React.FC<HelpSectionProps> = ({
       {isOpen && (
         <div className="mt-3 p-5 bg-[oklch(0.12_0.02_265)] border border-[oklch(0.22_0.02_265)]/50 rounded-xl space-y-5 animate-fade-in-up">
           <p className="text-[oklch(0.70_0.01_265)] leading-relaxed">{description}</p>
+
+          {example && (
+            <div className="flex items-start gap-3 p-4 bg-[oklch(0.78_0.12_75)]/10 border border-[oklch(0.78_0.12_75)]/30 rounded-lg">
+              <Lightbulb className="w-5 h-5 text-[oklch(0.78_0.12_75)] flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[oklch(0.78_0.12_75)] font-medium text-sm">When to use this:</span>
+                <p className="text-[oklch(0.80_0.01_265)] text-sm mt-1">{example}</p>
+              </div>
+            </div>
+          )}
 
           <ol className="space-y-3">
             {steps.map((step, idx) => (

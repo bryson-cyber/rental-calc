@@ -897,3 +897,11 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Update Step 3 "How This Tool Helps You" to be clearer about validating a specific deal
 - [x] Make clear distinction between the two tools' purposes
 - [x] Update placeholder text to be more specific to each tool
+
+
+## Add Example Use Case Scenarios (Jan 13, 2026)
+
+- [x] Add example scenario to Step 1 (See Real Revenue)
+- [x] Add example scenario to Step 2 (Explore Listings)
+- [x] Add example scenario to Step 3 (Validate the Deal)
+- [x] Add example scenario to Step 4 (Find the Best Deal)
