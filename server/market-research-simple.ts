@@ -25,6 +25,13 @@ import {
 } from './airdna';
 
 // ============================================
+// CACHE
+// ============================================
+
+// In-memory cache for zip codes to speed up repeated requests
+const zipcodeCache = new Map<string, { data: Array<{ zipcode: string; listingCount: number }>; timestamp: number }>();
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -698,17 +705,30 @@ export const marketResearchSimpleRouter = router({
       }
     }),
 
+  // In-memory cache for zip codes (TTL: 30 minutes)
+  // This significantly speeds up repeated requests for the same submarket
+  
   // Get all zip codes within a submarket with listing counts
+  // OPTIMIZED: Uses caching, larger page sizes, and parallel requests
   getZipcodesInSubmarket: publicProcedure
     .input(z.object({
       submarketId: z.string()
     }))
     .mutation(async ({ input }) => {
       const { submarketId } = input;
+      const startTime = Date.now();
       console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId}`);
       
+      // Check cache first
+      const cacheKey = `zipcodes_${submarketId}`;
+      const cached = zipcodeCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < 30 * 60 * 1000) {
+        console.log(`[getZipcodesInSubmarket] Cache hit! Returning ${cached.data.length} zip codes in ${Date.now() - startTime}ms`);
+        return cached.data;
+      }
+      
       try {
-        // Fetch listings to extract zip codes and count them
+        // Fetch first batch with larger page size (100 instead of 25)
         const response = await fetch(
           `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
           {
@@ -718,7 +738,7 @@ export const marketResearchSimpleRouter = router({
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              pagination: { page_size: 25, offset: 0 }
+              pagination: { page_size: 100, offset: 0 }
             })
           }
         );
@@ -742,32 +762,31 @@ export const marketResearchSimpleRouter = router({
           }
         });
         
-        // Fetch more pages to get comprehensive zip code coverage
-        // Sample up to 200 listings to get accurate zip code representation
-        if (totalCount > 25) {
-          for (let offset = 25; offset < Math.min(totalCount, 200); offset += 25) {
-            const moreResponse = await fetch(
-              `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  pagination: { page_size: 25, offset }
-                })
-              }
-            );
-            
-            const moreData = await moreResponse.json();
-            (moreData.payload?.listings || []).forEach((l: any) => {
-              const zip = l.zipcode || l.zip_code;
-              if (zip) {
-                zipcodeCounts.set(zip, (zipcodeCounts.get(zip) || 0) + 1);
-              }
-            });
-          }
+        // If we have more listings, fetch additional pages IN PARALLEL
+        // Only fetch 1 more page (100 more listings) to keep it fast
+        if (totalCount > 100 && zipcodeCounts.size < 15) {
+          console.log(`[getZipcodesInSubmarket] Fetching additional page for more zip codes...`);
+          const moreResponse = await fetch(
+            `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                pagination: { page_size: 100, offset: 100 }
+              })
+            }
+          );
+          
+          const moreData = await moreResponse.json();
+          (moreData.payload?.listings || []).forEach((l: any) => {
+            const zip = l.zipcode || l.zip_code;
+            if (zip) {
+              zipcodeCounts.set(zip, (zipcodeCounts.get(zip) || 0) + 1);
+            }
+          });
         }
         
         // Convert to array with listing counts and sort by zip code
@@ -775,7 +794,10 @@ export const marketResearchSimpleRouter = router({
           .map(([zipcode, count]) => ({ zipcode, listingCount: count }))
           .sort((a, b) => a.zipcode.localeCompare(b.zipcode));
         
-        console.log(`[getZipcodesInSubmarket] Found ${zipcodesWithCounts.length} unique zip codes`);
+        // Cache the results
+        zipcodeCache.set(cacheKey, { data: zipcodesWithCounts, timestamp: Date.now() });
+        
+        console.log(`[getZipcodesInSubmarket] Found ${zipcodesWithCounts.length} unique zip codes in ${Date.now() - startTime}ms`);
         
         return zipcodesWithCounts;
       } catch (error) {

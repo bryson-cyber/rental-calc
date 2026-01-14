@@ -1120,3 +1120,15 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Implement retry functionality to re-attempt failed API calls
 - [x] Add error state styling (red border, error icon)
 - [x] Test error handling with simulated failures
+
+
+## UI Improvements (Jan 14, 2026)
+
+### Neighborhood Reset Button:
+- [x] Add reset/clear button to neighborhood dropdown
+- [x] Allow users to clear their neighborhood selection
+
+### Zip Code Loading Performance:
+- [x] Investigate why zip codes take so long to load
+- [x] Optimize zip code API call or caching (added 30-min cache, larger page sizes)
+- [x] Loading indicator already exists

@@ -864,6 +864,22 @@ export function HierarchicalLocationSelector({
               )}
             </div>
             
+            {/* Reset Neighborhood Button */}
+            {selectedSubmarket && (
+              <button
+                onClick={() => {
+                  setSelectedSubmarket(null);
+                  setSelectedZipcode(null);
+                  setZipcodes([]);
+                }}
+                disabled={disabled}
+                className="h-14 w-14 flex items-center justify-center bg-white border border-[oklch(0.90_0_0)] text-[oklch(0.50_0_0)] rounded-xl transition-all hover:bg-[oklch(0.96_0_0)] hover:border-[oklch(0.80_0_0)]"
+                title="Clear neighborhood selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            
             {/* Search at Neighborhood level */}
             <button
               onClick={() => handleSearchAtLevel('submarket')}
