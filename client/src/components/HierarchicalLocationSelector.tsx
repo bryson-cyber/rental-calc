@@ -34,6 +34,29 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// Error message component with retry button
+const ErrorMessage = ({ 
+  message, 
+  onRetry 
+}: { 
+  message: string; 
+  onRetry: () => void;
+}) => (
+  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span className="flex-1">{message}</span>
+    <button
+      onClick={onRetry}
+      className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 rounded text-red-800 font-medium transition-colors"
+    >
+      <RotateCcw className="w-3 h-3" />
+      Retry
+    </button>
+  </div>
+);
+
 // US States list
 const US_STATES = [
   { code: 'AL', name: 'Alabama' },
@@ -154,6 +177,11 @@ export function HierarchicalLocationSelector({
   const [loadingSubmarkets, setLoadingSubmarkets] = useState(false);
   const [loadingZipcodes, setLoadingZipcodes] = useState(false);
   
+  // Error state
+  const [marketError, setMarketError] = useState<string | null>(null);
+  const [submarketError, setSubmarketError] = useState<string | null>(null);
+  const [zipcodeError, setZipcodeError] = useState<string | null>(null);
+  
   // TRPC mutations
   const searchMarkets = trpc.marketResearchSimple.searchMarkets.useMutation();
   const getSubmarkets = trpc.marketResearchSimple.getSubmarkets.useMutation();
@@ -203,6 +231,7 @@ export function HierarchicalLocationSelector({
     
     const fetchMarkets = async () => {
       setLoadingMarkets(true);
+      setMarketError(null); // Clear any previous error
       try {
         // Get major cities for this state, or use state name as fallback
         const citiesToSearch = MAJOR_CITIES[selectedState.code] || [selectedState.name];
@@ -284,6 +313,7 @@ export function HierarchicalLocationSelector({
       } catch (error) {
         console.error('Error fetching markets:', error);
         setMarkets([]);
+        setMarketError('Failed to load cities. Please check your connection and try again.');
       } finally {
         setLoadingMarkets(false);
       }
@@ -301,6 +331,7 @@ export function HierarchicalLocationSelector({
     
     const fetchSubmarkets = async () => {
       setLoadingSubmarkets(true);
+      setSubmarketError(null); // Clear any previous error
       try {
         // Handle virtual markets differently - search for their submarkets
         if (selectedMarket.isVirtual && selectedMarket.virtualSubmarkets) {
@@ -333,6 +364,7 @@ export function HierarchicalLocationSelector({
       } catch (error) {
         console.error('Error fetching submarkets:', error);
         setSubmarkets([]);
+        setSubmarketError('Failed to load neighborhoods. Please try again.');
       } finally {
         setLoadingSubmarkets(false);
       }
@@ -350,12 +382,14 @@ export function HierarchicalLocationSelector({
     
     const fetchZipcodes = async () => {
       setLoadingZipcodes(true);
+      setZipcodeError(null); // Clear any previous error
       try {
         const results = await getZipcodes.mutateAsync({ submarketId: selectedSubmarket.id });
         setZipcodes(results);
       } catch (error) {
         console.error('Error fetching zipcodes:', error);
         setZipcodes([]);
+        setZipcodeError('Failed to load zip codes. Please try again.');
       } finally {
         setLoadingZipcodes(false);
       }
@@ -672,8 +706,24 @@ export function HierarchicalLocationSelector({
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${marketOpen ? 'rotate-180' : ''}`} />
               </button>
               
+              {/* Error Message */}
+              {marketError && (
+                <div className="mt-2">
+                  <ErrorMessage 
+                    message={marketError} 
+                    onRetry={() => {
+                      setMarketError(null);
+                      // Trigger re-fetch by toggling state
+                      const currentState = selectedState;
+                      setSelectedState(null);
+                      setTimeout(() => setSelectedState(currentState), 0);
+                    }} 
+                  />
+                </div>
+              )}
+              
               {/* Dropdown Menu */}
-              {marketOpen && (
+              {marketOpen && !marketError && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
                   {marketSearchQuery ? (
                     isSearching ? (
@@ -765,7 +815,23 @@ export function HierarchicalLocationSelector({
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${submarketOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {submarketOpen && submarkets.length > 0 && (
+              {/* Error Message */}
+              {submarketError && (
+                <div className="mt-2">
+                  <ErrorMessage 
+                    message={submarketError} 
+                    onRetry={() => {
+                      setSubmarketError(null);
+                      // Trigger re-fetch by toggling market
+                      const currentMarket = selectedMarket;
+                      setSelectedMarket(null);
+                      setTimeout(() => setSelectedMarket(currentMarket), 0);
+                    }} 
+                  />
+                </div>
+              )}
+              
+              {submarketOpen && !submarketError && submarkets.length > 0 && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
                   {submarkets.map((submarket) => (
                     <button
@@ -791,7 +857,7 @@ export function HierarchicalLocationSelector({
                 </div>
               )}
               
-              {submarketOpen && submarkets.length === 0 && !loadingSubmarkets && (
+              {submarketOpen && !submarketError && submarkets.length === 0 && !loadingSubmarkets && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
                   No neighborhoods found
                 </div>
@@ -839,7 +905,23 @@ export function HierarchicalLocationSelector({
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${zipcodeOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {zipcodeOpen && zipcodes.length > 0 && (
+              {/* Error Message */}
+              {zipcodeError && (
+                <div className="mt-2">
+                  <ErrorMessage 
+                    message={zipcodeError} 
+                    onRetry={() => {
+                      setZipcodeError(null);
+                      // Trigger re-fetch by toggling submarket
+                      const currentSubmarket = selectedSubmarket;
+                      setSelectedSubmarket(null);
+                      setTimeout(() => setSelectedSubmarket(currentSubmarket), 0);
+                    }} 
+                  />
+                </div>
+              )}
+              
+              {zipcodeOpen && !zipcodeError && zipcodes.length > 0 && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
                   {zipcodes.map((zip) => (
                     <button
@@ -863,7 +945,7 @@ export function HierarchicalLocationSelector({
                 </div>
               )}
               
-              {zipcodeOpen && zipcodes.length === 0 && !loadingZipcodes && (
+              {zipcodeOpen && !zipcodeError && zipcodes.length === 0 && !loadingZipcodes && (
                 <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
                   No zip codes found
                 </div>
