@@ -241,10 +241,8 @@ export default function MarketComparison() {
       {/* Header */}
       <div className="bg-[#0F172A] text-white">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <Link href="/market">
-            <a className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#C9A962]/80 mb-4 font-sans text-sm">
+          <Link href="/market" className="inline-flex items-center gap-2 text-[#C9A962] hover:text-[#C9A962]/80 mb-4 font-sans text-sm">
               ← Back to Market Research
-            </a>
           </Link>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-[#C9A962]/20 rounded-lg flex items-center justify-center">
@@ -664,17 +662,13 @@ export default function MarketComparison() {
                     However, each market has unique advantages depending on your investment strategy.
                   </p>
                   <div className="flex flex-wrap gap-4">
-                    <Link href="/market">
-                      <a className="inline-flex items-center gap-2 bg-[#C9A962] text-[#0F172A] px-6 py-3 rounded-lg font-semibold font-sans hover:bg-[#C9A962]/90 transition-colors">
+                    <Link href="/market" className="inline-flex items-center gap-2 bg-[#C9A962] text-[#0F172A] px-6 py-3 rounded-lg font-semibold font-sans hover:bg-[#C9A962]/90 transition-colors">
                         Explore Individual Markets
                         <ArrowRight className="w-4 h-4" />
-                      </a>
                     </Link>
-                    <Link href="/">
-                      <a className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-3 rounded-lg font-semibold font-sans hover:bg-white/20 transition-colors">
+                    <Link href="/" className="inline-flex items-center gap-2 bg-white/10 text-white px-6 py-3 rounded-lg font-semibold font-sans hover:bg-white/20 transition-colors">
                         Analyze a Specific Property
                         <ChevronRight className="w-4 h-4" />
-                      </a>
                     </Link>
                   </div>
                 </div>

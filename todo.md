@@ -1180,3 +1180,17 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Track report generations (property analysis)
 - [x] Track lead submissions
 - [ ] Track user logins/logouts (deferred - requires auth middleware changes)
+
+
+## Bug Fixes (Jan 14, 2026)
+
+### Nested Anchor Tag Error:
+- [ ] Fix "<a> cannot contain a nested <a>" error on homepage
+- [ ] Find and remove nested Link/anchor combinations
+
+
+## Bug Fixes (Jan 14, 2026 - Nested Anchor)
+
+### Nested Anchor Tag Error:
+- [x] Fix "<a> cannot contain a nested <a>" error on homepage
+- [x] Find and remove nested Link/anchor combinations (fixed in AdminReports.tsx, MarketComparison.tsx)
