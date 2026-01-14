@@ -633,38 +633,60 @@ export function HierarchicalLocationSelector({
       <div className="space-y-3">
         {/* Row 1: State and City/Metro */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* State Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => !disabled && setStateOpen(!stateOpen)}
-              disabled={disabled}
-              className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
-                stateOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Map className="w-4 h-4 text-[oklch(0.50_0_0)]" />
-                <span className={selectedState ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                  {selectedState?.name || 'State'}
-                </span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
-            </button>
+          {/* State Dropdown with Reset Button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <button
+                onClick={() => !disabled && setStateOpen(!stateOpen)}
+                disabled={disabled}
+                className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
+                  stateOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
+                } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Map className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+                  <span className={selectedState ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                    {selectedState?.name || 'State'}
+                  </span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${stateOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {stateOpen && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {US_STATES.map((state) => (
+                    <button
+                      key={state.code}
+                      onClick={() => handleStateSelect(state)}
+                      className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                        selectedState?.code === state.code ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
+                      }`}
+                    >
+                      {state.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             
-            {stateOpen && (
-              <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                {US_STATES.map((state) => (
-                  <button
-                    key={state.code}
-                    onClick={() => handleStateSelect(state)}
-                    className={`w-full px-4 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                      selectedState?.code === state.code ? 'bg-[oklch(0.96_0_0)] font-medium' : ''
-                    }`}
-                  >
-                    {state.name}
-                  </button>
-                ))}
-              </div>
+            {/* Reset State Button */}
+            {selectedState && (
+              <button
+                onClick={() => {
+                  setSelectedState(null);
+                  setSelectedMarket(null);
+                  setSelectedSubmarket(null);
+                  setSelectedZipcode(null);
+                  setMarkets([]);
+                  setSubmarkets([]);
+                  setZipcodes([]);
+                }}
+                disabled={disabled}
+                className="h-14 w-14 flex items-center justify-center bg-white border border-[oklch(0.90_0_0)] text-[oklch(0.50_0_0)] rounded-xl transition-all hover:bg-[oklch(0.96_0_0)] hover:border-[oklch(0.80_0_0)]"
+                title="Clear state selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
             )}
           </div>
           
