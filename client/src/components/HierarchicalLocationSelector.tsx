@@ -10,6 +10,30 @@ import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ChevronDown, MapPin, Building2, Map, Hash, X, Loader2, Search, RotateCcw } from 'lucide-react';
 
+// Skeleton loading component with pulse animation
+const Skeleton = ({ className = '' }: { className?: string }) => (
+  <div 
+    className={`animate-pulse bg-gradient-to-r from-[oklch(0.92_0_0)] via-[oklch(0.96_0_0)] to-[oklch(0.92_0_0)] bg-[length:200%_100%] rounded ${className}`}
+    style={{ animation: 'shimmer 1.5s ease-in-out infinite' }}
+  />
+);
+
+// Add shimmer keyframes to document if not already present
+if (typeof document !== 'undefined') {
+  const styleId = 'skeleton-shimmer-style';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 // US States list
 const US_STATES = [
   { code: 'AL', name: 'Alabama' },
@@ -638,7 +662,11 @@ export function HierarchicalLocationSelector({
                     <Building2 className="w-4 h-4 text-[oklch(0.50_0_0)]" />
                   )}
                   <span className={selectedMarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                    {loadingMarkets ? 'Loading...' : selectedMarket?.name || 'City/Metro'}
+                    {loadingMarkets ? (
+                      <Skeleton className="h-4 w-20" />
+                    ) : (
+                      selectedMarket?.name || 'City/Metro'
+                    )}
                   </span>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${marketOpen ? 'rotate-180' : ''}`} />
@@ -727,7 +755,11 @@ export function HierarchicalLocationSelector({
                     <MapPin className="w-4 h-4 text-[oklch(0.50_0_0)]" />
                   )}
                   <span className={selectedSubmarket ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                    {loadingSubmarkets ? 'Loading...' : selectedSubmarket?.name || 'Neighborhood'}
+                    {loadingSubmarkets ? (
+                      <Skeleton className="h-4 w-24" />
+                    ) : (
+                      selectedSubmarket?.name || 'Neighborhood'
+                    )}
                   </span>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${submarketOpen ? 'rotate-180' : ''}`} />
@@ -797,7 +829,11 @@ export function HierarchicalLocationSelector({
                     <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
                   )}
                   <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
-                    {loadingZipcodes ? 'Loading...' : selectedZipcode || 'Zip Code'}
+                    {loadingZipcodes ? (
+                      <Skeleton className="h-4 w-16" />
+                    ) : (
+                      selectedZipcode || 'Zip Code'
+                    )}
                   </span>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-[oklch(0.50_0_0)] transition-transform ${zipcodeOpen ? 'rotate-180' : ''}`} />
