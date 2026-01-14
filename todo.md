@@ -1132,3 +1132,18 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Investigate why zip codes take so long to load
 - [x] Optimize zip code API call or caching (added 30-min cache, larger page sizes)
 - [x] Loading indicator already exists
+
+
+## UI Improvements - Phase 2 (Jan 14, 2026)
+
+### City/Metro Reset Button:
+- [x] Add reset/clear button to City/Metro dropdown
+- [x] Allow users to clear city selection without resetting state
+
+### Loading Time Indicator:
+- [x] Show loading time for zip code fetch (e.g., "Loaded in 1.2s")
+- [x] Build user confidence in optimization
+
+### Pre-fetch Zip Codes:
+- [x] Pre-fetch zip codes when neighborhood is selected (already implemented via useEffect)
+- [x] Added visual indicator showing "Pre-loading zip codes..." and "X ready" status

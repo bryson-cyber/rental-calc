@@ -176,6 +176,7 @@ export function HierarchicalLocationSelector({
   const [loadingMarkets, setLoadingMarkets] = useState(false);
   const [loadingSubmarkets, setLoadingSubmarkets] = useState(false);
   const [loadingZipcodes, setLoadingZipcodes] = useState(false);
+  const [zipcodeLoadTime, setZipcodeLoadTime] = useState<number | null>(null);
   
   // Error state
   const [marketError, setMarketError] = useState<string | null>(null);
@@ -383,9 +384,12 @@ export function HierarchicalLocationSelector({
     const fetchZipcodes = async () => {
       setLoadingZipcodes(true);
       setZipcodeError(null); // Clear any previous error
+      setZipcodeLoadTime(null); // Reset load time
+      const startTime = Date.now();
       try {
         const results = await getZipcodes.mutateAsync({ submarketId: selectedSubmarket.id });
         setZipcodes(results);
+        setZipcodeLoadTime(Date.now() - startTime);
       } catch (error) {
         console.error('Error fetching zipcodes:', error);
         setZipcodes([]);
@@ -771,7 +775,26 @@ export function HierarchicalLocationSelector({
           </div>
           
           {/* Search Button - Kept for consistency with other levels */}
-          <div className="flex gap-2">            {/* Search at City/Metro level */}
+          <div className="flex gap-2">
+            {/* Reset City/Metro Button */}
+            {selectedMarket && (
+              <button
+                onClick={() => {
+                  setSelectedMarket(null);
+                  setSelectedSubmarket(null);
+                  setSelectedZipcode(null);
+                  setSubmarkets([]);
+                  setZipcodes([]);
+                }}
+                disabled={disabled}
+                className="h-14 w-14 flex items-center justify-center bg-white border border-[oklch(0.90_0_0)] text-[oklch(0.50_0_0)] rounded-xl transition-all hover:bg-[oklch(0.96_0_0)] hover:border-[oklch(0.80_0_0)]"
+                title="Clear city selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            
+            {/* Search at City/Metro level */}
             <button
               onClick={() => handleSearchAtLevel('market')}
               disabled={disabled || !selectedMarket}
@@ -906,15 +929,19 @@ export function HierarchicalLocationSelector({
               >
                 <div className="flex items-center gap-2">
                   {loadingZipcodes ? (
-                    <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
+                    <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+                  ) : zipcodes.length > 0 && !selectedZipcode ? (
+                    <Hash className="w-4 h-4 text-emerald-600" />
                   ) : (
                     <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
                   )}
-                  <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.50_0_0)]'}>
+                  <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : loadingZipcodes ? 'text-emerald-600' : 'text-[oklch(0.50_0_0)]'}>
                     {loadingZipcodes ? (
-                      <Skeleton className="h-4 w-16" />
+                      <span className="flex items-center gap-1">
+                        <span>Pre-loading zip codes...</span>
+                      </span>
                     ) : (
-                      selectedZipcode || 'Zip Code'
+                      selectedZipcode || (zipcodes.length > 0 ? `Zip Code (${zipcodes.length} ready)` : 'Zip Code')
                     )}
                   </span>
                 </div>
@@ -954,10 +981,15 @@ export function HierarchicalLocationSelector({
                 </div>
               )}
               
-              {/* Show zip code count when loaded */}
+              {/* Show zip code count and loading time when loaded */}
               {!zipcodeOpen && !loadingZipcodes && zipcodes.length > 0 && !selectedZipcode && (
-                <div className="absolute -bottom-5 left-0 text-xs text-emerald-600 font-medium">
-                  ✓ {zipcodes.length} zip codes found
+                <div className="absolute -bottom-5 left-0 text-xs text-emerald-600 font-medium flex items-center gap-2">
+                  <span>✓ {zipcodes.length} zip codes found</span>
+                  {zipcodeLoadTime !== null && (
+                    <span className="text-[oklch(0.50_0_0)]">
+                      ({zipcodeLoadTime < 1000 ? `${zipcodeLoadTime}ms` : `${(zipcodeLoadTime / 1000).toFixed(1)}s`})
+                    </span>
+                  )}
                 </div>
               )}
               
