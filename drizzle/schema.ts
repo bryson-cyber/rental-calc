@@ -370,3 +370,73 @@ export const opportunitySearches = mysqlTable("opportunity_searches", {
 
 export type OpportunitySearch = typeof opportunitySearches.$inferSelect;
 export type InsertOpportunitySearch = typeof opportunitySearches.$inferInsert;
+
+
+/**
+ * Activity Logs table for tracking user actions
+ * Used by admin portal to monitor user behavior and usage patterns
+ */
+export const activityLogs = mysqlTable("activity_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous users)
+  userId: int("userId"),
+  
+  // Session tracking for anonymous users
+  sessionId: varchar("sessionId", { length: 64 }),
+  
+  // Action details
+  action: varchar("action", { length: 100 }).notNull(), // e.g., 'market_search', 'property_analysis', 'report_generated'
+  actionCategory: varchar("actionCategory", { length: 50 }).notNull(), // e.g., 'search', 'analysis', 'navigation', 'auth'
+  
+  // Additional context (JSON blob for flexible data)
+  details: json("details"), // e.g., { marketId: 'xxx', bedrooms: 3, etc. }
+  
+  // Request metadata
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  referrer: text("referrer"),
+  
+  // Page/route information
+  pagePath: varchar("pagePath", { length: 255 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;
+
+/**
+ * User Sessions table for tracking active sessions
+ * Helps understand user engagement and session duration
+ */
+export const userSessions = mysqlTable("user_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous users)
+  userId: int("userId"),
+  
+  // Session identifier
+  sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
+  
+  // Session metadata
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  
+  // Location info (derived from IP if available)
+  country: varchar("country", { length: 100 }),
+  city: varchar("city", { length: 255 }),
+  
+  // Session activity
+  pageViews: int("pageViews").default(0),
+  actionsCount: int("actionsCount").default(0),
+  
+  // Timestamps
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  lastActivityAt: timestamp("lastActivityAt").defaultNow().notNull(),
+  endedAt: timestamp("endedAt"),
+});
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = typeof userSessions.$inferInsert;

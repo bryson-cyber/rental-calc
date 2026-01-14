@@ -1154,3 +1154,29 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ### State Reset Button:
 - [x] Add reset/clear button to State dropdown
 - [x] Complete the reset button pattern across all location dropdowns
+
+
+## Admin Portal - User Activity Tracking (Jan 14, 2026)
+
+### Database Schema:
+- [x] Create activity_logs table (user_id, action, details, timestamp, ip_address)
+- [x] Create user sessions tracking
+- [ ] Add indexes for efficient querying (deferred - will add if needed)
+
+### Activity Logging API:
+- [x] Create logActivity helper function
+- [x] Create admin-only tRPC procedures for fetching logs
+- [x] Add middleware to track page views (getOrCreateSession, incrementPageViews)
+
+### Admin Dashboard UI:
+- [x] Create /admin route with protected access
+- [x] Build activity feed showing recent user actions
+- [x] Add user list with activity summary
+- [ ] Add date range filtering for logs (deferred)
+- [ ] Add export functionality for activity data (deferred)
+
+### Activity Tracking Integration:
+- [x] Track market research searches
+- [x] Track report generations (property analysis)
+- [x] Track lead submissions
+- [ ] Track user logins/logouts (deferred - requires auth middleware changes)

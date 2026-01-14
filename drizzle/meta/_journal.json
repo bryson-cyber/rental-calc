@@ -71,6 +71,13 @@
       "when": 1768207980870,
       "tag": "0009_faithful_agent_zero",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1768416649629,
+      "tag": "0010_spooky_dark_beast",
+      "breakpoints": true
     }
   ]
 }

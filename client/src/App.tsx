@@ -8,6 +8,7 @@ import LeadMagnet from "./pages/LeadMagnet";
 import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 import DeepAnalysis from "./pages/DeepAnalysis";
 import AdminReports from "./pages/AdminReports";
+import AdminDashboard from "./pages/Admin";
 
 function Router() {
   return (
@@ -18,7 +19,8 @@ function Router() {
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
       <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
-      <Route path={"/admin"} component={AdminReports} />
+      <Route path={"/admin"} component={AdminDashboard} />
+      <Route path={"/admin/reports"} component={AdminReports} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

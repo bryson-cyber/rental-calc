@@ -34,6 +34,8 @@ import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
 import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
+import { adminRouter } from "./admin-router";
+import { logActivity, ActionCategory, ActionType } from "./activity";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -116,6 +118,13 @@ export const appRouter = router({
       .input(marketSearchInputSchema)
       .query(async ({ input }) => {
         try {
+          // Log activity
+          await logActivity({
+            action: ActionType.MARKET_SEARCH,
+            actionCategory: ActionCategory.SEARCH,
+            details: { searchTerm: input.searchTerm },
+          });
+          
           const results = await searchMarkets(input.searchTerm, input.limit);
           return {
             success: true,
@@ -573,6 +582,16 @@ export const appRouter = router({
       .input(leadInputSchema)
       .mutation(async ({ input }) => {
         try {
+          // Log activity
+          await logActivity({
+            action: ActionType.LEAD_SUBMITTED,
+            actionCategory: ActionCategory.LEAD,
+            details: {
+              email: input.email,
+              address: input.address,
+            },
+          });
+          
           const db = await getDb();
           
           if (db) {
@@ -1030,6 +1049,19 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         try {
           console.log('[LeadMagnet] Starting property analysis:', input.address);
+          
+          // Log activity
+          await logActivity({
+            sessionId: input.sessionId,
+            action: ActionType.PROPERTY_ANALYSIS,
+            actionCategory: ActionCategory.ANALYSIS,
+            details: {
+              address: input.address,
+              monthly_rent: input.monthly_rent,
+              bedrooms: input.bedrooms,
+              bathrooms: input.bathrooms,
+            },
+          });
           
           // Run the full arbitrage analysis with optional progress tracking
           const analysis = await generateFullArbitrageAnalysis(
@@ -1700,6 +1732,9 @@ export const appRouter = router({
 
   // Opportunity Finder (Zillow + AirDNA + Coach Inayah)
   opportunityFinder: opportunityFinderRouter,
+
+  // Admin portal for user activity tracking
+  admin: adminRouter,
 
   bulkSummary: router({
     get: publicProcedure
