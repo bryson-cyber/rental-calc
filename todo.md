@@ -1087,3 +1087,13 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
   - Tested with "los" search - results display correctly after debounce delay
   - API calls are properly delayed by 400ms
   - Search functionality remains responsive to user input
+
+## Bug Fix: Infinite Loop Error (Jan 13, 2026)
+
+### Issue:
+- [x] Fix "Maximum update depth exceeded" error in HierarchicalLocationSelector
+- [x] Root cause: useEffect calling performSearch which updates state, triggering re-render
+- [x] Solution: Fixed the useEffect dependency array to only depend on debouncedSearchQuery
+  - Removed `markets` and `searchMarkets` from dependency array (they were causing infinite re-renders)
+  - Added cancellation flag to prevent state updates after effect cleanup
+  - Added eslint-disable comment to suppress exhaustive-deps warning

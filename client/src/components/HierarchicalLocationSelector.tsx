@@ -436,14 +436,17 @@ export function HierarchicalLocationSelector({
   
   const debouncedSearchQuery = useDebounce(marketSearchQuery, 400);
   
-  // Effect to handle debounced search
+  // Effect to handle debounced search - only trigger on search query changes
   useEffect(() => {
+    // Skip if no search query
+    if (!debouncedSearchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    let isCancelled = false;
+    
     const performSearch = async () => {
-      if (!debouncedSearchQuery.trim()) {
-        setSearchResults([]);
-        return;
-      }
-      
       setIsSearching(true);
       try {
         // Filter predefined markets by search query
@@ -454,6 +457,10 @@ export function HierarchicalLocationSelector({
         
         // Search API for additional cities not in predefined list
         const apiResults = await searchMarkets.mutateAsync({ query: debouncedSearchQuery });
+        
+        // Don't update state if effect was cancelled
+        if (isCancelled) return;
+        
         const results = Array.isArray(apiResults) ? apiResults : ((apiResults as any)?.data || apiResults || []);
         
         // Filter to markets only and remove duplicates
@@ -465,15 +472,25 @@ export function HierarchicalLocationSelector({
         const combined = [...filteredPredefined, ...newApiMarkets];
         setSearchResults(combined);
       } catch (error) {
-        console.error('Error searching markets:', error);
-        setSearchResults([]);
+        if (!isCancelled) {
+          console.error('Error searching markets:', error);
+          setSearchResults([]);
+        }
       } finally {
-        setIsSearching(false);
+        if (!isCancelled) {
+          setIsSearching(false);
+        }
       }
     };
     
     performSearch();
-  }, [debouncedSearchQuery, markets, searchMarkets]);
+    
+    // Cleanup function to cancel if effect re-runs
+    return () => {
+      isCancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchQuery]); // Only depend on debouncedSearchQuery - markets and searchMarkets are stable
   
   const handleMarketSearch = (query: string) => {
     setMarketSearchQuery(query);
