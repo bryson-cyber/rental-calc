@@ -1,0 +1,41 @@
+Delaware:Wilmington
+Florida:Miami
+Georgia:Atlanta
+Hawaii:Honolulu
+Idaho:Boise
+Illinois:Chicago
+Indiana:Indianapolis
+Iowa:Des Moines
+Kansas:Wichita
+Kentucky:Louisville
+Louisiana:New Orleans
+Maine:Portland
+Maryland:Baltimore
+Massachusetts:Boston
+Michigan:Detroit
+Minnesota:Minneapolis
+Mississippi:Jackson
+Montana:Billings
+Nebraska:Omaha
+Nevada:Las Vegas
+New Hampshire:Manchester
+New Jersey:Newark
+New Mexico:Albuquerque
+New York:New York
+North Carolina:Charlotte
+North Dakota:Fargo
+Ohio:Columbus
+Oklahoma:Oklahoma City
+Oregon:Portland
+Pennsylvania:Philadelphia
+Rhode Island:Providence
+South Carolina:Charleston
+South Dakota:Sioux Falls
+Tennessee:Nashville
+Utah:Salt Lake City
+Vermont:Burlington
+Virginia:Virginia Beach
+Washington:Seattle
+West Virginia:Charleston
+Wisconsin:Milwaukee
+Wyoming:Jackson
