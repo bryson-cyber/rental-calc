@@ -121,6 +121,8 @@ interface Market {
   type?: string;
   isVirtual?: boolean;
   virtualSubmarkets?: string[];
+  isSubmarketAsMarket?: boolean;
+  zipcodes?: string[];
 }
 
 interface Submarket {
@@ -191,7 +193,7 @@ export function HierarchicalLocationSelector({
   // Fetch markets when state is selected
   // Major cities by state to search for markets
   const MAJOR_CITIES: Record<string, string[]> = {
-    'AZ': ['Phoenix', 'Tucson', 'Scottsdale', 'Mesa', 'Flagstaff', 'Sedona'],
+    'AZ': ['Phoenix', 'Tucson', 'Scottsdale', 'Mesa', 'Flagstaff', 'Sedona', 'Glendale', 'Tempe', 'Chandler', 'Gilbert', 'Peoria'],
     'CA': ['Los Angeles', 'San Francisco', 'San Diego', 'Sacramento', 'Oakland', 'Palm Springs', 'Santa Barbara', 'Napa'],
     'CO': ['Denver', 'Boulder', 'Colorado Springs', 'Aspen', 'Vail', 'Fort Collins'],
     'FL': ['Miami', 'Orlando', 'Tampa', 'Jacksonville', 'Fort Lauderdale', 'Naples', 'Key West', 'Destin'],
@@ -272,7 +274,20 @@ export function HierarchicalLocationSelector({
                   allMarkets.push(result);
                 }
               } else if (result.type === 'submarket') {
-                // Collect orphaned submarkets for potential virtual market creation
+                // ENHANCEMENT: Also add submarkets as selectable "markets" in the City/Metro dropdown
+                // This allows users to select cities like Glendale, AZ which are submarkets in AirDNA
+                if (!seenIds.has(result.id)) {
+                  seenIds.add(result.id);
+                  // Add submarket as a market with its parent info for context
+                  allMarkets.push({
+                    ...result,
+                    // Keep the original type for later processing
+                    isSubmarketAsMarket: true,
+                    // Include zipcodes from the search result
+                    zipcodes: result.zipcodes || []
+                  });
+                }
+                // Also collect for virtual market creation
                 orphanedSubmarkets.push(result);
               }
             }
@@ -327,6 +342,19 @@ export function HierarchicalLocationSelector({
   useEffect(() => {
     if (!selectedMarket) {
       setSubmarkets([]);
+      return;
+    }
+    
+    // If the selected market is actually a submarket (like Glendale, AZ), 
+    // skip fetching submarkets and directly use the market's zipcodes
+    if (selectedMarket.isSubmarketAsMarket) {
+      console.log('[HierarchicalLocationSelector] Selected market is a submarket, skipping submarket fetch');
+      setSubmarkets([]);
+      // If the market has zipcodes, set them directly
+      if (selectedMarket.zipcodes && selectedMarket.zipcodes.length > 0) {
+        console.log(`[HierarchicalLocationSelector] Using ${selectedMarket.zipcodes.length} zipcodes from market:`, selectedMarket.zipcodes);
+        setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+      }
       return;
     }
     
@@ -1040,11 +1068,11 @@ export function HierarchicalLocationSelector({
           <div className="flex gap-2">
             <div className="relative flex-1">
               <button
-                onClick={() => !disabled && selectedSubmarket && setZipcodeOpen(!zipcodeOpen)}
-                disabled={disabled || !selectedSubmarket}
+                onClick={() => !disabled && (selectedSubmarket || zipcodes.length > 0) && setZipcodeOpen(!zipcodeOpen)}
+                disabled={disabled || (!selectedSubmarket && zipcodes.length === 0)}
                 className={`w-full h-14 px-4 flex items-center justify-between bg-white border rounded-xl transition-all ${
                   zipcodeOpen ? 'border-[oklch(0.75_0.15_75)] ring-2 ring-[oklch(0.75_0.15_75)]/20' : 'border-[oklch(0.90_0_0)]'
-                } ${disabled || !selectedSubmarket ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
+                } ${disabled || (!selectedSubmarket && zipcodes.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:border-[oklch(0.80_0_0)]'}`}
               >
                 <div className="flex items-center gap-2">
                   {loadingZipcodes ? (

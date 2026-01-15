@@ -117,7 +117,9 @@ export const marketResearchSimpleRouter = router({
           parentMarket: r.parent_market ? {
             id: r.parent_market.id,
             name: r.parent_market.name
-          } : undefined
+          } : undefined,
+          // Include zipcodes from the API response for submarkets
+          zipcodes: r.zipcodes || []
         }));
       }
       

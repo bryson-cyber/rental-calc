@@ -1256,3 +1256,24 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Implement fallback logic for missing submarkets (fetchZipcodesFromMarket)
 - [x] Add error handling for API timeouts
 - [x] Improve zip code fetching for problematic markets
+
+
+## Glendale AZ Zip Code Fix (Jan 15, 2026) - COMPLETE
+
+### Issue:
+- When selecting Glendale, AZ as a City/Metro, the Zip Code dropdown was empty
+- Glendale is returned as a "submarket" type from AirDNA API, not a "market" type
+- The zip codes were available in the search API response but not being passed through
+
+### Root Cause:
+1. The City/Metro dropdown only showed results with `type === 'market'`, excluding submarkets like Glendale
+2. The `searchMarkets` procedure was not including the `zipcodes` field from the API response
+3. The Zip Code dropdown was disabled when no submarket was selected
+
+### Fix Applied:
+- [x] Updated HierarchicalLocationSelector to include submarkets in City/Metro dropdown
+- [x] Added `isSubmarketAsMarket` flag to distinguish submarkets selected as markets
+- [x] Updated `searchMarkets` procedure to include `zipcodes` field from API response
+- [x] Updated Zip Code dropdown to be enabled when zipcodes are loaded (even without submarket)
+- [x] Verified fix works: Glendale, AZ now shows 5 zip codes (85305, 85302, 85301, 85304, 85303)
+
