@@ -587,8 +587,105 @@ export function HierarchicalLocationSelector({
   // Check if any selection is made
   const hasSelection = selectedState || selectedMarket || selectedSubmarket || selectedZipcode;
   
+  // Direct zip code search state
+  const [directZipSearch, setDirectZipSearch] = useState('');
+  const [directZipSearching, setDirectZipSearching] = useState(false);
+  
+  // Handle direct zip code search
+  const handleDirectZipSearch = async () => {
+    const zip = directZipSearch.trim();
+    if (!zip || !/^\d{5}$/.test(zip)) {
+      alert('Please enter a valid 5-digit zip code');
+      return;
+    }
+    
+    setDirectZipSearching(true);
+    try {
+      // Search for the zip code to find its market/submarket
+      const response = await searchMarkets.mutateAsync({ query: zip });
+      const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
+      
+      if (results.length > 0) {
+        // Use the first result
+        const result = results[0];
+        
+        // Set the zip code directly and trigger search
+        setSelectedZipcode(zip);
+        onSearch({
+          level: 'zipcode',
+          zipcode: zip,
+          market: result.type === 'market' ? {
+            id: result.id,
+            name: result.name,
+            listingCount: result.listing_count || 0
+          } : undefined,
+          submarket: result.type === 'submarket' ? {
+            id: result.id,
+            name: result.name,
+            listingCount: result.listing_count || 0
+          } : undefined
+        });
+      } else {
+        alert(`No data found for zip code ${zip}. Try searching by city or state instead.`);
+      }
+    } catch (error) {
+      console.error('Error searching zip code:', error);
+      alert('Error searching zip code. Please try again.');
+    } finally {
+      setDirectZipSearching(false);
+    }
+  };
+  
   return (
     <div className="space-y-4">
+      {/* Direct Zip Code Search */}
+      <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.85_0_0)] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+          <h3 className="text-sm font-medium text-[oklch(0.30_0_0)]">Quick Search by Zip Code</h3>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={directZipSearch}
+            onChange={(e) => setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5))}
+            onKeyDown={(e) => e.key === 'Enter' && handleDirectZipSearch()}
+            placeholder="Enter 5-digit zip code"
+            disabled={disabled || directZipSearching}
+            className="flex-1 px-3 py-2 border border-[oklch(0.85_0_0)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed"
+            maxLength={5}
+          />
+          <button
+            onClick={handleDirectZipSearch}
+            disabled={disabled || directZipSearching || directZipSearch.length !== 5}
+            className="px-4 py-2 bg-[oklch(0.30_0_0)] text-white rounded-lg hover:bg-[oklch(0.25_0_0)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+          >
+            {directZipSearching ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                Search
+              </>
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-[oklch(0.50_0_0)] mt-2">Skip the hierarchical selection and search directly by zip code</p>
+      </div>
+      
+      {/* OR Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[oklch(0.85_0_0)]"></div>
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-[oklch(0.50_0_0)]">Or browse by location</span>
+        </div>
+      </div>
+      
       {/* Reset All Button - only show when there's a selection */}
       {hasSelection && (
         <div className="flex justify-end">

@@ -1194,3 +1194,41 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ### Nested Anchor Tag Error:
 - [x] Fix "<a> cannot contain a nested <a>" error on homepage
 - [x] Find and remove nested Link/anchor combinations (fixed in AdminReports.tsx, MarketComparison.tsx)
+
+
+## Zip Code Search Issues (Jan 14, 2026)
+
+### Critical Bugs:
+- [ ] Fix Glendale, Arizona returning no zip codes
+- [ ] Debug why some valid locations return empty results
+- [ ] Add error handling for empty zip code results
+
+### Feature Requests:
+- [x] Add direct zip code search option (bypass State → City → Neighborhood flow)
+- [x] Allow users to manually enter zip codes
+- [x] Add zip code validation and autocomplete
+
+### Stress Testing:
+- [ ] Create comprehensive test suite for all US states
+- [ ] Test major cities in each state alphabetically
+- [ ] Document which locations fail and why
+- [ ] Fix API calls or fallback logic for failing locations
+
+
+## Zip Code Search Issues (Jan 14, 2026)
+
+### Critical Bugs:
+- [ ] Fix Glendale, Arizona returning no zip codes
+- [ ] Debug why some valid locations return empty results
+- [ ] Add error handling for empty zip code results
+
+### Feature Requests:
+- [x] Add direct zip code search option (bypass State → City → Neighborhood flow)
+- [x] Allow users to manually enter zip codes
+- [x] Add zip code validation and autocomplete
+
+### Stress Testing:
+- [ ] Create comprehensive test suite for all US states
+- [ ] Test major cities in each state alphabetically
+- [ ] Document which locations fail and why
+- [ ] Fix API calls or fallback logic for failing locations
