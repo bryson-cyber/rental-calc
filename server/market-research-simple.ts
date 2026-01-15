@@ -710,12 +710,14 @@ export const marketResearchSimpleRouter = router({
   
   // Get all zip codes within a submarket with listing counts
   // OPTIMIZED: Uses caching, larger page sizes, and parallel requests
+  // ENHANCED: Falls back to market-level listings if submarket fails
   getZipcodesInSubmarket: publicProcedure
     .input(z.object({
-      submarketId: z.string()
+      submarketId: z.string(),
+      marketId: z.string().optional() // For fallback to market-level listings
     }))
     .mutation(async ({ input }) => {
-      const { submarketId } = input;
+      const { submarketId, marketId } = input;
       const startTime = Date.now();
       console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId}`);
       
@@ -745,8 +747,13 @@ export const marketResearchSimpleRouter = router({
         
         const data = await response.json();
         
-        if (data.status?.type === 'error') {
-          console.error(`[getZipcodesInSubmarket] API error:`, data.status.message);
+        // FALLBACK: If submarket listings fail, try market-level listings
+        if (data.status?.type === 'error' || !data.payload?.listings) {
+          console.log(`[getZipcodesInSubmarket] Submarket failed, trying market-level fallback...`);
+          if (marketId) {
+            return await fetchZipcodesFromMarket(marketId, startTime);
+          }
+          console.error(`[getZipcodesInSubmarket] API error and no marketId for fallback:`, data.status?.message);
           return [];
         }
         
@@ -810,6 +817,41 @@ export const marketResearchSimpleRouter = router({
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// Fallback function to fetch zip codes from market-level listings
+async function fetchZipcodesFromMarket(marketId: string, startTime: number) {
+  try {
+    console.log(`[fetchZipcodesFromMarket] Fetching zip codes from market ${marketId}`);
+    const result = await getMarketListings(marketId, { limit: 200 });
+    const listings = result.listings || [];
+    
+    if (!listings || listings.length === 0) {
+      console.log(`[fetchZipcodesFromMarket] No listings found for market ${marketId}`);
+      return [];
+    }
+    
+    // Count listings per zip code
+    const zipcodeCounts = new Map<string, number>();
+    listings.forEach((l: any) => {
+      const zip = l.zipcode || l.zip_code;
+      if (zip) {
+        zipcodeCounts.set(zip, (zipcodeCounts.get(zip) || 0) + 1);
+      }
+    });
+    
+    // Convert to array with listing counts and sort by zip code
+    const zipcodesWithCounts = Array.from(zipcodeCounts.entries())
+      .map(([zipcode, count]) => ({ zipcode, listingCount: count }))
+      .sort((a, b) => a.zipcode.localeCompare(b.zipcode));
+    
+    console.log(`[fetchZipcodesFromMarket] Found ${zipcodesWithCounts.length} unique zip codes from market in ${Date.now() - startTime}ms`);
+    
+    return zipcodesWithCounts;
+  } catch (error) {
+    console.error(`[fetchZipcodesFromMarket] Error:`, error);
+    return [];
+  }
+}
 
 function generateInsights(
   overview: SimplifiedMarketReport['overview'],

@@ -1232,3 +1232,27 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [ ] Test major cities in each state alphabetically
 - [ ] Document which locations fail and why
 - [ ] Fix API calls or fallback logic for failing locations
+
+
+## Automated Stress Test Suite (Jan 14, 2026)
+
+### Build Comprehensive City List:
+- [x] Create list of top 2-3 cities per state (all 50 states)
+- [x] Include major metros and tourist destinations
+- [x] Total ~100-150 cities to test
+
+### Create Parallel Stress Test:
+- [x] Use map tool to test all cities in parallel
+- [x] Test State → City → Neighborhood → Zip Code flow for each
+- [x] Capture success/failure status and error messages
+- [x] Record which step fails (state, city, neighborhood, or zip code)
+
+### Analyze Results:
+- [x] Identify cities that return empty results
+- [x] Categorize failure types (no submarkets, no zip codes, API errors)
+- [x] Create prioritized fix list based on city importance
+
+### Fix Identified Issues:
+- [x] Implement fallback logic for missing submarkets (fetchZipcodesFromMarket)
+- [x] Add error handling for API timeouts
+- [x] Improve zip code fetching for problematic markets
