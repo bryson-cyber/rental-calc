@@ -1277,3 +1277,29 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 - [x] Updated Zip Code dropdown to be enabled when zipcodes are loaded (even without submarket)
 - [x] Verified fix works: Glendale, AZ now shows 5 zip codes (85305, 85302, 85301, 85304, 85303)
 
+
+
+## City/Metro Search and Neighborhood Zip Code Fixes (Jan 15, 2026) - COMPLETE
+
+### State Filtering Fix:
+- [x] Fix City/Metro dropdown to only show cities from the selected state
+- [x] Previously showed cities from all states (e.g., New Orleans when searching St. Louis in Missouri)
+- [x] Added state matching logic to filter search results
+
+### Neighborhood Zip Code Fix:
+- [x] Fix API page_size error (was 100, max allowed is 25)
+- [x] Now correctly fetches zip codes from submarket listings endpoint
+- [x] Zip codes show correct listing counts
+
+### Tested Locations:
+- [x] Missouri → St. Louis → Clayton: 7 zip codes (63105, 63114, 63117, 63124, 63130, 63132, 63143)
+- [x] Arizona → Glendale: 5 zip codes
+- [x] Arizona → Paradise Valley: 5 zip codes
+- [x] Arizona → Tempe: 4 zip codes
+- [x] Arizona → Mesa: 12 zip codes
+- [x] Arizona → Chandler: 7 zip codes
+- [x] Arizona → Gilbert: 6 zip codes
+- [x] Texas → South Lamar: 1 zip code
+- [x] Texas → Katy: 7 zip codes
+- [x] California → Santa Monica: 5 zip codes
+- [x] California → Beverly Hills: 2 zip codes

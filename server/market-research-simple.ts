@@ -742,7 +742,7 @@ export const marketResearchSimpleRouter = router({
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              pagination: { page_size: 100, offset: 0 }
+              pagination: { page_size: 25, offset: 0 }
             })
           }
         );
@@ -773,7 +773,7 @@ export const marketResearchSimpleRouter = router({
         
         // If we have more listings, fetch additional pages IN PARALLEL
         // Only fetch 1 more page (100 more listings) to keep it fast
-        if (totalCount > 100 && zipcodeCounts.size < 15) {
+        if (totalCount > 25 && zipcodeCounts.size < 15) {
           console.log(`[getZipcodesInSubmarket] Fetching additional page for more zip codes...`);
           const moreResponse = await fetch(
             `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
@@ -784,7 +784,7 @@ export const marketResearchSimpleRouter = router({
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                pagination: { page_size: 100, offset: 100 }
+                pagination: { page_size: 25, offset: 25 }
               })
             }
           );

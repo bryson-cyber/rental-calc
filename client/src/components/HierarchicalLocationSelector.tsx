@@ -131,6 +131,7 @@ interface Submarket {
   listingCount: number;
   revenue?: number;
   occupancy?: number;
+  zipcodes?: string[];  // Zip codes fetched via search API
 }
 
 interface LocationSelection {
@@ -252,21 +253,42 @@ export function HierarchicalLocationSelector({
             
             // Separate markets and submarkets
             for (const result of results) {
-              // More robust state matching
+              // Strict state matching - only include results that match the selected state
               const stateName = selectedState.name.toLowerCase();
               const stateCode = selectedState.code.toLowerCase();
               const resultState = (result.state || '').toLowerCase();
               const resultLocation = (result.locationName || '').toLowerCase();
               
-              // If result has state information, check if it matches
-              // If result doesn't have state information, include it anyway (fallback results)
-              const matchesState = !result.state || 
-                                   resultState.includes(stateName) ||
-                                   resultLocation.includes(stateName) ||
-                                   resultLocation.includes(stateCode) ||
-                                   resultState.includes(stateCode);
+              // Debug: Log what we're checking
+              console.log(`[StateFilter] Checking ${result.name}: state="${result.state}", location="${result.locationName}", selectedState="${selectedState.name}" (${selectedState.code})`);
               
-              if (!matchesState) continue;
+              // Check if result matches the selected state
+              // Must have explicit state match - don't include results without state info
+              const matchesStateField = resultState && (
+                resultState === stateName ||
+                resultState === stateCode ||
+                resultState.includes(stateName) ||
+                resultState.includes(stateCode)
+              );
+              
+              const matchesLocationField = resultLocation && (
+                resultLocation.includes(`, ${stateName},`) ||
+                resultLocation.includes(`, ${stateCode},`) ||
+                resultLocation.endsWith(`, ${stateName}`) ||
+                resultLocation.endsWith(`, ${stateCode}`) ||
+                // Also check for state code at the end (e.g., "St. Louis, MO")
+                resultLocation.endsWith(`, ${stateCode.toUpperCase()}`) ||
+                resultLocation.includes(`, ${stateCode.toUpperCase()},`)
+              );
+              
+              const matchesState = matchesStateField || matchesLocationField;
+              
+              console.log(`[StateFilter] ${result.name}: matchesStateField=${matchesStateField}, matchesLocationField=${matchesLocationField}, matchesState=${matchesState}`);
+              
+              if (!matchesState) {
+                console.log(`[StateFilter] SKIPPING ${result.name} - does not match ${selectedState.name}`);
+                continue;
+              }
               
               if (result.type === 'market') {
                 if (!seenIds.has(result.id)) {
@@ -414,10 +436,77 @@ export function HierarchicalLocationSelector({
       setZipcodeError(null); // Clear any previous error
       setZipcodeLoadTime(null); // Reset load time
       const startTime = Date.now();
+      
       try {
-        const results = await getZipcodes.mutateAsync({ submarketId: selectedSubmarket.id });
-        setZipcodes(results);
-        setZipcodeLoadTime(Date.now() - startTime);
+        // First, try to get zip codes from the submarket's existing data
+        if (selectedSubmarket.zipcodes && selectedSubmarket.zipcodes.length > 0) {
+          // Use existing zip codes from the submarket
+          const zipResults = selectedSubmarket.zipcodes.map(zip => ({
+            zipcode: zip,
+            listingCount: 0 // Count not available from search results
+          }));
+          setZipcodes(zipResults);
+          setZipcodeLoadTime(Date.now() - startTime);
+          return;
+        }
+        
+        // If no zip codes in submarket data, try the API
+        try {
+          const results = await getZipcodes.mutateAsync({ submarketId: selectedSubmarket.id });
+          if (results && results.length > 0) {
+            setZipcodes(results);
+            setZipcodeLoadTime(Date.now() - startTime);
+            return;
+          }
+        } catch (apiError) {
+          console.log('API zip code fetch failed, trying search fallback:', apiError);
+        }
+        
+        // Fallback: Search for the submarket by name to get its zip codes
+        // Include state name in search for more accurate results
+        try {
+          const stateContext = selectedState ? `, ${selectedState.name}` : '';
+          const searchQuery = `${selectedSubmarket.name}${stateContext}`;
+          console.log(`[ZipCodeFetch] Searching for: "${searchQuery}"`);
+          const searchResponse = await searchMarkets.mutateAsync({ query: searchQuery });
+          const searchResults = Array.isArray(searchResponse) ? searchResponse : ((searchResponse as any)?.data || searchResponse || []);
+          
+          // Find a matching result with zip codes, prioritizing state match
+          for (const result of searchResults) {
+            if (result.zipcodes && result.zipcodes.length > 0) {
+              // Check if this result matches our submarket (by name similarity)
+              const resultName = (result.name || result.locationName || '').toLowerCase();
+              const submarketName = selectedSubmarket.name.toLowerCase();
+              const resultState = (result.state || '').toLowerCase();
+              
+              // Check state match if we have a selected state
+              const stateMatches = !selectedState || (
+                resultState === selectedState.name.toLowerCase() ||
+                resultState === selectedState.code.toLowerCase() ||
+                resultState.includes(selectedState.name.toLowerCase())
+              );
+              
+              if (stateMatches && (resultName.includes(submarketName) || submarketName.includes(resultName))) {
+                console.log(`[ZipCodeFetch] Found match: ${result.name} in ${result.state} with ${result.zipcodes.length} zip codes`);
+                const zipResults = result.zipcodes.map((zip: string) => ({
+                  zipcode: zip,
+                  listingCount: 0
+                }));
+                setZipcodes(zipResults);
+                setZipcodeLoadTime(Date.now() - startTime);
+                return;
+              }
+            }
+          }
+          
+          // No matching zip codes found
+          setZipcodes([]);
+          setZipcodeLoadTime(Date.now() - startTime);
+        } catch (searchError) {
+          console.error('Search fallback failed:', searchError);
+          setZipcodes([]);
+          setZipcodeError('Failed to load zip codes. Please try again.');
+        }
       } catch (error) {
         console.error('Error fetching zipcodes:', error);
         setZipcodes([]);
@@ -428,7 +517,7 @@ export function HierarchicalLocationSelector({
     };
     
     fetchZipcodes();
-  }, [selectedSubmarket]);
+  }, [selectedSubmarket, selectedState]);
   
   // Notify parent of selection changes
   useEffect(() => {
@@ -554,7 +643,43 @@ export function HierarchicalLocationSelector({
         const results = Array.isArray(apiResults) ? apiResults : ((apiResults as any)?.data || apiResults || []);
         
         // Filter to markets only and remove duplicates
-        const apiMarkets = (results as any[]).filter(r => r.type === 'market');
+        // Also filter by selected state if one is selected
+        const apiMarkets = (results as any[]).filter(r => {
+          // Must be a market or submarket
+          if (r.type !== 'market' && r.type !== 'submarket') return false;
+          
+          // If a state is selected, filter by state
+          if (selectedState) {
+            const stateName = selectedState.name.toLowerCase();
+            const stateCode = selectedState.code.toLowerCase();
+            const resultState = (r.state || '').toLowerCase();
+            const resultLocation = (r.locationName || '').toLowerCase();
+            
+            // Check if result matches the selected state
+            const matchesStateField = resultState && (
+              resultState === stateName ||
+              resultState === stateCode ||
+              resultState.includes(stateName) ||
+              resultState.includes(stateCode)
+            );
+            
+            const matchesLocationField = resultLocation && (
+              resultLocation.includes(`, ${stateName},`) ||
+              resultLocation.includes(`, ${stateCode},`) ||
+              resultLocation.endsWith(`, ${stateName}`) ||
+              resultLocation.endsWith(`, ${stateCode}`) ||
+              resultLocation.endsWith(`, ${stateCode.toUpperCase()}`) ||
+              resultLocation.includes(`, ${stateCode.toUpperCase()},`)
+            );
+            
+            if (!matchesStateField && !matchesLocationField) {
+              console.log(`[SearchFilter] SKIPPING ${r.name} - state="${r.state}", location="${r.locationName}" does not match ${selectedState.name}`);
+              return false;
+            }
+          }
+          
+          return true;
+        });
         const seenIds = new Set(filteredPredefined.map(m => m.id));
         const newApiMarkets = apiMarkets.filter(m => !seenIds.has(m.id));
         
