@@ -1406,3 +1406,24 @@ The getZipcodesInSubmarket procedure now:
 - ✅ Florida → Miami → Brickell: Shows 4 zip codes with accurate counts (33131: 2,350 listings)
 - ✅ Texas → Austin → Downtown Austin: Shows 3 zip codes with accurate counts (78701: 1,309 listings)
 - ✅ Load times: 4-9 seconds for initial load, instant for cached results
+
+
+## Zip Code Loading Progress Indicator (Jan 15, 2026) - COMPLETE
+
+### Feature Requirements:
+- [x] Add progress indicator during zip code loading
+- [x] Show visual feedback of loading progress
+- [x] Display status text like "Fetching listings from [neighborhood]..."
+- [x] Make loading state more informative and less jarring
+
+### Implementation Steps:
+- [x] Add zipcodeLoadingStatus state to HierarchicalLocationSelector
+- [x] Update fetchZipcodes to set status messages at each stage
+- [x] Update zip code button to display the status message
+- [x] Test with multiple markets to verify UX improvement
+- [x] Save checkpoint with completed feature
+
+### Test Results:
+- ✅ California → San Diego → La Jolla: Shows "Fetching listings from La Jolla..." during load
+- ✅ Completion message: "✓ 2 zip codes found (7.3s)"
+- ✅ Ready state: "Zip Code (2 ready)"

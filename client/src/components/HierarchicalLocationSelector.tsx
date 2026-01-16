@@ -180,6 +180,7 @@ export function HierarchicalLocationSelector({
   const [loadingSubmarkets, setLoadingSubmarkets] = useState(false);
   const [loadingZipcodes, setLoadingZipcodes] = useState(false);
   const [zipcodeLoadTime, setZipcodeLoadTime] = useState<number | null>(null);
+  const [zipcodeLoadingStatus, setZipcodeLoadingStatus] = useState<string>('');
   
   // Error state
   const [marketError, setMarketError] = useState<string | null>(null);
@@ -474,11 +475,13 @@ export function HierarchicalLocationSelector({
       setLoadingZipcodes(true);
       setZipcodeError(null); // Clear any previous error
       setZipcodeLoadTime(null); // Reset load time
+      setZipcodeLoadingStatus('Initializing...');
       const startTime = Date.now();
       
       try {
         // First, try to get zip codes from the submarket's existing data
         if (selectedSubmarket.zipcodes && selectedSubmarket.zipcodes.length > 0) {
+          setZipcodeLoadingStatus('Using cached data...');
           // Use existing zip codes from the submarket
           const zipResults = selectedSubmarket.zipcodes.map(zip => ({
             zipcode: zip,
@@ -486,34 +489,41 @@ export function HierarchicalLocationSelector({
           }));
           setZipcodes(zipResults);
           setZipcodeLoadTime(Date.now() - startTime);
+          setZipcodeLoadingStatus('');
           return;
         }
         
         // If no zip codes in submarket data, try the API
         try {
+          setZipcodeLoadingStatus(`Fetching listings from ${selectedSubmarket.name}...`);
           const results = await getZipcodes.mutateAsync({ 
             submarketId: selectedSubmarket.id,
             marketId: selectedMarket?.id, // Pass market ID for fallback
             submarketListingCount: selectedSubmarket.listingCount || 0
           });
           if (results && results.length > 0) {
+            setZipcodeLoadingStatus(`Found ${results.length} zip codes!`);
             setZipcodes(results);
             setZipcodeLoadTime(Date.now() - startTime);
+            setZipcodeLoadingStatus('');
             return;
           }
         } catch (apiError) {
           console.log('API zip code fetch failed, trying search fallback:', apiError);
+          setZipcodeLoadingStatus('Trying alternative method...');
         }
         
         // Fallback: Search for the submarket by name to get its zip codes
         // Include state name in search for more accurate results
         try {
+          setZipcodeLoadingStatus('Searching market database...');
           const stateContext = selectedState ? `, ${selectedState.name}` : '';
           const searchQuery = `${selectedSubmarket.name}${stateContext}`;
           console.log(`[ZipCodeFetch] Searching for: "${searchQuery}"`);
           const searchResponse = await searchMarkets.mutateAsync({ query: searchQuery });
           const searchResults = Array.isArray(searchResponse) ? searchResponse : ((searchResponse as any)?.data || searchResponse || []);
           
+          setZipcodeLoadingStatus('Processing results...');
           // Find a matching result with zip codes, prioritizing state match
           for (const result of searchResults) {
             if (result.zipcodes && result.zipcodes.length > 0) {
@@ -537,6 +547,7 @@ export function HierarchicalLocationSelector({
                 }));
                 setZipcodes(zipResults);
                 setZipcodeLoadTime(Date.now() - startTime);
+                setZipcodeLoadingStatus('');
                 return;
               }
             }
@@ -545,17 +556,21 @@ export function HierarchicalLocationSelector({
           // No matching zip codes found
           setZipcodes([]);
           setZipcodeLoadTime(Date.now() - startTime);
+          setZipcodeLoadingStatus('');
         } catch (searchError) {
           console.error('Search fallback failed:', searchError);
           setZipcodes([]);
           setZipcodeError('Failed to load zip codes. Please try again.');
+          setZipcodeLoadingStatus('');
         }
       } catch (error) {
         console.error('Error fetching zipcodes:', error);
         setZipcodes([]);
         setZipcodeError('Failed to load zip codes. Please try again.');
+        setZipcodeLoadingStatus('');
       } finally {
         setLoadingZipcodes(false);
+        setZipcodeLoadingStatus('');
       }
     };
     
@@ -1252,8 +1267,8 @@ export function HierarchicalLocationSelector({
                   )}
                   <span className={selectedZipcode ? 'text-[oklch(0.25_0_0)]' : loadingZipcodes ? 'text-emerald-600' : 'text-[oklch(0.50_0_0)]'}>
                     {loadingZipcodes ? (
-                      <span className="flex items-center gap-1">
-                        <span>Pre-loading zip codes...</span>
+                      <span className="flex items-center gap-1 text-sm">
+                        <span>{zipcodeLoadingStatus || 'Loading zip codes...'}</span>
                       </span>
                     ) : (
                       selectedZipcode || (zipcodes.length > 0 ? `Zip Code (${zipcodes.length} ready)` : 'Zip Code')
