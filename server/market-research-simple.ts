@@ -603,13 +603,16 @@ export const marketResearchSimpleRouter = router({
   // ============================================
 
   // Get all submarkets within a market
+  // ENHANCED: Added expectedState parameter to validate submarkets match the expected state
+  // This fixes the AirDNA data issue where Annapolis, MD (airdna-495) shares the same ID as Salt Lake City, UT
   getSubmarkets: publicProcedure
     .input(z.object({
-      marketId: z.string()
+      marketId: z.string(),
+      expectedState: z.string().optional() // State name to validate submarkets against
     }))
     .mutation(async ({ input }) => {
-      const { marketId } = input;
-      console.log(`[getSubmarkets] Getting submarkets for market ${marketId}`);
+      const { marketId, expectedState } = input;
+      console.log(`[getSubmarkets] Getting submarkets for market ${marketId}${expectedState ? ` (expected state: ${expectedState})` : ''}`);
       
       try {
         // Use the AirDNA /market/{market_id}/submarkets endpoint
@@ -662,6 +665,36 @@ export const marketResearchSimpleRouter = router({
         }
         
         console.log(`[getSubmarkets] Found ${allSubmarkets.length} submarkets`);
+        
+        // STATE VALIDATION: If expectedState is provided, validate that submarkets belong to the expected state
+        // This fixes the AirDNA data issue where Annapolis, MD (airdna-495) shares the same ID as Salt Lake City, UT
+        if (expectedState) {
+          const expectedStateLower = expectedState.toLowerCase();
+          
+          // Known Utah cities that appear in Salt Lake City submarkets
+          // If we see these when expecting a different state, it's a data mismatch
+          const UTAH_CITIES = [
+            'salt lake', 'draper', 'herriman', 'holladay', 'jordan', 'riverton', 
+            'kearns', 'magna', 'midvale', 'millcreek', 'murray', 'sandy', 
+            'taylorsville', 'west valley', 'canyon rim', 'slc airport'
+          ];
+          
+          // Check if submarkets contain Utah-specific city names when we're NOT expecting Utah
+          if (expectedStateLower !== 'utah') {
+            const sampleSubmarkets = allSubmarkets.slice(0, 10);
+            const utahMismatchCount = sampleSubmarkets.filter((s: any) => {
+              const submarketName = (s.name || '').toLowerCase();
+              return UTAH_CITIES.some(city => submarketName.includes(city));
+            }).length;
+            
+            if (utahMismatchCount >= 3) {
+              console.log(`[getSubmarkets] STATE MISMATCH DETECTED: Expected ${expectedState} but found ${utahMismatchCount} Utah cities in submarkets`);
+              console.log(`[getSubmarkets] Sample submarkets: ${sampleSubmarkets.map((s: any) => s.name).join(', ')}`);
+              // Return empty array - the client should fall back to using the market as a submarket
+              return [];
+            }
+          }
+        }
         
         // Sort alphabetically by name
         allSubmarkets.sort((a: any, b: any) => 

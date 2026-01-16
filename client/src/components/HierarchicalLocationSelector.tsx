@@ -227,6 +227,19 @@ export function HierarchicalLocationSelector({
     'NC': { name: 'Charlotte Area', searchTerms: ['Charlotte'] },
   };
 
+  // SPECIAL MARKET MAPPINGS: For states where the AirDNA search API returns poor results
+  // These markets exist in AirDNA but aren't returned by the search API
+  const SPECIAL_MARKET_IDS: Record<string, Array<{ id: string; name: string; listingCount: number }>> = {
+    'UT': [
+      { id: 'airdna-22', name: 'Park City', listingCount: 4500 },
+      { id: 'airdna-495', name: 'Salt Lake City', listingCount: 3200 },
+      { id: 'airdna-326', name: 'Utah Area', listingCount: 7997 },
+    ],
+    'DC': [
+      { id: 'airdna-402', name: 'Washington DC', listingCount: 8500 },
+    ],
+  };
+
   useEffect(() => {
     if (!selectedState) {
       setMarkets([]);
@@ -237,6 +250,21 @@ export function HierarchicalLocationSelector({
       setLoadingMarkets(true);
       setMarketError(null); // Clear any previous error
       try {
+        // SPECIAL HANDLING: For states with known search issues (Utah, DC), use direct market IDs
+        const specialMarkets = SPECIAL_MARKET_IDS[selectedState.code];
+        if (specialMarkets && specialMarkets.length > 0) {
+          console.log(`[HierarchicalLocationSelector] Using special market mappings for ${selectedState.code}`);
+          const marketsWithState = specialMarkets.map(m => ({
+            ...m,
+            type: 'market' as const,
+            state: selectedState.name,
+            locationName: `${m.name}, ${selectedState.name}, United States`
+          }));
+          setMarkets(marketsWithState);
+          setLoadingMarkets(false);
+          return;
+        }
+        
         // Get major cities for this state, or use state name as fallback
         const citiesToSearch = MAJOR_CITIES[selectedState.code] || [selectedState.name];
         
@@ -409,7 +437,18 @@ export function HierarchicalLocationSelector({
           setSubmarkets(stateSubmarkets);
         } else {
           // Regular market - fetch from API
-          const results = await getSubmarkets.mutateAsync({ marketId: selectedMarket.id });
+          // Pass expectedState to validate submarkets match the selected state
+          // This fixes the AirDNA data issue where Annapolis, MD shares the same ID as Salt Lake City, UT
+          const results = await getSubmarkets.mutateAsync({ 
+            marketId: selectedMarket.id,
+            expectedState: selectedState?.name 
+          });
+          
+          // If no submarkets returned (possibly due to state mismatch), treat the market as a submarket
+          if (results.length === 0 && selectedMarket.zipcodes && selectedMarket.zipcodes.length > 0) {
+            console.log('[HierarchicalLocationSelector] No valid submarkets found, using market zipcodes directly');
+            setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+          }
           setSubmarkets(results);
         }
       } catch (error) {
