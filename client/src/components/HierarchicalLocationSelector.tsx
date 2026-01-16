@@ -396,15 +396,44 @@ export function HierarchicalLocationSelector({
       return;
     }
     
-    // If the selected market is actually a submarket (like Glendale, AZ), 
-    // skip fetching submarkets and directly use the market's zipcodes
+    // If the selected market is actually a submarket (like Glendale, AZ or Downtown Orlando), 
+    // skip fetching submarkets and fetch zip codes with listing counts from API
     if (selectedMarket.isSubmarketAsMarket) {
-      console.log('[HierarchicalLocationSelector] Selected market is a submarket, skipping submarket fetch');
+      console.log('[HierarchicalLocationSelector] Selected market is a submarket, fetching zip code listing counts');
       setSubmarkets([]);
-      // If the market has zipcodes, set them directly
+      // If the market has zipcodes, fetch listing counts from API
       if (selectedMarket.zipcodes && selectedMarket.zipcodes.length > 0) {
-        console.log(`[HierarchicalLocationSelector] Using ${selectedMarket.zipcodes.length} zipcodes from market:`, selectedMarket.zipcodes);
-        setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+        console.log(`[HierarchicalLocationSelector] Fetching listing counts for ${selectedMarket.zipcodes.length} zipcodes`);
+        // Use async IIFE to handle the API call
+        (async () => {
+          setLoadingZipcodes(true);
+          setZipcodeLoadingStatus(`Fetching listings from ${selectedMarket.name}...`);
+          const startTime = Date.now();
+          try {
+            const zipResults = await getZipcodes.mutateAsync({ 
+              submarketId: selectedMarket.id,
+              marketId: selectedMarket.id, // Use market ID for both since this is a submarket-as-market
+              submarketListingCount: selectedMarket.listingCount || 0
+            });
+            if (zipResults && zipResults.length > 0) {
+              setZipcodes(zipResults);
+              setZipcodeLoadTime(Date.now() - startTime);
+              setZipcodeLoadingStatus('');
+            } else {
+              // Fallback to cached zip codes if API returns nothing
+              setZipcodes(selectedMarket.zipcodes!.map(z => ({ zipcode: z, listingCount: 0 })));
+              setZipcodeLoadTime(Date.now() - startTime);
+              setZipcodeLoadingStatus('');
+            }
+          } catch (apiError) {
+            console.log('[HierarchicalLocationSelector] API zip code fetch failed, using cached:', apiError);
+            setZipcodes(selectedMarket.zipcodes!.map(z => ({ zipcode: z, listingCount: 0 })));
+            setZipcodeLoadTime(Date.now() - startTime);
+            setZipcodeLoadingStatus('');
+          } finally {
+            setLoadingZipcodes(false);
+          }
+        })();
       }
       return;
     }
@@ -447,8 +476,35 @@ export function HierarchicalLocationSelector({
           
           // If no submarkets returned (possibly due to state mismatch), treat the market as a submarket
           if (results.length === 0 && selectedMarket.zipcodes && selectedMarket.zipcodes.length > 0) {
-            console.log('[HierarchicalLocationSelector] No valid submarkets found, using market zipcodes directly');
-            setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+            console.log('[HierarchicalLocationSelector] No valid submarkets found, fetching zip code listing counts');
+            // Fetch listing counts from API instead of using cached zip codes with 0 counts
+            setLoadingZipcodes(true);
+            setZipcodeLoadingStatus(`Fetching listings from ${selectedMarket.name}...`);
+            const startTime = Date.now();
+            try {
+              const zipResults = await getZipcodes.mutateAsync({ 
+                submarketId: selectedMarket.id,
+                marketId: selectedMarket.id, // Use market ID for both since this is a market without submarkets
+                submarketListingCount: selectedMarket.listingCount || 0
+              });
+              if (zipResults && zipResults.length > 0) {
+                setZipcodes(zipResults);
+                setZipcodeLoadTime(Date.now() - startTime);
+                setZipcodeLoadingStatus('');
+              } else {
+                // Fallback to cached zip codes if API returns nothing
+                setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+                setZipcodeLoadTime(Date.now() - startTime);
+                setZipcodeLoadingStatus('');
+              }
+            } catch (apiError) {
+              console.log('[HierarchicalLocationSelector] API zip code fetch failed, using cached:', apiError);
+              setZipcodes(selectedMarket.zipcodes.map(z => ({ zipcode: z, listingCount: 0 })));
+              setZipcodeLoadTime(Date.now() - startTime);
+              setZipcodeLoadingStatus('');
+            } finally {
+              setLoadingZipcodes(false);
+            }
           }
           setSubmarkets(results);
         }
@@ -479,21 +535,8 @@ export function HierarchicalLocationSelector({
       const startTime = Date.now();
       
       try {
-        // First, try to get zip codes from the submarket's existing data
-        if (selectedSubmarket.zipcodes && selectedSubmarket.zipcodes.length > 0) {
-          setZipcodeLoadingStatus('Using cached data...');
-          // Use existing zip codes from the submarket
-          const zipResults = selectedSubmarket.zipcodes.map(zip => ({
-            zipcode: zip,
-            listingCount: 0 // Count not available from search results
-          }));
-          setZipcodes(zipResults);
-          setZipcodeLoadTime(Date.now() - startTime);
-          setZipcodeLoadingStatus('');
-          return;
-        }
-        
-        // If no zip codes in submarket data, try the API
+        // ALWAYS try the API first to get accurate listing counts
+        // Even if submarket has cached zip codes, we want the listing counts
         try {
           setZipcodeLoadingStatus(`Fetching listings from ${selectedSubmarket.name}...`);
           const results = await getZipcodes.mutateAsync({ 
@@ -511,6 +554,20 @@ export function HierarchicalLocationSelector({
         } catch (apiError) {
           console.log('API zip code fetch failed, trying search fallback:', apiError);
           setZipcodeLoadingStatus('Trying alternative method...');
+        }
+        
+        // Fallback 1: Use cached zip codes from submarket data (without listing counts)
+        if (selectedSubmarket.zipcodes && selectedSubmarket.zipcodes.length > 0) {
+          setZipcodeLoadingStatus('Using cached data...');
+          // Use existing zip codes from the submarket
+          const zipResults = selectedSubmarket.zipcodes.map(zip => ({
+            zipcode: zip,
+            listingCount: 0 // Count not available from search results
+          }));
+          setZipcodes(zipResults);
+          setZipcodeLoadTime(Date.now() - startTime);
+          setZipcodeLoadingStatus('');
+          return;
         }
         
         // Fallback: Search for the submarket by name to get its zip codes

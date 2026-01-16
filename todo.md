@@ -1427,3 +1427,40 @@ The getZipcodesInSubmarket procedure now:
 - ✅ California → San Diego → La Jolla: Shows "Fetching listings from La Jolla..." during load
 - ✅ Completion message: "✓ 2 zip codes found (7.3s)"
 - ✅ Ready state: "Zip Code (2 ready)"
+
+
+## Fix Zip Code Listing Counts Bug - Downtown Orlando (Jan 15, 2026) - COMPLETE
+
+### Bug Report:
+- Florida → Downtown Orlando shows 7 zip codes but ALL have "0 listings"
+- Affected zip codes: 32814, 32808, 32806, 32801, 32804, 32803
+- Other markets like Hell's Kitchen, New York work correctly (742, 501, 59 listings)
+- This suggests the issue is market-specific, not a global bug
+
+### Root Cause:
+- When a submarket (like Downtown Orlando) is selected directly from the City/Metro dropdown, it has `isSubmarketAsMarket: true`
+- The code at line 401-409 was setting zip codes directly from cached data with `listingCount: 0` without calling the API
+- This bypassed the API call that would fetch actual listing counts
+
+### Solution:
+- Updated the `isSubmarketAsMarket` case in HierarchicalLocationSelector.tsx to call the `getZipcodes` API
+- The API now fetches listings from AirDNA and calculates actual listing counts per zip code
+- Added async IIFE to handle the API call within the useEffect
+
+### Investigation Steps:
+- [x] Check the API response for Downtown Orlando vs Hell's Kitchen
+- [x] Verify the marketId is being passed correctly
+- [x] Check if the submarket ID is correct for Downtown Orlando
+- [x] Debug the listing count calculation logic
+- [x] Test fix across multiple markets
+
+### Implementation:
+- [x] Fix the root cause of 0 listings for Downtown Orlando
+- [x] Test with Florida → Downtown Orlando
+- [x] Test with other previously working markets
+- [x] Save checkpoint with fix
+
+### Test Results:
+- ✅ Florida → Downtown Orlando: Now shows 9 zip codes with actual counts (32801: 311, 32803: 304, 32806: 298, etc.)
+- ✅ Load time: 3.9 seconds (API call working correctly)
+- ✅ Previously working markets (Hell's Kitchen, La Jolla) still work correctly

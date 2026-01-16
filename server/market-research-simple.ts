@@ -770,7 +770,8 @@ export const marketResearchSimpleRouter = router({
         const pageSize = 25;
         const pagesToFetch = Math.min(8, Math.ceil((submarketListingCount || 200) / pageSize)); // Up to 8 pages (200 listings)
         
-        const fetchPage = async (offset: number) => {
+        // Helper to fetch from submarket API
+        const fetchSubmarketPage = async (offset: number) => {
           const response = await fetch(
             `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
             {
@@ -787,18 +788,48 @@ export const marketResearchSimpleRouter = router({
           return response.json();
         };
         
-        // Fetch first page to get total count
-        const firstPageData = await fetchPage(0);
+        // Helper to fetch from market API (for when submarketId is actually a market)
+        const fetchMarketPage = async (offset: number) => {
+          const response = await fetch(
+            `https://api.airdna.co/api/enterprise/v2/market/${submarketId}/listings`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                pagination: { page_size: pageSize, offset }
+              })
+            }
+          );
+          return response.json();
+        };
         
-        // FALLBACK: If submarket listings fail, try market-level listings
+        // Try submarket API first
+        let firstPageData = await fetchSubmarketPage(0);
+        let fetchPage = fetchSubmarketPage;
+        let apiType = 'submarket';
+        
+        // If submarket API fails, try market API with the same ID
         if (firstPageData.status?.type === 'error' || !firstPageData.payload?.listings) {
-          console.log(`[getZipcodesInSubmarket] Submarket failed, trying market-level fallback...`);
-          if (marketId) {
-            return await fetchZipcodesFromMarket(marketId, startTime);
+          console.log(`[getZipcodesInSubmarket] Submarket API failed, trying market API with same ID...`);
+          firstPageData = await fetchMarketPage(0);
+          fetchPage = fetchMarketPage;
+          apiType = 'market';
+          
+          // If market API also fails, try fallback marketId if provided
+          if (firstPageData.status?.type === 'error' || !firstPageData.payload?.listings) {
+            console.log(`[getZipcodesInSubmarket] Market API also failed, trying fallback marketId...`);
+            if (marketId && marketId !== submarketId) {
+              return await fetchZipcodesFromMarket(marketId, startTime);
+            }
+            console.error(`[getZipcodesInSubmarket] All API attempts failed:`, firstPageData.status?.message);
+            return [];
           }
-          console.error(`[getZipcodesInSubmarket] API error and no marketId for fallback:`, firstPageData.status?.message);
-          return [];
         }
+        
+        console.log(`[getZipcodesInSubmarket] Using ${apiType} API for ${submarketId}`);
         
         const totalCount = firstPageData.payload?.page_info?.total_count || 0;
         const allListings = [...(firstPageData.payload?.listings || [])];
@@ -823,14 +854,27 @@ export const marketResearchSimpleRouter = router({
         
         console.log(`[getZipcodesInSubmarket] Sampled ${allListings.length} of ${totalCount} total listings`);
         
+        // Debug: Log first listing to see available fields
+        if (allListings.length > 0) {
+          console.log(`[getZipcodesInSubmarket] Sample listing fields:`, Object.keys(allListings[0]));
+          console.log(`[getZipcodesInSubmarket] Sample listing zipcode field:`, allListings[0].zipcode, allListings[0].zip_code, allListings[0].postal_code, allListings[0].location);
+        }
+        
         // Count listings per zip code from our sample
+        // Check multiple possible field names for zip code
         const zipcodeSampleCounts = new Map<string, number>();
+        let listingsWithZip = 0;
+        let listingsWithoutZip = 0;
         allListings.forEach((l: any) => {
-          const zip = l.zipcode || l.zip_code;
+          const zip = l.zipcode || l.zip_code || l.postal_code || l.location?.zipcode || l.location?.postal_code;
           if (zip) {
             zipcodeSampleCounts.set(zip, (zipcodeSampleCounts.get(zip) || 0) + 1);
+            listingsWithZip++;
+          } else {
+            listingsWithoutZip++;
           }
         });
+        console.log(`[getZipcodesInSubmarket] Listings with zip: ${listingsWithZip}, without zip: ${listingsWithoutZip}`);
         
         // Calculate estimated actual counts based on sample proportion
         const sampleSize = allListings.length;
