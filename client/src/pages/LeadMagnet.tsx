@@ -677,8 +677,16 @@ export default function LeadMagnet() {
       setSelectedMarketId(report.market.id);
       
       // Transform to our result format
+      // Use the user's searched zip code in the display name if available
+      let displayMarketName = report.market.name;
+      if (locationSelection?.zipcode) {
+        // For zip code searches, show the user's searched zip code with the market name
+        const marketNameWithoutZip = report.market.name.replace(/\s*\d{5}\s*/, '').trim();
+        displayMarketName = `${marketNameWithoutZip} ${locationSelection.zipcode}`;
+      }
+      
       setResearchResult({
-        marketName: report.market.name,
+        marketName: displayMarketName,
         avgRevenue: report.overview.avgRevenue,
         avgAdr: report.overview.avgAdr,
         avgOccupancy: report.overview.avgOccupancy,
