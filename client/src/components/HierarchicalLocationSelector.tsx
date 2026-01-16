@@ -491,7 +491,11 @@ export function HierarchicalLocationSelector({
         
         // If no zip codes in submarket data, try the API
         try {
-          const results = await getZipcodes.mutateAsync({ submarketId: selectedSubmarket.id });
+          const results = await getZipcodes.mutateAsync({ 
+            submarketId: selectedSubmarket.id,
+            marketId: selectedMarket?.id, // Pass market ID for fallback
+            submarketListingCount: selectedSubmarket.listingCount || 0
+          });
           if (results && results.length > 0) {
             setZipcodes(results);
             setZipcodeLoadTime(Date.now() - startTime);
