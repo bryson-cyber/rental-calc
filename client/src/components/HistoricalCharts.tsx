@@ -154,7 +154,7 @@ export function HistoricalCharts({
       label: 'Occupancy',
       icon: Percent,
       color: '#3B82F6',
-      format: (v: number) => `${Math.round(v * 100)}%`,
+      format: (v: number) => `${Math.round(v)}%`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
     },
     revenue: {

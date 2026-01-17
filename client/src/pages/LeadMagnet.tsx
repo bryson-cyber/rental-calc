@@ -1748,12 +1748,30 @@ export default function LeadMagnet() {
             )}
             
             {/* Historical Charts - Market Trends */}
-            {locationSelection?.market?.id && (
+            {/* Note: Historical data API only works with market IDs, not submarket IDs */}
+            {/* When a submarket is selected as a market (isSubmarketAsMarket), we need to find the parent market */}
+            {locationSelection?.market?.id && !locationSelection.market.isSubmarketAsMarket && (
               <div className="mt-8">
                 <HistoricalCharts
                   marketId={locationSelection.market.id}
                   marketName={researchResult.marketName}
                 />
+              </div>
+            )}
+            {/* For submarkets selected as markets, show a message that historical data is at market level */}
+            {locationSelection?.market?.isSubmarketAsMarket && (
+              <div className="mt-8 p-6 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-amber-900">Historical Trends</h4>
+                    <p className="text-amber-700 text-sm mt-1">
+                      Historical trend data is available at the city/metro level. Select a parent market (like Austin instead of Downtown Austin) to view historical occupancy, revenue, and ADR trends.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

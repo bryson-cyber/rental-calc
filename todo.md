@@ -1615,3 +1615,13 @@ The getZipcodesInSubmarket procedure now:
 - [ ] Add sorting options (revenue, occupancy, rating)
 - [ ] Add favorite/save property functionality
 - [ ] Add AI-generated market reports
+
+
+## Bug Fixes & Enhancements (Jan 17, 2026)
+- [ ] Fix Historical Trends to use parent market ID for submarkets (API returns 404 for submarket IDs like airdna-837)
+- [ ] Fix main metrics display ($0/0%) for submarket searches
+- [ ] Add Map Visualization with revenue markers (like AirDNA PDF report)
+- [ ] Add PDF export feature matching AirDNA Rentalizer format
+- [ ] Add amenities percentage breakdown
+- [ ] Add monthly revenue projection chart
+- [ ] Add annual revenue trend chart
