@@ -23,6 +23,8 @@ import {
   calculateArbitrageFeasibility,
   getListingsByArea,
   getRentalizerBulkSummary,
+  getSubmarketListings,
+  getMarketHistoricalData,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1735,6 +1737,123 @@ export const appRouter = router({
 
   // Admin portal for user activity tracking
   admin: adminRouter,
+
+  // Comp Data and Historical Charts for Coach Inayah parity
+  compData: router({
+    getListings: publicProcedure
+      .input(z.object({
+        submarketId: z.string(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(25),
+        orderBy: z.enum(['revenue', 'adr', 'occupancy', 'rating']).default('revenue'),
+        orderDirection: z.enum(['asc', 'desc']).default('desc'),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const offset = (input.page - 1) * input.pageSize;
+          const result = await getSubmarketListings(input.submarketId, {
+            limit: input.pageSize,
+            offset,
+            orderBy: input.orderBy,
+            orderDirection: input.orderDirection,
+          });
+
+          if (!result) {
+            return {
+              success: false,
+              error: 'Could not fetch listings',
+              listings: [],
+              totalCount: 0,
+            };
+          }
+
+          // Transform listings to match frontend interface
+          const listings = result.listings.map((listing: any) => ({
+            id: listing.id || listing.airbnb_listing_id || String(Math.random()),
+            title: listing.title || 'Untitled Listing',
+            property_type: listing.property_type || 'unknown',
+            bedrooms: listing.bedrooms || 0,
+            bathrooms: listing.bathrooms || 0,
+            accommodates: listing.accommodates || 0,
+            annual_revenue: listing.annual_revenue || listing.revenue || 0,
+            adr: listing.adr || 0,
+            occupancy: listing.occupancy || 0,
+            rating: listing.rating || null,
+            reviews: listing.reviews || 0,
+            airbnb_url: listing.airbnb_url || listing.url || `https://www.airbnb.com/rooms/${listing.airbnb_listing_id || ''}`,
+            image_url: listing.image_url || listing.thumbnail_url || '',
+            is_superhost: listing.is_superhost || false,
+          }));
+
+          return {
+            success: true,
+            listings,
+            totalCount: result.total_count || listings.length,
+          };
+        } catch (error) {
+          console.error('[CompData.getListings] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch listings',
+            listings: [],
+            totalCount: 0,
+          };
+        }
+      }),
+
+    getHistoricalData: publicProcedure
+      .input(z.object({
+        marketId: z.string(),
+        numMonths: z.number().int().min(12).max(60).default(24),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getMarketHistoricalData(input.marketId, input.numMonths);
+
+          if (!result) {
+            return {
+              success: false,
+              error: 'Could not fetch historical data',
+              data: {
+                occupancy: [],
+                revenue: [],
+                adr: [],
+                listings: [],
+              },
+            };
+          }
+
+          // Transform to match frontend interface
+          const transformData = (dataPoints: any[]) => 
+            (dataPoints || []).map((d: any) => ({
+              month: d.month || d.date || '',
+              value: d.value || d.avg || 0,
+            }));
+
+          return {
+            success: true,
+            data: {
+              occupancy: transformData(result.occupancy),
+              revenue: transformData(result.revenue),
+              adr: transformData(result.adr),
+              listings: transformData(result.active_listings),
+            },
+          };
+        } catch (error) {
+          console.error('[CompData.getHistoricalData] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch historical data',
+            data: {
+              occupancy: [],
+              revenue: [],
+              adr: [],
+              listings: [],
+            },
+          };
+        }
+      }),
+  }),
 
   bulkSummary: router({
     get: publicProcedure

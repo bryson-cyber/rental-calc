@@ -21,6 +21,8 @@ import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
 import PropertyCard from '@/components/PropertyCard';
+import { CompDataTable } from '@/components/CompDataTable';
+import { HistoricalCharts } from '@/components/HistoricalCharts';
 
 import { 
   MapPin,
@@ -1734,6 +1736,26 @@ export default function LeadMagnet() {
                 )}
               </Button>
             </div>
+            
+            {/* Comp Data Table - Individual Property Listings */}
+            {(locationSelection?.submarket?.id || locationSelection?.market?.id) && (
+              <div className="mt-8">
+                <CompDataTable
+                  submarketId={locationSelection.submarket?.id || locationSelection.market?.id || ''}
+                  marketName={researchResult.marketName}
+                />
+              </div>
+            )}
+            
+            {/* Historical Charts - Market Trends */}
+            {locationSelection?.market?.id && (
+              <div className="mt-8">
+                <HistoricalCharts
+                  marketId={locationSelection.market.id}
+                  marketName={researchResult.marketName}
+                />
+              </div>
+            )}
           </div>
         </section>
       )}

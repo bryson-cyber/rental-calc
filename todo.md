@@ -1582,3 +1582,36 @@ The getZipcodesInSubmarket procedure now:
 - [x] Hierarchical selection (Florida → Ft. Lauderdale) - PASS
 - [x] Market data display after search - PASS
 
+
+
+## Coach Inayah Parity Features (Jan 17, 2026) - IN PROGRESS
+
+### Comp Data Table
+- [x] Add getSubmarketListings tRPC endpoint
+- [x] Create CompDataTable component with property cards
+- [x] Show property images, titles, revenue, ADR, occupancy, ratings
+- [x] Add Airbnb links for each property
+- [x] Add pagination (25 listings per page)
+- [x] Add Show Filters button (placeholder)
+- [x] Write unit tests for compData endpoints
+
+### Historical Charts
+- [x] Add getMarketHistoricalData tRPC endpoint
+- [x] Create HistoricalCharts component with Chart.js
+- [x] Show Occupancy, Revenue, ADR, Listings tabs
+- [x] Add time range selector (12, 24, 36, 48, 60 months)
+- [x] Show YoY comparison metrics
+- [x] Integrate with LeadMagnet page
+
+### Map Visualization (TODO)
+- [ ] Add Google Maps component with property markers
+- [ ] Show property clusters by location
+- [ ] Add heatmap overlay for revenue/occupancy
+- [ ] Enable click-to-view property details
+
+### Additional Features (TODO)
+- [ ] Add property type filter to Comp Data
+- [ ] Add bedroom filter to Comp Data
+- [ ] Add sorting options (revenue, occupancy, rating)
+- [ ] Add favorite/save property functionality
+- [ ] Add AI-generated market reports
