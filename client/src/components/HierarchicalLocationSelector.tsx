@@ -865,8 +865,19 @@ export function HierarchicalLocationSelector({
     const zip = directZipSearch.trim();
     setDirectZipError(null); // Clear any previous error
     
-    if (!zip || !/^\d{5}$/.test(zip)) {
-      setDirectZipError('Please enter a valid 5-digit zip code');
+    // Validation with specific error messages
+    if (!zip) {
+      setDirectZipError('Please enter a zip code to search');
+      return;
+    }
+    
+    if (zip.length < 5) {
+      setDirectZipError(`Please enter all 5 digits. You entered ${zip.length} digit${zip.length === 1 ? '' : 's'} (${zip}).`);
+      return;
+    }
+    
+    if (!/^\d{5}$/.test(zip)) {
+      setDirectZipError('Please enter only numbers (0-9) for the zip code');
       return;
     }
     
@@ -919,16 +930,21 @@ export function HierarchicalLocationSelector({
           <input
             type="text"
             value={directZipSearch}
-            onChange={(e) => setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5))}
+            onChange={(e) => {
+              // Clear any previous error when user starts typing
+              if (directZipError) setDirectZipError(null);
+              // Filter to only digits and limit to 5 characters
+              setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5));
+            }}
             onKeyDown={(e) => e.key === 'Enter' && handleDirectZipSearch()}
             placeholder="Enter 5-digit zip code"
             disabled={disabled || directZipSearching}
-            className="flex-1 px-3 py-2 border border-[oklch(0.85_0_0)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directZipError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
             maxLength={5}
           />
           <button
             onClick={handleDirectZipSearch}
-            disabled={disabled || directZipSearching || directZipSearch.length !== 5}
+            disabled={disabled || directZipSearching}
             className="px-4 py-2 bg-[oklch(0.30_0_0)] text-white rounded-lg hover:bg-[oklch(0.25_0_0)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
           >
             {directZipSearching ? (

@@ -1561,3 +1561,24 @@ The getZipcodesInSubmarket procedure now:
 - ✅ No page jumping during load
 - ✅ Results display correctly after loading
 
+
+
+## Stress Test & Validation Improvements (Jan 16, 2026) - COMPLETE
+
+### Zip Code Input Validation:
+- [x] Improve validation to show helpful inline error messages instead of silently disabling button
+- [x] Empty input → "Please enter a zip code to search"
+- [x] Partial zip (e.g., "123") → "Please enter all 5 digits. You entered 3 digits (123)."
+- [x] Single digit (e.g., "1") → "Please enter all 5 digits. You entered 1 digit (1)." (correct singular grammar)
+- [x] Valid 5-digit zip codes work correctly (tested 90210, 10001)
+
+### Stress Test Results:
+- [x] Empty input validation - PASS
+- [x] Partial zip code validation - PASS
+- [x] Single digit validation with correct grammar - PASS
+- [x] Valid zip code search (90210 → Beverly Crest) - PASS
+- [x] Valid zip code search (10001 → Chelsea-Hudson Yards) - PASS
+- [x] Rapid consecutive searches - PASS (no race conditions)
+- [x] Hierarchical selection (Florida → Ft. Lauderdale) - PASS
+- [x] Market data display after search - PASS
+

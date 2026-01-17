@@ -680,11 +680,12 @@ export default function LeadMagnet() {
       
       // Transform to our result format
       // Use the user's searched zip code in the display name if available
+      // Use selection (which is directSelection or locationSelection) to avoid race conditions
       let displayMarketName = report.market.name;
-      if (locationSelection?.zipcode) {
+      if (selection?.zipcode) {
         // For zip code searches, show the user's searched zip code with the market name
         const marketNameWithoutZip = report.market.name.replace(/\s*\d{5}\s*/, '').trim();
-        displayMarketName = `${marketNameWithoutZip} ${locationSelection.zipcode}`;
+        displayMarketName = `${marketNameWithoutZip} ${selection.zipcode}`;
       }
       
       setResearchResult({
