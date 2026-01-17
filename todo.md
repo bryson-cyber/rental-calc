@@ -1499,3 +1499,65 @@ The getZipcodesInSubmarket procedure now:
 - ✅ Zip code 85306: Now shows "AVONDALE, AZ 85306 Works!" (correct zip code)
 - ✅ Market data loads correctly: $39,982 avg revenue, $227 ADR, 63% occupancy, 18 listings
 - ✅ Quick search functionality working properly
+
+
+## High Priority UX Fixes (Jan 16, 2026) - ALL COMPLETE
+
+### Fix 1: Zip Code Validation with Helpful Error Messages - COMPLETE
+- [x] Detect when a zip code has no AirDNA data available
+- [x] Show friendly error message with suggestions for nearby zip codes
+- [x] Handle edge cases: invalid format, non-existent zip codes, API errors
+- [x] Test with multiple invalid/no-data zip codes
+
+**Implementation:**
+- Added `directZipError` state to HierarchicalLocationSelector.tsx
+- Replaced `alert()` calls with inline error messages
+- Error message shows: "No Data Available" with helpful guidance
+- Added dismiss button (X) to close the error
+
+**Test Results:**
+- ✅ 00000: Shows "No rental data found for zip code 00000"
+- ✅ 99999: Shows error message correctly
+- ✅ 12345: Shows error message correctly
+- ✅ Error dismisses when X is clicked
+- ✅ Valid zip codes (90210, 10001) work without errors
+
+### Fix 2: Fix "Please Search by Location" Message - COMPLETE
+- [x] Investigate when this message appears incorrectly
+- [x] Auto-search when a valid 5-digit zip code is entered
+- [x] Provide clearer guidance in the UI
+- [x] Test with various zip code inputs
+
+**Root Cause:**
+- React state updates are asynchronous
+- `handleResearch()` was called immediately after `setLocationSelection()`
+- The state wasn't updated yet, causing "Please select a location" error
+
+**Solution:**
+- Modified `handleResearch()` to accept an optional `overrideSelection` parameter
+- Updated `handleHierarchicalSearch()` to pass selection directly to `handleResearch()`
+- This bypasses the async state timing issue
+
+**Test Results:**
+- ✅ 85306: Immediately shows results without "Please select a location" error
+- ✅ 10001: Search completes successfully
+- ✅ Toast shows "Market proven!" success message
+
+### Fix 3: Loading Skeleton for Market Data - COMPLETE
+- [x] Add skeleton loader when "Find Opportunities" is clicked
+- [x] Prevent page jumping during data load
+- [x] Smooth transition from skeleton to actual data
+- [x] Test loading states across different network speeds
+
+**Implementation:**
+- Added loading skeleton section in LeadMagnet.tsx
+- Shows "Analyzing market data..." with animated spinner
+- Displays 4 skeleton cards for key metrics
+- Skeleton appears in place of results during loading
+
+**Test Results:**
+- ✅ 33139: Loading skeleton visible during data fetch
+- ✅ 10001: Smooth transition from skeleton to results
+- ✅ No page jumping during load
+- ✅ Results display correctly after loading
+

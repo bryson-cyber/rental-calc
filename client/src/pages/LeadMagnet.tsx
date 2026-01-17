@@ -628,9 +628,11 @@ export default function LeadMagnet() {
   // Prove the Market (Market Research)
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   
-  const handleResearch = async () => {
+  const handleResearch = async (directSelection?: LocationSelection) => {
     // Support hierarchical selection at any level
-    const hasHierarchicalSelection = locationSelection && (locationSelection.market || locationSelection.submarket || locationSelection.zipcode);
+    // Use directSelection if provided (for immediate calls after state update)
+    const selection = directSelection || locationSelection;
+    const hasHierarchicalSelection = selection && (selection.market || selection.submarket || selection.zipcode);
     
     if (!researchMarket && !hasHierarchicalSelection) {
       toast.error('Please select a location');
@@ -644,25 +646,25 @@ export default function LeadMagnet() {
       let report;
       
       // If we have a hierarchical selection, use the appropriate endpoint
-      if (hasHierarchicalSelection) {
+      if (hasHierarchicalSelection && selection) {
         // Check the selection level: zipcode > submarket > market
-        if (locationSelection.zipcode && locationSelection.submarket?.id) {
+        if (selection.zipcode && selection.submarket?.id) {
           // For zip code, we use the submarket data but display with zip code context
           // The submarket endpoint gives us the most specific data available
-          const submarketId = locationSelection.submarket.id;
-          const submarketName = `${locationSelection.zipcode} (${locationSelection.submarket.name})`;
-          console.log(`[handleResearch] Using submarket endpoint for zip code ${locationSelection.zipcode} in ${locationSelection.submarket.name}`);
+          const submarketId = selection.submarket.id;
+          const submarketName = `${selection.zipcode} (${selection.submarket.name})`;
+          console.log(`[handleResearch] Using submarket endpoint for zip code ${selection.zipcode} in ${selection.submarket.name}`);
           report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
-        } else if (locationSelection.submarket?.id) {
+        } else if (selection.submarket?.id) {
           // Use submarket endpoint for neighborhood-level data
-          const submarketId = locationSelection.submarket.id;
-          const submarketName = locationSelection.submarket.name;
+          const submarketId = selection.submarket.id;
+          const submarketName = selection.submarket.name;
           console.log(`[handleResearch] Using submarket endpoint for ${submarketName} (${submarketId})`);
           report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
-        } else if (locationSelection.market?.id) {
+        } else if (selection.market?.id) {
           // Use market endpoint for city-level data
-          const marketId = locationSelection.market.id;
-          const marketName = locationSelection.market.name;
+          const marketId = selection.market.id;
+          const marketName = selection.market.name;
           console.log(`[handleResearch] Using market endpoint for ${marketName} (${marketId})`);
           report = await getMarketReport.mutateAsync({ marketId, marketName });
         } else {
@@ -729,8 +731,8 @@ export default function LeadMagnet() {
     
     setResearchMarket(displayName);
     
-    // Trigger the research
-    handleResearch();
+    // Trigger the research - pass selection directly to avoid state timing issues
+    handleResearch(selection);
   };
   
   // Sorted bulk results
@@ -1372,8 +1374,92 @@ export default function LeadMagnet() {
       {/* RESULTS SECTIONS */}
       {/* ============================================ */}
       
+      {/* Prove the Market Results - Loading Skeleton */}
+      {activeTab === 'prove' && isResearching && (
+        <section className="py-12 bg-[oklch(0.97_0_0)]">
+          <div className="container max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[oklch(0.90_0_0)] rounded-full mb-4 animate-pulse">
+                <div className="w-4 h-4 bg-[oklch(0.85_0_0)] rounded-full" />
+                <div className="w-24 h-4 bg-[oklch(0.85_0_0)] rounded" />
+              </div>
+              <div className="h-8 w-64 bg-[oklch(0.90_0_0)] rounded mx-auto mb-2 animate-pulse" />
+              <div className="h-4 w-80 bg-[oklch(0.92_0_0)] rounded mx-auto animate-pulse" />
+            </div>
+            
+            {/* Key Metrics Skeleton */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
+                  <div className="h-4 w-24 bg-[oklch(0.90_0_0)] rounded mx-auto mb-2 animate-pulse" />
+                  <div className="h-8 w-20 bg-[oklch(0.88_0_0)] rounded mx-auto animate-pulse" />
+                </div>
+              ))}
+            </div>
+            
+            {/* Property Types Skeleton */}
+            <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-6 w-48 bg-[oklch(0.90_0_0)] rounded animate-pulse" />
+                <div className="h-5 w-24 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-[oklch(0.96_0_0)] rounded-lg p-4 border border-[oklch(0.92_0_0)]">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="h-5 w-20 bg-[oklch(0.90_0_0)] rounded animate-pulse" />
+                      <div className="h-4 w-12 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                    </div>
+                    <div className="h-3 w-full bg-[oklch(0.92_0_0)] rounded mb-2 animate-pulse" />
+                    <div className="flex justify-between">
+                      <div className="h-4 w-16 bg-[oklch(0.90_0_0)] rounded animate-pulse" />
+                      <div className="h-4 w-12 bg-[oklch(0.90_0_0)] rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Seasonality Skeleton */}
+            <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+              <div className="h-6 w-40 bg-[oklch(0.90_0_0)] rounded mb-4 animate-pulse" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="h-4 w-32 bg-[oklch(0.92_0_0)] rounded mb-3 animate-pulse" />
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex items-center gap-2 mb-2">
+                      <div className="h-3 w-8 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                      <div className="flex-1 h-4 bg-[oklch(0.90_0_0)] rounded animate-pulse" style={{ width: `${70 - i * 8}%` }} />
+                      <div className="h-3 w-8 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="h-4 w-40 bg-[oklch(0.92_0_0)] rounded mb-3 animate-pulse" />
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex items-center gap-2 mb-2">
+                      <div className="h-3 w-8 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                      <div className="flex-1 h-4 bg-[oklch(0.90_0_0)] rounded animate-pulse" style={{ width: `${60 + i * 5}%` }} />
+                      <div className="h-3 w-10 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Loading message */}
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-3 text-[oklch(0.50_0_0)]">
+                <div className="w-5 h-5 border-2 border-[oklch(0.75_0.15_75)]/30 border-t-[oklch(0.75_0.15_75)] rounded-full animate-spin" />
+                <span>Analyzing market data...</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      
       {/* Prove the Market Results */}
-      {activeTab === 'prove' && researchResult && (
+      {activeTab === 'prove' && researchResult && !isResearching && (
         <section className="py-12 bg-[oklch(0.97_0_0)]">
           <div className="container max-w-4xl mx-auto">
             <div className="text-center mb-8">

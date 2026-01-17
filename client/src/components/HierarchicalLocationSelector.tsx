@@ -858,12 +858,15 @@ export function HierarchicalLocationSelector({
   // Direct zip code search state
   const [directZipSearch, setDirectZipSearch] = useState('');
   const [directZipSearching, setDirectZipSearching] = useState(false);
+  const [directZipError, setDirectZipError] = useState<string | null>(null);
   
   // Handle direct zip code search
   const handleDirectZipSearch = async () => {
     const zip = directZipSearch.trim();
+    setDirectZipError(null); // Clear any previous error
+    
     if (!zip || !/^\d{5}$/.test(zip)) {
-      alert('Please enter a valid 5-digit zip code');
+      setDirectZipError('Please enter a valid 5-digit zip code');
       return;
     }
     
@@ -894,11 +897,11 @@ export function HierarchicalLocationSelector({
           } : undefined
         });
       } else {
-        alert(`No data found for zip code ${zip}. Try searching by city or state instead.`);
+        setDirectZipError(`No rental data found for zip code ${zip}. This area may not have enough Airbnb listings. Try a nearby city or browse by state instead.`);
       }
     } catch (error) {
       console.error('Error searching zip code:', error);
-      alert('Error searching zip code. Please try again.');
+      setDirectZipError('Unable to search this zip code. Please check your connection and try again.');
     } finally {
       setDirectZipSearching(false);
     }
@@ -942,6 +945,27 @@ export function HierarchicalLocationSelector({
           </button>
         </div>
         <p className="text-xs text-[oklch(0.50_0_0)] mt-2">Skip the hierarchical selection and search directly by zip code</p>
+        
+        {/* Error message display */}
+        {directZipError && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm text-red-700 font-medium">No Data Available</p>
+                <p className="text-sm text-red-600 mt-1">{directZipError}</p>
+              </div>
+              <button
+                onClick={() => setDirectZipError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* OR Divider */}
