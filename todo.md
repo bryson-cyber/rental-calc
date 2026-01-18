@@ -1625,3 +1625,8 @@ The getZipcodesInSubmarket procedure now:
 - [ ] Add amenities percentage breakdown
 - [ ] Add monthly revenue projection chart
 - [ ] Add annual revenue trend chart
+
+
+## Bug Fix: Rank Among Comps showing #0 (Jan 18, 2026)
+
+- [x] Fix "Rank Among Comps" showing #0 instead of #1 - rank should be 1-indexed, not 0-indexed

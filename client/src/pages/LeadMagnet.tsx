@@ -2130,7 +2130,7 @@ export default function LeadMagnet() {
                         <div className="text-center">
                           <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Rank Among Comps</p>
                           <p className="text-xl font-bold text-[oklch(0.15_0_0)]">
-                            #{allRevenues.length - rank} of {allRevenues.length}
+                            #{allRevenues.length - rank + 1} of {allRevenues.length}
                           </p>
                         </div>
                       </div>
