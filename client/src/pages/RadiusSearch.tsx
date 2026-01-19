@@ -39,8 +39,8 @@ interface ListingData {
   occupancy: number;
   superhost?: boolean;
   professionally_managed?: boolean;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   distance_meters?: number;
 }
 

@@ -185,8 +185,8 @@ export interface ListingData {
   superhost?: boolean;
   professionally_managed?: boolean;
   host_size?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   zipcode?: string;
   days_available?: number;
   days_reserved?: number;
@@ -1441,8 +1441,8 @@ export async function getMarketListings(
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
       host_size: r.host_size || 'unknown',
-      latitude: r.location?.lat ?? 0,
-      longitude: r.location?.lng ?? 0,
+      latitude: r.location?.lat ?? null,
+      longitude: r.location?.lng ?? null,
       zipcode: r.zipcode || '',
       days_available: r.days_available_ltm || 0,
       days_reserved: r.days_reserved_ltm || 0,
@@ -1629,6 +1629,13 @@ export async function getSubmarketListings(
       ...(filters.length > 0 && { filters })
     });
     
+    // Debug: log location data availability
+    const listingsWithLocation = response.payload.listings.filter(l => l.location?.lat && l.location?.lng);
+    console.log(`[getSubmarketListings] Listings with location: ${listingsWithLocation.length}/${response.payload.listings.length}`);
+    if (response.payload.listings.length > 0 && !response.payload.listings[0].location) {
+      console.log('[getSubmarketListings] Sample listing keys:', Object.keys(response.payload.listings[0]));
+    }
+    
     const listings: ListingData[] = response.payload.listings.map((r) => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
@@ -1647,8 +1654,8 @@ export async function getSubmarketListings(
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
       host_size: r.host_size || 'unknown',
-      latitude: r.location?.lat ?? 0,
-      longitude: r.location?.lng ?? 0,
+      latitude: r.location?.lat ?? null,
+      longitude: r.location?.lng ?? null,
       zipcode: r.zipcode || '',
       days_available: r.days_available_ltm || 0,
       days_reserved: r.days_reserved_ltm || 0,
@@ -1879,8 +1886,8 @@ export async function exploreListingsInRadius(
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
       host_size: r.host_size || 'unknown',
-      latitude: r.location?.lat ?? 0,
-      longitude: r.location?.lng ?? 0,
+      latitude: r.location?.lat ?? null,
+      longitude: r.location?.lng ?? null,
       zipcode: r.zipcode || '',
     }));
     
@@ -3378,8 +3385,8 @@ export async function getListingsInRadius(
       occupancy: r.occupancy_rate_ltm || 0,
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
-      latitude: r.location?.lat ?? 0,
-      longitude: r.location?.lng ?? 0,
+      latitude: r.location?.lat ?? null,
+      longitude: r.location?.lng ?? null,
       distance_meters: r.distance_meters,
     }));
 
@@ -3712,8 +3719,8 @@ export async function getTopPerformers(
       superhost: r.superhost ?? false,
       professionally_managed: r.professionally_managed ?? false,
       host_size: r.host_size || 'unknown',
-      latitude: r.location?.lat ?? 0,
-      longitude: r.location?.lng ?? 0,
+      latitude: r.location?.lat ?? null,
+      longitude: r.location?.lng ?? null,
       zipcode: r.zipcode || '',
     }));
 
@@ -4940,8 +4947,8 @@ export interface AreaListing {
   image_url?: string;
   amenities?: string[];
   superhost?: boolean;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface ListingsByAreaResponse {

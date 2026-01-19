@@ -975,6 +975,18 @@ export default function LeadMagnet() {
             })}
           </div>
           
+          {/* Map View Link */}
+          <div className="mb-8 flex justify-center">
+            <a
+              href="/map"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            >
+              <Map className="w-5 h-5" />
+              <span>See the Map</span>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Step 5</span>
+            </a>
+          </div>
+          
           {/* Tool Content Area */}
           <div className="apple-card p-8 md:p-12">
             

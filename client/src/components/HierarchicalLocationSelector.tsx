@@ -1063,7 +1063,7 @@ export function HierarchicalLocationSelector({
               </button>
               
               {stateOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto overscroll-contain" style={{ maxHeight: '256px' }}>
                   {US_STATES.map((state) => (
                     <button
                       key={state.code}
@@ -1160,7 +1160,7 @@ export function HierarchicalLocationSelector({
               
               {/* Dropdown Menu */}
               {marketOpen && !marketError && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto overscroll-contain" style={{ maxHeight: '256px' }}>
                   {marketSearchQuery ? (
                     isSearching ? (
                       <div className="px-4 py-8 text-center text-[oklch(0.50_0_0)] text-sm">
@@ -1287,7 +1287,7 @@ export function HierarchicalLocationSelector({
               )}
               
               {submarketOpen && !submarketError && submarkets.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto overscroll-contain" style={{ maxHeight: '256px' }}>
                   {submarkets.map((submarket) => (
                     <button
                       key={submarket.id}
@@ -1397,7 +1397,7 @@ export function HierarchicalLocationSelector({
               )}
               
               {zipcodeOpen && !zipcodeError && zipcodes.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg max-h-64 overflow-y-auto overscroll-contain" style={{ maxHeight: '256px' }}>
                   {zipcodes.map((zip) => (
                     <button
                       key={zip.zipcode}

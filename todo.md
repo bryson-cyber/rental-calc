@@ -1635,3 +1635,53 @@ The getZipcodesInSubmarket procedure now:
 ## Enhancement: Auto-show parent market historical data for submarkets (Jan 19, 2026)
 
 - [x] Automatically use parent market ID for Historical Charts when a submarket is selected (instead of showing fallback message)
+
+
+## Map View Feature (Step 5) - Jan 19, 2026
+
+### Core Map Functionality
+- [ ] Create MapView page component with location selection (City, Submarket, or Zip Code)
+- [ ] Reuse HierarchicalLocationSelector component for consistent UX
+- [ ] Integrate Google Maps using existing Map component
+- [ ] Fetch property listings with coordinates from AirDNA API
+- [ ] Display property markers on map
+
+### Revenue-Based Color Coding
+- [ ] Auto mode: Calculate thresholds based on market percentiles (top 33%, middle 33%, bottom 33%)
+- [ ] Display legend showing threshold values and what each color means
+- [ ] Show market average prominently
+- [ ] Custom mode: Allow user to set custom revenue threshold
+- [ ] Toggle between auto and custom modes
+
+### Property Interaction
+- [ ] Show property popup on marker click (name, revenue, occupancy, nightly rate)
+- [ ] Add link to Airbnb in popup
+- [ ] Implement marker clustering for dense areas
+
+### Integration
+- [ ] Add Step 5 "See the Map" to tools navigation
+- [ ] Register route in App.tsx
+- [ ] Test with multiple markets (Nashville, Phoenix, Miami)
+
+
+## Map View Coordinate Fix (Jan 19, 2026)
+
+### Issue:
+- Map markers not displaying on the Map View page
+- Property listings were missing latitude/longitude coordinates
+
+### Root Cause:
+- In `airdna.ts`, coordinates were defaulting to `0` when missing: `latitude: r.location?.lat ?? 0`
+- In JavaScript, `0` is falsy, so the router's `listing.latitude || ...` check was skipping the value
+- This caused all coordinates to be `null` in the final output
+
+### Fix Applied:
+- [x] Changed default value from `0` to `null` in airdna.ts for all coordinate extractions
+- [x] Updated ListingData interface to allow `null` for latitude/longitude
+- [x] Updated client-side interfaces in RadiusSearch.tsx and TopPerformers.tsx
+- [x] Verified fix with manual test - 5/5 listings now have valid coordinates
+
+### Verification:
+- Test script confirmed: "Listings with location: 5/5"
+- Example coordinates: Lat 39.5424826, Lng -105.2648006 (Conifer, Denver)
+- TypeScript compilation passes with no errors

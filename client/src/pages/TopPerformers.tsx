@@ -43,8 +43,8 @@ interface ListingData {
   superhost?: boolean;
   professionally_managed?: boolean;
   host_size?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   zipcode?: string;
 }
 

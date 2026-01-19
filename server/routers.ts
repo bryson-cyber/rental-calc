@@ -1769,20 +1769,24 @@ export const appRouter = router({
 
           // Transform listings to match frontend interface
           const listings = result.listings.map((listing: any) => ({
-            id: listing.id || listing.airbnb_listing_id || String(Math.random()),
+            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
             title: listing.title || 'Untitled Listing',
             property_type: listing.property_type || 'unknown',
             bedrooms: listing.bedrooms || 0,
             bathrooms: listing.bathrooms || 0,
             accommodates: listing.accommodates || 0,
-            annual_revenue: listing.annual_revenue || listing.revenue || 0,
-            adr: listing.adr || 0,
-            occupancy: listing.occupancy || 0,
+            annual_revenue: listing.annual_revenue || listing.revenue_ltm || listing.revenue || 0,
+            adr: listing.adr || listing.average_daily_rate_ltm || 0,
+            occupancy: listing.occupancy || listing.occupancy_rate_ltm || 0,
             rating: listing.rating || null,
             reviews: listing.reviews || 0,
-            airbnb_url: listing.airbnb_url || listing.url || `https://www.airbnb.com/rooms/${listing.airbnb_listing_id || ''}`,
-            image_url: listing.image_url || listing.thumbnail_url || '',
-            is_superhost: listing.is_superhost || false,
+            airbnb_url: listing.airbnb_url || listing.airbnb_property_url || listing.url || `https://www.airbnb.com/rooms/${listing.airbnb_property_id || listing.airbnb_listing_id || ''}`,
+            image_url: listing.image_url || listing.thumbnail_url || (listing.images && listing.images[0]) || '',
+            is_superhost: listing.is_superhost || listing.superhost || false,
+            // Add coordinates - check both direct properties and location object
+            latitude: listing.latitude || listing.location?.lat || null,
+            longitude: listing.longitude || listing.location?.lng || null,
+            exact_location: listing.exact_location || false,
           }));
 
           return {

@@ -9,12 +9,16 @@ import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 import DeepAnalysis from "./pages/DeepAnalysis";
 import AdminReports from "./pages/AdminReports";
 import AdminDashboard from "./pages/Admin";
+import MapViewPage from "./pages/MapViewPage";
 
 function Router() {
   return (
     <Switch>
       {/* Main lead magnet page */}
       <Route path={"/"} component={LeadMagnet} />
+      
+      {/* Map View - Step 5 */}
+      <Route path={"/map"} component={MapViewPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
