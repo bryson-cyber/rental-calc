@@ -901,18 +901,50 @@ export function HierarchicalLocationSelector({
         
         // Set the zip code directly and trigger search
         setSelectedZipcode(zip);
+        // Also set visual state for the dropdowns
+        if (result.parentMarket) {
+          // Find the state from the parent market name (e.g., "Miami" -> "Florida")
+          const foundState = US_STATES.find(s => 
+            result.parentMarket?.name?.toLowerCase().includes(s.name.toLowerCase()) ||
+            result.name?.toLowerCase().includes(s.name.toLowerCase())
+          );
+          if (foundState) {
+            setSelectedState(foundState);
+          }
+          
+          // Set the parent market
+          setSelectedMarket({
+            id: result.parentMarket.id,
+            name: result.parentMarket.name,
+            listingCount: result.listingCount || 0
+          });
+        }
+        
+        // Set the submarket if the result is a submarket
+        if (result.type === 'submarket') {
+          setSelectedSubmarket({
+            id: result.id,
+            name: result.name,
+            listingCount: result.listingCount || 0
+          });
+        }
+        
         onSearch({
           level: 'zipcode',
           zipcode: zip,
           market: result.type === 'market' ? {
             id: result.id,
             name: result.name,
-            listingCount: result.listing_count || 0
+            listingCount: result.listingCount || 0
+          } : result.parentMarket ? {
+            id: result.parentMarket.id,
+            name: result.parentMarket.name,
+            listingCount: result.listingCount || 0
           } : undefined,
           submarket: result.type === 'submarket' ? {
             id: result.id,
             name: result.name,
-            listingCount: result.listing_count || 0
+            listingCount: result.listingCount || 0
           } : undefined
         });
       } else {

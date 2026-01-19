@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
   id: string;
@@ -79,13 +80,21 @@ export default function MapViewPage() {
   const [useCustomThreshold, setUseCustomThreshold] = useState(false);
   const [customThreshold, setCustomThreshold] = useState<number>(50000);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
+  const [bedroomFilter, setBedroomFilter] = useState<string>('all');
   
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   
-  // Calculate thresholds based on current listings
-  const thresholds = useMemo(() => calculateThresholds(listings), [listings]);
+  // Filter listings by bedroom count
+  const filteredListings = useMemo(() => {
+    if (bedroomFilter === 'all') return listings;
+    const bedroomCount = parseInt(bedroomFilter);
+    return listings.filter(l => l.bedrooms === bedroomCount);
+  }, [listings, bedroomFilter]);
+  
+  // Calculate thresholds based on filtered listings
+  const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
   // Handle location search - accepts selection directly to avoid state timing issues
   const performSearch = useCallback(async (selection: LocationSelection) => {
@@ -135,18 +144,17 @@ export default function MapViewPage() {
       console.log('[MapView] Fetching listings for marketId:', marketId, 'isMarket:', isMarket);
       
       // Fetch listings (get more for map view)
-      // Use fetch directly since we need to pass isMarket which isn't in the query schema
-      const response = await fetch('/api/trpc/compData.getListings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          json: {
-            submarketId: marketId,
-            page: 1,
-            pageSize: 100,
-            isMarket,
-          }
-        }),
+      // Use GET request for tRPC query with input as URL parameter
+      // Note: tRPC with superjson requires wrapping input in { json: ... } for GET requests
+      const input = encodeURIComponent(JSON.stringify({
+        json: {
+          submarketId: marketId,
+          page: 1,
+          pageSize: 100,
+        }
+      }));
+      const response = await fetch(`/api/trpc/compData.getListings?input=${input}`, {
+        method: 'GET',
         credentials: 'include',
       });
       const data = await response.json();
@@ -222,10 +230,10 @@ export default function MapViewPage() {
       infoWindowRef.current = new google.maps.InfoWindow();
     }
     
-    console.log('[MapView] Creating', listings.length, 'markers');
+    console.log('[MapView] Creating', filteredListings.length, 'markers (filtered from', listings.length, 'total)');
     
     // Create new markers
-    listings.forEach(listing => {
+    filteredListings.forEach(listing => {
       const color = getMarkerColor(
         listing.revenue,
         thresholds,
@@ -297,7 +305,7 @@ export default function MapViewPage() {
       
       markersRef.current.push(marker);
     });
-  }, [listings, thresholds, useCustomThreshold, customThreshold]);
+  }, [filteredListings, listings.length, thresholds, useCustomThreshold, customThreshold]);
   
   const getLocationName = () => {
     if (locationSelection?.zipcode) return locationSelection.zipcode;
@@ -443,8 +451,43 @@ export default function MapViewPage() {
               </CardContent>
             </Card>
             
-            {/* Stats */}
+            {/* Bedroom Filter */}
             {listings.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BedDouble className="w-4 h-4 text-[#C9A962]" />
+                    Filter by Bedrooms
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Bedrooms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
+                      {Array.from(new Set(listings.map(l => l.bedrooms))).sort((a, b) => a - b).map(br => {
+                        const count = listings.filter(l => l.bedrooms === br).length;
+                        return (
+                          <SelectItem key={br} value={String(br)}>
+                            {br} Bedroom{br !== 1 ? 's' : ''} ({count})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {bedroomFilter !== 'all' && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Showing {filteredListings.length} of {listings.length} properties
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Stats */}
+            {filteredListings.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -456,7 +499,7 @@ export default function MapViewPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Properties Shown</span>
-                      <span className="font-medium">{listings.length}</span>
+                      <span className="font-medium">{filteredListings.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Avg Revenue</span>
@@ -465,7 +508,7 @@ export default function MapViewPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Top Performer</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(Math.max(...listings.map(l => l.revenue)))}
+                        {filteredListings.length > 0 ? formatCurrency(Math.max(...filteredListings.map(l => l.revenue))) : '—'}
                       </span>
                     </div>
                   </div>

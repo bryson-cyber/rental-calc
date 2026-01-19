@@ -1754,3 +1754,32 @@ The getZipcodesInSubmarket procedure now:
 - [x] Update geocodeZipCodeToMarket to search for zip code directly first
 - [x] Test with zip code 63108 - St. Louis market found correctly
 - [x] Verify multiple zip codes work correctly across different states
+
+
+## Quick Search Map Display Bug Fix (Jan 19, 2026) - COMPLETE
+
+### Bug Report:
+- Quick Search by Zip Code shows "No listings with coordinates found for this location"
+- The dropdowns populate correctly but the map doesn't display property markers
+
+### Root Cause:
+- Property name mismatch: API returns camelCase (parentMarket, listingCount) but code expected snake_case
+- tRPC GET requests require input wrapped in { json: ... } for superjson serialization
+
+### Tasks:
+- [x] Fix property name mismatch (parent_market → parentMarket, listing_count → listingCount)
+- [x] Fix API call to wrap input in { json: ... } for tRPC GET requests
+- [x] Test with zip code 33139 (Miami Beach) - 25 properties displayed with coordinates
+
+## Add Bedroom Filters to Map View (Jan 19, 2026) - COMPLETE
+
+### Feature Request:
+- Add bedroom filters to the MapViewPage to allow users to filter properties by bedroom count
+
+### Implementation:
+- [x] Add bedroomFilter state to MapViewPage
+- [x] Add filteredListings computed value based on bedroom filter
+- [x] Add "Filter by Bedrooms" dropdown with dynamic options based on available bedrooms
+- [x] Update markers to use filteredListings instead of all listings
+- [x] Update thresholds calculation to use filteredListings
+- [x] Test bedroom filtering with various selections - working correctly
