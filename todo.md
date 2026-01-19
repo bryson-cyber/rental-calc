@@ -1685,3 +1685,40 @@ The getZipcodesInSubmarket procedure now:
 - Test script confirmed: "Listings with location: 5/5"
 - Example coordinates: Lat 39.5424826, Lng -105.2648006 (Conifer, Denver)
 - TypeScript compilation passes with no errors
+
+
+## Zip Code Auto-Population Feature (Jan 19, 2026)
+
+### Problem:
+- Quick Search by Zip Code fails when AirDNA API doesn't find the zip code directly
+- Users have to manually select State → City → Submarket instead
+- Example: Zip code 63108 (St. Louis, MO) doesn't return results from AirDNA search
+
+### Solution:
+- [ ] Implement geocoding fallback to get city/state from zip code
+- [ ] Search for the city's market in AirDNA using the geocoded location
+- [ ] Find the submarket that contains the zip code
+- [ ] Auto-populate all hierarchical selections from just the zip code
+- [ ] Test with zip code 63108 (St. Louis, MO)
+
+
+## Zip Code Auto-Population Feature (Jan 19, 2026)
+
+### Geocoding Implementation:
+- [x] Add geocodeZipCodeToMarket function using Google Maps Geocoding API
+- [x] Create rental.geocodeZipCode tRPC endpoint
+- [x] Update HierarchicalLocationSelector to use geocoding for Quick Search
+- [x] Handle case where zip code is found but no AirDNA market exists
+- [x] Center map on geocoded coordinates even when no market data available
+- [x] Show helpful error messages guiding users to hierarchical selection
+
+### Map Coordinate Fix:
+- [x] Fix latitude/longitude extraction using null instead of 0 for missing values
+- [x] Update ListingData interface to allow null for coordinates
+- [x] Update router to properly pass through coordinates from API response
+- [x] Verify coordinates are returned correctly (tested with Denver Conifer submarket)
+
+### Known Limitations:
+- AirDNA API search doesn't filter by search term properly (returns same top markets)
+- Some US cities/states don't have dedicated AirDNA market data (e.g., St. Louis, MO)
+- For areas without market data, users should use hierarchical State → City → Submarket selection

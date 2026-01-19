@@ -320,3 +320,267 @@ export async function getSubmarketData(submarketId: string): Promise<SubmarketDa
     return null;
   }
 }
+
+
+// ============================================
+// GEOCODE ZIP CODE TO FIND MARKET
+// ============================================
+
+import { makeRequest as makeGoogleMapsRequest, GeocodingResult } from "./_core/map";
+
+export interface ZipCodeLookupResult {
+  success: boolean;
+  zipcode: string;
+  city?: string;
+  state?: string;
+  stateCode?: string;
+  market?: {
+    id: string;
+    name: string;
+    listingCount: number;
+  };
+  submarket?: {
+    id: string;
+    name: string;
+    listingCount: number;
+  };
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  error?: string;
+}
+
+/**
+ * Geocode a US zip code to find the city, state, and corresponding AirDNA market
+ * This enables the "Quick Search by Zip Code" feature to work with any US zip code
+ */
+export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLookupResult> {
+  try {
+    console.log(`[geocodeZipCodeToMarket] Looking up zip code: ${zipcode}`);
+    
+    // Step 1: Use Google Geocoding API to get city/state from zip code
+    const geocodeResult = await makeGoogleMapsRequest<GeocodingResult>(
+      "/maps/api/geocode/json",
+      { address: `${zipcode}, USA` }
+    );
+    
+    if (geocodeResult.status !== "OK" || !geocodeResult.results?.[0]) {
+      console.log(`[geocodeZipCodeToMarket] Geocoding failed for ${zipcode}: ${geocodeResult.status}`);
+      return {
+        success: false,
+        zipcode,
+        error: `Could not find location for zip code ${zipcode}. Please verify the zip code is correct.`
+      };
+    }
+    
+    const result = geocodeResult.results[0];
+    const coordinates = {
+      lat: result.geometry.location.lat,
+      lng: result.geometry.location.lng
+    };
+    
+    // Extract city and state from address components
+    let city = "";
+    let state = "";
+    let stateCode = "";
+    
+    for (const component of result.address_components) {
+      if (component.types.includes("locality")) {
+        city = component.long_name;
+      } else if (component.types.includes("administrative_area_level_1")) {
+        state = component.long_name;
+        stateCode = component.short_name;
+      }
+    }
+    
+    // If no locality found, try sublocality or neighborhood
+    if (!city) {
+      for (const component of result.address_components) {
+        if (component.types.includes("sublocality") || 
+            component.types.includes("neighborhood") ||
+            component.types.includes("administrative_area_level_2")) {
+          city = component.long_name;
+          break;
+        }
+      }
+    }
+    
+    console.log(`[geocodeZipCodeToMarket] Geocoded ${zipcode} to: ${city}, ${state} (${stateCode})`);
+    
+    // Step 2: Search for the market using multiple search term variations
+    const apiKey = process.env.AIRDNA_API_KEY;
+    if (!apiKey) {
+      throw new Error("AIRDNA_API_KEY is not set");
+    }
+    
+    // Generate search term variations to improve matching
+    const searchTerms: string[] = [];
+    if (city) {
+      searchTerms.push(city);
+      // Handle abbreviations like "St." -> "Saint"
+      if (city.includes("St.")) {
+        searchTerms.push(city.replace(/St\./g, "Saint"));
+      }
+      if (city.includes("St ")) {
+        searchTerms.push(city.replace(/St /g, "Saint "));
+      }
+      // Try city + state
+      if (state) {
+        searchTerms.push(`${city} ${state}`);
+        searchTerms.push(`${city} ${stateCode}`);
+      }
+    }
+    if (state) {
+      searchTerms.push(state);
+    }
+    
+    if (searchTerms.length === 0) {
+      return {
+        success: false,
+        zipcode,
+        city,
+        state,
+        stateCode,
+        coordinates,
+        error: `Could not determine city/state for zip code ${zipcode}.`
+      };
+    }
+    
+    // Try each search term until we find a match
+    let markets: any[] = [];
+    for (const searchTerm of searchTerms) {
+      console.log(`[geocodeZipCodeToMarket] Trying search term: "${searchTerm}"`);
+      
+      const searchResponse = await fetch(`${AIRDNA_API_BASE}/market/search`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          term: searchTerm,
+          pagination: { page_size: 25, offset: 0 }
+        })
+      });
+      
+      const searchData = await searchResponse.json();
+      const results = searchData.payload?.results || [];
+      
+      // Filter to US markets only
+      const usMarkets = results.filter((m: any) => 
+        m.type === "market" && m.location?.country_code === "us"
+      );
+      
+      if (usMarkets.length > 0) {
+        markets = results;
+        break;
+      }
+    }
+    
+    // Find a market that matches the city/state
+    let matchedMarket = null;
+    for (const m of markets) {
+      if (m.type !== "market") continue;
+      if (m.location?.country_code !== "us") continue;
+      
+      // Check if market name contains the city name
+      const marketName = m.name.toLowerCase();
+      const cityLower = city.toLowerCase();
+      const stateLower = state.toLowerCase();
+      
+      if (marketName.includes(cityLower) || 
+          (m.location?.state?.toLowerCase() === stateLower && marketName.includes(cityLower.split(" ")[0]))) {
+        matchedMarket = m;
+        break;
+      }
+    }
+    
+    // If no exact match, try to find a market in the same state
+    if (!matchedMarket) {
+      for (const m of markets) {
+        if (m.type !== "market") continue;
+        if (m.location?.country_code !== "us") continue;
+        if (m.location?.state?.toLowerCase() === state.toLowerCase()) {
+          matchedMarket = m;
+          break;
+        }
+      }
+    }
+    
+    if (!matchedMarket) {
+      console.log(`[geocodeZipCodeToMarket] No market found for ${city}, ${state}`);
+      return {
+        success: false,
+        zipcode,
+        city,
+        state,
+        stateCode,
+        coordinates,
+        error: `No AirDNA market data available for ${city}, ${state}. Try browsing by state using the dropdown menu above, or search for a nearby major city.`
+      };
+    }
+    
+    console.log(`[geocodeZipCodeToMarket] Found market: ${matchedMarket.name} (${matchedMarket.id})`);
+    
+    // Step 3: Get submarkets in this market and find one that might contain this zip code
+    const submarketResponse = await fetch(`${AIRDNA_API_BASE}/market/${matchedMarket.id}/submarkets`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        pagination: { page_size: 25, offset: 0 }
+      })
+    });
+    
+    const submarketData = await submarketResponse.json();
+    const submarkets = submarketData.payload?.submarkets || [];
+    
+    // Try to find a submarket that matches the city name or neighborhood
+    let matchedSubmarket = null;
+    for (const sm of submarkets) {
+      const smName = sm.name.toLowerCase();
+      const cityLower = city.toLowerCase();
+      
+      if (smName.includes(cityLower) || cityLower.includes(smName)) {
+        matchedSubmarket = sm;
+        break;
+      }
+    }
+    
+    // If no submarket match, use the first one (or none)
+    if (!matchedSubmarket && submarkets.length > 0) {
+      // Just return the market without a specific submarket
+      matchedSubmarket = null;
+    }
+    
+    return {
+      success: true,
+      zipcode,
+      city,
+      state,
+      stateCode,
+      coordinates,
+      market: {
+        id: matchedMarket.id,
+        name: matchedMarket.name,
+        listingCount: matchedMarket.listing_count || 0
+      },
+      submarket: matchedSubmarket ? {
+        id: matchedSubmarket.id,
+        name: matchedSubmarket.name,
+        listingCount: matchedSubmarket.listing_count || 0
+      } : undefined
+    };
+    
+  } catch (error) {
+    console.error(`[geocodeZipCodeToMarket] Error:`, error);
+    return {
+      success: false,
+      zipcode,
+      error: `An error occurred while looking up zip code ${zipcode}. Please try again.`
+    };
+  }
+}

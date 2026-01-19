@@ -36,6 +36,7 @@ import { startDeepAnalysis, getDeepAnalysis } from "./deep-analysis";
 import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
+import { geocodeZipCodeToMarket } from "./airdna-hierarchy";
 import { adminRouter } from "./admin-router";
 import { logActivity, ActionCategory, ActionType } from "./activity";
 
@@ -138,6 +139,41 @@ export const appRouter = router({
             success: false,
             error: "Failed to search markets",
             data: [],
+          };
+        }
+      }),
+
+    // Geocode a zip code to find the corresponding market and submarket
+    geocodeZipCode: publicProcedure
+      .input(z.object({ zipcode: z.string().length(5) }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[geocodeZipCode] Looking up zip code: ${input.zipcode}`);
+          
+          const result = await geocodeZipCodeToMarket(input.zipcode);
+          
+          // Log activity
+          await logActivity({
+            action: ActionType.MARKET_SEARCH,
+            actionCategory: ActionCategory.SEARCH,
+            details: { 
+              searchType: 'zipcode_geocode',
+              zipcode: input.zipcode,
+              city: result.city,
+              state: result.state,
+              marketId: result.market?.id,
+              marketName: result.market?.name,
+              success: result.success
+            },
+          });
+          
+          return result;
+        } catch (error) {
+          console.error("[geocodeZipCode] Error:", error);
+          return {
+            success: false,
+            zipcode: input.zipcode,
+            error: "An error occurred while looking up the zip code. Please try again."
           };
         }
       }),

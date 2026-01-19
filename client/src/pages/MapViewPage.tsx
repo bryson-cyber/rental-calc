@@ -109,8 +109,18 @@ export default function MapViewPage() {
         // Search by city/market
         marketId = selection.market.id;
         isMarket = !(selection.market as any).isSubmarketAsMarket;
+      } else if (selection.zipcode && selection.coordinates) {
+        // Zip code with coordinates but no market - center map on coordinates
+        console.log('[MapView] Centering map on coordinates:', selection.coordinates);
+        if (mapRef.current) {
+          mapRef.current.setCenter(selection.coordinates);
+          mapRef.current.setZoom(12);
+        }
+        setError('No market data available for this area. The map is centered on the zip code location.');
+        setIsLoading(false);
+        return;
       } else if (selection.zipcode) {
-        // Zip code only - need to show error since we don't have a market
+        // Zip code only without coordinates - need to show error
         setError('Please select a city/metro area first, then choose a zip code');
         setIsLoading(false);
         return;

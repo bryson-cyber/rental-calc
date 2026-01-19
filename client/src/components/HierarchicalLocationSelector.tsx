@@ -142,6 +142,7 @@ interface LocationSelection {
   market?: Market;
   submarket?: Submarket;
   zipcode?: string;
+  coordinates?: { lat: number; lng: number };
 }
 
 interface HierarchicalLocationSelectorProps {
@@ -865,7 +866,9 @@ export function HierarchicalLocationSelector({
   const [directZipSearching, setDirectZipSearching] = useState(false);
   const [directZipError, setDirectZipError] = useState<string | null>(null);
   
-  // Handle direct zip code search
+  // Handle direct zip code search with geocoding fallback
+  const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
+  
   const handleDirectZipSearch = async () => {
     const zip = directZipSearch.trim();
     setDirectZipError(null); // Clear any previous error
@@ -888,7 +891,7 @@ export function HierarchicalLocationSelector({
     
     setDirectZipSearching(true);
     try {
-      // Search for the zip code to find its market/submarket
+      // First, try the traditional market search
       const response = await searchMarkets.mutateAsync({ query: zip });
       const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
       
@@ -913,7 +916,100 @@ export function HierarchicalLocationSelector({
           } : undefined
         });
       } else {
-        setDirectZipError(`No rental data found for zip code ${zip}. This area may not have enough Airbnb listings. Try a nearby city or browse by state instead.`);
+        // Fallback: Use geocoding to find the market
+        console.log(`[DirectZipSearch] No direct results for ${zip}, trying geocoding fallback...`);
+        
+        // Use fetch directly since we need to await the result
+        const geocodeResponse = await fetch(`/api/trpc/rental.geocodeZipCode?input=${encodeURIComponent(JSON.stringify({ zipcode: zip }))}`);
+        const geocodeData = await geocodeResponse.json();
+        const geocodeResult = geocodeData?.result?.data;
+        
+        if (geocodeResult?.success && geocodeResult?.market) {
+          console.log(`[DirectZipSearch] Geocoding found: ${geocodeResult.city}, ${geocodeResult.state} -> ${geocodeResult.market.name}`);
+          
+          // Find the state from the geocoded result
+          const stateCode = geocodeResult.stateCode;
+          const stateName = geocodeResult.state;
+          const foundState = US_STATES.find(s => 
+            s.code.toLowerCase() === stateCode?.toLowerCase() ||
+            s.name.toLowerCase() === stateName?.toLowerCase()
+          );
+          
+          // Set the hierarchical selections
+          if (foundState) {
+            setSelectedState(foundState);
+          }
+          
+          // Set the market
+          const market = {
+            id: geocodeResult.market.id,
+            name: geocodeResult.market.name,
+            listingCount: geocodeResult.market.listingCount || 0
+          };
+          setSelectedMarket(market);
+          
+          // Set the submarket if available
+          if (geocodeResult.submarket) {
+            setSelectedSubmarket({
+              id: geocodeResult.submarket.id,
+              name: geocodeResult.submarket.name,
+              listingCount: geocodeResult.submarket.listingCount || 0
+            });
+          }
+          
+          // Set the zip code
+          setSelectedZipcode(zip);
+          
+          // Trigger search with the found market
+          onSearch({
+            level: geocodeResult.submarket ? 'submarket' : 'market',
+            state: foundState,
+            zipcode: zip,
+            market: market,
+            submarket: geocodeResult.submarket ? {
+              id: geocodeResult.submarket.id,
+              name: geocodeResult.submarket.name,
+              listingCount: geocodeResult.submarket.listingCount || 0
+            } : undefined,
+            coordinates: geocodeResult.coordinates
+          });
+        } else if (geocodeResult?.coordinates) {
+          // No market found, but we have coordinates - still trigger search to center the map
+          console.log(`[DirectZipSearch] No market found, but have coordinates for ${geocodeResult.city}, ${geocodeResult.state}`);
+          
+          // Find the state from the geocoded result
+          const stateCode = geocodeResult.stateCode;
+          const stateName = geocodeResult.state;
+          const foundState = US_STATES.find(s => 
+            s.code.toLowerCase() === stateCode?.toLowerCase() ||
+            s.name.toLowerCase() === stateName?.toLowerCase()
+          );
+          
+          // Set the state if found
+          if (foundState) {
+            setSelectedState(foundState);
+          }
+          
+          // Set the zip code
+          setSelectedZipcode(zip);
+          
+          // Trigger search with just the coordinates and zip code
+          // This will at least center the map on the correct location
+          onSearch({
+            level: 'zipcode',
+            state: foundState,
+            zipcode: zip,
+            coordinates: geocodeResult.coordinates
+          });
+          
+          // Show a warning message that no market data is available
+          setDirectZipError(`Located ${geocodeResult.city}, ${geocodeResult.state}. No AirDNA market data available for this area. The map will center on this location, but listing data may be limited.`);
+        } else {
+          // Show the error from geocoding or a default message
+          const errorMsg = geocodeResult?.error || 
+            `No rental data found for zip code ${zip}. This area may not have enough Airbnb listings. Try a nearby city or browse by state instead.`;
+          setDirectZipError(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error searching zip code:', error);
