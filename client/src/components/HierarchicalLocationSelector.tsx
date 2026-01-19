@@ -123,6 +123,8 @@ interface Market {
   virtualSubmarkets?: string[];
   isSubmarketAsMarket?: boolean;
   zipcodes?: string[];
+  parentMarketId?: string;  // Parent market ID for submarkets (used for Historical Charts)
+  parentMarketName?: string;  // Parent market name for display
 }
 
 interface Submarket {
@@ -335,7 +337,10 @@ export function HierarchicalLocationSelector({
                     // Keep the original type for later processing
                     isSubmarketAsMarket: true,
                     // Include zipcodes from the search result
-                    zipcodes: result.zipcodes || []
+                    zipcodes: result.zipcodes || [],
+                    // Store parent market info for Historical Charts (API returns parent_market for submarkets)
+                    parentMarketId: result.parent_market?.id,
+                    parentMarketName: result.parent_market?.name,
                   });
                 }
                 // Also collect for virtual market creation

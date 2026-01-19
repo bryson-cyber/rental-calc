@@ -664,11 +664,20 @@ export default function LeadMagnet() {
           console.log(`[handleResearch] Using submarket endpoint for ${submarketName} (${submarketId})`);
           report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
         } else if (selection.market?.id) {
-          // Use market endpoint for city-level data
-          const marketId = selection.market.id;
-          const marketName = selection.market.name;
-          console.log(`[handleResearch] Using market endpoint for ${marketName} (${marketId})`);
-          report = await getMarketReport.mutateAsync({ marketId, marketName });
+          // Check if this is a submarket being treated as a market (e.g., Downtown Nashville, Glendale AZ)
+          if (selection.market.isSubmarketAsMarket) {
+            // Use submarket endpoint for submarkets selected as markets
+            const submarketId = selection.market.id;
+            const submarketName = selection.market.name;
+            console.log(`[handleResearch] Using submarket endpoint for market-as-submarket: ${submarketName} (${submarketId})`);
+            report = await getSubmarketReport.mutateAsync({ submarketId, submarketName });
+          } else {
+            // Use market endpoint for regular city-level data
+            const marketId = selection.market.id;
+            const marketName = selection.market.name;
+            console.log(`[handleResearch] Using market endpoint for ${marketName} (${marketId})`);
+            report = await getMarketReport.mutateAsync({ marketId, marketName });
+          }
         } else {
           // Fallback to location-based search
           report = await getMarketReportByLocation.mutateAsync({ location: researchMarket });
@@ -1749,29 +1758,44 @@ export default function LeadMagnet() {
             
             {/* Historical Charts - Market Trends */}
             {/* Note: Historical data API only works with market IDs, not submarket IDs */}
-            {/* When a submarket is selected as a market (isSubmarketAsMarket), we need to find the parent market */}
-            {locationSelection?.market?.id && !locationSelection.market.isSubmarketAsMarket && (
+            {/* When a submarket is selected as a market (isSubmarketAsMarket), use the parent market ID if available */}
+            {locationSelection?.market?.id && (
               <div className="mt-8">
-                <HistoricalCharts
-                  marketId={locationSelection.market.id}
-                  marketName={researchResult.marketName}
-                />
-              </div>
-            )}
-            {/* For submarkets selected as markets, show a message that historical data is at market level */}
-            {locationSelection?.market?.isSubmarketAsMarket && (
-              <div className="mt-8 p-6 bg-amber-50 border border-amber-200 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <BarChart3 className="w-5 h-5 text-amber-600" />
-                  </div>
+                {/* For submarkets with parent market info, show the charts with parent market data */}
+                {locationSelection.market.isSubmarketAsMarket && locationSelection.market.parentMarketId ? (
                   <div>
-                    <h4 className="font-semibold text-amber-900">Historical Trends</h4>
-                    <p className="text-amber-700 text-sm mt-1">
-                      Historical trend data is available at the city/metro level. Select a parent market (like Austin instead of Downtown Austin) to view historical occupancy, revenue, and ADR trends.
-                    </p>
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-blue-700 text-sm">
+                        <span className="font-medium">Note:</span> Historical trends shown for {locationSelection.market.parentMarketName || 'parent market'} (broader market area)
+                      </p>
+                    </div>
+                    <HistoricalCharts
+                      marketId={locationSelection.market.parentMarketId}
+                      marketName={locationSelection.market.parentMarketName || researchResult.marketName}
+                    />
                   </div>
-                </div>
+                ) : locationSelection.market.isSubmarketAsMarket ? (
+                  /* For submarkets without parent market info, show a message */
+                  <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <BarChart3 className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-amber-900">Historical Trends</h4>
+                        <p className="text-amber-700 text-sm mt-1">
+                          Historical trend data is available at the city/metro level. Select a parent market (like Austin instead of Downtown Austin) to view historical occupancy, revenue, and ADR trends.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* For regular markets, show charts directly */
+                  <HistoricalCharts
+                    marketId={locationSelection.market.id}
+                    marketName={researchResult.marketName}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -2088,12 +2112,16 @@ export default function LeadMagnet() {
               <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
                 <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">How Your Property Ranks</h4>
                 {(() => {
-                  const allRevenues = result.comparables.map(c => c.revenue).sort((a, b) => a - b);
+                  const allRevenues = result.comparables.map(c => c.revenue).sort((a, b) => b - a); // Sort descending (highest first)
                   const propertyRevenue = result.revenue.projected;
-                  const rank = allRevenues.filter(r => r < propertyRevenue).length;
-                  const percentile = Math.round((rank / allRevenues.length) * 100);
+                  // Find position where property would rank (1-indexed)
+                  const position = allRevenues.findIndex(r => propertyRevenue >= r);
+                  // If property is lower than all comps, it ranks last (position = -1 means add to end)
+                  const rank = position === -1 ? allRevenues.length + 1 : position + 1;
+                  const percentile = Math.round(((allRevenues.length - rank + 1) / allRevenues.length) * 100);
                   const avgCompRevenue = allRevenues.reduce((sum, r) => sum + r, 0) / allRevenues.length;
                   const vsAvg = ((propertyRevenue - avgCompRevenue) / avgCompRevenue) * 100;
+                  const totalCount = allRevenues.length + 1; // Include the property being analyzed
                   
                   return (
                     <div className="space-y-4">
@@ -2130,7 +2158,7 @@ export default function LeadMagnet() {
                         <div className="text-center">
                           <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Rank Among Comps</p>
                           <p className="text-xl font-bold text-[oklch(0.15_0_0)]">
-                            #{allRevenues.length - rank + 1} of {allRevenues.length}
+                            #{rank} of {totalCount}
                           </p>
                         </div>
                       </div>
