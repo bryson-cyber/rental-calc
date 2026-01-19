@@ -1630,3 +1630,8 @@ The getZipcodesInSubmarket procedure now:
 ## Bug Fix: Rank Among Comps showing #0 (Jan 18, 2026)
 
 - [x] Fix "Rank Among Comps" showing #0 instead of #1 - rank should be 1-indexed, not 0-indexed
+
+
+## Enhancement: Auto-show parent market historical data for submarkets (Jan 19, 2026)
+
+- [x] Automatically use parent market ID for Historical Charts when a submarket is selected (instead of showing fallback message)

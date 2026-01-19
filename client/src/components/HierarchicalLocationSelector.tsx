@@ -338,9 +338,9 @@ export function HierarchicalLocationSelector({
                     isSubmarketAsMarket: true,
                     // Include zipcodes from the search result
                     zipcodes: result.zipcodes || [],
-                    // Store parent market info for Historical Charts (API returns parent_market for submarkets)
-                    parentMarketId: result.parent_market?.id,
-                    parentMarketName: result.parent_market?.name,
+                    // Store parent market info for Historical Charts (API returns parentMarket for submarkets)
+                    parentMarketId: result.parentMarket?.id || result.parent_market?.id,
+                    parentMarketName: result.parentMarket?.name || result.parent_market?.name,
                   });
                 }
                 // Also collect for virtual market creation
