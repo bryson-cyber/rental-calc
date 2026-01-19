@@ -1722,3 +1722,35 @@ The getZipcodesInSubmarket procedure now:
 - AirDNA API search doesn't filter by search term properly (returns same top markets)
 - Some US cities/states don't have dedicated AirDNA market data (e.g., St. Louis, MO)
 - For areas without market data, users should use hierarchical State → City → Submarket selection
+
+
+## Fix Zip Code Search - St. Louis Market (Jan 19, 2026) - COMPLETE
+
+### Issue:
+- User entered zip code 63108 (St. Louis, MO)
+- System incorrectly reported "no market data available"
+- AirDNA does have St. Louis market data - the search logic was broken
+
+### Root Cause:
+- The geocodeZipCodeToMarket function was geocoding the zip code first, then searching for the city name
+- AirDNA's market search API returns inconsistent results when searching by city name (e.g., "St. Louis" returns Louisiana results)
+- The correct approach is to search for the zip code directly in AirDNA first
+
+### Solution:
+- [x] Updated geocodeZipCodeToMarket to search for the zip code directly in AirDNA first
+- [x] AirDNA's market/search endpoint finds submarkets that contain specific zip codes in their legacy_location.zipcodes array
+- [x] Only fall back to geocoding + city search if direct zip code search fails
+
+### Test Results:
+- ✅ 63108 (St. Louis, MO): Central West End submarket, St. Louis market, 343 listings
+- ✅ 80202 (Denver, CO): LoDo submarket, Denver market
+- ✅ 90210 (Beverly Hills, CA): Beverly Crest submarket, Los Angeles market, 167 listings
+- ✅ 33139 (Miami Beach, FL): Venetian / Star Islands submarket, Miami market
+
+### Implementation:
+- [x] Check AirDNA API documentation for correct market search method
+- [x] Test different API endpoints to find St. Louis market
+- [x] Identify why current search returns wrong results (city name search is unreliable)
+- [x] Update geocodeZipCodeToMarket to search for zip code directly first
+- [x] Test with zip code 63108 - St. Louis market found correctly
+- [x] Verify multiple zip codes work correctly across different states

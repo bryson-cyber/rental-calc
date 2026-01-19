@@ -100,7 +100,19 @@ export async function getMarketsInState(stateName: string): Promise<MarketResult
       return marketState.includes(searchState) || searchState.includes(marketState);
     });
     
-    console.log(`[getMarketsInState] Found ${stateMarkets.length} markets in ${stateName}`);
+    // If no state-specific results, return all US markets as fallback
+    if (stateMarkets.length === 0) {
+      console.log(`[getMarketsInState] No state-specific results, returning all US markets`);
+      const usMarkets = results.filter(m => 
+        m.location?.country_code === 'us' && m.type === 'market'
+      );
+      return usMarkets.map(m => ({
+        id: m.id,
+        name: m.name,
+        listingCount: m.listing_count,
+        state: m.location?.state
+      }));
+    }
     
     return stateMarkets.map(m => ({
       id: m.id,
@@ -108,6 +120,7 @@ export async function getMarketsInState(stateName: string): Promise<MarketResult
       listingCount: m.listing_count,
       state: m.location?.state
     }));
+    
   } catch (error) {
     console.error(`[getMarketsInState] Error:`, error);
     return [];
@@ -122,64 +135,53 @@ export interface SubmarketResult {
   id: string;
   name: string;
   listingCount: number;
-  revenue?: number;
-  occupancy?: number;
+  zipcodes?: string[];
 }
 
 /**
- * Get all submarkets (neighborhoods) within a market
- * Uses the /market/{market_id}/submarkets endpoint
+ * Get all submarkets in a given market
  */
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketResult[]> {
   try {
     console.log(`[getSubmarketsInMarket] Getting submarkets for market ${marketId}`);
     
-    // Fetch all pages of submarkets
-    let allSubmarkets: SubmarketResult[] = [];
-    let offset = 0;
-    const pageSize = 25;
-    let hasMore = true;
-    
-    while (hasMore) {
-      const response = await makeApiRequest<{
-        payload: {
-          submarkets: Array<{
+    // Use the market/search endpoint to find submarkets
+    // The API returns submarkets when searching for the market name
+    const response = await makeApiRequest<{
+      payload: {
+        results: Array<{
+          id: string;
+          name: string;
+          type: string;
+          listing_count: number;
+          parent_market?: {
             id: string;
             name: string;
-            metrics?: {
-              revenue?: number;
-              booked?: number;
-            };
-          }>;
-          page_info: {
-            total_count: number;
           };
-        };
-      }>(`/market/${marketId}/submarkets`, "POST", {
-        pagination: { page_size: pageSize, offset }
-      });
-      
-      const submarkets = response.payload?.submarkets || [];
-      const totalCount = response.payload?.page_info?.total_count || 0;
-      
-      allSubmarkets.push(...submarkets.map(s => ({
-        id: s.id,
-        name: s.name,
-        listingCount: 0, // Not provided in this endpoint
-        revenue: s.metrics?.revenue,
-        occupancy: s.metrics?.booked ? Math.round(s.metrics.booked * 100) : undefined
-      })));
-      
-      offset += pageSize;
-      hasMore = offset < totalCount;
-    }
+          legacy_location?: {
+            zipcodes?: string[];
+          };
+        }>;
+      };
+    }>("/market/search", "POST", {
+      search_term: marketId,
+      pagination: { page_size: 50, offset: 0 }
+    });
     
-    console.log(`[getSubmarketsInMarket] Found ${allSubmarkets.length} submarkets`);
+    const results = response.payload?.results || [];
     
-    // Sort by revenue descending
-    allSubmarkets.sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+    // Filter to submarkets that belong to this market
+    const submarkets = results.filter(r => 
+      r.type === 'submarket' && r.parent_market?.id === marketId
+    );
     
-    return allSubmarkets;
+    return submarkets.map(sm => ({
+      id: sm.id,
+      name: sm.name,
+      listingCount: sm.listing_count,
+      zipcodes: sm.legacy_location?.zipcodes
+    }));
+    
   } catch (error) {
     console.error(`[getSubmarketsInMarket] Error:`, error);
     return [];
@@ -187,146 +189,127 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
 }
 
 // ============================================
-// GET ZIP CODES IN SUBMARKET
+// SEARCH MARKETS
 // ============================================
 
+export interface SearchResult {
+  id: string;
+  name: string;
+  type: 'market' | 'submarket';
+  listingCount: number;
+  state?: string;
+  parentMarket?: {
+    id: string;
+    name: string;
+  };
+  zipcodes?: string[];
+}
+
 /**
- * Get all unique zip codes within a submarket
- * Fetches listings and extracts unique zip codes
+ * Search for markets and submarkets by name
  */
-export async function getZipcodesInSubmarket(submarketId: string): Promise<string[]> {
+export async function searchMarkets(query: string): Promise<SearchResult[]> {
   try {
-    console.log(`[getZipcodesInSubmarket] Getting zip codes for submarket ${submarketId}`);
+    console.log(`[searchMarkets] Searching for: ${query}`);
     
-    // Fetch listings to extract zip codes
     const response = await makeApiRequest<{
       payload: {
-        listings: Array<{
-          zipcode?: string;
-          zip_code?: string;
+        results: Array<{
+          id: string;
+          name: string;
+          type: string;
+          listing_count: number;
+          location?: {
+            state: string;
+            country_code: string;
+          };
+          parent_market?: {
+            id: string;
+            name: string;
+          };
+          legacy_location?: {
+            zipcodes?: string[];
+          };
         }>;
-        page_info: {
-          total_count: number;
-        };
       };
-    }>(`/submarket/${submarketId}/listings`, "POST", {
+    }>("/market/search", "POST", {
+      search_term: query,
       pagination: { page_size: 25, offset: 0 }
     });
     
-    const listings = response.payload?.listings || [];
+    const results = response.payload?.results || [];
     
-    // Extract unique zip codes
-    const zipcodes = new Set<string>();
-    listings.forEach(l => {
-      const zip = l.zipcode || l.zip_code;
-      if (zip) {
-        zipcodes.add(zip);
-      }
-    });
+    // Filter to US results only
+    const usResults = results.filter(r => 
+      r.location?.country_code === 'us' || r.parent_market
+    );
     
-    // If we need more zip codes, fetch additional pages
-    const totalCount = response.payload?.page_info?.total_count || 0;
-    if (totalCount > 25 && zipcodes.size < 10) {
-      // Fetch more pages to get more zip codes
-      for (let offset = 25; offset < Math.min(totalCount, 100); offset += 25) {
-        const moreResponse = await makeApiRequest<{
-          payload: {
-            listings: Array<{
-              zipcode?: string;
-              zip_code?: string;
-            }>;
-          };
-        }>(`/submarket/${submarketId}/listings`, "POST", {
-          pagination: { page_size: 25, offset }
-        });
-        
-        (moreResponse.payload?.listings || []).forEach(l => {
-          const zip = l.zipcode || l.zip_code;
-          if (zip) {
-            zipcodes.add(zip);
-          }
-        });
-      }
-    }
+    return usResults.map(r => ({
+      id: r.id,
+      name: r.name,
+      type: r.type as 'market' | 'submarket',
+      listingCount: r.listing_count,
+      state: r.location?.state,
+      parentMarket: r.parent_market,
+      zipcodes: r.legacy_location?.zipcodes
+    }));
     
-    const sortedZipcodes = Array.from(zipcodes).sort();
-    console.log(`[getZipcodesInSubmarket] Found ${sortedZipcodes.length} unique zip codes`);
-    
-    return sortedZipcodes;
   } catch (error) {
-    console.error(`[getZipcodesInSubmarket] Error:`, error);
+    console.error(`[searchMarkets] Error:`, error);
     return [];
   }
 }
 
 // ============================================
-// GET SUBMARKET DATA
+// GEOCODE ZIP CODE TO MARKET
 // ============================================
 
-export interface SubmarketData {
-  id: string;
-  name: string;
-  parentMarket?: string;
-  metrics: {
-    revenue: number;
-    occupancy: number;
-    adr: number;
-    revpar: number;
-    marketScore?: number;
-  };
-  listingCount: number;
-}
+// Google Maps API helper
+const GOOGLE_MAPS_BASE = "https://maps.googleapis.com";
 
-/**
- * Get detailed data for a specific submarket
- */
-export async function getSubmarketData(submarketId: string): Promise<SubmarketData | null> {
-  try {
-    console.log(`[getSubmarketData] Getting data for submarket ${submarketId}`);
-    
-    const response = await makeApiRequest<{
-      payload: {
-        id: string;
-        name: string;
-        parent_market_name?: string;
-        metrics?: {
-          market_score?: number;
-          revenue?: number;
-          booked?: number;
-          daily_rate?: number;
-          revpar?: number;
-        };
-      };
-    }>(`/submarket/${submarketId}`, "GET");
-    
-    const data = response.payload;
-    if (!data) return null;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      parentMarket: data.parent_market_name,
-      metrics: {
-        revenue: Math.round(data.metrics?.revenue || 0),
-        occupancy: Math.round((data.metrics?.booked || 0) * 100),
-        adr: Math.round(data.metrics?.daily_rate || 0),
-        revpar: Math.round(data.metrics?.revpar || 0),
-        marketScore: data.metrics?.market_score
-      },
-      listingCount: 0 // Not provided in this endpoint
-    };
-  } catch (error) {
-    console.error(`[getSubmarketData] Error:`, error);
-    return null;
+async function makeGoogleMapsRequest<T>(
+  endpoint: string,
+  params: Record<string, string>
+): Promise<T> {
+  const apiKey = process.env.BUILT_IN_FORGE_API_KEY;
+  const baseUrl = process.env.BUILT_IN_FORGE_API_URL;
+  
+  if (!apiKey || !baseUrl) {
+    throw new Error("Google Maps API credentials not configured");
   }
+  
+  const searchParams = new URLSearchParams(params);
+  const url = `${baseUrl}/google${endpoint}?${searchParams.toString()}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Google Maps API error: ${response.status}`);
+  }
+  
+  return response.json();
 }
 
-
-// ============================================
-// GEOCODE ZIP CODE TO FIND MARKET
-// ============================================
-
-import { makeRequest as makeGoogleMapsRequest, GeocodingResult } from "./_core/map";
+interface GeocodingResult {
+  status: string;
+  results: Array<{
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: string[];
+    }>;
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+  }>;
+}
 
 export interface ZipCodeLookupResult {
   success: boolean;
@@ -334,6 +317,10 @@ export interface ZipCodeLookupResult {
   city?: string;
   state?: string;
   stateCode?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
   market?: {
     id: string;
     name: string;
@@ -344,22 +331,151 @@ export interface ZipCodeLookupResult {
     name: string;
     listingCount: number;
   };
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
   error?: string;
 }
 
 /**
  * Geocode a US zip code to find the city, state, and corresponding AirDNA market
  * This enables the "Quick Search by Zip Code" feature to work with any US zip code
+ * 
+ * IMPROVED: Now searches for the zip code directly in AirDNA first, which is more accurate
+ * than geocoding and then searching for the city name.
  */
 export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLookupResult> {
   try {
     console.log(`[geocodeZipCodeToMarket] Looking up zip code: ${zipcode}`);
     
-    // Step 1: Use Google Geocoding API to get city/state from zip code
+    const apiKey = process.env.AIRDNA_API_KEY;
+    if (!apiKey) {
+      throw new Error("AIRDNA_API_KEY is not set");
+    }
+    
+    // Step 1: Search for the zip code directly in AirDNA
+    // This is more accurate than geocoding first because AirDNA's search
+    // can find submarkets that contain specific zip codes
+    console.log(`[geocodeZipCodeToMarket] Searching AirDNA for zip code: ${zipcode}`);
+    
+    const zipSearchResponse = await fetch(`${AIRDNA_API_BASE}/market/search`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        search_term: zipcode,
+        pagination: { page_size: 10, offset: 0 }
+      })
+    });
+    
+    const zipSearchData = await zipSearchResponse.json();
+    const zipResults = zipSearchData.payload?.results || [];
+    
+    // Look for a US submarket or market that contains this zip code
+    let foundSubmarket = null;
+    let foundMarket = null;
+    
+    for (const result of zipResults) {
+      // Check if this result is in the US
+      if (result.location?.country_code !== 'us') continue;
+      
+      // Check if this submarket contains the zip code
+      const zipcodes = result.legacy_location?.zipcodes || [];
+      if (zipcodes.includes(zipcode)) {
+        if (result.type === 'submarket') {
+          foundSubmarket = result;
+          // Get the parent market
+          if (result.parent_market) {
+            foundMarket = result.parent_market;
+          }
+          break;
+        } else if (result.type === 'market') {
+          foundMarket = result;
+          break;
+        }
+      }
+      
+      // If no exact zip match, take the first US result as a fallback
+      if (!foundSubmarket && !foundMarket) {
+        if (result.type === 'submarket') {
+          foundSubmarket = result;
+          if (result.parent_market) {
+            foundMarket = result.parent_market;
+          }
+        } else if (result.type === 'market') {
+          foundMarket = result;
+        }
+      }
+    }
+    
+    // If we found a result from AirDNA, use it
+    if (foundSubmarket || foundMarket) {
+      console.log(`[geocodeZipCodeToMarket] Found AirDNA result for ${zipcode}:`, {
+        submarket: foundSubmarket?.name,
+        market: foundMarket?.name
+      });
+      
+      // Get coordinates from Google Geocoding for map centering
+      let coordinates: { lat: number; lng: number } | undefined;
+      let city = "";
+      let state = "";
+      let stateCode = "";
+      
+      try {
+        const geocodeResult = await makeGoogleMapsRequest<GeocodingResult>(
+          "/maps/api/geocode/json",
+          { address: `${zipcode}, USA` }
+        );
+        
+        if (geocodeResult.status === "OK" && geocodeResult.results?.[0]) {
+          const result = geocodeResult.results[0];
+          coordinates = {
+            lat: result.geometry.location.lat,
+            lng: result.geometry.location.lng
+          };
+          
+          for (const component of result.address_components) {
+            if (component.types.includes("locality")) {
+              city = component.long_name;
+            } else if (component.types.includes("administrative_area_level_1")) {
+              state = component.long_name;
+              stateCode = component.short_name;
+            }
+          }
+        }
+      } catch (geoError) {
+        console.log(`[geocodeZipCodeToMarket] Geocoding failed, continuing without coordinates`);
+      }
+      
+      // Use state from AirDNA result if not found via geocoding
+      if (!state && foundSubmarket?.location?.state) {
+        state = foundSubmarket.location.state;
+      } else if (!state && foundMarket?.location?.state) {
+        state = foundMarket.location?.state;
+      }
+      
+      return {
+        success: true,
+        zipcode,
+        city: city || foundSubmarket?.name || foundMarket?.name,
+        state,
+        stateCode,
+        coordinates,
+        market: foundMarket ? {
+          id: foundMarket.id,
+          name: foundMarket.name,
+          listingCount: foundMarket.listing_count || 0
+        } : undefined,
+        submarket: foundSubmarket ? {
+          id: foundSubmarket.id,
+          name: foundSubmarket.name,
+          listingCount: foundSubmarket.listing_count || 0
+        } : undefined
+      };
+    }
+    
+    // Step 2: If no AirDNA result, fall back to geocoding and city search
+    console.log(`[geocodeZipCodeToMarket] No direct AirDNA result, falling back to geocoding`);
+    
     const geocodeResult = await makeGoogleMapsRequest<GeocodingResult>(
       "/maps/api/geocode/json",
       { address: `${zipcode}, USA` }
@@ -408,47 +524,26 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
     
     console.log(`[geocodeZipCodeToMarket] Geocoded ${zipcode} to: ${city}, ${state} (${stateCode})`);
     
-    // Step 2: Search for the market using multiple search term variations
-    const apiKey = process.env.AIRDNA_API_KEY;
-    if (!apiKey) {
-      throw new Error("AIRDNA_API_KEY is not set");
-    }
-    
-    // Generate search term variations to improve matching
+    // Step 3: Search for the market using city + state
     const searchTerms: string[] = [];
     if (city) {
+      // Try city + state first (most specific)
+      if (state) {
+        searchTerms.push(`${city} ${state}`);
+      }
       searchTerms.push(city);
       // Handle abbreviations like "St." -> "Saint"
       if (city.includes("St.")) {
         searchTerms.push(city.replace(/St\./g, "Saint"));
+        if (state) {
+          searchTerms.push(`${city.replace(/St\./g, "Saint")} ${state}`);
+        }
       }
-      if (city.includes("St ")) {
-        searchTerms.push(city.replace(/St /g, "Saint "));
-      }
-      // Try city + state
-      if (state) {
-        searchTerms.push(`${city} ${state}`);
-        searchTerms.push(`${city} ${stateCode}`);
-      }
-    }
-    if (state) {
-      searchTerms.push(state);
     }
     
-    if (searchTerms.length === 0) {
-      return {
-        success: false,
-        zipcode,
-        city,
-        state,
-        stateCode,
-        coordinates,
-        error: `Could not determine city/state for zip code ${zipcode}.`
-      };
-    }
+    let matchedMarket = null;
+    let matchedSubmarket = null;
     
-    // Try each search term until we find a match
-    let markets: any[] = [];
     for (const searchTerm of searchTerms) {
       console.log(`[geocodeZipCodeToMarket] Trying search term: "${searchTerm}"`);
       
@@ -459,7 +554,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          term: searchTerm,
+          search_term: searchTerm,
           pagination: { page_size: 25, offset: 0 }
         })
       });
@@ -467,48 +562,32 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
       const searchData = await searchResponse.json();
       const results = searchData.payload?.results || [];
       
-      // Filter to US markets only
-      const usMarkets = results.filter((m: any) => 
-        m.type === "market" && m.location?.country_code === "us"
-      );
-      
-      if (usMarkets.length > 0) {
-        markets = results;
-        break;
-      }
-    }
-    
-    // Find a market that matches the city/state
-    let matchedMarket = null;
-    for (const m of markets) {
-      if (m.type !== "market") continue;
-      if (m.location?.country_code !== "us") continue;
-      
-      // Check if market name contains the city name
-      const marketName = m.name.toLowerCase();
-      const cityLower = city.toLowerCase();
-      const stateLower = state.toLowerCase();
-      
-      if (marketName.includes(cityLower) || 
-          (m.location?.state?.toLowerCase() === stateLower && marketName.includes(cityLower.split(" ")[0]))) {
-        matchedMarket = m;
-        break;
-      }
-    }
-    
-    // If no exact match, try to find a market in the same state
-    if (!matchedMarket) {
-      for (const m of markets) {
-        if (m.type !== "market") continue;
-        if (m.location?.country_code !== "us") continue;
-        if (m.location?.state?.toLowerCase() === state.toLowerCase()) {
-          matchedMarket = m;
-          break;
+      // Look for US markets/submarkets in the correct state
+      for (const r of results) {
+        if (r.location?.country_code !== 'us') continue;
+        
+        // Check if the state matches
+        const resultState = r.location?.state?.toLowerCase() || '';
+        const targetState = state.toLowerCase();
+        
+        if (resultState !== targetState) continue;
+        
+        if (r.type === 'submarket' && !matchedSubmarket) {
+          matchedSubmarket = r;
+          if (r.parent_market) {
+            matchedMarket = r.parent_market;
+          }
+        } else if (r.type === 'market' && !matchedMarket) {
+          matchedMarket = r;
         }
+        
+        if (matchedSubmarket && matchedMarket) break;
       }
+      
+      if (matchedSubmarket || matchedMarket) break;
     }
     
-    if (!matchedMarket) {
+    if (!matchedMarket && !matchedSubmarket) {
       console.log(`[geocodeZipCodeToMarket] No market found for ${city}, ${state}`);
       return {
         success: false,
@@ -521,40 +600,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
       };
     }
     
-    console.log(`[geocodeZipCodeToMarket] Found market: ${matchedMarket.name} (${matchedMarket.id})`);
-    
-    // Step 3: Get submarkets in this market and find one that might contain this zip code
-    const submarketResponse = await fetch(`${AIRDNA_API_BASE}/market/${matchedMarket.id}/submarkets`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        pagination: { page_size: 25, offset: 0 }
-      })
-    });
-    
-    const submarketData = await submarketResponse.json();
-    const submarkets = submarketData.payload?.submarkets || [];
-    
-    // Try to find a submarket that matches the city name or neighborhood
-    let matchedSubmarket = null;
-    for (const sm of submarkets) {
-      const smName = sm.name.toLowerCase();
-      const cityLower = city.toLowerCase();
-      
-      if (smName.includes(cityLower) || cityLower.includes(smName)) {
-        matchedSubmarket = sm;
-        break;
-      }
-    }
-    
-    // If no submarket match, use the first one (or none)
-    if (!matchedSubmarket && submarkets.length > 0) {
-      // Just return the market without a specific submarket
-      matchedSubmarket = null;
-    }
+    console.log(`[geocodeZipCodeToMarket] Found market: ${matchedMarket?.name || matchedSubmarket?.parent_market?.name}`);
     
     return {
       success: true,
@@ -563,11 +609,11 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
       state,
       stateCode,
       coordinates,
-      market: {
+      market: matchedMarket ? {
         id: matchedMarket.id,
         name: matchedMarket.name,
         listingCount: matchedMarket.listing_count || 0
-      },
+      } : undefined,
       submarket: matchedSubmarket ? {
         id: matchedSubmarket.id,
         name: matchedSubmarket.name,
