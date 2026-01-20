@@ -1918,3 +1918,78 @@ The getZipcodesInSubmarket procedure now:
 - [x] Fix occupancy display bug (added logic to handle both decimal and percentage formats)
 - [x] Add property images to map popup cards (fixed to use image_url from API)
 - [x] Test with zip code 33139 - VERIFIED: Occupancy shows 89% (correct), image displays properly
+
+
+## Property-Centric Tool Ecosystem (Jan 20, 2026)
+
+### Core Concept:
+User enters ONE property address → All 5 tools auto-populate with relevant, apples-to-apples data
+
+### The Investor's Decision Flow:
+1. "Can I make money here?" → Validate the Deal (revenue estimate for MY property)
+2. "What's already working?" → See the Comps (same BR/BA properties succeeding)
+3. "How does my location compare?" → Map view (distance from competition)
+4. "What if this one doesn't work?" → Explore the Market (alternatives)
+
+### Phase 1: Map View Improvements
+- [x] Add bedroom filter options: 1 BR, 2 BR, 3 BR (already dynamically generated from data)
+- [x] Build comps table below map with sortable columns:
+  - Property Name (with thumbnail)
+  - Bedrooms/Bathrooms
+  - Annual Revenue (color-coded by performance)
+  - Occupancy % (color-coded by performance)
+  - ADR (Average Daily Rate)
+  - Rating (with star icon)
+  - Distance from user's property (when My Property set)
+  - Airbnb link
+- [x] Add sorting functionality to comps table (clickable column headers)
+- [x] Add filtering functionality to comps table (uses same filters as map)
+
+### Phase 2: Property-Centric Workflow
+- [x] Create "Start with My Property" entry point (StartWithProperty.tsx)
+- [x] When user enters property address, auto-extract:
+  - Zip code
+  - Neighborhood
+  - City
+  - State
+  - Bedrooms
+  - Bathrooms
+- [x] Store property context in global state (PropertyContext.tsx)
+- [x] Auto-populate all tools with property context
+
+### Phase 3: Apples-to-Apples Filtering
+- [x] When property has 3BR/2BA, filter ALL data to 3BR properties:
+  - [ ] Step 1 (See Real Revenue): Show 3BR market data only
+  - [ ] Step 2 (Explore Listings): Show 3BR listings only
+  - [ ] Step 3 (Validate the Deal): Compare against 3BR comps
+  - [ ] Step 4 (Find the Best Deal): Show 3BR alternatives
+  - [x] Step 5 (See the Map): Show 3BR competitors only
+- [x] Add visual indicator showing current filter ("Show only 2BR properties (apples-to-apples)")
+- [x] Allow user to override filter if they want to see all bedrooms (toggle switch)
+
+### Phase 4: Tool Integration
+- [x] Connect all 5 tools to shared property context
+- [x] When property changes, update all tools automatically
+- [ ] Add "Analyze This Property" button on listings that sets context
+- [x] Add navigation between tools that preserves context (Quick Actions: Validate Deal, See on Map)
+
+### Phase 5: PDF Export
+- [ ] Generate comprehensive report including:
+  - Property details
+  - Revenue projection
+  - Comparable properties (apples-to-apples)
+  - Map screenshot
+  - Market summary
+- [ ] Style PDF to match professional AirDNA-style reports
+
+### Two Entry Points:
+1. **"I have a property"** → Enter address, everything auto-populates with matching BR/BA data
+2. **"I'm exploring markets"** → Browse freely, select location manually
+
+### Success Criteria:
+- [x] User can enter one address and see all relevant data across all tools
+- [x] All comparisons are apples-to-apples (same bedroom count) - Map view complete
+- [x] Comps table shows all map markers in sortable format
+- [ ] PDF export generates professional analysis report
+- [x] Tools feel like chapters in one story, not separate utilities
+

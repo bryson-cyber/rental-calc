@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { PropertyProvider } from "./contexts/PropertyContext";
 import LeadMagnet from "./pages/LeadMagnet";
 import PropertyAnalyzer from "./pages/PropertyAnalyzer";
 import DeepAnalysis from "./pages/DeepAnalysis";
@@ -37,10 +38,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <PropertyProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </PropertyProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

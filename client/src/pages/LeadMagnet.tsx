@@ -76,6 +76,8 @@ import { HierarchicalLocationSelector, type LocationSelection } from '@/componen
 import { toast } from 'sonner';
 import { useSavedItems } from '@/hooks/useSavedItems';
 import { SavedItemsPanel } from '@/components/SavedItemsPanel';
+import { StartWithProperty } from '@/components/StartWithProperty';
+import { useProperty } from '@/contexts/PropertyContext';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -257,6 +259,9 @@ const getMonthAbbr = (dateStr: string): string => {
 type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map';
 
 export default function LeadMagnet() {
+  // Property context for property-centric workflow
+  const { myProperty, hasProperty, bedroomFilter, setMyProperty } = useProperty();
+  
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
   
@@ -351,6 +356,25 @@ export default function LeadMagnet() {
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
   const getSubmarketReport = trpc.marketResearchSimple.getSubmarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
+
+  // ============================================
+  // AUTO-POPULATE FROM PROPERTY CONTEXT
+  // ============================================
+  useEffect(() => {
+    // When property context changes, auto-populate bedroom filter for apples-to-apples comparison
+    if (hasProperty && myProperty?.bedrooms) {
+      setExploreBedroomFilter(myProperty.bedrooms);
+      // Also update the validate form if not already set
+      if (!address && myProperty.address) {
+        setAddress(myProperty.address);
+        setBedrooms(String(myProperty.bedrooms));
+        setBathrooms(String(myProperty.bathrooms));
+        if (myProperty.monthlyRent) {
+          setMonthlyRent(String(myProperty.monthlyRent));
+        }
+      }
+    }
+  }, [hasProperty, myProperty]);
 
   // ============================================
   // DEBOUNCED MARKET SEARCH
@@ -861,6 +885,24 @@ export default function LeadMagnet() {
       <section id="tools-section" className="section-padding">
         <div className="container max-w-4xl mx-auto">
           
+          {/* Start With Property - Property-Centric Entry Point */}
+          <div className="mb-12">
+            <StartWithProperty
+              onPropertySet={(property) => {
+                // When property is set, auto-fill the validate form
+                setAddress(property.address);
+                setBedrooms(String(property.bedrooms));
+                setBathrooms(String(property.bathrooms));
+                if (property.monthlyRent) {
+                  setMonthlyRent(String(property.monthlyRent));
+                }
+              }}
+              onNavigateToStep={(step) => {
+                setActiveTab(step as TabType);
+              }}
+            />
+          </div>
+          
           {/* Section Header */}
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-[oklch(0.55_0.14_75)]/10 border border-[oklch(0.55_0.14_75)]/20 rounded-full text-gold text-sm font-medium mb-8">
@@ -1116,8 +1158,13 @@ export default function LeadMagnet() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
                       Beds
+                      {hasProperty && exploreBedroomFilter === myProperty?.bedrooms && (
+                        <span className="text-xs px-2 py-0.5 bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.55_0.14_75)] rounded-full">
+                          Apples-to-apples
+                        </span>
+                      )}
                     </label>
                     <select
                       value={exploreBedroomFilter ?? ''}

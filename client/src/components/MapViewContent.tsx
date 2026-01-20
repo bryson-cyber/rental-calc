@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapView } from '@/components/Map';
 import { HierarchicalLocationSelector, LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { Button } from '@/components/ui/button';
+import { useProperty } from '@/contexts/PropertyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2 } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, Table2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -238,6 +239,9 @@ function createMyPropertyMarker(): HTMLDivElement {
 }
 
 export function MapViewContent({ embedded = false, className = '' }: MapViewContentProps) {
+  // Property context for property-centric workflow
+  const { myProperty, hasProperty, bedroomFilter: contextBedroomFilter, enforceApplesToApples } = useProperty();
+  
   const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
   const [listings, setListings] = useState<PropertyListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -253,6 +257,9 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
   const [isGeocodingMyProperty, setIsGeocodingMyProperty] = useState(false);
   const [myPropertyError, setMyPropertyError] = useState<string | null>(null);
+  
+  // Track if we've auto-populated from context
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -452,8 +459,116 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     }
   }, [locationSelection, performSearch]);
   
+  // Auto-populate from property context when available
   useEffect(() => {
-    if (!mapRef.current || !window.google) return;
+    if (hasProperty && myProperty && !hasAutoPopulated) {
+      // Set the address for "My Property" marker
+      if (myProperty.address) {
+        setMyPropertyAddress(myProperty.address);
+      }
+      
+      // Apply apples-to-apples bedroom filter if enabled
+      if (enforceApplesToApples && contextBedroomFilter !== null) {
+        setBedroomFilter(String(contextBedroomFilter));
+      }
+      
+      // Auto-search by zip code if available
+      if (myProperty.zipCode) {
+        // Trigger zip code search
+        const zipCode = myProperty.zipCode;
+        console.log('[MapView] Auto-searching by zip code:', zipCode);
+        
+        // Fetch listings for this zip code
+        fetch(`/api/trpc/compData.getListingsByZipcode?input=${encodeURIComponent(JSON.stringify({ json: { zipcode: zipCode } }))}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.result?.data?.json?.listings) {
+              const fetchedListings = data.result.data.json.listings;
+              console.log('[MapView] Auto-search received', fetchedListings.length, 'listings for zip', zipCode);
+              
+              const listingsWithCoords = fetchedListings
+                .filter((l: any) => l.latitude && l.longitude)
+                .map((l: any) => ({
+                  id: l.id,
+                  title: l.title,
+                  revenue: l.annual_revenue || l.revenue || 0,
+                  occupancy: l.occupancy || 0,
+                  adr: l.adr || 0,
+                  bedrooms: l.bedrooms || 0,
+                  bathrooms: l.bathrooms || 0,
+                  accommodates: l.accommodates || 0,
+                  rating: l.rating,
+                  reviews: l.reviews || 0,
+                  latitude: l.latitude,
+                  longitude: l.longitude,
+                  propertyType: l.property_type || l.propertyType || 'Unknown',
+                  airbnbUrl: l.airbnb_url || l.airbnbUrl || '#',
+                  thumbnailUrl: l.image_url || l.thumbnail_url || l.thumbnailUrl || null,
+                }));
+              
+              setListings(listingsWithCoords);
+              
+              // Fit map to listings bounds
+              if (listingsWithCoords.length > 0 && mapRef.current) {
+                const bounds = new google.maps.LatLngBounds();
+                listingsWithCoords.forEach((l: PropertyListing) => {
+                  bounds.extend({ lat: l.latitude, lng: l.longitude });
+                });
+                mapRef.current.fitBounds(bounds);
+              }
+            }
+          })
+          .catch(err => {
+            console.error('[MapView] Auto-search error:', err);
+          });
+      }
+      
+      setHasAutoPopulated(true);
+    }
+  }, [hasProperty, myProperty, hasAutoPopulated, enforceApplesToApples, contextBedroomFilter]);
+  
+  // Auto-geocode property address when map is ready and property is set
+  useEffect(() => {
+    if (hasProperty && myProperty?.address && myPropertyAddress && !myPropertyLocation && mapRef.current && window.google) {
+      // Initialize geocoder if needed
+      if (!geocoderRef.current) {
+        geocoderRef.current = new google.maps.Geocoder();
+      }
+      
+      // Auto-geocode the property
+      geocoderRef.current.geocode({ address: myProperty.address })
+        .then((result) => {
+          if (result.results && result.results.length > 0) {
+            const location = result.results[0].geometry.location;
+            const newLocation = {
+              address: result.results[0].formatted_address,
+              lat: location.lat(),
+              lng: location.lng()
+            };
+            setMyPropertyLocation(newLocation);
+            
+            // Pan map to the property location
+            if (mapRef.current) {
+              mapRef.current.panTo({ lat: newLocation.lat, lng: newLocation.lng });
+              mapRef.current.setZoom(13);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('[MapView] Auto-geocode error:', err);
+        });
+    }
+  }, [hasProperty, myProperty?.address, myPropertyAddress, myPropertyLocation]);
+  
+  // Update bedroom filter when context changes
+  useEffect(() => {
+    if (enforceApplesToApples && contextBedroomFilter !== null) {
+      setBedroomFilter(String(contextBedroomFilter));
+    }
+  }, [enforceApplesToApples, contextBedroomFilter]);
+  
+  useEffect(() => {
+    if (!mapRef.current || !window.google || !window.google.maps.marker?.AdvancedMarkerElement) return;
     
     if (myPropertyMarkerRef.current) {
       myPropertyMarkerRef.current.map = null;
@@ -498,7 +613,10 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   }, [myPropertyLocation]);
   
   useEffect(() => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || !window.google || !window.google.maps.marker?.AdvancedMarkerElement) {
+      console.log('[MapView] Waiting for map and marker library to be ready...');
+      return;
+    }
     
     markersRef.current.forEach(marker => {
       marker.map = null;
@@ -799,10 +917,32 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Apples-to-Apples Indicator */}
+                  {hasProperty && enforceApplesToApples && contextBedroomFilter !== null && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-amber-800">
+                        <Home className="w-4 h-4" />
+                        <span className="font-medium">Apples-to-Apples Mode</span>
+                      </div>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Showing only {contextBedroomFilter}BR properties to match your property
+                      </p>
+                    </div>
+                  )}
+                  
                   {/* Bedroom Filter */}
                   <div>
-                    <Label className="text-xs text-muted-foreground mb-1.5 block">Bedrooms</Label>
-                    <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">
+                      Bedrooms
+                      {hasProperty && enforceApplesToApples && contextBedroomFilter !== null && (
+                        <span className="ml-2 text-amber-600">(locked to match your property)</span>
+                      )}
+                    </Label>
+                    <Select 
+                      value={bedroomFilter} 
+                      onValueChange={setBedroomFilter}
+                      disabled={hasProperty && enforceApplesToApples && contextBedroomFilter !== null}
+                    >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="All Bedrooms" />
                       </SelectTrigger>
@@ -967,6 +1107,210 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
             )}
           </div>
         </div>
+        
+        {/* Comps Table */}
+        {filteredListings.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Table2 className="w-5 h-5 text-[#C9A962]" />
+                Comparable Properties ({filteredListings.length})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                All properties shown on the map, sorted by {sortBy.replace('-desc', ' (High to Low)').replace('-asc', ' (Low to High)')}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-stone-50">
+                      <th className="text-left p-3 font-medium">Property</th>
+                      <th className="text-center p-3 font-medium">BR/BA</th>
+                      <th className="text-right p-3 font-medium">
+                        <button 
+                          onClick={() => setSortBy(sortBy === 'revenue-desc' ? 'revenue-asc' : 'revenue-desc')}
+                          className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
+                        >
+                          Revenue
+                          {sortBy.startsWith('revenue') && (
+                            sortBy === 'revenue-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-right p-3 font-medium">
+                        <button 
+                          onClick={() => setSortBy(sortBy === 'occupancy-desc' ? 'occupancy-asc' : 'occupancy-desc')}
+                          className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
+                        >
+                          Occupancy
+                          {sortBy.startsWith('occupancy') && (
+                            sortBy === 'occupancy-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-right p-3 font-medium">
+                        <button 
+                          onClick={() => setSortBy(sortBy === 'adr-desc' ? 'adr-asc' : 'adr-desc')}
+                          className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
+                        >
+                          ADR
+                          {sortBy.startsWith('adr') && (
+                            sortBy === 'adr-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-center p-3 font-medium">
+                        <button 
+                          onClick={() => setSortBy(sortBy === 'rating-desc' ? 'rating-asc' : 'rating-desc')}
+                          className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
+                        >
+                          Rating
+                          {sortBy.startsWith('rating') && (
+                            sortBy === 'rating-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
+                          )}
+                        </button>
+                      </th>
+                      {myPropertyLocation && (
+                        <th className="text-right p-3 font-medium">
+                          <button 
+                            onClick={() => setSortBy(sortBy === 'distance-asc' ? 'distance-desc' : 'distance-asc')}
+                            className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
+                          >
+                            Distance
+                            {sortBy.startsWith('distance') && (
+                              sortBy === 'distance-asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
+                        </th>
+                      )}
+                      <th className="text-center p-3 font-medium">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredListings.map((listing, index) => {
+                      const markerColor = getMarkerColor(listing.revenue, thresholds, useCustomThreshold ? customThreshold : null);
+                      const occupancyDisplay = listing.occupancy > 1 ? Math.round(listing.occupancy) : Math.round(listing.occupancy * 100);
+                      
+                      return (
+                        <tr 
+                          key={listing.id} 
+                          className={`border-b hover:bg-stone-50 transition-colors cursor-pointer ${selectedProperty?.id === listing.id ? 'bg-blue-50' : ''}`}
+                          onClick={() => {
+                            setSelectedProperty(listing);
+                            // Pan map to this property
+                            if (mapRef.current) {
+                              mapRef.current.panTo({ lat: listing.latitude, lng: listing.longitude });
+                              mapRef.current.setZoom(15);
+                            }
+                          }}
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              {listing.thumbnailUrl ? (
+                                <img 
+                                  src={listing.thumbnailUrl} 
+                                  alt={listing.title}
+                                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-stone-200 flex items-center justify-center flex-shrink-0">
+                                  <Home className="w-5 h-5 text-stone-400" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="font-medium truncate max-w-[200px]" title={listing.title}>
+                                  {listing.title}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {listing.propertyType || 'Entire home'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-stone-100 rounded text-xs">
+                              {listing.bedrooms}BR / {listing.bathrooms}BA
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <span 
+                              className="font-semibold"
+                              style={{ color: markerColor }}
+                            >
+                              {formatCurrency(listing.revenue)}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <span className={occupancyDisplay >= 70 ? 'text-green-600' : occupancyDisplay >= 50 ? 'text-amber-600' : 'text-red-600'}>
+                              {occupancyDisplay}%
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            {formatCurrency(listing.adr)}/night
+                          </td>
+                          <td className="p-3 text-center">
+                            {listing.rating ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                {listing.rating.toFixed(1)}
+                                <span className="text-xs text-muted-foreground">({listing.reviews})</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          {myPropertyLocation && (
+                            <td className="p-3 text-right text-blue-600">
+                              {listing.distanceToMyProperty !== undefined 
+                                ? formatDistance(listing.distanceToMyProperty)
+                                : '—'}
+                            </td>
+                          )}
+                          <td className="p-3 text-center">
+                            <a 
+                              href={listing.airbnbUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#C9A962]/10 hover:bg-[#C9A962]/20 text-[#C9A962] transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Table Summary */}
+              <div className="mt-4 pt-4 border-t flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div>
+                  <span className="font-medium text-foreground">{filteredListings.length}</span> properties
+                </div>
+                <div>
+                  Avg Revenue: <span className="font-medium text-foreground">{formatCurrency(thresholds.average)}</span>
+                </div>
+                <div>
+                  Avg Occupancy: <span className="font-medium text-foreground">
+                    {filteredListings.length > 0 
+                      ? Math.round(filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length)
+                      : 0}%
+                  </span>
+                </div>
+                <div>
+                  Avg ADR: <span className="font-medium text-foreground">
+                    {filteredListings.length > 0 
+                      ? formatCurrency(filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length)
+                      : '$0'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
