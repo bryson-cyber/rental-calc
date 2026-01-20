@@ -1900,12 +1900,9 @@ export async function exploreListingsInRadius(
     });
     
     let listings: ListingData[] = (response.payload.listings || []).map((r) => {
-      // Try to get image from API response, or construct from Airbnb ID
-      let imageUrl = r.images?.[0] || '';
-      if (!imageUrl && r.airbnb_property_id) {
-        // Use Airbnb's public image CDN as fallback
-        imageUrl = `https://a0.muscache.com/im/pictures/airbnb-platform-assets/AirbnbRooms-${r.airbnb_property_id}/original/listing-photo.jpg`;
-      }
+      // Get image from API response if available
+      // Note: radius search endpoint doesn't return images, so we'll enrich later via getSinglePropertyDetails
+      const imageUrl = r.images?.[0] || '';
       return {
         id: r.property_id || '',
         title: r.title || 'Untitled Listing',
@@ -2872,15 +2869,19 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
     const response = await makeApiRequest<{
       payload: {
         property_id: string;
-        title: string;
-        images?: string[];
-        bedrooms: number;
-        bathrooms: number;
-        accommodates: number;
-        property_type: string;
-        rating?: number;
-        reviews?: number;
-        stats?: {
+        details: {
+          title: string;
+          images?: string[];
+          bedrooms: number;
+          bathrooms: number;
+          accommodates: number;
+          property_type: string;
+          reviews?: number;
+        };
+        ratings?: {
+          overall?: number;
+        };
+        metrics?: {
           summary?: {
             annual_revenue?: number;
             adr?: number;
@@ -2891,19 +2892,20 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
     }>(`/listing/${propertyId}`, "GET");
     
     const p = response.payload;
+    const d = p.details;
     return {
       property_id: p.property_id,
-      title: p.title,
-      images: p.images || [],
-      bedrooms: p.bedrooms,
-      bathrooms: p.bathrooms,
-      accommodates: p.accommodates,
-      property_type: p.property_type,
-      rating: p.rating || null,
-      reviews: p.reviews || 0,
-      annual_revenue: p.stats?.summary?.annual_revenue || 0,
-      adr: p.stats?.summary?.adr || 0,
-      occupancy: p.stats?.summary?.occupancy || 0,
+      title: d.title,
+      images: d.images || [],
+      bedrooms: d.bedrooms,
+      bathrooms: d.bathrooms,
+      accommodates: d.accommodates,
+      property_type: d.property_type,
+      rating: p.ratings?.overall || null,
+      reviews: d.reviews || 0,
+      annual_revenue: p.metrics?.summary?.annual_revenue || 0,
+      adr: p.metrics?.summary?.adr || 0,
+      occupancy: p.metrics?.summary?.occupancy || 0,
     };
   } catch (error) {
     console.error(`[getSinglePropertyDetails] Error fetching property ${propertyId}:`, error);

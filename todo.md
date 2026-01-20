@@ -2401,3 +2401,26 @@ When a property is set, applicable tools should automatically filter to show onl
 - [ ] Step 4 (Find Best Deal): Redesign comparison view
 - [ ] Step 5 (Map View): Ensure consistent styling with Tesla Dashboard
 - [ ] Maintain consistent color palette across all steps
+
+
+## Image Loading Workaround (COMPLETED - Jan 20, 2026)
+
+### Problem:
+- Similar Properties section showing placeholder icons instead of actual property photos
+- Radius search endpoint doesn't return images
+- Broken CDN fallback URL pattern returning 404 errors
+
+### Solution:
+- [x] Research available image sources and API endpoints
+- [x] Found that /listing/{listingId} endpoint returns images in payload.details.images
+- [x] Fixed getSinglePropertyDetails to correctly parse nested response structure
+- [x] Removed broken CDN fallback URL pattern from exploreListingsInRadius
+- [x] enrichListingsWithImages now properly fetches images via getSinglePropertyDetails
+- [x] All 4 vitest tests pass (image-fetch.test.ts)
+- [x] Verified in browser: property cards now show actual Airbnb listing photos
+
+### Technical Details:
+- API endpoint: GET /listing/{listingId}
+- Images location: payload.details.images (array of URLs)
+- Image CDN: https://a0.muscache.com/im/pictures/miso/Hosting-{id}/original/...
+- enrichListingsWithImages fetches images for top 10 listings without images
