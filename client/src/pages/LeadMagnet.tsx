@@ -363,8 +363,10 @@ export default function LeadMagnet() {
   useEffect(() => {
     // When property context changes, auto-populate bedroom filter for apples-to-apples comparison
     if (hasProperty && myProperty?.bedrooms) {
+      // Step 2: Explore Listings - set bedroom filter for apples-to-apples
       setExploreBedroomFilter(myProperty.bedrooms);
-      // Also update the validate form if not already set
+      
+      // Step 3: Validate the Deal - auto-populate form if not already set
       if (!address && myProperty.address) {
         setAddress(myProperty.address);
         setBedrooms(String(myProperty.bedrooms));
@@ -373,6 +375,8 @@ export default function LeadMagnet() {
           setMonthlyRent(String(myProperty.monthlyRent));
         }
       }
+      // Note: Step 4 (Find the Best Deal) is intentionally NOT auto-populated
+      // because it's for comparing multiple different properties
     }
   }, [hasProperty, myProperty]);
 

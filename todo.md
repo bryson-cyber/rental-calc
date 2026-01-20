@@ -1993,3 +1993,25 @@ User enters ONE property address → All 5 tools auto-populate with relevant, ap
 - [ ] PDF export generates professional analysis report
 - [x] Tools feel like chapters in one story, not separate utilities
 
+
+
+## Extend Apples-to-Apples to All Tools (Jan 20, 2026)
+
+### Goal:
+When a property is set, applicable tools should automatically filter to show only data matching the property's bedroom count.
+
+### Where Apples-to-Apples Applies:
+- Step 2 (Explore Listings): Show only properties matching your BR count
+- Step 3 (Validate the Deal): Auto-populate your property details, comps filtered to matching BR
+- Step 5 (Map View): Filter comps to matching BR count
+
+### Where It Doesn't Apply:
+- Step 1 (See Real Revenue): Shows market-level aggregate data (not property-specific)
+- Step 4 (Find the Best Deal): Comparing different properties by design
+
+### Tasks:
+- [x] Step 2 (Explore Listings): Auto-set bedroom filter dropdown to match property BR + visual indicator
+- [x] Step 3 (Validate the Deal): Auto-populate address, bedrooms, bathrooms from property context
+- [x] Step 5 (Map View): Auto-filter to matching BR + visual indicator + distance column
+- [x] Test complete flow with property context - VERIFIED: All tools auto-populate correctly with apples-to-apples filtering
+
