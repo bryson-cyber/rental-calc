@@ -1783,3 +1783,43 @@ The getZipcodesInSubmarket procedure now:
 - [x] Update markers to use filteredListings instead of all listings
 - [x] Update thresholds calculation to use filteredListings
 - [x] Test bedroom filtering with various selections - working correctly
+
+
+## Bedroom Filter Bug Fix (Jan 19, 2026) - VERIFIED WORKING
+
+### Bug Report:
+- Bedroom filter on map view is not working or not visible
+- User cannot filter properties by bedroom count on the map
+
+### Investigation Results:
+- Bedroom filter IS working correctly
+- Filter dropdown shows "All Bedrooms (25)" by default
+- Selecting "2 Bedrooms" correctly filters to 6 properties
+- Map markers update to show only filtered properties
+- Revenue thresholds recalculate based on filtered properties
+- Stats (Properties Shown, Avg Revenue) update correctly
+
+### Tasks:
+- [x] Investigate why bedroom filter is not showing or not working - WORKING
+- [x] Fix the bedroom filter implementation - NO FIX NEEDED
+- [x] Test with zip code 33139 - VERIFIED
+
+
+## Map View Improvements (Jan 20, 2026)
+
+### Bug Fix - Occupancy Display:
+- [x] Fix occupancy percentage showing 5810% instead of 58.10% (removed *100 since API returns percentage)
+
+### New Feature - My Property Address:
+- [x] Add address input field for user's property on map view
+- [x] Geocode the entered address to get coordinates
+- [x] Display user's property as a distinct marker on the map (blue house icon with "MY PROPERTY" label)
+- [x] Show distance from user's property to each competitor property (Haversine formula)
+- [x] Update property popup to show distance to user's property
+- [x] Add stats showing closest competitor and average distance
+
+### UI Improvement - Map Markers:
+- [x] Redesign map marker dots to be more visually appealing (gradient backgrounds, drop shadows)
+- [x] Add revenue amount inside markers (compact format: $50K, $1.2M)
+- [x] Add hover effects for better interactivity (scale animation)
+- [x] Improve popup card design with colored sections and better layout

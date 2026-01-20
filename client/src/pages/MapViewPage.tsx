@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MapView } from '@/components/Map';
 import { HierarchicalLocationSelector, LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { trpc } from '@/lib/trpc';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -26,12 +26,19 @@ interface PropertyListing {
   propertyType: string;
   airbnbUrl: string;
   thumbnailUrl: string | null;
+  distanceToMyProperty?: number; // Distance in miles
 }
 
 interface RevenueThresholds {
   high: number;  // Top 33%
   low: number;   // Bottom 33%
   average: number;
+}
+
+interface MyPropertyLocation {
+  address: string;
+  lat: number;
+  lng: number;
 }
 
 function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
@@ -53,6 +60,29 @@ function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
   };
 }
 
+// Calculate distance between two points in miles using Haversine formula
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function formatDistance(miles: number): string {
+  if (miles < 0.1) {
+    return `${Math.round(miles * 5280)} ft`;
+  } else if (miles < 1) {
+    return `${(miles).toFixed(2)} mi`;
+  } else {
+    return `${(miles).toFixed(1)} mi`;
+  }
+}
+
 function getMarkerColor(revenue: number, thresholds: RevenueThresholds, customThreshold: number | null): string {
   if (customThreshold !== null) {
     return revenue >= customThreshold ? '#16a34a' : '#9ca3af'; // Green or gray
@@ -72,6 +102,144 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Create improved marker element with better styling
+function createMarkerElement(color: string, revenue: number): HTMLDivElement {
+  const markerElement = document.createElement('div');
+  markerElement.innerHTML = `
+    <div style="
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    " class="property-marker">
+      <div style="
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%);
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <span style="
+          color: white;
+          font-size: 10px;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        ">${formatCompactCurrency(revenue)}</span>
+      </div>
+      <div style="
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid white;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+      "></div>
+    </div>
+  `;
+  
+  // Add hover effect
+  const marker = markerElement.querySelector('.property-marker') as HTMLElement;
+  if (marker) {
+    marker.addEventListener('mouseenter', () => {
+      marker.style.transform = 'scale(1.15)';
+    });
+    marker.addEventListener('mouseleave', () => {
+      marker.style.transform = 'scale(1)';
+    });
+  }
+  
+  return markerElement;
+}
+
+// Create "My Property" marker with distinct styling
+function createMyPropertyMarker(): HTMLDivElement {
+  const markerElement = document.createElement('div');
+  markerElement.innerHTML = `
+    <div style="
+      position: relative;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    " class="my-property-marker">
+      <div style="
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: 4px solid white;
+        border-radius: 50%;
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5), 0 4px 8px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <div style="
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 10px solid white;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+      "></div>
+      <div style="
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #3b82f6;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      ">MY PROPERTY</div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+    </style>
+  `;
+  
+  return markerElement;
+}
+
+// Adjust color brightness
+function adjustColor(color: string, amount: number): string {
+  const hex = color.replace('#', '');
+  const r = Math.max(0, Math.min(255, parseInt(hex.slice(0, 2), 16) + amount));
+  const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
+  const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// Format currency in compact form for markers
+function formatCompactCurrency(amount: number): string {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M`;
+  } else if (amount >= 1000) {
+    return `$${Math.round(amount / 1000)}K`;
+  }
+  return `$${amount}`;
+}
+
 export default function MapViewPage() {
   const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
   const [listings, setListings] = useState<PropertyListing[]>([]);
@@ -82,122 +250,167 @@ export default function MapViewPage() {
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
   
+  // My Property state
+  const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
+  const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
+  const [isGeocodingMyProperty, setIsGeocodingMyProperty] = useState(false);
+  const [myPropertyError, setMyPropertyError] = useState<string | null>(null);
+  
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const myPropertyMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   
-  // Filter listings by bedroom count
+  // Filter listings by bedroom count and add distance to my property
   const filteredListings = useMemo(() => {
-    if (bedroomFilter === 'all') return listings;
-    const bedroomCount = parseInt(bedroomFilter);
-    return listings.filter(l => l.bedrooms === bedroomCount);
-  }, [listings, bedroomFilter]);
+    let filtered = bedroomFilter === 'all' ? listings : listings.filter(l => l.bedrooms === parseInt(bedroomFilter));
+    
+    // Add distance to my property if set
+    if (myPropertyLocation) {
+      filtered = filtered.map(l => ({
+        ...l,
+        distanceToMyProperty: calculateDistance(
+          myPropertyLocation.lat,
+          myPropertyLocation.lng,
+          l.latitude,
+          l.longitude
+        )
+      }));
+    }
+    
+    return filtered;
+  }, [listings, bedroomFilter, myPropertyLocation]);
   
   // Calculate thresholds based on filtered listings
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
+  // Geocode my property address
+  const geocodeMyProperty = useCallback(async () => {
+    if (!myPropertyAddress.trim()) {
+      setMyPropertyError('Please enter an address');
+      return;
+    }
+    
+    if (!geocoderRef.current && window.google) {
+      geocoderRef.current = new google.maps.Geocoder();
+    }
+    
+    if (!geocoderRef.current) {
+      setMyPropertyError('Geocoder not available. Please try again.');
+      return;
+    }
+    
+    setIsGeocodingMyProperty(true);
+    setMyPropertyError(null);
+    
+    try {
+      const result = await geocoderRef.current.geocode({ address: myPropertyAddress });
+      
+      if (result.results && result.results.length > 0) {
+        const location = result.results[0].geometry.location;
+        const newLocation = {
+          address: result.results[0].formatted_address,
+          lat: location.lat(),
+          lng: location.lng()
+        };
+        setMyPropertyLocation(newLocation);
+        setMyPropertyAddress(result.results[0].formatted_address);
+        
+        // Center map on my property
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: newLocation.lat, lng: newLocation.lng });
+        }
+      } else {
+        setMyPropertyError('Address not found. Please try a different address.');
+      }
+    } catch (err) {
+      console.error('Geocoding error:', err);
+      setMyPropertyError('Failed to geocode address. Please try again.');
+    } finally {
+      setIsGeocodingMyProperty(false);
+    }
+  }, [myPropertyAddress]);
+  
+  // Clear my property
+  const clearMyProperty = useCallback(() => {
+    setMyPropertyLocation(null);
+    setMyPropertyAddress('');
+    setMyPropertyError(null);
+    
+    // Remove my property marker
+    if (myPropertyMarkerRef.current) {
+      myPropertyMarkerRef.current.map = null;
+      myPropertyMarkerRef.current = null;
+    }
+  }, []);
+  
   // Handle location search - accepts selection directly to avoid state timing issues
   const performSearch = useCallback(async (selection: LocationSelection) => {
-    if (!selection) return;
-    
     setIsLoading(true);
     setError(null);
     setListings([]);
     
     try {
-      let marketId: string | undefined;
-      let isMarket = false;
+      // Determine which ID to use for fetching listings
+      let marketId: string | null = null;
       
-      // Determine what to search based on selection
-      // Priority: submarket > market (for zip codes, we need a parent market/submarket)
       if (selection.submarket) {
-        // Search by submarket
         marketId = selection.submarket.id;
-        isMarket = false;
       } else if (selection.market) {
-        // Search by city/market
         marketId = selection.market.id;
-        isMarket = !(selection.market as any).isSubmarketAsMarket;
-      } else if (selection.zipcode && selection.coordinates) {
-        // Zip code with coordinates but no market - center map on coordinates
-        console.log('[MapView] Centering map on coordinates:', selection.coordinates);
-        if (mapRef.current) {
-          mapRef.current.setCenter(selection.coordinates);
-          mapRef.current.setZoom(12);
-        }
-        setError('No market data available for this area. The map is centered on the zip code location.');
-        setIsLoading(false);
-        return;
-      } else if (selection.zipcode) {
-        // Zip code only without coordinates - need to show error
-        setError('Please select a city/metro area first, then choose a zip code');
-        setIsLoading(false);
-        return;
       }
       
       if (!marketId) {
-        setError('Please select a location to search');
+        setError('Please select a city/metro or neighborhood to view listings.');
         setIsLoading(false);
         return;
       }
       
-      console.log('[MapView] Fetching listings for marketId:', marketId, 'isMarket:', isMarket);
+      console.log('[MapView] Fetching listings for market:', marketId);
       
-      // Fetch listings (get more for map view)
-      // Use GET request for tRPC query with input as URL parameter
-      // Note: tRPC with superjson requires wrapping input in { json: ... } for GET requests
-      const input = encodeURIComponent(JSON.stringify({
-        json: {
-          submarketId: marketId,
-          page: 1,
-          pageSize: 100,
-        }
-      }));
-      const response = await fetch(`/api/trpc/compData.getListings?input=${input}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      // Fetch listings using tRPC - use GET request format for queries
+      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId } }))}`);
       const data = await response.json();
-      console.log('[MapView] API response:', data);
       
-      const result = data.result?.data?.json || data.result?.data || { listings: [], totalCount: 0 };
-      
-      console.log('[MapView] Listings count:', result.listings?.length || 0);
-      
-      // Transform to our format with coordinates
-      const transformedListings: PropertyListing[] = (result.listings || [])
-        .filter((l: any) => l.latitude && l.longitude) // Only include listings with coordinates
-        .map((l: any) => ({
-          id: l.id,
-          title: l.title,
-          revenue: l.annual_revenue || l.revenue || 0,
-          occupancy: l.occupancy || 0,
-          adr: l.adr || 0,
-          bedrooms: l.bedrooms || 0,
-          bathrooms: l.bathrooms || 0,
-          accommodates: l.accommodates || 0,
-          rating: l.rating,
-          reviews: l.reviews || 0,
-          latitude: l.latitude,
-          longitude: l.longitude,
-          propertyType: l.property_type || 'unknown',
-          airbnbUrl: l.airbnb_url || '',
-          thumbnailUrl: l.image_url || null,
-        }));
-      
-      console.log('[MapView] Transformed listings with coordinates:', transformedListings.length);
-      
-      setListings(transformedListings);
-      
-      // Center map on listings
-      if (transformedListings.length > 0 && mapRef.current) {
-        const bounds = new google.maps.LatLngBounds();
-        transformedListings.forEach(l => {
-          bounds.extend({ lat: l.latitude, lng: l.longitude });
-        });
-        mapRef.current.fitBounds(bounds);
-        console.log('[MapView] Map centered on bounds');
-      } else if (transformedListings.length === 0) {
+      if (data.result?.data?.json?.listings) {
+        const fetchedListings = data.result.data.json.listings;
+        console.log('[MapView] Received', fetchedListings.length, 'listings');
+        
+        // Filter listings with valid coordinates
+        const listingsWithCoords = fetchedListings
+          .filter((l: any) => l.latitude && l.longitude)
+          .map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            revenue: l.annual_revenue || l.revenue || 0,
+            occupancy: l.occupancy || 0,
+            adr: l.adr || 0,
+            bedrooms: l.bedrooms || 0,
+            bathrooms: l.bathrooms || 0,
+            accommodates: l.accommodates || 0,
+            rating: l.rating,
+            reviews: l.reviews || 0,
+            latitude: l.latitude,
+            longitude: l.longitude,
+            propertyType: l.property_type || l.propertyType || 'Unknown',
+            airbnbUrl: l.airbnb_url || l.airbnbUrl || '#',
+            thumbnailUrl: l.thumbnail_url || l.thumbnailUrl || null,
+          }));
+        
+        console.log('[MapView] Listings with coordinates:', listingsWithCoords.length);
+        setListings(listingsWithCoords);
+        
+        // Center map on first listing
+        if (listingsWithCoords.length > 0 && mapRef.current) {
+          const bounds = new google.maps.LatLngBounds();
+          listingsWithCoords.forEach((l: PropertyListing) => {
+            bounds.extend({ lat: l.latitude, lng: l.longitude });
+          });
+          mapRef.current.fitBounds(bounds);
+        }
+      } else {
+        console.log('[MapView] No listings in response');
         setError('No listings with coordinates found for this location. Try a different area.');
       }
     } catch (err) {
@@ -214,6 +427,55 @@ export default function MapViewPage() {
       performSearch(locationSelection);
     }
   }, [locationSelection, performSearch]);
+  
+  // Update my property marker
+  useEffect(() => {
+    if (!mapRef.current || !window.google) return;
+    
+    // Remove existing my property marker
+    if (myPropertyMarkerRef.current) {
+      myPropertyMarkerRef.current.map = null;
+      myPropertyMarkerRef.current = null;
+    }
+    
+    // Create new my property marker if location is set
+    if (myPropertyLocation) {
+      const markerElement = createMyPropertyMarker();
+      
+      myPropertyMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
+        position: { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng },
+        title: 'My Property',
+        content: markerElement,
+        zIndex: 1000, // Ensure it's on top
+      });
+      
+      // Add click listener
+      myPropertyMarkerRef.current.addListener('click', () => {
+        if (!infoWindowRef.current) {
+          infoWindowRef.current = new google.maps.InfoWindow();
+        }
+        
+        const content = `
+          <div style="max-width: 250px; font-family: system-ui, sans-serif; padding: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+              </div>
+              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1d4ed8;">My Property</h3>
+            </div>
+            <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.4;">${myPropertyLocation.address}</p>
+          </div>
+        `;
+        
+        infoWindowRef.current.setContent(content);
+        infoWindowRef.current.open(mapRef.current, myPropertyMarkerRef.current);
+      });
+    }
+  }, [myPropertyLocation]);
   
   // Update markers when listings or thresholds change
   useEffect(() => {
@@ -240,19 +502,8 @@ export default function MapViewPage() {
         useCustomThreshold ? customThreshold : null
       );
       
-      // Create custom marker element
-      const markerElement = document.createElement('div');
-      markerElement.innerHTML = `
-        <div style="
-          width: 24px;
-          height: 24px;
-          background-color: ${color};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          cursor: pointer;
-        "></div>
-      `;
+      // Create improved marker element
+      const markerElement = createMarkerElement(color, listing.revenue);
       
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map: mapRef.current,
@@ -265,34 +516,49 @@ export default function MapViewPage() {
       marker.addListener('click', () => {
         setSelectedProperty(listing);
         
+        const distanceHtml = listing.distanceToMyProperty !== undefined ? `
+          <div style="margin-top: 8px; padding: 8px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 6px; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+            </svg>
+            <span style="font-size: 11px; color: #1d4ed8; font-weight: 600;">
+              ${formatDistance(listing.distanceToMyProperty)} from your property
+            </span>
+          </div>
+        ` : '';
+        
         const content = `
-          <div style="max-width: 280px; font-family: system-ui, sans-serif;">
-            ${listing.thumbnailUrl ? `<img src="${listing.thumbnailUrl}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px 8px 0 0;" />` : ''}
-            <div style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; line-height: 1.3;">${listing.title}</h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-                <div>
-                  <div style="color: #666;">Annual Revenue</div>
-                  <div style="font-weight: 600; color: #16a34a;">${formatCurrency(listing.revenue)}</div>
+          <div style="max-width: 300px; font-family: system-ui, sans-serif;">
+            ${listing.thumbnailUrl ? `<img src="${listing.thumbnailUrl}" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px 8px 0 0;" />` : ''}
+            <div style="padding: 14px;">
+              <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600; line-height: 1.4; color: #1f2937;">${listing.title}</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                <div style="background: #f0fdf4; padding: 8px; border-radius: 6px;">
+                  <div style="color: #166534; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Annual Revenue</div>
+                  <div style="font-weight: 700; color: #16a34a; font-size: 14px;">${formatCurrency(listing.revenue)}</div>
                 </div>
-                <div>
-                  <div style="color: #666;">Occupancy</div>
-                  <div style="font-weight: 600;">${Math.round(listing.occupancy * 100)}%</div>
+                <div style="background: #fefce8; padding: 8px; border-radius: 6px;">
+                  <div style="color: #854d0e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Occupancy</div>
+                  <div style="font-weight: 700; color: #ca8a04; font-size: 14px;">${Math.round(listing.occupancy)}%</div>
                 </div>
-                <div>
-                  <div style="color: #666;">Nightly Rate</div>
-                  <div style="font-weight: 600;">${formatCurrency(listing.adr)}</div>
+                <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
+                  <div style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Nightly Rate</div>
+                  <div style="font-weight: 700; color: #334155; font-size: 14px;">${formatCurrency(listing.adr)}</div>
                 </div>
-                <div>
-                  <div style="color: #666;">Rating</div>
-                  <div style="font-weight: 600;">${listing.rating ? `${listing.rating} ⭐` : 'N/A'}</div>
+                <div style="background: #faf5ff; padding: 8px; border-radius: 6px;">
+                  <div style="color: #7c3aed; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Rating</div>
+                  <div style="font-weight: 700; color: #7c3aed; font-size: 14px;">${listing.rating ? `${listing.rating} ⭐` : 'N/A'}</div>
                 </div>
               </div>
-              <div style="margin-top: 8px; font-size: 11px; color: #666;">
-                ${listing.bedrooms} BR · ${listing.bathrooms} BA · ${listing.accommodates} guests
+              <div style="margin-top: 10px; font-size: 11px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">
+                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.bedrooms} BR</span>
+                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.bathrooms} BA</span>
+                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.accommodates} guests</span>
               </div>
+              ${distanceHtml}
               <a href="${listing.airbnbUrl}" target="_blank" rel="noopener noreferrer" 
-                 style="display: block; margin-top: 12px; padding: 8px 12px; background: #C9A962; color: white; text-align: center; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500;">
+                 style="display: block; margin-top: 12px; padding: 10px 14px; background: linear-gradient(135deg, #C9A962 0%, #b8984f 100%); color: white; text-align: center; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; box-shadow: 0 2px 4px rgba(201, 169, 98, 0.3);">
                 View on Airbnb
               </a>
             </div>
@@ -381,6 +647,64 @@ export default function MapViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Legend and Controls */}
           <div className="lg:col-span-1 space-y-4">
+            {/* My Property Section */}
+            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Home className="w-4 h-4 text-blue-600" />
+                  My Property
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Enter your property address to see how far competitors are from your location.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter your address..."
+                    value={myPropertyAddress}
+                    onChange={(e) => setMyPropertyAddress(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={geocodeMyProperty}
+                    disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
+                    size="sm"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isGeocodingMyProperty ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Navigation className="w-3 h-3 mr-1" />
+                    )}
+                    Set Location
+                  </Button>
+                  {myPropertyLocation && (
+                    <Button
+                      onClick={clearMyProperty}
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                {myPropertyError && (
+                  <p className="text-xs text-red-600">{myPropertyError}</p>
+                )}
+                {myPropertyLocation && (
+                  <div className="p-2 bg-blue-100 rounded-lg text-xs text-blue-800">
+                    <div className="font-medium">📍 Location Set</div>
+                    <div className="truncate">{myPropertyLocation.address}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
             {/* Threshold Controls */}
             <Card>
               <CardHeader className="pb-3">
@@ -511,6 +835,28 @@ export default function MapViewPage() {
                         {filteredListings.length > 0 ? formatCurrency(Math.max(...filteredListings.map(l => l.revenue))) : '—'}
                       </span>
                     </div>
+                    {myPropertyLocation && (
+                      <>
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Closest Competitor</span>
+                            <span className="font-medium text-blue-600">
+                              {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
+                                ? formatDistance(Math.min(...filteredListings.map(l => l.distanceToMyProperty || Infinity)))
+                                : '—'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Avg Distance</span>
+                            <span className="font-medium text-blue-600">
+                              {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
+                                ? formatDistance(filteredListings.reduce((sum, l) => sum + (l.distanceToMyProperty || 0), 0) / filteredListings.length)
+                                : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -526,6 +872,10 @@ export default function MapViewPage() {
                 initialZoom={11}
                 onMapReady={(map) => {
                   mapRef.current = map;
+                  // Initialize geocoder
+                  if (window.google) {
+                    geocoderRef.current = new google.maps.Geocoder();
+                  }
                 }}
               />
             </Card>
