@@ -2034,3 +2034,28 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Root cause: Form state wasn't syncing with existing property values when editing
 - [x] Fix: Added useEffect to sync form state with myProperty, and initialized form fields from existing property values
 
+
+
+## Bug Fix: Step 5 Map Not Auto-Searching (Jan 20, 2026) - FIXED
+
+### Issue:
+- When user sets a property and clicks "See on Map" from the property card, Step 5 doesn't auto-search
+- User has to manually type in location details to see the map
+- Expected: Map should auto-populate with property's zip code and search automatically
+
+### Root Cause:
+- The `getListingsByZipcode` endpoint was missing from the router
+- MapViewContent was trying to call this endpoint but it didn't exist
+
+### Fix:
+- [x] Added `getListingsByZipcode` endpoint to compData router
+- [x] Endpoint uses zip code geocoding to find market/submarket and fetch listings
+- [x] Auto-search now triggers correctly when navigating to Step 5
+
+### Verified Working:
+- [x] Zip code auto-populates from property address (80202)
+- [x] Location hierarchy auto-selects (State → Denver → LoDo → 80202)
+- [x] Property address auto-fills in "My Property" section
+- [x] Map loads with property markers
+- [x] Filters to matching bedroom count (apples-to-apples)
+

@@ -1893,6 +1893,115 @@ export const appRouter = router({
           };
         }
       }),
+
+    // Get listings by zip code - auto-finds market/submarket and fetches listings
+    getListingsByZipcode: publicProcedure
+      .input(z.object({
+        zipcode: z.string().length(5),
+        pageSize: z.number().int().min(1).max(100).default(50),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[CompData.getListingsByZipcode] Looking up zip code: ${input.zipcode}`);
+          
+          // First, geocode the zip code to find the market/submarket
+          const geoResult = await geocodeZipCodeToMarket(input.zipcode);
+          
+          if (!geoResult.success) {
+            console.log(`[CompData.getListingsByZipcode] Geocode failed:`, geoResult.error);
+            return {
+              success: false,
+              error: geoResult.error || 'Could not find market for this zip code',
+              listings: [],
+              totalCount: 0,
+              market: null,
+              submarket: null,
+            };
+          }
+          
+          // Get the market ID to fetch listings from
+          let marketId: string | null = null;
+          if (geoResult.submarket) {
+            marketId = geoResult.submarket.id;
+          } else if (geoResult.market) {
+            marketId = geoResult.market.id;
+          }
+          
+          if (!marketId) {
+            return {
+              success: false,
+              error: 'No market found for this zip code',
+              listings: [],
+              totalCount: 0,
+              market: geoResult.market || null,
+              submarket: geoResult.submarket || null,
+            };
+          }
+          
+          console.log(`[CompData.getListingsByZipcode] Fetching listings for market: ${marketId}`);
+          
+          // Fetch listings for this market
+          const result = await getSubmarketListings(marketId, {
+            limit: input.pageSize,
+            offset: 0,
+            orderBy: 'revenue',
+            orderDirection: 'desc',
+          });
+          
+          if (!result) {
+            return {
+              success: false,
+              error: 'Could not fetch listings',
+              listings: [],
+              totalCount: 0,
+              market: geoResult.market || null,
+              submarket: geoResult.submarket || null,
+            };
+          }
+          
+          // Transform listings to match frontend interface
+          const listings = result.listings.map((listing: any) => ({
+            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
+            title: listing.title || 'Untitled Listing',
+            property_type: listing.property_type || 'unknown',
+            bedrooms: listing.bedrooms || 0,
+            bathrooms: listing.bathrooms || 0,
+            accommodates: listing.accommodates || 0,
+            annual_revenue: listing.annual_revenue || listing.revenue_ltm || listing.revenue || 0,
+            adr: listing.adr || listing.average_daily_rate_ltm || 0,
+            occupancy: listing.occupancy || listing.occupancy_rate_ltm || 0,
+            rating: listing.rating || null,
+            reviews: listing.reviews || 0,
+            airbnb_url: listing.airbnb_url || listing.airbnb_property_url || listing.url || `https://www.airbnb.com/rooms/${listing.airbnb_property_id || listing.airbnb_listing_id || ''}`,
+            image_url: listing.image_url || listing.thumbnail_url || (listing.images && listing.images[0]) || '',
+            is_superhost: listing.is_superhost || listing.superhost || false,
+            latitude: listing.latitude || listing.location?.lat || null,
+            longitude: listing.longitude || listing.location?.lng || null,
+            exact_location: listing.exact_location || false,
+          }));
+          
+          console.log(`[CompData.getListingsByZipcode] Found ${listings.length} listings for zip ${input.zipcode}`);
+          
+          return {
+            success: true,
+            listings,
+            totalCount: result.total_count || listings.length,
+            market: geoResult.market || null,
+            submarket: geoResult.submarket || null,
+            coordinates: geoResult.coordinates,
+          };
+        } catch (error) {
+          console.error('[CompData.getListingsByZipcode] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch listings',
+            listings: [],
+            totalCount: 0,
+            market: null,
+            submarket: null,
+          };
+        }
+      }),
   }),
 
   bulkSummary: router({
