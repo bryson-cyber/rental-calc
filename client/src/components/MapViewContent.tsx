@@ -812,8 +812,8 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         
         {/* Map and Controls */}
         <div className="flex flex-col xl:flex-row gap-6">
-          {/* Map - Show first on mobile/tablet, second on desktop */}
-          <div className="order-1 xl:order-2 xl:flex-1">
+          {/* Map - Show AFTER controls on all screen sizes */}
+          <div className="order-2 xl:order-2 xl:flex-1">
             <Card className="overflow-hidden">
               <MapView
                 className="h-[400px] md:h-[500px] xl:h-[600px]"
@@ -836,8 +836,8 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
             )}
           </div>
           
-          {/* Legend and Controls - Show second on mobile/tablet, first (sidebar) on desktop */}
-          <div className="order-2 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4">
+          {/* Legend and Controls - Show BEFORE map on all screen sizes */}
+          <div className="order-1 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4">
             {/* My Property Section - Compact view when property is set from context */}
             {hasProperty && myProperty ? (
               <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">

@@ -2170,3 +2170,25 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Made "Your Property" card compact when property is set from context
 - [x] Shows address, bedroom/bathroom count in a clean single-row layout
 - [x] Removed redundant input fields when property is already set
+
+
+## CRITICAL Bug: Step 5 My Property Input Missing (Jan 20, 2026)
+
+### Issue:
+- User cannot see the option to put their address on the map in Step 5
+- The "My Property" input section was accidentally removed during UI improvements
+- Need to restore the address input functionality
+
+### Tasks:
+- [ ] Restore the "My Property" address input section in MapViewContent
+- [ ] Ensure users can enter their property address directly in Step 5
+- [ ] Keep the compact view when property is already set from context
+- [ ] Test the full flow works correctly
+
+
+## CRITICAL Bug: Step 5 My Property Section Missing (Jan 20, 2026) - FIXED
+
+- [x] Issue: "My Property" section was not visible in Step 5 Map View
+- [x] Root cause: The CSS order was showing the map FIRST on mobile/tablet, pushing "My Property" below the fold
+- [x] Fix: Changed the order so controls (My Property, Revenue Thresholds) show BEFORE the map on all screen sizes
+- [x] Verified: "My Property" input section is now visible immediately when opening Step 5
