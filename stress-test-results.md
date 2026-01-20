@@ -80,3 +80,51 @@ The stress testing revealed that the system handles most inputs well, with prope
 3. ✅ isSubmarketAsMarket detection (was returning wrong state)
 4. ✅ Loading spinner added to map
 5. ✅ Distance filter feature added
+
+
+## Test 3: Texas → Austin (Market with Neighborhoods)
+- **Market Size**: 24,356 listings
+- **Listings Returned**: 25
+- **Status**: ✅ PASSED
+
+### Results:
+- Map auto-centered on Austin, TX ✅
+- Markers displayed with revenue-based color coding ✅
+- Summary stats calculated correctly ✅
+  - Properties Shown: 25
+  - Avg Revenue: $573,595
+  - Top Performer: $1,292,737
+- Revenue thresholds calculated:
+  - Top 33%: ≥ $588,036 (green)
+  - Middle 33%: $418,931 - $588,036 (yellow)
+  - Bottom 33%: < $418,931 (red)
+- Neighborhood dropdown available and loading ✅
+- Filters working (Bedrooms, Property Type, Sort By) ✅
+
+### Top Properties Found:
+1. 20-acre Ranch for Events - 28BR/28.5BA - $1,292,737/year
+2. Inn Cahoots on 6th - 15BR/10.5BA - $956,388/year - 5.0 rating
+3. The Gatsby Mansion Waterfront - 12BR/11.5BA - $940,756/year - 5.0 rating
+
+
+
+## Test 4: Quick Search by Zip Code (85308 - Phoenix/Scottsdale)
+- **Zip Code**: 85308
+- **Auto-detected Market**: Phoenix/Scottsdale
+- **Auto-selected Neighborhood**: Deer Valley
+- **Listings Returned**: 25
+- **Status**: ✅ PASSED
+
+### Results:
+- Zip code correctly identified market ✅
+- Neighborhood auto-selected based on zip ✅
+- Map auto-centered on Phoenix/Glendale area ✅
+- Summary stats calculated:
+  - Market Average: $185,699
+  - Top 33%: ≥ $157,196
+
+### Top Properties Found:
+1. Large Groups Welcome | 35 Beds - 18BR/9.5BA - $415,126/year
+2. New Best Location in Scottsdale - 9BR/6.5BA - $400,408/year - 5.0 rating
+3. Discounts! Direct Message - 10BR/8BA - $334,157/year
+
