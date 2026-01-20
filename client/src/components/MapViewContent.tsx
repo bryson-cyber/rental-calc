@@ -267,6 +267,9 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   const [lastPropertyId, setLastPropertyId] = useState<string | null>(null);
   
+  // Track when marker library is ready
+  const [markerLibraryReady, setMarkerLibraryReady] = useState(false);
+  
   // Reset auto-populated state when property changes
   useEffect(() => {
     const currentPropertyId = myProperty?.address || null;
@@ -434,7 +437,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       const isMarketLevel = selection.level === 'market' && !isSubmarketAsMarket;
       // Search level determined
       
-      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel } }))}`);
+      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel, pageSize: 50 } }))}`);
       const data = await response.json();
       
       if (data.result?.data?.json?.listings) {
@@ -566,7 +569,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         console.log('[MapView] Auto-searching by zip code:', zipCode);
         
         // Fetch listings for this zip code
-        fetch(`/api/trpc/compData.getListingsByZipcode?input=${encodeURIComponent(JSON.stringify({ json: { zipcode: zipCode } }))}`)
+        fetch(`/api/trpc/compData.getListingsByZipcode?input=${encodeURIComponent(JSON.stringify({ json: { zipcode: zipCode, pageSize: 50 } }))}`)
           .then(response => response.json())
           .then(data => {
             if (data.result?.data?.json?.listings) {
@@ -655,7 +658,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   }, [enforceApplesToApples, contextBedroomFilter]);
   
   useEffect(() => {
-    if (!mapRef.current || !window.google || !window.google.maps.marker?.AdvancedMarkerElement) return;
+    if (!mapRef.current || !markerLibraryReady || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
     
     if (myPropertyMarkerRef.current) {
       myPropertyMarkerRef.current.map = null;
@@ -697,11 +700,11 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         infoWindowRef.current.open(mapRef.current, myPropertyMarkerRef.current);
       });
     }
-  }, [myPropertyLocation]);
+  }, [myPropertyLocation, markerLibraryReady]);
   
   useEffect(() => {
-    if (!mapRef.current || !window.google || !window.google.maps.marker?.AdvancedMarkerElement) {
-      console.log('[MapView] Waiting for map and marker library to be ready...');
+    if (!mapRef.current || !markerLibraryReady || !window.google?.maps?.marker?.AdvancedMarkerElement) {
+      console.log('[MapView] Waiting for map and marker library to be ready...', { mapReady: !!mapRef.current, markerLibraryReady });
       return;
     }
     
@@ -790,7 +793,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       
       markersRef.current.push(marker);
     });
-  }, [filteredListings, listings.length, thresholds, useCustomThreshold, customThreshold]);
+  }, [filteredListings, listings.length, thresholds, useCustomThreshold, customThreshold, markerLibraryReady]);
   
   const getLocationName = () => {
     if (locationSelection?.zipcode) return locationSelection.zipcode;
@@ -883,6 +886,18 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   mapRef.current = map;
                   if (window.google) {
                     geocoderRef.current = new google.maps.Geocoder();
+                    
+                    // Check if marker library is ready, poll if not
+                    const checkMarkerLibrary = () => {
+                      if (window.google?.maps?.marker?.AdvancedMarkerElement) {
+                        console.log('[MapView] Marker library is ready');
+                        setMarkerLibraryReady(true);
+                      } else {
+                        console.log('[MapView] Waiting for marker library...');
+                        setTimeout(checkMarkerLibrary, 100);
+                      }
+                    };
+                    checkMarkerLibrary();
                   }
                 }}
               />

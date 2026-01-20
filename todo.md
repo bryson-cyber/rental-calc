@@ -2233,3 +2233,13 @@ When a property is set, applicable tools should automatically filter to show onl
 - [ ] Add loading spinner to map while fetching listings
 - [ ] Stress test Step 5 with various scenarios
 - [ ] Fix any bugs found during stress testing
+
+
+## Bug Fixes (Jan 20, 2026) - Round 2
+- [ ] Fix map markers not displaying on the map
+- [ ] Fix bedroom filter to start at 1 instead of 4
+
+
+## Bug Fixes (Jan 20, 2026) - Round 2
+- [x] Fix map markers not displaying on the map (added markerLibraryReady state)
+- [x] Fix bedroom filter to show more options (increased pageSize to 50)
