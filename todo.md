@@ -2227,3 +2227,9 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Update map markers to only show filtered properties
 - [x] Add distance column to comparable properties table
 - [x] Add "Sort by Distance" option
+
+
+## Loading Spinner & Stress Test (Jan 20, 2026)
+- [ ] Add loading spinner to map while fetching listings
+- [ ] Stress test Step 5 with various scenarios
+- [ ] Fix any bugs found during stress testing

@@ -40,3 +40,43 @@ The stress testing revealed that the system handles most inputs well, with prope
 - Google Places autocomplete for addresses
 - Recent searches
 - "Powered by Coach Inayah" branding (AirDNA removed)
+
+
+---
+
+# Step 5 Map View Stress Test Results (Jan 20, 2026)
+
+## Test 1: Florida → Orlando (Large Market)
+- **Market Size**: 63,790 listings
+- **Listings Returned**: 25
+- **Status**: ✅ PASSED
+
+### Results:
+- Map auto-centered on Orlando ✅
+- Markers displayed with revenue-based color coding ✅
+- Summary stats calculated correctly ✅
+  - Properties Shown: 25
+  - Avg Revenue: $682,593
+  - Top Performer: $1,149,459
+- Revenue thresholds calculated:
+  - Top 33%: ≥ $709,122 (green)
+  - Middle 33%: $549,417 - $709,122 (yellow)
+  - Bottom 33%: < $549,417 (red)
+- Console errors: None
+
+## Test 2: Arizona → Glendale (Submarket-as-Market)
+- **Market Type**: Submarket treated as market
+- **Status**: ✅ PASSED (after fix)
+
+### Results:
+- isSubmarketAsMarket detection working ✅
+- Returns Arizona listings (not Michigan) ✅
+- Map auto-centered on Glendale, AZ ✅
+- Neighborhood dropdown shows helpful message ✅
+
+## Bugs Fixed During Testing:
+1. ✅ Neighborhood dropdown UX for submarket-cities
+2. ✅ Map auto-centering on location selection
+3. ✅ isSubmarketAsMarket detection (was returning wrong state)
+4. ✅ Loading spinner added to map
+5. ✅ Distance filter feature added

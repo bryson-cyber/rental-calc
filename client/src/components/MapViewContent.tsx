@@ -874,7 +874,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         <div className="flex flex-col xl:flex-row gap-6">
           {/* Map - Show AFTER controls on all screen sizes */}
           <div className="order-2 xl:order-2 xl:flex-1">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden relative">
               <MapView
                 className="h-[400px] md:h-[500px] xl:h-[600px]"
                 initialCenter={{ lat: 36.1627, lng: -86.7816 }}
@@ -886,6 +886,19 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   }
                 }}
               />
+              
+              {/* Loading Overlay */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                  <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center gap-3">
+                    <Loader2 className="w-10 h-10 text-[#C9A962] animate-spin" />
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-800">Loading Properties</p>
+                      <p className="text-sm text-muted-foreground">Fetching comparable listings...</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
             
             {listings.length === 0 && !isLoading && (
