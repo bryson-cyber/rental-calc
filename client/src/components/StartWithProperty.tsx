@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useProperty, PropertyDetails } from '@/contexts/PropertyContext';
-import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { AddressAutocomplete, PlaceDetails } from '@/components/AddressAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -56,15 +56,18 @@ export function StartWithProperty({
     }
   }, [myProperty]);
   
-  // Selected place ID for geocoding
+  // Selected place ID and details for geocoding
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedPlaceDetails, setSelectedPlaceDetails] = useState<PlaceDetails | null>(null);
   
   // Handle address selection from autocomplete
-  const handleAddressSelect = (selectedAddress: string, placeId: string) => {
+  const handleAddressSelect = (selectedAddress: string, placeId: string, details?: PlaceDetails) => {
     setAddress(selectedAddress);
     setSelectedPlaceId(placeId);
-    // Note: Location details will be extracted from the address string
-    // or via geocoding when the property is set
+    if (details) {
+      setSelectedPlaceDetails(details);
+      console.log('[StartWithProperty] Received place details:', details);
+    }
   };
   
   // Extract location details from address string
@@ -115,7 +118,20 @@ export function StartWithProperty({
       return;
     }
     
-    const locationInfo = extractLocationFromAddress(address);
+    // Use place details from Google API if available, otherwise fall back to regex extraction
+    let locationInfo: { city?: string; state?: string; zipCode?: string };
+    
+    if (selectedPlaceDetails) {
+      locationInfo = {
+        city: selectedPlaceDetails.city,
+        state: selectedPlaceDetails.state,
+        zipCode: selectedPlaceDetails.zipCode,
+      };
+      console.log('[StartWithProperty] Using Google place details:', locationInfo);
+    } else {
+      locationInfo = extractLocationFromAddress(address);
+      console.log('[StartWithProperty] Falling back to regex extraction:', locationInfo);
+    }
     
     const property: PropertyDetails = {
       address,
@@ -126,7 +142,11 @@ export function StartWithProperty({
       bedrooms: parseInt(bedrooms) || 2,
       bathrooms: parseFloat(bathrooms) || 1,
       monthlyRent: monthlyRent ? parseFloat(monthlyRent) : undefined,
+      latitude: selectedPlaceDetails?.lat,
+      longitude: selectedPlaceDetails?.lng,
     };
+    
+    console.log('[StartWithProperty] Setting property:', property);
     
     setMyProperty(property);
     setIsExpanded(false);

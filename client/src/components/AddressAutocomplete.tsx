@@ -3,6 +3,7 @@
  * 
  * Uses the Manus proxy for Google Maps services - no API key needed from user.
  * Provides address suggestions as the user types.
+ * Fetches full place details including zip code when a place is selected.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -65,10 +66,22 @@ interface PlacePrediction {
   secondaryText: string;
 }
 
+// Full place details returned after selection
+export interface PlaceDetails {
+  address: string;
+  placeId: string;
+  zipCode?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  lat?: number;
+  lng?: number;
+}
+
 interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
-  onSelect?: (address: string, placeId: string) => void;
+  onSelect?: (address: string, placeId: string, details?: PlaceDetails) => void;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
@@ -93,6 +106,7 @@ export function AddressAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -107,6 +121,13 @@ export function AddressAutocomplete({
         
         autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
         sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        
+        // Create a hidden div for PlacesService (required by Google API)
+        const hiddenDiv = document.createElement('div');
+        hiddenDiv.style.display = 'none';
+        document.body.appendChild(hiddenDiv);
+        placesServiceRef.current = new google.maps.places.PlacesService(hiddenDiv);
+        
         setIsInitialized(true);
       } catch (error) {
         console.error("Failed to initialize Google Places:", error);
@@ -177,21 +198,84 @@ export function AddressAutocomplete({
     [onChange, fetchPredictions]
   );
 
+  // Fetch full place details using place_id
+  const fetchPlaceDetails = useCallback((placeId: string): Promise<PlaceDetails | null> => {
+    return new Promise((resolve) => {
+      if (!placesServiceRef.current) {
+        console.error('PlacesService not initialized');
+        resolve(null);
+        return;
+      }
+
+      placesServiceRef.current.getDetails(
+        {
+          placeId,
+          fields: ['address_components', 'formatted_address', 'geometry', 'place_id'],
+          sessionToken: sessionTokenRef.current!,
+        },
+        (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+            const details: PlaceDetails = {
+              address: place.formatted_address || '',
+              placeId: place.place_id || placeId,
+              lat: place.geometry?.location?.lat(),
+              lng: place.geometry?.location?.lng(),
+            };
+
+            // Extract address components
+            if (place.address_components) {
+              for (const component of place.address_components) {
+                const types = component.types;
+                
+                if (types.includes('postal_code')) {
+                  details.zipCode = component.long_name;
+                } else if (types.includes('locality')) {
+                  details.city = component.long_name;
+                } else if (types.includes('administrative_area_level_1')) {
+                  details.state = component.short_name; // Use short name for state (e.g., "TN" instead of "Tennessee")
+                } else if (types.includes('country')) {
+                  details.country = component.short_name;
+                }
+              }
+            }
+
+            console.log('[AddressAutocomplete] Fetched place details:', details);
+            resolve(details);
+          } else {
+            console.error('Failed to fetch place details:', status);
+            resolve(null);
+          }
+        }
+      );
+    });
+  }, []);
+
   // Handle prediction selection
   const handleSelect = useCallback(
-    (prediction: PlacePrediction) => {
+    async (prediction: PlacePrediction) => {
+      setIsLoading(true);
       onChange(prediction.description);
       setPredictions([]);
       setIsOpen(false);
       
+      // Fetch full place details
+      const details = await fetchPlaceDetails(prediction.placeId);
+      
       // Create a new session token for the next search
       sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
       
+      setIsLoading(false);
+      
       if (onSelect) {
-        onSelect(prediction.description, prediction.placeId);
+        // Pass the full details including zip code
+        onSelect(
+          details?.address || prediction.description, 
+          prediction.placeId,
+          details || undefined
+        );
       }
     },
-    [onChange, onSelect]
+    [onChange, onSelect, fetchPlaceDetails]
   );
 
   // Handle keyboard navigation

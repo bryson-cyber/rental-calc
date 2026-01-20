@@ -2059,3 +2059,47 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Map loads with property markers
 - [x] Filters to matching bedroom count (apples-to-apples)
 
+
+
+## Bug Fix: See on Map Button & Zip Code Auto-Population (Jan 20, 2026) - FIXED
+
+### Issue:
+- User reports "See on Map" button from property card is not working
+- Google Places Autocomplete was only returning formatted address without zip code
+- Expected: Clicking "See on Map" should navigate to Step 5 and auto-search with property's zip code
+
+### Root Cause:
+- Google Places Autocomplete `getPlacePredictions` only returns formatted address description
+- Zip code was being extracted via regex, which failed when Google didn't include it in the description
+
+### Fix:
+- [x] Updated AddressAutocomplete component to use Google Places API `getDetails` method
+- [x] Now fetches full address components including postal_code, locality, administrative_area_level_1
+- [x] Added PlaceDetails interface with city, state, zipCode, lat, lng
+- [x] Updated StartWithProperty to use PlaceDetails from AddressAutocomplete
+- [x] Property now stores latitude/longitude for map centering
+
+### Verified Working:
+- [x] Address autocomplete now shows full address with zip code (e.g., "123 Broadway, Nashville, TN 37201, USA")
+- [x] Property card shows correct location info (Nashville, TN 37201)
+- [x] "See on Map" auto-populates: zip code, state, city, neighborhood, property address
+- [x] Map loads with correct markers and filters to matching bedroom count
+
+
+## Bug Fix: Step 5 Map View UI Broken/Squeezed (Jan 20, 2026) - FIXED
+
+### Issue:
+- User reports the Step 5 Map View UI looks "squeezed" and broken
+- Everything appears compressed and the layout is messed up
+
+### Fix:
+- [x] Improved layout structure with proper grid proportions
+- [x] Controls sidebar on left, map on right (side-by-side layout)
+- [x] Proper spacing and sizing for all elements
+
+### Verified Working:
+- [x] Map displays properly with markers
+- [x] Location selector shows correct hierarchy (State → City → Neighborhood → Zip)
+- [x] Revenue thresholds display correctly
+- [x] Filters and sorting work correctly
+- [x] Comparable properties table shows all data with proper formatting

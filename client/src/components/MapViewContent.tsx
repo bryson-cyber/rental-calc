@@ -807,9 +807,33 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         )}
         
         {/* Map and Controls */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Legend and Controls */}
-          <div className="lg:col-span-1 space-y-4">
+        <div className="flex flex-col xl:flex-row gap-6">
+          {/* Map - Show first on mobile/tablet, second on desktop */}
+          <div className="order-1 xl:order-2 xl:flex-1">
+            <Card className="overflow-hidden">
+              <MapView
+                className="h-[400px] md:h-[500px] xl:h-[600px]"
+                initialCenter={{ lat: 36.1627, lng: -86.7816 }}
+                initialZoom={11}
+                onMapReady={(map) => {
+                  mapRef.current = map;
+                  if (window.google) {
+                    geocoderRef.current = new google.maps.Geocoder();
+                  }
+                }}
+              />
+            </Card>
+            
+            {listings.length === 0 && !isLoading && (
+              <div className="mt-4 text-center text-muted-foreground">
+                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>Select a location and click "Show on Map" to see property markers</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Legend and Controls - Show second on mobile/tablet, first (sidebar) on desktop */}
+          <div className="order-2 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4">
             {/* My Property Section */}
             <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
               <CardHeader className="pb-3">
@@ -1110,30 +1134,6 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-          
-          {/* Map */}
-          <div className="lg:col-span-3">
-            <Card className="overflow-hidden">
-              <MapView
-                className={embedded ? "h-[500px]" : "h-[600px]"}
-                initialCenter={{ lat: 36.1627, lng: -86.7816 }}
-                initialZoom={11}
-                onMapReady={(map) => {
-                  mapRef.current = map;
-                  if (window.google) {
-                    geocoderRef.current = new google.maps.Geocoder();
-                  }
-                }}
-              />
-            </Card>
-            
-            {listings.length === 0 && !isLoading && (
-              <div className="mt-4 text-center text-muted-foreground">
-                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>Select a location and click "Show on Map" to see property markers</p>
-              </div>
             )}
           </div>
         </div>
