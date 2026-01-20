@@ -1865,3 +1865,17 @@ The getZipcodesInSubmarket procedure now:
 4. STEP 3 - Validate the Deal
 5. STEP 4 - Find the Best Deal
 6. STEP 5 - See the Map (opens full map view)
+
+
+## Embed Full Map View in Step 5 (Jan 19, 2026) - COMPLETE
+
+### Requirement:
+- Embed the full map view directly into Step 5 tab instead of linking to a separate page
+- Users should be able to use the complete map functionality without leaving the main navigation
+
+### Implementation:
+- [x] Created reusable MapViewContent component with embedded prop
+- [x] Imported MapViewContent into LeadMagnet.tsx
+- [x] Embedded the full map view in the Step 5 (map) tab content section
+- [x] Removed the "Open Full Map View" button and link
+- [x] Map now displays directly in Step 5 tab with all functionality

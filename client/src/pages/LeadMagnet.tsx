@@ -68,6 +68,7 @@ import {
   HeartOff
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
+import { MapViewContent } from '@/components/MapViewContent';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -1403,46 +1404,7 @@ export default function LeadMagnet() {
             {/* MAP TAB */}
             {/* ============================================ */}
             {activeTab === 'map' && (
-              <div className="space-y-8">
-                <div className="text-center mb-8">
-                  <p className="text-[oklch(0.50_0_0)] text-lg leading-relaxed mb-6">
-                    Visualize all competitors in your target area on an interactive map. Enter your property address to see how it compares to nearby competition.
-                  </p>
-                  <a
-                    href="/map"
-                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-lg"
-                  >
-                    <Map className="w-6 h-6" />
-                    <span>Open Full Map View</span>
-                  </a>
-                </div>
-                
-                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-8">
-                  <h3 className="text-xl font-semibold text-teal-900 mb-4">What You Can Do in Map View</h3>
-                  <ul className="space-y-3 text-teal-800">
-                    <li className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">1</div>
-                      <span>Search any market by state, city, neighborhood, or zip code</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">2</div>
-                      <span>See all competitor properties with color-coded revenue markers</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">3</div>
-                      <span>Enter your property address to see it on the map</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">4</div>
-                      <span>View distance from your property to each competitor</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">5</div>
-                      <span>Filter by bedroom count to focus on your competition</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+              <MapViewContent embedded={true} />
             )}
           </div>
         </div>
