@@ -421,7 +421,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
             longitude: l.longitude,
             propertyType: l.property_type || l.propertyType || 'Unknown',
             airbnbUrl: l.airbnb_url || l.airbnbUrl || '#',
-            thumbnailUrl: l.thumbnail_url || l.thumbnailUrl || null,
+            thumbnailUrl: l.image_url || l.thumbnail_url || l.thumbnailUrl || null,
           }));
         
         console.log('[MapView] Listings with coordinates:', listingsWithCoords.length);
@@ -554,7 +554,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                 </div>
                 <div style="background: #fefce8; padding: 8px; border-radius: 6px;">
                   <div style="color: #854d0e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Occupancy</div>
-                  <div style="font-weight: 700; color: #ca8a04; font-size: 14px;">${Math.round(listing.occupancy)}%</div>
+                  <div style="font-weight: 700; color: #ca8a04; font-size: 14px;">${listing.occupancy > 1 ? Math.round(listing.occupancy) : Math.round(listing.occupancy * 100)}%</div>
                 </div>
                 <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
                   <div style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Nightly Rate</div>

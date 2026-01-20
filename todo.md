@@ -1906,3 +1906,15 @@ The getZipcodesInSubmarket procedure now:
 - [ ] Add Monthly Revenue Chart (projection chart for revenue)
 - [ ] Add Annual Revenue Trend (year-over-year revenue trends)
 
+
+
+## Map Popup Bug Fixes (Jan 20, 2026)
+
+### Bug Reports:
+1. Occupancy showing 5810% instead of 58.10% in map popup cards
+2. Property images missing from map popup cards
+
+### Tasks:
+- [x] Fix occupancy display bug (added logic to handle both decimal and percentage formats)
+- [x] Add property images to map popup cards (fixed to use image_url from API)
+- [x] Test with zip code 33139 - VERIFIED: Occupancy shows 89% (correct), image displays properly
