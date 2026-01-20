@@ -39,12 +39,22 @@ export function StartWithProperty({
 }: StartWithPropertyProps) {
   const { myProperty, setMyProperty, clearProperty, hasProperty, enforceApplesToApples, setEnforceApplesToApples } = useProperty();
   
-  // Form state
-  const [address, setAddress] = useState('');
-  const [bedrooms, setBedrooms] = useState('2');
-  const [bathrooms, setBathrooms] = useState('1');
-  const [monthlyRent, setMonthlyRent] = useState('');
+  // Form state - initialize from existing property if available
+  const [address, setAddress] = useState(myProperty?.address || '');
+  const [bedrooms, setBedrooms] = useState(myProperty?.bedrooms?.toString() || '2');
+  const [bathrooms, setBathrooms] = useState(myProperty?.bathrooms?.toString() || '1');
+  const [monthlyRent, setMonthlyRent] = useState(myProperty?.monthlyRent?.toString() || '');
   const [isExpanded, setIsExpanded] = useState(!hasProperty);
+  
+  // Sync form state when property changes (e.g., when editing)
+  useEffect(() => {
+    if (myProperty) {
+      setAddress(myProperty.address || '');
+      setBedrooms(myProperty.bedrooms?.toString() || '2');
+      setBathrooms(myProperty.bathrooms?.toString() || '1');
+      setMonthlyRent(myProperty.monthlyRent?.toString() || '');
+    }
+  }, [myProperty]);
   
   // Selected place ID for geocoding
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
@@ -59,19 +69,41 @@ export function StartWithProperty({
   
   // Extract location details from address string
   const extractLocationFromAddress = (addr: string) => {
-    // Parse address like "123 Main St, Miami, FL 33139, USA"
+    // Parse various address formats:
+    // "123 Main St, Miami, FL 33139, USA"
+    // "123 Main St, Miami Beach, Florida, USA"
+    // "123 Main St, Miami, FL, USA"
     const parts = addr.split(',').map(p => p.trim());
     let city, state, zipCode;
     
+    // Try to find zip code anywhere in the address (5 digits)
+    const zipMatch = addr.match(/\b(\d{5})\b/);
+    if (zipMatch) {
+      zipCode = zipMatch[1];
+    }
+    
+    // Try to find state (2-letter code or full name)
+    const stateAbbrevMatch = addr.match(/\b([A-Z]{2})\b(?:\s+\d{5})?/);
+    if (stateAbbrevMatch) {
+      state = stateAbbrevMatch[1];
+    }
+    
+    // City is usually before the state
     if (parts.length >= 3) {
-      city = parts[parts.length - 3]; // City is usually 3rd from end
-      const stateZip = parts[parts.length - 2]; // State and zip
-      const stateZipMatch = stateZip.match(/([A-Z]{2})\s*(\d{5})?/);
-      if (stateZipMatch) {
-        state = stateZipMatch[1];
-        zipCode = stateZipMatch[2];
+      // Find the part that contains the state and look before it
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (parts[i + 1].match(/^[A-Z]{2}\b/) || parts[i + 1].match(/Florida|California|Texas|New York/i)) {
+          city = parts[i];
+          break;
+        }
+      }
+      // Fallback: city is 3rd from end
+      if (!city && parts.length >= 3) {
+        city = parts[parts.length - 3];
       }
     }
+    
+    console.log('[StartWithProperty] Extracted location:', { city, state, zipCode, from: addr });
     
     return { city, state, zipCode };
   };

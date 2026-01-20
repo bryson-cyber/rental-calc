@@ -2250,9 +2250,14 @@ export default function LeadMagnet() {
             {/* Comparables */}
             {result.comparables && result.comparables.length > 0 && (
               <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Similar Properties Making Money Nearby</h4>
-                <div className="grid gap-3">
-                  {result.comparables.slice(0, 5).map((comp, idx) => (
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)]">Similar Properties Making Money Nearby</h4>
+                  <span className="text-sm text-[oklch(0.50_0_0)] bg-[oklch(0.92_0_0)] px-3 py-1 rounded-full">
+                    {result.comparables.length} properties
+                  </span>
+                </div>
+                <div className="grid gap-3 max-h-[500px] overflow-y-auto pr-2">
+                  {result.comparables.map((comp, idx) => (
                     <div key={comp.id} className="flex items-center gap-4 p-3 bg-[oklch(0.97_0_0)] rounded-lg">
                       <span className="w-8 h-8 rounded-full bg-[oklch(0.92_0_0)] flex items-center justify-center text-[oklch(0.35_0_0)] text-sm font-medium">
                         {idx + 1}

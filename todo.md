@@ -2015,3 +2015,22 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Step 5 (Map View): Auto-filter to matching BR + visual indicator + distance column
 - [x] Test complete flow with property context - VERIFIED: All tools auto-populate correctly with apples-to-apples filtering
 
+
+
+## Bug Fixes (Jan 20, 2026) - COMPLETE
+
+### Bug 1: Validate the Deal shows only 5 comps but ranks among 26 - ALREADY FIXED
+- [x] Issue: "Rank Among Comps" shows #26 but only 5 comparable properties are displayed
+- [x] User expectation: If ranked #26, should see all 26+ comparable properties
+- [x] Status: Code review shows this was already fixed - LeadMagnet.tsx lines 2259-2284 use `result.comparables.map()` to show ALL comps with a scrollable container (`max-h-[500px] overflow-y-auto`)
+
+### Bug 2: Map doesn't auto-populate location from property context - FIXED PREVIOUSLY
+- [x] Issue: When user sets "My Property" with an address, they still have to manually select State → City → Neighborhood → Zip Code
+- [x] User expectation: Map should auto-extract zip code from property address and search automatically
+- [x] Fix: Implemented initialZipCode prop and auto-search in HierarchicalLocationSelector
+
+### Bug 3: Bedroom/Bathroom dropdown selection not updating property context - FIXED
+- [x] Issue: When user selects 3BR/2BA in StartWithProperty form, it still shows 2BR/1BA in property context
+- [x] Root cause: Form state wasn't syncing with existing property values when editing
+- [x] Fix: Added useEffect to sync form state with myProperty, and initialized form fields from existing property values
+

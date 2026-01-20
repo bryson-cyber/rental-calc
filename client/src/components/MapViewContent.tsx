@@ -239,8 +239,12 @@ function createMyPropertyMarker(): HTMLDivElement {
 }
 
 export function MapViewContent({ embedded = false, className = '' }: MapViewContentProps) {
+  console.log('[MapViewContent] Component rendering');
+  
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter: contextBedroomFilter, enforceApplesToApples } = useProperty();
+  
+  console.log('[MapViewContent] Property context:', { hasProperty, myProperty: myProperty ? { address: myProperty.address, zipCode: myProperty.zipCode } : null });
   
   const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
   const [listings, setListings] = useState<PropertyListing[]>([]);
@@ -260,6 +264,18 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   
   // Track if we've auto-populated from context
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
+  const [lastPropertyId, setLastPropertyId] = useState<string | null>(null);
+  
+  // Reset auto-populated state when property changes
+  useEffect(() => {
+    const currentPropertyId = myProperty?.address || null;
+    console.log('[MapView] Property check:', { currentPropertyId, lastPropertyId, hasAutoPopulated });
+    if (currentPropertyId !== lastPropertyId) {
+      console.log('[MapView] Property changed, resetting hasAutoPopulated');
+      setHasAutoPopulated(false);
+      setLastPropertyId(currentPropertyId);
+    }
+  }, [myProperty?.address, lastPropertyId, hasAutoPopulated]);
   
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -461,7 +477,14 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   
   // Auto-populate from property context when available
   useEffect(() => {
+    console.log('[MapView] Auto-populate check:', { 
+      hasProperty, 
+      myProperty: myProperty ? { address: myProperty.address, zipCode: myProperty.zipCode } : null,
+      hasAutoPopulated 
+    });
+    
     if (hasProperty && myProperty && !hasAutoPopulated) {
+      console.log('[MapView] Triggering auto-populate...');
       // Set the address for "My Property" marker
       if (myProperty.address) {
         setMyPropertyAddress(myProperty.address);
@@ -742,11 +765,18 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
           </CardHeader>
           <CardContent>
             <HierarchicalLocationSelector
+              key={myProperty?.zipCode || 'no-property'}
               onSelectionChange={setLocationSelection}
               onSearch={(selection) => {
                 setLocationSelection(selection);
                 performSearch(selection);
               }}
+              initialZipCode={(() => {
+                const zip = hasProperty && myProperty?.zipCode ? myProperty.zipCode : undefined;
+                console.log('[MapViewContent] Passing initialZipCode to HierarchicalLocationSelector:', zip, 'hasProperty:', hasProperty, 'myProperty?.zipCode:', myProperty?.zipCode);
+                return zip;
+              })()}
+              autoSearch={hasProperty && !!myProperty?.zipCode}
             />
             <div className="mt-4 flex gap-3">
               <Button

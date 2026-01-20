@@ -149,12 +149,16 @@ interface HierarchicalLocationSelectorProps {
   onSelectionChange: (selection: LocationSelection | null) => void;
   onSearch: (selection: LocationSelection) => void;
   disabled?: boolean;
+  initialZipCode?: string;
+  autoSearch?: boolean;
 }
 
 export function HierarchicalLocationSelector({
   onSelectionChange,
   onSearch,
-  disabled = false
+  disabled = false,
+  initialZipCode,
+  autoSearch = false
 }: HierarchicalLocationSelectorProps) {
   // Selection state
   const [selectedState, setSelectedState] = useState<{ code: string; name: string } | null>(null);
@@ -862,9 +866,10 @@ export function HierarchicalLocationSelector({
   const hasSelection = selectedState || selectedMarket || selectedSubmarket || selectedZipcode;
   
   // Direct zip code search state
-  const [directZipSearch, setDirectZipSearch] = useState('');
+  const [directZipSearch, setDirectZipSearch] = useState(initialZipCode || '');
   const [directZipSearching, setDirectZipSearching] = useState(false);
   const [directZipError, setDirectZipError] = useState<string | null>(null);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
   
   // Handle direct zip code search with geocoding fallback
   const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
@@ -1050,6 +1055,27 @@ export function HierarchicalLocationSelector({
       setDirectZipSearching(false);
     }
   };
+  
+  // Auto-search when initialZipCode is provided and autoSearch is enabled
+  useEffect(() => {
+    if (initialZipCode && autoSearch && !hasAutoSearched && initialZipCode.length === 5) {
+      console.log('[HierarchicalLocationSelector] Auto-searching for zip code:', initialZipCode);
+      setDirectZipSearch(initialZipCode);
+      setHasAutoSearched(true);
+      // Trigger the search after a short delay to ensure state is updated
+      setTimeout(() => {
+        handleDirectZipSearch();
+      }, 100);
+    }
+  }, [initialZipCode, autoSearch, hasAutoSearched]);
+  
+  // Update directZipSearch when initialZipCode changes
+  useEffect(() => {
+    if (initialZipCode && initialZipCode !== directZipSearch) {
+      setDirectZipSearch(initialZipCode);
+      setHasAutoSearched(false); // Reset so it can auto-search again
+    }
+  }, [initialZipCode]);
   
   return (
     <div className="space-y-4">
