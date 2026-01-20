@@ -2243,3 +2243,18 @@ When a property is set, applicable tools should automatically filter to show onl
 ## Bug Fixes (Jan 20, 2026) - Round 2
 - [x] Fix map markers not displaying on the map (added markerLibraryReady state)
 - [x] Fix bedroom filter to show more options (increased pageSize to 50)
+
+
+## Bedroom Range Filter Feature (Jan 20, 2026) - COMPLETE
+- [x] Add bedroom filter parameter to API endpoints (getListings, getListingsByZipcode)
+- [x] Update MapViewContent UI to pass bedroom filter to API
+- [x] Test with 1BR and 2BR properties
+
+### Implementation Details:
+- Added `bedrooms` parameter to `compData.getListings` endpoint in routers.ts
+- Added `bedrooms` parameter to `getMarketListings` and `getSubmarketListings` functions in airdna.ts
+- Updated MapViewContent to pass `selectedBedroomFilter` to API when searching
+- API-level bedroom filter uses AirDNA's `bedrooms` query parameter
+- Tested with Florida → Miami → 1BR: Returns 25 1BR properties (all showing 1BR/1BA or 1BR/2BA)
+- Tested with Florida → Miami → 2BR: Returns 25 2BR properties (all showing 2BR/2BA or 2BR/2.5BA)
+- This allows users to see smaller properties (1BR, 2BR) that were previously hidden because the API returns top revenue properties first (which tend to be larger)

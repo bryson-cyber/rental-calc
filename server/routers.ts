@@ -1785,10 +1785,14 @@ export const appRouter = router({
         pageSize: z.number().int().min(1).max(100).default(25),
         orderBy: z.enum(['revenue', 'adr', 'occupancy', 'rating']).default('revenue'),
         orderDirection: z.enum(['asc', 'desc']).default('desc'),
+        bedrooms: z.number().int().min(1).max(20).optional(), // Filter by specific bedroom count
       }))
       .query(async ({ input }) => {
         try {
           const offset = (input.page - 1) * input.pageSize;
+          
+          // Build filters object if bedrooms is specified
+          const filters = input.bedrooms ? { bedrooms: input.bedrooms } : undefined;
           
           // Use the appropriate function based on whether it's a market or submarket search
           const result = input.isMarketLevel 
@@ -1797,12 +1801,14 @@ export const appRouter = router({
                 offset,
                 orderBy: input.orderBy,
                 orderDirection: input.orderDirection,
+                filters,
               })
             : await getSubmarketListings(input.submarketId, {
                 limit: input.pageSize,
                 offset,
                 orderBy: input.orderBy,
                 orderDirection: input.orderDirection,
+                filters,
               });
 
           if (!result) {

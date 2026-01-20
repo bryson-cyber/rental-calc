@@ -1377,6 +1377,7 @@ export async function getMarketListings(
     offset?: number;
     orderBy?: "revenue" | "adr" | "occupancy" | "rating";
     orderDirection?: "asc" | "desc";
+    filters?: ListingFilters;
   }
 ): Promise<{ listings: ListingData[]; total_count: number }> {
   try {
@@ -1412,16 +1413,46 @@ export async function getMarketListings(
           offset: number;
         };
       };
-    }>(`/market/${marketId}/listings`, "POST", {
-      pagination: {
-        page_size: Math.min(options?.limit || 25, 25),
-        offset: options?.offset || 0,
-      },
-      order_by: {
-        field: options?.orderBy || "revenue",
-        method: options?.orderDirection || "desc",
-      },
-    });
+    }>(`/market/${marketId}/listings`, "POST", (() => {
+      // Build filters array based on options
+      const filters: Array<Record<string, unknown>> = [];
+      
+      if (options?.filters?.bedrooms) {
+        filters.push({
+          type: "select",
+          field: "bedrooms",
+          value: options.filters.bedrooms
+        });
+      }
+      
+      if (options?.filters?.bathrooms) {
+        filters.push({
+          type: "gte",
+          field: "bathrooms",
+          value: options.filters.bathrooms
+        });
+      }
+      
+      if (options?.filters?.propertyType) {
+        filters.push({
+          type: "multi_select",
+          field: "property_type",
+          value: [options.filters.propertyType.toLowerCase()]
+        });
+      }
+      
+      return {
+        pagination: {
+          page_size: Math.min(options?.limit || 25, 25),
+          offset: options?.offset || 0,
+        },
+        order_by: {
+          field: options?.orderBy || "revenue",
+          method: options?.orderDirection || "desc",
+        },
+        ...(filters.length > 0 && { filters }),
+      };
+    })());
     
     const listings: ListingData[] = response.payload.listings.map((r) => ({
       id: r.property_id || '',

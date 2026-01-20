@@ -257,6 +257,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
   const [distanceFilter, setDistanceFilter] = useState<string>('all');
+  const [apiBedroomFilter, setApiBedroomFilter] = useState<number | null>(null); // API-level bedroom filter (1, 2, 3, etc.)
   
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
@@ -437,7 +438,12 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       const isMarketLevel = selection.level === 'market' && !isSubmarketAsMarket;
       // Search level determined
       
-      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel, pageSize: 50 } }))}`);
+      // Build the API request with optional bedroom filter
+      const apiParams: any = { submarketId: marketId, isMarketLevel, pageSize: 50 };
+      if (apiBedroomFilter) {
+        apiParams.bedrooms = apiBedroomFilter;
+      }
+      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);
       const data = await response.json();
       
       if (data.result?.data?.json?.listings) {
@@ -484,7 +490,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [apiBedroomFilter]);
   
   const handleSearch = useCallback(() => {
     // handleSearch called
@@ -845,7 +851,31 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
               })()}
               autoSearch={hasProperty && !!myProperty?.zipCode}
             />
-            <div className="mt-4 flex gap-3">
+            {/* API-Level Bedroom Filter */}
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <div className="w-40">
+                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                  <BedDouble className="w-3 h-3 inline mr-1" />
+                  Search by Bedrooms
+                </Label>
+                <Select 
+                  value={apiBedroomFilter?.toString() || 'all'} 
+                  onValueChange={(val) => setApiBedroomFilter(val === 'all' ? null : parseInt(val))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Sizes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sizes</SelectItem>
+                    <SelectItem value="1">1 Bedroom</SelectItem>
+                    <SelectItem value="2">2 Bedrooms</SelectItem>
+                    <SelectItem value="3">3 Bedrooms</SelectItem>
+                    <SelectItem value="4">4 Bedrooms</SelectItem>
+                    <SelectItem value="5">5 Bedrooms</SelectItem>
+                    <SelectItem value="6">6+ Bedrooms</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 onClick={handleSearch}
                 disabled={!locationSelection || isLoading}
