@@ -2192,3 +2192,17 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Root cause: The CSS order was showing the map FIRST on mobile/tablet, pushing "My Property" below the fold
 - [x] Fix: Changed the order so controls (My Property, Revenue Thresholds) show BEFORE the map on all screen sizes
 - [x] Verified: "My Property" input section is now visible immediately when opening Step 5
+
+
+## Bug Fixes (Jan 20, 2026) - Step 5 Map View UX
+- [ ] Hide/clarify Neighborhood dropdown for submarket-cities (like Glendale, AZ)
+- [ ] Fix map auto-center on location selection
+- [ ] Stress test for additional issues
+
+
+## Bug Fixes (Jan 20, 2026)
+
+### Step 5 Map View Fixes:
+- [x] Fix Neighborhood dropdown UX for submarket-cities (show helpful message instead of "No neighborhoods found")
+- [x] Fix map auto-center on location selection (map shows Nashville instead of selected location)
+- [x] Fix isSubmarketAsMarket detection (Glendale was returning Michigan listings instead of Arizona)

@@ -418,11 +418,14 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         return;
       }
       
-      console.log('[MapView] Fetching listings for market:', marketId, 'selection:', JSON.stringify(selection));
+      // Fetching listings for market
       
       // Determine if this is a market-level or submarket-level search
-      const isMarketLevel = selection.level === 'market';
-      console.log('[MapView] Search level:', selection.level, 'isMarketLevel:', isMarketLevel);
+      // IMPORTANT: If the selected market has isSubmarketAsMarket flag, it's actually a submarket
+      // (e.g., Glendale, AZ is a submarket under Phoenix/Scottsdale)
+      const isSubmarketAsMarket = selection.market && (selection.market as any).isSubmarketAsMarket;
+      const isMarketLevel = selection.level === 'market' && !isSubmarketAsMarket;
+      // Search level determined
       
       const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel } }))}`);
       const data = await response.json();
@@ -474,10 +477,60 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   }, []);
   
   const handleSearch = useCallback(() => {
+    // handleSearch called
     if (locationSelection) {
       performSearch(locationSelection);
+    } else {
+      console.warn('[MapView] No locationSelection set!');
     }
   }, [locationSelection, performSearch]);
+  
+  // Center map when location selection changes
+  useEffect(() => {
+    if (!locationSelection || !mapRef.current) return;
+    
+    // If we have coordinates in the selection, use them
+    if (locationSelection.coordinates) {
+      console.log('[MapView] Centering map on selection coordinates:', locationSelection.coordinates);
+      mapRef.current.panTo(locationSelection.coordinates);
+      mapRef.current.setZoom(12);
+      return;
+    }
+    
+    // Otherwise, geocode the location name
+    const locationName = locationSelection.zipcode 
+      || locationSelection.submarket?.name 
+      || locationSelection.market?.name;
+    const stateName = locationSelection.state?.name;
+    
+    if (locationName && window.google) {
+      const searchQuery = stateName ? `${locationName}, ${stateName}` : locationName;
+      console.log('[MapView] Geocoding location for map centering:', searchQuery);
+      
+      if (!geocoderRef.current) {
+        geocoderRef.current = new google.maps.Geocoder();
+      }
+      
+      geocoderRef.current.geocode({ address: searchQuery })
+        .then((result) => {
+          if (result.results && result.results.length > 0) {
+            const location = result.results[0].geometry.location;
+            console.log('[MapView] Geocoded location:', location.lat(), location.lng());
+            if (mapRef.current) {
+              mapRef.current.panTo({ lat: location.lat(), lng: location.lng() });
+              // Set zoom based on selection level
+              const zoomLevel = locationSelection.zipcode ? 13 
+                : locationSelection.submarket ? 12 
+                : 11;
+              mapRef.current.setZoom(zoomLevel);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('[MapView] Geocoding error for map centering:', err);
+        });
+    }
+  }, [locationSelection]);
   
   // Auto-populate from property context when available
   useEffect(() => {

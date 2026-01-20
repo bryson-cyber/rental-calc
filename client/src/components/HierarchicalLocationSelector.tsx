@@ -1467,8 +1467,16 @@ export function HierarchicalLocationSelector({
               )}
               
               {submarketOpen && !submarketError && submarkets.length === 0 && !loadingSubmarkets && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-[oklch(0.50_0_0)] text-sm">
-                  No neighborhoods found
+                <div className="absolute z-50 w-full mt-2 bg-white border border-[oklch(0.90_0_0)] rounded-xl shadow-lg p-4 text-center text-sm">
+                  {selectedMarket?.isSubmarketAsMarket ? (
+                    <div className="text-[oklch(0.40_0.10_75)]">
+                      <span className="font-medium">{selectedMarket.name}</span> is already a neighborhood.
+                      <br />
+                      <span className="text-[oklch(0.50_0_0)]">Select a zip code below for more specific data.</span>
+                    </div>
+                  ) : (
+                    <span className="text-[oklch(0.50_0_0)]">No neighborhoods found</span>
+                  )}
                 </div>
               )}
             </div>
