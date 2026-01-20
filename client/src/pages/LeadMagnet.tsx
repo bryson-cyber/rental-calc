@@ -253,11 +253,11 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'prove' | 'find' | 'validate' | 'compare';
+type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map';
 
 export default function LeadMagnet() {
   // Tab state - now in job sequence
-  const [activeTab, setActiveTab] = useState<TabType>('prove');
+  const [activeTab, setActiveTab] = useState<TabType>('ebook');
   
   // Ebook state
   const [isEbookExpanded, setIsEbookExpanded] = useState(true);
@@ -760,6 +760,13 @@ export default function LeadMagnet() {
   // JOB DESCRIPTIONS FOR EACH TOOL
   // ============================================
   const jobDescriptions = {
+    ebook: {
+      title: "Read the Guide",
+      subtitle: "Learn the fundamentals of Airbnb arbitrage",
+      job: "Answer: How does this business actually work?",
+      icon: BookOpen,
+      color: "from-violet-500 to-purple-500"
+    },
     prove: {
       title: "See Real Revenue",
       subtitle: "View actual Airbnb earnings data from any market",
@@ -787,6 +794,13 @@ export default function LeadMagnet() {
       job: "Answer: Which property should I choose?",
       icon: Trophy,
       color: "from-amber-500 to-orange-500"
+    },
+    map: {
+      title: "See the Map",
+      subtitle: "Visualize competitors and compare your property location",
+      job: "Answer: How does my property compare to nearby competition?",
+      icon: Map,
+      color: "from-teal-500 to-cyan-500"
     }
   };
 
@@ -839,19 +853,6 @@ export default function LeadMagnet() {
         </div>
       </section>
       
-      {/* ============================================ */}
-      {/* INLINE EBOOK - ALWAYS VISIBLE AT TOP */}
-      {/* ============================================ */}
-      <section className="relative py-12 md:py-16 bg-[oklch(0.97_0_0)]">
-        <div className="container max-w-4xl mx-auto">
-          <InlineEbook onStartTools={() => {
-            const toolsSection = document.getElementById('tools-section');
-            if (toolsSection) {
-              toolsSection.scrollIntoView({ behavior: 'smooth' });
-            }
-          }} />
-        </div>
-      </section>
 
       {/* ============================================ */}
       {/* TOOLS SECTION - JOB-FOCUSED */}
@@ -938,8 +939,8 @@ export default function LeadMagnet() {
           )}
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-12">
-            {(['prove', 'find', 'validate', 'compare'] as TabType[]).map((tab, index) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
+            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -962,7 +963,9 @@ export default function LeadMagnet() {
                     }`}>
                       <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
-                    <span className="text-xs text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">Step {index + 1}</span>
+                    <span className="text-xs text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
+                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : `Step ${index}`}
+                    </span>
                   </div>
                   <h3 className={`font-semibold text-base mb-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
                     {job.title}
@@ -975,17 +978,6 @@ export default function LeadMagnet() {
             })}
           </div>
           
-          {/* Map View Link */}
-          <div className="mb-8 flex justify-center">
-            <a
-              href="/map"
-              className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-            >
-              <Map className="w-5 h-5" />
-              <span>See the Map</span>
-              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Step 5</span>
-            </a>
-          </div>
           
           {/* Tool Content Area */}
           <div className="apple-card p-8 md:p-12">
@@ -1013,6 +1005,22 @@ export default function LeadMagnet() {
                 {jobDescriptions[activeTab].job}
               </p>
             </div>
+            
+            {/* ============================================ */}
+            {/* EBOOK TAB */}
+            {/* ============================================ */}
+            {activeTab === 'ebook' && (
+              <div className="space-y-8">
+                <div className="text-center mb-8">
+                  <p className="text-[oklch(0.50_0_0)] text-lg leading-relaxed">
+                    Start here to learn the fundamentals of Airbnb arbitrage. This guide will teach you everything you need to know before using the analysis tools.
+                  </p>
+                </div>
+                <InlineEbook onStartTools={() => {
+                  setActiveTab('prove');
+                }} />
+              </div>
+            )}
             
             {/* ============================================ */}
             {/* PROVE THE MARKET TAB */}
@@ -1388,6 +1396,52 @@ export default function LeadMagnet() {
                     </>
                   )}
                 </button>
+              </div>
+            )}
+            
+            {/* ============================================ */}
+            {/* MAP TAB */}
+            {/* ============================================ */}
+            {activeTab === 'map' && (
+              <div className="space-y-8">
+                <div className="text-center mb-8">
+                  <p className="text-[oklch(0.50_0_0)] text-lg leading-relaxed mb-6">
+                    Visualize all competitors in your target area on an interactive map. Enter your property address to see how it compares to nearby competition.
+                  </p>
+                  <a
+                    href="/map"
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-lg"
+                  >
+                    <Map className="w-6 h-6" />
+                    <span>Open Full Map View</span>
+                  </a>
+                </div>
+                
+                <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-8">
+                  <h3 className="text-xl font-semibold text-teal-900 mb-4">What You Can Do in Map View</h3>
+                  <ul className="space-y-3 text-teal-800">
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">1</div>
+                      <span>Search any market by state, city, neighborhood, or zip code</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">2</div>
+                      <span>See all competitor properties with color-coded revenue markers</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">3</div>
+                      <span>Enter your property address to see it on the map</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">4</div>
+                      <span>View distance from your property to each competitor</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-bold">5</div>
+                      <span>Filter by bedroom count to focus on your competition</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>

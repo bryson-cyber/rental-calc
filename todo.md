@@ -1823,3 +1823,45 @@ The getZipcodesInSubmarket procedure now:
 - [x] Add revenue amount inside markers (compact format: $50K, $1.2M)
 - [x] Add hover effects for better interactivity (scale animation)
 - [x] Improve popup card design with colored sections and better layout
+
+
+## Navigation Restructure (Jan 20, 2026)
+
+### Requirements:
+- Add Step 5 (Map View) as a tab in the main navigation bar (not a separate page)
+- Move Ebook to appear before Step 1 in the navigation
+- New flow: Ebook → Step 1 → Step 2 → Step 3 → Step 4 → Step 5 (Map)
+
+### Tasks:
+- [ ] Identify current navigation component and structure
+- [ ] Add Step 5 (Map) tab to the navigation bar
+- [ ] Move Ebook tab to appear before Step 1
+- [ ] Update tab order: Ebook, Step 1, Step 2, Step 3, Step 4, Step 5
+- [ ] Test navigation flow works correctly
+
+
+## Navigation Restructure (Jan 19, 2026) - COMPLETE
+
+### Requirements:
+- Add Step 5 (Map View) to the navigation bar as a tab (not a separate page)
+- Move Ebook before Step 1 in the navigation
+- New flow: Ebook → Step 1 → Step 2 → Step 3 → Step 4 → Step 5 (Map)
+
+### Implementation:
+- [x] Update TabType to include 'ebook' and 'map'
+- [x] Add jobDescriptions entries for ebook and map tabs
+- [x] Update tab navigation grid from 4 to 6 columns
+- [x] Add ebook tab content section (shows InlineEbook component)
+- [x] Add map tab content section (shows description and "Open Full Map View" button)
+- [x] Remove the always-visible InlineEbook section (now it's a tab)
+- [x] Set default tab to 'ebook' so users start with the guide
+- [x] Remove the separate "See the Map" link button (replaced with tab)
+- [x] Test all 6 tabs work correctly - VERIFIED
+
+### New Tab Order:
+1. GUIDE - Read the Guide (default active)
+2. STEP 1 - See Real Revenue
+3. STEP 2 - Explore Listings
+4. STEP 3 - Validate the Deal
+5. STEP 4 - Find the Best Deal
+6. STEP 5 - See the Map (opens full map view)
