@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -246,6 +246,8 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [customThreshold, setCustomThreshold] = useState<number>(50000);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('revenue-desc');
   
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
@@ -259,8 +261,15 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   
   const filteredListings = useMemo(() => {
+    // Apply bedroom filter
     let filtered = bedroomFilter === 'all' ? listings : listings.filter(l => l.bedrooms === parseInt(bedroomFilter));
     
+    // Apply property type filter
+    if (propertyTypeFilter !== 'all') {
+      filtered = filtered.filter(l => l.propertyType === propertyTypeFilter);
+    }
+    
+    // Calculate distance if my property is set
     if (myPropertyLocation) {
       filtered = filtered.map(l => ({
         ...l,
@@ -273,8 +282,40 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       }));
     }
     
+    // Apply sorting
+    const [sortField, sortDirection] = sortBy.split('-');
+    filtered = [...filtered].sort((a, b) => {
+      let aVal: number, bVal: number;
+      switch (sortField) {
+        case 'revenue':
+          aVal = a.revenue;
+          bVal = b.revenue;
+          break;
+        case 'occupancy':
+          aVal = a.occupancy;
+          bVal = b.occupancy;
+          break;
+        case 'rating':
+          aVal = a.rating || 0;
+          bVal = b.rating || 0;
+          break;
+        case 'distance':
+          aVal = a.distanceToMyProperty || Infinity;
+          bVal = b.distanceToMyProperty || Infinity;
+          break;
+        case 'adr':
+          aVal = a.adr;
+          bVal = b.adr;
+          break;
+        default:
+          aVal = a.revenue;
+          bVal = b.revenue;
+      }
+      return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+    
     return filtered;
-  }, [listings, bedroomFilter, myPropertyLocation]);
+  }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy]);
   
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
@@ -748,36 +789,102 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
               </CardContent>
             </Card>
             
-            {/* Bedroom Filter */}
+            {/* Filters & Sorting */}
             {listings.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <BedDouble className="w-4 h-4 text-[#C9A962]" />
-                    Filter by Bedrooms
+                    Filters & Sorting
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Bedrooms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                      {Array.from(new Set(listings.map(l => l.bedrooms))).sort((a, b) => a - b).map(br => {
-                        const count = listings.filter(l => l.bedrooms === br).length;
-                        return (
-                          <SelectItem key={br} value={String(br)}>
-                            {br} Bedroom{br !== 1 ? 's' : ''} ({count})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {bedroomFilter !== 'all' && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Showing {filteredListings.length} of {listings.length} properties
-                    </p>
+                <CardContent className="space-y-4">
+                  {/* Bedroom Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Bedrooms</Label>
+                    <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Bedrooms" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
+                        {Array.from(new Set(listings.map(l => l.bedrooms))).sort((a, b) => a - b).map(br => {
+                          const count = listings.filter(l => l.bedrooms === br).length;
+                          return (
+                            <SelectItem key={br} value={String(br)}>
+                              {br} Bedroom{br !== 1 ? 's' : ''} ({count})
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Property Type Filter */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Property Type</Label>
+                    <Select value={propertyTypeFilter} onValueChange={setPropertyTypeFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types ({listings.length})</SelectItem>
+                        {Array.from(new Set(listings.map(l => l.propertyType))).filter(Boolean).sort().map(type => {
+                          const count = listings.filter(l => l.propertyType === type).length;
+                          return (
+                            <SelectItem key={type} value={type}>
+                              {type} ({count})
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Sort By */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Sort By</Label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="revenue-desc">Revenue (High to Low)</SelectItem>
+                        <SelectItem value="revenue-asc">Revenue (Low to High)</SelectItem>
+                        <SelectItem value="occupancy-desc">Occupancy (High to Low)</SelectItem>
+                        <SelectItem value="occupancy-asc">Occupancy (Low to High)</SelectItem>
+                        <SelectItem value="rating-desc">Rating (High to Low)</SelectItem>
+                        <SelectItem value="rating-asc">Rating (Low to High)</SelectItem>
+                        <SelectItem value="adr-desc">Nightly Rate (High to Low)</SelectItem>
+                        <SelectItem value="adr-asc">Nightly Rate (Low to High)</SelectItem>
+                        {myPropertyLocation && (
+                          <>
+                            <SelectItem value="distance-asc">Distance (Closest First)</SelectItem>
+                            <SelectItem value="distance-desc">Distance (Farthest First)</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Active Filters Summary */}
+                  {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all') && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        Showing {filteredListings.length} of {listings.length} properties
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 px-2 mt-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          setBedroomFilter('all');
+                          setPropertyTypeFilter('all');
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>

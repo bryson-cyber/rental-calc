@@ -1879,3 +1879,30 @@ The getZipcodesInSubmarket procedure now:
 - [x] Embedded the full map view in the Step 5 (map) tab content section
 - [x] Removed the "Open Full Map View" button and link
 - [x] Map now displays directly in Step 5 tab with all functionality
+
+
+## New Feature Requests (Jan 20, 2026)
+
+### Loading & UX Improvements:
+- [x] Add loading state indicators for seasonality chart (already implemented with skeleton loader)
+- [x] Show skeleton loader while fetching seasonality data (already implemented)
+
+### Map View Filters & Sorting: ✅ COMPLETE
+- [x] Add Property Type Filter (apartment, boat, chalet, condominium, cottage, house, villa)
+- [x] Add Bedroom Filter (0-4+ bedrooms with counts)
+- [x] Add Sorting Options (revenue, occupancy, rating, nightly rate - high/low)
+- [x] Add "Sort by Distance" option (appears when My Property is set)
+- [x] Add "Clear Filters" button to reset all filters
+- [x] Add "Showing X of Y properties" indicator
+- [x] Verified all filters and sorting working correctly with Miami 33139 test
+
+### Save & Export Features:
+- [ ] Add Save/Favorite Properties feature (allow users to save properties for later)
+- [ ] Add PDF Export (generate PDF report matching AirDNA format)
+
+### Analytics & Reports:
+- [ ] Add AI-Generated Market Reports using LLM
+- [ ] Add Amenities Breakdown (show percentage of properties with each amenity)
+- [ ] Add Monthly Revenue Chart (projection chart for revenue)
+- [ ] Add Annual Revenue Trend (year-over-year revenue trends)
+
