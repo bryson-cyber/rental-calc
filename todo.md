@@ -2206,3 +2206,24 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Fix Neighborhood dropdown UX for submarket-cities (show helpful message instead of "No neighborhoods found")
 - [x] Fix map auto-center on location selection (map shows Nashville instead of selected location)
 - [x] Fix isSubmarketAsMarket detection (Glendale was returning Michigan listings instead of Arizona)
+
+
+## Distance Filter Feature (Jan 20, 2026)
+- [ ] Add distance filter dropdown to Step 5 Map View (options: All, 0.5 mi, 1 mi, 2 mi, 5 mi)
+- [ ] Calculate distance from user's property to each listing using Haversine formula
+- [ ] Filter listings based on selected distance
+- [ ] Update map markers when distance filter changes
+- [ ] Show distance in listings table
+
+
+## Distance Filter Feature (Jan 20, 2026) - COMPLETE
+
+- [x] Add distance filter dropdown to Filters & Sorting section
+- [x] Filter options: Any Distance, Within 0.5 miles, Within 1 mile, Within 2 miles, Within 5 miles, Within 10 miles
+- [x] Calculate distances using Haversine formula from user's property location
+- [x] Filter listings by selected distance threshold
+- [x] Update summary stats to reflect filtered results
+- [x] Show "Showing X of Y properties within Z mi" message
+- [x] Update map markers to only show filtered properties
+- [x] Add distance column to comparable properties table
+- [x] Add "Sort by Distance" option

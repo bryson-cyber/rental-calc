@@ -256,6 +256,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
+  const [distanceFilter, setDistanceFilter] = useState<string>('all');
   
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
@@ -303,6 +304,12 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
           l.longitude
         )
       }));
+      
+      // Apply distance filter (only when my property is set)
+      if (distanceFilter !== 'all') {
+        const maxDistance = parseFloat(distanceFilter);
+        filtered = filtered.filter(l => (l.distanceToMyProperty || Infinity) <= maxDistance);
+      }
     }
     
     // Apply sorting
@@ -338,7 +345,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     });
     
     return filtered;
-  }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy]);
+  }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy, distanceFilter]);
   
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
@@ -1092,6 +1099,29 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                     </Select>
                   </div>
                   
+                  {/* Distance Filter - only show when my property is set */}
+                  {myPropertyLocation && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">
+                        <Navigation className="w-3 h-3 inline mr-1" />
+                        Max Distance from My Property
+                      </Label>
+                      <Select value={distanceFilter} onValueChange={setDistanceFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Any Distance" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Any Distance</SelectItem>
+                          <SelectItem value="0.5">Within 0.5 miles</SelectItem>
+                          <SelectItem value="1">Within 1 mile</SelectItem>
+                          <SelectItem value="2">Within 2 miles</SelectItem>
+                          <SelectItem value="5">Within 5 miles</SelectItem>
+                          <SelectItem value="10">Within 10 miles</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
                   {/* Sort By */}
                   <div>
                     <Label className="text-xs text-muted-foreground mb-1.5 block">Sort By</Label>
@@ -1119,10 +1149,11 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </div>
                   
                   {/* Active Filters Summary */}
-                  {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all') && (
+                  {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all' || distanceFilter !== 'all') && (
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground">
                         Showing {filteredListings.length} of {listings.length} properties
+                        {distanceFilter !== 'all' && ` within ${distanceFilter} mi`}
                       </p>
                     </div>
                   )}
