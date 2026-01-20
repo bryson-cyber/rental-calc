@@ -2258,3 +2258,28 @@ When a property is set, applicable tools should automatically filter to show onl
 - Tested with Florida → Miami → 1BR: Returns 25 1BR properties (all showing 1BR/1BA or 1BR/2BA)
 - Tested with Florida → Miami → 2BR: Returns 25 2BR properties (all showing 2BR/2BA or 2BR/2.5BA)
 - This allows users to see smaller properties (1BR, 2BR) that were previously hidden because the API returns top revenue properties first (which tend to be larger)
+
+
+## Bug Fix: Map Markers Not Displaying (Jan 20, 2026)
+
+### Issue:
+- User reports map feature isn't displaying listings
+- Listings load correctly in the table (25 properties shown)
+- Map shows correct location (Miami) but no markers appear on the map
+- No console errors visible
+
+### Investigation:
+- [ ] Check if listings have valid coordinates (latitude/longitude)
+- [ ] Check if markers are being created correctly
+- [ ] Check if markerLibraryReady state is working
+- [ ] Debug the marker rendering logic in MapViewContent.tsx
+
+
+
+## Bug Fix: Map Markers Not Displaying (Jan 20, 2026) - FIXED
+- [x] Identified issue: Google Maps marker library not loading via URL parameters
+- [x] Root cause: The proxy was only loading `libraries=places` instead of `libraries=marker,places,geocoding,geometry`
+- [x] Solution: Use `google.maps.importLibrary()` to dynamically load libraries after base script loads
+- [x] Updated Map.tsx to use importLibrary for marker, places, geocoding, and geometry libraries
+- [x] Tested: Markers now display correctly on the map with revenue labels ($941K, $875K, etc.)
+- [x] Verified: 25 markers showing for Miami with correct positioning and info windows

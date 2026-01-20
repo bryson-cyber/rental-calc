@@ -85,6 +85,7 @@ declare global {
     google?: typeof google;
     __googleMapsLoading?: Promise<void>;
     __googleMapsLoaded?: boolean;
+    __googleMapsLibrariesLoaded?: boolean;
   }
 }
 
@@ -94,15 +95,19 @@ const FORGE_BASE_URL =
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
-function loadMapScript(): Promise<void> {
+async function loadMapScript(): Promise<void> {
   // If already loaded, return immediately
   if (window.__googleMapsLoaded && window.google?.maps) {
-    return Promise.resolve();
+    // Ensure libraries are also loaded
+    await loadLibraries();
+    return;
   }
   
   // If currently loading, return the existing promise
   if (window.__googleMapsLoading) {
-    return window.__googleMapsLoading;
+    await window.__googleMapsLoading;
+    await loadLibraries();
+    return;
   }
   
   // Start loading
@@ -129,8 +134,9 @@ function loadMapScript(): Promise<void> {
       return;
     }
     
+    // Load base script without libraries - we'll use importLibrary instead
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
@@ -144,7 +150,42 @@ function loadMapScript(): Promise<void> {
     document.head.appendChild(script);
   });
   
-  return window.__googleMapsLoading;
+  await window.__googleMapsLoading;
+  await loadLibraries();
+}
+
+// Load required libraries using the dynamic importLibrary API
+async function loadLibraries(): Promise<void> {
+  if (window.__googleMapsLibrariesLoaded) {
+    return;
+  }
+  
+  if (!window.google?.maps) {
+    console.error("Google Maps not available for library loading");
+    return;
+  }
+  
+  try {
+    // Load libraries in parallel using importLibrary
+    // This is the recommended approach for Google Maps JS API v3
+    const librariesToLoad = ["marker", "places", "geocoding", "geometry"];
+    
+    await Promise.all(
+      librariesToLoad.map(async (lib) => {
+        try {
+          await google.maps.importLibrary(lib);
+          console.log(`[Map] Loaded library: ${lib}`);
+        } catch (err) {
+          console.warn(`[Map] Failed to load library ${lib}:`, err);
+        }
+      })
+    );
+    
+    window.__googleMapsLibrariesLoaded = true;
+    console.log("[Map] All libraries loaded successfully");
+  } catch (err) {
+    console.error("[Map] Error loading libraries:", err);
+  }
 }
 
 interface MapViewProps {
