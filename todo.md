@@ -2283,3 +2283,24 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Updated Map.tsx to use importLibrary for marker, places, geocoding, and geometry libraries
 - [x] Tested: Markers now display correctly on the map with revenue labels ($941K, $875K, etc.)
 - [x] Verified: 25 markers showing for Miami with correct positioning and info windows
+
+
+## Marker Info Windows Feature (Jan 20, 2026) - ALREADY IMPLEMENTED
+- [x] Add info window popup when clicking a marker on the map
+- [x] Show property details: name, revenue, occupancy, rating
+- [x] Style info window to match app design
+- [x] Test info window functionality
+
+### Implementation Details (Already Present):
+- Info windows were already implemented in MapViewContent.tsx (lines 744-798)
+- Clicking a marker shows a styled popup with:
+  - Property thumbnail image
+  - Property title
+  - Annual Revenue (green box)
+  - Occupancy percentage (yellow box)
+  - Nightly Rate/ADR (gray box)
+  - Rating with star (purple box)
+  - Bedroom/Bathroom/Guest count badges
+  - Distance from user's property (if set)
+  - "View on Airbnb" button linking to the listing
+- Tested with Florida → Miami: Info window displays correctly when clicking markers
