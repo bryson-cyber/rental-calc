@@ -490,7 +490,9 @@ export default function LeadMagnet() {
           occupancy: c.occupancy || 0,
           rating: c.rating || 0,
           reviews: c.reviews || 0,
+          imageUrl: c.image_url || c.thumbnail_url || undefined,
           airbnbUrl: c.airbnb_url,
+          distanceMeters: c.distance_meters,
         })),
       });
       

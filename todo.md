@@ -2370,3 +2370,34 @@ When a property is set, applicable tools should automatically filter to show onl
 - [ ] Investor can make a decision in under 60 seconds
 - [ ] Arbitrage-specific calculations help with rent vs revenue analysis
 - [ ] Mobile experience is clean and usable
+
+
+## Tesla Dashboard Expansion & Bug Fixes (Jan 20, 2026)
+
+### Bug Fix: Comp Property Images Not Loading
+- [x] Investigate why thumbnails aren't loading in Similar Properties section
+- [x] Check if AirDNA API returns image URLs for comps
+- [x] Fix image loading or add placeholder images
+- [x] Test with multiple properties to verify fix
+- [x] Added image enrichment for radius comps via getSinglePropertyDetails API
+- [x] Verified: Images load correctly for rentalizer comps (Card #4 shows actual image)
+
+### Feature: Year-over-Year Trends
+- [ ] Add YoY revenue trend: "↑ 8% vs last year" or "↓ 5% vs last year"
+- [ ] Add YoY occupancy trend
+- [ ] Add YoY ADR trend
+- [ ] Display trends in Tesla Dashboard hero section
+- [ ] Color code: green for positive, red for negative
+
+### Fix: Color Mode Consistency
+- [ ] Audit all components for dark/light mode conflicts
+- [ ] Ensure all text is readable against backgrounds
+- [ ] Standardize on one color scheme (light mode with dark accents)
+- [ ] Fix any contrast issues
+
+### Apply Tesla Dashboard to All Steps
+- [ ] Step 1 (See Real Revenue): Redesign market research results
+- [ ] Step 2 (Explore Listings): Redesign listings grid
+- [ ] Step 4 (Find Best Deal): Redesign comparison view
+- [ ] Step 5 (Map View): Ensure consistent styling with Tesla Dashboard
+- [ ] Maintain consistent color palette across all steps

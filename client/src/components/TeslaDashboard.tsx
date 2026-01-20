@@ -666,26 +666,39 @@ function ComparableProperties({
             key={comp.id} 
             className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
           >
-            {/* Image */}
-            <div className="h-32 bg-gradient-to-br from-slate-100 to-slate-200 relative">
+            {/* Image - Show actual image if available, otherwise styled placeholder */}
+            <div className="h-32 bg-gradient-to-br from-amber-50 to-amber-100 relative">
               {comp.imageUrl ? (
                 <img 
                   src={comp.imageUrl} 
                   alt={comp.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // On error, hide the image and show placeholder
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const placeholder = target.nextElementSibling as HTMLElement;
+                    if (placeholder) placeholder.style.display = 'flex';
+                  }}
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Home className="w-8 h-8 text-slate-400" />
+              ) : null}
+              {/* Placeholder - shown when no image or image fails to load */}
+              <div 
+                className="w-full h-full flex flex-col items-center justify-center absolute inset-0"
+                style={{ display: comp.imageUrl ? 'none' : 'flex' }}
+              >
+                <div className="w-12 h-12 rounded-full bg-amber-200/50 flex items-center justify-center mb-1">
+                  <Home className="w-6 h-6 text-amber-600" />
                 </div>
-              )}
+                <span className="text-xs font-medium text-amber-700">{comp.bedrooms} BR / {comp.bathrooms} BA</span>
+              </div>
               {/* Rank badge */}
-              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-700">
+              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm">
                 {idx + 1}
               </div>
               {/* Rating badge */}
               {comp.rating > 0 && (
-                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5">
+                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
                   <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                   <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
                 </div>

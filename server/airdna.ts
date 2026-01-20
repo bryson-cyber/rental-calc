@@ -1899,28 +1899,36 @@ export async function exploreListingsInRadius(
       sort_direction: "descending",
     });
     
-    let listings: ListingData[] = (response.payload.listings || []).map((r) => ({
-      id: r.property_id || '',
-      title: r.title || 'Untitled Listing',
-      airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
-      image_url: r.images?.[0] || '',
-      bedrooms: r.bedrooms || 0,
-      bathrooms: r.bathrooms || 0,
-      accommodates: r.accommodates || 0,
-      property_type: r.property_type || 'Unknown',
-      rating: r.rating ?? null,
-      reviews: r.reviews || 0,
-      annual_revenue: r.revenue_ltm || 0,
-      adr: r.average_daily_rate_ltm || 0,
-      occupancy: r.occupancy_rate_ltm || 0,
-      last_review_date: r.last_scraped_date || '',
-      superhost: r.superhost ?? false,
-      professionally_managed: r.professionally_managed ?? false,
-      host_size: r.host_size || 'unknown',
-      latitude: r.location?.lat ?? null,
-      longitude: r.location?.lng ?? null,
-      zipcode: r.zipcode || '',
-    }));
+    let listings: ListingData[] = (response.payload.listings || []).map((r) => {
+      // Try to get image from API response, or construct from Airbnb ID
+      let imageUrl = r.images?.[0] || '';
+      if (!imageUrl && r.airbnb_property_id) {
+        // Use Airbnb's public image CDN as fallback
+        imageUrl = `https://a0.muscache.com/im/pictures/airbnb-platform-assets/AirbnbRooms-${r.airbnb_property_id}/original/listing-photo.jpg`;
+      }
+      return {
+        id: r.property_id || '',
+        title: r.title || 'Untitled Listing',
+        airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
+        image_url: imageUrl,
+        bedrooms: r.bedrooms || 0,
+        bathrooms: r.bathrooms || 0,
+        accommodates: r.accommodates || 0,
+        property_type: r.property_type || 'Unknown',
+        rating: r.rating ?? null,
+        reviews: r.reviews || 0,
+        annual_revenue: r.revenue_ltm || 0,
+        adr: r.average_daily_rate_ltm || 0,
+        occupancy: r.occupancy_rate_ltm || 0,
+        last_review_date: r.last_scraped_date || '',
+        superhost: r.superhost ?? false,
+        professionally_managed: r.professionally_managed ?? false,
+        host_size: r.host_size || 'unknown',
+        latitude: r.location?.lat ?? null,
+        longitude: r.location?.lng ?? null,
+        zipcode: r.zipcode || '',
+      };
+    });
     
     // Filter by minimum revenue if specified
     if (filters?.minRevenue) {
@@ -2082,7 +2090,27 @@ async function tryRentalizerRequest(
     
     const payload = response.payload;
     
+    // Log raw comp data to debug image URLs
+    console.log('[AirDNA] Rentalizer comps raw data sample:', JSON.stringify({
+      firstComp: payload.comps?.[0] ? {
+        title: payload.comps[0].details?.title,
+        images: payload.comps[0].details?.images,
+        thumbnail_url: (payload.comps[0].details as any)?.thumbnail_url,
+        airbnb_property_id: payload.comps[0].platforms?.airbnb_property_id,
+      } : 'No comps'
+    }));
+    
     // Map comps to our format (take all available, up to 10)
+    // Log first comp to see image data structure
+    if (payload.comps?.[0]) {
+      const firstComp = payload.comps[0];
+      console.log('[AirDNA] First comp image data:', {
+        images: firstComp.details?.images,
+        thumbnail_url: (firstComp.details as any)?.thumbnail_url,
+        comp_thumbnail: (firstComp as any)?.thumbnail_url,
+        platforms: firstComp.platforms,
+      });
+    }
     const comps: Comp[] = (payload.comps || []).slice(0, 10).map((comp) => ({
       title: comp.details.title,
       bedrooms: comp.details.bedrooms,
@@ -2335,12 +2363,55 @@ export async function getComprehensivePropertyReport(
     submarkets = submarketList;
   }
   
-  // Step 4: Get same-bedroom comps in radius (apples-to-apples)
-  // Increased from 20 to 30 for more comprehensive analysis
-  const sameBedroomComps = await exploreListingsInRadius(address, 3000, {
+  // Step 4: Get same-bedroom comps - prioritize rentalizer comps (which have images)
+  // Then supplement with radius comps for more comprehensive analysis
+  
+  // First, get comps from the rentalizer API (these have images!)
+  const rentalizerComps: ListingData[] = (propertyEstimate.comps || []).map(comp => ({
+    id: comp.airbnb_listing_id || String(Math.random()),
+    title: comp.title || 'Untitled Listing',
+    airbnb_url: comp.airbnb_url || '',
+    image_url: comp.image_url || '', // This has the real image URL from rentalizer API
+    bedrooms: comp.bedrooms || 0,
+    bathrooms: comp.bathrooms || 0,
+    accommodates: comp.accommodates || 0,
+    property_type: comp.property_type || 'Unknown',
+    rating: comp.rating ?? null,
+    reviews: comp.reviews || 0,
+    annual_revenue: comp.annual_revenue || 0,
+    adr: comp.adr || 0,
+    occupancy: comp.occupancy || 0,
+    last_review_date: '',
+    superhost: false,
+    professionally_managed: false,
+    host_size: 'unknown',
+    latitude: null,
+    longitude: null,
+    zipcode: '',
+    distance_meters: comp.distance_meters,
+  }));
+  
+  // Filter to same bedroom count
+  const sameBedroomRentalizerComps = rentalizerComps.filter(c => c.bedrooms === propertyBedrooms);
+  
+  // Get additional comps from radius search (these don't have images but may have more listings)
+  const radiusComps = await exploreListingsInRadius(address, 3000, {
     bedrooms: propertyBedrooms,
     minRevenue: 10000, // Filter out very low performers
   }, 30);
+  
+  // Merge: prioritize rentalizer comps (with images), then add radius comps that aren't duplicates
+  const seenIds = new Set(sameBedroomRentalizerComps.map(c => c.id));
+  const additionalRadiusComps = radiusComps.filter(c => !seenIds.has(c.id));
+  
+  // Combine and sort by revenue
+  let sameBedroomComps = [...sameBedroomRentalizerComps, ...additionalRadiusComps]
+    .sort((a, b) => b.annual_revenue - a.annual_revenue)
+    .slice(0, 30);
+  
+  // Enrich listings that don't have images (radius comps)
+  // Only enrich top 10 listings to avoid too many API calls
+  sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 10);
   
   // Step 5: Get bedroom performance data from comps in radius
   const bedroomPerformance: Array<{
