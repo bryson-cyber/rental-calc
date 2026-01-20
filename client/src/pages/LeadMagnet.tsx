@@ -78,6 +78,7 @@ import { useSavedItems } from '@/hooks/useSavedItems';
 import { SavedItemsPanel } from '@/components/SavedItemsPanel';
 import { StartWithProperty } from '@/components/StartWithProperty';
 import { useProperty } from '@/contexts/PropertyContext';
+import { TeslaDashboard } from '@/components/TeslaDashboard';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -2064,231 +2065,20 @@ export default function LeadMagnet() {
         </section>
       )}
       
-      {/* Validate the Deal Results */}
+      {/* Validate the Deal Results - Tesla Dashboard */}
       {activeTab === 'validate' && result && (
-        <section className="py-12 bg-[oklch(0.97_0_0)]">
-          <div className="container max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
-                result.cashFlow.monthlyProfit > 0 
-                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                  : 'bg-red-500/10 border border-red-500/20 text-red-400'
-              }`}>
-                {result.cashFlow.monthlyProfit > 0 ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    Deal Validated - Profitable!
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-4 h-4" />
-                    Warning - May Not Be Profitable
-                  </>
-                )}
-              </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-[oklch(0.15_0_0)] mb-2">
-                Your Property Analysis
-              </h3>
-              <p className="text-[oklch(0.50_0_0)]">{address}</p>
-            </div>
-            
-            {/* Key Numbers */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-2">Expected Monthly Revenue</p>
-                <p className="text-3xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(result.cashFlow.monthlyRevenue)}</p>
-              </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-2">Your Monthly Rent</p>
-                <p className="text-3xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(result.cashFlow.monthlyRent || 0)}</p>
-              </div>
-              <div className={`border rounded-xl p-6 text-center ${
-                result.cashFlow.monthlyProfit > 0 
-                  ? 'bg-emerald-500/10 border-emerald-500/30'
-                  : 'bg-red-500/10 border-red-500/30'
-              }`}>
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-2">Your Monthly Profit</p>
-                <p className={`text-3xl font-bold ${
-                  result.cashFlow.monthlyProfit > 0 ? 'text-emerald-400' : 'text-red-400'
-                }`}>
-                  {formatCurrency(result.cashFlow.monthlyProfit)}
-                </p>
-              </div>
-            </div>
-            
-            {/* Additional Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Nightly Rate</p>
-                <p className="text-xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(result.metrics.adr)}</p>
-              </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Occupancy</p>
-                <p className="text-xl font-bold text-[oklch(0.15_0_0)]">{Math.round(result.metrics.occupancy)}%</p>
-              </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Annual Revenue</p>
-                <p className="text-xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(result.revenue.projected)}</p>
-              </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Revenue Range</p>
-                <p className="text-xl font-bold text-[oklch(0.15_0_0)]">
-                  {formatCurrency(result.revenue.low)} - {formatCurrency(result.revenue.high)}
-                </p>
-              </div>
-            </div>
-            
-            {/* Monthly Revenue Forecast */}
-            {result.forecast && result.forecast.length > 0 && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">12-Month Revenue Forecast</h4>
-                <div className="grid grid-cols-12 gap-1 h-40 items-end mb-4">
-                  {result.forecast.slice(0, 12).map((month, idx) => {
-                    const maxRevenue = Math.max(...result.forecast.map(m => m.revenue));
-                    const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-                    return (
-                      <div key={idx} className="flex flex-col items-center h-full justify-end">
-                        <div className="text-xs text-[oklch(0.50_0_0)] mb-1 hidden md:block">
-                          {formatCurrency(month.revenue)}
-                        </div>
-                        <div 
-                          className="w-full bg-gradient-to-t from-emerald-500 to-teal-400 rounded-t transition-all hover:from-emerald-400 hover:to-teal-300"
-                          style={{ height: `${Math.max(heightPct, 5)}%` }}
-                          title={`${formatMonth(month.month)}: ${formatCurrency(month.revenue)} (${Math.round(month.occupancy)}% occ)`}
-                        />
-                        <div className="text-xs text-[oklch(0.50_0_0)] mt-1">
-                          {formatMonth(month.month)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[oklch(0.90_0_0)]">
-                  <div className="text-center">
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Monthly Revenue</p>
-                    <p className="text-lg font-bold text-emerald-500">
-                      {formatCurrency(result.forecast.reduce((sum, m) => sum + m.revenue, 0) / result.forecast.length)}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Peak Month</p>
-                    <p className="text-lg font-bold text-[oklch(0.15_0_0)]">
-                      {formatMonth(result.forecast.reduce((max, m) => m.revenue > max.revenue ? m : max, result.forecast[0]).month)}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Occupancy</p>
-                    <p className="text-lg font-bold text-[oklch(0.15_0_0)]">
-                      {Math.round(result.forecast.reduce((sum, m) => sum + m.occupancy, 0) / result.forecast.length)}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Market Percentile Ranking */}
-            {result.comparables && result.comparables.length > 0 && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">How Your Property Ranks</h4>
-                {(() => {
-                  const allRevenues = result.comparables.map(c => c.revenue).sort((a, b) => b - a); // Sort descending (highest first)
-                  const propertyRevenue = result.revenue.projected;
-                  // Find position where property would rank (1-indexed)
-                  const position = allRevenues.findIndex(r => propertyRevenue >= r);
-                  // If property is lower than all comps, it ranks last (position = -1 means add to end)
-                  const rank = position === -1 ? allRevenues.length + 1 : position + 1;
-                  const percentile = Math.round(((allRevenues.length - rank + 1) / allRevenues.length) * 100);
-                  const avgCompRevenue = allRevenues.reduce((sum, r) => sum + r, 0) / allRevenues.length;
-                  const vsAvg = ((propertyRevenue - avgCompRevenue) / avgCompRevenue) * 100;
-                  const totalCount = allRevenues.length + 1; // Include the property being analyzed
-                  
-                  return (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-[oklch(0.50_0_0)]">Market Percentile</span>
-                            <span className="font-semibold text-[oklch(0.15_0_0)]">{percentile}th percentile</span>
-                          </div>
-                          <div className="h-3 bg-[oklch(0.92_0_0)] rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all ${
-                                percentile >= 75 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
-                                percentile >= 50 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
-                                'bg-gradient-to-r from-red-500 to-orange-400'
-                              }`}
-                              style={{ width: `${percentile}%` }}
-                            />
-                          </div>
-                          <div className="flex justify-between text-xs text-[oklch(0.50_0_0)] mt-1">
-                            <span>Bottom 25%</span>
-                            <span>Median</span>
-                            <span>Top 25%</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[oklch(0.90_0_0)]">
-                        <div className="text-center">
-                          <p className="text-sm text-[oklch(0.50_0_0)] mb-1">vs. Market Average</p>
-                          <p className={`text-xl font-bold ${vsAvg >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {vsAvg >= 0 ? '+' : ''}{Math.round(vsAvg)}%
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Rank Among Comps</p>
-                          <p className="text-xl font-bold text-[oklch(0.15_0_0)]">
-                            #{rank} of {totalCount}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            
-            {/* Comparables */}
-            {result.comparables && result.comparables.length > 0 && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)]">Similar Properties Making Money Nearby</h4>
-                  <span className="text-sm text-[oklch(0.50_0_0)] bg-[oklch(0.92_0_0)] px-3 py-1 rounded-full">
-                    {result.comparables.length} properties
-                  </span>
-                </div>
-                <div className="grid gap-3 max-h-[500px] overflow-y-auto pr-2">
-                  {result.comparables.map((comp, idx) => (
-                    <div key={comp.id} className="flex items-center gap-4 p-3 bg-[oklch(0.97_0_0)] rounded-lg">
-                      <span className="w-8 h-8 rounded-full bg-[oklch(0.92_0_0)] flex items-center justify-center text-[oklch(0.35_0_0)] text-sm font-medium">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-[oklch(0.25_0_0)] font-medium">{comp.title}</p>
-                        <p className="text-sm text-[oklch(0.50_0_0)]">{comp.bedrooms} BR · {comp.bathrooms} BA</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-emerald-400 font-semibold">{formatCurrency(comp.revenue)}/yr</p>
-                        <p className="text-sm text-[oklch(0.50_0_0)]">{Math.round(comp.occupancy)}% occ</p>
-                      </div>
-                      {comp.airbnbUrl && (
-                        <a
-                          href={comp.airbnbUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 bg-[oklch(0.92_0_0)] rounded-lg hover:bg-slate-600 transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4 text-[oklch(0.35_0_0)]" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        <section className="py-12 bg-slate-50">
+          <div className="container max-w-5xl mx-auto px-4">
+            <TeslaDashboard
+              result={result}
+              address={address}
+              bedrooms={parseInt(bedrooms)}
+              bathrooms={parseFloat(bathrooms)}
+            />
             
             {/* Next Step CTA */}
-            <div className="text-center">
-              <p className="text-[oklch(0.50_0_0)] mb-4">Have multiple properties to compare? Find the best one.</p>
+            <div className="text-center mt-8">
+              <p className="text-slate-500 mb-4">Have multiple properties to compare? Find the best one.</p>
               <Button
                 onClick={() => {
                   setBulkProperties([

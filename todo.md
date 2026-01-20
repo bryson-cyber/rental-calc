@@ -2304,3 +2304,69 @@ When a property is set, applicable tools should automatically filter to show onl
   - Distance from user's property (if set)
   - "View on Airbnb" button linking to the listing
 - Tested with Florida → Miami: Info window displays correctly when clicking markers
+
+
+## Tesla Dashboard Redesign (Jan 20, 2026)
+
+### Design Philosophy:
+- Same powerful insights as AirDNA, dramatically simpler interface
+- One hero metric per section, progressive disclosure for details
+- Smart defaults, visual over tabular, instant insights
+- Color = meaning (green/yellow/red for quick decisions)
+
+### Phase 1: Core Metrics Redesign (Priority: HIGH) - COMPLETE
+- [x] Create hero revenue display: Big "$133,244/year" front and center (dark hero section)
+- [x] Add supporting stats row: ADR ($496/night), Occupancy (74% booked)
+- [x] Add Conservative/Optimistic range: $117K - $150K
+- [x] Add cash flow verdict badge: "This Property Cash Flows" (green)
+- [x] Clean card design with proper visual hierarchy
+
+### Phase 2: Seasonal Forecast Simplification (Priority: HIGH) - COMPLETE
+- [x] Redesign as single bar chart (monthly revenue only)
+- [x] Auto-highlight peak months: "Peak: Jan, Feb, Mar ($16,365/mo)" with green dot
+- [x] Auto-highlight slow months: "Slow: Jun, Oct, Sep ($3,717/mo)" with yellow dot
+- [x] Clean month labels (J, F, M, A, M, J, J, A, S, O, N, D)
+- [x] "Show details" button for expanded view
+
+### Phase 3: Market Health Indicators (Priority: MEDIUM)
+- [ ] Create Market Grade component (A+, A, B+, B, C, D, F)
+- [ ] One-line summary: "Strong market with high demand and steady growth"
+- [ ] Color-coded: Green = Go, Yellow = Caution, Red = Risky
+- [ ] Click to expand for 5 factors (Investability, Demand, Growth, Seasonality, Regulation)
+- [ ] Add Year-over-Year trends: Revenue ↑8%, Occupancy ↑3%, ADR ↑5%
+- [ ] Add Active Listings count with growth indicator
+
+### Phase 4: Arbitrage-Specific Calculations (Priority: HIGH) - COMPLETE
+- [x] Monthly rent input field (already in form)
+- [x] Calculate and display: "Monthly Profit: $11,104" (green)
+- [x] Add break-even occupancy: "You need 0% occupancy to cover rent. Current projection is 74% — that's a 74% cushion."
+- [x] Add risk assessment: "If occupancy drops 20%, You'd still profit $8,809/month"
+- [x] Simple verdict: "Low Risk" badge (green) or "High Risk" badge (red)
+
+### Phase 5: Comparable Properties Redesign (Priority: MEDIUM) - COMPLETE
+- [x] Convert from dense table to visual property cards
+- [x] Card shows: Rank #, Rating, Name, BR/BA/Guests, Revenue, Occupancy, ADR
+- [x] Show top 6 by default, "See all 25" expands
+- [x] Smart default: sorted by revenue (what matters most)
+- [x] Clean card design with thumbnails and Airbnb links
+
+### Phase 6: Additional Market Insights (Priority: LOW)
+- [ ] Add Professional Management %: "42% professionally managed"
+- [ ] Add Superhost %: "38% are Superhosts"
+- [ ] Add Amenities breakdown: "Must-haves: WiFi (98%), Kitchen (95%)" + "Differentiators: Pool (23%)"
+- [ ] Add Rental Channel info: "Most hosts list on Airbnb (60%)"
+- [ ] Add Minimum Stay data: "Average minimum stay: 2 nights"
+
+### Phase 7: UI/UX Polish (Priority: MEDIUM)
+- [ ] Update color scheme to professional palette (navy, blue, green accents)
+- [ ] Improve typography hierarchy (large bold numbers, clean labels)
+- [ ] Add white space and breathing room
+- [ ] Ensure mobile responsiveness
+- [ ] Add smooth transitions and micro-animations
+
+### Success Criteria:
+- [ ] All important AirDNA data points are present (nothing omitted)
+- [ ] Interface feels simple and intuitive (not overwhelming)
+- [ ] Investor can make a decision in under 60 seconds
+- [ ] Arbitrage-specific calculations help with rent vs revenue analysis
+- [ ] Mobile experience is clean and usable
