@@ -418,9 +418,13 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         return;
       }
       
-      console.log('[MapView] Fetching listings for market:', marketId);
+      console.log('[MapView] Fetching listings for market:', marketId, 'selection:', JSON.stringify(selection));
       
-      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId } }))}`);
+      // Determine if this is a market-level or submarket-level search
+      const isMarketLevel = selection.level === 'market';
+      console.log('[MapView] Search level:', selection.level, 'isMarketLevel:', isMarketLevel);
+      
+      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel } }))}`);
       const data = await response.json();
       
       if (data.result?.data?.json?.listings) {

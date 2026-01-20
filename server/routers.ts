@@ -25,6 +25,7 @@ import {
   getRentalizerBulkSummary,
   getSubmarketListings,
   getMarketHistoricalData,
+  getMarketListings,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1779,6 +1780,7 @@ export const appRouter = router({
     getListings: publicProcedure
       .input(z.object({
         submarketId: z.string(),
+        isMarketLevel: z.boolean().default(false), // true = city/metro level, false = neighborhood level
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(25),
         orderBy: z.enum(['revenue', 'adr', 'occupancy', 'rating']).default('revenue'),
@@ -1787,12 +1789,21 @@ export const appRouter = router({
       .query(async ({ input }) => {
         try {
           const offset = (input.page - 1) * input.pageSize;
-          const result = await getSubmarketListings(input.submarketId, {
-            limit: input.pageSize,
-            offset,
-            orderBy: input.orderBy,
-            orderDirection: input.orderDirection,
-          });
+          
+          // Use the appropriate function based on whether it's a market or submarket search
+          const result = input.isMarketLevel 
+            ? await getMarketListings(input.submarketId, {
+                limit: input.pageSize,
+                offset,
+                orderBy: input.orderBy,
+                orderDirection: input.orderDirection,
+              })
+            : await getSubmarketListings(input.submarketId, {
+                limit: input.pageSize,
+                offset,
+                orderBy: input.orderBy,
+                orderDirection: input.orderDirection,
+              });
 
           if (!result) {
             return {

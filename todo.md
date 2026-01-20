@@ -2103,3 +2103,45 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Revenue thresholds display correctly
 - [x] Filters and sorting work correctly
 - [x] Comparable properties table shows all data with proper formatting
+
+
+## Map View Enhancements (Jan 20, 2026)
+
+### Feature: Search Beyond Zip Code
+- [ ] Allow users to search by city/metro to see properties across multiple zip codes
+- [ ] Allow users to search by neighborhood to see a wider area
+- [ ] When property is set, default to zip code but allow expanding search area
+- [ ] Add "Search entire city" or "Search neighborhood" options
+
+### Data Quality Audit
+- [ ] Audit all data fields for proper formatting
+- [ ] Ensure revenue displays as currency ($X,XXX)
+- [ ] Ensure occupancy displays as percentage (XX%)
+- [ ] Ensure ADR displays as currency ($XXX/night)
+- [ ] Ensure ratings display correctly (X.X)
+- [ ] Check for any null/undefined values displaying incorrectly
+
+
+## Map View City-Level Search Fix (Jan 20, 2026) - COMPLETE
+
+### Issue:
+- When searching at city/metro level (e.g., Florida → Miami), the API returned wrong data (San Diego properties instead of Miami)
+- Users could only reliably search by zip code, not by city or neighborhood
+
+### Root Cause:
+- The `compData.getListings` endpoint was always calling `getSubmarketListings` which uses `/submarket/{id}/listings`
+- City-level searches need to use `/market/{id}/listings` endpoint instead
+- The market ID was being passed to the submarket endpoint, returning incorrect data
+
+### Fix:
+- [x] Added `isMarketLevel` parameter to `compData.getListings` endpoint in routers.ts
+- [x] Added `getMarketListings` to imports from airdna.ts
+- [x] Updated router to call `getMarketListings` for city-level searches and `getSubmarketListings` for neighborhood/zip-level searches
+- [x] Updated MapViewContent to pass `isMarketLevel: true` when searching at city level
+
+### Verified Working:
+- [x] Florida → Miami search returns Miami properties (25 properties, avg $629,427 revenue)
+- [x] Map shows correct Miami area (Coral Gables, Virginia Key, Key Biscayne)
+- [x] Revenue thresholds calculate correctly (Top 33%: ≥$657,498)
+- [x] Property data displays cleanly (Revenue, Occupancy, ADR, Rating)
+- [x] Properties without reviews show "—" for rating (correct behavior)
