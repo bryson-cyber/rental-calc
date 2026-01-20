@@ -2145,3 +2145,28 @@ When a property is set, applicable tools should automatically filter to show onl
 - [x] Revenue thresholds calculate correctly (Top 33%: ≥$657,498)
 - [x] Property data displays cleanly (Revenue, Occupancy, ADR, Rating)
 - [x] Properties without reviews show "—" for rating (correct behavior)
+
+
+## Map View (Step 5) Bug Fixes (Jan 20, 2026) - FIXED
+
+### Bug 1: Comps not loading - WORKING
+- [x] Status: Comps load correctly when location is selected
+- [x] Verified: Nashville 37201 shows 2 properties, Miami shows 25 properties
+
+### Bug 2: Not auto-loading from property - WORKING
+- [x] Status: Auto-loads when user clicks "See on Map" from property card
+- [x] Zip code auto-populates from property address
+- [x] Location hierarchy auto-selects (State → City → Neighborhood → Zip)
+
+### Bug 3: Remove Filters button - FIXED
+- [x] Removed the "Clear Filters" button from the UI
+
+### Bug 4: Bedroom filter locked - FIXED
+- [x] Unlocked the bedroom filter - users can now select any bedroom count
+- [x] Dropdown shows all available options: All Bedrooms, 2BR, 4BR, 5BR, 6BR, 8BR, 9BR, 13BR, 24BR
+- [x] Removed the "(locked to match your property)" text
+
+### Bug 5: UI needs improvement - FIXED
+- [x] Made "Your Property" card compact when property is set from context
+- [x] Shows address, bedroom/bathroom count in a clean single-row layout
+- [x] Removed redundant input fields when property is already set

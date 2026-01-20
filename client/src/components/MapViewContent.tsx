@@ -838,63 +838,80 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
           
           {/* Legend and Controls - Show second on mobile/tablet, first (sidebar) on desktop */}
           <div className="order-2 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4">
-            {/* My Property Section */}
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Home className="w-4 h-4 text-blue-600" />
-                  My Property
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Enter your property address to see how far competitors are from your location.
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter your address..."
-                    value={myPropertyAddress}
-                    onChange={(e) => setMyPropertyAddress(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
-                    className="text-sm"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={geocodeMyProperty}
-                    disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
-                    size="sm"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {isGeocodingMyProperty ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Navigation className="w-3 h-3 mr-1" />
-                    )}
-                    Set Location
-                  </Button>
-                  {myPropertyLocation && (
-                    <Button
-                      onClick={clearMyProperty}
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
-                {myPropertyError && (
-                  <p className="text-xs text-red-600">{myPropertyError}</p>
-                )}
-                {myPropertyLocation && (
-                  <div className="p-2 bg-blue-100 rounded-lg text-xs text-blue-800">
-                    <div className="font-medium">📍 Location Set</div>
-                    <div className="truncate">{myPropertyLocation.address}</div>
+            {/* My Property Section - Compact view when property is set from context */}
+            {hasProperty && myProperty ? (
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-muted-foreground">Your Property</div>
+                      <div className="text-sm font-medium truncate">{myProperty.address}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {myProperty.bedrooms}BR / {myProperty.bathrooms}BA
+                      </div>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Home className="w-4 h-4 text-blue-600" />
+                    My Property
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Enter your property address to see how far competitors are from your location.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter your address..."
+                      value={myPropertyAddress}
+                      onChange={(e) => setMyPropertyAddress(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={geocodeMyProperty}
+                      disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
+                      size="sm"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isGeocodingMyProperty ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Navigation className="w-3 h-3 mr-1" />
+                      )}
+                      Set Location
+                    </Button>
+                    {myPropertyLocation && (
+                      <Button
+                        onClick={clearMyProperty}
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  {myPropertyError && (
+                    <p className="text-xs text-red-600">{myPropertyError}</p>
+                  )}
+                  {myPropertyLocation && (
+                    <div className="p-2 bg-blue-100 rounded-lg text-xs text-blue-800">
+                      <div className="font-medium">📍 Location Set</div>
+                      <div className="truncate">{myPropertyLocation.address}</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
             
             {/* Threshold Controls */}
             <Card>
@@ -975,31 +992,14 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Apples-to-Apples Indicator */}
-                  {hasProperty && enforceApplesToApples && contextBedroomFilter !== null && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-amber-800">
-                        <Home className="w-4 h-4" />
-                        <span className="font-medium">Apples-to-Apples Mode</span>
-                      </div>
-                      <p className="text-xs text-amber-700 mt-1">
-                        Showing only {contextBedroomFilter}BR properties to match your property
-                      </p>
-                    </div>
-                  )}
-                  
                   {/* Bedroom Filter */}
                   <div>
                     <Label className="text-xs text-muted-foreground mb-1.5 block">
                       Bedrooms
-                      {hasProperty && enforceApplesToApples && contextBedroomFilter !== null && (
-                        <span className="ml-2 text-amber-600">(locked to match your property)</span>
-                      )}
                     </Label>
                     <Select 
                       value={bedroomFilter} 
                       onValueChange={setBedroomFilter}
-                      disabled={hasProperty && enforceApplesToApples && contextBedroomFilter !== null}
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="All Bedrooms" />
@@ -1071,17 +1071,6 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                       <p className="text-xs text-muted-foreground">
                         Showing {filteredListings.length} of {listings.length} properties
                       </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7 px-2 mt-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => {
-                          setBedroomFilter('all');
-                          setPropertyTypeFilter('all');
-                        }}
-                      >
-                        Clear Filters
-                      </Button>
                     </div>
                   )}
                 </CardContent>
