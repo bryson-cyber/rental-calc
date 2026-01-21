@@ -2424,3 +2424,46 @@ When a property is set, applicable tools should automatically filter to show onl
 - Images location: payload.details.images (array of URLs)
 - Image CDN: https://a0.muscache.com/im/pictures/miso/Hosting-{id}/original/...
 - enrichListingsWithImages fetches images for top 10 listings without images
+
+
+## Image Carousel Feature (Jan 20, 2026)
+
+### Goal:
+Allow users to click on a property card to see multiple photos (30-70 images per property from AirDNA API)
+
+### Tasks:
+- [ ] Update backend to return multiple images per property (not just first image)
+- [ ] Create ImageCarousel modal component with navigation arrows
+- [ ] Add click handler to property cards in TeslaDashboard
+- [ ] Implement keyboard navigation (arrow keys, escape to close)
+- [ ] Add image counter (e.g., "3 of 45")
+- [ ] Test with multiple properties
+
+
+## Image Carousel Feature (Jan 20, 2026) - COMPLETE
+
+### Implementation:
+- [x] Design the image carousel component and data flow
+- [x] Update Comparable interface to include images array
+- [x] Update LeadMagnet mapping to pass images from backend
+- [x] Create ImageCarousel modal component with:
+  - Full-screen modal overlay with dark backdrop
+  - Keyboard navigation (arrow keys, ESC to close)
+  - Touch/swipe support for mobile
+  - Image counter ("1 of 57")
+  - Thumbnail strip with +N indicator for overflow
+  - "View on Airbnb" link
+  - Loading spinner for images
+  - Previous/Next navigation buttons
+- [x] Integrate carousel into TeslaDashboard property cards
+- [x] Add hover effect with "X photos" badge on cards
+- [x] Test carousel navigation and verify working
+
+### Features:
+- Click any property card to open full-screen gallery
+- Navigate with arrow buttons or keyboard arrows
+- Thumbnail strip shows first 10 images + "+N" for remaining
+- Click any thumbnail to jump to that image
+- "View on Airbnb" link opens listing in new tab
+- ESC key or X button closes the gallery
+- Smooth transitions and loading states

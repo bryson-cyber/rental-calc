@@ -28,8 +28,10 @@ import {
   Users,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  Camera
 } from 'lucide-react';
+import { ImageCarousel } from './ImageCarousel';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -54,6 +56,7 @@ interface Comparable {
   rating: number;
   reviews: number;
   imageUrl?: string;
+  images?: string[];  // All images for carousel
   airbnbUrl?: string;
   distanceMeters?: number;
 }
@@ -628,7 +631,7 @@ function MarketPosition({
 }
 
 /**
- * Comparable Properties Cards - Visual property cards
+ * Comparable Properties Cards - Visual property cards with image carousel
  */
 function ComparableProperties({ 
   comparables,
@@ -638,72 +641,118 @@ function ComparableProperties({
   onViewAll?: () => void;
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [selectedComp, setSelectedComp] = useState<Comparable | null>(null);
   
   if (!comparables || comparables.length === 0) return null;
   
   const displayComps = showAll ? comparables : comparables.slice(0, 6);
   
+  const openCarousel = (comp: Comparable) => {
+    // Only open carousel if there are images
+    const images = comp.images && comp.images.length > 0 ? comp.images : (comp.imageUrl ? [comp.imageUrl] : []);
+    if (images.length > 0) {
+      setSelectedComp(comp);
+      setCarouselOpen(true);
+    }
+  };
+  
+  const getCompImages = (comp: Comparable): string[] => {
+    if (comp.images && comp.images.length > 0) return comp.images;
+    if (comp.imageUrl) return [comp.imageUrl];
+    return [];
+  };
+  
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">Similar Properties Nearby</h3>
-          <p className="text-slate-500 text-sm">{comparables.length} properties making money in this area</p>
-        </div>
-        {comparables.length > 6 && (
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            {showAll ? 'Show less' : `See all ${comparables.length}`}
-          </button>
-        )}
-      </div>
+    <>
+      {/* Image Carousel Modal */}
+      <ImageCarousel
+        images={selectedComp ? getCompImages(selectedComp) : []}
+        isOpen={carouselOpen}
+        onClose={() => {
+          setCarouselOpen(false);
+          setSelectedComp(null);
+        }}
+        title={selectedComp?.title}
+        airbnbUrl={selectedComp?.airbnbUrl}
+      />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {displayComps.map((comp, idx) => (
-          <div 
-            key={comp.id} 
-            className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
-          >
-            {/* Image - Show actual image if available, otherwise styled placeholder */}
-            <div className="h-32 bg-gradient-to-br from-amber-50 to-amber-100 relative">
-              {comp.imageUrl ? (
-                <img 
-                  src={comp.imageUrl} 
-                  alt={comp.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // On error, hide the image and show placeholder
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const placeholder = target.nextElementSibling as HTMLElement;
-                    if (placeholder) placeholder.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              {/* Placeholder - shown when no image or image fails to load */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Similar Properties Nearby</h3>
+            <p className="text-slate-500 text-sm">{comparables.length} properties making money in this area</p>
+          </div>
+          {comparables.length > 6 && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              {showAll ? 'Show less' : `See all ${comparables.length}`}
+            </button>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {displayComps.map((comp, idx) => {
+            const hasImages = (comp.images && comp.images.length > 0) || !!comp.imageUrl;
+            const imageCount = comp.images?.length || (comp.imageUrl ? 1 : 0);
+            
+            return (
               <div 
-                className="w-full h-full flex flex-col items-center justify-center absolute inset-0"
-                style={{ display: comp.imageUrl ? 'none' : 'flex' }}
+                key={comp.id} 
+                className="border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
               >
-                <div className="w-12 h-12 rounded-full bg-amber-200/50 flex items-center justify-center mb-1">
-                  <Home className="w-6 h-6 text-amber-600" />
+                {/* Image - Clickable to open carousel */}
+                <div 
+                  className={`h-32 bg-gradient-to-br from-amber-50 to-amber-100 relative ${hasImages ? 'cursor-pointer group' : ''}`}
+                  onClick={() => hasImages && openCarousel(comp)}
+                >
+                  {comp.imageUrl ? (
+                    <img 
+                      src={comp.imageUrl} 
+                      alt={comp.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        // On error, hide the image and show placeholder
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const placeholder = target.nextElementSibling as HTMLElement;
+                        if (placeholder) placeholder.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  {/* Placeholder - shown when no image or image fails to load */}
+                  <div 
+                    className="w-full h-full flex flex-col items-center justify-center absolute inset-0"
+                    style={{ display: comp.imageUrl ? 'none' : 'flex' }}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-amber-200/50 flex items-center justify-center mb-1">
+                      <Home className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <span className="text-xs font-medium text-amber-700">{comp.bedrooms} BR / {comp.bathrooms} BA</span>
+                  </div>
+                  {/* Hover overlay with photo count */}
+                  {hasImages && imageCount > 1 && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="flex items-center gap-1.5 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                        <Camera className="w-4 h-4" />
+                        <span>{imageCount} photos</span>
+                      </div>
+                    </div>
+                  )}
+                  {/* Rank badge */}
+                  <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm">
+                    {idx + 1}
+                  </div>
+                  {/* Rating badge */}
+                  {comp.rating > 0 && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs font-medium text-amber-700">{comp.bedrooms} BR / {comp.bathrooms} BA</span>
-              </div>
-              {/* Rank badge */}
-              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center text-xs font-bold text-slate-700 shadow-sm">
-                {idx + 1}
-              </div>
-              {/* Rating badge */}
-              {comp.rating > 0 && (
-                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 rounded-full px-2 py-0.5 shadow-sm">
-                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                  <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
-                </div>
-              )}
-            </div>
             
             {/* Content */}
             <div className="p-3">
@@ -741,12 +790,13 @@ function ComparableProperties({
               </div>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     </div>
+    </>
   );
 }
-
 // ============================================
 // MAIN COMPONENT
 // ============================================
