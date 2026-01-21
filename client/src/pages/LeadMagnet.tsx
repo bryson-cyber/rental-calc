@@ -1574,38 +1574,55 @@ export default function LeadMagnet() {
       
       {/* Prove the Market Results */}
       {activeTab === 'prove' && researchResult && !isResearching && (
-        <section className="py-12 bg-[oklch(0.97_0_0)]">
+        <section className="py-12 bg-slate-50">
           <div className="container max-w-4xl mx-auto">
+            {/* Hero Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
                 <CheckCircle2 className="w-4 h-4" />
-                Market Proven
+                Market Validated
               </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-[oklch(0.15_0_0)] mb-2">
-                {researchResult.marketName} Works!
+              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+                {researchResult.marketName} is Profitable
               </h3>
-              <p className="text-[oklch(0.50_0_0)]">
-                Here's the proof that hosts are making real money in this market
+              <p className="text-slate-500">
+                Real revenue data from active Airbnb hosts in this market
               </p>
             </div>
             
-            {/* Key Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Annual Revenue</p>
-                <p className="text-2xl font-bold text-emerald-400">{formatCurrency(researchResult.avgRevenue)}</p>
+            {/* Key Metrics - Tesla Dashboard Style */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                <div className="inline-flex p-2 rounded-lg mb-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <p className="text-slate-500 text-xs font-medium">Avg Annual Revenue</p>
+                <p className="text-xl font-bold text-slate-900">{formatCurrency(researchResult.avgRevenue)}</p>
+                <p className="text-slate-400 text-xs">Per listing</p>
               </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Nightly Rate</p>
-                <p className="text-2xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(researchResult.avgAdr)}</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                <div className="inline-flex p-2 rounded-lg mb-2 bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <p className="text-slate-500 text-xs font-medium">Nightly Rate</p>
+                <p className="text-xl font-bold text-slate-900">{formatCurrency(researchResult.avgAdr)}</p>
+                <p className="text-slate-400 text-xs">Average ADR</p>
               </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Avg Occupancy</p>
-                <p className="text-2xl font-bold text-[oklch(0.15_0_0)]">{Math.round(researchResult.avgOccupancy)}%</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                <div className="inline-flex p-2 rounded-lg mb-2 bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                  <Percent className="w-5 h-5" />
+                </div>
+                <p className="text-slate-500 text-xs font-medium">Occupancy</p>
+                <p className="text-xl font-bold text-slate-900">{Math.round(researchResult.avgOccupancy)}%</p>
+                <p className="text-slate-400 text-xs">Booked nights</p>
               </div>
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-4 text-center">
-                <p className="text-sm text-[oklch(0.50_0_0)] mb-1">Active Listings</p>
-                <p className="text-2xl font-bold text-[oklch(0.15_0_0)]">{researchResult.totalListings.toLocaleString()}</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                <div className="inline-flex p-2 rounded-lg mb-2 bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Home className="w-5 h-5" />
+                </div>
+                <p className="text-slate-500 text-xs font-medium">Active Listings</p>
+                <p className="text-xl font-bold text-slate-900">{researchResult.totalListings.toLocaleString()}</p>
+                <p className="text-slate-400 text-xs">In this market</p>
               </div>
             </div>
             
@@ -1638,52 +1655,62 @@ export default function LeadMagnet() {
               });
               
               return (
-                <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)]">What's Working in This Market</h4>
-                    <span className="text-xs text-[oklch(0.50_0_0)] bg-[oklch(0.95_0_0)] px-2 py-1 rounded">By Bedroom Count</span>
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Revenue by Property Type</h4>
+                      <p className="text-slate-500 text-sm">See what's working in this market</p>
+                    </div>
+                    <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-medium">By Bedroom</span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {typesToShow.map((type, idx) => (
                       <div 
                         key={idx} 
-                        className={`p-4 rounded-lg border ${
+                        className={`p-4 rounded-xl border transition-all ${
                           type.count > 0 
-                            ? 'bg-[oklch(0.97_0_0)] border-[oklch(0.90_0_0)]' 
-                            : 'bg-[oklch(0.98_0_0)] border-dashed border-[oklch(0.85_0_0)]'
+                            ? 'bg-slate-50 border-slate-200 hover:border-slate-300' 
+                            : 'bg-slate-50/50 border-dashed border-slate-200'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <p className={`font-semibold ${type.count > 0 ? 'text-[oklch(0.25_0_0)]' : 'text-[oklch(0.60_0_0)]'}`}>
-                            {type.type}
-                          </p>
-                          <p className="text-sm text-[oklch(0.50_0_0)]">
-                            {type.count > 0 ? `${type.count} listings` : 'No data'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                              type.count > 0 ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-200 text-slate-400'
+                            }`}>
+                              {type.type === 'Studio' ? 'S' : type.type.split(' ')[0]}
+                            </div>
+                            <p className={`font-semibold text-sm ${type.count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
+                              {type.type}
+                            </p>
+                          </div>
                         </div>
                         {type.count > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Revenue/yr</p>
-                              <p className="text-emerald-500 font-bold text-sm">{formatCurrency(type.avgRevenue)}</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-slate-500">Revenue/yr</p>
+                              <p className="text-emerald-600 font-bold text-sm">{formatCurrency(type.avgRevenue)}</p>
                             </div>
-                            <div>
-                              <p className="text-xs text-[oklch(0.50_0_0)] mb-1">Occupancy</p>
-                              <p className="text-[oklch(0.25_0_0)] font-semibold text-sm">{type.occupancy}%</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-slate-500">Occupancy</p>
+                              <p className="text-slate-900 font-semibold text-sm">{type.occupancy}%</p>
                             </div>
+                            <p className="text-xs text-slate-400">{type.count} listings</p>
                           </div>
                         ) : (
-                          <p className="text-xs text-[oklch(0.55_0_0)] italic">
-                            Limited data in this area for this bedroom count
+                          <p className="text-xs text-slate-400 italic">
+                            Limited data available
                           </p>
                         )}
                       </div>
                     ))}
                   </div>
                   {typesToShow.some(t => t.count === 0) && (
-                    <p className="mt-4 text-xs text-[oklch(0.50_0_0)] italic">
-                      💡 Tip: Some bedroom types show "No data" because there are few active listings in this specific area. Try searching a broader market for more complete data.
-                    </p>
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-700">
+                        💡 Some bedroom types show limited data because there are few active listings in this specific area. Try searching a broader market for more complete data.
+                      </p>
+                    </div>
                   )}
                 </div>
               );
@@ -1692,28 +1719,28 @@ export default function LeadMagnet() {
             
             {/* Seasonality Summary */}
             {isResearching && (
-              <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
+              <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4">Market Seasonality</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Occupancy by Month</p>
+                    <p className="text-sm text-slate-500 mb-3">Occupancy by Month</p>
                     <div className="space-y-2">
                       {[...Array(12)].map((_, idx) => (
                         <div key={idx} className="flex items-center gap-3">
-                          <div className="w-12 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
-                          <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 animate-pulse" />
-                          <div className="w-10 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                          <div className="w-12 h-4 bg-slate-200 rounded animate-pulse" />
+                          <div className="flex-1 bg-slate-200 rounded-full h-5 animate-pulse" />
+                          <div className="w-10 h-4 bg-slate-200 rounded animate-pulse" />
                         </div>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-[oklch(0.50_0_0)] mb-3">Average Daily Rate by Month</p>
+                    <p className="text-sm text-slate-500 mb-3">Average Daily Rate by Month</p>
                     <div className="space-y-2">
                       {[...Array(12)].map((_, idx) => (
                         <div key={idx} className="flex items-center justify-between">
-                          <div className="w-12 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
-                          <div className="w-16 h-4 bg-[oklch(0.92_0_0)] rounded animate-pulse" />
+                          <div className="w-12 h-4 bg-slate-200 rounded animate-pulse" />
+                          <div className="w-16 h-4 bg-slate-200 rounded animate-pulse" />
                         </div>
                       ))}
                     </div>
@@ -1730,13 +1757,18 @@ export default function LeadMagnet() {
               const adrRange = maxAdr - minAdr || 1;
               
               return (
-                <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-8">
-                  <h4 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-4">Market Seasonality</h4>
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Market Seasonality</h4>
+                      <p className="text-slate-500 text-sm">Monthly performance patterns</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Occupancy Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-[oklch(0.50_0_0)]">Occupancy by Month</p>
+                        <p className="text-sm text-slate-500">Occupancy by Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-amber-500"></div>
                           <span className="text-xs text-amber-600 font-medium">Avg: {Math.round(avgOccupancy)}%</span>
@@ -1747,8 +1779,8 @@ export default function LeadMagnet() {
                           const isAboveAvg = month.occupancy >= avgOccupancy;
                           return (
                             <div key={idx} className="flex items-center gap-3">
-                              <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
-                              <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden relative">
+                              <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
+                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
                                 {/* Average line indicator */}
                                 <div 
                                   className="absolute top-0 bottom-0 w-0.5 bg-amber-500 z-10"
@@ -1764,12 +1796,12 @@ export default function LeadMagnet() {
                           );
                         })}
                       </div>
-                      <p className="text-xs text-[oklch(0.50_0_0)] mt-3 italic">Green = above average, Amber = below average</p>
+                      <p className="text-xs text-slate-400 mt-3">Green = above average, Amber = below average</p>
                     </div>
                     {/* ADR Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-[oklch(0.50_0_0)]">Average Daily Rate by Month</p>
+                        <p className="text-sm text-slate-500">Average Daily Rate by Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-blue-500"></div>
                           <span className="text-xs text-blue-600 font-medium">Avg: {formatCurrency(avgAdr)}</span>
@@ -1783,8 +1815,8 @@ export default function LeadMagnet() {
                           const avgPosition = 20 + ((avgAdr - minAdr) / adrRange) * 80;
                           return (
                             <div key={idx} className="flex items-center gap-3">
-                              <span className="text-xs text-[oklch(0.50_0_0)] w-12">{formatMonth(month.month)}</span>
-                              <div className="flex-1 bg-[oklch(0.92_0_0)] rounded-full h-5 overflow-hidden relative">
+                              <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
+                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
                                 {/* Average line indicator */}
                                 <div 
                                   className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10"
@@ -1800,15 +1832,16 @@ export default function LeadMagnet() {
                           );
                         })}
                       </div>
-                      <p className="text-xs text-[oklch(0.50_0_0)] mt-3 italic">Blue = above average, Gray = below average</p>
+                      <p className="text-xs text-slate-400 mt-3">Blue = above average, Gray = below average</p>
                     </div>
                   </div>
                 </div>
               );
             })()}
             {/* Next Step CTA */}
-            <div className="text-center">
-              <p className="text-[oklch(0.50_0_0)] mb-4">Ready to find specific opportunities in this market?</p>
+            <div className="bg-white border border-slate-200 rounded-xl p-6 text-center">
+              <h4 className="text-lg font-semibold text-slate-900 mb-2">Ready for the Next Step?</h4>
+              <p className="text-slate-500 mb-4">Find specific opportunities in this market</p>
               <Button
                 onClick={() => {
                   setExploreAddress(researchResult.marketName);
@@ -1832,7 +1865,7 @@ export default function LeadMagnet() {
                   });
                   toast.success(`Saved ${marketName} to your list!`);
                 }}
-                className={`border-[oklch(0.78_0.12_75)] text-[oklch(0.78_0.12_75)] hover:bg-[oklch(0.78_0.12_75)]/10 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-[oklch(0.78_0.12_75)]/10' : ''}`}
+                className={`ml-3 border-amber-500 text-amber-600 hover:bg-amber-50 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-amber-50' : ''}`}
               >
                 {isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? (
                   <>
