@@ -2660,3 +2660,25 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - For-sale properties (not relevant for arbitrage)
 - Complex policy breakdowns
 - RevPAR (hotel metric, not relevant)
+
+
+## UI Fixes & Market Health Grade (COMPLETED - Jan 21, 2026)
+
+### Property Address Input Fix:
+- [x] Fix Property Address input field visibility (placeholder text barely visible)
+- [x] Make input text bolder and more readable (white text on dark background)
+- [x] Improve contrast on dark background
+
+### Market Health Grade Feature:
+- [x] Add market grade calculation (A+, A, B, C, D, F)
+- [x] Display grade prominently in results (B+ = 74/100 for Miami)
+- [x] Add summary explaining the grade factors
+- [x] Factors: occupancy rate (30%), growth trends (25%), competition level (20%), quality indicators (15%), seasonality stability (10%)
+- [x] Score breakdown with progress bars for each factor
+
+### Other App Improvements Identified:
+- [ ] Add PDF export for property analysis reports
+- [ ] Add "Save to Compare" feature to bookmark properties
+- [ ] Add recent searches history for quick access
+- [ ] Add property image carousel (click to view all photos)
+- [ ] Add amenities breakdown for top performers

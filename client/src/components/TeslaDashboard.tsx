@@ -640,6 +640,207 @@ function MarketPosition({
 }
 
 /**
+ * Market Health Grade - Overall market assessment with letter grade
+ */
+function MarketHealthGrade({
+  occupancy,
+  yoyChange,
+  professionalPct,
+  superhostPct,
+  totalListings,
+  avgRating,
+  forecast
+}: {
+  occupancy: number;
+  yoyChange?: number;
+  professionalPct?: number;
+  superhostPct?: number;
+  totalListings?: number;
+  avgRating?: number;
+  forecast?: MonthlyForecast[];
+}) {
+  // Calculate individual scores (0-100)
+  
+  // 1. Occupancy Score (higher is better)
+  // 70%+ = excellent, 50-70% = good, 30-50% = fair, <30% = poor
+  const occupancyScore = Math.min(100, Math.max(0, (occupancy / 0.75) * 100));
+  
+  // 2. Growth Score (based on YoY change)
+  // +10%+ = excellent, +5-10% = good, 0-5% = fair, negative = poor
+  let growthScore = 50; // neutral default
+  if (yoyChange !== undefined) {
+    if (yoyChange >= 10) growthScore = 100;
+    else if (yoyChange >= 5) growthScore = 80;
+    else if (yoyChange >= 0) growthScore = 60;
+    else if (yoyChange >= -5) growthScore = 40;
+    else growthScore = 20;
+  }
+  
+  // 3. Competition Score (lower professional % = better for new hosts)
+  // <30% = excellent opportunity, 30-50% = good, 50-70% = competitive, >70% = saturated
+  let competitionScore = 70; // neutral default
+  if (professionalPct !== undefined) {
+    if (professionalPct < 30) competitionScore = 90;
+    else if (professionalPct < 50) competitionScore = 70;
+    else if (professionalPct < 70) competitionScore = 50;
+    else competitionScore = 30;
+  }
+  
+  // 4. Quality Score (based on avg rating and superhost %)
+  let qualityScore = 70;
+  if (avgRating !== undefined && avgRating > 0) {
+    qualityScore = Math.min(100, (avgRating / 5) * 100);
+  }
+  
+  // 5. Seasonality Score (how stable is revenue throughout the year)
+  let seasonalityScore = 70;
+  if (forecast && forecast.length >= 4) {
+    const revenues = forecast.map(f => f.revenue);
+    const avgRevenue = revenues.reduce((a, b) => a + b, 0) / revenues.length;
+    const variance = revenues.reduce((sum, r) => sum + Math.pow(r - avgRevenue, 2), 0) / revenues.length;
+    const coefficientOfVariation = Math.sqrt(variance) / avgRevenue;
+    // Lower CV = more stable = higher score
+    seasonalityScore = Math.max(20, 100 - (coefficientOfVariation * 200));
+  }
+  
+  // Calculate weighted average
+  const weights = {
+    occupancy: 0.30,
+    growth: 0.25,
+    competition: 0.20,
+    quality: 0.15,
+    seasonality: 0.10
+  };
+  
+  const overallScore = 
+    occupancyScore * weights.occupancy +
+    growthScore * weights.growth +
+    competitionScore * weights.competition +
+    qualityScore * weights.quality +
+    seasonalityScore * weights.seasonality;
+  
+  // Convert score to letter grade
+  let grade: string;
+  let gradeColor: string;
+  let gradeBg: string;
+  let gradeText: string;
+  
+  if (overallScore >= 90) {
+    grade = 'A+';
+    gradeColor = 'text-emerald-600';
+    gradeBg = 'bg-emerald-100';
+    gradeText = 'Exceptional market with strong fundamentals';
+  } else if (overallScore >= 80) {
+    grade = 'A';
+    gradeColor = 'text-emerald-600';
+    gradeBg = 'bg-emerald-100';
+    gradeText = 'Excellent market for short-term rentals';
+  } else if (overallScore >= 70) {
+    grade = 'B+';
+    gradeColor = 'text-blue-600';
+    gradeBg = 'bg-blue-100';
+    gradeText = 'Strong market with good potential';
+  } else if (overallScore >= 60) {
+    grade = 'B';
+    gradeColor = 'text-blue-600';
+    gradeBg = 'bg-blue-100';
+    gradeText = 'Solid market worth considering';
+  } else if (overallScore >= 50) {
+    grade = 'C+';
+    gradeColor = 'text-amber-600';
+    gradeBg = 'bg-amber-100';
+    gradeText = 'Average market - proceed with caution';
+  } else if (overallScore >= 40) {
+    grade = 'C';
+    gradeColor = 'text-amber-600';
+    gradeBg = 'bg-amber-100';
+    gradeText = 'Below average - research thoroughly';
+  } else if (overallScore >= 30) {
+    grade = 'D';
+    gradeColor = 'text-red-600';
+    gradeBg = 'bg-red-100';
+    gradeText = 'Challenging market conditions';
+  } else {
+    grade = 'F';
+    gradeColor = 'text-red-600';
+    gradeBg = 'bg-red-100';
+    gradeText = 'High risk - not recommended';
+  }
+  
+  // Factor breakdown
+  const factors = [
+    { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy, icon: '📊' },
+    { name: 'Growth Trend', score: growthScore, weight: weights.growth, icon: '📈' },
+    { name: 'Competition', score: competitionScore, weight: weights.competition, icon: '🏆' },
+    { name: 'Quality', score: qualityScore, weight: weights.quality, icon: '⭐' },
+    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality, icon: '📅' },
+  ];
+  
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Award className="w-5 h-5 text-slate-600" />
+            Market Health Grade
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">Overall market assessment based on key factors</p>
+        </div>
+        
+        {/* Big Grade Badge */}
+        <div className={`${gradeBg} ${gradeColor} rounded-2xl px-6 py-4 text-center`}>
+          <div className="text-4xl font-bold">{grade}</div>
+          <div className="text-xs font-medium mt-1 opacity-80">
+            {Math.round(overallScore)}/100
+          </div>
+        </div>
+      </div>
+      
+      {/* Grade Summary */}
+      <div className={`${gradeBg} rounded-lg p-4 mb-6`}>
+        <p className={`${gradeColor} font-medium`}>{gradeText}</p>
+      </div>
+      
+      {/* Factor Breakdown */}
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-slate-700">Score Breakdown</p>
+        {factors.map((factor) => (
+          <div key={factor.name} className="flex items-center gap-3">
+            <span className="text-lg">{factor.icon}</span>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm text-slate-600">{factor.name}</span>
+                <span className="text-sm font-medium text-slate-900">
+                  {Math.round(factor.score)}
+                </span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${
+                    factor.score >= 70 ? 'bg-emerald-500' :
+                    factor.score >= 50 ? 'bg-blue-500' :
+                    factor.score >= 30 ? 'bg-amber-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${factor.score}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Methodology Note */}
+      <div className="mt-4 pt-4 border-t border-slate-100">
+        <p className="text-xs text-slate-400">
+          Grade calculated from: occupancy rate (30%), growth trends (25%), competition level (20%), 
+          quality indicators (15%), and seasonality stability (10%).
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Market Insights Card - Professional management and Superhost stats
  */
 function MarketInsights({ 
@@ -990,6 +1191,17 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms }: TeslaDa
           adr={result.metrics.adr}
         />
       </div>
+      
+      {/* Market Health Grade */}
+      <MarketHealthGrade
+        occupancy={result.metrics.occupancy}
+        yoyChange={yearlyChange}
+        professionalPct={result.marketInsights?.professionallyManagedPct}
+        superhostPct={result.marketInsights?.superhostPct}
+        totalListings={result.marketInsights?.totalListings}
+        avgRating={result.marketInsights?.avgRating}
+        forecast={result.forecast}
+      />
       
       {/* Market Position */}
       <MarketPosition

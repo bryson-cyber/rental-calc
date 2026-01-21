@@ -353,7 +353,9 @@ export function AddressAutocomplete({
           placeholder={placeholder}
           disabled={disabled || !isInitialized}
           className={cn(
-            "w-full",
+            "w-full h-12 px-4 bg-white/10 border border-white/20 rounded-xl text-white font-medium",
+            "placeholder:text-white/50 placeholder:font-normal",
+            "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             inputClassName
           )}
