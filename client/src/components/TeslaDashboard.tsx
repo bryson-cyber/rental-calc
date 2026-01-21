@@ -330,10 +330,10 @@ function MetricCard({
 }
 
 /**
- * Seasonal Forecast Chart - Simplified bar chart with insights
+ * Seasonal Forecast Chart - Comprehensive 12-month view with chart and table
  */
 function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
-  const [showDetails, setShowDetails] = useState(false);
+  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
   
   if (!forecast || forecast.length === 0) return null;
   
@@ -341,14 +341,21 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
   const maxRevenue = Math.max(...forecast.map(m => m.revenue));
   const minRevenue = Math.min(...forecast.map(m => m.revenue));
   const avgRevenue = forecast.reduce((sum, m) => sum + m.revenue, 0) / forecast.length;
+  const avgOccupancy = forecast.reduce((sum, m) => sum + m.occupancy, 0) / forecast.length;
   
-  const peakMonth = forecast.find(m => m.revenue === maxRevenue);
-  const slowMonth = forecast.find(m => m.revenue === minRevenue);
+  // Categorize months by performance
+  const getMonthCategory = (revenue: number) => {
+    const threshold33 = minRevenue + (maxRevenue - minRevenue) * 0.33;
+    const threshold66 = minRevenue + (maxRevenue - minRevenue) * 0.66;
+    if (revenue >= threshold66) return 'peak';
+    if (revenue >= threshold33) return 'shoulder';
+    return 'slow';
+  };
   
-  // Find peak and slow seasons (consecutive months)
+  // Sort months by revenue for ranking
   const sortedByRevenue = [...forecast].sort((a, b) => b.revenue - a.revenue);
-  const peakMonths = sortedByRevenue.slice(0, 3).map(m => formatMonth(m.month));
-  const slowMonths = sortedByRevenue.slice(-3).map(m => formatMonth(m.month));
+  const peakMonths = sortedByRevenue.slice(0, 3);
+  const slowMonths = sortedByRevenue.slice(-3);
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -357,100 +364,180 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
           <h3 className="text-lg font-semibold text-slate-900">Seasonal Forecast</h3>
           <p className="text-slate-500 text-sm">12-month revenue projection</p>
         </div>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
-        >
-          {showDetails ? 'Hide' : 'Show'} details
-          {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('chart')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+              viewMode === 'chart' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Chart
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+              viewMode === 'table' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Table
+          </button>
+        </div>
       </div>
       
-      {/* Quick Insight */}
-      <div className="flex flex-wrap gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+        <div className="text-center">
+          <p className="text-slate-500 text-xs mb-1">Average Monthly</p>
+          <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevenue)}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-slate-500 text-xs mb-1">Avg Occupancy</p>
+          <p className="text-lg font-bold text-slate-900">{Math.round(avgOccupancy)}%</p>
+        </div>
+        <div className="text-center">
+          <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
+          <p className="text-lg font-bold text-slate-900">
+            {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
+          </p>
+        </div>
+      </div>
+      
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-emerald-500" />
-          <span className="text-sm text-slate-600">
-            <span className="font-medium">Peak:</span> {peakMonths.join(', ')} ({formatCurrency(peakMonth?.revenue || 0)}/mo)
-          </span>
+          <span className="text-xs text-slate-600">Peak (Top 33%)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-blue-400" />
+          <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-sm text-slate-600">
-            <span className="font-medium">Slow:</span> {slowMonths.join(', ')} ({formatCurrency(slowMonth?.revenue || 0)}/mo)
-          </span>
+          <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
         </div>
       </div>
       
-      {/* Bar Chart */}
-      <div className="grid grid-cols-12 gap-1 h-32 items-end mb-2">
-        {forecast.slice(0, 12).map((month, idx) => {
-          const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
-          const isPeak = month.revenue === maxRevenue;
-          const isSlow = month.revenue === minRevenue;
-          
-          return (
-            <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap">
-                  <p className="font-medium">{formatMonth(month.month)}</p>
-                  <p>{formatCurrency(month.revenue)}</p>
-                  <p>{Math.round(month.occupancy)}% occupancy</p>
+      {viewMode === 'chart' ? (
+        /* Bar Chart View */
+        <>
+          <div className="grid grid-cols-12 gap-1 h-40 items-end mb-2">
+            {forecast.slice(0, 12).map((month, idx) => {
+              const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+              const category = getMonthCategory(month.revenue);
+              
+              return (
+                <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                    <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                      <p className="font-medium">{formatMonth(month.month)}</p>
+                      <p className="text-emerald-300">{formatCurrency(month.revenue)}</p>
+                      <p>{Math.round(month.occupancy)}% occupancy</p>
+                      <p className="text-slate-400 capitalize">{category} season</p>
+                    </div>
+                  </div>
+                  
+                  {/* Bar */}
+                  <div 
+                    className={`w-full rounded-t transition-all cursor-pointer ${
+                      category === 'peak'
+                        ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
+                        : category === 'slow'
+                        ? 'bg-gradient-to-t from-amber-500 to-amber-300'
+                        : 'bg-gradient-to-t from-blue-500 to-blue-300'
+                    }`}
+                    style={{ height: `${Math.max(heightPct, 8)}%` }}
+                  />
+                  
+                  {/* Month label */}
+                  <div className="text-[10px] text-slate-500 mt-1 font-medium">
+                    {formatMonth(month.month).substring(0, 3)}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Bar */}
-              <div 
-                className={`w-full rounded-t transition-all cursor-pointer ${
-                  isPeak 
-                    ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
-                    : isSlow 
-                    ? 'bg-gradient-to-t from-amber-500 to-amber-300'
-                    : 'bg-gradient-to-t from-slate-400 to-slate-300 group-hover:from-slate-500 group-hover:to-slate-400'
-                }`}
-                style={{ height: `${Math.max(heightPct, 8)}%` }}
-              />
-              
-              {/* Month label */}
-              <div className="text-[10px] text-slate-500 mt-1 font-medium">
-                {formatMonth(month.month).substring(0, 1)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      
-      {/* Month labels (full) */}
-      <div className="grid grid-cols-12 gap-1 text-center">
-        {forecast.slice(0, 12).map((month, idx) => (
-          <div key={idx} className="text-[9px] text-slate-400 hidden md:block">
-            {formatMonth(month.month)}
+              );
+            })}
           </div>
-        ))}
-      </div>
-      
-      {/* Detailed Stats */}
-      {showDetails && (
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-200">
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Average Monthly</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevenue)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
-            <p className="text-lg font-bold text-slate-900">
-              {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Occupancy</p>
-            <p className="text-lg font-bold text-slate-900">
-              {Math.round(forecast.reduce((sum, m) => sum + m.occupancy, 0) / forecast.length)}%
-            </p>
-          </div>
+        </>
+      ) : (
+        /* Table View */
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-2 px-2 font-medium text-slate-600">Month</th>
+                <th className="text-right py-2 px-2 font-medium text-slate-600">Revenue</th>
+                <th className="text-right py-2 px-2 font-medium text-slate-600">Occupancy</th>
+                <th className="text-center py-2 px-2 font-medium text-slate-600">Season</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forecast.slice(0, 12).map((month, idx) => {
+                const category = getMonthCategory(month.revenue);
+                const isPeak = peakMonths.some(p => p.month === month.month);
+                const isSlow = slowMonths.some(s => s.month === month.month);
+                
+                return (
+                  <tr key={idx} className={`border-b border-slate-100 ${
+                    isPeak ? 'bg-emerald-50' : isSlow ? 'bg-amber-50' : ''
+                  }`}>
+                    <td className="py-2.5 px-2 font-medium text-slate-900">
+                      {formatMonth(month.month)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right font-semibold text-slate-900">
+                      {formatCurrency(month.revenue)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right text-slate-600">
+                      {Math.round(month.occupancy)}%
+                    </td>
+                    <td className="py-2.5 px-2 text-center">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        category === 'peak' 
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : category === 'slow'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {category === 'peak' ? '🔥 Peak' : category === 'slow' ? '❄️ Slow' : '📊 Shoulder'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
+      
+      {/* Best/Worst Months Summary */}
+      <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
+        <div className="p-3 bg-emerald-50 rounded-lg">
+          <p className="text-xs font-medium text-emerald-700 mb-2">🔥 Best Months</p>
+          <div className="space-y-1">
+            {peakMonths.map((m, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-slate-700">{formatMonth(m.month)}</span>
+                <span className="font-semibold text-emerald-700">{formatCurrency(m.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="p-3 bg-amber-50 rounded-lg">
+          <p className="text-xs font-medium text-amber-700 mb-2">❄️ Slowest Months</p>
+          <div className="space-y-1">
+            {slowMonths.map((m, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-slate-700">{formatMonth(m.month)}</span>
+                <span className="font-semibold text-amber-700">{formatCurrency(m.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

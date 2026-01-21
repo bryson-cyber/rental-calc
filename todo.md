@@ -2729,3 +2729,13 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 
 - [x] Implement zip code autocomplete backend endpoint
 - [x] Add zip code autocomplete UI with dropdown suggestions
+
+
+## Seasonal Forecast Display Improvement (Jan 21, 2026)
+
+- [x] Redesign seasonal forecast to show all 12 months instead of just peak/slow months
+- [x] Add visual chart (bar or line graph) for monthly revenue/occupancy
+- [x] Make the display more comprehensive and user-friendly
+- [x] Add Chart/Table toggle for different viewing preferences
+- [x] Add color-coded season categories (Peak, Shoulder, Slow)
+- [x] Add Best/Worst months summary panel
