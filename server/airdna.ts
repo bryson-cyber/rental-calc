@@ -2221,9 +2221,14 @@ export async function getComprehensivePropertyReport(
   }>;
   insights?: MarketInsights;
   generated_at: string;
+  // Year-over-year change data
+  historical_valuation?: {
+    mom_perc_chg: number;
+    yoy_perc_chg: number;
+  };
 } | null> {
-  // Step 1: Get property estimate from Rentalizer
-  const propertyEstimate = await getRentalizerEstimate({
+    // Get property estimates from rentalizer
+    const propertyEstimate = await getRentalizerEstimate({
     address,
     bedrooms,
     bathrooms,
@@ -2458,6 +2463,17 @@ export async function getComprehensivePropertyReport(
     }
   }
   
+  // Calculate YoY change from market historical data
+  let yoyPercentChange: number | undefined;
+  if (marketData?.historical?.revenue && marketData.historical.revenue.length >= 12) {
+    const revenueData = marketData.historical.revenue;
+    const latestRevenue = revenueData[revenueData.length - 1]?.value || 0;
+    const yearAgoRevenue = revenueData[0]?.value || 0;
+    if (yearAgoRevenue > 0) {
+      yoyPercentChange = Math.round(((latestRevenue - yearAgoRevenue) / yearAgoRevenue) * 100);
+    }
+  }
+  
   return {
     property: propertyEstimate,
     market: marketData,
@@ -2466,6 +2482,11 @@ export async function getComprehensivePropertyReport(
     bedroom_performance: bedroomPerformance,
     insights: marketInsights,
     generated_at: new Date().toISOString(),
+    // YoY data calculated from market historical revenue
+    historical_valuation: yoyPercentChange !== undefined ? {
+      mom_perc_chg: 0, // Not calculated
+      yoy_perc_chg: yoyPercentChange,
+    } : undefined,
   };
 }
 
@@ -4494,13 +4515,18 @@ export async function getEnhancedRentalizerEstimate(
     });
 
     const responsePayload = (response as any)?.payload;
+    console.log('[Enhanced Rentalizer] Raw response:', JSON.stringify(response, null, 2).slice(0, 2000));
+    console.log('[Enhanced Rentalizer] Payload:', JSON.stringify(responsePayload, null, 2).slice(0, 2000));
     if (!responsePayload) {
+      console.log('[Enhanced Rentalizer] No payload found in response');
       return null;
     }
 
     const payload = responsePayload;
     const details = payload.details || {};
     const estimates = payload.estimates || {};
+    console.log('[Enhanced Rentalizer] Details:', JSON.stringify(details, null, 2).slice(0, 1000));
+    console.log('[Enhanced Rentalizer] Estimates:', JSON.stringify(estimates, null, 2));
 
     // Extract ALL fields including hidden ones
     return {

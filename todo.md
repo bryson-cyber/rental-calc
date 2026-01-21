@@ -2635,3 +2635,28 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Verified: "Miami" search returns 10 markets with listing counts
 - [x] Verified: Selecting market auto-sets state and triggers map search
 - [x] Verified: 25 properties loaded with revenue markers ($293K top performer)
+
+
+## Feature Priority List (Jan 21, 2026)
+
+### Must Have Features:
+- [x] Seasonal forecast (monthly revenue/occupancy/ADR projections) - IMPLEMENTED
+- [x] Revenue/ADR/Occupancy metrics (core data display) - IMPLEMENTED
+- [x] Comparable properties (with images and links) - IMPLEMENTED
+- [x] Year-over-year trends (revenue changes vs last year) - COMPLETED
+  - Shows "↗ X% vs last year" indicator next to annual revenue
+  - Calculated from 12-month market historical data
+  - Tested with Miami: shows 1.0% YoY increase
+- [x] Active listings count (total properties in market) - IMPLEMENTED
+
+### Nice to Have Features:
+- [ ] Rental channel breakdown (Airbnb vs VRBO distribution)
+- [ ] Professional management % (how many are professionally managed)
+- [ ] Superhost % (percentage of Superhosts in market)
+- [ ] Amenities breakdown (must-haves vs differentiators)
+- [ ] Minimum stay data (average minimum night requirements)
+
+### Skip:
+- For-sale properties (not relevant for arbitrage)
+- Complex policy breakdowns
+- RevPAR (hotel metric, not relevant)

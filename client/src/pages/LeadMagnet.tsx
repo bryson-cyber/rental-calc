@@ -457,8 +457,11 @@ export default function LeadMagnet() {
       }
       
       const data = response.data;
+      console.log('[Validate Deal] API Response:', JSON.stringify(data, null, 2));
+      console.log('[Validate Deal] Property estimates:', data.property?.estimates);
       const rent = parseFloat(monthlyRent) || 0;
       const annualRevenue = data.property.estimates?.annual_revenue || 0;
+      console.log('[Validate Deal] Annual revenue:', annualRevenue);
       const monthlyRevenue = annualRevenue / 12;
       
       // Transform API response to our result format
@@ -515,6 +518,54 @@ export default function LeadMagnet() {
           })(),
           totalListings: data.market?.listing_count || (data.same_bedroom_comps || []).length,
         } : undefined,
+        // Historical data for YoY trends - use API historical_valuation data (more accurate)
+        historicalData: (() => {
+          // First try to use the direct historical_valuation from enhanced rentalizer API
+          const historicalValuation = data.historical_valuation;
+          if (historicalValuation && historicalValuation.yoy_perc_chg !== undefined) {
+            const yoyChange = historicalValuation.yoy_perc_chg;
+            return {
+              summary: {
+                monthly_pct_change: historicalValuation.mom_perc_chg || yoyChange / 12,
+                yearly_pct_change: yoyChange,
+                trend: yoyChange > 2 ? 'up' as const : yoyChange < -2 ? 'down' as const : 'stable' as const,
+              },
+              months: [], // Not needed for YoY display
+            };
+          }
+          
+          // Fallback: calculate from market.historical if available
+          const historical = data.market?.historical;
+          if (!historical?.revenue || historical.revenue.length < 2) return undefined;
+          
+          // Get the most recent 12 months and previous 12 months to calculate YoY change
+          const sortedRevenue = [...historical.revenue].sort((a, b) => 
+            new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
+          );
+          
+          if (sortedRevenue.length < 13) return undefined;
+          
+          const currentYearRevenue = sortedRevenue.slice(0, 12).reduce((sum, m) => sum + (m.value || 0), 0);
+          const previousYearRevenue = sortedRevenue.slice(12, 24).reduce((sum, m) => sum + (m.value || 0), 0);
+          
+          if (previousYearRevenue === 0) return undefined;
+          
+          const yoyChange = ((currentYearRevenue - previousYearRevenue) / previousYearRevenue) * 100;
+          
+          return {
+            summary: {
+              monthly_pct_change: yoyChange / 12,
+              yearly_pct_change: yoyChange,
+              trend: yoyChange > 2 ? 'up' as const : yoyChange < -2 ? 'down' as const : 'stable' as const,
+            },
+            months: sortedRevenue.slice(0, 24).map(m => ({
+              date: m.date || '',
+              revenue: m.value || 0,
+              occupancy: 0,
+              adr: 0,
+            })),
+          };
+        })(),
       });
       
       toast.success('Property validated! See your results below.');
