@@ -2495,3 +2495,12 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] All 8 vitest tests pass for image caching
 - [x] Verified in browser: 9 properties cached on first request
 - [x] Cache TTL: 7 days (configurable)
+
+
+## Bug Fix: Duplicate Properties in Similar Properties Section (COMPLETED - Jan 20, 2026)
+- [x] Investigate why duplicate properties are appearing
+- [x] Found root cause: rentalizer uses `airbnb_listing_id` while radius uses `property_id` with "abnb_" prefix
+- [x] Implemented fix: normalize IDs by extracting numeric Airbnb ID from both formats
+- [x] Updated deduplication logic in getComprehensivePropertyReport to compare normalized IDs
+- [x] Tested: 29 unique properties displayed, no visible duplicates
+- [x] All properties have unique numbers (1-29) and different titles/images

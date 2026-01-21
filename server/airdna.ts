@@ -2365,7 +2365,8 @@ export async function getComprehensivePropertyReport(
   
   // First, get comps from the rentalizer API (these have images!)
   const rentalizerComps: ListingData[] = (propertyEstimate.comps || []).map(comp => ({
-    id: comp.airbnb_listing_id || String(Math.random()),
+    // Use airbnb_listing_id with 'abnb_' prefix for consistent ID format with radius comps
+    id: comp.airbnb_listing_id ? `abnb_${comp.airbnb_listing_id}` : String(Math.random()),
     title: comp.title || 'Untitled Listing',
     airbnb_url: comp.airbnb_url || '',
     image_url: comp.image_url || '', // This has the real image URL from rentalizer API
@@ -2398,8 +2399,28 @@ export async function getComprehensivePropertyReport(
   }, 30);
   
   // Merge: prioritize rentalizer comps (with images), then add radius comps that aren't duplicates
+  // Use multiple identifiers for deduplication: ID, title, and Airbnb URL
   const seenIds = new Set(sameBedroomRentalizerComps.map(c => c.id));
-  const additionalRadiusComps = radiusComps.filter(c => !seenIds.has(c.id));
+  const seenTitles = new Set(sameBedroomRentalizerComps.map(c => c.title.toLowerCase().trim()));
+  const seenUrls = new Set(sameBedroomRentalizerComps.map(c => c.airbnb_url).filter(Boolean));
+  
+  const additionalRadiusComps = radiusComps.filter(c => {
+    // Check if this listing is a duplicate by ID, title, or URL
+    const isDuplicateById = seenIds.has(c.id);
+    const isDuplicateByTitle = seenTitles.has(c.title.toLowerCase().trim());
+    const isDuplicateByUrl = c.airbnb_url && seenUrls.has(c.airbnb_url);
+    
+    if (isDuplicateById || isDuplicateByTitle || isDuplicateByUrl) {
+      return false;
+    }
+    
+    // Add to seen sets to prevent duplicates within radius comps too
+    seenIds.add(c.id);
+    seenTitles.add(c.title.toLowerCase().trim());
+    if (c.airbnb_url) seenUrls.add(c.airbnb_url);
+    
+    return true;
+  });
   
   // Combine and sort by revenue
   let sameBedroomComps = [...sameBedroomRentalizerComps, ...additionalRadiusComps]
