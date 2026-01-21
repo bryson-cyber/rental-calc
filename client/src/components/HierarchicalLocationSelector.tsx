@@ -877,6 +877,42 @@ export function HierarchicalLocationSelector({
   const [directCityError, setDirectCityError] = useState<string | null>(null);
   const [citySearchResults, setCitySearchResults] = useState<Market[]>([]);
   const [showCityResults, setShowCityResults] = useState(false);
+  const [isLoadingCitySuggestions, setIsLoadingCitySuggestions] = useState(false);
+  
+  // Debounced city search autocomplete - search as user types
+  useEffect(() => {
+    // Don't search if input is too short or empty
+    if (directCitySearch.length < 2) {
+      setCitySearchResults([]);
+      setShowCityResults(false);
+      return;
+    }
+    
+    // Debounce the search
+    const timeoutId = setTimeout(async () => {
+      setIsLoadingCitySuggestions(true);
+      try {
+        const response = await searchMarkets.mutateAsync({ query: directCitySearch });
+        const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
+        
+        if (results.length > 0) {
+          setCitySearchResults(results.slice(0, 10)); // Limit to 10 results
+          setShowCityResults(true);
+        } else {
+          setCitySearchResults([]);
+          setShowCityResults(false);
+        }
+      } catch (error) {
+        console.error('Error searching cities:', error);
+        setCitySearchResults([]);
+        setShowCityResults(false);
+      } finally {
+        setIsLoadingCitySuggestions(false);
+      }
+    }, 300); // 300ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [directCitySearch]);
   
   // Handle direct zip code search with geocoding fallback
   const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
@@ -1226,15 +1262,22 @@ export function HierarchicalLocationSelector({
               onChange={(e) => {
                 if (directCityError) setDirectCityError(null);
                 setDirectCitySearch(e.target.value);
-                setShowCityResults(false);
+                // Don't hide results - let the debounced search update them
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleDirectCitySearch()}
               placeholder="Enter city name (e.g., Miami, Austin, Nashville)"
               disabled={disabled || directCitySearching}
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directCityError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
+              className={`w-full px-3 py-2 pr-8 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directCityError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
             />
             
-            {/* City Search Results Dropdown */}
+            {/* Loading indicator inside input */}
+            {isLoadingCitySuggestions && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-[oklch(0.50_0_0)] animate-spin" />
+              </div>
+            )}
+            
+            {/* City Search Results Dropdown - shows as user types */}
             {showCityResults && citySearchResults.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-[oklch(0.85_0_0)] rounded-lg shadow-lg max-h-64 overflow-y-auto">
                 {citySearchResults.map((market, index) => (
