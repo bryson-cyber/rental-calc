@@ -2767,3 +2767,18 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Calculate RevPAR for each month (ADR × Occupancy / 100)
 - [x] Add RevPAR YoY change calculation
 - [x] Include occupancy and ADR in historical data for month-by-month YoY comparison
+
+
+## UI Improvements - Simple Tooltips & Comp Enhancements (Jan 21, 2026)
+
+### Simple Tooltips for Metrics (Frontend Only):
+- [x] Add tooltips to Revenue metric with third-grader explanation
+- [x] Add tooltips to ADR (Nightly Rate) metric with third-grader explanation
+- [x] Add tooltips to Occupancy metric with third-grader explanation
+- [x] Add tooltips to RevPAR metric with third-grader explanation
+- [x] Add tooltips to Conservative/Optimistic estimates with explanation
+
+### Comp Enhancements:
+- [x] Add comp strength indicator (number of comps, average distance)
+- [x] Add platform links (View on Airbnb/VRBO buttons) for comps (already existed)
+- [x] Display comp images in carousel (already available in API)

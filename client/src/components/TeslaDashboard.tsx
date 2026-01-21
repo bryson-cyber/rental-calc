@@ -35,6 +35,7 @@ import {
   Building2
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -195,7 +196,17 @@ function HeroRevenueCard({
         
         {/* Hero Number */}
         <div className="mb-6">
-          <p className="text-slate-400 text-sm font-medium mb-1">Projected Annual Revenue</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-slate-400 text-sm font-medium mb-1 inline-flex items-center gap-1 cursor-help hover:text-slate-300 transition-colors">
+                Projected Annual Revenue
+                <Info className="w-3.5 h-3.5" />
+              </p>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-slate-900">
+              <p className="text-sm leading-relaxed">{METRIC_TOOLTIPS.revenue}</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="flex items-baseline gap-3">
             <span className="text-4xl md:text-5xl font-bold text-white tracking-tight">
               {formatCurrency(annualRevenue)}
@@ -253,6 +264,16 @@ function HeroRevenueCard({
 /**
  * Key Metrics Row - Supporting stats at a glance
  */
+// Tooltip explanations for metrics (third-grader friendly)
+const METRIC_TOOLTIPS = {
+  adr: "This is how much you charge per night, on average. If you charge $200 one night and $300 another, your average is $250. Higher is better!",
+  occupancy: "This shows how often your place is booked. 70% means guests stay 7 out of every 10 nights. More bookings = more money!",
+  conservative: "This is the 'worst case' estimate - what you'd make if things go a bit slower than expected. Good for planning safely.",
+  optimistic: "This is the 'best case' estimate - what you could make if everything goes great. Aim for this, plan for conservative!",
+  revenue: "This is your total money earned before expenses. It's calculated by: Nightly Rate × Occupancy × 365 days.",
+  revpar: "Revenue Per Available Room - combines your nightly rate and how often you're booked into one number. Higher = better performance!"
+};
+
 function KeyMetricsRow({ 
   adr, 
   occupancy, 
@@ -272,6 +293,7 @@ function KeyMetricsRow({
         value={formatCurrency(adr)}
         sublabel="Average Daily Rate"
         color="blue"
+        tooltip={METRIC_TOOLTIPS.adr}
       />
       <MetricCard
         icon={<Percent className="w-5 h-5" />}
@@ -279,6 +301,7 @@ function KeyMetricsRow({
         value={`${Math.round(occupancy)}%`}
         sublabel="Booked nights"
         color="purple"
+        tooltip={METRIC_TOOLTIPS.occupancy}
       />
       <MetricCard
         icon={<TrendingDown className="w-5 h-5" />}
@@ -286,6 +309,7 @@ function KeyMetricsRow({
         value={formatCompactCurrency(revenueLow)}
         sublabel="Low estimate"
         color="amber"
+        tooltip={METRIC_TOOLTIPS.conservative}
       />
       <MetricCard
         icon={<TrendingUp className="w-5 h-5" />}
@@ -293,6 +317,7 @@ function KeyMetricsRow({
         value={formatCompactCurrency(revenueHigh)}
         sublabel="High estimate"
         color="emerald"
+        tooltip={METRIC_TOOLTIPS.optimistic}
       />
     </div>
   );
@@ -303,13 +328,15 @@ function MetricCard({
   label, 
   value, 
   sublabel, 
-  color 
+  color,
+  tooltip
 }: { 
   icon: React.ReactNode;
   label: string;
   value: string;
   sublabel: string;
   color: 'blue' | 'purple' | 'amber' | 'emerald';
+  tooltip?: string;
 }) {
   const colorClasses = {
     blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -318,16 +345,36 @@ function MetricCard({
     emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
   };
   
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-      <div className={`inline-flex p-2 rounded-lg mb-2 ${colorClasses[color]}`}>
-        {icon}
+  const cardContent = (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow cursor-help group">
+      <div className="flex items-start justify-between">
+        <div className={`inline-flex p-2 rounded-lg mb-2 ${colorClasses[color]}`}>
+          {icon}
+        </div>
+        {tooltip && (
+          <Info className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+        )}
       </div>
       <p className="text-slate-500 text-xs font-medium">{label}</p>
       <p className="text-xl font-bold text-slate-900">{value}</p>
       <p className="text-slate-400 text-xs">{sublabel}</p>
     </div>
   );
+  
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {cardContent}
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-center p-3 bg-slate-900 text-white">
+          <p className="text-sm leading-relaxed">{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  
+  return cardContent;
 }
 
 /**
@@ -1291,6 +1338,76 @@ function MarketInsights({
 }
 
 /**
+ * Comp Strength Indicator - Shows how reliable the estimate is based on comp data
+ */
+function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
+  if (!comparables || comparables.length === 0) return null;
+  
+  // Calculate metrics
+  const compCount = comparables.length;
+  const compsWithDistance = comparables.filter(c => c.distanceMeters !== undefined);
+  const avgDistanceMeters = compsWithDistance.length > 0 
+    ? compsWithDistance.reduce((sum, c) => sum + (c.distanceMeters || 0), 0) / compsWithDistance.length
+    : null;
+  const avgDistanceMiles = avgDistanceMeters ? (avgDistanceMeters / 1609.34) : null;
+  
+  // Determine strength level
+  let strengthLabel: string;
+  let strengthColor: string;
+  let strengthBg: string;
+  
+  if (compCount >= 10 && avgDistanceMiles && avgDistanceMiles < 1) {
+    strengthLabel = 'High Confidence';
+    strengthColor = 'text-emerald-700';
+    strengthBg = 'bg-emerald-50 border-emerald-200';
+  } else if (compCount >= 5 && avgDistanceMiles && avgDistanceMiles < 2) {
+    strengthLabel = 'Good Confidence';
+    strengthColor = 'text-blue-700';
+    strengthBg = 'bg-blue-50 border-blue-200';
+  } else {
+    strengthLabel = 'Limited Data';
+    strengthColor = 'text-amber-700';
+    strengthBg = 'bg-amber-50 border-amber-200';
+  }
+  
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg border mb-4 ${strengthBg}`}>
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-1.5 ${strengthColor}`}>
+          <CheckCircle2 className="w-4 h-4" />
+          <span className="text-sm font-medium">{strengthLabel}</span>
+        </div>
+        <span className="text-slate-400">|</span>
+        <span className="text-sm text-slate-600">
+          Based on <span className="font-medium">{compCount}</span> similar properties
+        </span>
+        {avgDistanceMiles !== null && (
+          <>
+            <span className="text-slate-400">|</span>
+            <span className="text-sm text-slate-600">
+              Avg. <span className="font-medium">{avgDistanceMiles.toFixed(1)} mi</span> away
+            </span>
+          </>
+        )}
+      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button className="p-1 hover:bg-white/50 rounded transition-colors">
+            <Info className="w-4 h-4 text-slate-400" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs p-3 bg-slate-900 text-white">
+          <p className="text-sm leading-relaxed">
+            More comps = more reliable estimate. Closer comps = more accurate for your specific location. 
+            10+ comps within 1 mile is ideal!
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+/**
  * Comparable Properties Cards - Visual property cards with image carousel
  */
 function ComparableProperties({ 
@@ -1338,6 +1455,9 @@ function ComparableProperties({
       />
       
       <div className="bg-white border border-slate-200 rounded-xl p-6">
+        {/* Comp Strength Indicator */}
+        <CompStrengthIndicator comparables={comparables} />
+        
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">Similar Properties Nearby</h3>
