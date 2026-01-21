@@ -582,16 +582,16 @@ export default function MapViewPage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-stone-50">
-      {/* Header */}
-      <div className="bg-[#0F172A] text-white py-8">
+      {/* Header - Tesla Dashboard Light Theme */}
+      <div className="bg-white border-b border-slate-200 py-8">
         <div className="container">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
-              <Map className="w-5 h-5 text-[#C9A962]" />
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+              <Map className="w-5 h-5 text-blue-500" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-serif font-semibold">See the Map</h1>
+            <h1 className="text-2xl md:text-3xl font-serif font-semibold text-slate-900">See the Map</h1>
           </div>
-          <p className="text-white/70 max-w-2xl">
+          <p className="text-slate-500 max-w-2xl">
             Visualize property performance across any market. See which neighborhoods have the highest-earning rentals at a glance.
           </p>
         </div>
@@ -599,11 +599,13 @@ export default function MapViewPage() {
       
       <div className="container py-8">
         {/* Location Selection */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-slate-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <MapPin className="w-5 h-5 text-[#C9A962]" />
-              Select Location
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                <MapPin className="w-4 h-4 text-amber-500" />
+              </div>
+              <span className="text-slate-900">Select Location</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -648,11 +650,13 @@ export default function MapViewPage() {
           {/* Legend and Controls */}
           <div className="lg:col-span-1 space-y-4">
             {/* My Property Section */}
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+            <Card className="border-slate-200 bg-white">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Home className="w-4 h-4 text-blue-600" />
-                  My Property
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                    <Home className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <span className="text-slate-900">My Property</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -706,11 +710,13 @@ export default function MapViewPage() {
             </Card>
             
             {/* Threshold Controls */}
-            <Card>
+            <Card className="border-slate-200 bg-white">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-[#C9A962]" />
-                  Revenue Thresholds
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <span className="text-slate-900">Revenue Thresholds</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -777,11 +783,13 @@ export default function MapViewPage() {
             
             {/* Bedroom Filter */}
             {listings.length > 0 && (
-              <Card>
+              <Card className="border-slate-200 bg-white">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <BedDouble className="w-4 h-4 text-[#C9A962]" />
-                    Filter by Bedrooms
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                      <BedDouble className="w-3.5 h-3.5 text-purple-500" />
+                    </div>
+                    <span className="text-slate-900">Filter by Bedrooms</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -812,11 +820,13 @@ export default function MapViewPage() {
             
             {/* Stats */}
             {filteredListings.length > 0 && (
-              <Card>
+              <Card className="border-slate-200 bg-white">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Info className="w-4 h-4 text-[#C9A962]" />
-                    {getLocationName()}
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
+                      <Info className="w-3.5 h-3.5 text-cyan-500" />
+                    </div>
+                    <span className="text-slate-900">{getLocationName()}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
