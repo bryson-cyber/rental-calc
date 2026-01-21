@@ -423,7 +423,7 @@ export function StartWithProperty({
               value={monthlyRent}
               onChange={(e) => setMonthlyRent(e.target.value)}
               placeholder="2,500"
-              className="w-full h-12 pl-12 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+              className="w-full h-12 pl-12 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
             />
           </div>
           <p className="text-xs text-slate-500 mt-1">

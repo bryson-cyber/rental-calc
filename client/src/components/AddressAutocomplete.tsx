@@ -359,8 +359,8 @@ export function AddressAutocomplete({
             "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             variant === 'dark' 
-              ? "bg-white/10 border border-white/20 text-white placeholder:text-white/50 placeholder:font-normal"
-              : "bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 placeholder:font-normal",
+              ? "bg-white/10 border border-white/20 text-white placeholder:text-white/60 placeholder:font-normal"
+              : "bg-white border border-slate-200 text-slate-900 placeholder:text-slate-500 placeholder:font-normal",
             inputClassName
           )}
           autoComplete="off"

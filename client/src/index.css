@@ -303,7 +303,14 @@
   }
   
   .input-apple::placeholder {
-    color: oklch(0.60 0 0);
+    color: oklch(0.50 0 0);
+  }
+  
+  /* Global placeholder styling for better visibility */
+  input::placeholder,
+  textarea::placeholder {
+    color: oklch(0.45 0 0) !important;
+    opacity: 1;
   }
   
   .input-apple:focus {

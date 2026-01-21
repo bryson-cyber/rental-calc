@@ -628,7 +628,7 @@ export default function RentalEstimator() {
                     value={formData.monthlyRent || ''}
                     onChange={(e) => setFormData({ ...formData, monthlyRent: parseInt(e.target.value) || 0 })}
                     placeholder="e.g., 2500"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white placeholder:text-slate-500"
                   />
                 </div>
                 <p className="text-xs text-[#0F172A]/50 mt-2 font-sans">
@@ -851,7 +851,7 @@ export default function RentalEstimator() {
                     onChange={(e) => setLeadData({ ...leadData, name: e.target.value })}
                     placeholder="John Smith"
                     required
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans placeholder:text-slate-500"
                   />
                 </div>
                 <div>
@@ -864,7 +864,7 @@ export default function RentalEstimator() {
                     onChange={(e) => setLeadData({ ...leadData, email: e.target.value })}
                     placeholder="john@example.com"
                     required
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans placeholder:text-slate-500"
                   />
                 </div>
                 <div>
@@ -876,7 +876,7 @@ export default function RentalEstimator() {
                     value={leadData.phone}
                     onChange={(e) => setLeadData({ ...leadData, phone: e.target.value })}
                     placeholder="(555) 123-4567"
-                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans"
+                    className="w-full px-4 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans placeholder:text-slate-500"
                   />
                 </div>
               </div>

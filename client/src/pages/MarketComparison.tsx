@@ -276,7 +276,7 @@ export default function MarketComparison() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for a city or zip code..."
-                className="flex-1 bg-transparent outline-none text-[#0F172A] placeholder:text-[#0F172A]/40 font-sans"
+                className="flex-1 bg-transparent outline-none text-[#0F172A] placeholder:text-[#0F172A]/60 font-sans"
                 disabled={selectedMarkets.length >= 3}
               />
               {isSearching && <Loader2 className="w-5 h-5 text-[#C9A962] animate-spin" />}

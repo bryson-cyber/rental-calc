@@ -2782,3 +2782,8 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Add comp strength indicator (number of comps, average distance)
 - [x] Add platform links (View on Airbnb/VRBO buttons) for comps (already existed)
 - [x] Display comp images in carousel (already available in API)
+
+
+## Bug Fixes (Jan 21, 2026)
+
+- [x] Fix placeholder text contrast - placeholder text hard to see
