@@ -2914,8 +2914,9 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
 }
 
 /**
- * Batch fetch images for multiple properties
+ * Batch fetch images for multiple properties with database caching
  * Returns a map of property_id -> image_url
+ * First checks cache, then fetches missing from API and caches results
  */
 export async function batchFetchPropertyImages(
   propertyIds: string[],
@@ -2926,10 +2927,32 @@ export async function batchFetchPropertyImages(
   console.log(`[batchFetchPropertyImages] Starting with ${propertyIds.length} property IDs`);
   console.log(`[batchFetchPropertyImages] Sample IDs: ${propertyIds.slice(0, 3).join(', ')}`);
   
+  // Step 1: Check database cache first
+  const { getBatchCachedPropertyImages, batchCachePropertyImages } = await import('./db');
+  const cachedImages = await getBatchCachedPropertyImages(propertyIds);
+  
+  // Add cached images to result map
+  Array.from(cachedImages.entries()).forEach(([id, images]) => {
+    imageMap.set(id, images);
+  });
+  
+  // Find which property IDs still need to be fetched from API
+  const uncachedIds = propertyIds.filter(id => !cachedImages.has(id));
+  
+  console.log(`[batchFetchPropertyImages] Cache: ${cachedImages.size} hits, ${uncachedIds.length} misses`);
+  
+  if (uncachedIds.length === 0) {
+    console.log(`[batchFetchPropertyImages] All images served from cache!`);
+    return imageMap;
+  }
+  
+  // Step 2: Fetch uncached images from API
+  const newlyFetchedImages = new Map<string, string[]>();
+  
   // Process in batches to avoid overwhelming the API
-  for (let i = 0; i < propertyIds.length; i += maxConcurrent) {
-    const batch = propertyIds.slice(i, i + maxConcurrent);
-    console.log(`[batchFetchPropertyImages] Processing batch ${i / maxConcurrent + 1}: ${batch.join(', ')}`);
+  for (let i = 0; i < uncachedIds.length; i += maxConcurrent) {
+    const batch = uncachedIds.slice(i, i + maxConcurrent);
+    console.log(`[batchFetchPropertyImages] API batch ${Math.floor(i / maxConcurrent) + 1}: ${batch.join(', ')}`);
     
     const results = await Promise.all(
       batch.map(id => getSinglePropertyDetails(id))
@@ -2940,6 +2963,7 @@ export async function batchFetchPropertyImages(
         console.log(`[batchFetchPropertyImages] Property ${batch[index]}: ${result.images.length} images`);
         if (result.images.length > 0) {
           imageMap.set(batch[index], result.images);
+          newlyFetchedImages.set(batch[index], result.images);
         }
       } else {
         console.log(`[batchFetchPropertyImages] Property ${batch[index]}: FAILED to fetch`);
@@ -2947,7 +2971,13 @@ export async function batchFetchPropertyImages(
     });
   }
   
-  console.log(`[batchFetchPropertyImages] Fetched images for ${imageMap.size}/${propertyIds.length} properties`);
+  // Step 3: Cache newly fetched images in database
+  if (newlyFetchedImages.size > 0) {
+    console.log(`[batchFetchPropertyImages] Caching ${newlyFetchedImages.size} newly fetched images`);
+    await batchCachePropertyImages(newlyFetchedImages);
+  }
+  
+  console.log(`[batchFetchPropertyImages] Total: ${imageMap.size}/${propertyIds.length} properties (${cachedImages.size} cached, ${newlyFetchedImages.size} from API)`);
   return imageMap;
 }
 

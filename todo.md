@@ -2467,3 +2467,31 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - "View on Airbnb" link opens listing in new tab
 - ESC key or X button closes the gallery
 - Smooth transitions and loading states
+
+
+## Image Caching Feature (Jan 20, 2026)
+
+### Goal: Cache property images in database to reduce API calls and improve load times
+
+- [ ] Design database schema for property_images table
+- [ ] Create the database table and run migration
+- [ ] Update enrichListingsWithImages to check cache first
+- [ ] Store fetched images in database after API call
+- [ ] Add cache expiration logic (e.g., 7 days)
+- [ ] Test caching with multiple property lookups
+- [ ] Verify reduced API calls on subsequent requests
+
+
+## Image Caching Feature (COMPLETED - Jan 20, 2026)
+- [x] Design the database schema for image caching
+- [x] Create property_images table with columns:
+  - id, propertyId, platform, imageUrls (JSON), imageCount, createdAt, expiresAt
+- [x] Add database helper functions:
+  - getCachedPropertyImages(propertyId)
+  - cachePropertyImages(propertyId, images, platform, ttlDays)
+  - getBatchCachedPropertyImages(propertyIds)
+  - batchCachePropertyImages(imageMap, platform, ttlDays)
+- [x] Update batchFetchPropertyImages to check cache first
+- [x] All 8 vitest tests pass for image caching
+- [x] Verified in browser: 9 properties cached on first request
+- [x] Cache TTL: 7 days (configurable)

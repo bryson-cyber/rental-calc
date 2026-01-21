@@ -440,3 +440,35 @@ export const userSessions = mysqlTable("user_sessions", {
 
 export type UserSession = typeof userSessions.$inferSelect;
 export type InsertUserSession = typeof userSessions.$inferInsert;
+
+
+/**
+ * Property images cache table for storing fetched images from AirDNA API
+ * This reduces API calls by caching images for properties we've already looked up
+ */
+export const propertyImages = mysqlTable("property_images", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Property identifier (e.g., "abnb_24017637" or "vrbo_12345")
+  propertyId: varchar("propertyId", { length: 100 }).notNull().unique(),
+  
+  // Platform (airbnb, vrbo, etc.)
+  platform: varchar("platform", { length: 50 }),
+  
+  // Array of image URLs stored as JSON
+  images: json("images").$type<string[]>().notNull(),
+  
+  // Number of images (for quick reference without parsing JSON)
+  imageCount: int("imageCount").notNull(),
+  
+  // Cache metadata
+  fetchedAt: timestamp("fetchedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(), // When this cache entry should be refreshed
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PropertyImage = typeof propertyImages.$inferSelect;
+export type InsertPropertyImage = typeof propertyImages.$inferInsert;
