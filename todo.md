@@ -2879,3 +2879,27 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] South Beach now shows correct data: $68,571 revenue, 62% occupancy, $303 ADR, 3,062 listings
 - [x] Revenue by property type shows correct data
 - [x] Market seasonality shows correct data
+
+
+## Google Places API Integration (Jan 21, 2026)
+- [ ] Add VITE_GOOGLE_PLACES_API_KEY as environment variable
+- [ ] Update AddressAutocomplete to use direct Google Maps API instead of Manus proxy
+- [ ] Test Distance Badges feature
+- [ ] Test Bulk Rent Warning feature
+- [ ] Test RevPAR Calculation feature
+- [ ] Test Location Input feature
+
+
+## Bug Fix Testing (Jan 21, 2026)
+
+### Google Places API Integration:
+- [x] Added user's Google Places API key to enable direct Google Maps API access
+- [x] Modified AddressAutocomplete.tsx to bypass Manus Maps proxy
+- [x] Resolved "failed to match project origin" error
+
+### Test Results:
+- [x] Test 1 (Distance Badges): PASSED - Distance badges showing correctly (1.8 mi, 1.9 mi)
+- [x] Test 2 (Bulk Rent Warning): CODE VERIFIED - Implementation at lines 635-640 in LeadMagnet.tsx
+- [x] Test 3 (RevPAR Calculation): PASSED - $3,795 × 78% = $2,943 ✅
+- [x] Test 4 (Market Comps): PASSED - Comps change correctly between Miami and Denver
+- [x] Test 5 (Location Input): PASSED - Input field enabled and accepts text
