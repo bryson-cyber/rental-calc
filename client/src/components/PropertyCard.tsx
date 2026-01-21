@@ -57,7 +57,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const calculateRevPAR = (): number => {
     if (revpar) return revpar;
-    return annualRevenue / 365;
+    // RevPAR = ADR × Occupancy (as decimal)
+    // This is the correct formula: Revenue Per Available Room = Daily Rate × Occupancy Rate
+    return adr * (occupancy / 100);
   };
 
   const formatDistance = (meters: number): string => {

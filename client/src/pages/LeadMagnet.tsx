@@ -632,6 +632,13 @@ export default function LeadMagnet() {
       return;
     }
     
+    // Check if any property is missing rent
+    const propertiesWithoutRent = validProperties.filter(p => !p.rent || p.rent <= 0);
+    if (propertiesWithoutRent.length > 0) {
+      toast.error(`Please enter monthly rent for all properties (${propertiesWithoutRent.length} missing)`);
+      return;
+    }
+    
     setIsBulkAnalyzing(true);
     const results: BulkPropertyResult[] = [];
     
@@ -1242,6 +1249,7 @@ export default function LeadMagnet() {
                     onChange={setExploreAddress}
                     placeholder="Enter a city or neighborhood..."
                     className="input-apple h-12"
+                    variant="light"
                   />
                 </div>
                 
@@ -1964,6 +1972,7 @@ export default function LeadMagnet() {
             {(locationSelection?.submarket?.id || locationSelection?.market?.id) && (
               <div className="mt-8">
                 <CompDataTable
+                  key={`comp-table-${locationSelection.submarket?.id || locationSelection.market?.id}-${researchResult.marketName}`}
                   submarketId={locationSelection.submarket?.id || locationSelection.market?.id || ''}
                   marketName={researchResult.marketName}
                 />

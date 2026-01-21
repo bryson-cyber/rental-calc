@@ -2794,3 +2794,47 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Pass market_score from API through to TeslaDashboard
 - [x] Add Market Health indicator component to TeslaDashboard (integrated into MarketHealthGrade)
 - [x] Add distance badge to each individual comp card (e.g., "0.3 mi away")
+
+
+## Extensive Testing - All Tools (Jan 21, 2026)
+
+### Tool 1: Validate the Deal (One Home)
+- [ ] Test property analysis with real address
+- [ ] Check Market Health Grade display and scoring
+- [ ] Check distance badges on comp cards
+- [ ] Check tooltips on all metrics
+- [ ] Check seasonal forecast chart
+- [ ] Check comparable properties display
+- [ ] Check Airbnb links work
+- [ ] Check image carousel works
+
+### Tool 2: Find the Best Deal (Compare Many)
+- [ ] Test bulk property comparison
+- [ ] Check table formatting
+- [ ] Check sorting functionality
+- [ ] Check all metrics display correctly
+
+### Tool 3: See Real Revenue (Market Research)
+- [ ] Test market research with city name
+- [ ] Check bedroom breakdown display
+- [ ] Check seasonality charts
+- [ ] Check top performers display
+
+### Tool 4: Explore Listings (Explore Area)
+- [ ] Test area exploration
+- [ ] Check property cards display
+- [ ] Check filtering functionality
+- [ ] Check pagination/load more
+
+### Bugs Found:
+(To be filled during testing)
+
+
+## Bug Fixes from Extensive Testing (Jan 21, 2026)
+
+- [ ] Bug 1: Fix distance badges not showing on comp cards (Tool 1)
+- [ ] Bug 2: Fix bulk comparison shows $0 rent (Tool 2)
+- [ ] Bug 3: Fix extremely low revenue numbers in Explore Listings (Tool 4)
+- [ ] Bug 4: Fix RevPAR calculation in Explore Listings (Tool 4)
+- [ ] Bug 5: Fix wrong market comps showing in Tool 3
+- [ ] Bug 6: Fix location input appears blank after selection (Tool 4)

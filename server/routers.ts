@@ -1103,12 +1103,42 @@ export const appRouter = router({
           let qualifyingCompetitors: typeof baseReport.same_bedroom_comps = [];
           const minRevenueThreshold = input.monthlyRent * 12 * 2;
           
+          // Get subject property coordinates for distance calculation
+          const subjectLat = baseReport.property.property?.latitude;
+          const subjectLng = baseReport.property.property?.longitude;
+          
+          // Helper function to calculate distance in meters using Haversine formula
+          const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number | null | undefined, lng2: number | null | undefined): number | undefined => {
+            if (!lat2 || !lng2) return undefined;
+            const R = 6371000; // Earth's radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+          };
+          
           if (marketId) {
             console.log(`[getAIPropertyReport] Fetching all competitors for market ${marketId}, ${bedrooms}BR, threshold $${minRevenueThreshold}`);
             const competitorData = await getQualifyingCompetitors(marketId, bedrooms, input.monthlyRent);
             allCompetitors = competitorData.allSameBedroomListings;
             qualifyingCompetitors = competitorData.qualifyingListings;
             console.log(`[getAIPropertyReport] Found ${allCompetitors.length} same-bedroom listings, ${qualifyingCompetitors.length} meet threshold`);
+            
+            // Calculate distance for each competitor if we have subject property coordinates
+            if (subjectLat && subjectLng) {
+              allCompetitors = allCompetitors.map(c => ({
+                ...c,
+                distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
+              }));
+              qualifyingCompetitors = qualifyingCompetitors.map(c => ({
+                ...c,
+                distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
+              }));
+              console.log(`[getAIPropertyReport] Calculated distances for ${allCompetitors.filter(c => c.distance_meters).length} competitors`);
+            }
             
             // Scrape images from Airbnb for top competitors
             const airbnbUrls = allCompetitors
