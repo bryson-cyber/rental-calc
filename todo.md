@@ -2504,3 +2504,40 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Updated deduplication logic in getComprehensivePropertyReport to compare normalized IDs
 - [x] Tested: 29 unique properties displayed, no visible duplicates
 - [x] All properties have unique numbers (1-29) and different titles/images
+
+
+## Feature Enhancements (Jan 20, 2026)
+
+### Year-over-Year Trends in Tesla Dashboard
+- [ ] Add YoY revenue change indicator to hero section (e.g., "↑ 8% vs last year")
+- [ ] Add YoY occupancy change indicator
+- [ ] Add YoY ADR change indicator
+- [ ] Style with green/red arrows based on positive/negative change
+
+### Professional Management & Superhost Metrics
+- [ ] Add professional management percentage to market insights
+- [ ] Add Superhost percentage to market insights
+- [ ] Display in Tesla Dashboard Market Position section
+
+### Tesla Dashboard Styling Across All Steps
+- [ ] Step 1 (See Real Revenue): Apply Tesla Dashboard card styling
+- [ ] Step 2 (Explore Listings): Apply Tesla Dashboard card styling
+- [ ] Step 4 (Find Best Deal): Apply Tesla Dashboard comparison styling
+- [ ] Ensure consistent color palette (dark cards, amber accents, green/red indicators)
+- [ ] Test all steps for visual consistency
+
+
+
+## Feature Enhancements - Market Insights (COMPLETED - Jan 20, 2026)
+
+### YoY Trends & Market Insights:
+- [x] Verified Year-over-Year trends already implemented in HeroRevenueCard
+- [x] Added MarketInsights component to TeslaDashboard with:
+  - Professionally Managed % with competitive insight
+  - Superhost % with quality insight
+  - Average Rating with standards insight
+  - Total Similar Listings with competition insight
+  - Market Insight summary with actionable advice
+- [x] Updated AnalysisResult interface to include marketInsights
+- [x] Updated LeadMagnet.tsx to pass insights data to TeslaDashboard
+- [x] Tested: Market Landscape shows 8% Pro Managed, 68% Superhosts, 4.9 Avg Rating, 29 Listings

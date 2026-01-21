@@ -111,6 +111,7 @@ interface Comparable {
   rating: number;
   reviews: number;
   imageUrl?: string;
+  images?: string[];  // All images for carousel
   airbnbUrl?: string;
   distanceMeters?: number;
   monthlyMetrics?: CompMonthlyMetric[];
@@ -148,6 +149,12 @@ interface AnalysisResult {
   forecast: MonthlyForecast[];
   comparables: Comparable[];
   historicalData?: HistoricalData;
+  marketInsights?: {
+    professionallyManagedPct: number;
+    superhostPct: number;
+    avgRating?: number;
+    totalListings?: number;
+  };
 }
 
 interface BulkPropertyInput {
@@ -495,6 +502,18 @@ export default function LeadMagnet() {
           airbnbUrl: c.airbnb_url,
           distanceMeters: c.distance_meters,
         })),
+        // Market insights for professional management and superhost stats
+        marketInsights: data.insights ? {
+          professionallyManagedPct: data.insights.professionally_managed_pct || 0,
+          superhostPct: data.insights.superhost_pct || 0,
+          avgRating: (() => {
+            const comps = data.same_bedroom_comps || [];
+            if (comps.length === 0) return undefined;
+            const ratings = comps.filter((c: any) => c.rating && c.rating > 0).map((c: any) => c.rating);
+            return ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : undefined;
+          })(),
+          totalListings: data.market?.listing_count || (data.same_bedroom_comps || []).length,
+        } : undefined,
       });
       
       toast.success('Property validated! See your results below.');
