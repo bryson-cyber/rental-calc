@@ -871,6 +871,11 @@ export function HierarchicalLocationSelector({
   const [directZipError, setDirectZipError] = useState<string | null>(null);
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
   
+  // Zip code autocomplete state
+  const [zipSearchResults, setZipSearchResults] = useState<Array<{ zip: string; city: string; state: string }>>([]);
+  const [showZipResults, setShowZipResults] = useState(false);
+  const [isLoadingZipSuggestions, setIsLoadingZipSuggestions] = useState(false);
+  
   // Direct city/market search state
   const [directCitySearch, setDirectCitySearch] = useState('');
   const [directCitySearching, setDirectCitySearching] = useState(false);
@@ -913,6 +918,49 @@ export function HierarchicalLocationSelector({
     
     return () => clearTimeout(timeoutId);
   }, [directCitySearch]);
+  
+  // Debounced zip code search autocomplete - search as user types
+  useEffect(() => {
+    // Don't search if input is empty or not numeric
+    const cleanedZip = directZipSearch.replace(/\D/g, '');
+    if (cleanedZip.length < 1) {
+      setZipSearchResults([]);
+      setShowZipResults(false);
+      return;
+    }
+    
+    // Don't show autocomplete if we have a complete 5-digit zip
+    if (cleanedZip.length === 5) {
+      setShowZipResults(false);
+      return;
+    }
+    
+    // Debounce the search
+    const timeoutId = setTimeout(async () => {
+      setIsLoadingZipSuggestions(true);
+      try {
+        const response = await fetch(`/api/trpc/rental.searchZipCodes?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: { prefix: cleanedZip } } }))}`);
+        const data = await response.json();
+        const results = data?.[0]?.result?.data?.json?.data || [];
+        
+        if (results.length > 0) {
+          setZipSearchResults(results);
+          setShowZipResults(true);
+        } else {
+          setZipSearchResults([]);
+          setShowZipResults(false);
+        }
+      } catch (error) {
+        console.error('Error searching zip codes:', error);
+        setZipSearchResults([]);
+        setShowZipResults(false);
+      } finally {
+        setIsLoadingZipSuggestions(false);
+      }
+    }, 200); // 200ms debounce for zip codes (faster since it's local)
+    
+    return () => clearTimeout(timeoutId);
+  }, [directZipSearch]);
   
   // Handle direct zip code search with geocoding fallback
   const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
@@ -1190,22 +1238,63 @@ export function HierarchicalLocationSelector({
           <Hash className="w-4 h-4 text-[oklch(0.50_0_0)]" />
           <h3 className="text-sm font-medium text-[oklch(0.30_0_0)]">Quick Search by Zip Code</h3>
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={directZipSearch}
-            onChange={(e) => {
-              // Clear any previous error when user starts typing
-              if (directZipError) setDirectZipError(null);
-              // Filter to only digits and limit to 5 characters
-              setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5));
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleDirectZipSearch()}
-            placeholder="Enter 5-digit zip code"
-            disabled={disabled || directZipSearching}
-            className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directZipError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
-            maxLength={5}
-          />
+        <div className="flex gap-2 relative">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={directZipSearch}
+              onChange={(e) => {
+                // Clear any previous error when user starts typing
+                if (directZipError) setDirectZipError(null);
+                // Filter to only digits and limit to 5 characters
+                setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5));
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleDirectZipSearch()}
+              onBlur={() => {
+                // Delay hiding results to allow click to register
+                setTimeout(() => setShowZipResults(false), 200);
+              }}
+              onFocus={() => {
+                if (zipSearchResults.length > 0 && directZipSearch.length > 0 && directZipSearch.length < 5) {
+                  setShowZipResults(true);
+                }
+              }}
+              placeholder="Enter 5-digit zip code"
+              disabled={disabled || directZipSearching}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directZipError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
+              maxLength={5}
+            />
+            {/* Loading indicator */}
+            {isLoadingZipSuggestions && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-[oklch(0.50_0_0)]" />
+              </div>
+            )}
+            {/* Zip code autocomplete dropdown */}
+            {showZipResults && zipSearchResults.length > 0 && (
+              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[oklch(0.85_0_0)] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {zipSearchResults.map((result, index) => (
+                  <button
+                    key={`${result.zip}-${index}`}
+                    type="button"
+                    className="w-full px-3 py-2 text-left hover:bg-[oklch(0.96_0_0)] transition-colors flex items-center gap-2 text-sm border-b border-[oklch(0.95_0_0)] last:border-b-0"
+                    onClick={() => {
+                      setDirectZipSearch(result.zip);
+                      setShowZipResults(false);
+                      // Optionally auto-search after selection
+                      setTimeout(() => {
+                        handleDirectZipSearch();
+                      }, 100);
+                    }}
+                  >
+                    <Hash className="w-3 h-3 text-[oklch(0.50_0_0)]" />
+                    <span className="font-medium text-[oklch(0.30_0_0)]">{result.zip}</span>
+                    <span className="text-[oklch(0.50_0_0)]">{result.city}, {result.state}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleDirectZipSearch}
             disabled={disabled || directZipSearching}

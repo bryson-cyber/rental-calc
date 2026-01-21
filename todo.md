@@ -2723,3 +2723,9 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Fix 1% occupancy bug in Step 3 - occupancy was not being converted from decimal to percentage in comparables
 - [x] Fix Step 5 bedroom filter starting at 4 instead of 1 - now shows all options 1-8 regardless of data
 - [x] Add pagination to Step 5 property table (25 items per page with navigation controls)
+
+
+## Zip Code Autocomplete (Jan 21, 2026)
+
+- [x] Implement zip code autocomplete backend endpoint
+- [x] Add zip code autocomplete UI with dropdown suggestions
