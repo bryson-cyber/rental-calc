@@ -1939,29 +1939,36 @@ export default function LeadMagnet() {
       
       {/* Find Your Market Results */}
       {activeTab === 'find' && areaListings && (
-        <section className="py-12 bg-[oklch(0.97_0_0)]">
-          <div className="container max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-sm font-medium mb-4">
+        <section className="py-12 bg-white">
+          <div className="container max-w-5xl mx-auto">
+            {/* Tesla Dashboard Style Header */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
                 <CheckCircle2 className="w-4 h-4" />
                 {totalListings} Opportunities Found
               </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-[oklch(0.15_0_0)] mb-2">
+              <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
                 Here's What's Making Money
               </h3>
-              <p className="text-[oklch(0.50_0_0)]">
-                These are real Airbnb properties near {exploreAddress}
+              <p className="text-slate-500 text-lg">
+                Real Airbnb properties near <span className="font-medium text-slate-700">{exploreAddress}</span>
               </p>
             </div>
             
             
-            {/* Filters and Sorting */}
-            <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Tesla Dashboard Style Filters */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <Filter className="w-4 h-4 text-slate-600" />
+                </div>
+                <h4 className="font-semibold text-slate-900">Filter & Sort</h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Sort By</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Sort By</label>
                   <select 
-                    className="w-full input-apple h-10 text-sm"
+                    className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreSortBy}
                     onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
                   >
@@ -1972,9 +1979,9 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Property Type</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Property Type</label>
                   <select 
-                    className="w-full input-apple h-10 text-sm"
+                    className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={explorePropertyType || ''}
                     onChange={(e) => setExplorePropertyType(e.target.value || null)}
                   >
@@ -1985,51 +1992,55 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Rating</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Rating</label>
                   <select 
-                    className="w-full input-apple h-10 text-sm"
+                    className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinRating || ''}
                     onChange={(e) => setExploreMinRating(e.target.value ? parseFloat(e.target.value) : null)}
                   >
-                    <option value="">Any</option>
-                    <option value="4.5">4.5+</option>
-                    <option value="4.7">4.7+</option>
-                    <option value="4.9">4.9+</option>
+                    <option value="">Any Rating</option>
+                    <option value="4.5">4.5+ Stars</option>
+                    <option value="4.7">4.7+ Stars</option>
+                    <option value="4.9">4.9+ Stars</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[oklch(0.50_0_0)] mb-2">Min Occupancy</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Occupancy</label>
                   <select 
-                    className="w-full input-apple h-10 text-sm"
+                    className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinOccupancy || ''}
                     onChange={(e) => setExploreMinOccupancy(e.target.value ? parseFloat(e.target.value) : null)}
                   >
-                    <option value="">Any</option>
-                    <option value="50">50%+</option>
-                    <option value="70">70%+</option>
-                    <option value="85">85%+</option>
+                    <option value="">Any Occupancy</option>
+                    <option value="50">50%+ Booked</option>
+                    <option value="70">70%+ Booked</option>
+                    <option value="85">85%+ Booked</option>
                   </select>
                 </div>
               </div>
             </div>
-            {/* View Toggle */}
-            <div className="flex justify-center gap-2 mb-6">
+            {/* View Toggle - Tesla Dashboard Style */}
+            <div className="flex justify-center gap-2 mb-8">
               <button
                 onClick={() => setShowMapView(false)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  !showMapView ? 'bg-blue-500 text-white' : 'bg-[oklch(0.92_0_0)] text-[oklch(0.35_0_0)]'
+                className={`px-5 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                  !showMapView 
+                    ? 'bg-slate-900 text-white shadow-md' 
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                <List className="w-4 h-4 inline mr-2" />
+                <List className="w-4 h-4" />
                 List View
               </button>
               <button
                 onClick={() => setShowMapView(true)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  showMapView ? 'bg-blue-500 text-white' : 'bg-[oklch(0.92_0_0)] text-[oklch(0.35_0_0)]'
+                className={`px-5 py-2.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                  showMapView 
+                    ? 'bg-slate-900 text-white shadow-md' 
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                <Map className="w-4 h-4 inline mr-2" />
+                <Map className="w-4 h-4" />
                 Map View
               </button>
             </div>
