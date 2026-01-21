@@ -2624,3 +2624,14 @@ Allow users to click on a property card to see multiple photos (30-70 images per
   - [x] Table summary with colored stat pills
 - [x] All cards use consistent white backgrounds with slate borders
 - [x] Verified styling in browser
+
+
+## Step 5 Map View Quick Search Feature (COMPLETED - Jan 21, 2026)
+- [x] Add quick search input for direct zip code entry (bypass state dropdown) - already existed
+- [x] Add quick search input for direct city/market entry - NEW FEATURE
+- [x] Integrate with existing HierarchicalLocationSelector
+- [x] Test zip code search functionality
+- [x] Test city search functionality
+- [x] Verified: "Miami" search returns 10 markets with listing counts
+- [x] Verified: Selecting market auto-sets state and triggers map search
+- [x] Verified: 25 properties loaded with revenue markers ($293K top performer)

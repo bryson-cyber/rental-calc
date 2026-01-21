@@ -871,6 +871,13 @@ export function HierarchicalLocationSelector({
   const [directZipError, setDirectZipError] = useState<string | null>(null);
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
   
+  // Direct city/market search state
+  const [directCitySearch, setDirectCitySearch] = useState('');
+  const [directCitySearching, setDirectCitySearching] = useState(false);
+  const [directCityError, setDirectCityError] = useState<string | null>(null);
+  const [citySearchResults, setCitySearchResults] = useState<Market[]>([]);
+  const [showCityResults, setShowCityResults] = useState(false);
+  
   // Handle direct zip code search with geocoding fallback
   const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
   
@@ -1077,6 +1084,68 @@ export function HierarchicalLocationSelector({
     }
   }, [initialZipCode]);
   
+  // Handle direct city/market search
+  const handleDirectCitySearch = async () => {
+    const query = directCitySearch.trim();
+    setDirectCityError(null);
+    setCitySearchResults([]);
+    setShowCityResults(false);
+    
+    if (!query) {
+      setDirectCityError('Please enter a city or market name');
+      return;
+    }
+    
+    if (query.length < 2) {
+      setDirectCityError('Please enter at least 2 characters');
+      return;
+    }
+    
+    setDirectCitySearching(true);
+    try {
+      const response = await searchMarkets.mutateAsync({ query });
+      const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
+      
+      if (results.length > 0) {
+        setCitySearchResults(results.slice(0, 10)); // Limit to 10 results
+        setShowCityResults(true);
+      } else {
+        setDirectCityError(`No markets found for "${query}". Try a different city name or use the state dropdown below.`);
+      }
+    } catch (error) {
+      console.error('Error searching cities:', error);
+      setDirectCityError('Unable to search. Please check your connection and try again.');
+    } finally {
+      setDirectCitySearching(false);
+    }
+  };
+  
+  // Handle selecting a city from search results
+  const handleCityResultSelect = (market: Market) => {
+    // Find the state from the market
+    const foundState = US_STATES.find(s => 
+      market.state?.toLowerCase() === s.code.toLowerCase() ||
+      market.state?.toLowerCase() === s.name.toLowerCase() ||
+      market.locationName?.toLowerCase().includes(s.name.toLowerCase()) ||
+      market.name?.toLowerCase().includes(s.name.toLowerCase())
+    );
+    
+    if (foundState) {
+      setSelectedState(foundState);
+    }
+    
+    setSelectedMarket(market);
+    setShowCityResults(false);
+    setDirectCitySearch('');
+    
+    // Trigger search with the selected market
+    onSearch({
+      level: 'market',
+      state: foundState,
+      market: market
+    });
+  };
+  
   return (
     <div className="space-y-4">
       {/* Direct Zip Code Search */}
@@ -1134,6 +1203,93 @@ export function HierarchicalLocationSelector({
               </div>
               <button
                 onClick={() => setDirectZipError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Direct City/Market Search */}
+      <div className="bg-[oklch(0.98_0_0)] border border-[oklch(0.85_0_0)] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Building2 className="w-4 h-4 text-[oklch(0.50_0_0)]" />
+          <h3 className="text-sm font-medium text-[oklch(0.30_0_0)]">Quick Search by City/Market</h3>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={directCitySearch}
+              onChange={(e) => {
+                if (directCityError) setDirectCityError(null);
+                setDirectCitySearch(e.target.value);
+                setShowCityResults(false);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleDirectCitySearch()}
+              placeholder="Enter city name (e.g., Miami, Austin, Nashville)"
+              disabled={disabled || directCitySearching}
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.50_0.15_250)] disabled:opacity-50 disabled:cursor-not-allowed ${directCityError ? 'border-red-400 bg-red-50' : 'border-[oklch(0.85_0_0)]'}`}
+            />
+            
+            {/* City Search Results Dropdown */}
+            {showCityResults && citySearchResults.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-[oklch(0.85_0_0)] rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {citySearchResults.map((market, index) => (
+                  <button
+                    key={market.id || index}
+                    onClick={() => handleCityResultSelect(market)}
+                    className="w-full px-3 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors flex items-center justify-between first:rounded-t-lg last:rounded-b-lg"
+                  >
+                    <div>
+                      <span className="font-medium text-[oklch(0.25_0_0)]">{market.name}</span>
+                      {market.locationName && market.locationName !== market.name && (
+                        <span className="text-[oklch(0.50_0_0)] text-sm ml-1">({market.locationName})</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-[oklch(0.50_0_0)] bg-[oklch(0.96_0_0)] px-2 py-1 rounded">
+                      {market.listingCount?.toLocaleString() || 0} listings
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleDirectCitySearch}
+            disabled={disabled || directCitySearching}
+            className="px-4 py-2 bg-[oklch(0.30_0_0)] text-white rounded-lg hover:bg-[oklch(0.25_0_0)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+          >
+            {directCitySearching ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                Search
+              </>
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-[oklch(0.50_0_0)] mt-2">Search for any city or market directly - no need to select a state first</p>
+        
+        {/* City Error message display */}
+        {directCityError && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm text-red-700 font-medium">No Markets Found</p>
+                <p className="text-sm text-red-600 mt-1">{directCityError}</p>
+              </div>
+              <button
+                onClick={() => setDirectCityError(null)}
                 className="text-red-400 hover:text-red-600 transition-colors"
               >
                 <X className="w-4 h-4" />
