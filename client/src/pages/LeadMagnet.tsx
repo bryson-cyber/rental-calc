@@ -547,6 +547,14 @@ export default function LeadMagnet() {
             new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
           );
           
+          // Also get occupancy and ADR historical data
+          const sortedOccupancy = historical.occupancy ? [...historical.occupancy].sort((a, b) => 
+            new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
+          ) : [];
+          const sortedAdr = historical.adr ? [...historical.adr].sort((a, b) => 
+            new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
+          ) : [];
+          
           if (sortedRevenue.length < 13) return undefined;
           
           const currentYearRevenue = sortedRevenue.slice(0, 12).reduce((sum, m) => sum + (m.value || 0), 0);
@@ -556,18 +564,27 @@ export default function LeadMagnet() {
           
           const yoyChange = ((currentYearRevenue - previousYearRevenue) / previousYearRevenue) * 100;
           
+          // Build months array with all metrics for YoY comparison
+          const months = sortedRevenue.slice(0, 24).map((m, idx) => {
+            // Find matching occupancy and ADR by date
+            const occupancyData = sortedOccupancy.find(o => o.date === m.date);
+            const adrData = sortedAdr.find(a => a.date === m.date);
+            
+            return {
+              date: m.date || '',
+              revenue: m.value || 0,
+              occupancy: occupancyData?.value || 0,
+              adr: adrData?.value || 0,
+            };
+          });
+          
           return {
             summary: {
               monthly_pct_change: yoyChange / 12,
               yearly_pct_change: yoyChange,
               trend: yoyChange > 2 ? 'up' as const : yoyChange < -2 ? 'down' as const : 'stable' as const,
             },
-            months: sortedRevenue.slice(0, 24).map(m => ({
-              date: m.date || '',
-              revenue: m.value || 0,
-              occupancy: 0,
-              adr: 0,
-            })),
+            months,
           };
         })(),
       });

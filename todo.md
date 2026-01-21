@@ -2748,3 +2748,22 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Show multiple metrics simultaneously based on user selection
 - [x] Add toggle to show/hide YoY changes
 - [x] Update tooltips to show all selected metrics with YoY changes
+
+
+## YoY Data and RevPAR Enhancement (Jan 21, 2026)
+
+- [ ] Analyze AirDNA API for historical data endpoints
+- [ ] Update backend to fetch historical YoY data from AirDNA API
+- [ ] Add RevPAR (Revenue Per Available Room) metric calculation
+- [ ] Add RevPAR as a selectable metric option in seasonal forecast
+- [ ] Update frontend to display real YoY comparison data
+
+
+## YoY Data and RevPAR Enhancements (Jan 21, 2026)
+
+- [x] Connect to AirDNA historical API for real year-over-year comparison data
+- [x] Add RevPAR (Revenue Per Available Room = ADR × Occupancy) as a metric option
+- [x] Update frontend to display real YoY data in seasonal forecast
+- [x] Calculate RevPAR for each month (ADR × Occupancy / 100)
+- [x] Add RevPAR YoY change calculation
+- [x] Include occupancy and ADR in historical data for month-by-month YoY comparison

@@ -45,6 +45,7 @@ interface MonthlyForecast {
   revenue: number;
   adr: number;
   occupancy: number;
+  revpar?: number; // Revenue Per Available Room = ADR × Occupancy
 }
 
 interface Comparable {
@@ -333,12 +334,13 @@ function MetricCard({
  * Seasonal Forecast Chart - Comprehensive 12-month view with chart and table
  */
 // Available metrics for the seasonal forecast
-type MetricKey = 'revenue' | 'adr' | 'occupancy';
+type MetricKey = 'revenue' | 'adr' | 'occupancy' | 'revpar';
 
 const METRIC_CONFIG: Record<MetricKey, { label: string; format: (val: number) => string; color: string }> = {
   revenue: { label: 'Revenue', format: (val) => formatCurrency(val), color: 'emerald' },
   adr: { label: 'Nightly Rate (ADR)', format: (val) => formatCurrency(val), color: 'blue' },
   occupancy: { label: 'Occupancy', format: (val) => `${Math.round(val)}%`, color: 'purple' },
+  revpar: { label: 'RevPAR', format: (val) => formatCurrency(val), color: 'amber' },
 };
 
 function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForecast[]; historicalData?: { months: Array<{ date: string; revenue: number; occupancy: number; adr: number }> } }) {
@@ -348,17 +350,24 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
   
   if (!forecast || forecast.length === 0) return null;
   
+  // Calculate RevPAR for each month (ADR × Occupancy / 100)
+  const forecastWithRevpar = forecast.map(m => ({
+    ...m,
+    revpar: m.revpar ?? Math.round(m.adr * (m.occupancy / 100))
+  }));
+  
   // Calculate insights
-  const maxRevenue = Math.max(...forecast.map(m => m.revenue));
-  const minRevenue = Math.min(...forecast.map(m => m.revenue));
-  const avgRevenue = forecast.reduce((sum, m) => sum + m.revenue, 0) / forecast.length;
-  const avgOccupancy = forecast.reduce((sum, m) => sum + m.occupancy, 0) / forecast.length;
-  const avgAdr = forecast.reduce((sum, m) => sum + m.adr, 0) / forecast.length;
+  const maxRevenue = Math.max(...forecastWithRevpar.map(m => m.revenue));
+  const minRevenue = Math.min(...forecastWithRevpar.map(m => m.revenue));
+  const avgRevenue = forecastWithRevpar.reduce((sum, m) => sum + m.revenue, 0) / forecastWithRevpar.length;
+  const avgOccupancy = forecastWithRevpar.reduce((sum, m) => sum + m.occupancy, 0) / forecastWithRevpar.length;
+  const avgAdr = forecastWithRevpar.reduce((sum, m) => sum + m.adr, 0) / forecastWithRevpar.length;
+  const avgRevpar = forecastWithRevpar.reduce((sum, m) => sum + (m.revpar || 0), 0) / forecastWithRevpar.length;
   
   // Calculate YoY changes if historical data is available
-  const getYoYChange = (month: MonthlyForecast): { revenue: number | null; adr: number | null; occupancy: number | null } => {
+  const getYoYChange = (month: MonthlyForecast & { revpar?: number }): { revenue: number | null; adr: number | null; occupancy: number | null; revpar: number | null } => {
     if (!historicalData?.months || historicalData.months.length === 0) {
-      return { revenue: null, adr: null, occupancy: null };
+      return { revenue: null, adr: null, occupancy: null, revpar: null };
     }
     
     // Find matching month from last year
@@ -368,7 +377,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       return hMonthNum === currentMonthNum;
     });
     
-    if (!lastYearMonth) return { revenue: null, adr: null, occupancy: null };
+    if (!lastYearMonth) return { revenue: null, adr: null, occupancy: null, revpar: null };
     
     const revenueChange = lastYearMonth.revenue > 0 
       ? ((month.revenue - lastYearMonth.revenue) / lastYearMonth.revenue) * 100 
@@ -380,7 +389,14 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       ? ((month.occupancy - lastYearMonth.occupancy) / lastYearMonth.occupancy) * 100 
       : null;
     
-    return { revenue: revenueChange, adr: adrChange, occupancy: occupancyChange };
+    // Calculate RevPAR YoY change
+    const lastYearRevpar = lastYearMonth.adr * (lastYearMonth.occupancy / 100);
+    const currentRevpar = month.revpar || (month.adr * (month.occupancy / 100));
+    const revparChange = lastYearRevpar > 0 
+      ? ((currentRevpar - lastYearRevpar) / lastYearRevpar) * 100 
+      : null;
+    
+    return { revenue: revenueChange, adr: adrChange, occupancy: occupancyChange, revpar: revparChange };
   };
   
   // Categorize months by performance
@@ -393,7 +409,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
   };
   
   // Sort months by revenue for ranking
-  const sortedByRevenue = [...forecast].sort((a, b) => b.revenue - a.revenue);
+  const sortedByRevenue = [...forecastWithRevpar].sort((a, b) => b.revenue - a.revenue);
   const peakMonths = sortedByRevenue.slice(0, 3);
   const slowMonths = sortedByRevenue.slice(-3);
   
@@ -469,6 +485,8 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                   ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                   : metric === 'adr'
                   ? 'bg-blue-100 text-blue-700 border-blue-300'
+                  : metric === 'revpar'
+                  ? 'bg-amber-100 text-amber-700 border-amber-300'
                   : 'bg-purple-100 text-purple-700 border-purple-300'
                 : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
             }`}
@@ -490,7 +508,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       </div>
       
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
         {selectedMetrics.includes('revenue') && (
           <div className="text-center">
             <p className="text-slate-500 text-xs mb-1">Avg Monthly Revenue</p>
@@ -509,7 +527,13 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
             <p className="text-lg font-bold text-slate-900">{formatCurrency(avgAdr)}</p>
           </div>
         )}
-        {selectedMetrics.length < 3 && (
+        {selectedMetrics.includes('revpar') && (
+          <div className="text-center">
+            <p className="text-slate-500 text-xs mb-1">Avg RevPAR</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevpar)}</p>
+          </div>
+        )}
+        {selectedMetrics.length < 4 && (
           <div className="text-center">
             <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
             <p className="text-lg font-bold text-slate-900">
@@ -539,7 +563,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         /* Bar Chart View */
         <>
           <div className="grid grid-cols-12 gap-1 h-40 items-end mb-2">
-            {forecast.slice(0, 12).map((month, idx) => {
+            {forecastWithRevpar.slice(0, 12).map((month, idx) => {
               const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
               const category = getMonthCategory(month.revenue);
               const yoyChange = getYoYChange(month);
@@ -576,6 +600,16 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                           {showYoY && yoyChange.adr !== null && (
                             <span className={yoyChange.adr >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                               ({yoyChange.adr >= 0 ? '+' : ''}{yoyChange.adr.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {selectedMetrics.includes('revpar') && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-300">{formatCurrency(month.revpar || 0)} RevPAR</span>
+                          {showYoY && yoyChange.revpar !== null && (
+                            <span className={yoyChange.revpar >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                              ({yoyChange.revpar >= 0 ? '+' : ''}{yoyChange.revpar.toFixed(1)}%)
                             </span>
                           )}
                         </div>
@@ -627,11 +661,16 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                     Occupancy {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
                   </th>
                 )}
+                {selectedMetrics.includes('revpar') && (
+                  <th className="text-right py-2 px-2 font-medium text-slate-600">
+                    RevPAR {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
+                  </th>
+                )}
                 <th className="text-center py-2 px-2 font-medium text-slate-600">Season</th>
               </tr>
             </thead>
             <tbody>
-              {forecast.slice(0, 12).map((month, idx) => {
+              {forecastWithRevpar.slice(0, 12).map((month, idx) => {
                 const category = getMonthCategory(month.revenue);
                 const isPeak = peakMonths.some(p => p.month === month.month);
                 const isSlow = slowMonths.some(s => s.month === month.month);
@@ -665,6 +704,14 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                         <div className="flex items-center justify-end gap-2">
                           <span className="text-slate-600">{Math.round(month.occupancy)}%</span>
                           {showYoY && formatYoYChange(yoyChange.occupancy)}
+                        </div>
+                      </td>
+                    )}
+                    {selectedMetrics.includes('revpar') && (
+                      <td className="py-2.5 px-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-amber-700 font-medium">{formatCurrency(month.revpar || 0)}</span>
+                          {showYoY && formatYoYChange(yoyChange.revpar)}
                         </div>
                       </td>
                     )}
