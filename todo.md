@@ -2787,3 +2787,10 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 ## Bug Fixes (Jan 21, 2026)
 
 - [x] Fix placeholder text contrast - placeholder text hard to see
+
+
+## UI Improvements - Market Health & Distance (Jan 21, 2026)
+
+- [x] Pass market_score from API through to TeslaDashboard
+- [x] Add Market Health indicator component to TeslaDashboard (integrated into MarketHealthGrade)
+- [x] Add distance badge to each individual comp card (e.g., "0.3 mi away")

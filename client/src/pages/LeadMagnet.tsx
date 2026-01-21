@@ -155,6 +155,7 @@ interface AnalysisResult {
     superhostPct: number;
     avgRating?: number;
     totalListings?: number;
+    marketScore?: number;
   };
 }
 
@@ -521,6 +522,7 @@ export default function LeadMagnet() {
             return ratings.length > 0 ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length : undefined;
           })(),
           totalListings: data.market?.listing_count || (data.same_bedroom_comps || []).length,
+          marketScore: data.market?.metrics?.market_score || undefined,
         } : undefined,
         // Historical data for YoY trends - use API historical_valuation data (more accurate)
         historicalData: (() => {

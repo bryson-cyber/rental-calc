@@ -32,7 +32,8 @@ import {
   Camera,
   Briefcase,
   Award,
-  Building2
+  Building2,
+  MapPin
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -101,6 +102,7 @@ interface AnalysisResult {
     superhostPct: number;
     avgRating?: number;
     totalListings?: number;
+    marketScore?: number;
   };
 }
 
@@ -1016,7 +1018,8 @@ function MarketHealthGrade({
   superhostPct,
   totalListings,
   avgRating,
-  forecast
+  forecast,
+  marketScore
 }: {
   occupancy: number;
   yoyChange?: number;
@@ -1025,6 +1028,7 @@ function MarketHealthGrade({
   totalListings?: number;
   avgRating?: number;
   forecast?: MonthlyForecast[];
+  marketScore?: number;
 }) {
   // Calculate individual scores (0-100)
   
@@ -1070,8 +1074,19 @@ function MarketHealthGrade({
     seasonalityScore = Math.max(20, 100 - (coefficientOfVariation * 200));
   }
   
-  // Calculate weighted average
-  const weights = {
+  // 6. AirDNA Market Score (if available from API)
+  // This is a comprehensive score from AirDNA that factors in many market indicators
+  const airdnaScore = marketScore !== undefined ? marketScore : undefined;
+  
+  // Calculate weighted average - adjust weights if AirDNA score is available
+  const weights = airdnaScore !== undefined ? {
+    occupancy: 0.20,
+    growth: 0.20,
+    competition: 0.15,
+    quality: 0.10,
+    seasonality: 0.10,
+    airdna: 0.25  // Give significant weight to AirDNA's comprehensive score
+  } : {
     occupancy: 0.30,
     growth: 0.25,
     competition: 0.20,
@@ -1079,12 +1094,18 @@ function MarketHealthGrade({
     seasonality: 0.10
   };
   
-  const overallScore = 
-    occupancyScore * weights.occupancy +
-    growthScore * weights.growth +
-    competitionScore * weights.competition +
-    qualityScore * weights.quality +
-    seasonalityScore * weights.seasonality;
+  const overallScore = airdnaScore !== undefined
+    ? occupancyScore * weights.occupancy +
+      growthScore * weights.growth +
+      competitionScore * weights.competition +
+      qualityScore * weights.quality +
+      seasonalityScore * weights.seasonality +
+      airdnaScore * (weights as any).airdna
+    : occupancyScore * weights.occupancy +
+      growthScore * weights.growth +
+      competitionScore * weights.competition +
+      qualityScore * weights.quality +
+      seasonalityScore * weights.seasonality;
   
   // Convert score to letter grade
   let grade: string;
@@ -1136,6 +1157,7 @@ function MarketHealthGrade({
   
   // Factor breakdown
   const factors = [
+    ...(airdnaScore !== undefined ? [{ name: 'AirDNA Market Score', score: airdnaScore, weight: (weights as any).airdna, icon: '🎯' }] : []),
     { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy, icon: '📊' },
     { name: 'Growth Trend', score: growthScore, weight: weights.growth, icon: '📈' },
     { name: 'Competition', score: competitionScore, weight: weights.competition, icon: '🏆' },
@@ -1532,6 +1554,18 @@ function ComparableProperties({
                       <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
                     </div>
                   )}
+                  {/* Distance badge */}
+                  {comp.distanceMeters !== undefined && comp.distanceMeters > 0 && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
+                      <MapPin className="w-3 h-3" />
+                      <span className="text-xs font-medium">
+                        {comp.distanceMeters < 1609 
+                          ? `${(comp.distanceMeters / 1609).toFixed(1)} mi`
+                          : `${(comp.distanceMeters / 1609).toFixed(1)} mi`
+                        }
+                      </span>
+                    </div>
+                  )}
                 </div>
             
             {/* Content */}
@@ -1641,6 +1675,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms }: TeslaDa
         totalListings={result.marketInsights?.totalListings}
         avgRating={result.marketInsights?.avgRating}
         forecast={result.forecast}
+        marketScore={result.marketInsights?.marketScore}
       />
       
       {/* Market Position */}
