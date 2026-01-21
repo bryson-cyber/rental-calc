@@ -332,8 +332,19 @@ function MetricCard({
 /**
  * Seasonal Forecast Chart - Comprehensive 12-month view with chart and table
  */
-function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
+// Available metrics for the seasonal forecast
+type MetricKey = 'revenue' | 'adr' | 'occupancy';
+
+const METRIC_CONFIG: Record<MetricKey, { label: string; format: (val: number) => string; color: string }> = {
+  revenue: { label: 'Revenue', format: (val) => formatCurrency(val), color: 'emerald' },
+  adr: { label: 'Nightly Rate (ADR)', format: (val) => formatCurrency(val), color: 'blue' },
+  occupancy: { label: 'Occupancy', format: (val) => `${Math.round(val)}%`, color: 'purple' },
+};
+
+function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForecast[]; historicalData?: { months: Array<{ date: string; revenue: number; occupancy: number; adr: number }> } }) {
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
+  const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(['revenue', 'adr', 'occupancy']);
+  const [showYoY, setShowYoY] = useState(true);
   
   if (!forecast || forecast.length === 0) return null;
   
@@ -342,6 +353,35 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
   const minRevenue = Math.min(...forecast.map(m => m.revenue));
   const avgRevenue = forecast.reduce((sum, m) => sum + m.revenue, 0) / forecast.length;
   const avgOccupancy = forecast.reduce((sum, m) => sum + m.occupancy, 0) / forecast.length;
+  const avgAdr = forecast.reduce((sum, m) => sum + m.adr, 0) / forecast.length;
+  
+  // Calculate YoY changes if historical data is available
+  const getYoYChange = (month: MonthlyForecast): { revenue: number | null; adr: number | null; occupancy: number | null } => {
+    if (!historicalData?.months || historicalData.months.length === 0) {
+      return { revenue: null, adr: null, occupancy: null };
+    }
+    
+    // Find matching month from last year
+    const currentMonthNum = month.month.split('-')[1];
+    const lastYearMonth = historicalData.months.find(h => {
+      const hMonthNum = h.date.split('-')[1];
+      return hMonthNum === currentMonthNum;
+    });
+    
+    if (!lastYearMonth) return { revenue: null, adr: null, occupancy: null };
+    
+    const revenueChange = lastYearMonth.revenue > 0 
+      ? ((month.revenue - lastYearMonth.revenue) / lastYearMonth.revenue) * 100 
+      : null;
+    const adrChange = lastYearMonth.adr > 0 
+      ? ((month.adr - lastYearMonth.adr) / lastYearMonth.adr) * 100 
+      : null;
+    const occupancyChange = lastYearMonth.occupancy > 0 
+      ? ((month.occupancy - lastYearMonth.occupancy) / lastYearMonth.occupancy) * 100 
+      : null;
+    
+    return { revenue: revenueChange, adr: adrChange, occupancy: occupancyChange };
+  };
   
   // Categorize months by performance
   const getMonthCategory = (revenue: number) => {
@@ -357,53 +397,126 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
   const peakMonths = sortedByRevenue.slice(0, 3);
   const slowMonths = sortedByRevenue.slice(-3);
   
+  // Toggle metric selection
+  const toggleMetric = (metric: MetricKey) => {
+    if (selectedMetrics.includes(metric)) {
+      // Don't allow deselecting all metrics
+      if (selectedMetrics.length > 1) {
+        setSelectedMetrics(selectedMetrics.filter(m => m !== metric));
+      }
+    } else {
+      setSelectedMetrics([...selectedMetrics, metric]);
+    }
+  };
+  
+  // Format YoY change display
+  const formatYoYChange = (change: number | null) => {
+    if (change === null) return null;
+    const isPositive = change >= 0;
+    return (
+      <span className={`inline-flex items-center text-xs font-medium ${
+        isPositive ? 'text-emerald-600' : 'text-red-500'
+      }`}>
+        {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+        {Math.abs(change).toFixed(1)}%
+      </span>
+    );
+  };
+  
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Seasonal Forecast</h3>
           <p className="text-slate-500 text-sm">12-month revenue projection</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('chart')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                viewMode === 'chart' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Chart
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                viewMode === 'table' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Table
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Metric Selector */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
+        <span className="text-xs font-medium text-slate-500 mr-2">Show Metrics:</span>
+        {(Object.keys(METRIC_CONFIG) as MetricKey[]).map(metric => (
           <button
-            onClick={() => setViewMode('chart')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              viewMode === 'chart' 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700'
+            key={metric}
+            onClick={() => toggleMetric(metric)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
+              selectedMetrics.includes(metric)
+                ? metric === 'revenue' 
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                  : metric === 'adr'
+                  ? 'bg-blue-100 text-blue-700 border-blue-300'
+                  : 'bg-purple-100 text-purple-700 border-purple-300'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
             }`}
           >
-            Chart
+            {METRIC_CONFIG[metric].label}
           </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-              viewMode === 'table' 
-                ? 'bg-white text-slate-900 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Table
-          </button>
+        ))}
+        <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showYoY}
+              onChange={(e) => setShowYoY(e.target.checked)}
+              className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+            />
+            Show YoY Change
+          </label>
         </div>
       </div>
       
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
-        <div className="text-center">
-          <p className="text-slate-500 text-xs mb-1">Average Monthly</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevenue)}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-slate-500 text-xs mb-1">Avg Occupancy</p>
-          <p className="text-lg font-bold text-slate-900">{Math.round(avgOccupancy)}%</p>
-        </div>
-        <div className="text-center">
-          <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
-          <p className="text-lg font-bold text-slate-900">
-            {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
-          </p>
-        </div>
+        {selectedMetrics.includes('revenue') && (
+          <div className="text-center">
+            <p className="text-slate-500 text-xs mb-1">Avg Monthly Revenue</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevenue)}</p>
+          </div>
+        )}
+        {selectedMetrics.includes('occupancy') && (
+          <div className="text-center">
+            <p className="text-slate-500 text-xs mb-1">Avg Occupancy</p>
+            <p className="text-lg font-bold text-slate-900">{Math.round(avgOccupancy)}%</p>
+          </div>
+        )}
+        {selectedMetrics.includes('adr') && (
+          <div className="text-center">
+            <p className="text-slate-500 text-xs mb-1">Avg Nightly Rate</p>
+            <p className="text-lg font-bold text-slate-900">{formatCurrency(avgAdr)}</p>
+          </div>
+        )}
+        {selectedMetrics.length < 3 && (
+          <div className="text-center">
+            <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
+            <p className="text-lg font-bold text-slate-900">
+              {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
+            </p>
+          </div>
+        )}
       </div>
       
       {/* Legend */}
@@ -429,16 +542,45 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
             {forecast.slice(0, 12).map((month, idx) => {
               const heightPct = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
               const category = getMonthCategory(month.revenue);
+              const yoyChange = getYoYChange(month);
               
               return (
                 <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
                     <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
-                      <p className="font-medium">{formatMonth(month.month)}</p>
-                      <p className="text-emerald-300">{formatCurrency(month.revenue)}</p>
-                      <p>{Math.round(month.occupancy)}% occupancy</p>
-                      <p className="text-slate-400 capitalize">{category} season</p>
+                      <p className="font-medium mb-1">{formatMonth(month.month)}</p>
+                      {selectedMetrics.includes('revenue') && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-300">{formatCurrency(month.revenue)}</span>
+                          {showYoY && yoyChange.revenue !== null && (
+                            <span className={yoyChange.revenue >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                              ({yoyChange.revenue >= 0 ? '+' : ''}{yoyChange.revenue.toFixed(1)}% YoY)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {selectedMetrics.includes('occupancy') && (
+                        <div className="flex items-center gap-2">
+                          <span>{Math.round(month.occupancy)}% occupancy</span>
+                          {showYoY && yoyChange.occupancy !== null && (
+                            <span className={yoyChange.occupancy >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                              ({yoyChange.occupancy >= 0 ? '+' : ''}{yoyChange.occupancy.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {selectedMetrics.includes('adr') && (
+                        <div className="flex items-center gap-2">
+                          <span>{formatCurrency(month.adr)}/night</span>
+                          {showYoY && yoyChange.adr !== null && (
+                            <span className={yoyChange.adr >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                              ({yoyChange.adr >= 0 ? '+' : ''}{yoyChange.adr.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-slate-400 capitalize mt-1">{category} season</p>
                     </div>
                   </div>
                   
@@ -470,8 +612,21 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="text-left py-2 px-2 font-medium text-slate-600">Month</th>
-                <th className="text-right py-2 px-2 font-medium text-slate-600">Revenue</th>
-                <th className="text-right py-2 px-2 font-medium text-slate-600">Occupancy</th>
+                {selectedMetrics.includes('revenue') && (
+                  <th className="text-right py-2 px-2 font-medium text-slate-600">
+                    Revenue {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
+                  </th>
+                )}
+                {selectedMetrics.includes('adr') && (
+                  <th className="text-right py-2 px-2 font-medium text-slate-600">
+                    ADR {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
+                  </th>
+                )}
+                {selectedMetrics.includes('occupancy') && (
+                  <th className="text-right py-2 px-2 font-medium text-slate-600">
+                    Occupancy {showYoY && <span className="text-xs text-slate-400">(YoY)</span>}
+                  </th>
+                )}
                 <th className="text-center py-2 px-2 font-medium text-slate-600">Season</th>
               </tr>
             </thead>
@@ -480,6 +635,7 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
                 const category = getMonthCategory(month.revenue);
                 const isPeak = peakMonths.some(p => p.month === month.month);
                 const isSlow = slowMonths.some(s => s.month === month.month);
+                const yoyChange = getYoYChange(month);
                 
                 return (
                   <tr key={idx} className={`border-b border-slate-100 ${
@@ -488,12 +644,30 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
                     <td className="py-2.5 px-2 font-medium text-slate-900">
                       {formatMonth(month.month)}
                     </td>
-                    <td className="py-2.5 px-2 text-right font-semibold text-slate-900">
-                      {formatCurrency(month.revenue)}
-                    </td>
-                    <td className="py-2.5 px-2 text-right text-slate-600">
-                      {Math.round(month.occupancy)}%
-                    </td>
+                    {selectedMetrics.includes('revenue') && (
+                      <td className="py-2.5 px-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-semibold text-slate-900">{formatCurrency(month.revenue)}</span>
+                          {showYoY && formatYoYChange(yoyChange.revenue)}
+                        </div>
+                      </td>
+                    )}
+                    {selectedMetrics.includes('adr') && (
+                      <td className="py-2.5 px-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-slate-700">{formatCurrency(month.adr)}</span>
+                          {showYoY && formatYoYChange(yoyChange.adr)}
+                        </div>
+                      </td>
+                    )}
+                    {selectedMetrics.includes('occupancy') && (
+                      <td className="py-2.5 px-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-slate-600">{Math.round(month.occupancy)}%</span>
+                          {showYoY && formatYoYChange(yoyChange.occupancy)}
+                        </div>
+                      </td>
+                    )}
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         category === 'peak' 
@@ -518,23 +692,35 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
         <div className="p-3 bg-emerald-50 rounded-lg">
           <p className="text-xs font-medium text-emerald-700 mb-2">🔥 Best Months</p>
           <div className="space-y-1">
-            {peakMonths.map((m, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-slate-700">{formatMonth(m.month)}</span>
-                <span className="font-semibold text-emerald-700">{formatCurrency(m.revenue)}</span>
-              </div>
-            ))}
+            {peakMonths.map((m, i) => {
+              const yoyChange = getYoYChange(m);
+              return (
+                <div key={i} className="flex justify-between items-center text-sm">
+                  <span className="text-slate-700">{formatMonth(m.month)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-emerald-700">{formatCurrency(m.revenue)}</span>
+                    {showYoY && formatYoYChange(yoyChange.revenue)}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="p-3 bg-amber-50 rounded-lg">
           <p className="text-xs font-medium text-amber-700 mb-2">❄️ Slowest Months</p>
           <div className="space-y-1">
-            {slowMonths.map((m, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-slate-700">{formatMonth(m.month)}</span>
-                <span className="font-semibold text-amber-700">{formatCurrency(m.revenue)}</span>
-              </div>
-            ))}
+            {slowMonths.map((m, i) => {
+              const yoyChange = getYoYChange(m);
+              return (
+                <div key={i} className="flex justify-between items-center text-sm">
+                  <span className="text-slate-700">{formatMonth(m.month)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-amber-700">{formatCurrency(m.revenue)}</span>
+                    {showYoY && formatYoYChange(yoyChange.revenue)}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1268,7 +1454,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms }: TeslaDa
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Seasonal Forecast */}
-        <SeasonalForecast forecast={result.forecast} />
+        <SeasonalForecast forecast={result.forecast} historicalData={result.historicalData} />
         
         {/* Arbitrage Calculator */}
         <ArbitrageCalculator

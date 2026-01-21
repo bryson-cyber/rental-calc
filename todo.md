@@ -2739,3 +2739,12 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Add Chart/Table toggle for different viewing preferences
 - [x] Add color-coded season categories (Peak, Shoulder, Slow)
 - [x] Add Best/Worst months summary panel
+
+
+## Seasonal Forecast Enhancements (Jan 21, 2026)
+
+- [x] Add metric selector dropdown to choose which metrics to display (Revenue, ADR, Occupancy)
+- [x] Add year-over-year comparison data with percentage change indicators
+- [x] Show multiple metrics simultaneously based on user selection
+- [x] Add toggle to show/hide YoY changes
+- [x] Update tooltips to show all selected metrics with YoY changes
