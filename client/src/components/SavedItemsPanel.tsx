@@ -189,7 +189,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                         {formatCurrency(market.avgRevenue)}/yr
                       </p>
                       <p className="text-xs text-[oklch(0.50_0_0)]">
-                        {Math.round(market.avgOccupancy)}% occ
+                        {Math.round(market.avgOccupancy)}% occupancy
                       </p>
                     </div>
                     <button

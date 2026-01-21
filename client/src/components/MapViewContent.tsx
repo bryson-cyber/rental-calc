@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, Table2 } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -258,6 +258,8 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
   const [distanceFilter, setDistanceFilter] = useState<string>('all');
   const [apiBedroomFilter, setApiBedroomFilter] = useState<number | null>(null); // API-level bedroom filter (1, 2, 3, etc.)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 25;
   
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
@@ -352,6 +354,18 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy, distanceFilter]);
   
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
+  
+  // Paginated listings for table display
+  const totalPages = Math.ceil(filteredListings.length / ITEMS_PER_PAGE);
+  const paginatedListings = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredListings, currentPage]);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [bedroomFilter, propertyTypeFilter, distanceFilter, sortBy]);
   
   const geocodeMyProperty = useCallback(async () => {
     if (!myPropertyAddress.trim()) {
@@ -1136,7 +1150,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                        {Array.from(new Set(listings.map(l => l.bedrooms))).sort((a, b) => a - b).map(br => {
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(br => {
                           const count = listings.filter(l => l.bedrooms === br).length;
                           return (
                             <SelectItem key={br} value={String(br)}>
@@ -1372,7 +1386,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredListings.map((listing, index) => {
+                    {paginatedListings.map((listing, index) => {
                       const markerColor = getMarkerColor(listing.revenue, thresholds, useCustomThreshold ? customThreshold : null);
                       const occupancyDisplay = listing.occupancy > 1 ? Math.round(listing.occupancy) : Math.round(listing.occupancy * 100);
                       
@@ -1496,6 +1510,60 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </span>
                 </div>
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between">
+                  <div className="text-sm text-slate-500">
+                    Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredListings.length)} of {filteredListings.length} properties
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 px-2"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`h-8 w-8 p-0 ${currentPage === pageNum ? 'bg-[#C9A962] hover:bg-[#b8984f]' : ''}`}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 px-2"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

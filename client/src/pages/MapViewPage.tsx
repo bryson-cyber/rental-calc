@@ -799,7 +799,7 @@ export default function MapViewPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                      {Array.from(new Set(listings.map(l => l.bedrooms))).sort((a, b) => a - b).map(br => {
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(br => {
                         const count = listings.filter(l => l.bedrooms === br).length;
                         return (
                           <SelectItem key={br} value={String(br)}>

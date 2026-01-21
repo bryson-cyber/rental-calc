@@ -695,7 +695,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Peak Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">May through August</p>
-                <p className="text-2xl font-serif font-bold text-amber-600">55-65% occ.</p>
+                <p className="text-2xl font-serif font-bold text-amber-600">55-65% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Higher rates, strong demand</p>
               </div>
 
@@ -705,7 +705,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Shoulder Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">Mar-Apr & Sep-Nov</p>
-                <p className="text-2xl font-serif font-bold text-green-600">50-55% occ.</p>
+                <p className="text-2xl font-serif font-bold text-green-600">50-55% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Solid, consistent bookings</p>
               </div>
 
@@ -715,7 +715,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Off-Peak Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">December through February</p>
-                <p className="text-2xl font-serif font-bold text-blue-600">45-50% occ.</p>
+                <p className="text-2xl font-serif font-bold text-blue-600">45-50% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Lower rates, less demand</p>
               </div>
             </div>

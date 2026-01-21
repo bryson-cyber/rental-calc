@@ -498,7 +498,11 @@ export default function LeadMagnet() {
           accommodates: c.accommodates,
           revenue: c.annual_revenue || 0,
           adr: c.adr || 0,
-          occupancy: c.occupancy || 0,
+          // Convert occupancy from decimal to percentage if needed (API returns 0.57 for 57%)
+          occupancy: (() => {
+            const occ = c.occupancy || 0;
+            return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
+          })(),
           rating: c.rating || 0,
           reviews: c.reviews || 0,
           imageUrl: c.image_url || c.thumbnail_url || undefined,
@@ -646,7 +650,11 @@ export default function LeadMagnet() {
           profit,
           ratio: prop.rent > 0 ? monthlyRevenue / prop.rent : 0,
           adr: data.property.estimates?.average_daily_rate || 0,
-          occupancy: data.property.estimates?.occupancy_rate || 0,
+          // Convert occupancy from decimal to percentage if needed (API returns 0.57 for 57%)
+          occupancy: (() => {
+            const occ = data.property.estimates?.occupancy_rate || 0;
+            return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
+          })(),
           status: 'success',
           imageUrl,
           propertyType,

@@ -396,7 +396,7 @@ function SeasonalForecast({ forecast }: { forecast: MonthlyForecast[] }) {
                 <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap">
                   <p className="font-medium">{formatMonth(month.month)}</p>
                   <p>{formatCurrency(month.revenue)}</p>
-                  <p>{Math.round(month.occupancy)}% occ</p>
+                  <p>{Math.round(month.occupancy)}% occupancy</p>
                 </div>
               </div>
               
@@ -1115,7 +1115,7 @@ function ComparableProperties({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-emerald-600 font-bold">{formatCompactCurrency(comp.revenue)}/yr</p>
-                  <p className="text-[10px] text-slate-400">{Math.round(comp.occupancy)}% occ · ${Math.round(comp.adr)}/night</p>
+                  <p className="text-[10px] text-slate-400">{Math.round(comp.occupancy)}% occupancy · ${Math.round(comp.adr)}/night</p>
                 </div>
                 {comp.airbnbUrl && (
                   <a

@@ -2701,3 +2701,25 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Updated: White background, slate borders, amber icon badges, dark text labels
 - [x] Updated: Select dropdowns, input fields all use light theme
 - [x] Updated: Compact view and full property set view also use light theme
+
+
+## Bug Fixes: Multiple Issues (Jan 21, 2026)
+
+### Step 3 Validate Deal - Occupancy Issues:
+- [ ] Fix 1% occupancy bug - some properties showing incorrect 1% occupancy
+- [ ] Change "occ" label to "occupancy" (e.g., "1% occ" → "1% occupancy")
+
+### Step 5 Map View - Filter and UX Issues:
+- [ ] Fix bedroom filter starting at 4 instead of 1
+- [ ] Add loading indicator when fetching properties
+- [ ] Limit number of properties shown or add pagination
+- [ ] Make it one-click to load properties (auto-search on filter change)
+
+
+## Bug Fixes (Jan 21, 2026)
+
+### Completed:
+- [x] Fix "occ" label - changed to "occupancy" throughout UI (TeslaDashboard.tsx, SavedItemsPanel.tsx, ChapterMarketReport.tsx)
+- [x] Fix 1% occupancy bug in Step 3 - occupancy was not being converted from decimal to percentage in comparables
+- [x] Fix Step 5 bedroom filter starting at 4 instead of 1 - now shows all options 1-8 regardless of data
+- [x] Add pagination to Step 5 property table (25 items per page with navigation controls)
