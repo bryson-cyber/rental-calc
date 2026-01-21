@@ -33,6 +33,7 @@ import {
   TrendingDown,
   Calendar,
   Bed,
+  BedDouble,
   Bath,
   Star,
   Users,
@@ -2165,150 +2166,267 @@ export default function LeadMagnet() {
       
       {/* Find the Best Deal Results */}
       {activeTab === 'compare' && sortedBulkResults && (
-        <section className="py-12 bg-[oklch(0.97_0_0)]">
-          <div className="container max-w-4xl mx-auto">
+        <section className="py-12 bg-slate-50">
+          <div className="container max-w-5xl mx-auto">
+            {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
                 <Trophy className="w-4 h-4" />
-                Winner Found!
+                {sortedBulkResults.filter(r => r.status === 'success').length} Properties Compared
               </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-[oklch(0.15_0_0)] mb-2">
-                Your Best Deal
+              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+                Property Comparison Results
               </h3>
-              <p className="text-[oklch(0.50_0_0)]">
-                Compared {sortedBulkResults.filter(r => r.status === 'success').length} properties to find the winner
+              <p className="text-slate-500">
+                Ranked by profitability to help you find the best investment opportunity
               </p>
             </div>
             
             {/* Sort Controls */}
-            <div className="flex justify-center gap-2 mb-6">
-              {(['profit', 'revenue', 'ratio'] as const).map(sortType => (
-                <button
-                  key={sortType}
-                  onClick={() => {
-                    if (bulkSortBy === sortType) {
-                      setBulkSortDir(bulkSortDir === 'desc' ? 'asc' : 'desc');
-                    } else {
-                      setBulkSortBy(sortType);
-                      setBulkSortDir('desc');
-                    }
-                  }}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                    bulkSortBy === sortType ? 'bg-amber-500 text-white' : 'bg-[oklch(0.92_0_0)] text-[oklch(0.35_0_0)]'
-                  }`}
-                >
-                  {sortType === 'profit' ? 'Profit' : sortType === 'revenue' ? 'Revenue' : 'ROI Ratio'}
-                  {bulkSortBy === sortType && (
-                    bulkSortDir === 'desc' ? <SortDesc className="w-4 h-4" /> : <SortAsc className="w-4 h-4" />
-                  )}
-                </button>
-              ))}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <span className="text-sm font-medium text-slate-700">Sort by:</span>
+                <div className="flex gap-2">
+                  {(['profit', 'revenue', 'ratio'] as const).map(sortType => (
+                    <button
+                      key={sortType}
+                      onClick={() => {
+                        if (bulkSortBy === sortType) {
+                          setBulkSortDir(bulkSortDir === 'desc' ? 'asc' : 'desc');
+                        } else {
+                          setBulkSortBy(sortType);
+                          setBulkSortDir('desc');
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                        bulkSortBy === sortType 
+                          ? 'bg-slate-900 text-white shadow-md' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {sortType === 'profit' ? 'Monthly Profit' : sortType === 'revenue' ? 'Revenue' : 'ROI Ratio'}
+                      {bulkSortBy === sortType && (
+                        bulkSortDir === 'desc' ? <SortDesc className="w-4 h-4" /> : <SortAsc className="w-4 h-4" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             
             {/* Results */}
-            <div className="grid gap-4">
+            <div className="space-y-4">
               {sortedBulkResults.map((result, idx) => (
                 <div 
                   key={result.id} 
-                  className={`border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${
+                  className={`bg-white border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 ${
                     idx === 0 && result.status === 'success'
-                      ? 'bg-amber-500/10 border-amber-500/30'
+                      ? 'border-emerald-500/50 ring-2 ring-emerald-500/20'
                       : result.status === 'error'
-                      ? 'bg-red-500/10 border-red-500/30'
-                      : 'bg-white border-[oklch(0.90_0_0)]'
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-slate-200'
                   }`}
                 >
-                  {/* Rank Badge */}
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
-                    idx === 0 && result.status === 'success'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                      : 'bg-[oklch(0.92_0_0)] text-[oklch(0.35_0_0)]'
-                  }`}>
-                    {idx === 0 && result.status === 'success' ? (
-                      <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
-                    ) : (
-                      idx + 1
-                    )}
-                  </div>
-                  
-                  {/* Property Image */}
-                  {result.imageUrl ? (
-                    <div className="w-full sm:w-24 h-32 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
-                      <img 
-                        src={result.imageUrl} 
-                        alt={result.address}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.parentElement!.classList.add('bg-gradient-to-br', 'from-amber-100', 'to-orange-100');
-                        }}
-                      />
-                      {result.propertyType && (
-                        <span className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
-                          {result.propertyType}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="w-full sm:w-24 h-32 sm:h-20 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-                      <Home className="w-8 h-8 text-amber-400" />
-                    </div>
-                  )}
-                  
-                  {/* Property Details */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-[oklch(0.25_0_0)] font-medium truncate">{result.address}</h4>
-                    <p className="text-sm text-[oklch(0.50_0_0)]">
-                      {result.bedrooms} BR · {result.bathrooms} BA · {formatCurrency(result.rent)}/mo rent
-                    </p>
-                    {result.status === 'success' && (result.rating || result.reviews) && (
-                      <div className="flex items-center gap-2 mt-1">
-                        {result.rating && (
-                          <span className="flex items-center gap-1 text-xs text-amber-500">
-                            <Star className="w-3 h-3 fill-current" />
-                            {result.rating.toFixed(1)}
-                          </span>
+                  <div className="p-5">
+                    <div className="flex flex-col lg:flex-row gap-5">
+                      {/* Left: Rank + Image */}
+                      <div className="flex gap-4 items-start">
+                        {/* Rank Badge */}
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold flex-shrink-0 ${
+                          idx === 0 && result.status === 'success'
+                            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                            : idx === 1 && result.status === 'success'
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                            : idx === 2 && result.status === 'success'
+                            ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-white'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {idx === 0 && result.status === 'success' ? (
+                            <Trophy className="w-6 h-6" />
+                          ) : (
+                            <span className="text-lg">#{idx + 1}</span>
+                          )}
+                        </div>
+                        
+                        {/* Property Image */}
+                        {result.imageUrl ? (
+                          <div className="w-28 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
+                            <img 
+                              src={result.imageUrl} 
+                              alt={result.address}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.parentElement!.classList.add('bg-gradient-to-br', 'from-slate-100', 'to-slate-200');
+                              }}
+                            />
+                            {result.propertyType && (
+                              <span className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
+                                {result.propertyType}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-28 h-20 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
+                            <Home className="w-8 h-8 text-slate-400" />
+                          </div>
                         )}
-                        {result.reviews && (
-                          <span className="text-xs text-[oklch(0.50_0_0)]">
-                            {result.reviews} reviews
-                          </span>
+                      </div>
+                      
+                      {/* Middle: Property Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h4 className="text-slate-900 font-semibold text-lg truncate">{result.address}</h4>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <BedDouble className="w-4 h-4" />
+                                {result.bedrooms} bed
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Bath className="w-4 h-4" />
+                                {result.bathrooms} bath
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <DollarSign className="w-4 h-4" />
+                                {formatCurrency(result.rent)}/mo rent
+                              </span>
+                            </div>
+                            {result.status === 'success' && (result.rating || result.reviews) && (
+                              <div className="flex items-center gap-2 mt-2">
+                                {result.rating && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-600 text-xs font-medium rounded-full">
+                                    <Star className="w-3 h-3 fill-current" />
+                                    {result.rating.toFixed(1)}
+                                  </span>
+                                )}
+                                {result.reviews && (
+                                  <span className="text-xs text-slate-400">
+                                    {result.reviews} reviews
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Financial Stats Grid */}
+                        {result.status === 'success' && (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                            {/* Monthly Profit */}
+                            <div className={`p-3 rounded-xl ${
+                              result.profit > 0 
+                                ? 'bg-emerald-500/10 border border-emerald-500/20' 
+                                : 'bg-red-500/10 border border-red-500/20'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <TrendingUp className={`w-3.5 h-3.5 ${result.profit > 0 ? 'text-emerald-500' : 'text-red-500'}`} />
+                                <span className="text-xs font-medium text-slate-500">Profit</span>
+                              </div>
+                              <p className={`text-lg font-bold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {formatCurrency(result.profit)}
+                              </p>
+                              <p className="text-xs text-slate-400">per month</p>
+                            </div>
+                            
+                            {/* Revenue */}
+                            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <DollarSign className="w-3.5 h-3.5 text-blue-500" />
+                                <span className="text-xs font-medium text-slate-500">Revenue</span>
+                              </div>
+                              <p className="text-lg font-bold text-blue-600">
+                                {formatCurrency(result.revenue)}
+                              </p>
+                              <p className="text-xs text-slate-400">per month</p>
+                            </div>
+                            
+                            {/* Occupancy */}
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-xs font-medium text-slate-500">Occupancy</span>
+                              </div>
+                              <p className="text-lg font-bold text-amber-600">
+                                {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%
+                              </p>
+                              <p className="text-xs text-slate-400">booked nights</p>
+                            </div>
+                            
+                            {/* ROI Ratio */}
+                            <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <Percent className="w-3.5 h-3.5 text-purple-500" />
+                                <span className="text-xs font-medium text-slate-500">ROI Ratio</span>
+                              </div>
+                              <p className="text-lg font-bold text-purple-600">
+                                {result.ratio.toFixed(1)}x
+                              </p>
+                              <p className="text-xs text-slate-400">${Math.round(result.adr)}/night ADR</p>
+                            </div>
+                          </div>
                         )}
+                        
+                        {result.status === 'error' && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 text-sm flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              {result.error}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Winner Badge */}
+                    {idx === 0 && result.status === 'success' && (
+                      <div className="mt-4 pt-4 border-t border-emerald-500/20">
+                        <div className="flex items-center gap-2 text-emerald-600">
+                          <Trophy className="w-5 h-5" />
+                          <span className="font-semibold">Best Deal!</span>
+                          <span className="text-sm text-emerald-500">Highest profitability based on your criteria</span>
+                        </div>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Financial Results */}
-                  {result.status === 'success' ? (
-                    <div className="text-left sm:text-right w-full sm:w-auto">
-                      <p className={`text-xl font-bold ${result.profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {formatCurrency(result.profit)}/mo
-                      </p>
-                      <p className="text-sm text-[oklch(0.50_0_0)]">
-                        {formatCurrency(result.revenue)}/mo · {result.ratio.toFixed(1)}x ratio
-                      </p>
-                      <p className="text-xs text-[oklch(0.60_0_0)] mt-1">
-                        {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}% occ · ${Math.round(result.adr)}/night
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-red-400 text-sm">{result.error}</p>
-                  )}
                 </div>
               ))}
             </div>
             
             {/* CTA */}
-            <div className="text-center mt-8 p-6 bg-gradient-to-r from-[#D4A84B]/10 to-[#4ECDC4]/10 border border-[#D4A84B]/20 rounded-xl">
-              <h4 className="text-xl font-bold text-[oklch(0.15_0_0)] mb-2">Ready to Take Action?</h4>
-              <p className="text-[oklch(0.50_0_0)] mb-4">
-                Get personalized guidance on your next steps with Coach Inayah's Turnkey Program
-              </p>
-              <Button className="bg-gradient-to-r from-[#D4A84B] to-[#4ECDC4] hover:opacity-90">
-                Learn About the Turnkey Program
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+            <div className="mt-8 bg-white border border-slate-200 rounded-xl p-8">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-500/10 rounded-xl mb-4">
+                  <Zap className="w-7 h-7 text-emerald-500" />
+                </div>
+                <h4 className="text-xl font-bold text-slate-900 mb-2">Ready to Take Action?</h4>
+                <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                  Get personalized guidance on your next steps with Coach Inayah's Turnkey Program
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    className="bg-slate-900 hover:bg-slate-800 text-white"
+                    onClick={() => window.open('https://masterclass.coachinayah.com/the-turnkey-program', '_blank')}
+                  >
+                    Learn About the Turnkey Program
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setBulkProperties([
+                        { id: '1', address: '', bedrooms: 2, bathrooms: 1, rent: 0 },
+                        { id: '2', address: '', bedrooms: 2, bathrooms: 1, rent: 0 }
+                      ]);
+                      setBulkResults(null);
+                    }}
+                  >
+                    Compare More Properties
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
