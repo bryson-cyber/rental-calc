@@ -2691,3 +2691,13 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Light variant uses: white bg, slate border, dark text, gray placeholder
 - [x] Dropdown also updated with light theme styling
 - [x] Tested: Text now clearly visible when typing in Step 3
+
+
+## UI Fix: Start with Your Property Theme Mismatch (COMPLETED - Jan 21, 2026)
+- [x] Update StartWithProperty component from dark theme to light theme
+- [x] Match styling with rest of the site (white/light backgrounds, dark text)
+- [x] Update input fields to use light variant (AddressAutocomplete with variant="light")
+- [x] Test and verify visual consistency
+- [x] Updated: White background, slate borders, amber icon badges, dark text labels
+- [x] Updated: Select dropdowns, input fields all use light theme
+- [x] Updated: Compact view and full property set view also use light theme
