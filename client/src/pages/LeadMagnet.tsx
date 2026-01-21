@@ -1323,7 +1323,7 @@ export default function LeadMagnet() {
                     value={address}
                     onChange={setAddress}
                     placeholder="Enter the property address..."
-                    className="input-apple h-12"
+                    variant="light"
                   />
                 </div>
                 

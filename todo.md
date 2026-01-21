@@ -2682,3 +2682,12 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [ ] Add recent searches history for quick access
 - [ ] Add property image carousel (click to view all photos)
 - [ ] Add amenities breakdown for top performers
+
+
+## Bug Fix: Step 3 Address Input Not Working (COMPLETED - Jan 21, 2026)
+- [x] Investigated: AddressAutocomplete had hardcoded dark theme styling (white text on transparent bg)
+- [x] Fixed: Added `variant` prop to AddressAutocomplete ('dark' | 'light')
+- [x] Updated LeadMagnet.tsx Step 3 to use `variant="light"`
+- [x] Light variant uses: white bg, slate border, dark text, gray placeholder
+- [x] Dropdown also updated with light theme styling
+- [x] Tested: Text now clearly visible when typing in Step 3

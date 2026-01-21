@@ -86,6 +86,7 @@ interface AddressAutocompleteProps {
   className?: string;
   inputClassName?: string;
   disabled?: boolean;
+  variant?: 'dark' | 'light';
 }
 
 export function AddressAutocomplete({
@@ -96,6 +97,7 @@ export function AddressAutocomplete({
   className,
   inputClassName,
   disabled = false,
+  variant = 'dark',
 }: AddressAutocompleteProps) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -353,10 +355,12 @@ export function AddressAutocomplete({
           placeholder={placeholder}
           disabled={disabled || !isInitialized}
           className={cn(
-            "w-full h-12 px-4 bg-white/10 border border-white/20 rounded-xl text-white font-medium",
-            "placeholder:text-white/50 placeholder:font-normal",
+            "w-full h-12 px-4 rounded-xl font-medium",
             "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none",
             "disabled:opacity-50 disabled:cursor-not-allowed",
+            variant === 'dark' 
+              ? "bg-white/10 border border-white/20 text-white placeholder:text-white/50 placeholder:font-normal"
+              : "bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 placeholder:font-normal",
             inputClassName
           )}
           autoComplete="off"
@@ -368,7 +372,12 @@ export function AddressAutocomplete({
 
       {/* Predictions Dropdown */}
       {isOpen && predictions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-[#1a2744] border border-white/20 rounded-lg shadow-lg overflow-y-auto max-h-64 top-full left-0">
+        <div className={cn(
+          "absolute z-50 w-full mt-1 rounded-lg shadow-lg overflow-y-auto max-h-64 top-full left-0",
+          variant === 'dark'
+            ? "bg-[#1a2744] border border-white/20"
+            : "bg-white border border-slate-200"
+        )}>
           {predictions.map((prediction, index) => (
             <button
               key={prediction.placeId}
@@ -377,24 +386,37 @@ export function AddressAutocomplete({
               onMouseEnter={() => setHighlightedIndex(index)}
               className={cn(
                 "w-full px-4 py-3 text-left flex items-start gap-3 transition-colors",
-                "hover:bg-white/10",
-                highlightedIndex === index && "bg-white/10"
+                variant === 'dark' 
+                  ? "hover:bg-white/10" 
+                  : "hover:bg-slate-100",
+                highlightedIndex === index && (variant === 'dark' ? "bg-white/10" : "bg-slate-100")
               )}
             >
               <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-white truncate">
+                <div className={cn(
+                  "font-medium truncate",
+                  variant === 'dark' ? "text-white" : "text-slate-900"
+                )}>
                   {prediction.mainText}
                 </div>
                 {prediction.secondaryText && (
-                  <div className="text-sm text-white/60 truncate">
+                  <div className={cn(
+                    "text-sm truncate",
+                    variant === 'dark' ? "text-white/60" : "text-slate-500"
+                  )}>
                     {prediction.secondaryText}
                   </div>
                 )}
               </div>
             </button>
           ))}
-          <div className="px-4 py-2 text-xs text-white/40 border-t border-white/10 bg-white/5">
+          <div className={cn(
+            "px-4 py-2 text-xs border-t",
+            variant === 'dark'
+              ? "text-white/40 border-white/10 bg-white/5"
+              : "text-slate-400 border-slate-100 bg-slate-50"
+          )}>
             Powered by Google
           </div>
         </div>
