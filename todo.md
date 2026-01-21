@@ -2838,3 +2838,44 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [ ] Bug 4: Fix RevPAR calculation in Explore Listings (Tool 4)
 - [ ] Bug 5: Fix wrong market comps showing in Tool 3
 - [ ] Bug 6: Fix location input appears blank after selection (Tool 4)
+
+
+## Remaining Bug Fixes - Deep Dive (Jan 21, 2026)
+
+### Bug 1: Distance badges not showing on comp cards
+- [ ] Debug data flow from routers.ts to LeadMagnet.tsx to TeslaDashboard.tsx
+- [ ] Ensure distance_meters is passed through all transformations
+- [ ] Verify TeslaDashboard receives distanceMeters in comparables
+
+### Bug 4: Market comps not refreshing when switching markets
+- [ ] Investigate backend query - check if market_id is being used correctly
+- [ ] Check if there's caching causing stale data
+- [ ] Ensure CompDataTable fetches fresh data on market change
+
+### Bug 2: Bulk rent warning toast not visible
+- [ ] Verify toast component is properly configured
+- [ ] Check if Sonner toast is being called correctly
+
+
+## Bug Fix: South Beach Submarket Data Display (Jan 21, 2026) - COMPLETE
+
+### Issue:
+- [x] South Beach and other submarkets showing $0 revenue, 0% occupancy, 0 listings in overview metrics
+- [x] Seasonality charts showing correct data (from different API endpoint)
+- [x] API returning correct data but frontend not using submarket endpoint
+
+### Root Cause:
+- [x] When selecting a submarket from quick search dropdown, `isSubmarketAsMarket` property was not being set
+- [x] This caused the code to use market endpoint instead of submarket endpoint
+- [x] Market endpoint returned 404 errors for submarket IDs (e.g., airdna-1914)
+
+### Fix Applied:
+- [x] Updated `HierarchicalLocationSelector.tsx` to transform search results
+- [x] Set `isSubmarketAsMarket: true` for any result with `type: "submarket"`
+- [x] Also set `parentMarketId` and `parentMarketName` from API response
+- [x] Applied fix to both debounced autocomplete and direct search functions
+
+### Verification:
+- [x] South Beach now shows correct data: $68,571 revenue, 62% occupancy, $303 ADR, 3,062 listings
+- [x] Revenue by property type shows correct data
+- [x] Market seasonality shows correct data

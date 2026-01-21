@@ -901,7 +901,14 @@ export function HierarchicalLocationSelector({
         const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
         
         if (results.length > 0) {
-          setCitySearchResults(results.slice(0, 10)); // Limit to 10 results
+          // Transform results to set isSubmarketAsMarket for submarkets
+          const transformedResults = results.slice(0, 10).map((r: any) => ({
+            ...r,
+            isSubmarketAsMarket: r.type === 'submarket',
+            parentMarketId: r.parentMarket?.id,
+            parentMarketName: r.parentMarket?.name,
+          }));
+          setCitySearchResults(transformedResults); // Limit to 10 results
           setShowCityResults(true);
         } else {
           setCitySearchResults([]);
@@ -1191,7 +1198,14 @@ export function HierarchicalLocationSelector({
       const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
       
       if (results.length > 0) {
-        setCitySearchResults(results.slice(0, 10)); // Limit to 10 results
+        // Transform results to set isSubmarketAsMarket for submarkets
+        const transformedResults = results.slice(0, 10).map((r: any) => ({
+          ...r,
+          isSubmarketAsMarket: r.type === 'submarket',
+          parentMarketId: r.parentMarket?.id,
+          parentMarketName: r.parentMarket?.name,
+        }));
+        setCitySearchResults(transformedResults); // Limit to 10 results
         setShowCityResults(true);
       } else {
         setDirectCityError(`No markets found for "${query}". Try a different city name or use the state dropdown below.`);

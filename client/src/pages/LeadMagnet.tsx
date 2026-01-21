@@ -837,6 +837,12 @@ export default function LeadMagnet() {
         displayMarketName = `${marketNameWithoutZip} ${selection.zipcode}`;
       }
       
+      console.log('[handleResearch] Raw report:', JSON.stringify(report, null, 2));
+      console.log('[handleResearch] report.overview.avgRevenue:', report.overview.avgRevenue);
+      console.log('[handleResearch] report.overview.avgOccupancy:', report.overview.avgOccupancy);
+      console.log('[handleResearch] report.overview.avgAdr:', report.overview.avgAdr);
+      console.log('[handleResearch] report.overview.totalListings:', report.overview.totalListings);
+      
       setResearchResult({
         marketName: displayMarketName,
         avgRevenue: report.overview.avgRevenue,

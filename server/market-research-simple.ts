@@ -536,6 +536,8 @@ export const marketResearchSimpleRouter = router({
       }
       
       // Transform to SimplifiedMarketReport format
+      console.log(`[getSubmarketReport] Raw metrics from report:`, JSON.stringify(report.submarket.metrics, null, 2));
+      
       const overview = {
         totalListings: report.submarket.listing_count || 0,
         avgOccupancy: report.submarket.metrics.occupancy,
@@ -544,6 +546,8 @@ export const marketResearchSimpleRouter = router({
         avgRevpar: report.submarket.metrics.revpar,
         marketScore: report.submarket.metrics.market_score
       };
+      
+      console.log(`[getSubmarketReport] Transformed overview:`, JSON.stringify(overview, null, 2));
       
       // Process top performers
       const topPerformers = report.top_listings.slice(0, 10).map(l => ({

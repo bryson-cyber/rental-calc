@@ -164,6 +164,23 @@ class APICache {
   }
   
   /**
+   * Clear cache entries by prefix
+   */
+  clearByPrefix(prefix: string): number {
+    let cleared = 0;
+    const entries = Array.from(this.cache.keys());
+    for (const key of entries) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+        cleared++;
+      }
+    }
+    this.stats.size = this.cache.size;
+    console.log(`[Cache] CLEARED ${cleared} entries with prefix: ${prefix}`);
+    return cleared;
+  }
+  
+  /**
    * Clean up expired entries
    */
   cleanup(): number {

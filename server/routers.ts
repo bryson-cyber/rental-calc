@@ -1137,7 +1137,9 @@ export const appRouter = router({
                 ...c,
                 distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
               }));
-              console.log(`[getAIPropertyReport] Calculated distances for ${allCompetitors.filter(c => c.distance_meters).length} competitors`);
+              const compsWithLatLng = allCompetitors.filter(c => c.latitude && c.longitude).length;
+              const compsWithDistance = allCompetitors.filter(c => c.distance_meters).length;
+              console.log(`[getAIPropertyReport] Comps with lat/lng: ${compsWithLatLng}/${allCompetitors.length}, Comps with distance: ${compsWithDistance}/${allCompetitors.length}`);
             }
             
             // Scrape images from Airbnb for top competitors

@@ -2613,11 +2613,21 @@ export async function getComprehensiveSubmarketReport(
   insights: MarketInsights;
   generated_at: string;
 } | null> {
-  // Check cache first
+  // Check cache first - but clear any stale data with 0 metrics
   const cacheKey = `submarket_comprehensive:${submarketId}`;
   const cached = apiCache.get<NonNullable<Awaited<ReturnType<typeof getComprehensiveSubmarketReport>>>>(cacheKey);
   if (cached) {
-    return cached;
+    // Check if cached data has valid metrics (not all zeros)
+    const hasValidMetrics = cached.submarket.metrics.revenue > 0 || cached.submarket.metrics.occupancy > 0;
+    if (hasValidMetrics) {
+      console.log(`[getComprehensiveSubmarketReport] CACHE HIT for ${submarketId}:`, JSON.stringify(cached.submarket.metrics, null, 2));
+      return cached;
+    } else {
+      console.log(`[getComprehensiveSubmarketReport] CACHE INVALID for ${submarketId} (all zeros), fetching fresh data...`);
+      // Don't return cached data with all zeros - fetch fresh
+    }
+  } else {
+    console.log(`[getComprehensiveSubmarketReport] CACHE MISS for ${submarketId}, fetching fresh data...`);
   }
 
   // Step 1: Get submarket details
@@ -2665,12 +2675,35 @@ export async function getComprehensiveSubmarketReport(
   let revpar = 0;
   let marketScore = 0;
   
-  if (submarketDetails.metrics) {
+  console.log(`[getComprehensiveSubmarketReport] submarketDetails.metrics:`, JSON.stringify(submarketDetails.metrics, null, 2));
+  
+  if (submarketDetails.metrics && submarketDetails.metrics.revenue > 0) {
+    // Use API metrics if available and valid
     occupancy = Math.round(submarketDetails.metrics.booked * 100);
     adr = Math.round(submarketDetails.metrics.daily_rate);
     revenue = Math.round(submarketDetails.metrics.revenue);
     revpar = Math.round(submarketDetails.metrics.revpar);
     marketScore = submarketDetails.metrics.market_score;
+    console.log(`[getComprehensiveSubmarketReport] Using API metrics: occupancy=${occupancy}, adr=${adr}, revenue=${revenue}, revpar=${revpar}`);
+  } else {
+    // FALLBACK: Calculate metrics from listings data when API metrics are unavailable
+    console.log(`[getComprehensiveSubmarketReport] API metrics unavailable, calculating from ${listingsResult.listings.length} listings...`);
+    
+    if (listingsResult.listings.length > 0) {
+      const validListings = listingsResult.listings.filter(l => l.annual_revenue > 0);
+      if (validListings.length > 0) {
+        const totalRevenue = validListings.reduce((sum, l) => sum + l.annual_revenue, 0);
+        const totalAdr = validListings.reduce((sum, l) => sum + l.adr, 0);
+        const totalOccupancy = validListings.reduce((sum, l) => sum + l.occupancy, 0);
+        
+        revenue = Math.round(totalRevenue / validListings.length);
+        adr = Math.round(totalAdr / validListings.length);
+        occupancy = Math.round(totalOccupancy / validListings.length);
+        revpar = Math.round(adr * (occupancy / 100));
+        
+        console.log(`[getComprehensiveSubmarketReport] Calculated from listings: occupancy=${occupancy}%, adr=$${adr}, revenue=$${revenue}, revpar=$${revpar}`);
+      }
+    }
   }
   
   // Calculate insights from listings
