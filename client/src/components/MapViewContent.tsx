@@ -1058,7 +1058,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         )}
         
         {/* Map and Controls */}
-        <div className="flex flex-col xl:flex-row gap-6">
+        <div className="flex flex-col xl:flex-row gap-6 overflow-visible">
           {/* Map - Show AFTER controls on all screen sizes */}
           <div className="order-2 xl:order-2 xl:flex-1">
             <Card className="overflow-hidden relative">
@@ -1118,7 +1118,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
           </div>
           
           {/* Legend and Controls - Show BEFORE map on all screen sizes */}
-          <div className="order-1 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4">
+          <div className="order-1 xl:order-1 xl:w-80 xl:flex-shrink-0 space-y-4 overflow-visible">
             {/* My Property Section - Compact view when property is set from context */}
             {hasProperty && myProperty ? (
               <Card className="border-blue-200 bg-white">
@@ -1138,7 +1138,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                 </CardContent>
               </Card>
             ) : (
-              <Card className="border-slate-200 bg-white">
+              <Card className="border-slate-200 bg-white overflow-visible">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2 text-slate-900">
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -1147,7 +1147,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                     My Property
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 overflow-visible">
                   <p className="text-xs text-slate-500">
                     Enter your property address to see how far competitors are from your location.
                   </p>

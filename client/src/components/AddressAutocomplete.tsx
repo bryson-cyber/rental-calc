@@ -6,6 +6,7 @@
  */
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,7 @@ export function AddressAutocomplete({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [hasValidSelection, setHasValidSelection] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,9 +75,36 @@ export function AddressAutocomplete({
     return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
   }
 
+  // Update dropdown position when input changes or window scrolls
+  const updateDropdownPosition = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, []);
+
+  // Update position when dropdown opens or window scrolls/resizes
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+      window.addEventListener('scroll', updateDropdownPosition, true);
+      window.addEventListener('resize', updateDropdownPosition);
+      return () => {
+        window.removeEventListener('scroll', updateDropdownPosition, true);
+        window.removeEventListener('resize', updateDropdownPosition);
+      };
+    }
+  }, [isOpen, updateDropdownPosition]);
+
   // Fetch predictions using REST API
   const fetchPredictions = useCallback(async (input: string) => {
+    console.log('[AddressAutocomplete] fetchPredictions called with:', input);
     if (!input.trim() || input.length < 3) {
+      console.log('[AddressAutocomplete] Input too short, skipping API call');
       setPredictions([]);
       setIsOpen(false);
       return;
@@ -128,21 +157,26 @@ export function AddressAutocomplete({
           };
         });
 
+      console.log('[AddressAutocomplete] Got predictions:', formattedPredictions.length);
       setPredictions(formattedPredictions);
       setIsOpen(formattedPredictions.length > 0);
       setHighlightedIndex(-1);
+      
+      // Update dropdown position after getting predictions
+      updateDropdownPosition();
     } catch (error) {
       console.error('[AddressAutocomplete] Error fetching predictions:', error);
       setPredictions([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [updateDropdownPosition]);
 
   // Debounced input handler
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
+      console.log('[AddressAutocomplete] handleInputChange called with:', newValue);
       onChange(newValue);
       
       // When user types, invalidate the previous selection
@@ -329,8 +363,10 @@ export function AddressAutocomplete({
     }
   }, [required, value, hasValidSelection]);
 
+  console.log('[AddressAutocomplete] Rendering with value:', value);
+  
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} data-component="address-autocomplete" className={cn("relative w-full address-autocomplete-container", className)}>
       <div className="relative w-full">
         <input
           ref={inputRef}
@@ -342,6 +378,7 @@ export function AddressAutocomplete({
           onFocus={() => {
             if (predictions.length > 0) {
               setIsOpen(true);
+              updateDropdownPosition();
             }
           }}
           placeholder={placeholder}
@@ -370,14 +407,22 @@ export function AddressAutocomplete({
         </p>
       )}
 
-      {/* Predictions Dropdown */}
-      {isOpen && predictions.length > 0 && (
-        <div className={cn(
-          "absolute z-50 w-full mt-1 rounded-lg shadow-lg overflow-y-auto max-h-64 top-full left-0",
-          variant === 'dark'
-            ? "bg-[#1a2744] border border-white/20"
-            : "bg-white border border-slate-200"
-        )}>
+      {/* Predictions Dropdown - Using Portal to avoid clipping */}
+      {isOpen && predictions.length > 0 && createPortal(
+        <div 
+          className={cn(
+            "fixed rounded-lg shadow-lg overflow-y-auto max-h-64",
+            variant === 'dark'
+              ? "bg-[#1a2744] border border-white/20"
+              : "bg-white border border-slate-200"
+          )}
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
+            zIndex: 99999,
+          }}
+        >
           {predictions.map((prediction, index) => (
             <button
               key={prediction.placeId}
@@ -419,7 +464,8 @@ export function AddressAutocomplete({
           )}>
             Powered by Google
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

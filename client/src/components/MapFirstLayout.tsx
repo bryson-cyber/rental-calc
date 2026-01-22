@@ -14,6 +14,7 @@ import { trpc } from '@/lib/trpc';
 import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -964,11 +965,26 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   <p className="text-sm text-slate-500">
                     Enter your property address to see distances to competitors.
                   </p>
-                  <Input
-                    placeholder="Enter your address..."
+                  <AddressAutocomplete
                     value={myPropertyAddress}
-                    onChange={(e) => setMyPropertyAddress(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
+                    onChange={setMyPropertyAddress}
+                    onSelect={(address, placeId, details) => {
+                      setMyPropertyAddress(address);
+                      // Auto-set location from place details if available
+                      if (details?.lat && details?.lng) {
+                        setMyPropertyLocation({
+                          address: address,
+                          lat: details.lat,
+                          lng: details.lng
+                        });
+                      } else {
+                        // Fallback to geocoding if no lat/lng in details
+                        geocodeMyProperty();
+                      }
+                    }}
+                    placeholder="Enter your address..."
+                    inputClassName="text-sm"
+                    variant="light"
                   />
                   <Button
                     onClick={geocodeMyProperty}

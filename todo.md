@@ -3639,3 +3639,11 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Replace plain text input with AddressAutocomplete component
 - [x] Auto-set location from place details (lat/lng) when address is selected
 - [x] Fallback to geocoding if place details don't include coordinates
+
+
+### Bug Fix: Address Autofill Not Working on Step 5 - FIXED
+- [x] Investigated why AddressAutocomplete was not showing suggestions in My Property dialog
+- [x] Root cause: MapFirstLayout.tsx (line 967) was using plain Input instead of AddressAutocomplete
+- [x] Fixed by replacing Input with AddressAutocomplete component in MapFirstLayout.tsx
+- [x] Address autocomplete now works correctly in Step 5 Map view My Property dialog
+- [x] Tested and verified: typing address shows Google Places suggestions, selecting sets location
