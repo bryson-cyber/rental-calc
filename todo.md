@@ -3464,3 +3464,11 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
   - Revenue sorted from highest to lowest
   - Map centered correctly on St. Louis area
 - [x] Fixed MapFirstLayout.tsx to use getAllListings with isMarketLevel parameter
+
+
+## Missing 1BR Listings Bug (Jan 22, 2026)
+- [ ] Investigate why 1BR properties are not showing in Soulard (63104) search results
+- [ ] User confirms 1BR properties exist in zip code 63104
+- [ ] Check if AirDNA API is filtering out 1BR listings
+- [ ] Verify bedroom filter is working correctly
+- [ ] Fix issue so all bedroom types appear in search results
