@@ -3198,3 +3198,21 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Market Score - Added score number (e.g., 72/100) to each factor in the breakdown
 - [x] Factor Definitions - Added simple explanations under each factor (Occupancy, Growth, Competition, Quality, Seasonality)
 - [x] Remove all AirDNA branding - Removed from user-facing error messages and variable names
+
+
+## AI Advisor Fixes (Jan 22, 2026 - Session 3)
+- [ ] Fix property address input text visibility in Step 6 (text not visible when typing)
+- [ ] Remove AI Property Advisor from Step 3 Validate Deal
+- [ ] Single-button analysis flow (no two-step process)
+- [ ] Remove data transparency section and AI model info
+- [ ] Remove emojis from the report
+- [ ] Improve report formatting and narration quality
+
+
+## AI Advisor Fixes (Jan 22, 2026)
+- [x] Property address text not visible in Step 6 input - Fixed AddressAutocomplete to use light variant by default
+- [x] Remove AI Property Advisor from Step 3 (Validate Deal) - Removed AIAdvisorStep component from TeslaDashboard
+- [x] Single-button analysis flow (no two-step process) - Added useEffect to auto-generate on mount
+- [x] Remove data transparency section (AI model info) - Removed data summary cards and Powered by Gemini badge
+- [x] Remove emojis from report - Removed all emojis from gemini.ts prompts
+- [x] Improve formatting and narration - Updated section headers to be cleaner without emojis

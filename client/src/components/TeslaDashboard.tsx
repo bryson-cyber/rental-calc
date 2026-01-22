@@ -2113,15 +2113,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         totalComparables={result.comparables.length}
       />
       
-      {/* AI Property Advisor */}
-      <AIPropertyAdvisor
-        address={address}
-        bedrooms={bedrooms}
-        bathrooms={bathrooms}
-        accommodates={accommodates}
-        monthlyRent={monthlyRent}
-        result={result}
-      />
+      {/* AI Property Advisor removed - now only in Step 6 */}
       
       {/* Comparable Properties */}
       <ComparableProperties comparables={result.comparables} />

@@ -384,14 +384,14 @@ IMPORTANT RULES:
 PROPERTY ANALYSIS DATA
 ═══════════════════════════════════════════════════════════════════════════════
 
-📍 PROPERTY DETAILS
+PROPERTY DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Address: ${property.address}
 Bedrooms: ${property.bedrooms} | Bathrooms: ${property.bathrooms}
 ${property.accommodates ? `Max Guests: ${property.accommodates}` : ''}
 ${property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : ''}
 
-💰 REVENUE PROJECTIONS
+REVENUE PROJECTIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Projected Annual Revenue: $${revenue.projected.toLocaleString()}
 Conservative Estimate: $${revenue.low.toLocaleString()}
@@ -400,7 +400,7 @@ Average Daily Rate (ADR): $${revenue.adr.toLocaleString()}
 Projected Occupancy: ${revenue.occupancy}%
 
 ${cashFlow ? `
-💵 CASH FLOW ANALYSIS (Based on $${property.monthlyRent?.toLocaleString()}/month rent)
+CASH FLOW ANALYSIS (Based on $${property.monthlyRent?.toLocaleString()}/month rent)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
 Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
@@ -410,7 +410,7 @@ Profit Margin: ${cashFlow.profitMargin.toFixed(1)}%
 Revenue-to-Rent Ratio: ${(cashFlow.monthlyRevenue / cashFlow.monthlyRent).toFixed(2)}x
 ` : ''}
 
-📊 MARKET HEALTH
+MARKET HEALTH
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${marketGrade ? `Market Grade: ${marketGrade.grade} (${marketGrade.score}/100) - ${marketGrade.description}` : 'Market Grade: Not available'}
 ${marketInsights ? `
@@ -418,11 +418,11 @@ Total Listings in Area: ${marketInsights.totalListings?.toLocaleString() || 'Unk
 Professionally Managed: ${marketInsights.professionallyManagedPct.toFixed(1)}%
 Superhost Percentage: ${marketInsights.superhostPct.toFixed(1)}%
 Average Rating: ${marketInsights.avgRating?.toFixed(2) || 'N/A'}
-${marketInsights.marketScore ? `AirDNA Market Score: ${marketInsights.marketScore}/100` : ''}
+${marketInsights.marketScore ? `Market Score: ${marketInsights.marketScore}/100` : ''}
 ` : ''}
 
 ${historicalData ? `
-📈 YEAR-OVER-YEAR TRENDS
+YEAR-OVER-YEAR TRENDS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
@@ -443,7 +443,7 @@ ${comparables.slice(0, 5).map((c, i) =>
   `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | ${c.rating} stars | ${c.reviews} reviews`
 ).join('\n')}
 
-📅 SEASONALITY (Monthly Revenue Forecast)
+SEASONALITY (Monthly Revenue Forecast)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Best Months: ${bestMonths.map(m => `${m.month.split('-')[1] || m.month} ($${m.revenue.toLocaleString()})`).join(', ')}
 Slowest Months: ${worstMonths.map(m => `${m.month.split('-')[1] || m.month} ($${m.revenue.toLocaleString()})`).join(', ')}
@@ -458,30 +458,30 @@ YOUR ANALYSIS TASK
 
 Write a comprehensive analysis with these sections:
 
-## 🎯 Executive Summary
+## Executive Summary
 A 2-3 sentence overview of whether this is a good opportunity and why.
 
-## 💡 The Opportunity
+## The Opportunity
 - What makes this property attractive (or not)?
 - How does the revenue compare to competitors?
 - What's the profit potential?
 
-## ⚠️ Key Risks & Challenges
+## Key Risks & Challenges
 - What could go wrong?
 - What competition challenges exist?
 - Are there concerning trends in the data?
 
-## 🏆 Competitive Positioning
+## Competitive Positioning
 - How does this property stack up against competitors?
 - What would it take to succeed in this market?
 - Is the market saturated or is there room for new listings?
 
-## 📊 Seasonality Strategy
+## Seasonality Strategy
 - When are the best and worst times to earn?
 - How should the owner plan for slow seasons?
 - What pricing strategy does the data suggest?
 
-## ✅ Bottom Line Recommendation
+## Bottom Line Recommendation
 Give a clear YES, NO, or MAYBE recommendation with specific reasoning based on the data. Include:
 - Who this opportunity is best suited for
 - Key success factors
@@ -741,7 +741,7 @@ export async function generateMaxPropertyAdvice(
                                            Report Date: ${currentDate}
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-🚨 CRITICAL CONTEXT - RENTAL ARBITRAGE MODEL:
+CRITICAL CONTEXT - RENTAL ARBITRAGE MODEL:
 This analysis is for RENTAL ARBITRAGE - where someone:
 1. Signs a lease to RENT this property (pays monthly rent to landlord)
 2. Furnishes and lists it on Airbnb/VRBO
@@ -768,7 +768,7 @@ CRITICAL INSTRUCTIONS:
 SECTION 1: PROPERTY OVERVIEW
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📍 PROPERTY DETAILS
+PROPERTY DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Address: ${property.address}
 City: ${property.city}, ${property.state} ${property.zipCode}
@@ -780,7 +780,7 @@ ${property.latitude && property.longitude ? `Coordinates: ${property.latitude}, 
 SECTION 2: REVENUE PROJECTIONS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-💰 PROJECTED EARNINGS
+PROJECTED EARNINGS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Annual Revenue (Projected): $${revenue.projected.toLocaleString()}
 Annual Revenue (Conservative): $${revenue.low.toLocaleString()}
@@ -793,7 +793,7 @@ Key Metrics:
 • Revenue Per Available Room (RevPAR): $${revenue.revpar.toLocaleString()}
 
 ${cashFlow ? `
-💵 CASH FLOW ANALYSIS
+CASH FLOW ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
 Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
@@ -809,7 +809,7 @@ Safety Cushion: ${(revenue.occupancy - cashFlow.breakEvenOccupancy).toFixed(1)} 
 SECTION 3: MARKET HEALTH & POSITION
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📊 MARKET GRADE
+MARKET GRADE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Overall Grade: ${marketGrade.grade} (${marketGrade.score}/100)
 Assessment: ${marketGrade.description}
@@ -817,19 +817,19 @@ Assessment: ${marketGrade.description}
 Score Breakdown:
 ${marketGrade.factors.map(f => `• ${f.name}: ${f.score}/100 (${f.weight}% weight)`).join('\n')}
 
-📈 MARKET POSITION
+MARKET POSITION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Percentile Rank: ${marketPosition.percentile}th percentile
 Market Rank: #${marketPosition.rank} of ${marketPosition.totalListings} similar properties
 Performance vs Average: ${marketPosition.vsAverage >= 0 ? '+' : ''}${marketPosition.vsAverage.toFixed(1)}%
 
-🏢 MARKET LANDSCAPE
+MARKET LANDSCAPE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total Listings in Area: ${marketInsights.totalListings.toLocaleString()}
 Professionally Managed: ${marketInsights.professionallyManagedPct.toFixed(1)}%
 Superhost Percentage: ${marketInsights.superhostPct.toFixed(1)}%
 Average Rating: ${marketInsights.avgRating.toFixed(2)} stars
-AirDNA Market Score: ${marketInsights.marketScore}/100
+Market Score: ${marketInsights.marketScore}/100
 ${marketInsights.investabilityScore ? `Investability Score: ${marketInsights.investabilityScore}/100` : ''}
 ${marketInsights.rentalDemandScore ? `Rental Demand Score: ${marketInsights.rentalDemandScore}/100` : ''}
 ${marketInsights.revenueGrowthScore ? `Revenue Growth Score: ${marketInsights.revenueGrowthScore}/100` : ''}
@@ -840,7 +840,7 @@ ${marketInsights.regulationScore ? `Regulation Score: ${marketInsights.regulatio
 SECTION 4: HISTORICAL TRENDS (24 MONTHS)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📈 YEAR-OVER-YEAR PERFORMANCE
+YEAR-OVER-YEAR PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
@@ -855,7 +855,7 @@ ${historicalData.months.map(m =>
 SECTION 5: SEASONALITY ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📅 12-MONTH REVENUE FORECAST
+12-MONTH REVENUE FORECAST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
 
@@ -874,11 +874,11 @@ ${seasonality.map(m =>
 SECTION 6: SAME-BEDROOM COMPETITOR ANALYSIS (${sameBedroomComps.length} ${property.bedrooms}BR PROPERTIES)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-⚠️ IMPORTANT: This analysis ONLY compares to other ${property.bedrooms}-bedroom properties for a fair apples-to-apples comparison.
+IMPORTANT: This analysis ONLY compares to other ${property.bedrooms}-bedroom properties for a fair apples-to-apples comparison.
 We found ${sameBedroomComps.length} properties with ${property.bedrooms} bedrooms in this area.
 ${otherBedroomComps.length > 0 ? `(${otherBedroomComps.length} properties with different bedroom counts were excluded from this comparison)` : ''}
 
-📊 ${property.bedrooms}BR COMPETITOR STATISTICS (APPLES-TO-APPLES)
+${property.bedrooms}BR COMPETITOR STATISTICS (APPLES-TO-APPLES)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total ${property.bedrooms}BR Competitors: ${sameBedroomComps.length}
 Average ${property.bedrooms}BR Revenue: $${sameBRAvgRevenue.toLocaleString()}
@@ -895,26 +895,26 @@ COMPETITOR BREAKDOWN:
 • Professionally Managed: ${professionalComps} of ${comparables.length} (${(professionalComps/comparables.length*100).toFixed(0)}%)
 • High-Rated (4.8+ stars): ${highRatedComps.length} of ${comparables.length} (${(highRatedComps.length/comparables.length*100).toFixed(0)}%)
 
-🏆 TOP 5 ${property.bedrooms}BR EARNERS (Learn from the best in your category):
+TOP 5 ${property.bedrooms}BR EARNERS (Learn from the best in your category):
 ${sameBRTopEarners.map((c, i) => 
   `${i+1}. "${c.title.substring(0, 50)}${c.title.length > 50 ? '...' : ''}"
      Revenue: $${c.revenue.toLocaleString()}/yr | ADR: $${c.adr} | Occupancy: ${c.occupancy}%
      Rating: ${c.rating} stars (${c.reviews} reviews) | ${c.bedrooms}BR/${c.bathrooms}BA | Sleeps ${c.accommodates}
-     ${c.isSuperhost ? '⭐ Superhost' : ''} ${c.isProfessionallyManaged ? '🏢 Pro Managed' : ''}
+     ${c.isSuperhost ? 'Superhost' : ''} ${c.isProfessionallyManaged ? 'Pro Managed' : ''}
      ${c.distanceMeters ? `Distance: ${(c.distanceMeters/1000).toFixed(1)}km away` : ''}
      ${c.propertyType ? `Type: ${c.propertyType}` : ''}`
 ).join('\n\n')}
 
-📉 BOTTOM 5 ${property.bedrooms}BR EARNERS (Learn what to avoid):
+BOTTOM 5 ${property.bedrooms}BR EARNERS (Learn what to avoid):
 ${sameBRBottomEarners.map((c, i) => 
   `${i+1}. "${c.title.substring(0, 50)}${c.title.length > 50 ? '...' : ''}"
      Revenue: $${c.revenue.toLocaleString()}/yr | ADR: $${c.adr} | Occupancy: ${c.occupancy}%
      Rating: ${c.rating} stars (${c.reviews} reviews) | ${c.bedrooms}BR/${c.bathrooms}BA | Sleeps ${c.accommodates}`
 ).join('\n\n')}
 
-📋 COMPLETE ${property.bedrooms}BR COMPETITOR LIST:
+COMPLETE ${property.bedrooms}BR COMPETITOR LIST:
 ${sameBedroomComps.map((c, i) => 
-  `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | $${c.adr} ADR | ${c.rating}★ (${c.reviews}) | ${c.bedrooms}BR/${c.bathrooms}BA ${c.isSuperhost ? '⭐' : ''} ${c.isProfessionallyManaged ? '🏢' : ''}`
+  `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | $${c.adr} ADR | ${c.rating}★ (${c.reviews}) | ${c.bedrooms}BR/${c.bathrooms}BA ${c.isSuperhost ? '[SH]' : ''} ${c.isProfessionallyManaged ? '[PM]' : ''}`
 ).join('\n')}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -930,14 +930,14 @@ IMPORTANT CONTEXT:
 
 Write a comprehensive rental arbitrage analysis report. Be specific with numbers and provide actionable insights.
 
-# 🎯 EXECUTIVE SUMMARY
+# EXECUTIVE SUMMARY
 Provide a clear, 3-5 sentence summary of the arbitrage opportunity. Include:
 - Overall recommendation (GO / PROCEED WITH CAUTION / PASS)
 - Projected monthly profit (if rent provided) or break-even rent threshold
 - How this property compares to other ${property.bedrooms}BR properties in the area
 - Who this opportunity is best suited for (new vs experienced arbitrage investors)
 
-# 💰 RENTAL ARBITRAGE FINANCIAL ANALYSIS
+# RENTAL ARBITRAGE FINANCIAL ANALYSIS
 
 ## Revenue vs Same-Bedroom Competitors
 - Compare projected revenue ONLY to other ${property.bedrooms}BR properties
@@ -959,7 +959,7 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What happens if occupancy drops 20% in slow season?
 - Safety margin analysis
 
-# 🏆 COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
+# COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
 
 ## Your Position Among ${property.bedrooms}BR Competitors
 - Rank this property among the ${sameBedroomComps.length} same-bedroom competitors
@@ -978,7 +978,7 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What would it take to reach top 25% of ${property.bedrooms}BR earners?
 - Realistic timeline to profitability
 
-# 📅 SEASONALITY & TIMING STRATEGY
+# SEASONALITY & TIMING STRATEGY
 
 ## Seasonal Revenue Patterns
 - Detailed analysis of peak vs slow seasons
@@ -996,7 +996,7 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What do the historical trends suggest for the future?
 - Are there concerning patterns in the data?
 
-# ⚠️ RISK ASSESSMENT
+# RISK ASSESSMENT
 
 ## Market Risks
 - Competition level and saturation
@@ -1015,7 +1015,7 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What insurance or reserves are needed
 - Exit strategy considerations
 
-# ✅ ACTION PLAN & RECOMMENDATIONS
+# ACTION PLAN & RECOMMENDATIONS
 
 ## Immediate Actions (First 30 Days)
 - Specific steps to take before listing
@@ -1179,13 +1179,13 @@ CRITICAL INSTRUCTIONS:
 SECTION 1: MARKET OVERVIEW
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📍 MARKET DETAILS
+MARKET DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Market Name: ${market.name}
 Location: ${market.city}, ${market.state}, ${market.country}
 Total Active Listings: ${metrics.totalListings.toLocaleString()}
 
-📊 MARKET SCORES (AirDNA)
+MARKET SCORES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Overall Market Score: ${scores.marketScore}/100
 Investability Score: ${scores.investabilityScore}/100
@@ -1194,7 +1194,7 @@ Revenue Growth Score: ${scores.revenueGrowthScore}/100
 Seasonality Score: ${scores.seasonalityScore}/100
 Regulation Score: ${scores.regulationScore}/100
 
-💰 MARKET METRICS
+MARKET METRICS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Average Annual Revenue: $${metrics.avgRevenue.toLocaleString()}
 Average Occupancy Rate: ${metrics.avgOccupancy}%
@@ -1220,7 +1220,7 @@ ${bestBedrooms.slice(0, 3).map((r, i) =>
 ).join('\n')}
 
 ${propertyTypes ? `
-🏢 PROPERTY TYPE DISTRIBUTION
+PROPERTY TYPE DISTRIBUTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${propertyTypes.map(p => 
   `${p.type}: ${p.count.toLocaleString()} listings | $${p.avgRevenue.toLocaleString()}/yr avg | ${p.avgOccupancy}% occupancy`
@@ -1231,7 +1231,7 @@ ${propertyTypes.map(p =>
 SECTION 3: HISTORICAL TRENDS (24 MONTHS)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📈 YEAR-OVER-YEAR PERFORMANCE
+YEAR-OVER-YEAR PERFORMANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
@@ -1246,7 +1246,7 @@ ${historicalData.months.map(m =>
 SECTION 4: SEASONALITY ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📅 SEASONAL PATTERNS
+SEASONAL PATTERNS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
 
@@ -1265,13 +1265,13 @@ ${seasonality.map(m =>
 SECTION 5: TOP PERFORMERS IN THIS MARKET
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-🏆 TOP EARNING PROPERTIES
+TOP EARNING PROPERTIES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${topPerformers.map((p, i) => 
   `${i+1}. "${p.title.substring(0, 50)}${p.title.length > 50 ? '...' : ''}"
      Revenue: $${p.revenue.toLocaleString()}/yr | ADR: $${p.adr} | Occupancy: ${p.occupancy}%
      Rating: ${p.rating} stars (${p.reviews} reviews) | ${p.bedrooms}BR/${p.bathrooms}BA
-     ${p.isSuperhost ? '⭐ Superhost' : ''} ${p.isProfessionallyManaged ? '🏢 Pro Managed' : ''}`
+     ${p.isSuperhost ? 'Superhost' : ''} ${p.isProfessionallyManaged ? 'Pro Managed' : ''}`
 ).join('\n\n')}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1280,15 +1280,13 @@ YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET REPORT
 
 Write an extremely comprehensive market analysis report with the following sections. Be thorough - this should be a complete market report that could stand alone as a professional document.
 
-# 🎯 EXECUTIVE SUMMARY
+# EXECUTIVE SUMMARY
 Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - Overall market rating (Excellent / Good / Fair / Poor)
 - Key revenue potential
 - Main opportunity and main risk
 - Who this market is best suited for
-
-# 📊 MARKET HEALTH ANALYSIS
-
+# MARKET HEALTH ANALYSIS
 ## Score Breakdown
 - Detailed analysis of each market score
 - What each score means for investors
@@ -1300,7 +1298,7 @@ Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - What does the listing count trend suggest?
 - Is there room for new entrants?
 
-# 💰 REVENUE OPPORTUNITY
+# REVENUE OPPORTUNITY
 
 ## Revenue Potential by Property Size
 - Which bedroom counts offer the best opportunity?
@@ -1312,7 +1310,7 @@ Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - What top performers are earning
 - Path from average to top performer
 
-# 📅 SEASONALITY STRATEGY
+# SEASONALITY STRATEGY
 
 ## Seasonal Patterns
 - Detailed peak and slow season analysis
@@ -1324,7 +1322,7 @@ Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - Pricing strategy by season
 - Occupancy optimization tips
 
-# 🏆 COMPETITIVE LANDSCAPE
+# COMPETITIVE LANDSCAPE
 
 ## Market Composition
 - Professional vs individual hosts
@@ -1336,7 +1334,7 @@ Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - Minimum requirements to compete
 - Differentiation opportunities
 
-# ⚠️ RISKS & CHALLENGES
+# RISKS & CHALLENGES
 
 ## Market Risks
 - Saturation concerns
@@ -1349,7 +1347,7 @@ Provide a clear, 3-5 sentence summary of this market opportunity. Include:
 - Market entry timing
 - Positioning strategies
 
-# ✅ RECOMMENDATIONS
+# RECOMMENDATIONS
 
 ## Market Entry Strategy
 - Recommended property type and size

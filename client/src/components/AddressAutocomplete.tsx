@@ -53,7 +53,7 @@ export function AddressAutocomplete({
   className,
   inputClassName,
   disabled = false,
-  variant = 'dark',
+  variant = 'light',
   required = false,
 }: AddressAutocompleteProps) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
