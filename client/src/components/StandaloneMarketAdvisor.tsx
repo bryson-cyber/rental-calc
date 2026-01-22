@@ -95,6 +95,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [showRatingDropdown, setShowRatingDropdown] = useState(false);
   const [reviewCountFilter, setReviewCountFilter] = useState<string>('all');
   const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
+  const [superhostOnly, setSuperhostOnly] = useState(false);
+  const [professionalOnly, setProfessionalOnly] = useState(false);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -153,6 +155,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
         minRating: ratingFilter !== 'all' ? parseFloat(ratingFilter) : undefined,
         minReviews: reviewCountFilter !== 'all' ? parseInt(reviewCountFilter) : undefined,
+        superhostOnly: superhostOnly || undefined,
+        professionalOnly: professionalOnly || undefined,
       });
       
       if (result.success && result.data) {
@@ -455,8 +459,34 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               )}
             </div>
 
+            {/* Host Type Toggles */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSuperhostOnly(!superhostOnly)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                  superhostOnly
+                    ? 'bg-amber-50 border-amber-300 text-amber-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Star className={`w-4 h-4 ${superhostOnly ? 'fill-amber-400 text-amber-400' : ''}`} />
+                <span className="text-sm font-medium">Superhosts Only</span>
+              </button>
+              <button
+                onClick={() => setProfessionalOnly(!professionalOnly)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                  professionalOnly
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="text-sm font-medium">Pro Managed</span>
+              </button>
+            </div>
+
             {/* Active Filters Display */}
-            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all') && (
+            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all' || superhostOnly || professionalOnly) && (
               <div className="flex items-center gap-2 flex-wrap">
                 {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
                 {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
@@ -467,6 +497,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {propertyTypeFilter}</Badge>}
                 {ratingFilter !== 'all' && <Badge variant="secondary" className="text-xs">⭐ {ratingFilter}+ Stars</Badge>}
                 {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">💬 {reviewCountFilter}+ Reviews</Badge>}
+                {superhostOnly && <Badge variant="secondary" className="text-xs">⭐ Superhosts</Badge>}
+                {professionalOnly && <Badge variant="secondary" className="text-xs">🏢 Pro Managed</Badge>}
               </div>
             )}
           </div>

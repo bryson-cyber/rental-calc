@@ -1101,6 +1101,8 @@ export interface MaxMarketAdvisorInput {
     propertyType?: string;
     minRating?: number;
     minReviews?: number;
+    superhostOnly?: boolean;
+    professionalOnly?: boolean;
   };
   
   // Market Scores
@@ -1280,6 +1282,12 @@ export async function generateMaxMarketAdvice(
   }
   if (appliedFilters?.minReviews) {
     filterContextParts.push(`minimum ${appliedFilters.minReviews}+ reviews`);
+  }
+  if (appliedFilters?.superhostOnly) {
+    filterContextParts.push('Superhosts only');
+  }
+  if (appliedFilters?.professionalOnly) {
+    filterContextParts.push('Professionally managed properties only');
   }
   const filterContext = filterContextParts.length > 0 
     ? `\n\nAPPLIED FILTERS: This analysis is filtered to show ${filterContextParts.join(' ')}. All metrics and comparisons are specific to properties matching these criteria.`
