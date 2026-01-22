@@ -12,7 +12,9 @@ import {
   Target,
   AlertTriangle,
   CheckCircle2,
-  Info
+  Info,
+  RefreshCw,
+  ServerCrash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -346,17 +348,46 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
                 </Button>
               )}
 
-              {/* Error State */}
+              {/* Error State with Retry */}
               {propertyAdvisorMutation.isError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-red-800">Analysis Failed</div>
-                    <div className="text-sm text-red-600">
-                      Unable to generate property analysis. Please try again.
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-5 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <ServerCrash className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-red-800 mb-1">Property Analysis Failed</div>
+                      <div className="text-sm text-red-600 mb-3">
+                        {propertyAdvisorMutation.error?.message?.includes('timeout') || propertyAdvisorMutation.error?.message?.includes('network')
+                          ? 'Network connection issue. Please check your internet connection and try again.'
+                          : propertyAdvisorMutation.error?.message?.includes('rate limit')
+                          ? 'Too many requests. Please wait a moment and try again.'
+                          : 'Unable to generate property analysis. This could be due to a temporary service issue.'}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          propertyAdvisorMutation.reset();
+                          handleGeneratePropertyAdvice();
+                        }}
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
+                      </Button>
                     </div>
                   </div>
-                </div>
+                  <div className="mt-3 pt-3 border-t border-red-200">
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      If the problem persists, try refreshing the page or contact support.
+                    </p>
+                  </div>
+                </motion.div>
               )}
 
               {/* Analysis Result */}
@@ -464,17 +495,46 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
                 </div>
               )}
 
-              {/* Error State */}
+              {/* Error State with Retry */}
               {marketAdvisorMutation.isError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-red-800">Analysis Failed</div>
-                    <div className="text-sm text-red-600">
-                      Unable to generate market analysis. Please try again.
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-5 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <ServerCrash className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-red-800 mb-1">Market Analysis Failed</div>
+                      <div className="text-sm text-red-600 mb-3">
+                        {marketAdvisorMutation.error?.message?.includes('timeout') || marketAdvisorMutation.error?.message?.includes('network')
+                          ? 'Network connection issue. Please check your internet connection and try again.'
+                          : marketAdvisorMutation.error?.message?.includes('rate limit')
+                          ? 'Too many requests. Please wait a moment and try again.'
+                          : 'Unable to generate market analysis. This could be due to a temporary service issue.'}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          marketAdvisorMutation.reset();
+                          handleGenerateMarketAdvice();
+                        }}
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
+                      </Button>
                     </div>
                   </div>
-                </div>
+                  <div className="mt-3 pt-3 border-t border-red-200">
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      If the problem persists, try refreshing the page or contact support.
+                    </p>
+                  </div>
+                </motion.div>
               )}
 
               {/* Analysis Result */}

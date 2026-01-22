@@ -195,9 +195,10 @@
   - COMPLETED: Created MarketAdvisorSkeleton, PropertyAdvisorSkeleton, DataCardSkeleton, and TableRowSkeleton components
 
 ### 4.3 Error Handling
-- [ ] **4.3.1** Add graceful error handling for API failures
-  - Show: User-friendly error messages
-  - Action: Retry button where appropriate
+- [x] **4.3.1** Add graceful error handling for API failures ✅
+  - Show: User-friendly error messages with context-aware text (network, rate limit, generic)
+  - Action: Retry button with "Try Again" and alternative options
+  - COMPLETED: Enhanced error states in StandaloneMarketAdvisor and AIAdvisorStep
 
 - [ ] **4.3.2** Add timeout handling for long API calls
   - Show: "This is taking longer than expected..."

@@ -24,7 +24,10 @@ import {
   ArrowDownRight,
   Minus,
   MessageSquare,
-  Zap
+  Zap,
+  RefreshCw,
+  WifiOff,
+  ServerCrash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -685,17 +688,60 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             </div>
           )}
 
-          {/* Error State */}
+          {/* Error State with Retry */}
           {standaloneMarketAdvisorMutation.isError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="font-medium text-red-800">Analysis Failed</div>
-                <div className="text-sm text-red-600">
-                  Unable to generate market analysis. Please try again or select a different market.
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-5 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl shadow-sm"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <ServerCrash className="w-6 h-6 text-red-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-red-800 mb-1">Analysis Failed</div>
+                  <div className="text-sm text-red-600 mb-3">
+                    {standaloneMarketAdvisorMutation.error?.message?.includes('timeout') || standaloneMarketAdvisorMutation.error?.message?.includes('network')
+                      ? 'Network connection issue. Please check your internet connection and try again.'
+                      : standaloneMarketAdvisorMutation.error?.message?.includes('rate limit')
+                      ? 'Too many requests. Please wait a moment and try again.'
+                      : 'Unable to generate market analysis. This could be due to a temporary service issue.'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => {
+                        standaloneMarketAdvisorMutation.reset();
+                        handleGenerateAnalysis();
+                      }}
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        standaloneMarketAdvisorMutation.reset();
+                        setSelectedMarket(null);
+                        setSearchQuery('');
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                    >
+                      Select Different Market
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+              <div className="mt-3 pt-3 border-t border-red-200">
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  If the problem persists, try refreshing the page or contact support.
+                </p>
+              </div>
+            </motion.div>
           )}
         </CardContent>
       </Card>

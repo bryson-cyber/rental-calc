@@ -3586,3 +3586,15 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Property Advisor already has progress indicator (verified)
 - [x] TypeScript compilation clean
 
+
+### Phase 17: Graceful Error Handling with Retry Buttons (Jan 22, 2026)
+- [x] Add RefreshCw, WifiOff, ServerCrash icons to StandaloneMarketAdvisor
+- [x] Enhance Market Advisor error state with animated error card
+- [x] Add context-aware error messages (network, rate limit, generic)
+- [x] Add "Try Again" retry button to Market Advisor
+- [x] Add "Select Different Market" option button
+- [x] Add helpful footer message with support guidance
+- [x] Add RefreshCw, ServerCrash icons to AIAdvisorStep
+- [x] Enhance Property Advisor error state with retry button
+- [x] Enhance Market Advisor (in AIAdvisorStep) error state with retry button
+- [x] TypeScript compilation clean
