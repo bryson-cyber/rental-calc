@@ -220,6 +220,18 @@ From AirDNA Rentalizer endpoint:
 - [x] Add propertyType to filterContext in Gemini prompt
 - [x] TypeScript compilation clean
 
+### Phase 12: Rating & Review Filters Implementation (Jan 22, 2026)
+- [x] Add ratingFilter and reviewCountFilter states to StandaloneMarketAdvisor
+- [x] Add rating filter dropdown UI (Any, 4.0+, 4.5+, 4.8+)
+- [x] Add review count filter dropdown UI (Any, 10+, 25+, 50+, 100+)
+- [x] Add rating and review badges to active filters display
+- [x] Update handleGenerateAnalysis to pass minRating and minReviews
+- [x] Update standaloneMarketAdvisor input schema in routers.ts
+- [x] Update getStandaloneMarketAdvisorData function signature in airdna.ts
+- [x] Add minRating and minReviews to appliedFilters in gemini.ts
+- [x] Add minRating and minReviews to filterContext in Gemini prompt
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

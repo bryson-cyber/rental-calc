@@ -22,7 +22,8 @@ import {
   Star,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,6 +91,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [showAmenitiesDropdown, setShowAmenitiesDropdown] = useState(false);
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [showPropertyTypeDropdown, setShowPropertyTypeDropdown] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState<string>('all');
+  const [showRatingDropdown, setShowRatingDropdown] = useState(false);
+  const [reviewCountFilter, setReviewCountFilter] = useState<string>('all');
+  const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -146,6 +151,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
         amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
         propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
+        minRating: ratingFilter !== 'all' ? parseFloat(ratingFilter) : undefined,
+        minReviews: reviewCountFilter !== 'all' ? parseInt(reviewCountFilter) : undefined,
       });
       
       if (result.success && result.data) {
@@ -373,9 +380,84 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               )}
             </div>
 
+            {/* Rating Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowRatingDropdown(!showRatingDropdown)}
+                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors bg-white"
+              >
+                <Star className="w-4 h-4 text-amber-500" />
+                <span className="text-sm text-slate-700">
+                  {ratingFilter === 'all' ? 'Any Rating' : `${ratingFilter}+ Stars`}
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+              {showRatingDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                  {[
+                    { value: 'all', label: 'Any Rating' },
+                    { value: '4.0', label: '4.0+ Stars' },
+                    { value: '4.5', label: '4.5+ Stars' },
+                    { value: '4.8', label: '4.8+ Stars' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setRatingFilter(value);
+                        setShowRatingDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
+                        ratingFilter === value ? 'bg-amber-50 text-amber-700 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Review Count Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowReviewCountDropdown(!showReviewCountDropdown)}
+                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors bg-white"
+              >
+                <MessageSquare className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-slate-700">
+                  {reviewCountFilter === 'all' ? 'Any Reviews' : `${reviewCountFilter}+ Reviews`}
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+              {showReviewCountDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                  {[
+                    { value: 'all', label: 'Any Reviews' },
+                    { value: '10', label: '10+ Reviews' },
+                    { value: '25', label: '25+ Reviews' },
+                    { value: '50', label: '50+ Reviews' },
+                    { value: '100', label: '100+ Reviews' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setReviewCountFilter(value);
+                        setShowReviewCountDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
+                        reviewCountFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Active Filters Display */}
-            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all') && (
-              <div className="flex items-center gap-2">
+            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all') && (
+              <div className="flex items-center gap-2 flex-wrap">
                 {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
                 {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
                 {amenitiesFilter.petFriendly && <Badge variant="secondary" className="text-xs">🐕 Pets</Badge>}
@@ -383,6 +465,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">🍳 Kitchen</Badge>}
                 {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">🧺 W/D</Badge>}
                 {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {propertyTypeFilter}</Badge>}
+                {ratingFilter !== 'all' && <Badge variant="secondary" className="text-xs">⭐ {ratingFilter}+ Stars</Badge>}
+                {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">💬 {reviewCountFilter}+ Reviews</Badge>}
               </div>
             )}
           </div>

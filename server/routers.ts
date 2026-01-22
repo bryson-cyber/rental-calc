@@ -2599,6 +2599,8 @@ export const appRouter = router({
           washerDryer: z.boolean().optional(),
         }).optional(),
         propertyType: z.string().optional(),
+        minRating: z.number().min(0).max(5).optional(),
+        minReviews: z.number().min(0).optional(),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -2611,6 +2613,8 @@ export const appRouter = router({
             bedrooms: input.bedrooms,
             amenities: input.amenities,
             propertyType: input.propertyType,
+            minRating: input.minRating,
+            minReviews: input.minReviews,
           });
           
           if (!marketData) {
@@ -2635,6 +2639,8 @@ export const appRouter = router({
               bedrooms: input.bedrooms,
               amenities: input.amenities,
               propertyType: input.propertyType,
+              minRating: input.minRating,
+              minReviews: input.minReviews,
             },
             scores: marketData.scores,
             metrics: marketData.metrics,

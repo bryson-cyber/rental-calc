@@ -126,13 +126,15 @@
   - Impact: Identify best-performing property types
 
 ### 3.3 Rating & Review Filters
-- [ ] **3.3.1** Add rating filter (4.0+, 4.5+, 4.8+)
-  - API: Use `rating` parameter
+- [x] **3.3.1** Add rating filter (4.0+, 4.5+, 4.8+) - COMPLETED
+  - API: Use `min_rating` parameter
   - Impact: Filter to quality properties only
+  - Implementation: Added dropdown with star rating options
 
-- [ ] **3.3.2** Add review count filter (10+, 25+, 50+, 100+)
-  - API: Use `review_count` parameter
+- [x] **3.3.2** Add review count filter (10+, 25+, 50+, 100+) - COMPLETED
+  - API: Use `min_reviews` parameter
   - Impact: Filter to established properties
+  - Implementation: Added dropdown with review count thresholds
 
 ### 3.4 Host Type Filters
 - [ ] **3.4.1** Add Superhost filter toggle

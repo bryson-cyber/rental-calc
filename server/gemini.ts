@@ -1099,6 +1099,8 @@ export interface MaxMarketAdvisorInput {
       washerDryer?: boolean;
     };
     propertyType?: string;
+    minRating?: number;
+    minReviews?: number;
   };
   
   // Market Scores
@@ -1272,6 +1274,12 @@ export async function generateMaxMarketAdvice(
   }
   if (appliedFilters?.propertyType) {
     filterContextParts.push(`property type: ${appliedFilters.propertyType}`);
+  }
+  if (appliedFilters?.minRating) {
+    filterContextParts.push(`minimum rating: ${appliedFilters.minRating}+`);
+  }
+  if (appliedFilters?.minReviews) {
+    filterContextParts.push(`minimum ${appliedFilters.minReviews}+ reviews`);
   }
   const filterContext = filterContextParts.length > 0 
     ? `\n\nAPPLIED FILTERS: This analysis is filtered to show ${filterContextParts.join(' ')}. All metrics and comparisons are specific to properties matching these criteria.`
