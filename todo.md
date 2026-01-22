@@ -3181,3 +3181,13 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Added monthlyRent prop to TeslaDashboard rendering in LeadMagnet.tsx
 - [x] Profit calculation now correctly uses user-entered rent value
 - [x] Fixed MarketInsightsPanel to convert marketId to string for API calls
+
+
+## New Feature Requests (Jan 22, 2026)
+- [ ] Map fullscreen toggle - Add button to expand map to full screen view
+- [ ] Comparable properties revenue filter - Add "Click to Filter" button with revenue threshold breakdown (top 33%, middle 33%, bottom 33%)
+
+
+## New Feature Requests (Jan 22, 2026) - COMPLETE
+- [x] Map fullscreen toggle button - Added expand button in top-right corner, fullscreen view with legend overlay showing property counts
+- [x] Revenue threshold filter with property counts (top/middle/bottom 33%) - Now shows "9 properties", "8 properties", etc. next to each tier

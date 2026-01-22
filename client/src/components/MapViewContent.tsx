@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2 } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2, Maximize2, Minimize2, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -33,6 +33,9 @@ interface RevenueThresholds {
   high: number;
   low: number;
   average: number;
+  topCount?: number;
+  middleCount?: number;
+  bottomCount?: number;
 }
 
 interface MyPropertyLocation {
@@ -48,7 +51,7 @@ interface MapViewContentProps {
 
 function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
   if (listings.length === 0) {
-    return { high: 100000, low: 50000, average: 75000 };
+    return { high: 100000, low: 50000, average: 75000, topCount: 0, middleCount: 0, bottomCount: 0 };
   }
   
   const revenues = listings.map(l => l.revenue).sort((a, b) => a - b);
@@ -57,10 +60,21 @@ function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
   const lowIndex = Math.floor(revenues.length * 0.33);
   const highIndex = Math.floor(revenues.length * 0.67);
   
+  const lowThreshold = revenues[lowIndex] || average * 0.7;
+  const highThreshold = revenues[highIndex] || average * 1.3;
+  
+  // Count properties in each tier
+  const topCount = listings.filter(l => l.revenue >= highThreshold).length;
+  const middleCount = listings.filter(l => l.revenue >= lowThreshold && l.revenue < highThreshold).length;
+  const bottomCount = listings.filter(l => l.revenue < lowThreshold).length;
+  
   return {
-    low: revenues[lowIndex] || average * 0.7,
-    high: revenues[highIndex] || average * 1.3,
+    low: lowThreshold,
+    high: highThreshold,
     average: Math.round(average),
+    topCount,
+    middleCount,
+    bottomCount,
   };
 }
 
@@ -276,6 +290,9 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   
   // Track when marker library is ready
   const [markerLibraryReady, setMarkerLibraryReady] = useState(false);
+  
+  // Fullscreen map state
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   
   // Reset auto-populated state when property changes
   useEffect(() => {
@@ -835,7 +852,109 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   };
   
   return (
-    <div className={`${embedded ? '' : 'min-h-screen bg-gradient-to-b from-white to-stone-50'} ${className}`}>
+    <>
+      {/* Fullscreen Map Modal */}
+      {isMapFullscreen && (
+        <div className="fixed inset-0 z-50 bg-black">
+          {/* Close Button */}
+          <button
+            onClick={() => setIsMapFullscreen(false)}
+            className="absolute top-4 right-4 z-50 bg-white/90 hover:bg-white p-3 rounded-lg shadow-lg border border-slate-200 transition-all duration-200 hover:scale-105 flex items-center gap-2"
+          >
+            <Minimize2 className="w-5 h-5 text-slate-700" />
+            <span className="text-sm font-medium text-slate-700">Exit Fullscreen</span>
+          </button>
+          
+          {/* Legend Overlay */}
+          <div className="absolute top-4 left-4 z-50 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-4 max-w-xs">
+            <h3 className="font-semibold text-slate-900 mb-3 text-sm">Revenue Tiers</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <span className="text-slate-700">Top 33%: ≥ {formatCurrency(thresholds.high)}</span>
+                </div>
+                <span className="font-bold text-green-600">{thresholds.topCount || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <span className="text-slate-700">Middle 33%</span>
+                </div>
+                <span className="font-bold text-amber-600">{thresholds.middleCount || 0}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <span className="text-slate-700">Bottom 33%</span>
+                </div>
+                <span className="font-bold text-red-600">{thresholds.bottomCount || 0}</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <div className="text-xs text-slate-500">Total: <span className="font-semibold text-slate-700">{filteredListings.length} properties</span></div>
+            </div>
+          </div>
+          
+          {/* Fullscreen Map */}
+          <MapView
+            className="w-full h-full"
+            initialCenter={mapRef.current?.getCenter()?.toJSON() || { lat: 36.1627, lng: -86.7816 }}
+            initialZoom={mapRef.current?.getZoom() || 11}
+            onMapReady={(map) => {
+              // Copy markers to fullscreen map
+              if (window.google?.maps?.marker?.AdvancedMarkerElement) {
+                filteredListings.forEach(listing => {
+                  const color = getMarkerColor(
+                    listing.revenue,
+                    thresholds,
+                    useCustomThreshold ? customThreshold : null
+                  );
+                  const markerElement = createMarkerElement(color, listing.revenue);
+                  new google.maps.marker.AdvancedMarkerElement({
+                    map: map,
+                    position: { lat: listing.latitude, lng: listing.longitude },
+                    title: listing.title,
+                    content: markerElement,
+                  });
+                });
+                
+                // Add my property marker if exists
+                if (myPropertyLocation) {
+                  const myPropertyElement = document.createElement('div');
+                  myPropertyElement.innerHTML = `
+                    <div style="
+                      width: 40px;
+                      height: 40px;
+                      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                      border-radius: 50%;
+                      border: 3px solid white;
+                      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      cursor: pointer;
+                    ">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                      </svg>
+                    </div>
+                  `;
+                  new google.maps.marker.AdvancedMarkerElement({
+                    map: map,
+                    position: { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng },
+                    title: 'My Property',
+                    content: myPropertyElement,
+                  });
+                }
+              }
+            }}
+          />
+        </div>
+      )}
+      
+      <div className={`${embedded ? '' : 'min-h-screen bg-gradient-to-b from-white to-stone-50'} ${className}`}>
       {/* Header - only show if not embedded */}
       {!embedded && (
         <div className="bg-white border-b border-slate-200 py-8">
@@ -959,6 +1078,15 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   }
                 }}
               />
+              
+              {/* Fullscreen Toggle Button */}
+              <button
+                onClick={() => setIsMapFullscreen(true)}
+                className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white p-2 rounded-lg shadow-md border border-slate-200 transition-all duration-200 hover:scale-105"
+                title="Expand to fullscreen"
+              >
+                <Maximize2 className="w-5 h-5 text-slate-700" />
+              </button>
               
               {/* Loading Overlay */}
               {isLoading && (
@@ -1118,17 +1246,26 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                     </div>
                     
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
-                        <div className="w-4 h-4 rounded-full bg-green-500" />
-                        <span className="text-slate-700">Top 33%: ≥ {listings.length > 0 ? formatCurrency(thresholds.high) : '—'}</span>
+                      <div className="flex items-center justify-between gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-green-500" />
+                          <span className="text-slate-700">Top 33%: ≥ {listings.length > 0 ? formatCurrency(thresholds.high) : '—'}</span>
+                        </div>
+                        <span className="font-bold text-green-600">{thresholds.topCount || 0} properties</span>
                       </div>
-                      <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
-                        <div className="w-4 h-4 rounded-full bg-amber-500" />
-                        <span className="text-slate-700">Middle 33%: {listings.length > 0 ? `${formatCurrency(thresholds.low)} - ${formatCurrency(thresholds.high)}` : '—'}</span>
+                      <div className="flex items-center justify-between gap-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-amber-500" />
+                          <span className="text-slate-700">Middle 33%: {listings.length > 0 ? `${formatCurrency(thresholds.low)} - ${formatCurrency(thresholds.high)}` : '—'}</span>
+                        </div>
+                        <span className="font-bold text-amber-600">{thresholds.middleCount || 0} properties</span>
                       </div>
-                      <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-100">
-                        <div className="w-4 h-4 rounded-full bg-red-500" />
-                        <span className="text-slate-700">Bottom 33%: &lt; {listings.length > 0 ? formatCurrency(thresholds.low) : '—'}</span>
+                      <div className="flex items-center justify-between gap-2 p-2 bg-red-50 rounded-lg border border-red-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-red-500" />
+                          <span className="text-slate-700">Bottom 33%: &lt; {listings.length > 0 ? formatCurrency(thresholds.low) : '—'}</span>
+                        </div>
+                        <span className="font-bold text-red-600">{thresholds.bottomCount || 0} properties</span>
                       </div>
                     </div>
                   </div>
@@ -1642,6 +1779,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         )}
       </div>
     </div>
+    </>
   );
 }
 
