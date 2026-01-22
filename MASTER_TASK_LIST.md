@@ -146,17 +146,20 @@
   - Impact: Pro vs amateur host comparison
 
 ### 3.5 Other Filters
-- [ ] **3.5.1** Add Instant Book filter
+- [x] **3.5.1** Add Instant Book filter ✅
   - API: Use `instant_book` parameter
   - Impact: Booking convenience analysis
+  - COMPLETED: Added toggle button with Zap icon
 
-- [ ] **3.5.2** Add Pets Allowed filter
-  - API: Use `pets_allowed` parameter
+- [x] **3.5.2** Add Pets Allowed filter ✅
+  - API: Use `pets_allowed` parameter via amenities filter
   - Impact: Pet-friendly market analysis
+  - COMPLETED: Already available in amenities dropdown
 
-- [ ] **3.5.3** Add Listing Type filter (Entire place, Private room, Shared)
+- [x] **3.5.3** Add Listing Type filter (Entire place, Private room, Shared) ✅
   - API: Use `listing_type` parameter
   - Impact: Listing type comparison
+  - COMPLETED: Added dropdown with 3 listing types
 
 ---
 

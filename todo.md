@@ -244,6 +244,26 @@ From AirDNA Rentalizer endpoint:
 - [x] Add superhostOnly and professionalOnly to filterContext in Gemini prompt
 - [x] TypeScript compilation clean
 
+### Phase 14: Progress Indicators Implementation (Jan 22, 2026)
+- [x] Add analysisProgress state to StandaloneMarketAdvisor
+- [x] Add 6-step progress indicator with visual checkmarks
+- [x] Add progress bar with percentage completion
+- [x] Add step-by-step status messages during analysis
+- [x] Property Advisor already has progress indicator (verified)
+- [x] TypeScript compilation clean
+
+### Phase 15: Additional Filters Implementation (Jan 22, 2026)
+- [x] Add instantBookOnly state to StandaloneMarketAdvisor
+- [x] Add Instant Book toggle button with Zap icon
+- [x] Add listingTypeFilter state to StandaloneMarketAdvisor
+- [x] Add Listing Type dropdown (Entire Home, Private Room, Shared Room)
+- [x] Add instant book and listing type badges to active filters display
+- [x] Update standaloneMarketAdvisor input schema in routers.ts
+- [x] Update getStandaloneMarketAdvisorData function signature in airdna.ts
+- [x] Add instantBookOnly and listingType to appliedFilters in gemini.ts
+- [x] Add instantBookOnly and listingType to filterContext in Gemini prompt
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

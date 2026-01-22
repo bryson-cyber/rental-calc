@@ -23,7 +23,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  MessageSquare
+  MessageSquare,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,6 +98,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
   const [superhostOnly, setSuperhostOnly] = useState(false);
   const [professionalOnly, setProfessionalOnly] = useState(false);
+  const [instantBookOnly, setInstantBookOnly] = useState(false);
+  const [listingTypeFilter, setListingTypeFilter] = useState<string>('all');
+  const [showListingTypeDropdown, setShowListingTypeDropdown] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<{
     step: number;
     message: string;
@@ -184,6 +188,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         minReviews: reviewCountFilter !== 'all' ? parseInt(reviewCountFilter) : undefined,
         superhostOnly: superhostOnly || undefined,
         professionalOnly: professionalOnly || undefined,
+        instantBookOnly: instantBookOnly || undefined,
+        listingType: listingTypeFilter !== 'all' ? listingTypeFilter : undefined,
       });
       
       clearInterval(progressInterval);
@@ -515,10 +521,60 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <Building2 className="w-4 h-4" />
                 <span className="text-sm font-medium">Pro Managed</span>
               </button>
+              <button
+                onClick={() => setInstantBookOnly(!instantBookOnly)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                  instantBookOnly
+                    ? 'bg-green-50 border-green-300 text-green-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Zap className={`w-4 h-4 ${instantBookOnly ? 'fill-green-400 text-green-400' : ''}`} />
+                <span className="text-sm font-medium">Instant Book</span>
+              </button>
+            </div>
+
+            {/* Listing Type Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowListingTypeDropdown(!showListingTypeDropdown)}
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+              >
+                <Home className="w-4 h-4 text-slate-500" />
+                <span className="text-sm text-slate-700">
+                  {listingTypeFilter === 'all' ? 'All Listing Types' : 
+                   listingTypeFilter === 'entire_home' ? 'Entire Home' :
+                   listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+              {showListingTypeDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                  {[
+                    { value: 'all', label: 'All Listing Types' },
+                    { value: 'entire_home', label: 'Entire Home/Apt' },
+                    { value: 'private_room', label: 'Private Room' },
+                    { value: 'shared_room', label: 'Shared Room' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setListingTypeFilter(value);
+                        setShowListingTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
+                        listingTypeFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Active Filters Display */}
-            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all' || superhostOnly || professionalOnly) && (
+            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all' || superhostOnly || professionalOnly || instantBookOnly || listingTypeFilter !== 'all') && (
               <div className="flex items-center gap-2 flex-wrap">
                 {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
                 {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
@@ -531,6 +587,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">💬 {reviewCountFilter}+ Reviews</Badge>}
                 {superhostOnly && <Badge variant="secondary" className="text-xs">⭐ Superhosts</Badge>}
                 {professionalOnly && <Badge variant="secondary" className="text-xs">🏢 Pro Managed</Badge>}
+                {instantBookOnly && <Badge variant="secondary" className="text-xs">⚡ Instant Book</Badge>}
+                {listingTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {listingTypeFilter === 'entire_home' ? 'Entire Home' : listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}</Badge>}
               </div>
             )}
           </div>

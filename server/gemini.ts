@@ -1103,6 +1103,8 @@ export interface MaxMarketAdvisorInput {
     minReviews?: number;
     superhostOnly?: boolean;
     professionalOnly?: boolean;
+    instantBookOnly?: boolean;
+    listingType?: string;
   };
   
   // Market Scores
@@ -1288,6 +1290,17 @@ export async function generateMaxMarketAdvice(
   }
   if (appliedFilters?.professionalOnly) {
     filterContextParts.push('Professionally managed properties only');
+  }
+  if (appliedFilters?.instantBookOnly) {
+    filterContextParts.push('Instant Book enabled properties only');
+  }
+  if (appliedFilters?.listingType) {
+    const listingTypeLabels: Record<string, string> = {
+      'entire_home': 'Entire home/apt',
+      'private_room': 'Private room',
+      'shared_room': 'Shared room'
+    };
+    filterContextParts.push(`listing type: ${listingTypeLabels[appliedFilters.listingType] || appliedFilters.listingType}`);
   }
   const filterContext = filterContextParts.length > 0 
     ? `\n\nAPPLIED FILTERS: This analysis is filtered to show ${filterContextParts.join(' ')}. All metrics and comparisons are specific to properties matching these criteria.`

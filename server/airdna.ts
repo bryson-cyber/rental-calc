@@ -5856,6 +5856,8 @@ export async function getStandaloneMarketAdvisorData(
     minReviews?: number;
     superhostOnly?: boolean;
     professionalOnly?: boolean;
+    instantBookOnly?: boolean;
+    listingType?: string;
   }
 ): Promise<StandaloneMarketAdvisorData | null> {
   console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);
