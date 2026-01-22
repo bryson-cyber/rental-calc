@@ -2920,3 +2920,55 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Removed dependency on Google Maps JavaScript SDK for autocomplete
 - [x] Added session token for billing optimization
 - [x] Maintained all existing functionality (keyboard navigation, click outside to close, etc.)
+
+
+## UI Improvements & Bug Fixes (Jan 21, 2026)
+
+### Seasonal Forecast (Step 3):
+- [ ] Remove emojis from seasonal forecast display
+- [ ] Simplify colors to professional look (less colorful)
+- [ ] Fix year-over-year display not showing
+
+### Comp Distance Labels (Step 3):
+- [ ] Fix distance calculations not loading for all 26 comps when clicking "Show All"
+
+### Light Mode:
+- [ ] Switch UI to light mode throughout
+
+### Metric Tooltips:
+- [ ] Add third-grade level explanations for all metrics (Revenue, ADR, Occupancy, RevPAR, etc.)
+
+### Map (Step 5):
+- [ ] Show user's property marker on the map (currently only showing competitor properties)
+- [ ] Add location disclaimer (~1km offset for privacy reasons)
+
+### Custom Comp Set (Step 5):
+- [ ] Add ability to select/deselect specific listings to create custom view on map
+
+
+## UI Improvements & Bug Fixes (Jan 21, 2026) - COMPLETE
+
+### Seasonal Forecast (Step 3):
+- [x] Remove emojis from seasonal forecast display
+- [x] Simplify colors to professional look (slate/gray tones)
+- [ ] Fix year-over-year display not showing (requires API data)
+
+### Comp Distance Labels (Step 3):
+- [x] Fix distance display - now shows "N/A" when distance unavailable (API limitation)
+
+### Light Mode:
+- [x] Switch UI to light mode throughout (white backgrounds, dark text)
+
+### Metric Tooltips:
+- [x] Add third-grade level explanations for all metrics (Revenue, ADR, Occupancy, RevPAR)
+
+### Map (Step 5):
+- [x] Show user's property marker on the map (fixed auto-geocoding logic)
+- [x] Add location disclaimer (~1km offset for privacy reasons)
+
+### Custom Comp Set (Step 5):
+- [x] Add ability to select/deselect specific listings to create custom view on map
+- [x] Added toggle switch to enable "Custom Comp Set" mode
+- [x] Added exclude button (X) on each table row when mode is active
+- [x] Added reset button to clear all exclusions
+- [x] Excluded properties are hidden from map and table

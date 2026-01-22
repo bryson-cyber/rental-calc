@@ -521,27 +521,38 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         </div>
       </div>
       
-      {/* Metric Selector */}
+      {/* Metric Selector with Tooltips */}
       <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg">
         <span className="text-xs font-medium text-slate-500 mr-2">Show Metrics:</span>
         {(Object.keys(METRIC_CONFIG) as MetricKey[]).map(metric => (
-          <button
-            key={metric}
-            onClick={() => toggleMetric(metric)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
-              selectedMetrics.includes(metric)
-                ? metric === 'revenue' 
-                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                  : metric === 'adr'
-                  ? 'bg-blue-100 text-blue-700 border-blue-300'
-                  : metric === 'revpar'
-                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                  : 'bg-purple-100 text-purple-700 border-purple-300'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            {METRIC_CONFIG[metric].label}
-          </button>
+          <Tooltip key={metric}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => toggleMetric(metric)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all border ${
+                  selectedMetrics.includes(metric)
+                    ? metric === 'revenue' 
+                      ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                      : metric === 'adr'
+                      ? 'bg-blue-100 text-blue-700 border-blue-300'
+                      : metric === 'revpar'
+                      ? 'bg-amber-100 text-amber-700 border-amber-300'
+                      : 'bg-purple-100 text-purple-700 border-purple-300'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {METRIC_CONFIG[metric].label}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-slate-900 text-white">
+              <p className="text-sm leading-relaxed">
+                {metric === 'revenue' && METRIC_TOOLTIPS.revenue}
+                {metric === 'adr' && METRIC_TOOLTIPS.adr}
+                {metric === 'occupancy' && METRIC_TOOLTIPS.occupancy}
+                {metric === 'revpar' && METRIC_TOOLTIPS.revpar}
+              </p>
+            </TooltipContent>
+          </Tooltip>
         ))}
         <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
@@ -595,15 +606,15 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500" />
+          <div className="w-3 h-3 rounded-full bg-slate-700" />
           <span className="text-xs text-slate-600">Peak (Top 33%)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-400" />
+          <div className="w-3 h-3 rounded-full bg-slate-500" />
           <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
+          <div className="w-3 h-3 rounded-full bg-slate-300" />
           <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
         </div>
       </div>
@@ -671,10 +682,10 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                   <div 
                     className={`w-full rounded-t transition-all cursor-pointer ${
                       category === 'peak'
-                        ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
+                        ? 'bg-gradient-to-t from-slate-700 to-slate-500' 
                         : category === 'slow'
-                        ? 'bg-gradient-to-t from-amber-500 to-amber-300'
-                        : 'bg-gradient-to-t from-blue-500 to-blue-300'
+                        ? 'bg-gradient-to-t from-slate-400 to-slate-300'
+                        : 'bg-gradient-to-t from-slate-500 to-slate-400'
                     }`}
                     style={{ height: `${Math.max(heightPct, 8)}%` }}
                   />
@@ -727,7 +738,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                 
                 return (
                   <tr key={idx} className={`border-b border-slate-100 ${
-                    isPeak ? 'bg-emerald-50' : isSlow ? 'bg-amber-50' : ''
+                    isPeak ? 'bg-slate-100' : isSlow ? 'bg-slate-50' : ''
                   }`}>
                     <td className="py-2.5 px-2 font-medium text-slate-900">
                       {formatMonth(month.month)}
@@ -767,12 +778,12 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         category === 'peak' 
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-slate-700 text-white'
                           : category === 'slow'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-slate-300 text-slate-700'
+                          : 'bg-slate-500 text-white'
                       }`}>
-                        {category === 'peak' ? '🔥 Peak' : category === 'slow' ? '❄️ Slow' : '📊 Shoulder'}
+                        {category === 'peak' ? 'Peak' : category === 'slow' ? 'Slow' : 'Shoulder'}
                       </span>
                     </td>
                   </tr>
@@ -785,8 +796,8 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       
       {/* Best/Worst Months Summary */}
       <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
-        <div className="p-3 bg-emerald-50 rounded-lg">
-          <p className="text-xs font-medium text-emerald-700 mb-2">🔥 Best Months</p>
+        <div className="p-3 bg-slate-100 rounded-lg">
+          <p className="text-xs font-medium text-slate-700 mb-2">Best Months</p>
           <div className="space-y-1">
             {peakMonths.map((m, i) => {
               const yoyChange = getYoYChange(m);
@@ -794,7 +805,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-emerald-700">{formatCurrency(m.revenue)}</span>
+                    <span className="font-semibold text-slate-900">{formatCurrency(m.revenue)}</span>
                     {showYoY && formatYoYChange(yoyChange.revenue)}
                   </div>
                 </div>
@@ -802,8 +813,8 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
             })}
           </div>
         </div>
-        <div className="p-3 bg-amber-50 rounded-lg">
-          <p className="text-xs font-medium text-amber-700 mb-2">❄️ Slowest Months</p>
+        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <p className="text-xs font-medium text-slate-700 mb-2">Slowest Months</p>
           <div className="space-y-1">
             {slowMonths.map((m, i) => {
               const yoyChange = getYoYChange(m);
@@ -811,7 +822,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-amber-700">{formatCurrency(m.revenue)}</span>
+                    <span className="font-semibold text-slate-700">{formatCurrency(m.revenue)}</span>
                     {showYoY && formatYoYChange(yoyChange.revenue)}
                   </div>
                 </div>
@@ -1157,12 +1168,12 @@ function MarketHealthGrade({
   
   // Factor breakdown
   const factors = [
-    ...(airdnaScore !== undefined ? [{ name: 'AirDNA Market Score', score: airdnaScore, weight: (weights as any).airdna, icon: '🎯' }] : []),
-    { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy, icon: '📊' },
-    { name: 'Growth Trend', score: growthScore, weight: weights.growth, icon: '📈' },
-    { name: 'Competition', score: competitionScore, weight: weights.competition, icon: '🏆' },
-    { name: 'Quality', score: qualityScore, weight: weights.quality, icon: '⭐' },
-    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality, icon: '📅' },
+    ...(airdnaScore !== undefined ? [{ name: 'AirDNA Market Score', score: airdnaScore, weight: (weights as any).airdna }] : []),
+    { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy },
+    { name: 'Growth Trend', score: growthScore, weight: weights.growth },
+    { name: 'Competition', score: competitionScore, weight: weights.competition },
+    { name: 'Quality', score: qualityScore, weight: weights.quality },
+    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality },
   ];
   
   return (
@@ -1195,7 +1206,6 @@ function MarketHealthGrade({
         <p className="text-sm font-medium text-slate-700">Score Breakdown</p>
         {factors.map((factor) => (
           <div key={factor.name} className="flex items-center gap-3">
-            <span className="text-lg">{factor.icon}</span>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-slate-600">{factor.name}</span>
@@ -1554,18 +1564,16 @@ function ComparableProperties({
                       <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
                     </div>
                   )}
-                  {/* Distance badge */}
-                  {comp.distanceMeters !== undefined && comp.distanceMeters > 0 && (
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
-                      <MapPin className="w-3 h-3" />
-                      <span className="text-xs font-medium">
-                        {comp.distanceMeters < 1609 
-                          ? `${(comp.distanceMeters / 1609).toFixed(1)} mi`
-                          : `${(comp.distanceMeters / 1609).toFixed(1)} mi`
-                        }
-                      </span>
-                    </div>
-                  )}
+                  {/* Distance badge - always show, with N/A for missing data */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
+                    <MapPin className="w-3 h-3" />
+                    <span className="text-xs font-medium">
+                      {comp.distanceMeters !== undefined && comp.distanceMeters > 0
+                        ? `${(comp.distanceMeters / 1609.34).toFixed(1)} mi`
+                        : 'N/A'
+                      }
+                    </span>
+                  </div>
                 </div>
             
             {/* Content */}

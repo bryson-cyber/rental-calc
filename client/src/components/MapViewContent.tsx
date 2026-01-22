@@ -261,6 +261,10 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 25;
   
+  // Custom comp set - track which listings are excluded from the view
+  const [excludedListingIds, setExcludedListingIds] = useState<Set<string>>(new Set());
+  const [showCompSetMode, setShowCompSetMode] = useState(false);
+  
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
   const [isGeocodingMyProperty, setIsGeocodingMyProperty] = useState(false);
@@ -297,6 +301,11 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     // Apply property type filter
     if (propertyTypeFilter !== 'all') {
       filtered = filtered.filter(l => l.propertyType === propertyTypeFilter);
+    }
+    
+    // Apply custom comp set exclusions
+    if (excludedListingIds.size > 0) {
+      filtered = filtered.filter(l => !excludedListingIds.has(l.id));
     }
     
     // Calculate distance if my property is set
@@ -351,7 +360,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     });
     
     return filtered;
-  }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy, distanceFilter]);
+  }, [listings, bedroomFilter, propertyTypeFilter, myPropertyLocation, sortBy, distanceFilter, excludedListingIds]);
   
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
@@ -639,14 +648,17 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   
   // Auto-geocode property address when map is ready and property is set
   useEffect(() => {
-    if (hasProperty && myProperty?.address && myPropertyAddress && !myPropertyLocation && mapRef.current && window.google) {
+    // Trigger geocoding if we have a property from context but no location yet
+    const addressToGeocode = myPropertyAddress || myProperty?.address;
+    if (hasProperty && addressToGeocode && !myPropertyLocation && mapRef.current && window.google) {
+      console.log('[MapView] Auto-geocoding property:', addressToGeocode);
       // Initialize geocoder if needed
       if (!geocoderRef.current) {
         geocoderRef.current = new google.maps.Geocoder();
       }
       
       // Auto-geocode the property
-      geocoderRef.current.geocode({ address: myProperty.address })
+      geocoderRef.current.geocode({ address: addressToGeocode })
         .then((result) => {
           if (result.results && result.results.length > 0) {
             const location = result.results[0].geometry.location;
@@ -668,7 +680,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
           console.error('[MapView] Auto-geocode error:', err);
         });
     }
-  }, [hasProperty, myProperty?.address, myPropertyAddress, myPropertyLocation]);
+  }, [hasProperty, myProperty?.address, myPropertyAddress, myPropertyLocation, markerLibraryReady]);
   
   // Update bedroom filter when context changes
   useEffect(() => {
@@ -1233,14 +1245,44 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </div>
                   
                   {/* Active Filters Summary */}
-                  {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all' || distanceFilter !== 'all') && (
+                  {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all' || distanceFilter !== 'all' || excludedListingIds.size > 0) && (
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground">
                         Showing {filteredListings.length} of {listings.length} properties
                         {distanceFilter !== 'all' && ` within ${distanceFilter} mi`}
+                        {excludedListingIds.size > 0 && ` (${excludedListingIds.size} excluded)`}
                       </p>
                     </div>
                   )}
+                  
+                  {/* Custom Comp Set Controls */}
+                  <div className="pt-3 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor="comp-set-mode" className="text-sm font-medium">Custom Comp Set</Label>
+                      <Switch
+                        id="comp-set-mode"
+                        checked={showCompSetMode}
+                        onCheckedChange={setShowCompSetMode}
+                      />
+                    </div>
+                    {showCompSetMode && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Click the X on any property in the table below to exclude it from your comp set.
+                        </p>
+                        {excludedListingIds.size > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setExcludedListingIds(new Set())}
+                            className="w-full text-xs"
+                          >
+                            Reset ({excludedListingIds.size} excluded)
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -1297,6 +1339,18 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </div>
                 </CardContent>
               </Card>
+            )}
+            
+            {/* Location Privacy Disclaimer */}
+            {listings.length > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    <strong>Note:</strong> Property locations are approximate (~1 km offset) for privacy reasons. Use this map for neighborhood exploration, not exact addresses.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -1383,6 +1437,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                         </th>
                       )}
                       <th className="text-center p-3 font-medium">Link</th>
+                      {showCompSetMode && <th className="text-center p-3 font-medium w-10"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1476,6 +1531,24 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                               <ExternalLink className="w-4 h-4" />
                             </a>
                           </td>
+                          {showCompSetMode && (
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExcludedListingIds(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.add(listing.id);
+                                    return newSet;
+                                  });
+                                }}
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors"
+                                title="Exclude from comp set"
+                              >
+                                <span className="text-xs font-bold">×</span>
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
