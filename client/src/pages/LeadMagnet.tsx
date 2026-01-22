@@ -524,25 +524,25 @@ export default function LeadMagnet() {
           totalListings: data.market?.listing_count || (data.same_bedroom_comps || []).length,
           marketScore: data.market?.metrics?.market_score || undefined,
         } : undefined,
-        // Historical data for YoY trends - use API historical_valuation data (more accurate)
+        // Historical data for YoY trends - always use market.historical for months data
         historicalData: (() => {
-          // First try to use the direct historical_valuation from enhanced rentalizer API
-          const historicalValuation = data.historical_valuation;
-          if (historicalValuation && historicalValuation.yoy_perc_chg !== undefined) {
-            const yoyChange = historicalValuation.yoy_perc_chg;
-            return {
-              summary: {
-                monthly_pct_change: historicalValuation.mom_perc_chg || yoyChange / 12,
-                yearly_pct_change: yoyChange,
-                trend: yoyChange > 2 ? 'up' as const : yoyChange < -2 ? 'down' as const : 'stable' as const,
-              },
-              months: [], // Not needed for YoY display
-            };
-          }
-          
-          // Fallback: calculate from market.historical if available
+          // Use market.historical for monthly data (needed for per-month YoY comparison)
           const historical = data.market?.historical;
-          if (!historical?.revenue || historical.revenue.length < 2) return undefined;
+          if (!historical?.revenue || historical.revenue.length < 2) {
+            // Fallback: if no market historical data, use historical_valuation summary only
+            const historicalValuation = data.historical_valuation;
+            if (historicalValuation && historicalValuation.yoy_perc_chg !== undefined) {
+              return {
+                summary: {
+                  monthly_pct_change: historicalValuation.mom_perc_chg || historicalValuation.yoy_perc_chg / 12,
+                  yearly_pct_change: historicalValuation.yoy_perc_chg,
+                  trend: historicalValuation.yoy_perc_chg > 2 ? 'up' as const : historicalValuation.yoy_perc_chg < -2 ? 'down' as const : 'stable' as const,
+                },
+                months: [],
+              };
+            }
+            return undefined;
+          }
           
           // Get the most recent 12 months and previous 12 months to calculate YoY change
           const sortedRevenue = [...historical.revenue].sort((a, b) => 

@@ -2315,7 +2315,7 @@ export async function getComprehensivePropertyReport(
   if (marketId) {
     const [marketDetails, historicalData, submarketList] = await Promise.all([
       getMarketDetails(marketId),
-      getMarketHistoricalData(marketId, 12),
+      getMarketHistoricalData(marketId, 24), // 24 months for YoY comparison
       getSubmarketsInMarket(marketId),
     ]);
     

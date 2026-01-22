@@ -2972,3 +2972,11 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Added exclude button (X) on each table row when mode is active
 - [x] Added reset button to clear all exclusions
 - [x] Excluded properties are hidden from map and table
+
+
+## Year-over-Year Comparison Feature (Jan 21, 2026)
+
+- [x] Research AirDNA API for historical/YoY data availability
+- [x] Update backend to fetch and return YoY comparison data (24 months instead of 12)
+- [x] Update seasonal forecast UI to display YoY comparison (already implemented, fixed data flow)
+- [x] Test the feature and save checkpoint
