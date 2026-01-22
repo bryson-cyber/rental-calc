@@ -5598,6 +5598,39 @@ export interface StandaloneMarketAdvisorData {
     avgOccupancy: number;
     avgAdr: number;
   }>;
+  // Additional data from more AirDNA endpoints
+  cancellationPolicies?: {
+    totalListings: number;
+    policies: Array<{
+      policy: string;
+      count: number;
+      percentage: number;
+      avgRevenue: number;
+      avgOccupancy: number;
+    }>;
+    recommendation: string;
+  };
+  professionalStats?: {
+    totalListings: number;
+    professionalCount: number;
+    individualCount: number;
+    professionalPercentage: number;
+    superhostCount: number;
+    superhostPercentage: number;
+    avgRevenueProfessional: number;
+    avgRevenueIndividual: number;
+    revenuePremiumPercent: number;
+  };
+  futurePricing?: Array<{
+    date: string;
+    supply: number;
+    demand: number;
+    adr: number;
+    adrPercentile25: number;
+    adrPercentile50: number;
+    adrPercentile75: number;
+    occupancy: number;
+  }>;
 }
 
 /**
@@ -5972,6 +6005,77 @@ export async function getStandaloneMarketAdvisorData(
         metrics: s.metrics,
       })),
       propertyTypes,
+      // Calculate cancellation policies from listings
+      cancellationPolicies: (() => {
+        const policyMap = new Map<string, { count: number; totalRevenue: number; totalOccupancy: number }>();
+        listings.forEach(l => {
+          const policy = (l as any).cancellation_policy || 'unknown';
+          const existing = policyMap.get(policy) || { count: 0, totalRevenue: 0, totalOccupancy: 0 };
+          policyMap.set(policy, {
+            count: existing.count + 1,
+            totalRevenue: existing.totalRevenue + l.annual_revenue,
+            totalOccupancy: existing.totalOccupancy + l.occupancy,
+          });
+        });
+        const policies = Array.from(policyMap.entries())
+          .map(([policy, data]) => ({
+            policy,
+            count: data.count,
+            percentage: listings.length > 0 ? Math.round((data.count / listings.length) * 100) : 0,
+            avgRevenue: data.count > 0 ? Math.round(data.totalRevenue / data.count) : 0,
+            avgOccupancy: data.count > 0 ? Math.round(data.totalOccupancy / data.count) : 0,
+          }))
+          .filter(p => p.policy !== 'unknown')
+          .sort((a, b) => b.count - a.count);
+        
+        if (policies.length === 0) return undefined;
+        
+        const bestPolicy = [...policies].sort((a, b) => b.avgRevenue - a.avgRevenue)[0];
+        const mostCommon = policies[0];
+        let recommendation = '';
+        if (bestPolicy && mostCommon) {
+          if (bestPolicy.policy === mostCommon.policy) {
+            recommendation = `Use "${bestPolicy.policy}" - it's both the most common (${bestPolicy.percentage}%) and highest earning ($${bestPolicy.avgRevenue.toLocaleString()}/year).`;
+          } else {
+            recommendation = `Consider "${bestPolicy.policy}" for higher earnings ($${bestPolicy.avgRevenue.toLocaleString()}/year), though "${mostCommon.policy}" is more common (${mostCommon.percentage}%).`;
+          }
+        }
+        return {
+          totalListings: listings.length,
+          policies,
+          recommendation,
+        };
+      })(),
+      // Calculate professional stats from listings
+      professionalStats: (() => {
+        const professionalListings = listings.filter(l => l.professionally_managed);
+        const individualListings = listings.filter(l => !l.professionally_managed);
+        const superhostListings = listings.filter(l => l.superhost);
+        
+        const avgRevenueProfessional = professionalListings.length > 0
+          ? Math.round(professionalListings.reduce((sum, l) => sum + l.annual_revenue, 0) / professionalListings.length)
+          : 0;
+        const avgRevenueIndividual = individualListings.length > 0
+          ? Math.round(individualListings.reduce((sum, l) => sum + l.annual_revenue, 0) / individualListings.length)
+          : 0;
+        const revenuePremium = avgRevenueIndividual > 0
+          ? Math.round(((avgRevenueProfessional - avgRevenueIndividual) / avgRevenueIndividual) * 100)
+          : 0;
+        
+        return {
+          totalListings: listings.length,
+          professionalCount: professionalListings.length,
+          individualCount: individualListings.length,
+          professionalPercentage: listings.length > 0 ? Math.round((professionalListings.length / listings.length) * 100) : 0,
+          superhostCount: superhostListings.length,
+          superhostPercentage: listings.length > 0 ? Math.round((superhostListings.length / listings.length) * 100) : 0,
+          avgRevenueProfessional,
+          avgRevenueIndividual,
+          revenuePremiumPercent: revenuePremium,
+        };
+      })(),
+      // Future pricing is not available from listings data
+      futurePricing: undefined,
     };
     
     console.log(`[StandaloneMarketAdvisor] Successfully compiled data for ${marketDetails.name}`);

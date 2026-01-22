@@ -71,6 +71,7 @@ import {
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
+import MapFirstLayout from '@/components/MapFirstLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -1609,7 +1610,7 @@ export default function LeadMagnet() {
             {/* MAP TAB */}
             {/* ============================================ */}
             {activeTab === 'map' && (
-              <MapViewContent embedded={true} />
+              <MapFirstLayout embedded={false} className="min-h-[600px]" />
             )}
 
             {/* ============================================ */}

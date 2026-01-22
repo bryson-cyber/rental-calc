@@ -59,6 +59,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
     seasonality: false,
     historical: false,
     topPerformers: false,
+    cancellationPolicies: false,
+    professionalStats: false,
+    futurePricing: false,
   });
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
@@ -648,6 +651,156 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
                         </div>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Cancellation Policies */}
+          {marketData.cancellationPolicies && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('cancellationPolicies')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    Cancellation Policies
+                  </CardTitle>
+                  {expandedSections.cancellationPolicies ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {expandedSections.cancellationPolicies && (
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {marketData.cancellationPolicies.policies.slice(0, 5).map((policy: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium capitalize">{policy.policy.replace(/_/g, ' ')}</div>
+                          <div className="text-sm text-slate-500">{policy.count} listings ({policy.percentage}%)</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium text-green-600">{formatCurrency(policy.avgRevenue)}/yr</div>
+                          <div className="text-xs text-slate-500">{formatPercent(policy.avgOccupancy)} occ</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {marketData.cancellationPolicies.recommendation && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-blue-800">{marketData.cancellationPolicies.recommendation}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Professional Stats */}
+          {marketData.professionalStats && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('professionalStats')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-purple-500" />
+                    Host Competition Analysis
+                  </CardTitle>
+                  {expandedSections.professionalStats ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {expandedSections.professionalStats && (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-700">{marketData.professionalStats.professionalPercentage}%</div>
+                      <div className="text-sm text-blue-600">Professionally Managed</div>
+                      <div className="text-xs text-blue-500 mt-1">{marketData.professionalStats.professionalCount} listings</div>
+                    </div>
+                    <div className="p-4 bg-amber-50 rounded-lg">
+                      <div className="text-2xl font-bold text-amber-700">{marketData.professionalStats.superhostPercentage}%</div>
+                      <div className="text-sm text-amber-600">Superhosts</div>
+                      <div className="text-xs text-amber-500 mt-1">{marketData.professionalStats.superhostCount} listings</div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 pt-3 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Avg Revenue (Professional)</span>
+                      <span className="font-medium text-green-600">{formatCurrency(marketData.professionalStats.avgRevenueProfessional)}/yr</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Avg Revenue (Individual)</span>
+                      <span className="font-medium">{formatCurrency(marketData.professionalStats.avgRevenueIndividual)}/yr</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-slate-600">Professional Premium</span>
+                      <Badge variant="outline" className={marketData.professionalStats.revenuePremiumPercent > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}>
+                        {marketData.professionalStats.revenuePremiumPercent > 0 ? '+' : ''}{marketData.professionalStats.revenuePremiumPercent}%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Future Pricing */}
+          {marketData.futurePricing && marketData.futurePricing.length > 0 && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('futurePricing')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-indigo-500" />
+                    Forward-Looking Pricing (Next 6 Months)
+                  </CardTitle>
+                  {expandedSections.futurePricing ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {expandedSections.futurePricing && (
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 font-medium text-slate-600">Month</th>
+                          <th className="text-right py-2 font-medium text-slate-600">ADR</th>
+                          <th className="text-right py-2 font-medium text-slate-600">ADR Range</th>
+                          <th className="text-right py-2 font-medium text-slate-600">Occupancy</th>
+                          <th className="text-right py-2 font-medium text-slate-600">Supply</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {marketData.futurePricing.slice(0, 30).filter((_: any, i: number) => i % 5 === 0).map((pricing: any, index: number) => (
+                          <tr key={index} className="border-b last:border-b-0">
+                            <td className="py-2 font-medium">
+                              {new Date(pricing.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </td>
+                            <td className="py-2 text-right text-green-600 font-medium">
+                              {formatCurrency(pricing.adr)}
+                            </td>
+                            <td className="py-2 text-right text-slate-500 text-xs">
+                              {formatCurrency(pricing.adrPercentile25)} - {formatCurrency(pricing.adrPercentile75)}
+                            </td>
+                            <td className="py-2 text-right">
+                              {formatPercent(pricing.occupancy * 100)}
+                            </td>
+                            <td className="py-2 text-right text-slate-500">
+                              {pricing.supply.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               )}

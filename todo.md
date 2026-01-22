@@ -3301,3 +3301,81 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Market Advisor tab shows as Step 7 in journey
 - [x] Consistent styling with other tools
 
+
+
+## UI Improvements & AI Advisor Restructure (Jan 22, 2026)
+
+### Step 5 (Map) Layout Redesign:
+- [ ] Review current Step 5 layout and identify issues
+- [ ] Design more compact, visually appealing layout
+- [ ] Reduce vertical scrolling while maintaining functionality
+- [ ] Improve data organization and visual hierarchy
+- [ ] Test new layout on mobile and desktop
+
+### AI Advisor Restructure (Step 6):
+- [ ] Combine Property Advisor and Market Advisor into single Step 6
+- [ ] Add tab navigation: Property tab and Market tab
+- [ ] Move Market Advisor functionality into Market tab
+- [ ] Keep Property Advisor functionality in Property tab
+- [ ] Remove Step 7 (now part of Step 6)
+- [ ] Update step numbering in LeadMagnet page
+
+### Market Advisor Enhancements:
+- [ ] Add zip code support to Market Advisor search
+- [ ] Research additional AirDNA endpoints to include
+- [ ] Add submarket comparison view
+- [ ] Integrate more comprehensive market data
+
+
+
+## UI Improvements & Market Advisor Enhancements (Jan 22, 2026) - IN PROGRESS
+
+### Step 5 (Map) Redesign:
+- [x] Create MapFirstLayout component with map-centric design
+- [x] Full-height map as hero element (70% viewport)
+- [x] Floating search bar overlaid on map
+- [x] Floating control buttons (Filters, Legend, Add Property)
+- [x] Compact stats bar at bottom of map
+- [x] Fix revenue display ($NaN → proper currency formatting)
+- [x] Integrate MapFirstLayout into LeadMagnet page
+
+### Market Advisor Enhancements:
+- [x] Add zip code support to market search (using searchMarketsAPI)
+- [x] Add cancellation policies endpoint and UI section
+- [x] Add professional host stats endpoint and UI section
+- [x] Add future pricing (6 months forward) endpoint and UI section
+- [x] Update StandaloneMarketAdvisorData type with new fields
+- [x] Update getStandaloneMarketAdvisorData to fetch new data
+- [x] Add collapsible UI sections for new data
+
+### Pending:
+- [ ] Test Market Advisor with zip code search
+- [ ] Test new data sections (cancellation, professional, future pricing)
+- [ ] Verify AI Advisor Step 6 has Property and Market tabs
+
+
+
+## Host Competition Analysis & Market Advisor Enhancements (Jan 22, 2026) - COMPLETE
+
+### Step 5 Map Redesign
+- [x] Created MapFirstLayout component with map-centric design
+- [x] Full-height map as hero element (70% viewport)
+- [x] Floating search bar overlaid on map
+- [x] Collapsible floating panels for filters, legend, property input
+- [x] Compact stats bar at bottom of map
+- [x] Table below map (unchanged)
+- [x] Fixed revenue display ($NaN → proper values)
+
+### Market Advisor Enhancements
+- [x] Added zip code support to market search
+- [x] Search now accepts zip codes, cities, and submarkets
+- [x] Added Host Competition Analysis section:
+  - [x] Professional vs Individual host breakdown
+  - [x] Superhost percentage
+  - [x] Revenue comparison (professional vs individual)
+  - [x] Professional premium calculation
+- [x] Removed broken AirDNA API calls (non-existent endpoints)
+- [x] Calculate competition data from existing listing data
+
+### Visual Edit
+- [x] Updated tagline to remove "arbitrage" (now "find profitable Airbnb opportunities")

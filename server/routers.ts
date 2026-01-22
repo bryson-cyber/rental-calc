@@ -9,6 +9,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
   searchMarkets,
+  searchMarketsAPI,
   getComprehensivePropertyReport,
   getComprehensiveMarketReport,
   getComprehensiveSubmarketReport,
@@ -132,7 +133,8 @@ export const appRouter = router({
             details: { searchTerm: input.searchTerm },
           });
           
-          const results = await searchMarkets(input.searchTerm, input.limit);
+          // Use searchMarketsAPI which supports zip codes, cities, and submarkets
+          const results = await searchMarketsAPI(input.searchTerm, input.limit);
           return {
             success: true,
             data: results,
@@ -2636,6 +2638,9 @@ export const appRouter = router({
               topPerformers: marketData.topPerformers,
               submarkets: marketData.submarkets,
               propertyTypes: marketData.propertyTypes,
+              cancellationPolicies: marketData.cancellationPolicies,
+              professionalStats: marketData.professionalStats,
+              futurePricing: marketData.futurePricing,
               advice,
             },
           };
