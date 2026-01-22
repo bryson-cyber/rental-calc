@@ -209,6 +209,17 @@ From AirDNA Rentalizer endpoint:
 - [x] Add filterContext to Gemini prompt for AI awareness
 - [x] TypeScript compilation clean
 
+### Phase 11: Property Type Filter Implementation (Jan 22, 2026)
+- [x] Add propertyTypeFilter state to StandaloneMarketAdvisor
+- [x] Add property type dropdown UI with 8 property types
+- [x] Add property type badge to active filters display
+- [x] Update handleGenerateAnalysis to pass propertyType filter
+- [x] Update standaloneMarketAdvisor input schema in routers.ts
+- [x] Update getStandaloneMarketAdvisorData function signature in airdna.ts
+- [x] Add propertyType to appliedFilters in gemini.ts
+- [x] Add propertyType to filterContext in Gemini prompt
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

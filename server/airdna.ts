@@ -5851,6 +5851,7 @@ export async function getStandaloneMarketAdvisorData(
       kitchen?: boolean;
       washerDryer?: boolean;
     };
+    propertyType?: string;
   }
 ): Promise<StandaloneMarketAdvisorData | null> {
   console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);

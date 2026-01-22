@@ -88,6 +88,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     washerDryer: false,
   });
   const [showAmenitiesDropdown, setShowAmenitiesDropdown] = useState(false);
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
+  const [showPropertyTypeDropdown, setShowPropertyTypeDropdown] = useState(false);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -143,6 +145,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         marketType: selectedMarket.type,
         bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
         amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
+        propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
       });
       
       if (result.success && result.data) {
@@ -327,8 +330,51 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               )}
             </div>
 
+            {/* Property Type Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowPropertyTypeDropdown(!showPropertyTypeDropdown)}
+                className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm hover:bg-slate-50 transition-colors"
+              >
+                <Home className="w-4 h-4 text-slate-500" />
+                <span className="font-medium text-slate-700">
+                  {propertyTypeFilter === 'all' ? 'Property Type' : propertyTypeFilter}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showPropertyTypeDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showPropertyTypeDropdown && (
+                <div className="absolute z-50 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1">
+                  {[
+                    { value: 'all', label: 'All Types' },
+                    { value: 'house', label: 'House' },
+                    { value: 'apartment', label: 'Apartment' },
+                    { value: 'condo', label: 'Condo' },
+                    { value: 'townhouse', label: 'Townhouse' },
+                    { value: 'cabin', label: 'Cabin' },
+                    { value: 'cottage', label: 'Cottage' },
+                    { value: 'villa', label: 'Villa' },
+                    { value: 'loft', label: 'Loft' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setPropertyTypeFilter(value);
+                        setShowPropertyTypeDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
+                        propertyTypeFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Active Filters Display */}
-            {Object.values(amenitiesFilter).filter(Boolean).length > 0 && (
+            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all') && (
               <div className="flex items-center gap-2">
                 {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
                 {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
@@ -336,6 +382,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 {amenitiesFilter.parking && <Badge variant="secondary" className="text-xs">🚗 Parking</Badge>}
                 {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">🍳 Kitchen</Badge>}
                 {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">🧺 W/D</Badge>}
+                {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {propertyTypeFilter}</Badge>}
               </div>
             )}
           </div>

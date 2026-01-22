@@ -116,12 +116,13 @@
   - Impact: AI analysis notes which filters are applied
 
 ### 3.2 Property Type Filter
-- [ ] **3.2.1** Add property type filter dropdown
-  - Options: House, Apartment, Condo, Cabin, Townhouse, etc.
+- [x] **3.2.1** Add property type filter dropdown - COMPLETED
+  - Options: House, Apartment, Condo, Cabin, Townhouse, Villa, Loft, Cottage
   - API: Use `property_type` parameter
+  - Implementation: Added dropdown to Market Advisor with filter context in Gemini prompt
 
-- [ ] **3.2.2** Add property type breakdown to Market Advisor
-  - Show: Revenue by property type
+- [x] **3.2.2** Add property type breakdown to Market Advisor - ALREADY EXISTS
+  - Show: Revenue by property type (propertyTypes section already in data)
   - Impact: Identify best-performing property types
 
 ### 3.3 Rating & Review Filters

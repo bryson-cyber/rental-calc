@@ -2598,6 +2598,7 @@ export const appRouter = router({
           kitchen: z.boolean().optional(),
           washerDryer: z.boolean().optional(),
         }).optional(),
+        propertyType: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -2609,6 +2610,7 @@ export const appRouter = router({
           const marketData = await getStandaloneMarketAdvisorData(input.marketId, input.marketType, {
             bedrooms: input.bedrooms,
             amenities: input.amenities,
+            propertyType: input.propertyType,
           });
           
           if (!marketData) {
@@ -2632,6 +2634,7 @@ export const appRouter = router({
             appliedFilters: {
               bedrooms: input.bedrooms,
               amenities: input.amenities,
+              propertyType: input.propertyType,
             },
             scores: marketData.scores,
             metrics: marketData.metrics,

@@ -1098,6 +1098,7 @@ export interface MaxMarketAdvisorInput {
       kitchen?: boolean;
       washerDryer?: boolean;
     };
+    propertyType?: string;
   };
   
   // Market Scores
@@ -1268,6 +1269,9 @@ export async function generateMaxMarketAdvice(
     if (amenityLabels.length > 0) {
       filterContextParts.push(`with amenities: ${amenityLabels.join(', ')}`);
     }
+  }
+  if (appliedFilters?.propertyType) {
+    filterContextParts.push(`property type: ${appliedFilters.propertyType}`);
   }
   const filterContext = filterContextParts.length > 0 
     ? `\n\nAPPLIED FILTERS: This analysis is filtered to show ${filterContextParts.join(' ')}. All metrics and comparisons are specific to properties matching these criteria.`
