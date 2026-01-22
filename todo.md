@@ -3611,3 +3611,12 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Add elapsed time display to Market Advisor button
 - [x] Add timeout warning with cancel button to Market Advisor
 - [x] TypeScript compilation clean
+
+
+### Phase 19: Comp Historical Metrics (Task 2.1.3)
+- [x] Add getListingHistoricalMetrics import to routers.ts
+- [x] Fetch historical metrics for top 10 comp properties in getAIPropertyReport
+- [x] Enrich comp data with revenue_trend, historical_total_revenue, historical_avg_occupancy
+- [x] Add revenue_trend field to ComparableProperty interface in ChapterPropertyReport
+- [x] Display revenue trend indicator (Growing/Stable/Declining) in comp cards
+- [x] Verify TypeScript compilation passes

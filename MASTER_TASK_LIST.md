@@ -10,38 +10,44 @@
 ## Phase 1: Market Advisor Data Maximization (HIGH PRIORITY)
 
 ### 1.1 Wire Up Missing API Endpoints to Market Advisor
-- [ ] **1.1.1** Add RevPAR data to Market Advisor data collection
+- [x] **1.1.1** Add RevPAR data to Market Advisor data collection ✅ ALREADY IMPLEMENTED
   - Endpoint: `/market/{id}/metrics/revpar`
-  - Returns: 12-60 months historical RevPAR data
+  - Returns: 60 months historical RevPAR data (already fetched)
   - Impact: Critical ROI metric for investors
+  - Status: RevPAR is fetched in getStandaloneMarketAdvisorData, included in monthly data, and passed to Gemini prompt
 
-- [ ] **1.1.2** Add Booking Lead Time data to Market Advisor
+- [x] **1.1.2** Add Booking Lead Time data to Market Advisor ✅ ALREADY IMPLEMENTED
   - Endpoint: `/market/{id}/metrics/booking_lead_time`
-  - Returns: How far in advance guests book
+  - Returns: How far in advance guests book (avg_days, last_minute_percent, advance_booking_percent)
   - Impact: Helps with pricing and availability strategy
+  - Status: Already fetched via getMarketBookingPatterns() and included in bookingPatterns data
 
-- [ ] **1.1.3** Add Average Length of Stay data to Market Advisor
-  - Endpoint: `/market/{id}/metrics/los`
-  - Returns: Average nights per booking
+- [x] **1.1.3** Add Average Length of Stay data to Market Advisor ✅ ALREADY IMPLEMENTED
+  - Endpoint: `/market/{id}/metrics/avg_length_of_stay`
+  - Returns: Average nights per booking (avg_nights, weekend_percent, week_percent)
   - Impact: Guest behavior insights, turnover costs
+  - Status: Already fetched via getMarketBookingPatterns() and included in bookingPatterns data
 
-- [ ] **1.1.4** Add Active Listings Count trend to Market Advisor
+- [x] **1.1.4** Add Active Listings Count trend to Market Advisor ✅ ALREADY IMPLEMENTED
   - Endpoint: `/market/{id}/metrics/active_listings_count`
-  - Returns: 12-60 months of supply data
+  - Returns: 60 months of supply data (already fetched)
   - Impact: Market saturation trends
+  - Status: Already fetched in getStandaloneMarketAdvisorData and getMarketSupplyTrend(), included in supplyTrend and listingCount data
 
 - [ ] **1.1.5** Add Future Daily Pricing data to Market Advisor
   - Endpoint: `/market/{id}/future_pricing`
   - Returns: 1-12 months forward pricing
   - Impact: Forward-looking market expectations
 
-- [ ] **1.1.6** Add Submarkets List to Market Advisor
-  - Endpoint: `/market/{id}/submarkets`
-  - Returns: All neighborhoods within market
+- [x] **1.1.6** Add Submarkets List to Market Advisor ✅ ALREADY IMPLEMENTED
+  - Endpoint: `/market/{id}/submarkets` via getSubmarketsInMarket()
+  - Returns: All neighborhoods within market with metrics
   - Impact: Granular location analysis
+  - Status: Already fetched and displayed in submarkets comparison table
 
 ### 1.2 Pass New Data to Gemini AI
-- [ ] **1.2.1** Update Market Advisor prompt to include RevPAR analysis
+- [x] **1.2.1** Update Market Advisor prompt to include RevPAR analysis ✅ ALREADY IMPLEMENTED
+  - RevPAR is included in market metrics, historical data, and seasonality sections of Gemini prompt
 - [x] **1.2.2** Update Market Advisor prompt to include Booking Lead Time insights - COMPLETED
 - [x] **1.2.3** Update Market Advisor prompt to include Length of Stay patterns - COMPLETED
 - [x] **1.2.4** Update Market Advisor prompt to include Supply Trend analysis - COMPLETED
@@ -69,10 +75,11 @@
   - Source: `airbnb_url` field from API
   - Display: "View Listing" link with ExternalLink icon
 
-- [ ] **2.1.3** Fetch historical metrics for top 10 comp properties
+- [x] **2.1.3** Fetch historical metrics for top 10 comp properties ✅ COMPLETED
   - Endpoint: `/listing/{id}/metrics`
-  - Returns: 12-60 months of comp performance
-  - Display: Show revenue trend for each comp
+  - Returns: 12 months of comp performance with revenue_trend (growing/stable/declining)
+  - Display: Shows trend indicator badge in comp cards (green=growing, gray=stable, red=declining)
+  - Implementation: Fetches metrics for top 10 comps in batches of 5 with rate limiting
 
 - [x] **2.1.4** Add comp property amenities display - ALREADY IMPLEMENTED
   - Source: `amenities` array from API

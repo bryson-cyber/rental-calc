@@ -33,6 +33,7 @@ import {
   getMarketSupplyTrend,
   getStandaloneMarketAdvisorData,
   getListingComps,
+  getListingHistoricalMetrics,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1201,6 +1202,69 @@ export const appRouter = router({
               // Continue without native comps
             }
           }
+
+          // Fetch historical metrics for top 10 comp properties (revenue trends)
+          const compHistoricalMetrics: Map<string, { trend: 'growing' | 'stable' | 'declining'; totalRevenue: number; avgOccupancy: number }> = new Map();
+          const top10Comps = allCompetitors.slice(0, 10);
+          if (top10Comps.length > 0) {
+            console.log(`[getAIPropertyReport] Fetching historical metrics for ${top10Comps.length} top comps...`);
+            try {
+              // Fetch in parallel with rate limiting (batches of 5)
+              const batchSize = 5;
+              for (let i = 0; i < top10Comps.length; i += batchSize) {
+                const batch = top10Comps.slice(i, i + batchSize);
+                const batchResults = await Promise.all(
+                  batch.map(async (comp) => {
+                    if (!comp.id) return null;
+                    try {
+                      const metrics = await getListingHistoricalMetrics(comp.id, 12);
+                      if (metrics) {
+                        return {
+                          id: comp.id,
+                          trend: metrics.summary.revenue_trend,
+                          totalRevenue: metrics.summary.total_revenue,
+                          avgOccupancy: metrics.summary.avg_occupancy,
+                        };
+                      }
+                    } catch (e) {
+                      console.error(`[getAIPropertyReport] Failed to fetch metrics for comp ${comp.id}:`, e);
+                    }
+                    return null;
+                  })
+                );
+                
+                for (const result of batchResults) {
+                  if (result) {
+                    compHistoricalMetrics.set(result.id, {
+                      trend: result.trend,
+                      totalRevenue: result.totalRevenue,
+                      avgOccupancy: result.avgOccupancy,
+                    });
+                  }
+                }
+                
+                // Small delay between batches to avoid rate limiting
+                if (i + batchSize < top10Comps.length) {
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                }
+              }
+              console.log(`[getAIPropertyReport] Successfully fetched historical metrics for ${compHistoricalMetrics.size} comps`);
+            } catch (error) {
+              console.error('[getAIPropertyReport] Historical metrics fetch failed:', error);
+              // Continue without historical metrics
+            }
+          }
+
+          // Enrich allCompetitors with historical trend data
+          allCompetitors = allCompetitors.map(comp => {
+            const historicalData = comp.id ? compHistoricalMetrics.get(comp.id) : undefined;
+            return {
+              ...comp,
+              revenue_trend: historicalData?.trend,
+              historical_total_revenue: historicalData?.totalRevenue,
+              historical_avg_occupancy: historicalData?.avgOccupancy,
+            };
+          });
 
           // Generate AI-enhanced analysis
           const aiAnalysis = await generateEnhancedPropertyReport(input.address, {

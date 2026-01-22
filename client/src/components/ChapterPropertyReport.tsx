@@ -116,6 +116,9 @@ interface ComparableProperty {
   superhost?: boolean;
   professionally_managed?: boolean;
   distance_meters?: number;
+  revenue_trend?: 'growing' | 'stable' | 'declining';
+  historical_total_revenue?: number;
+  historical_avg_occupancy?: number;
 }
 
 interface BedroomPerformance {
@@ -935,6 +938,23 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                         <p className="text-xl font-bold text-[#1A1A1A]">{formatCurrency(comp.annual_revenue)}</p>
                         <p className="text-sm text-[#1A1A1A]/50">/year</p>
                         <p className="text-sm text-[#1A1A1A]/60 mt-1">{formatCurrency(comp.adr)}/night</p>
+                        {comp.revenue_trend && (
+                          <div className={`mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            comp.revenue_trend === 'growing' 
+                              ? 'bg-green-100 text-green-700' 
+                              : comp.revenue_trend === 'declining' 
+                                ? 'bg-red-100 text-red-700' 
+                                : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {comp.revenue_trend === 'growing' ? (
+                              <><TrendingUp className="w-3 h-3" /> Growing</>
+                            ) : comp.revenue_trend === 'declining' ? (
+                              <><TrendingDown className="w-3 h-3" /> Declining</>
+                            ) : (
+                              <><span className="w-3 h-0.5 bg-gray-400 rounded"></span> Stable</>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
