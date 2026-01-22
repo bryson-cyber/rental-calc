@@ -230,14 +230,48 @@ export function MapView({
       return;
     }
     
+    // Detect mobile device
+    const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,
+      // Map type control - smaller on mobile
       mapTypeControl: true,
+      mapTypeControlOptions: {
+        style: isMobile 
+          ? google.maps.MapTypeControlStyle.DROPDOWN_MENU 
+          : google.maps.MapTypeControlStyle.DEFAULT,
+        position: google.maps.ControlPosition.TOP_RIGHT,
+      },
+      // Fullscreen control - essential for mobile
       fullscreenControl: true,
+      fullscreenControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_TOP,
+      },
+      // Zoom control - larger buttons on mobile
       zoomControl: true,
-      streetViewControl: true,
+      zoomControlOptions: {
+        position: isMobile 
+          ? google.maps.ControlPosition.RIGHT_BOTTOM 
+          : google.maps.ControlPosition.RIGHT_CENTER,
+      },
+      // Street view control
+      streetViewControl: !isMobile, // Hide on mobile to reduce clutter
+      streetViewControlOptions: {
+        position: google.maps.ControlPosition.RIGHT_BOTTOM,
+      },
+      // Mobile-friendly gesture handling
+      gestureHandling: isMobile ? 'greedy' : 'auto', // 'greedy' allows single-finger pan on mobile
+      // Disable scroll zoom on mobile when embedded (prevents accidental zoom while scrolling page)
+      scrollwheel: !isMobile,
+      // Enable two-finger zoom on mobile
+      // Map ID for advanced markers
       mapId: "DEMO_MAP_ID",
+      // Additional mobile optimizations
+      clickableIcons: !isMobile, // Disable POI clicks on mobile to prevent accidental taps
+      disableDoubleClickZoom: false, // Keep double-tap zoom
+      keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
     });
     if (onMapReady) {
       onMapReady(map.current);
@@ -249,6 +283,16 @@ export function MapView({
   }, [init]);
 
   return (
-    <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
+    <div 
+      ref={mapContainer} 
+      className={cn(
+        "w-full",
+        // Responsive height: smaller on mobile, larger on desktop
+        "h-[350px] sm:h-[400px] md:h-[500px] lg:h-[600px]",
+        // Touch-friendly: ensure map is easily tappable
+        "touch-manipulation",
+        className
+      )} 
+    />
   );
 }

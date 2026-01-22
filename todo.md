@@ -3620,3 +3620,15 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Add revenue_trend field to ComparableProperty interface in ChapterPropertyReport
 - [x] Display revenue trend indicator (Growing/Stable/Declining) in comp cards
 - [x] Verify TypeScript compilation passes
+
+
+### Phase 20: Mobile Map Improvements (Task 4.4.1)
+- [x] Added mobile device detection (screen width < 768px or touch support)
+- [x] Configured gesture handling: 'greedy' mode for single-finger pan on mobile
+- [x] Repositioned zoom controls to bottom-right on mobile for thumb access
+- [x] Changed map type control to dropdown menu on mobile (saves space)
+- [x] Disabled street view control on mobile to reduce clutter
+- [x] Disabled scroll wheel zoom on mobile to prevent accidental zoom while scrolling
+- [x] Disabled POI clicks on mobile to prevent accidental taps
+- [x] Added responsive height: 350px mobile, 400px tablet, 500px desktop, 600px large screens
+- [x] Added touch-manipulation CSS class for better touch responsiveness

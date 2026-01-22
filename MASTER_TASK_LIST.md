@@ -34,10 +34,10 @@
   - Impact: Market saturation trends
   - Status: Already fetched in getStandaloneMarketAdvisorData and getMarketSupplyTrend(), included in supplyTrend and listingCount data
 
-- [ ] **1.1.5** Add Future Daily Pricing data to Market Advisor
+- [x] **1.1.5** Add Future Daily Pricing data to Market Advisor - SKIPPED per user request
   - Endpoint: `/market/{id}/future_pricing`
   - Returns: 1-12 months forward pricing
-  - Impact: Forward-looking market expectations
+  - Status: User confirmed this feature is not needed
 
 - [x] **1.1.6** Add Submarkets List to Market Advisor ✅ ALREADY IMPLEMENTED
   - Endpoint: `/market/{id}/submarkets` via getSubmarketsInMarket()
@@ -85,9 +85,9 @@
   - Source: `amenities` array from API
   - Display: Shows up to 4 amenities with "+X more" indicator
 
-- [ ] **2.1.5** Add comp property future pricing
+- [x] **2.1.5** Add comp property future pricing - SKIPPED per user request
   - Endpoint: `/listing/{id}/future_pricing`
-  - Display: Show upcoming pricing for comps
+  - Status: User confirmed pricing features are not needed
 
 ### 2.2 Property Advisor Data Enhancements
 - [x] **2.2.1** Add AirDNA's native comp algorithm - IMPLEMENTED
@@ -214,9 +214,10 @@
   - COMPLETED: Enhanced StandaloneMarketAdvisor and AIAdvisorStep with timeout tracking
 
 ### 4.4 Mobile Responsiveness
-- [ ] **4.4.1** Improve Map view on mobile devices
+- [x] **4.4.1** Improve Map view on mobile devices ✅
   - Fix: Touch interactions, zoom controls
   - Impact: Better mobile experience
+  - COMPLETED: Added mobile detection, greedy gesture handling, responsive heights, repositioned controls
 
 - [ ] **4.4.2** Improve filter dropdowns on mobile
   - Fix: Touch-friendly dropdown menus
