@@ -108,6 +108,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     step: number;
     message: string;
     steps: string[];
+    startTime: number | null;
+    elapsedSeconds: number;
+    isTakingLong: boolean;
   }>({
     step: 0,
     message: '',
@@ -118,8 +121,12 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       'Collecting top performers...',
       'Generating AI insights...',
       'Finalizing report...'
-    ]
+    ],
+    startTime: null,
+    elapsedSeconds: 0,
+    isTakingLong: false
   });
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -166,19 +173,57 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     }
   };
 
+  const handleCancelAnalysis = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    standaloneMarketAdvisorMutation.reset();
+    setAnalysisProgress(prev => ({ ...prev, step: 0, message: '', startTime: null, elapsedSeconds: 0, isTakingLong: false }));
+  };
+
   const handleGenerateAnalysis = async () => {
     if (!selectedMarket) return;
     
-    // Start progress simulation
-    setAnalysisProgress(prev => ({ ...prev, step: 0, message: prev.steps[0] }));
+    const startTime = Date.now();
+    const controller = new AbortController();
+    setAbortController(controller);
     
-    // Simulate progress steps (the actual API call happens in parallel)
+    // Start progress simulation with elapsed time tracking
+    setAnalysisProgress(prev => ({ 
+      ...prev, 
+      step: 0, 
+      message: prev.steps[0], 
+      startTime, 
+      elapsedSeconds: 0, 
+      isTakingLong: false 
+    }));
+    
+    // Simulate progress steps and track elapsed time
     const progressInterval = setInterval(() => {
       setAnalysisProgress(prev => {
+        const elapsed = Math.floor((Date.now() - (prev.startTime || startTime)) / 1000);
         const nextStep = Math.min(prev.step + 1, prev.steps.length - 1);
-        return { ...prev, step: nextStep, message: prev.steps[nextStep] };
+        const isTakingLong = elapsed >= 45; // Show warning after 45 seconds
+        return { 
+          ...prev, 
+          step: nextStep, 
+          message: prev.steps[nextStep],
+          elapsedSeconds: elapsed,
+          isTakingLong
+        };
       });
     }, 8000); // Update every 8 seconds to cover ~48 seconds of analysis
+    
+    // Also update elapsed time every second for accurate display
+    const elapsedInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        if (!prev.startTime) return prev;
+        const elapsed = Math.floor((Date.now() - prev.startTime) / 1000);
+        const isTakingLong = elapsed >= 45;
+        return { ...prev, elapsedSeconds: elapsed, isTakingLong };
+      });
+    }, 1000);
     
     try {
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
@@ -196,7 +241,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       });
       
       clearInterval(progressInterval);
-      setAnalysisProgress(prev => ({ ...prev, step: prev.steps.length - 1, message: 'Complete!' }));
+      clearInterval(elapsedInterval);
+      setAbortController(null);
+      setAnalysisProgress(prev => ({ ...prev, step: prev.steps.length - 1, message: 'Complete!', startTime: null, elapsedSeconds: 0, isTakingLong: false }));
       
       if (result.success && result.data) {
         setMarketData(result.data);
@@ -204,7 +251,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       }
     } catch (error) {
       clearInterval(progressInterval);
-      setAnalysisProgress(prev => ({ ...prev, step: 0, message: '' }));
+      clearInterval(elapsedInterval);
+      setAbortController(null);
+      setAnalysisProgress(prev => ({ ...prev, step: 0, message: '', startTime: null, elapsedSeconds: 0, isTakingLong: false }));
       console.error('Error generating market analysis:', error);
     }
   };
@@ -639,12 +688,42 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               
               {/* Progress Steps */}
               {standaloneMarketAdvisorMutation.isPending && (
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div className={`rounded-lg p-4 border ${analysisProgress.isTakingLong ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">Analysis Progress</span>
-                    <span className="text-xs text-slate-500 ml-auto">~30-60 seconds</span>
+                    <Clock className={`w-4 h-4 ${analysisProgress.isTakingLong ? 'text-amber-600' : 'text-slate-500'}`} />
+                    <span className={`text-sm font-medium ${analysisProgress.isTakingLong ? 'text-amber-800' : 'text-slate-700'}`}>Analysis Progress</span>
+                    <span className={`text-xs ml-auto font-mono ${analysisProgress.isTakingLong ? 'text-amber-600' : 'text-slate-500'}`}>
+                      {analysisProgress.elapsedSeconds > 0 ? `${analysisProgress.elapsedSeconds}s elapsed` : '~30-60 seconds'}
+                    </span>
                   </div>
+                  
+                  {/* Taking Too Long Warning */}
+                  {analysisProgress.isTakingLong && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mb-3 p-3 bg-amber-100 rounded-lg border border-amber-200"
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-amber-800">This is taking longer than expected...</p>
+                          <p className="text-xs text-amber-700 mt-1">The AI is processing a large amount of market data. You can continue waiting or cancel and try again.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          onClick={handleCancelAnalysis}
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                        >
+                          Cancel Analysis
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                  
                   <div className="space-y-2">
                     {analysisProgress.steps.map((step, index) => (
                       <div key={index} className="flex items-center gap-3">
@@ -652,7 +731,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                           index < analysisProgress.step
                             ? 'bg-green-500'
                             : index === analysisProgress.step
-                            ? 'bg-blue-500'
+                            ? analysisProgress.isTakingLong ? 'bg-amber-500' : 'bg-blue-500'
                             : 'bg-slate-200'
                         }`}>
                           {index < analysisProgress.step ? (
@@ -667,7 +746,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                           index < analysisProgress.step
                             ? 'text-green-700 line-through'
                             : index === analysisProgress.step
-                            ? 'text-blue-700 font-medium'
+                            ? analysisProgress.isTakingLong ? 'text-amber-700 font-medium' : 'text-blue-700 font-medium'
                             : 'text-slate-400'
                         }`}>
                           {step}
@@ -678,7 +757,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   <div className="mt-3 pt-3 border-t border-slate-200">
                     <div className="w-full bg-slate-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                        className={`h-2 rounded-full transition-all duration-500 ${analysisProgress.isTakingLong ? 'bg-amber-500' : 'bg-blue-500'}`}
                         style={{ width: `${((analysisProgress.step + 1) / analysisProgress.steps.length) * 100}%` }}
                       />
                     </div>

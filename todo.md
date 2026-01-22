@@ -3598,3 +3598,16 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Enhance Property Advisor error state with retry button
 - [x] Enhance Market Advisor (in AIAdvisorStep) error state with retry button
 - [x] TypeScript compilation clean
+
+### Phase 18: Timeout Handling for Long API Calls (Jan 22, 2026)
+- [x] Add timeout state tracking (startTime, elapsedSeconds, isTakingLong) to StandaloneMarketAdvisor
+- [x] Add elapsed time display in progress UI (shows seconds elapsed)
+- [x] Add "Taking longer than expected" warning after 45 seconds
+- [x] Add Cancel Analysis button in warning state
+- [x] Change progress bar color to amber when taking too long
+- [x] Add timeout state tracking to AIAdvisorStep for both Property and Market advisors
+- [x] Add elapsed time display to Property Advisor button
+- [x] Add timeout warning with cancel button to Property Advisor
+- [x] Add elapsed time display to Market Advisor button
+- [x] Add timeout warning with cancel button to Market Advisor
+- [x] TypeScript compilation clean

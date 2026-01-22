@@ -200,9 +200,11 @@
   - Action: Retry button with "Try Again" and alternative options
   - COMPLETED: Enhanced error states in StandaloneMarketAdvisor and AIAdvisorStep
 
-- [ ] **4.3.2** Add timeout handling for long API calls
-  - Show: "This is taking longer than expected..."
-  - Action: Option to cancel or retry
+- [x] **4.3.2** Add timeout handling for long API calls ✅
+  - Show: "This is taking longer than expected..." warning after 45s (Market) / 30s (Property)
+  - Action: Cancel Analysis button to abort and retry
+  - Display: Real-time elapsed seconds counter
+  - COMPLETED: Enhanced StandaloneMarketAdvisor and AIAdvisorStep with timeout tracking
 
 ### 4.4 Mobile Responsiveness
 - [ ] **4.4.1** Improve Map view on mobile devices
