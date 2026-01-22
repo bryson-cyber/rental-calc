@@ -959,8 +959,8 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - Estimated Expenses (supplies, utilities, cleaning): ~20-25% of revenue
 - Projected Monthly Profit: Calculate this
 - Annual Profit Projection: Calculate this` : `- No rent provided - calculate the MAXIMUM RENT this property could support
-- Break-even rent (revenue - 25% expenses): $${Math.round((revenue.projected * 0.75) / 12).toLocaleString()}/month
-- Recommended max rent for healthy profit margin: $${Math.round((revenue.projected * 0.60) / 12).toLocaleString()}/month`}
+- Break-even rent range (revenue - 25% expenses): $${Math.round((revenue.low * 0.75) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.75) / 12 / 100) * 100}/month
+- Recommended max rent range for healthy profit margin: $${Math.round((revenue.low * 0.60) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.60) / 12 / 100) * 100}/month`}
 
 ## Break-Even & Risk Scenarios
 - What occupancy rate is needed to break even?

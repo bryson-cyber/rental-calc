@@ -28,6 +28,7 @@ import {
   getMarketListings,
   getMarketBookingPatterns,
   getMarketSupplyTrend,
+  getStandaloneMarketAdvisorData,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -2540,6 +2541,109 @@ export const appRouter = router({
           return {
             success: false,
             error: 'Failed to generate comprehensive market advice',
+            data: null,
+          };
+        }
+      }),
+
+    // Standalone Market Advisor - Fetches all data and generates AI report
+    standaloneMarketAdvisor: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+        marketType: z.enum(['market', 'submarket', 'zipcode']).default('market'),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[Standalone Market Advisor] Starting analysis for:', input.marketId, 'type:', input.marketType);
+          
+          // Step 1: Fetch comprehensive market data
+          const marketData = await getStandaloneMarketAdvisorData(input.marketId, input.marketType);
+          
+          if (!marketData) {
+            return {
+              success: false,
+              error: 'Could not fetch market data. Please try a different market.',
+              data: null,
+            };
+          }
+          
+          console.log('[Standalone Market Advisor] Market data fetched:', marketData.market.name);
+          
+          // Step 2: Generate AI advice using the comprehensive data
+          const adviceInput: MaxMarketAdvisorInput = {
+            market: {
+              name: marketData.market.name,
+              city: marketData.market.city,
+              state: marketData.market.state,
+              country: marketData.market.country,
+            },
+            scores: marketData.scores,
+            metrics: marketData.metrics,
+            revenueByBedroom: marketData.revenueByBedroom,
+            historicalData: {
+              yoyChange: marketData.historicalData.yoyChange,
+              trend: marketData.historicalData.trend,
+              months: marketData.historicalData.months.map(m => ({
+                date: m.date,
+                revenue: m.revenue,
+                occupancy: m.occupancy,
+                adr: m.adr,
+                listingCount: m.listingCount,
+              })),
+            },
+            seasonality: marketData.seasonality.map(s => ({
+              month: s.monthName,
+              revenue: s.revenue,
+              occupancy: s.occupancy,
+              adr: s.adr,
+              yoyChange: s.yoyChange,
+            })),
+            topPerformers: marketData.topPerformers.map(p => ({
+              title: p.title,
+              bedrooms: p.bedrooms,
+              bathrooms: p.bathrooms,
+              revenue: p.revenue,
+              occupancy: p.occupancy,
+              adr: p.adr,
+              rating: p.rating,
+              reviews: p.reviews,
+              isSuperhost: p.isSuperhost,
+              isProfessionallyManaged: p.isProfessionallyManaged,
+            })),
+            propertyTypes: marketData.propertyTypes.map(pt => ({
+              type: pt.type,
+              count: pt.count,
+              avgRevenue: pt.avgRevenue,
+              avgOccupancy: pt.avgOccupancy,
+            })),
+          };
+          
+          const advice = await generateMaxMarketAdvice(adviceInput);
+          
+          console.log('[Standalone Market Advisor] AI advice generated, length:', advice.length);
+          
+          return {
+            success: true,
+            data: {
+              market: marketData.market,
+              scores: marketData.scores,
+              metrics: marketData.metrics,
+              revenueByBedroom: marketData.revenueByBedroom,
+              historicalData: marketData.historicalData,
+              seasonality: marketData.seasonality,
+              bookingPatterns: marketData.bookingPatterns,
+              supplyTrend: marketData.supplyTrend,
+              topPerformers: marketData.topPerformers,
+              submarkets: marketData.submarkets,
+              propertyTypes: marketData.propertyTypes,
+              advice,
+            },
+          };
+        } catch (error) {
+          console.error('[Standalone Market Advisor] Error:', error);
+          return {
+            success: false,
+            error: 'Failed to generate market analysis. Please try again.',
             data: null,
           };
         }

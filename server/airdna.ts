@@ -5468,3 +5468,517 @@ export async function getRentalizerBulkSummary(
     return null;
   }
 }
+
+
+// ============================================
+// STANDALONE MARKET ADVISOR - COMPREHENSIVE DATA FETCH
+// ============================================
+
+export interface StandaloneMarketAdvisorData {
+  market: {
+    id: string;
+    name: string;
+    city: string;
+    state: string;
+    country: string;
+    type: 'market' | 'submarket' | 'zipcode';
+    listingCount: number;
+  };
+  scores: {
+    marketScore: number;
+    investabilityScore: number;
+    rentalDemandScore: number;
+    revenueGrowthScore: number;
+    seasonalityScore: number;
+    regulationScore: number;
+  };
+  metrics: {
+    avgRevenue: number;
+    avgOccupancy: number;
+    avgAdr: number;
+    avgRevpar: number;
+    totalListings: number;
+    professionallyManagedPct: number;
+    superhostPct: number;
+    avgRating: number;
+  };
+  revenueByBedroom: Array<{
+    bedrooms: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+    avgAdr: number;
+    listingCount: number;
+  }>;
+  historicalData: {
+    yoyChange: number;
+    trend: 'up' | 'down' | 'stable';
+    months: Array<{
+      date: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+      listingCount: number;
+    }>;
+    // 5-year summary by year
+    yearlySummary: Array<{
+      year: number;
+      avgRevenue: number;
+      avgOccupancy: number;
+      avgAdr: number;
+      avgRevpar: number;
+      avgListingCount: number;
+      yoyRevenueChange?: number;
+    }>;
+  };
+  seasonality: Array<{
+    month: string;
+    monthName: string;
+    revenue: number;
+    occupancy: number;
+    adr: number;
+    revpar: number;
+    yoyChange?: number;
+    seasonType: 'peak' | 'shoulder' | 'off';
+  }>;
+  bookingPatterns: {
+    avgLeadTimeDays: number;
+    lastMinutePercent: number;
+    advanceBookingPercent: number;
+    avgLengthOfStay: number;
+    weekendPercent: number;
+    weekPlusPercent: number;
+    insights: string[];
+  } | null;
+  supplyTrend: {
+    currentListings: number;
+    listings12MonthsAgo: number;
+    netChange: number;
+    percentChange: number;
+    trend: 'growing' | 'stable' | 'declining';
+    insight: string;
+    monthlyData: Array<{
+      month: string;
+      activeListings: number;
+      changeFromPrevious: number;
+    }>;
+  } | null;
+  topPerformers: Array<{
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    accommodates: number;
+    revenue: number;
+    occupancy: number;
+    adr: number;
+    revpar: number;
+    rating: number;
+    reviews: number;
+    isSuperhost: boolean;
+    isProfessionallyManaged: boolean;
+    propertyType: string;
+  }>;
+  submarkets: Array<{
+    id: string;
+    name: string;
+    listingCount: number;
+    metrics?: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      marketScore?: number;
+    };
+  }>;
+  propertyTypes: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+    avgAdr: number;
+  }>;
+}
+
+/**
+ * Get comprehensive market data for standalone Market Advisor
+ * Fetches 5 years of historical data and all relevant market endpoints
+ */
+export async function getStandaloneMarketAdvisorData(
+  marketId: string,
+  marketType: 'market' | 'submarket' | 'zipcode' = 'market'
+): Promise<StandaloneMarketAdvisorData | null> {
+  console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);
+  
+  try {
+    // Step 1: Get market/submarket details
+    let marketDetails: {
+      id: string;
+      name: string;
+      listing_count: number;
+      location_name: string;
+      market_type?: string;
+      parent_market_name?: string;
+      metrics?: {
+        market_score: number;
+        revenue: number;
+        booked: number;
+        daily_rate: number;
+        revpar: number;
+      };
+    } | null = null;
+    
+    if (marketType === 'submarket' || marketType === 'zipcode') {
+      const submarketDetails = await getSubmarketDetails(marketId);
+      if (submarketDetails) {
+        marketDetails = {
+          id: submarketDetails.id,
+          name: submarketDetails.name,
+          listing_count: submarketDetails.listing_count || 0,
+          location_name: submarketDetails.parent_market_name || submarketDetails.name,
+          market_type: submarketDetails.market_type,
+          parent_market_name: submarketDetails.parent_market_name,
+          metrics: submarketDetails.metrics,
+        };
+      }
+    } else {
+      marketDetails = await getMarketDetails(marketId);
+    }
+    
+    if (!marketDetails) {
+      console.error(`[StandaloneMarketAdvisor] Could not fetch details for ${marketType} ${marketId}`);
+      return null;
+    }
+    
+    // Parse city/state from location name
+    const locationParts = marketDetails.location_name?.split(',').map(s => s.trim()) || [];
+    const city = locationParts[0] || marketDetails.name;
+    const state = locationParts[1] || '';
+    const country = locationParts[2] || 'United States';
+    
+    // Step 2: Fetch 60 months (5 years) of historical data
+    console.log(`[StandaloneMarketAdvisor] Fetching 60 months of historical data...`);
+    const numMonths = 60; // 5 years
+    
+    // Use appropriate metric function based on market type
+    const getMetricFn = marketType === 'submarket' || marketType === 'zipcode'
+      ? (metric: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count") => 
+          makeApiRequest<{ payload: { metrics?: Array<{ month?: string; date?: string; value?: number; occupancy?: number; occupancy_rate?: number; avg_revenue?: number; revenue?: number; adr?: number; revpar?: number; active_listings_count?: number; active_listings?: number; listing_count?: number; }> } }>(
+            `/submarket/${marketId}/metrics/${metric}`, 
+            "POST", 
+            { num_months: numMonths }
+          )
+      : (metric: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count") =>
+          makeApiRequest<{ payload: { metrics?: Array<{ month?: string; date?: string; value?: number; occupancy?: number; occupancy_rate?: number; avg_revenue?: number; revenue?: number; adr?: number; revpar?: number; active_listings_count?: number; active_listings?: number; listing_count?: number; }> } }>(
+            `/market/${marketId}/metrics/${metric}`,
+            "POST",
+            { num_months: numMonths }
+          );
+    
+    // Fetch historical metrics with delays to avoid rate limiting
+    const [occupancyRes, adrRes, revenueRes, revparRes, listingsRes] = await Promise.all([
+      getMetricFn("occupancy"),
+      delay(100).then(() => getMetricFn("adr")),
+      delay(200).then(() => getMetricFn("avg_revenue")),
+      delay(300).then(() => getMetricFn("revpar")),
+      delay(400).then(() => getMetricFn("active_listings_count")),
+    ]);
+    
+    // Parse historical data
+    const parseMetric = (res: any, field: string) => {
+      const metrics = res?.payload?.metrics || [];
+      return metrics.map((m: any) => ({
+        date: m.month || m.date || '',
+        value: m.value ?? m[field] ?? m.occupancy_rate ?? m.occupancy ?? m.revenue ?? m.avg_revenue ?? m.adr ?? m.revpar ?? m.active_listings ?? m.active_listings_count ?? m.listing_count ?? 0,
+      }));
+    };
+    
+    const occupancyData = parseMetric(occupancyRes, 'occupancy');
+    const adrData = parseMetric(adrRes, 'adr');
+    const revenueData = parseMetric(revenueRes, 'revenue');
+    const revparData = parseMetric(revparRes, 'revpar');
+    const listingsData = parseMetric(listingsRes, 'active_listings');
+    
+    console.log(`[StandaloneMarketAdvisor] Historical data: ${occupancyData.length} occupancy, ${revenueData.length} revenue points`);
+    
+    // Combine into monthly data
+    const monthlyData: Array<{
+      date: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+      listingCount: number;
+    }> = [];
+    
+    for (let i = 0; i < Math.max(occupancyData.length, revenueData.length, adrData.length); i++) {
+      monthlyData.push({
+        date: occupancyData[i]?.date || revenueData[i]?.date || adrData[i]?.date || '',
+        revenue: Math.round(revenueData[i]?.value || 0),
+        occupancy: Math.round(occupancyData[i]?.value || 0),
+        adr: Math.round(adrData[i]?.value || 0),
+        revpar: Math.round(revparData[i]?.value || 0),
+        listingCount: Math.round(listingsData[i]?.value || 0),
+      });
+    }
+    
+    // Sort by date (newest first)
+    monthlyData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Calculate YoY change
+    const currentYearRevenue = monthlyData.slice(0, 12).reduce((sum, m) => sum + m.revenue, 0);
+    const lastYearRevenue = monthlyData.slice(12, 24).reduce((sum, m) => sum + m.revenue, 0);
+    const yoyChange = lastYearRevenue > 0 ? ((currentYearRevenue - lastYearRevenue) / lastYearRevenue) * 100 : 0;
+    const trend: 'up' | 'down' | 'stable' = yoyChange > 5 ? 'up' : yoyChange < -5 ? 'down' : 'stable';
+    
+    // Create yearly summary (5 years)
+    const yearlySummary: Array<{
+      year: number;
+      avgRevenue: number;
+      avgOccupancy: number;
+      avgAdr: number;
+      avgRevpar: number;
+      avgListingCount: number;
+      yoyRevenueChange?: number;
+    }> = [];
+    
+    const currentYear = new Date().getFullYear();
+    for (let yearOffset = 0; yearOffset < 5; yearOffset++) {
+      const year = currentYear - yearOffset;
+      const yearMonths = monthlyData.filter(m => {
+        const monthYear = new Date(m.date).getFullYear();
+        return monthYear === year;
+      });
+      
+      if (yearMonths.length > 0) {
+        const avgRevenue = Math.round(yearMonths.reduce((sum, m) => sum + m.revenue, 0) / yearMonths.length);
+        const avgOccupancy = Math.round(yearMonths.reduce((sum, m) => sum + m.occupancy, 0) / yearMonths.length);
+        const avgAdr = Math.round(yearMonths.reduce((sum, m) => sum + m.adr, 0) / yearMonths.length);
+        const avgRevpar = Math.round(yearMonths.reduce((sum, m) => sum + m.revpar, 0) / yearMonths.length);
+        const avgListingCount = Math.round(yearMonths.reduce((sum, m) => sum + m.listingCount, 0) / yearMonths.length);
+        
+        yearlySummary.push({
+          year,
+          avgRevenue,
+          avgOccupancy,
+          avgAdr,
+          avgRevpar,
+          avgListingCount,
+        });
+      }
+    }
+    
+    // Calculate YoY changes for yearly summary
+    for (let i = 0; i < yearlySummary.length - 1; i++) {
+      const currentYr = yearlySummary[i];
+      const prevYr = yearlySummary[i + 1];
+      if (prevYr && prevYr.avgRevenue > 0) {
+        currentYr.yoyRevenueChange = ((currentYr.avgRevenue - prevYr.avgRevenue) / prevYr.avgRevenue) * 100;
+      }
+    }
+    
+    // Step 3: Fetch seasonality, booking patterns, supply trend, listings in parallel
+    console.log(`[StandaloneMarketAdvisor] Fetching seasonality, booking patterns, supply trend, and listings...`);
+    
+    const listingsFn = marketType === 'submarket' || marketType === 'zipcode'
+      ? getSubmarketListings(marketId, { limit: 100, orderBy: 'revenue', orderDirection: 'desc' })
+      : getMarketListings(marketId, { limit: 100, orderBy: 'revenue', orderDirection: 'desc' });
+    
+    const seasonalityFn = marketType === 'submarket' || marketType === 'zipcode'
+      ? getSubmarketSeasonality(marketId)
+      : getMarketSeasonality(marketId);
+    
+    const [seasonalityData, bookingPatterns, supplyTrendData, listingsResult, submarkets] = await Promise.all([
+      seasonalityFn,
+      getMarketBookingPatterns(marketId),
+      getMarketSupplyTrend(marketId),
+      listingsFn,
+      marketType === 'market' ? getSubmarketsInMarket(marketId) : Promise.resolve([]),
+    ]);
+    
+    // Process seasonality
+    const seasonality = (seasonalityData || []).map(s => ({
+      month: s.month,
+      monthName: s.month_name,
+      revenue: s.revenue,
+      occupancy: s.occupancy,
+      adr: s.adr,
+      revpar: Math.round((s.adr * s.occupancy) / 100),
+      seasonType: s.season_type,
+    }));
+    
+    // Process booking patterns
+    const bookingPatternsProcessed = bookingPatterns ? {
+      avgLeadTimeDays: bookingPatterns.lead_time.avg_days,
+      lastMinutePercent: bookingPatterns.lead_time.last_minute_percent,
+      advanceBookingPercent: bookingPatterns.lead_time.advance_booking_percent,
+      avgLengthOfStay: bookingPatterns.length_of_stay.avg_nights,
+      weekendPercent: bookingPatterns.length_of_stay.weekend_percent,
+      weekPlusPercent: bookingPatterns.length_of_stay.week_percent,
+      insights: bookingPatterns.insights,
+    } : null;
+    
+    // Process supply trend
+    const supplyTrend = supplyTrendData ? {
+      currentListings: supplyTrendData.current_listings,
+      listings12MonthsAgo: supplyTrendData.listings_12_months_ago,
+      netChange: supplyTrendData.net_change,
+      percentChange: supplyTrendData.percent_change,
+      trend: supplyTrendData.trend,
+      insight: supplyTrendData.insight,
+      monthlyData: supplyTrendData.monthly_data.map(m => ({
+        month: m.month,
+        activeListings: m.active_listings,
+        changeFromPrevious: m.change_from_previous,
+      })),
+    } : null;
+    
+    // Process listings for metrics and top performers
+    const listings = listingsResult.listings || [];
+    
+    // Calculate market metrics from listings
+    const totalListings = listingsResult.total_count || listings.length;
+    const avgRevenue = listings.length > 0 
+      ? Math.round(listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length)
+      : marketDetails.metrics?.revenue || 0;
+    const avgOccupancy = listings.length > 0
+      ? Math.round(listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length)
+      : Math.round((marketDetails.metrics?.booked || 0) * 100);
+    const avgAdr = listings.length > 0
+      ? Math.round(listings.reduce((sum, l) => sum + l.adr, 0) / listings.length)
+      : marketDetails.metrics?.daily_rate || 0;
+    const avgRevpar = listings.length > 0
+      ? Math.round(listings.reduce((sum, l) => sum + (l.adr * l.occupancy / 100), 0) / listings.length)
+      : marketDetails.metrics?.revpar || 0;
+    
+    const superhostCount = listings.filter(l => l.superhost).length;
+    const professionalCount = listings.filter(l => l.professionally_managed).length;
+    const avgRating = listings.length > 0
+      ? listings.filter(l => l.rating).reduce((sum, l) => sum + (l.rating || 0), 0) / listings.filter(l => l.rating).length
+      : 4.5;
+    
+    // Calculate revenue by bedroom
+    const bedroomMap = new Map<number, { count: number; totalRevenue: number; totalOccupancy: number; totalAdr: number }>();
+    listings.forEach(l => {
+      const br = l.bedrooms;
+      const existing = bedroomMap.get(br) || { count: 0, totalRevenue: 0, totalOccupancy: 0, totalAdr: 0 };
+      bedroomMap.set(br, {
+        count: existing.count + 1,
+        totalRevenue: existing.totalRevenue + l.annual_revenue,
+        totalOccupancy: existing.totalOccupancy + l.occupancy,
+        totalAdr: existing.totalAdr + l.adr,
+      });
+    });
+    
+    const revenueByBedroom = Array.from(bedroomMap.entries())
+      .map(([bedrooms, data]) => ({
+        bedrooms,
+        avgRevenue: Math.round(data.totalRevenue / data.count),
+        avgOccupancy: Math.round(data.totalOccupancy / data.count),
+        avgAdr: Math.round(data.totalAdr / data.count),
+        listingCount: data.count,
+      }))
+      .sort((a, b) => a.bedrooms - b.bedrooms);
+    
+    // Calculate property type distribution
+    const propertyTypeMap = new Map<string, { count: number; totalRevenue: number; totalOccupancy: number; totalAdr: number }>();
+    listings.forEach(l => {
+      const type = l.property_type || 'Unknown';
+      const existing = propertyTypeMap.get(type) || { count: 0, totalRevenue: 0, totalOccupancy: 0, totalAdr: 0 };
+      propertyTypeMap.set(type, {
+        count: existing.count + 1,
+        totalRevenue: existing.totalRevenue + l.annual_revenue,
+        totalOccupancy: existing.totalOccupancy + l.occupancy,
+        totalAdr: existing.totalAdr + l.adr,
+      });
+    });
+    
+    const propertyTypes = Array.from(propertyTypeMap.entries())
+      .map(([type, data]) => ({
+        type,
+        count: data.count,
+        percentage: Math.round((data.count / listings.length) * 100),
+        avgRevenue: Math.round(data.totalRevenue / data.count),
+        avgOccupancy: Math.round(data.totalOccupancy / data.count),
+        avgAdr: Math.round(data.totalAdr / data.count),
+      }))
+      .sort((a, b) => b.count - a.count);
+    
+    // Get top performers (top 10 by revenue)
+    const topPerformers = listings.slice(0, 10).map(l => ({
+      title: l.title,
+      bedrooms: l.bedrooms,
+      bathrooms: l.bathrooms,
+      accommodates: l.accommodates,
+      revenue: l.annual_revenue,
+      occupancy: l.occupancy,
+      adr: l.adr,
+      revpar: Math.round((l.adr * l.occupancy) / 100),
+      rating: l.rating || 0,
+      reviews: l.reviews,
+      isSuperhost: l.superhost || false,
+      isProfessionallyManaged: l.professionally_managed || false,
+      propertyType: l.property_type,
+    }));
+    
+    // Build scores (use market details if available, otherwise estimate from data)
+    const marketScore = marketDetails.metrics?.market_score || 70;
+    
+    const result: StandaloneMarketAdvisorData = {
+      market: {
+        id: marketId,
+        name: marketDetails.name,
+        city,
+        state,
+        country,
+        type: marketType,
+        listingCount: totalListings,
+      },
+      scores: {
+        marketScore,
+        investabilityScore: Math.round(marketScore * 0.9), // Estimate if not available
+        rentalDemandScore: Math.round(avgOccupancy * 1.2), // Based on occupancy
+        revenueGrowthScore: Math.max(0, Math.min(100, 50 + yoyChange * 2)), // Based on YoY
+        seasonalityScore: Math.round(100 - (seasonality.length > 0 
+          ? ((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 50)
+          : 30)), // Lower variance = higher score
+        regulationScore: 70, // Default - would need separate API
+      },
+      metrics: {
+        avgRevenue,
+        avgOccupancy,
+        avgAdr,
+        avgRevpar,
+        totalListings,
+        professionallyManagedPct: listings.length > 0 ? Math.round((professionalCount / listings.length) * 100) : 30,
+        superhostPct: listings.length > 0 ? Math.round((superhostCount / listings.length) * 100) : 20,
+        avgRating: Math.round(avgRating * 100) / 100,
+      },
+      revenueByBedroom,
+      historicalData: {
+        yoyChange: Math.round(yoyChange * 10) / 10,
+        trend,
+        months: monthlyData.slice(0, 24), // Last 24 months for display
+        yearlySummary,
+      },
+      seasonality,
+      bookingPatterns: bookingPatternsProcessed,
+      supplyTrend,
+      topPerformers,
+      submarkets: submarkets.map(s => ({
+        id: s.id,
+        name: s.name,
+        listingCount: s.listing_count,
+        metrics: s.metrics,
+      })),
+      propertyTypes,
+    };
+    
+    console.log(`[StandaloneMarketAdvisor] Successfully compiled data for ${marketDetails.name}`);
+    return result;
+    
+  } catch (error) {
+    console.error(`[StandaloneMarketAdvisor] Error fetching data:`, error);
+    return null;
+  }
+}

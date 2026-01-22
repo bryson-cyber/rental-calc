@@ -3223,3 +3223,81 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Show what top performers have amenities-wise as a guide ("Your Blueprint for Success")
 - [x] Focus on "here's how to succeed" not "you can't compete" ("How to Position for Success")
 - [x] Remove assumptions about missing amenities - added IMPORTANT TONE GUIDANCE to prompt
+
+
+## Investigation & Enhancements (Jan 22, 2026)
+- [ ] Investigate MAF (Maximum Affordable Rent) calculation inconsistency - why does it change between reports?
+- [ ] Audit AirDNA endpoints - compare what we use vs what's available
+- [ ] Review AI report for missing elements and improvements
+- [ ] Plan Market Advisor feature using market-specific endpoints
+
+
+## Property Advisor Enhancements (Jan 22, 2026)
+- [ ] Add RevPAR analysis to Property Advisor report
+- [ ] Add comprehensive seasonality (monthly/quarterly trends)
+- [ ] Fix MAF to show ranges instead of exact numbers
+
+## Market Advisor Feature (Jan 22, 2026)
+- [ ] Create Market Advisor input form (market selection)
+- [ ] Build backend endpoint to fetch all market data
+- [ ] Add RevPAR metrics to market analysis
+- [ ] Add submarket breakdown and comparison
+- [ ] Add supply/demand trends
+- [ ] Add top performer analysis
+- [ ] Add future pricing outlook
+- [ ] Generate comprehensive market report with Gemini
+
+
+## Market Advisor Enhancement (Jan 22, 2026)
+- [ ] Create enhanced getComprehensiveMarketData function with 5 years history
+- [ ] Include all available AirDNA endpoints (RevPAR, booking patterns, supply trends)
+- [ ] Add submarket breakdown with individual metrics
+- [ ] Create standaloneMarketAdvisor router endpoint
+- [ ] Update generateMaxMarketAdvice prompt for 5-year trends and submarkets
+- [ ] Add standalone Market Advisor UI with market search input
+- [ ] Support submarkets, cities, and zip codes
+
+
+## Standalone Market Advisor Implementation (Jan 22, 2026) - COMPLETE
+
+### Backend Implementation:
+- [x] Create getStandaloneMarketAdvisorData function in airdna.ts
+- [x] Fetch 5 years (60 months) of historical data with yearly summaries
+- [x] Include all relevant AirDNA endpoints:
+  - Market details and scores (investability, rental demand, revenue growth, seasonality, regulation)
+  - Historical data with year-over-year comparisons
+  - Bedroom breakdown with revenue, occupancy, ADR per bedroom count
+  - Booking patterns (lead time, last-minute bookings, stay length, weekend stays)
+  - Supply trends (current listings, 12 months ago, net change)
+  - Top 10 performers with revenue, occupancy, ADR, ratings
+- [x] Add standaloneMarketAdvisor tRPC endpoint in routers.ts
+- [x] Generate comprehensive AI analysis via Gemini with all market data
+
+### Frontend Implementation:
+- [x] Create StandaloneMarketAdvisor component with market search
+- [x] Add market autocomplete with AirDNA market search API
+- [x] Display comprehensive market data in collapsible sections:
+  - Market overview (score, revenue, occupancy, ADR, listings, YoY change)
+  - Market scores breakdown (6 scores with descriptions)
+  - Revenue by property size table
+  - 5-year historical summary (if available)
+  - Booking patterns with insights
+  - Supply trends with analysis
+  - Top 10 performers list
+- [x] Display AI-generated comprehensive market analysis
+- [x] Add "Analyze a Different Market" button to reset
+- [x] Add Market Advisor as Step 7 in LeadMagnet page
+
+### Testing:
+- [x] Test with Denver market - verified all data displays correctly
+- [x] Verify market scores display (53.926/100 for Denver)
+- [x] Verify revenue by bedroom breakdown table
+- [x] Verify booking patterns and supply trends
+- [x] Verify AI analysis generates comprehensive report
+- [x] Test "Analyze a Different Market" button functionality
+
+### UI Polish:
+- [x] Remove "arbitrage" from tagline (visual edit applied)
+- [x] Market Advisor tab shows as Step 7 in journey
+- [x] Consistent styling with other tools
+

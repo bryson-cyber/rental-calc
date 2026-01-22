@@ -691,7 +691,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             {/* Market Insights Panel - Booking Patterns & Supply Trend */}
             {marketId && (
               <div className="mt-8">
-                <MarketInsightsPanel marketId={marketId} />
+                <MarketInsightsPanel marketId={String(marketId)} />
               </div>
             )}
           </ChapterSection>

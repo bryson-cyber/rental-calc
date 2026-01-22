@@ -81,6 +81,7 @@ import { SavedItemsPanel } from '@/components/SavedItemsPanel';
 import { StartWithProperty } from '@/components/StartWithProperty';
 import { useProperty } from '@/contexts/PropertyContext';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
+import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -268,7 +269,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor';
+type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market';
 
 export default function LeadMagnet() {
   // Property context for property-centric workflow
@@ -968,6 +969,13 @@ export default function LeadMagnet() {
       job: "Answer: What does all this data mean for me?",
       icon: Sparkles,
       color: "from-amber-500 to-yellow-500"
+    },
+    market: {
+      title: "Market Advisor",
+      subtitle: "Deep-dive into any market with 5 years of data",
+      job: "Answer: Is this market worth investing in?",
+      icon: TrendingUp,
+      color: "from-blue-500 to-indigo-500"
     }
   };
 
@@ -992,7 +1000,7 @@ export default function LeadMagnet() {
             <span className="text-[oklch(0.55_0.14_75)]">Rental Riches</span>
           </h1>
           <p className="text-lg md:text-xl text-[oklch(0.45_0_0)] max-w-2xl mx-auto leading-relaxed mb-8">
-            Use these free tools to analyze any market, validate any property, and find profitable Airbnb arbitrage opportunities—before you invest a single dollar.
+            Use these free tools to analyze any market, validate any property, and find profitable Airbnb opportunities—before you invest a single dollar.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
@@ -1124,8 +1132,8 @@ export default function LeadMagnet() {
           )}
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-12">
-            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'advisor'] as TabType[]).map((tab, index) => {
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-12">
+            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'advisor', 'market'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1149,7 +1157,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-xs text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'advisor' ? 'Step 6' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'advisor' ? 'Step 6' : tab === 'market' ? 'Step 7' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-base mb-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -1797,6 +1805,13 @@ export default function LeadMagnet() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ============================================ */}
+            {/* MARKET ADVISOR TAB */}
+            {/* ============================================ */}
+            {activeTab === 'market' && (
+              <StandaloneMarketAdvisor />
             )}
           </div>
         </div>

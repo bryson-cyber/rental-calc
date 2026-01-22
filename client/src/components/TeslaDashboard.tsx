@@ -2086,7 +2086,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* Market Insights Panel - Booking Patterns & Supply Trend - Updated */}
       {marketId && (
-        <MarketInsightsPanel marketId={marketId} />
+        <MarketInsightsPanel marketId={String(marketId)} />
       )}
       
       {/* Market Health Grade */}

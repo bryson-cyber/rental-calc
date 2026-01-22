@@ -11,6 +11,7 @@ import DeepAnalysis from "./pages/DeepAnalysis";
 import AdminReports from "./pages/AdminReports";
 import AdminDashboard from "./pages/Admin";
 import MapViewPage from "./pages/MapViewPage";
+import MarketAdvisor from "./pages/MarketAdvisor";
 
 function Router() {
   return (
@@ -20,6 +21,9 @@ function Router() {
       
       {/* Map View - Step 5 */}
       <Route path={"/map"} component={MapViewPage} />
+      
+      {/* Market Advisor - Standalone market analysis */}
+      <Route path={"/market-advisor"} component={MarketAdvisor} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
