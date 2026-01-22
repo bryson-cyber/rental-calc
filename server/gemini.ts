@@ -1087,6 +1087,19 @@ export interface MaxMarketAdvisorInput {
     country: string;
   };
   
+  // Applied Filters (for context in AI analysis)
+  appliedFilters?: {
+    bedrooms?: number;
+    amenities?: {
+      pool?: boolean;
+      hotTub?: boolean;
+      petFriendly?: boolean;
+      parking?: boolean;
+      kitchen?: boolean;
+      washerDryer?: boolean;
+    };
+  };
+  
   // Market Scores
   scores: {
     marketScore: number;
@@ -1237,7 +1250,28 @@ export interface MaxMarketAdvisorInput {
 export async function generateMaxMarketAdvice(
   input: MaxMarketAdvisorInput
 ): Promise<string> {
-  const { market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes, bookingPatterns, supplyTrend, submarkets, cancellationPolicies, professionalStats } = input;
+  const { market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes, bookingPatterns, supplyTrend, submarkets, cancellationPolicies, professionalStats, appliedFilters } = input;
+  
+  // Build filter context string for the prompt
+  const filterContextParts: string[] = [];
+  if (appliedFilters?.bedrooms) {
+    filterContextParts.push(`${appliedFilters.bedrooms}-bedroom properties only`);
+  }
+  if (appliedFilters?.amenities) {
+    const amenityLabels: string[] = [];
+    if (appliedFilters.amenities.pool) amenityLabels.push('Pool');
+    if (appliedFilters.amenities.hotTub) amenityLabels.push('Hot Tub');
+    if (appliedFilters.amenities.petFriendly) amenityLabels.push('Pet Friendly');
+    if (appliedFilters.amenities.parking) amenityLabels.push('Parking');
+    if (appliedFilters.amenities.kitchen) amenityLabels.push('Kitchen');
+    if (appliedFilters.amenities.washerDryer) amenityLabels.push('Washer/Dryer');
+    if (amenityLabels.length > 0) {
+      filterContextParts.push(`with amenities: ${amenityLabels.join(', ')}`);
+    }
+  }
+  const filterContext = filterContextParts.length > 0 
+    ? `\n\nAPPLIED FILTERS: This analysis is filtered to show ${filterContextParts.join(' ')}. All metrics and comparisons are specific to properties matching these criteria.`
+    : '';
   
   const bestMonths = [...seasonality].sort((a, b) => b.revenue - a.revenue).slice(0, 4);
   const worstMonths = [...seasonality].sort((a, b) => a.revenue - b.revenue).slice(0, 4);
@@ -1287,7 +1321,7 @@ MARKET DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Market Name: ${market.name}
 Location: ${market.city}, ${market.state}, ${market.country}
-Total Active Listings: ${metrics.totalListings.toLocaleString()}
+Total Active Listings: ${metrics.totalListings.toLocaleString()}${filterContext}
 
 MARKET SCORES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

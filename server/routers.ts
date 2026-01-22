@@ -2589,13 +2589,27 @@ export const appRouter = router({
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
         marketType: z.enum(['market', 'submarket', 'zipcode']).default('market'),
+        bedrooms: z.number().min(1).max(10).optional(),
+        amenities: z.object({
+          pool: z.boolean().optional(),
+          hotTub: z.boolean().optional(),
+          petFriendly: z.boolean().optional(),
+          parking: z.boolean().optional(),
+          kitchen: z.boolean().optional(),
+          washerDryer: z.boolean().optional(),
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         try {
           console.log('[Standalone Market Advisor] Starting analysis for:', input.marketId, 'type:', input.marketType);
+          if (input.bedrooms) console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms);
+          if (input.amenities) console.log('[Standalone Market Advisor] Amenities filter:', input.amenities);
           
-          // Step 1: Fetch comprehensive market data
-          const marketData = await getStandaloneMarketAdvisorData(input.marketId, input.marketType);
+          // Step 1: Fetch comprehensive market data (filters will be applied to top performers and comparables)
+          const marketData = await getStandaloneMarketAdvisorData(input.marketId, input.marketType, {
+            bedrooms: input.bedrooms,
+            amenities: input.amenities,
+          });
           
           if (!marketData) {
             return {
@@ -2614,6 +2628,10 @@ export const appRouter = router({
               city: marketData.market.city,
               state: marketData.market.state,
               country: marketData.market.country,
+            },
+            appliedFilters: {
+              bedrooms: input.bedrooms,
+              amenities: input.amenities,
             },
             scores: marketData.scores,
             metrics: marketData.metrics,

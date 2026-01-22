@@ -198,6 +198,17 @@ From AirDNA Rentalizer endpoint:
 - [x] Add month-over-month change indicators
 - [x] TypeScript compilation clean
 
+### Phase 10: Amenities Filter Implementation (Jan 22, 2026)
+- [x] Add amenitiesFilter state to StandaloneMarketAdvisor
+- [x] Add amenities filter dropdown UI with checkboxes
+- [x] Add active filters badge display
+- [x] Update handleGenerateAnalysis to pass amenities filter
+- [x] Update standaloneMarketAdvisor input schema in routers.ts
+- [x] Update getStandaloneMarketAdvisorData function signature in airdna.ts
+- [x] Add appliedFilters to MaxMarketAdvisorInput type in gemini.ts
+- [x] Add filterContext to Gemini prompt for AI awareness
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

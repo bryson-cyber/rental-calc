@@ -106,13 +106,14 @@
   - Options: Pool, Hot Tub, WiFi, Kitchen, Washer/Dryer, etc.
   - API: Use `amenities` parameter in listings endpoint
 
-- [ ] **3.1.2** Add amenities filter to Market Advisor
+- [x] **3.1.2** Add amenities filter to Market Advisor - COMPLETED
   - Allow: Filter market analysis by amenity type
   - Impact: "Pool properties in St. Louis" analysis
+  - Implementation: Added amenities dropdown with pool, hot tub, pet-friendly, parking, kitchen, washer/dryer
 
-- [ ] **3.1.3** Add amenities breakdown to AI analysis
-  - Show: % of listings with each amenity
-  - Impact: Identify amenity gaps/opportunities
+- [x] **3.1.3** Add amenities breakdown to AI analysis - COMPLETED
+  - Show: Applied filters context in Gemini prompt
+  - Impact: AI analysis notes which filters are applied
 
 ### 3.2 Property Type Filter
 - [ ] **3.2.1** Add property type filter dropdown

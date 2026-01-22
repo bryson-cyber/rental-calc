@@ -5840,9 +5840,22 @@ export interface StandaloneMarketAdvisorData {
  */
 export async function getStandaloneMarketAdvisorData(
   marketId: string,
-  marketType: 'market' | 'submarket' | 'zipcode' = 'market'
+  marketType: 'market' | 'submarket' | 'zipcode' = 'market',
+  filters?: {
+    bedrooms?: number;
+    amenities?: {
+      pool?: boolean;
+      hotTub?: boolean;
+      petFriendly?: boolean;
+      parking?: boolean;
+      kitchen?: boolean;
+      washerDryer?: boolean;
+    };
+  }
 ): Promise<StandaloneMarketAdvisorData | null> {
   console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);
+  if (filters?.bedrooms) console.log(`[StandaloneMarketAdvisor] Bedroom filter: ${filters.bedrooms}`);
+  if (filters?.amenities) console.log(`[StandaloneMarketAdvisor] Amenities filter:`, filters.amenities);
   
   try {
     // Step 1: Get market/submarket details

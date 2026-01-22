@@ -72,6 +72,22 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     revparChart: false,
   });
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
+  const [amenitiesFilter, setAmenitiesFilter] = useState<{
+    pool: boolean;
+    hotTub: boolean;
+    petFriendly: boolean;
+    parking: boolean;
+    kitchen: boolean;
+    washerDryer: boolean;
+  }>({
+    pool: false,
+    hotTub: false,
+    petFriendly: false,
+    parking: false,
+    kitchen: false,
+    washerDryer: false,
+  });
+  const [showAmenitiesDropdown, setShowAmenitiesDropdown] = useState(false);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -125,6 +141,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
         marketId: selectedMarket.id,
         marketType: selectedMarket.type,
+        bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
+        amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
       });
       
       if (result.success && result.data) {
@@ -234,21 +252,92 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             </AnimatePresence>
           </div>
 
-          {/* Bedroom Filter */}
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-slate-700">Filter by Bedrooms:</label>
-            <select
-              value={bedroomFilter}
-              onChange={(e) => setBedroomFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Bedrooms</option>
-              <option value="1">1 Bedroom</option>
-              <option value="2">2 Bedrooms</option>
-              <option value="3">3 Bedrooms</option>
-              <option value="4">4 Bedrooms</option>
-              <option value="5">5+ Bedrooms</option>
-            </select>
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Bedroom Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-700">Bedrooms:</label>
+              <select
+                value={bedroomFilter}
+                onChange={(e) => setBedroomFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="1">1 BR</option>
+                <option value="2">2 BR</option>
+                <option value="3">3 BR</option>
+                <option value="4">4 BR</option>
+                <option value="5">5+ BR</option>
+              </select>
+            </div>
+
+            {/* Amenities Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAmenitiesDropdown(!showAmenitiesDropdown)}
+                className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-700">Amenities</span>
+                {Object.values(amenitiesFilter).filter(Boolean).length > 0 && (
+                  <Badge className="bg-blue-100 text-blue-700 text-xs">
+                    {Object.values(amenitiesFilter).filter(Boolean).length}
+                  </Badge>
+                )}
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAmenitiesDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showAmenitiesDropdown && (
+                <div className="absolute z-50 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 p-3">
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Filter by Amenities</div>
+                  <div className="space-y-2">
+                    {[
+                      { key: 'pool', label: 'Pool', icon: '🏊' },
+                      { key: 'hotTub', label: 'Hot Tub', icon: '♨️' },
+                      { key: 'petFriendly', label: 'Pet Friendly', icon: '🐕' },
+                      { key: 'parking', label: 'Parking', icon: '🚗' },
+                      { key: 'kitchen', label: 'Kitchen', icon: '🍳' },
+                      { key: 'washerDryer', label: 'Washer/Dryer', icon: '🧺' },
+                    ].map(({ key, label, icon }) => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={amenitiesFilter[key as keyof typeof amenitiesFilter]}
+                          onChange={(e) => setAmenitiesFilter(prev => ({ ...prev, [key]: e.target.checked }))}
+                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm">{icon} {label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between">
+                    <button
+                      onClick={() => setAmenitiesFilter({ pool: false, hotTub: false, petFriendly: false, parking: false, kitchen: false, washerDryer: false })}
+                      className="text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Clear All
+                    </button>
+                    <button
+                      onClick={() => setShowAmenitiesDropdown(false)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Active Filters Display */}
+            {Object.values(amenitiesFilter).filter(Boolean).length > 0 && (
+              <div className="flex items-center gap-2">
+                {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
+                {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
+                {amenitiesFilter.petFriendly && <Badge variant="secondary" className="text-xs">🐕 Pets</Badge>}
+                {amenitiesFilter.parking && <Badge variant="secondary" className="text-xs">🚗 Parking</Badge>}
+                {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">🍳 Kitchen</Badge>}
+                {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">🧺 W/D</Badge>}
+              </div>
+            )}
           </div>
 
           {/* Selected Market Display */}
