@@ -754,6 +754,14 @@ This is NOT about purchasing property. Focus on:
 - Is there enough profit margin to be worth the effort?
 - What's the break-even occupancy needed?
 
+IMPORTANT TONE GUIDANCE:
+- The user is RESEARCHING this opportunity - they have NOT signed a lease yet
+- They don't have the property yet, so you don't know what amenities they'll have
+- DO NOT assume they lack amenities or discourage them
+- Instead, SHOW THEM what top performers have so they know what to aim for
+- Be EDUCATIONAL and ENCOURAGING - "Here's the blueprint for success" not "You can't compete"
+- Focus on OPPORTUNITY and HOW TO SUCCEED, not barriers or limitations
+
 CRITICAL INSTRUCTIONS:
 1. ONLY use the data provided below - do not make assumptions or use external knowledge
 2. ONLY compare to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is an apples-to-apples comparison
@@ -967,16 +975,22 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - Specific lessons from the top 5 ${property.bedrooms}BR performers
 - Warning signs from the bottom 5 ${property.bedrooms}BR performers
 
-## What Top ${property.bedrooms}BR Earners Do Differently
-- Analyze ADR differences - why do some charge more?
-- Analyze occupancy differences - why do some book more?
-- Common amenities or features among top performers
-- Review and rating patterns
+## What Top ${property.bedrooms}BR Earners Have (Your Blueprint for Success)
+- What amenities do the highest earners offer? (Be specific: pools, hot tubs, game rooms, outdoor spaces, etc.)
+- What design/decor elements appear in top listings?
+- Why do some charge higher ADR? What justifies premium pricing?
+- Why do some book more nights? What drives higher occupancy?
+- Review and rating patterns - what do guests love most?
 
-## Can You Compete?
-- Is the ${property.bedrooms}BR segment saturated?
-- What would it take to reach top 25% of ${property.bedrooms}BR earners?
+IMPORTANT: Present this as a ROADMAP - "Here's what top performers have, so you know what to aim for" - NOT as "you don't have this so you can't compete."
+
+## How to Position for Success
+- What amenities and features do the top ${property.bedrooms}BR earners have? (pools, hot tubs, game rooms, etc.)
+- What makes top performers stand out in their listings?
+- What's the path to reaching top 25% of ${property.bedrooms}BR earners?
 - Realistic timeline to profitability
+
+IMPORTANT: The user is RESEARCHING this opportunity - they haven't signed a lease yet. Focus on WHAT IT TAKES TO SUCCEED, not assumptions about what they lack. Show them the blueprint for success based on what top performers do.
 
 # SEASONALITY & TIMING STRATEGY
 

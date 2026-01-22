@@ -9,7 +9,7 @@ import { trpc } from '@/lib/trpc';
 import { Calendar, Clock, TrendingUp, Users, Info } from 'lucide-react';
 
 interface MarketInsightsPanelProps {
-  marketId?: string | number | undefined;
+  marketId?: string | number;
 }
 
 // Simple tooltip component

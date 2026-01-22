@@ -3216,3 +3216,10 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Remove data transparency section (AI model info) - Removed data summary cards and Powered by Gemini badge
 - [x] Remove emojis from report - Removed all emojis from gemini.ts prompts
 - [x] Improve formatting and narration - Updated section headers to be cleaner without emojis
+
+
+## AI Report Tone Update (Jan 22, 2026)
+- [x] Update AI prompt to be encouraging and educational (not discouraging)
+- [x] Show what top performers have amenities-wise as a guide ("Your Blueprint for Success")
+- [x] Focus on "here's how to succeed" not "you can't compete" ("How to Position for Success")
+- [x] Remove assumptions about missing amenities - added IMPORTANT TONE GUIDANCE to prompt
