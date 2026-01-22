@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart, CompetitorDistributionChart } from './RevenueCharts';
+import { MarketInsightsPanel } from './MarketInsightsPanel';
+import { BreakEvenCalculator } from './BreakEvenCalculator';
 
 // Helper function to extract Airbnb listing ID and construct image URL
 const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
@@ -155,6 +157,7 @@ interface ChapterPropertyReportProps {
   data: PropertyReportData;
   onBack: () => void;
   clientName?: string;
+  marketId?: string;
 }
 
 // Format helpers
@@ -289,7 +292,7 @@ function ThoughtProcess({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ChapterPropertyReport({ data, onBack, clientName }: ChapterPropertyReportProps) {
+export default function ChapterPropertyReport({ data, onBack, clientName, marketId }: ChapterPropertyReportProps) {
   const [activeChapter, setActiveChapter] = useState(1);
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
@@ -684,6 +687,18 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
                 </table>
               </div>
             </div>
+
+            {/* Market Insights Panel - Booking Patterns & Supply Trend */}
+            {marketId && (
+              <div className="mt-8">
+                <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">Market Intelligence</h3>
+                <MarketInsightsPanel 
+                  marketId={marketId} 
+                  bedrooms={property.bedrooms}
+                  className="bg-white shadow-lg"
+                />
+              </div>
+            )}
           </ChapterSection>
 
           {/* Chapter 3: Study the Competition */}
@@ -1037,6 +1052,22 @@ export default function ChapterPropertyReport({ data, onBack, clientName }: Chap
               there is a strong potential for profit of <strong>{formatCurrency(realisticRevenue - annualExpenses)}</strong> per year.
               This entire process, from property selection to competitive analysis, is designed to give us the confidence to invest.
             </ThoughtProcess>
+
+            {/* Break-Even Calculator */}
+            <div className="mt-10">
+              <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">Break-Even Analysis</h3>
+              <p className="text-[#1A1A1A]/70 mb-6">
+                This calculator shows you exactly what occupancy and nightly rate you need to cover your rent.
+                It also shows what happens in best and worst case scenarios.
+              </p>
+              <BreakEvenCalculator
+                monthlyRent={monthlyRent}
+                projectedADR={revenue_estimate.nightly}
+                projectedOccupancy={revenue_estimate.occupancy * 100}
+                projectedRevenue={revenue_estimate.monthly}
+                className="shadow-lg"
+              />
+            </div>
 
             {/* Why You Need Professional Help Section */}
             <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">

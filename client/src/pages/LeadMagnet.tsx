@@ -332,6 +332,12 @@ export default function LeadMagnet() {
   const [exploreSortBy, setExploreSortBy] = useState<'proximity' | 'revenue' | 'rating' | 'occupancy' | 'revpar'>('revenue');
   const [explorePropertyType, setExplorePropertyType] = useState<string | null>(null);
   const [exploreMinOccupancy, setExploreMinOccupancy] = useState<number | null>(null);
+  const [exploreAmenities, setExploreAmenities] = useState<{
+    pool?: boolean;
+    hotTub?: boolean;
+    petFriendly?: boolean;
+    parking?: boolean;
+  }>({});
   const [areaListings, setAreaListings] = useState<AreaListing[] | null>(null);
   const [isExploring, setIsExploring] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
@@ -728,6 +734,7 @@ export default function LeadMagnet() {
         minRating: exploreMinRating || undefined,
         sortBy: exploreSortBy === 'revpar' ? 'revenue' : exploreSortBy,
         sortDirection: exploreSortBy === 'revenue' ? 'descending' : 'ascending',
+        amenities: Object.keys(exploreAmenities).length > 0 ? exploreAmenities : undefined,
       });
       
       if (response.success && response.data) {
@@ -1324,6 +1331,67 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 
+                {/* Amenity Filters */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
+                    Must-Have Amenities
+                    <span className="relative group">
+                      <svg className="w-4 h-4 text-[oklch(0.55_0.01_265)] cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[oklch(0.20_0.01_265)] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                        Filter to only show listings with these features
+                      </span>
+                    </span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExploreAmenities(prev => ({ ...prev, pool: !prev.pool }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        exploreAmenities.pool
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                          : 'bg-[oklch(0.95_0.01_265)] text-[oklch(0.45_0.01_265)] hover:bg-[oklch(0.90_0.01_265)]'
+                      }`}
+                    >
+                      Pool
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExploreAmenities(prev => ({ ...prev, hotTub: !prev.hotTub }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        exploreAmenities.hotTub
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                          : 'bg-[oklch(0.95_0.01_265)] text-[oklch(0.45_0.01_265)] hover:bg-[oklch(0.90_0.01_265)]'
+                      }`}
+                    >
+                      Hot Tub
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExploreAmenities(prev => ({ ...prev, petFriendly: !prev.petFriendly }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        exploreAmenities.petFriendly
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                          : 'bg-[oklch(0.95_0.01_265)] text-[oklch(0.45_0.01_265)] hover:bg-[oklch(0.90_0.01_265)]'
+                      }`}
+                    >
+                      Pet Friendly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExploreAmenities(prev => ({ ...prev, parking: !prev.parking }))}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        exploreAmenities.parking
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                          : 'bg-[oklch(0.95_0.01_265)] text-[oklch(0.45_0.01_265)] hover:bg-[oklch(0.90_0.01_265)]'
+                      }`}
+                    >
+                      Parking
+                    </button>
+                  </div>
+                </div>
+                
                 <button
                   onClick={handleExplore}
                   disabled={isExploring || !exploreAddress}
@@ -1589,8 +1657,8 @@ export default function LeadMagnet() {
               <AIAdvisorStep
                 property={{
                   address: address,
-                  city: '',
-                  state: '',
+                  city: researchResult?.marketName?.split(',')[0] || '',
+                  state: researchResult?.marketName?.split(',')[1]?.trim() || '',
                   zipCode: '',
                   bedrooms: parseInt(bedrooms) || 2,
                   bathrooms: parseFloat(bathrooms) || 1,
@@ -1665,6 +1733,49 @@ export default function LeadMagnet() {
                   totalListings: result.marketInsights?.totalListings || 0,
                   vsAverage: 0,
                 }}
+                marketData={researchResult ? {
+                  name: researchResult.marketName,
+                  city: researchResult.marketName?.split(',')[0] || '',
+                  state: researchResult.marketName?.split(',')[1]?.trim() || '',
+                  country: 'United States',
+                  scores: {
+                    marketScore: result.marketInsights?.marketScore || 50,
+                    investabilityScore: 50,
+                    rentalDemandScore: 50,
+                    revenueGrowthScore: 50,
+                    seasonalityScore: 50,
+                    regulationScore: 50,
+                  },
+                  metrics: {
+                    avgRevenue: researchResult.avgRevenue,
+                    avgOccupancy: researchResult.avgOccupancy,
+                    avgAdr: researchResult.avgAdr,
+                    avgRevpar: researchResult.avgAdr * researchResult.avgOccupancy,
+                    totalListings: researchResult.totalListings,
+                    professionallyManagedPct: result.marketInsights?.professionallyManagedPct || 0,
+                    superhostPct: result.marketInsights?.superhostPct || 0,
+                    avgRating: result.marketInsights?.avgRating || 0,
+                  },
+                  revenueByBedroom: researchResult.propertyTypes.map(pt => ({
+                    bedrooms: parseInt(pt.type.split(' ')[0]) || 0,
+                    avgRevenue: pt.avgRevenue,
+                    avgOccupancy: pt.occupancy || researchResult.avgOccupancy,
+                    avgAdr: pt.avgRevenue / (pt.occupancy || researchResult.avgOccupancy) / 365,
+                    listingCount: pt.count,
+                  })),
+                  topPerformers: (result.comparables || []).slice(0, 5).map(c => ({
+                    title: c.title,
+                    bedrooms: c.bedrooms,
+                    bathrooms: c.bathrooms,
+                    revenue: c.revenue,
+                    occupancy: c.occupancy,
+                    adr: c.adr,
+                    rating: c.rating,
+                    reviews: c.reviews,
+                    isSuperhost: false,
+                    isProfessionallyManaged: false,
+                  })),
+                } : undefined}
               />
             )}
 

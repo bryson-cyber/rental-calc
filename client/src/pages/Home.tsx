@@ -983,6 +983,7 @@ export default function RentalEstimator() {
           setZillowUrl('');
         }}
         clientName={leadData?.name}
+        marketId={market?.id}
       />
     );
   }

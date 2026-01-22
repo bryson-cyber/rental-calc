@@ -26,6 +26,8 @@ import {
   getSubmarketListings,
   getMarketHistoricalData,
   getMarketListings,
+  getMarketBookingPatterns,
+  getMarketSupplyTrend,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1470,6 +1472,72 @@ export const appRouter = router({
         }
       }),
 
+    // Get booking patterns (lead time and length of stay) for a market
+    getBookingPatterns: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+        bedrooms: z.number().int().min(1).max(20).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[getBookingPatterns] Fetching for market ${input.marketId}, bedrooms: ${input.bedrooms}`);
+          const patterns = await getMarketBookingPatterns(input.marketId, input.bedrooms);
+          
+          if (!patterns) {
+            return {
+              success: false,
+              error: "Could not fetch booking patterns for this market",
+              data: null,
+            };
+          }
+          
+          return {
+            success: true,
+            data: patterns,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting booking patterns:", error);
+          return {
+            success: false,
+            error: "Failed to fetch booking patterns",
+            data: null,
+          };
+        }
+      }),
+
+    // Get supply trend (active listings over time) for a market
+    getSupplyTrend: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+        bedrooms: z.number().int().min(1).max(20).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[getSupplyTrend] Fetching for market ${input.marketId}, bedrooms: ${input.bedrooms}`);
+          const trend = await getMarketSupplyTrend(input.marketId, input.bedrooms);
+          
+          if (!trend) {
+            return {
+              success: false,
+              error: "Could not fetch supply trend for this market",
+              data: null,
+            };
+          }
+          
+          return {
+            success: true,
+            data: trend,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting supply trend:", error);
+          return {
+            success: false,
+            error: "Failed to fetch supply trend",
+            data: null,
+          };
+        }
+      }),
+
     // Submit lead and store in database
     submitLead: publicProcedure
       .input(leadInputSchema)
@@ -2900,6 +2968,12 @@ export const appRouter = router({
         offset: z.number().int().min(0).default(0),
         sortBy: z.enum(['proximity', 'revenue', 'rating', 'occupancy']).default('proximity'),
         sortDirection: z.enum(['ascending', 'descending']).default('ascending'),
+        amenities: z.object({
+          pool: z.boolean().optional(),
+          hotTub: z.boolean().optional(),
+          petFriendly: z.boolean().optional(),
+          parking: z.boolean().optional(),
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -2916,6 +2990,7 @@ export const appRouter = router({
               offset: input.offset,
               sortBy: input.sortBy,
               sortDirection: input.sortDirection,
+              amenities: input.amenities,
             }
           );
 

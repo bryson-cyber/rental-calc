@@ -3077,3 +3077,115 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Compare only to true comparables (same BR/BA configuration)
 - [ ] Include monthly rent input in analysis
 - [ ] Remove references to purchasing/renovations
+
+
+## Phase 1-6: Feature Enhancements (Jan 21-22, 2026) - ALL COMPLETE
+
+### Phase 1: Booking Patterns & Supply Trend
+- [x] Add getBookingPatterns and getSupplyTrend endpoints to routers.ts
+- [x] Create MarketInsightsPanel component with booking lead time, length of stay, supply trend
+- [x] Integrate into Chapter 2 of property report
+- [x] Add third-grade level tooltips for all metrics
+- [x] 9 tests passing
+
+### Phase 2-3: Break-Even Calculator
+- [x] Create BreakEvenCalculator component with break-even occupancy, ADR, cushion indicators
+- [x] Add startup cost recovery slider
+- [x] Add scenario analysis (worst/expected/best case)
+- [x] Add Investment Safety Score
+- [x] Integrate into Chapter 4 of property report
+- [x] 13 tests passing
+
+### Phase 4: Market Advisor Connection
+- [x] Connect AIAdvisorStep Market Advisor tab with real data
+- [x] Pass market scores, metrics, revenue by bedroom, top performers
+
+### Phase 5: Amenities Filter
+- [x] Add amenities parameter to getListingsByArea function
+- [x] Add amenities filter to listingsByArea router schema
+- [x] Add amenity toggle buttons (Pool, Hot Tub, Pet Friendly, Parking) to UI
+- [x] 10 tests passing
+
+### Phase 6: Testing & Verification
+- [x] All 32 new feature tests passing
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors
+
+---
+
+## Phase 1: Booking Patterns & Supply Trend (Jan 21, 2026) - COMPLETE
+
+### API Endpoints Added:
+- [x] Add getMarketBookingPatterns endpoint to routers.ts
+- [x] Add getMarketSupplyTrend endpoint to routers.ts
+- [x] Import functions from airdna.ts
+
+### UI Component Created:
+- [x] Create MarketInsightsPanel component
+- [x] Display booking lead time metrics
+- [x] Display length of stay metrics
+- [x] Display supply trend with chart
+- [x] Add third-grade level tooltips for all metrics
+- [x] Style with professional light-mode aesthetic
+
+### Integration:
+- [x] Add MarketInsightsPanel to ChapterPropertyReport (Chapter 2)
+- [x] Pass marketId prop through component chain
+- [x] Add marketId to ChapterPropertyReportProps interface
+
+### Testing:
+- [x] Create market-insights.test.ts
+- [x] Test booking patterns endpoint
+- [x] Test supply trend endpoint
+- [x] All 9 tests passing
+
+
+## Phase 2-3: Freshness Filter & Break-Even Calculator (Jan 21, 2026) - COMPLETE
+
+### Break-Even Calculator:
+- [x] Create BreakEvenCalculator.tsx component
+- [x] Calculate break-even occupancy (minimum nights needed)
+- [x] Calculate break-even ADR (minimum nightly rate needed)
+- [x] Show occupancy and ADR cushion
+- [x] Add startup cost recovery timeline
+- [x] Add worst case scenario (-30% occupancy)
+- [x] Add best case scenario (+20% occupancy)
+- [x] Add investment safety score (0-100)
+- [x] Add third-grade level tooltips
+- [x] Integrate into Chapter 4 of property report
+
+### Testing:
+- [x] Create break-even-calculator.test.ts
+- [x] Test break-even calculations
+- [x] Test profit calculations
+- [x] Test scenario analysis
+- [x] Test edge cases
+- [x] All 13 tests passing
+
+
+## Phase 4: Market Advisor Connection (Jan 21, 2026) - COMPLETE
+
+### Market Advisor Integration:
+- [x] Identify AIAdvisorStep component with Property and Market tabs
+- [x] Find missing marketData prop in LeadMagnet.tsx
+- [x] Connect researchResult data to marketData prop
+- [x] Pass market scores, metrics, revenue by bedroom, and top performers
+- [x] Market Advisor tab now receives real data from market research
+
+
+## Phase 5: Amenities Filter (Jan 21, 2026) - COMPLETE
+
+### Backend Changes:
+- [x] Add amenities parameter to getListingsByArea function in airdna.ts
+- [x] Add amenities filter to listingsByArea router input schema
+- [x] Pass amenities to getListingsByArea in router
+
+### Frontend Changes:
+- [x] Add exploreAmenities state variable
+- [x] Add amenity filter toggle buttons (Pool, Hot Tub, Pet Friendly, Parking)
+- [x] Pass amenities to API call in handleExplore
+- [x] Add tooltip explaining the filter
+
+### Tests:
+- [x] 10 tests for amenity filter functionality (all passing)
+
