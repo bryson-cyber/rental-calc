@@ -183,9 +183,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const [currentPage, setCurrentPage] = useState(1);
   const [excludedListingIds, setExcludedListingIds] = useState<Set<string>>(new Set());
   const [showCompSetMode, setShowCompSetMode] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -409,6 +411,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     markersRef.current.forEach(marker => marker.map = null);
     markersRef.current = [];
     
+    // Initialize info window if not exists
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new google.maps.InfoWindow();
+    }
+    
     // Add new markers
     listingsToShow.forEach(listing => {
       const color = getMarkerColor(listing.revenue, thresholds, useCustomThreshold ? customThreshold : null);
@@ -419,6 +426,46 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         position: { lat: listing.latitude, lng: listing.longitude },
         title: listing.title,
         content: markerElement,
+      });
+      
+      // Add click handler to show property details
+      marker.addListener('click', () => {
+        setSelectedListing(listing);
+        
+        const infoContent = `
+          <div style="max-width: 300px; font-family: system-ui, sans-serif;">
+            ${listing.thumbnailUrl ? `<img src="${listing.thumbnailUrl}" alt="${listing.title}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />` : ''}
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${listing.title}</h3>
+            <div style="display: flex; gap: 12px; margin-bottom: 8px; font-size: 13px; color: #64748b;">
+              <span>${listing.bedrooms} BR</span>
+              <span>${listing.bathrooms} BA</span>
+              <span>${listing.propertyType || 'Entire home'}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+              <div style="background: #f1f5f9; padding: 8px; border-radius: 6px;">
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Revenue</div>
+                <div style="font-size: 16px; font-weight: 600; color: #059669;">$${listing.revenue.toLocaleString()}</div>
+              </div>
+              <div style="background: #f1f5f9; padding: 8px; border-radius: 6px;">
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Occupancy</div>
+                <div style="font-size: 16px; font-weight: 600; color: #1e293b;">${Math.round(listing.occupancy * 100)}%</div>
+              </div>
+              <div style="background: #f1f5f9; padding: 8px; border-radius: 6px;">
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">ADR</div>
+                <div style="font-size: 16px; font-weight: 600; color: #1e293b;">$${Math.round(listing.adr)}</div>
+              </div>
+              <div style="background: #f1f5f9; padding: 8px; border-radius: 6px;">
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Rating</div>
+                <div style="font-size: 16px; font-weight: 600; color: #1e293b;">${listing.rating ? `⭐ ${listing.rating.toFixed(1)}` : 'N/A'}</div>
+              </div>
+            </div>
+            ${listing.distanceToMyProperty ? `<div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">📍 ${listing.distanceToMyProperty.toFixed(1)} mi from your property</div>` : ''}
+            <a href="${listing.airbnbUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #C9A962; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500;">View on Airbnb →</a>
+          </div>
+        `;
+        
+        infoWindowRef.current!.setContent(infoContent);
+        infoWindowRef.current!.open(mapRef.current, marker);
       });
       
       markersRef.current.push(marker);
@@ -704,7 +751,9 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                         </div>
                       </div>
                       <span className="text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                        {result.listingCount?.toLocaleString() || 0} listings
+                        {result.listingCount && result.listingCount > 0 
+                          ? `${result.listingCount.toLocaleString()} listings`
+                          : 'View listings →'}
                       </span>
                     </button>
                   ))}
@@ -744,20 +793,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
               )}
             </button>
             
-            {/* Thresholds Panel Toggle */}
-            <button
-              onClick={() => {
-                setShowThresholdsPanel(!showThresholdsPanel);
-                setShowFiltersPanel(false);
-                setShowMyPropertyPanel(false);
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg border transition-all ${
-                showThresholdsPanel ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/95 hover:bg-white text-slate-700 border-slate-200'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span className="text-sm font-medium">Legend</span>
-            </button>
+
             
             {/* My Property Panel Toggle */}
             <button
@@ -883,83 +919,6 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </div>
           )}
           
-          {/* Thresholds/Legend Panel */}
-          {showThresholdsPanel && (
-            <div className="absolute bottom-20 left-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-slate-900">Revenue Legend</h3>
-                <button onClick={() => setShowThresholdsPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                  <X className="w-4 h-4 text-slate-500" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Custom Threshold</Label>
-                  <Switch checked={useCustomThreshold} onCheckedChange={setUseCustomThreshold} />
-                </div>
-                
-                {useCustomThreshold ? (
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Minimum Revenue</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">$</span>
-                      <Input
-                        type="number"
-                        value={customThreshold}
-                        onChange={(e) => setCustomThreshold(Number(e.target.value))}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                        <div className="w-4 h-4 rounded-full bg-green-500" />
-                        <span className="text-sm">≥ {formatCurrency(customThreshold)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                        <div className="w-4 h-4 rounded-full bg-slate-400" />
-                        <span className="text-sm">&lt; {formatCurrency(customThreshold)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-emerald-50 rounded-xl">
-                      <div className="text-xs text-slate-500 mb-1">Market Average</div>
-                      <div className="text-xl font-bold text-emerald-600">
-                        {listings.length > 0 ? formatCurrency(thresholds.average) : '—'}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full bg-green-500" />
-                          <span className="text-sm">Top 33%</span>
-                        </div>
-                        <span className="text-sm font-medium text-green-600">{thresholds.topCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-amber-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full bg-amber-500" />
-                          <span className="text-sm">Middle 33%</span>
-                        </div>
-                        <span className="text-sm font-medium text-amber-600">{thresholds.middleCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full bg-red-500" />
-                          <span className="text-sm">Bottom 33%</span>
-                        </div>
-                        <span className="text-sm font-medium text-red-600">{thresholds.bottomCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
           {/* My Property Panel */}
           {showMyPropertyPanel && (
             <div className="absolute bottom-20 left-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20">
@@ -1081,6 +1040,66 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </div>
           )}
         </div>
+        
+        {/* Legend Bar - Below Map */}
+        {listings.length > 0 && (
+          <div className="bg-slate-50 border-t border-b border-slate-200 py-3">
+            <div className="container">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <span className="text-sm font-medium text-slate-600">Revenue Legend:</span>
+                  {useCustomThreshold ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-green-500" />
+                        <span className="text-sm text-slate-600">≥ {formatCurrency(customThreshold)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-slate-400" />
+                        <span className="text-sm text-slate-600">&lt; {formatCurrency(customThreshold)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-green-500" />
+                        <span className="text-sm text-slate-600">Top 33% ({thresholds.topCount})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-amber-500" />
+                        <span className="text-sm text-slate-600">Middle 33% ({thresholds.middleCount})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-red-500" />
+                        <span className="text-sm text-slate-600">Bottom 33% ({thresholds.bottomCount})</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={useCustomThreshold} onCheckedChange={setUseCustomThreshold} />
+                    <span className="text-sm text-slate-600">Custom Threshold</span>
+                  </div>
+                  {useCustomThreshold && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-500">$</span>
+                      <Input
+                        type="number"
+                        value={customThreshold}
+                        onChange={(e) => setCustomThreshold(Number(e.target.value))}
+                        className="h-8 w-28"
+                      />
+                    </div>
+                  )}
+                  <div className="text-sm text-slate-500">
+                    Avg: <span className="font-semibold text-emerald-600">{formatCurrency(thresholds.average)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Table Section - Below Map */}
         {filteredListings.length > 0 && !embedded && (

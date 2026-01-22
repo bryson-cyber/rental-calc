@@ -43,9 +43,14 @@ interface MarketSearchResult {
 
 interface StandaloneMarketAdvisorProps {
   onMarketSelect?: (marketId: string, marketName: string) => void;
+  myProperty?: {
+    address?: string;
+    zipCode?: string;
+    city?: string;
+  };
 }
 
-export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvisorProps) {
+export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: StandaloneMarketAdvisorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -63,6 +68,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
     professionalStats: false,
     futurePricing: false,
   });
+  const [bedroomFilter, setBedroomFilter] = useState<string>('all');
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -70,6 +76,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
   );
 
   const standaloneMarketAdvisorMutation = trpc.advanced.standaloneMarketAdvisor.useMutation();
+
+  // Auto-populate search with zip code from myProperty if available
+  useEffect(() => {
+    if (myProperty?.zipCode && !searchQuery && !selectedMarket) {
+      setSearchQuery(myProperty.zipCode);
+    }
+  }, [myProperty?.zipCode]);
 
   // Update search results when query changes
   useEffect(() => {
@@ -216,6 +229,23 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+
+          {/* Bedroom Filter */}
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium text-slate-700">Filter by Bedrooms:</label>
+            <select
+              value={bedroomFilter}
+              onChange={(e) => setBedroomFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Bedrooms</option>
+              <option value="1">1 Bedroom</option>
+              <option value="2">2 Bedrooms</option>
+              <option value="3">3 Bedrooms</option>
+              <option value="4">4 Bedrooms</option>
+              <option value="5">5+ Bedrooms</option>
+            </select>
           </div>
 
           {/* Selected Market Display */}
@@ -379,25 +409,30 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
                     { label: 'Revenue Growth', value: marketData.scores.revenueGrowthScore, description: 'Revenue trend' },
                     { label: 'Seasonality', value: marketData.scores.seasonalityScore, description: 'Revenue stability' },
                     { label: 'Regulation', value: marketData.scores.regulationScore, description: 'Regulatory environment' },
-                  ].map((score) => (
-                    <div key={score.label} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-700">{score.label}</span>
-                        <Badge className={getScoreColor(score.value)}>{score.value}</Badge>
+                  ].map((score) => {
+                    // Handle decimal values - if value is less than 1, it's likely a decimal that should be a percentage
+                    const displayValue = score.value < 1 && score.value > 0 ? Math.round(score.value * 100) : Math.round(score.value);
+                    const barWidth = Math.min(100, Math.max(0, displayValue));
+                    return (
+                      <div key={score.label} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-slate-700">{score.label}</span>
+                          <Badge className={getScoreColor(displayValue)}>{displayValue}</Badge>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              displayValue >= 80 ? 'bg-green-500' :
+                              displayValue >= 60 ? 'bg-amber-500' :
+                              displayValue >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">{score.description}</div>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            score.value >= 80 ? 'bg-green-500' :
-                            score.value >= 60 ? 'bg-amber-500' :
-                            score.value >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${score.value}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">{score.description}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             )}
@@ -432,7 +467,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
                         </tr>
                       </thead>
                       <tbody>
-                        {marketData.revenueByBedroom.map((br: any) => (
+                        {marketData.revenueByBedroom
+                          .filter((br: any) => {
+                            if (bedroomFilter === 'all') return true;
+                            if (bedroomFilter === '5') return br.bedrooms >= 5;
+                            return br.bedrooms === parseInt(bedroomFilter);
+                          })
+                          .map((br: any) => (
                           <tr key={br.bedrooms} className="border-b hover:bg-slate-50">
                             <td className="py-2 px-3 font-medium">{br.bedrooms} BR</td>
                             <td className="text-right py-2 px-3 text-green-600 font-medium">
@@ -609,7 +650,14 @@ export function StandaloneMarketAdvisor({ onMarketSelect }: StandaloneMarketAdvi
               {expandedSections.topPerformers && (
                 <CardContent>
                   <div className="space-y-3">
-                    {marketData.topPerformers.slice(0, 5).map((performer: any, index: number) => (
+                    {marketData.topPerformers
+                      .filter((performer: any) => {
+                        if (bedroomFilter === 'all') return true;
+                        if (bedroomFilter === '5') return performer.bedrooms >= 5;
+                        return performer.bedrooms === parseInt(bedroomFilter);
+                      })
+                      .slice(0, 10)
+                      .map((performer: any, index: number) => (
                       <div key={index} className="p-3 border rounded-lg hover:bg-slate-50">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">

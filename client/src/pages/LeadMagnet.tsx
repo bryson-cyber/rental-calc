@@ -1812,7 +1812,7 @@ export default function LeadMagnet() {
             {/* MARKET ADVISOR TAB */}
             {/* ============================================ */}
             {activeTab === 'market' && (
-              <StandaloneMarketAdvisor />
+              <StandaloneMarketAdvisor myProperty={myProperty || undefined} />
             )}
           </div>
         </div>

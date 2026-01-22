@@ -7,8 +7,8 @@
 
 import { ENV } from './_core/env';
 
-// Use Gemini 2.5 Pro - the latest and most capable model
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
+// Use Gemini 3 Pro Preview - the most capable model
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
 
 interface GeminiResponse {
   candidates: Array<{

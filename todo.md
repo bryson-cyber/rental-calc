@@ -3379,3 +3379,37 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 ### Visual Edit
 - [x] Updated tagline to remove "arbitrage" (now "find profitable Airbnb opportunities")
+
+
+## UI Fixes & Gemini 3.0 Upgrade (Jan 22, 2026)
+
+### Step 5 Map Fixes
+- [ ] Move legend outside map to below it
+- [ ] Fix overlay issues with floating panels
+
+### Step 7 Market Advisor Fixes
+- [ ] Auto-populate zip code from user's property if set
+- [ ] Fix Revenue by Property Size to start at 1BR (not 2BR)
+- [ ] Add bedroom filter to Revenue by Property Size
+- [ ] Fix Revenue Growth decimal display (should be percentage)
+- [ ] Improve Comprehensive Market Analysis formatting
+
+### Gemini Model Upgrade
+- [ ] Switch from Gemini 2.5 Pro to Gemini 3.0 (most capable model)
+
+
+### Step 5 Map Additional Fixes
+- [ ] Fix zip code search showing "0 listings" but actually loading properties
+- [ ] Fix property card popup when clicking markers on the map
+- [ ] Filter comparable properties by bedroom count
+
+
+### Completed Fixes (Jan 22, 2026 - Batch 2)
+- [x] Update Gemini model to 3.0 Pro Preview
+- [x] Fix Step 5 Map - search results showing "View listings" instead of "0 listings"
+- [x] Fix Step 5 Map - property card popup when clicking markers
+- [x] Fix Step 5 Map - move legend below the map
+- [x] Fix Step 7 Market Advisor - auto-populate zip code from user's property
+- [x] Fix Step 7 Market Advisor - add bedroom filter dropdown
+- [x] Fix Step 7 Market Advisor - revenue growth displayed as percentage (not decimal)
+- [x] Fix Step 7 Market Advisor - improved AI analysis formatting with Gemini 3.0
