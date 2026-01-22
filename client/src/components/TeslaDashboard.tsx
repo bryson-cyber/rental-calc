@@ -8,7 +8,9 @@
  * - Color = meaning (green/yellow/red for quick decisions)
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { trpc } from '@/lib/trpc';
+import { Streamdown } from 'streamdown';
 import {
   TrendingUp,
   TrendingDown,
@@ -33,7 +35,10 @@ import {
   Briefcase,
   Award,
   Building2,
-  MapPin
+  MapPin,
+  Sparkles,
+  Bot,
+  Loader2
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -111,6 +116,8 @@ interface TeslaDashboardProps {
   address: string;
   bedrooms: number;
   bathrooms: number;
+  accommodates?: number;
+  monthlyRent?: number;
 }
 
 // ============================================
@@ -393,7 +400,7 @@ const METRIC_CONFIG: Record<MetricKey, { label: string; format: (val: number) =>
 };
 
 function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForecast[]; historicalData?: { months: Array<{ date: string; revenue: number; occupancy: number; adr: number }> } }) {
-  const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
+  const [viewMode, setViewMode] = useState<'chart' | 'table' | 'yoy'>('chart');
   const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(['revenue', 'adr', 'occupancy']);
   const [showYoY, setShowYoY] = useState(true);
   
@@ -516,6 +523,16 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
               }`}
             >
               Table
+            </button>
+            <button
+              onClick={() => setViewMode('yoy')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                viewMode === 'yoy' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              YoY Compare
             </button>
           </div>
         </div>
@@ -698,6 +715,168 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
               );
             })}
           </div>
+        </>
+      ) : viewMode === 'yoy' ? (
+        /* YoY Comparison Chart View */
+        <>
+          {historicalData?.months && historicalData.months.length > 0 ? (
+            <>
+              <div className="mb-4">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-slate-700" />
+                    <span className="text-xs text-slate-600 font-medium">This Year</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-slate-300" />
+                    <span className="text-xs text-slate-600 font-medium">Last Year</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-12 gap-1 h-48 items-end mb-2">
+                {forecastWithRevpar.slice(0, 12).map((month, idx) => {
+                  const currentMonthNum = month.month.split('-')[1];
+                  const lastYearMonth = historicalData.months.find(h => {
+                    const hMonthNum = h.date.split('-')[1];
+                    return hMonthNum === currentMonthNum;
+                  });
+                  
+                  const maxVal = Math.max(
+                    maxRevenue,
+                    ...(historicalData.months.map(m => m.revenue) || [])
+                  );
+                  
+                  const currentHeightPct = maxVal > 0 ? (month.revenue / maxVal) * 100 : 0;
+                  const lastYearHeightPct = lastYearMonth && maxVal > 0 
+                    ? (lastYearMonth.revenue / maxVal) * 100 
+                    : 0;
+                  
+                  const yoyChange = lastYearMonth && lastYearMonth.revenue > 0
+                    ? ((month.revenue - lastYearMonth.revenue) / lastYearMonth.revenue) * 100
+                    : null;
+                  
+                  return (
+                    <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                        <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                          <p className="font-medium mb-2">{formatMonth(month.month)}</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-400">This Year:</span>
+                              <span className="text-emerald-300 font-medium">{formatCurrency(month.revenue)}</span>
+                            </div>
+                            {lastYearMonth && (
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">Last Year:</span>
+                                <span className="text-slate-300">{formatCurrency(lastYearMonth.revenue)}</span>
+                              </div>
+                            )}
+                            {yoyChange !== null && (
+                              <div className="flex justify-between gap-4 pt-1 border-t border-slate-700">
+                                <span className="text-slate-400">Change:</span>
+                                <span className={yoyChange >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                  {yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Side-by-side bars */}
+                      <div className="flex gap-0.5 w-full h-full items-end">
+                        {/* Last Year Bar */}
+                        <div 
+                          className="flex-1 bg-slate-300 rounded-t transition-all"
+                          style={{ height: `${Math.max(lastYearHeightPct, 4)}%` }}
+                        />
+                        {/* This Year Bar */}
+                        <div 
+                          className={`flex-1 rounded-t transition-all ${
+                            yoyChange !== null && yoyChange >= 0 
+                              ? 'bg-slate-700' 
+                              : 'bg-slate-500'
+                          }`}
+                          style={{ height: `${Math.max(currentHeightPct, 4)}%` }}
+                        />
+                      </div>
+                      
+                      {/* YoY Change indicator */}
+                      {yoyChange !== null && (
+                        <div className={`text-[9px] font-bold mt-0.5 ${
+                          yoyChange >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        }`}>
+                          {yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(0)}%
+                        </div>
+                      )}
+                      
+                      {/* Month label */}
+                      <div className="text-[10px] text-slate-500 font-medium">
+                        {formatMonth(month.month).substring(0, 3)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* YoY Summary Stats */}
+              <div className="grid grid-cols-3 gap-4 mt-4 p-4 bg-slate-50 rounded-xl">
+                {(() => {
+                  const currentYearTotal = forecastWithRevpar.slice(0, 12).reduce((sum, m) => sum + m.revenue, 0);
+                  const lastYearTotal = historicalData.months.reduce((sum, m) => sum + m.revenue, 0);
+                  const totalYoYChange = lastYearTotal > 0 
+                    ? ((currentYearTotal - lastYearTotal) / lastYearTotal) * 100 
+                    : null;
+                  
+                  const growthMonths = forecastWithRevpar.slice(0, 12).filter(month => {
+                    const currentMonthNum = month.month.split('-')[1];
+                    const lastYearMonth = historicalData.months.find(h => h.date.split('-')[1] === currentMonthNum);
+                    return lastYearMonth && month.revenue > lastYearMonth.revenue;
+                  }).length;
+                  
+                  return (
+                    <>
+                      <div className="text-center">
+                        <p className="text-slate-500 text-xs mb-1">Annual Revenue Change</p>
+                        <p className={`text-xl font-bold ${
+                          totalYoYChange !== null && totalYoYChange >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        }`}>
+                          {totalYoYChange !== null ? (
+                            <>{totalYoYChange >= 0 ? '+' : ''}{totalYoYChange.toFixed(1)}%</>
+                          ) : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-slate-500 text-xs mb-1">Months Growing</p>
+                        <p className="text-xl font-bold text-slate-900">{growthMonths}/12</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-slate-500 text-xs mb-1">Market Trend</p>
+                        <p className={`text-xl font-bold flex items-center justify-center gap-1 ${
+                          totalYoYChange !== null && totalYoYChange >= 5 ? 'text-emerald-600' :
+                          totalYoYChange !== null && totalYoYChange <= -5 ? 'text-red-500' : 'text-amber-600'
+                        }`}>
+                          {totalYoYChange !== null && totalYoYChange >= 5 ? (
+                            <><TrendingUp className="w-5 h-5" /> Growing</>
+                          ) : totalYoYChange !== null && totalYoYChange <= -5 ? (
+                            <><TrendingDown className="w-5 h-5" /> Declining</>
+                          ) : (
+                            <><Minus className="w-5 h-5" /> Stable</>
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              <p>Historical data not available for YoY comparison</p>
+              <p className="text-sm mt-1">Try the Chart or Table view instead</p>
+            </div>
+          )}
         </>
       ) : (
         /* Table View */
@@ -1196,9 +1375,43 @@ function MarketHealthGrade({
         </div>
       </div>
       
-      {/* Grade Summary */}
+      {/* Grade Summary with Market Trend */}
       <div className={`${gradeBg} rounded-lg p-4 mb-6`}>
         <p className={`${gradeColor} font-medium`}>{gradeText}</p>
+        
+        {/* Market Trend Indicator */}
+        {yoyChange !== undefined && (
+          <div className="mt-3 pt-3 border-t border-slate-200/50 flex items-center justify-between">
+            <span className="text-sm text-slate-600">Market Trend</span>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${
+              yoyChange >= 5 
+                ? 'bg-emerald-100 text-emerald-700' 
+                : yoyChange <= -5 
+                ? 'bg-red-100 text-red-700' 
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {yoyChange >= 5 ? (
+                <>
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Growing Market</span>
+                  <span className="text-xs opacity-75">+{yoyChange.toFixed(1)}% YoY</span>
+                </>
+              ) : yoyChange <= -5 ? (
+                <>
+                  <TrendingDown className="w-4 h-4" />
+                  <span>Declining Market</span>
+                  <span className="text-xs opacity-75">{yoyChange.toFixed(1)}% YoY</span>
+                </>
+              ) : (
+                <>
+                  <Minus className="w-4 h-4" />
+                  <span>Stable Market</span>
+                  <span className="text-xs opacity-75">{yoyChange >= 0 ? '+' : ''}{yoyChange.toFixed(1)}% YoY</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Factor Breakdown */}
@@ -1365,6 +1578,187 @@ function MarketInsights({
           )}
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * AI Property Advisor - Comprehensive AI-powered analysis
+ * Uses Gemini to synthesize all data into actionable insights
+ */
+function AIPropertyAdvisor({
+  address,
+  bedrooms,
+  bathrooms,
+  accommodates,
+  monthlyRent,
+  result
+}: {
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  accommodates?: number;
+  monthlyRent?: number;
+  result: AnalysisResult;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [advice, setAdvice] = useState<string | null>(null);
+  const [hasRequested, setHasRequested] = useState(false);
+  
+  const advisorMutation = trpc.advanced.propertyAdvisor.useMutation();
+  
+  const handleGetAdvice = async () => {
+    if (hasRequested && advice) {
+      setIsExpanded(!isExpanded);
+      return;
+    }
+    
+    setIsExpanded(true);
+    setHasRequested(true);
+    
+    try {
+      // Prepare the comprehensive data payload
+      const payload = {
+        property: {
+          address,
+          bedrooms,
+          bathrooms,
+          accommodates,
+          monthlyRent: monthlyRent || result.cashFlow.monthlyRent,
+        },
+        revenue: {
+          projected: result.revenue.projected,
+          low: result.revenue.low,
+          high: result.revenue.high,
+          adr: result.metrics.adr,
+          occupancy: result.metrics.occupancy,
+        },
+        cashFlow: monthlyRent || result.cashFlow.monthlyRent > 0 ? {
+          monthlyRevenue: result.cashFlow.monthlyRevenue,
+          monthlyRent: monthlyRent || result.cashFlow.monthlyRent,
+          monthlyProfit: result.cashFlow.monthlyProfit,
+          annualProfit: result.cashFlow.monthlyProfit * 12,
+          profitMargin: result.cashFlow.monthlyRent > 0 
+            ? (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100 
+            : 0,
+        } : undefined,
+        comparables: result.comparables.map(c => ({
+          title: c.title,
+          bedrooms: c.bedrooms,
+          bathrooms: c.bathrooms,
+          revenue: c.revenue,
+          adr: c.adr,
+          occupancy: c.occupancy,
+          rating: c.rating || 0,
+          reviews: c.reviews,
+          distanceMeters: c.distanceMeters,
+          isSuperhost: false, // TODO: Add to comparables data
+          isProfessionallyManaged: false, // TODO: Add to comparables data
+        })),
+        marketInsights: result.marketInsights ? {
+          professionallyManagedPct: result.marketInsights.professionallyManagedPct,
+          superhostPct: result.marketInsights.superhostPct,
+          avgRating: result.marketInsights.avgRating,
+          totalListings: result.marketInsights.totalListings,
+          marketScore: result.marketInsights.marketScore,
+        } : undefined,
+        historicalData: result.historicalData ? {
+          yoyChange: result.historicalData.summary.yearly_pct_change,
+          trend: result.historicalData.summary.trend,
+          months: result.historicalData.months,
+        } : undefined,
+        seasonality: result.forecast.map(f => ({
+          month: f.month,
+          revenue: f.revenue,
+          adr: f.adr,
+          occupancy: f.occupancy,
+        })),
+        marketGrade: result.marketInsights?.marketScore ? {
+          grade: result.marketInsights.marketScore >= 80 ? 'A' :
+                 result.marketInsights.marketScore >= 60 ? 'B' :
+                 result.marketInsights.marketScore >= 40 ? 'C' : 'D',
+          score: result.marketInsights.marketScore,
+          description: result.marketInsights.marketScore >= 80 ? 'Excellent investment market' :
+                       result.marketInsights.marketScore >= 60 ? 'Good investment potential' :
+                       result.marketInsights.marketScore >= 40 ? 'Moderate opportunity' : 'Challenging market',
+        } : undefined,
+      };
+      
+      const response = await advisorMutation.mutateAsync(payload);
+      
+      if (response.success && response.data?.advice) {
+        setAdvice(response.data.advice);
+      } else {
+        setAdvice('Unable to generate analysis. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error getting AI advice:', error);
+      setAdvice('An error occurred while generating the analysis. Please try again.');
+    }
+  };
+  
+  return (
+    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 overflow-hidden">
+      {/* Header - Always visible */}
+      <button
+        onClick={handleGetAdvice}
+        className="w-full p-4 flex items-center justify-between hover:bg-indigo-100/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              AI Property Advisor
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium">
+                Powered by Gemini
+              </span>
+            </h3>
+            <p className="text-sm text-slate-500">
+              {hasRequested && advice 
+                ? 'Click to expand/collapse analysis' 
+                : 'Get a comprehensive AI analysis of this property opportunity'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {advisorMutation.isPending && (
+            <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+          )}
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5 text-slate-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-slate-400" />
+          )}
+        </div>
+      </button>
+      
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="border-t border-indigo-200">
+          {advisorMutation.isPending ? (
+            <div className="p-8 text-center">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
+              <p className="text-slate-600 font-medium">Analyzing property data...</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Gemini is reviewing {result.comparables.length} competitors, {result.forecast.length} months of seasonality data, and market insights
+              </p>
+            </div>
+          ) : advice ? (
+            <div className="p-6">
+              <div className="prose prose-slate prose-sm max-w-none">
+                <Streamdown>{advice}</Streamdown>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <Bot className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500">Click the button above to generate your AI analysis</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1623,7 +2017,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent }: TeslaDashboardProps) {
   const yearlyChange = result.historicalData?.summary?.yearly_pct_change;
   
   return (
@@ -1696,6 +2090,16 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms }: TeslaDa
       <MarketInsights
         insights={result.marketInsights}
         totalComparables={result.comparables.length}
+      />
+      
+      {/* AI Property Advisor */}
+      <AIPropertyAdvisor
+        address={address}
+        bedrooms={bedrooms}
+        bathrooms={bathrooms}
+        accommodates={accommodates}
+        monthlyRent={monthlyRent}
+        result={result}
       />
       
       {/* Comparable Properties */}

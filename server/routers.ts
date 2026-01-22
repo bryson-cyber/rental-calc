@@ -27,7 +27,7 @@ import {
   getMarketHistoricalData,
   getMarketListings,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, type PropertyAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 import { generateFullArbitrageAnalysis } from "./sop-reports";
@@ -2165,6 +2165,125 @@ export const appRouter = router({
         }
       }),
 
+
+    // Comprehensive AI Property Advisor - synthesizes all data into actionable advice
+    propertyAdvisor: publicProcedure
+      .input(z.object({
+        property: z.object({
+          address: z.string(),
+          bedrooms: z.number(),
+          bathrooms: z.number(),
+          accommodates: z.number().optional(),
+          monthlyRent: z.number().optional(),
+        }),
+        revenue: z.object({
+          projected: z.number(),
+          low: z.number(),
+          high: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+        }),
+        cashFlow: z.object({
+          monthlyRevenue: z.number(),
+          monthlyRent: z.number(),
+          monthlyProfit: z.number(),
+          annualProfit: z.number(),
+          profitMargin: z.number(),
+        }).optional(),
+        comparables: z.array(z.object({
+          title: z.string(),
+          bedrooms: z.number(),
+          bathrooms: z.number(),
+          revenue: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+          rating: z.number(),
+          reviews: z.number(),
+          distanceMeters: z.number().optional(),
+          isSuperhost: z.boolean().optional(),
+          isProfessionallyManaged: z.boolean().optional(),
+        })),
+        marketInsights: z.object({
+          professionallyManagedPct: z.number(),
+          superhostPct: z.number(),
+          avgRating: z.number().optional(),
+          totalListings: z.number().optional(),
+          marketScore: z.number().optional(),
+        }).optional(),
+        historicalData: z.object({
+          yoyChange: z.number(),
+          trend: z.enum(['up', 'down', 'stable']),
+          months: z.array(z.object({
+            date: z.string(),
+            revenue: z.number(),
+            occupancy: z.number(),
+            adr: z.number(),
+          })),
+        }).optional(),
+        seasonality: z.array(z.object({
+          month: z.string(),
+          revenue: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+        })),
+        marketGrade: z.object({
+          grade: z.string(),
+          score: z.number(),
+          description: z.string(),
+        }).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[AI Advisor] Generating comprehensive property advice for:', input.property.address);
+          const advice = await generateComprehensivePropertyAdvice(input as PropertyAdvisorInput);
+          return {
+            success: true,
+            data: { advice },
+          };
+        } catch (error) {
+          console.error('[AI Advisor] Error generating property advice:', error);
+          return {
+            success: false,
+            error: 'Failed to generate property advice',
+            data: null,
+          };
+        }
+      }),
+
+    // Market Trend Narrator - AI-powered natural language insights
+    marketTrendNarrative: publicProcedure
+      .input(z.object({
+        marketName: z.string(),
+        currentYearRevenue: z.number(),
+        lastYearRevenue: z.number(),
+        yoyChange: z.number(),
+        occupancy: z.number(),
+        adr: z.number(),
+        monthlyData: z.array(z.object({
+          month: z.string(),
+          currentRevenue: z.number(),
+          lastYearRevenue: z.number(),
+          yoyChange: z.number(),
+        })),
+        marketGrade: z.string(),
+        marketScore: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const narrative = await generateMarketTrendNarrative(input);
+          return {
+            success: true,
+            data: { narrative },
+          };
+        } catch (error) {
+          console.error("[Advanced] Error generating market trend narrative:", error);
+          return {
+            success: false,
+            error: "Failed to generate market trend narrative",
+            data: null,
+          };
+        }
+      }),
 
   }),
 

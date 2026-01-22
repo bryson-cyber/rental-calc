@@ -2980,3 +2980,34 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Update backend to fetch and return YoY comparison data (24 months instead of 12)
 - [x] Update seasonal forecast UI to display YoY comparison (already implemented, fixed data flow)
 - [x] Test the feature and save checkpoint
+
+
+## UI Enhancements & AI Integration (Jan 21, 2026)
+
+### YoY Comparison Chart:
+- [x] Add side-by-side bar chart comparing this year vs last year revenue
+- [ ] Show visual comparison for ADR, occupancy, and RevPAR
+
+### Market Trend Indicators:
+- [x] Add growth/decline trend arrows to Market Health Grade section
+- [x] Show whether market is growing, stable, or declining
+
+### Google API & Gemini AI Research:
+- [x] Research all Google API capabilities available through Manus proxy
+- [x] Research Gemini AI integration opportunities
+- [x] Identify enhancement opportunities for the tools
+- [ ] Implement Market Trend Narrator (AI-powered insights)
+- [ ] Implement AI Property Advisor
+- [ ] Implement Neighborhood Analysis with Google Maps
+
+
+## Maximize Gemini AI Integration (Jan 22, 2026)
+
+### AI Property Advisor (Comprehensive):
+- [x] Use Gemini 2.5 Pro (latest model) with extended context
+- [x] Create comprehensive prompt engineering for rich insights
+- [x] Pass ALL available data: property, revenue, comparables, market insights, historical, seasonality
+- [x] Structure output for beginner-friendly actionable advice
+- [x] Add API endpoint for AI Property Advisor
+- [x] Add AI Advisor section to TeslaDashboard UI
+- [ ] Test with real property analysis
