@@ -25,8 +25,10 @@ import {
   getListingsByArea,
   getRentalizerBulkSummary,
   getSubmarketListings,
+  getAllSubmarketListings,
   getMarketHistoricalData,
   getMarketListings,
+  getAllMarketListings,
   getMarketBookingPatterns,
   getMarketSupplyTrend,
   getStandaloneMarketAdvisorData,
@@ -3200,6 +3202,70 @@ export const appRouter = router({
         }
       }),
 
+    // Get ALL listings for a market/submarket (with pagination to bypass 25 limit)
+    getAllListings: publicProcedure
+      .input(z.object({
+        submarketId: z.string(),
+        isMarketLevel: z.boolean().default(false),
+        maxListings: z.number().int().min(25).max(500).default(200),
+        bedrooms: z.number().int().min(1).max(20).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[CompData.getAllListings] Fetching all listings for ${input.submarketId}, isMarketLevel: ${input.isMarketLevel}, maxListings: ${input.maxListings}`);
+          
+          // Use the appropriate function based on whether it's a market or submarket search
+          const allListings = input.isMarketLevel 
+            ? await getAllMarketListings(input.submarketId, {
+                bedrooms: input.bedrooms,
+                maxListings: input.maxListings,
+                minFilteredCount: 10,
+              })
+            : await getAllSubmarketListings(input.submarketId, {
+                bedrooms: input.bedrooms,
+                maxListings: input.maxListings,
+                minFilteredCount: 10,
+              });
+
+          console.log(`[CompData.getAllListings] Fetched ${allListings.length} total listings`);
+
+          // Transform listings to match frontend interface
+          const listings = allListings.map((listing: any) => ({
+            id: listing.id || listing.airbnb_listing_id || listing.property_id || String(Math.random()),
+            title: listing.title || 'Untitled Listing',
+            property_type: listing.property_type || 'unknown',
+            bedrooms: listing.bedrooms || 0,
+            bathrooms: listing.bathrooms || 0,
+            accommodates: listing.accommodates || 0,
+            annual_revenue: listing.annual_revenue || listing.revenue_ltm || listing.revenue || 0,
+            adr: listing.adr || listing.average_daily_rate_ltm || 0,
+            occupancy: listing.occupancy || listing.occupancy_rate_ltm || 0,
+            rating: listing.rating || null,
+            reviews: listing.reviews || 0,
+            airbnb_url: listing.airbnb_url || listing.airbnb_property_url || listing.url || `https://www.airbnb.com/rooms/${listing.airbnb_property_id || listing.airbnb_listing_id || ''}`,
+            image_url: listing.image_url || listing.thumbnail_url || (listing.images && listing.images[0]) || '',
+            is_superhost: listing.is_superhost || listing.superhost || false,
+            latitude: listing.latitude || listing.location?.lat || null,
+            longitude: listing.longitude || listing.location?.lng || null,
+            exact_location: listing.exact_location || false,
+          }));
+
+          return {
+            success: true,
+            listings,
+            totalCount: listings.length,
+          };
+        } catch (error) {
+          console.error('[CompData.getAllListings] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch all listings',
+            listings: [],
+            totalCount: 0,
+          };
+        }
+      }),
+
     getHistoricalData: publicProcedure
       .input(z.object({
         marketId: z.string(),
@@ -3297,15 +3363,18 @@ export const appRouter = router({
             };
           }
           
-          console.log(`[CompData.getListingsByZipcode] Fetching listings for market: ${marketId}`);
+          console.log(`[CompData.getListingsByZipcode] Fetching ALL listings for market: ${marketId}`);
           
-          // Fetch listings for this market
-          const result = await getSubmarketListings(marketId, {
-            limit: input.pageSize,
-            offset: 0,
-            orderBy: 'revenue',
-            orderDirection: 'desc',
+          // Fetch ALL listings for this market (with pagination to bypass 25 limit)
+          const allListings = await getAllSubmarketListings(marketId, {
+            maxListings: 200,
+            minFilteredCount: 10,
           });
+          
+          const result = {
+            listings: allListings,
+            total_count: allListings.length,
+          };
           
           if (!result) {
             return {

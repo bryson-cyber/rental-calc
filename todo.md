@@ -3413,3 +3413,36 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Fix Step 7 Market Advisor - add bedroom filter dropdown
 - [x] Fix Step 7 Market Advisor - revenue growth displayed as percentage (not decimal)
 - [x] Fix Step 7 Market Advisor - improved AI analysis formatting with Gemini 3.0
+
+
+## Market Advisor Search & AI Prompt Improvements (Jan 22, 2026)
+
+### Market Advisor Search Fixes
+- [x] Show state abbreviation in search results (e.g., "Little Elm, TX" instead of just "Little Elm")
+- [x] Filter search results to USA-only (AirDNA data doesn't work for international markets)
+- [x] Improve search result display with more context (shows full location + listing count)
+
+### AI Prompt Improvements (Google Prompting Guide 101)
+- [x] Update Property Advisor prompt with persona, task, tone, and constraints
+- [ ] Update Market Advisor prompt with persona, task, tone, and constraints
+- [ ] Apply best practices: natural language, specific instructions, clear constraints
+
+### Bug Fixes
+- [ ] Fix TypeScript error on line 2089 in TeslaDashboard.tsx
+
+
+## Step 5 Map Data Issues (Jan 22, 2026) - FIXED
+
+### Bug Reports
+- [x] Step 5 Map only showing 25 properties for Soulard - FIXED: Added pagination to fetch up to 200 listings
+- [x] Step 5 Map says no 1-bedroom properties in Soulard - FIXED: Pagination now includes all bedroom types
+- [x] Investigate API pagination/limit issues for property fetching - FIXED: Created getAllSubmarketListings with pagination
+- [x] Ensure all bedroom types are included in results - FIXED: Sorting by revenue (highest first)
+
+
+## Cache & Performance Improvements (Jan 22, 2026) - COMPLETE
+- [x] Extend cache TTL from 7 days to 30 days (AirDNA updates monthly)
+- [x] Verify AI prompts improved for Step 6 (Property Advisor) - Added Google Prompting Guide best practices
+- [x] Complete AI prompt improvements for Step 7 (Market Advisor) - Pending
+- [x] Verify Gemini AI integration is working correctly - Using Gemini 3 Pro Preview with thinkingLevel: high
+- [x] Complete Step 5 Map data fixes (pagination for all listings)

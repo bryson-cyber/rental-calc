@@ -479,11 +479,13 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       // Search level determined
       
       // Build the API request with optional bedroom filter
-      const apiParams: any = { submarketId: marketId, isMarketLevel, pageSize: 50 };
+      // Use getAllListings to fetch up to 200 listings (bypasses 25 per page API limit)
+      const apiParams: any = { submarketId: marketId, isMarketLevel, maxListings: 200 };
       if (apiBedroomFilter) {
         apiParams.bedrooms = apiBedroomFilter;
       }
-      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);
+      const response = await fetch(`/api/trpc/compData.getAllListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);
+      console.log('[MapView] Fetching ALL listings (up to 200) for', marketId);
       const data = await response.json();
       
       if (data.result?.data?.json?.listings) {

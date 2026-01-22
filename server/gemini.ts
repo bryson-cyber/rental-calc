@@ -45,9 +45,10 @@ interface InvestmentAdvisorContext {
   }>;
 }
 
-async function callGemini(prompt: string, options?: { maxTokens?: number; temperature?: number }): Promise<string> {
+async function callGemini(prompt: string, options?: { maxTokens?: number; temperature?: number; thinkingLevel?: 'low' | 'high' }): Promise<string> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for comprehensive analysis
+  // Gemini 3 with thinking enabled can take longer - 3 minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
   
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
@@ -60,8 +61,13 @@ async function callGemini(prompt: string, options?: { maxTokens?: number; temper
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          temperature: options?.temperature ?? 0.7,
-          maxOutputTokens: options?.maxTokens ?? 8192, // Increased for comprehensive responses
+          // Gemini 3 recommends temperature 1.0 for optimal reasoning
+          temperature: options?.temperature ?? 1.0,
+          maxOutputTokens: options?.maxTokens ?? 8192,
+        },
+        // Gemini 3 thinking configuration for advanced reasoning
+        thinkingConfig: {
+          thinkingLevel: options?.thinkingLevel ?? 'high' // Use high for complex property analysis
         }
       }),
       signal: controller.signal

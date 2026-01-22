@@ -459,9 +459,50 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
 }
 
 /**
+ * Helper function to extract US state abbreviation from location string
+ */
+function extractStateFromLocation(location: string): string | undefined {
+  // Common patterns: "City, State", "City, ST", "City, State, Country"
+  const stateAbbreviations: Record<string, string> = {
+    'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+    'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'florida': 'FL', 'georgia': 'GA',
+    'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA',
+    'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO',
+    'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+    'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH',
+    'oklahoma': 'OK', 'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+    'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT',
+    'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
+    'district of columbia': 'DC'
+  };
+  
+  // Check for state abbreviation pattern (2 uppercase letters)
+  const abbrevMatch = location.match(/\b([A-Z]{2})\b/);
+  if (abbrevMatch) {
+    const abbrev = abbrevMatch[1];
+    // Verify it's a valid US state abbreviation
+    if (Object.values(stateAbbreviations).includes(abbrev)) {
+      return abbrev;
+    }
+  }
+  
+  // Check for full state name
+  const locationLower = location.toLowerCase();
+  for (const [stateName, abbrev] of Object.entries(stateAbbreviations)) {
+    if (locationLower.includes(stateName)) {
+      return abbrev;
+    }
+  }
+  
+  return undefined;
+}
+
+/**
  * Search for markets and submarkets using AirDNA's /market/search API.
  * This searches DIRECTLY in AirDNA's database, so every result is guaranteed to have data.
  * Supports: city names, neighborhood names, zip codes, and any location AirDNA knows about.
+ * NOTE: Results are filtered to USA-only since AirDNA data doesn't work for international markets.
  */
 export async function searchMarketsAPI(searchTerm: string, limit: number = 15): Promise<MarketSearchResult[]> {
   const cacheKey = apiCache.generateKey('search_markets_api', { searchTerm, limit });
@@ -508,15 +549,17 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
     const results = searchResponse.payload?.results || [];
     console.log(`[searchMarketsAPI] Found ${results.length} results for "${searchTerm}"`);
     
-    // Filter to prioritize US results and sort by listing count
+    // STRICT USA-ONLY FILTER: AirDNA data only works reliably for US markets
     const processedResults = results
       .filter(r => {
-        // Filter out non-US results (unless they have many listings)
         const country = r.location?.country?.toLowerCase();
-        if (country && country !== 'us' && country !== 'united states' && r.listing_count < 1000) {
-          return false;
+        // Only allow US results - no exceptions
+        if (!country) {
+          // If no country specified, check if location_name contains US state abbreviations
+          const usStatePattern = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/i;
+          return usStatePattern.test(r.location_name || r.name);
         }
-        return true;
+        return country === 'us' || country === 'united states' || country === 'usa';
       })
       .sort((a, b) => {
         // Prioritize exact name matches
@@ -528,17 +571,27 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
         return b.listing_count - a.listing_count;
       })
       .slice(0, limit)
-      .map((r): MarketSearchResult => ({
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        listing_count: r.listing_count,
-        location_name: r.location_name || r.name,
-        state: r.location?.state,
-        country: r.location?.country,
-        parent_market: r.parent_market,
-        zipcodes: r.legacy_location?.zipcodes,
-      }));
+      .map((r): MarketSearchResult => {
+        // Extract state from location or location_name
+        const state = r.location?.state || extractStateFromLocation(r.location_name || r.name);
+        
+        // Format name with state for better clarity (e.g., "Little Elm, TX")
+        const formattedName = state && !r.name.includes(',') 
+          ? `${r.name}, ${state}` 
+          : r.name;
+        
+        return {
+          id: r.id,
+          name: formattedName,
+          type: r.type,
+          listing_count: r.listing_count,
+          location_name: r.location_name || r.name,
+          state: state,
+          country: r.location?.country || 'US',
+          parent_market: r.parent_market,
+          zipcodes: r.legacy_location?.zipcodes,
+        };
+      });
     
     apiCache.set(cacheKey, processedResults, 'search_markets_api');
     return processedResults;
@@ -1699,6 +1752,130 @@ export async function getSubmarketListings(
   } catch (error) {
     console.error("Error fetching submarket listings:", error);
     return { listings: [], total_count: 0 };
+  }
+}
+
+// ============================================
+// GET ALL SUBMARKET LISTINGS (WITH PAGINATION)
+// ============================================
+
+export async function getAllSubmarketListings(
+  submarketId: string,
+  options?: {
+    bedrooms?: number;
+    minRevenue?: number;
+    maxListings?: number;
+    minFilteredCount?: number;
+  }
+): Promise<ListingData[]> {
+  // Check cache first - cache the full listing set for 7 days
+  const cacheKey = apiCache.generateKey('all_submarket_listings', { 
+    submarketId, 
+    maxListings: options?.maxListings || 500 
+  });
+  const cached = apiCache.get<ListingData[]>(cacheKey);
+  if (cached) {
+    console.log(`[getAllSubmarketListings] CACHE HIT for ${submarketId}, ${cached.length} listings`);
+    // Apply filters to cached data
+    let filtered = cached;
+    if (options?.bedrooms !== undefined) {
+      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
+    }
+    if (options?.minRevenue !== undefined) {
+      filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
+    }
+    return filtered;
+  }
+  
+  const allListings: ListingData[] = [];
+  const pageSize = 25; // API max
+  let offset = 0;
+  let totalCount = 0;
+  const maxListings = options?.maxListings || 500; // Safety limit
+  const minFilteredCount = options?.minFilteredCount || 10;
+  const absoluteMax = 1000;
+  
+  console.log(`[getAllSubmarketListings] CACHE MISS - Fetching listings for submarket ${submarketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}`);
+  
+  // Helper to count filtered listings
+  const countFiltered = (listings: ListingData[]) => {
+    let filtered = listings;
+    if (options?.bedrooms !== undefined) {
+      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
+    }
+    if (options?.minRevenue !== undefined) {
+      filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
+    }
+    return filtered.length;
+  };
+  
+  try {
+    // First request to get total count
+    const firstResult = await getSubmarketListings(submarketId, {
+      limit: pageSize,
+      offset: 0,
+      orderBy: "revenue",
+      orderDirection: "desc",
+    });
+    
+    totalCount = firstResult.total_count;
+    console.log(`[getAllSubmarketListings] Total listings in submarket: ${totalCount}`);
+    
+    // Add first batch
+    allListings.push(...firstResult.listings);
+    offset += pageSize;
+    
+    // Fetch remaining pages until we have enough filtered listings OR hit limits
+    while (offset < totalCount && allListings.length < absoluteMax) {
+      // Check if we have enough filtered listings
+      const filteredCount = countFiltered(allListings);
+      if (filteredCount >= minFilteredCount && allListings.length >= maxListings) {
+        console.log(`[getAllSubmarketListings] Have ${filteredCount} filtered listings (target: ${minFilteredCount}), stopping fetch`);
+        break;
+      }
+      
+      const result = await getSubmarketListings(submarketId, {
+        limit: pageSize,
+        offset,
+        orderBy: "revenue",
+        orderDirection: "desc",
+      });
+      
+      if (result.listings.length === 0) break;
+      
+      allListings.push(...result.listings);
+      offset += pageSize;
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`[getAllSubmarketListings] Fetched ${allListings.length} total listings, ${countFiltered(allListings)} match filters`);
+    
+    // Cache the UNFILTERED results (so we can apply different filters from cache)
+    apiCache.set(cacheKey, allListings, 'market_listings');
+    console.log(`[getAllSubmarketListings] Cached ${allListings.length} listings for ${submarketId}`);
+    
+    // Filter by bedroom count if specified
+    let filtered = allListings;
+    if (options?.bedrooms !== undefined) {
+      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
+      console.log(`[getAllSubmarketListings] After bedroom filter (${options.bedrooms}BR): ${filtered.length} listings`);
+    }
+    
+    // Filter by minimum revenue if specified
+    if (options?.minRevenue !== undefined) {
+      filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
+      console.log(`[getAllSubmarketListings] After revenue filter (>=$${options.minRevenue}): ${filtered.length} listings`);
+    }
+    
+    // Sort by revenue (highest first)
+    filtered.sort((a, b) => b.annual_revenue - a.annual_revenue);
+    
+    return filtered;
+  } catch (error) {
+    console.error("[getAllSubmarketListings] Error:", error);
+    return [];
   }
 }
 
