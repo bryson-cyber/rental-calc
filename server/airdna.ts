@@ -3060,16 +3060,22 @@ export async function getAllMarketListings(
 export async function getQualifyingCompetitors(
   marketId: string,
   bedrooms: number,
-  monthlyRent: number
+  monthlyRent: number,
+  options?: {
+    excludeInactive?: boolean; // Filter out properties with last review > 2 months ago
+  }
 ): Promise<{
   qualifyingListings: ListingData[];
   allSameBedroomListings: ListingData[];
+  activeListings: ListingData[]; // Listings with recent reviews (< 2 months)
   revenueThreshold: number;
   totalInMarket: number;
+  inactiveCount: number;
 }> {
   const revenueThreshold = monthlyRent * 12 * 2; // 2x annual rent
+  const excludeInactive = options?.excludeInactive ?? true; // Default to filtering inactive
   
-  console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}`);
+  console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}, ExcludeInactive: ${excludeInactive}`);
   
   // Get all listings for this bedroom count - fetch more to ensure we get enough same-bedroom listings
   const allSameBedroomListings = await getAllMarketListings(marketId, {
@@ -3078,18 +3084,36 @@ export async function getQualifyingCompetitors(
     minFilteredCount: 15, // Continue fetching until we have at least 15 same-bedroom listings
   });
   
+  // Filter out inactive properties (last review > 2 months ago)
+  const twoMonthsAgo = new Date();
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+  
+  const activeListings = allSameBedroomListings.filter(l => {
+    if (!l.last_review_date) return true; // Keep if no review date (can't determine activity)
+    const lastReview = new Date(l.last_review_date);
+    return lastReview >= twoMonthsAgo;
+  });
+  
+  const inactiveCount = allSameBedroomListings.length - activeListings.length;
+  console.log(`[getQualifyingCompetitors] Filtered ${inactiveCount} inactive listings (last review > 2 months ago)`);
+  
+  // Use active listings if filtering is enabled, otherwise use all
+  const listingsToFilter = excludeInactive ? activeListings : allSameBedroomListings;
+  
   // Filter to those meeting revenue threshold
-  const qualifyingListings = allSameBedroomListings.filter(
+  const qualifyingListings = listingsToFilter.filter(
     l => l.annual_revenue >= revenueThreshold
   );
   
-  console.log(`[getQualifyingCompetitors] Found ${qualifyingListings.length} qualifying listings out of ${allSameBedroomListings.length} same-bedroom listings`);
+  console.log(`[getQualifyingCompetitors] Found ${qualifyingListings.length} qualifying listings out of ${listingsToFilter.length} active same-bedroom listings`);
   
   return {
     qualifyingListings,
-    allSameBedroomListings,
+    allSameBedroomListings: excludeInactive ? activeListings : allSameBedroomListings,
+    activeListings,
     revenueThreshold,
     totalInMarket: allSameBedroomListings.length,
+    inactiveCount,
   };
 }
 

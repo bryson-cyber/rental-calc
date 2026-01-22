@@ -184,6 +184,12 @@ From AirDNA Rentalizer endpoint:
 - [x] Add Active Listings trend chart with 12-month visualization
 - [x] Add expandable sections for new UI components
 
+### Phase 8: Property Advisor Enhancements (Jan 22, 2026)
+- [x] Add inactive property filtering (last review > 2 months ago)
+- [x] Add AirDNA native comp algorithm integration (similarity-based comps)
+- [x] Return airdna_native_comps with similarity_score in response
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

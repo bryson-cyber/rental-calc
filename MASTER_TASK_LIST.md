@@ -61,38 +61,40 @@
 ## Phase 2: Property Advisor Enhancement
 
 ### 2.1 Comp Property Improvements
-- [ ] **2.1.1** Add comp property thumbnail images to display
-  - Source: `/listing/{id}` returns `thumbnail_url`
-  - Display: Show image next to each comp property
+- [x] **2.1.1** Add comp property thumbnail images to display - ALREADY IMPLEMENTED
+  - Source: Constructed from Airbnb CDN using listing ID
+  - Display: Shows image in comp cards with fallback
 
-- [ ] **2.1.2** Add clickable Airbnb links for comp properties
-  - Source: `/listing/{id}` returns `url`
-  - Display: Make property titles clickable
+- [x] **2.1.2** Add clickable Airbnb links for comp properties - ALREADY IMPLEMENTED
+  - Source: `airbnb_url` field from API
+  - Display: "View Listing" link with ExternalLink icon
 
 - [ ] **2.1.3** Fetch historical metrics for top 10 comp properties
   - Endpoint: `/listing/{id}/metrics`
   - Returns: 12-60 months of comp performance
   - Display: Show revenue trend for each comp
 
-- [ ] **2.1.4** Add comp property amenities display
-  - Source: `/listing/{id}` returns `amenities` array
-  - Display: Show key amenities (pool, hot tub, etc.)
+- [x] **2.1.4** Add comp property amenities display - ALREADY IMPLEMENTED
+  - Source: `amenities` array from API
+  - Display: Shows up to 4 amenities with "+X more" indicator
 
 - [ ] **2.1.5** Add comp property future pricing
   - Endpoint: `/listing/{id}/future_pricing`
   - Display: Show upcoming pricing for comps
 
 ### 2.2 Property Advisor Data Enhancements
-- [ ] **2.2.1** Add AirDNA's native comp algorithm
+- [x] **2.2.1** Add AirDNA's native comp algorithm - IMPLEMENTED
   - Endpoint: `/listing/{id}/comps`
+  - Returns: airdna_native_comps with similarity_score
   - Compare: Our area-based comps vs AirDNA's algorithm
 
-- [ ] **2.2.2** Filter out inactive/unavailable properties
+- [x] **2.2.2** Filter out inactive/unavailable properties - IMPLEMENTED
   - Rule: Exclude properties with last review > 2 months ago
   - Impact: Ensure fresh, relevant comp data
+  - Implementation: Added excludeInactive option to getQualifyingCompetitors()
 
-- [ ] **2.2.3** Add property type to comp display
-  - Show: House, Apartment, Cabin, etc.
+- [x] **2.2.3** Add property type to comp display - ALREADY IMPLEMENTED
+  - Show: Property type displayed below comp title
   - Impact: Better apples-to-apples comparison
 
 ---

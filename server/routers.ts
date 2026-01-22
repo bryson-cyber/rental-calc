@@ -32,6 +32,7 @@ import {
   getMarketBookingPatterns,
   getMarketSupplyTrend,
   getStandaloneMarketAdvisorData,
+  getListingComps,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1131,10 +1132,11 @@ export const appRouter = router({
           
           if (marketId) {
             console.log(`[getAIPropertyReport] Fetching all competitors for market ${marketId}, ${bedrooms}BR, threshold $${minRevenueThreshold}`);
-            const competitorData = await getQualifyingCompetitors(marketId, bedrooms, input.monthlyRent);
-            allCompetitors = competitorData.allSameBedroomListings;
+            const competitorData = await getQualifyingCompetitors(marketId, bedrooms, input.monthlyRent, { excludeInactive: true });
+            allCompetitors = competitorData.allSameBedroomListings; // Already filtered to active only
             qualifyingCompetitors = competitorData.qualifyingListings;
-            console.log(`[getAIPropertyReport] Found ${allCompetitors.length} same-bedroom listings, ${qualifyingCompetitors.length} meet threshold`);
+            const inactiveFiltered = competitorData.inactiveCount;
+            console.log(`[getAIPropertyReport] Found ${allCompetitors.length} active same-bedroom listings (filtered ${inactiveFiltered} inactive), ${qualifyingCompetitors.length} meet threshold`);
             
             // Calculate distance for each competitor if we have subject property coordinates
             if (subjectLat && subjectLng) {
@@ -1184,6 +1186,20 @@ export const appRouter = router({
             // Fallback to original comps if no market ID
             allCompetitors = baseReport.same_bedroom_comps || [];
             qualifyingCompetitors = allCompetitors.filter(c => c.annual_revenue >= minRevenueThreshold);
+          }
+
+          // Fetch AirDNA's native comp algorithm (if we have a listing ID from comps)
+          let airdnaNativeComps: Awaited<ReturnType<typeof getListingComps>> = [];
+          const topCompId = (baseReport.property as any)?.comps?.[0]?.airbnb_listing_id || allCompetitors[0]?.id;
+          if (topCompId) {
+            try {
+              console.log(`[getAIPropertyReport] Fetching AirDNA native comps for listing ${topCompId}`);
+              airdnaNativeComps = await getListingComps(topCompId, 10);
+              console.log(`[getAIPropertyReport] Found ${airdnaNativeComps.length} native comps from AirDNA algorithm`);
+            } catch (error) {
+              console.error('[getAIPropertyReport] Native comps fetch failed:', error);
+              // Continue without native comps
+            }
           }
 
           // Generate AI-enhanced analysis
@@ -1237,6 +1253,24 @@ export const appRouter = router({
               // Override same_bedroom_comps with ALL competitors from Market Charts API
               same_bedroom_comps: allCompetitors,
               qualifying_comps: qualifyingCompetitors,
+              // AirDNA's native comp algorithm (similarity-based)
+              airdna_native_comps: airdnaNativeComps.length > 0 ? airdnaNativeComps.map(c => ({
+                id: c.listing_id,
+                title: c.title,
+                bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
+                accommodates: c.accommodates,
+                property_type: c.property_type,
+                annual_revenue: c.annual_revenue,
+                adr: c.adr,
+                occupancy: c.occupancy,
+                rating: c.rating,
+                reviews: c.reviews,
+                distance_meters: c.distance_meters,
+                similarity_score: c.similarity_score,
+                airbnb_url: c.airbnb_url,
+                amenities: c.amenities,
+              })) : undefined,
               ai_analysis: aiAnalysis,
               profitability: {
                 monthly_rent: input.monthlyRent,
