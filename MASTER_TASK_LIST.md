@@ -227,18 +227,12 @@
 
 ## Phase 5: New Features
 
-### 5.1 Smart Rates Integration
-- [ ] **5.1.1** Implement Smart Rates API integration
-  - Endpoint: `/listing/{id}/smart_rates`
-  - Returns: Recommended daily rates
-
-- [ ] **5.1.2** Add pricing strategy recommendations
-  - Endpoint: `/listing/{id}/smart_rates/pricing_strategies`
-  - Show: Balanced, High ADR, High Occupancy strategies
-
-- [ ] **5.1.3** Display Smart Rates in Property Advisor
-  - For: Existing Airbnb listings
-  - Impact: Revenue optimization insights
+### 5.1 UI Improvements
+- [x] **5.1.1** Add address autofill to "My Property" dialog on Map view ✅
+  - Location: MapViewContent.tsx - My Property popup
+  - Feature: Google Places autocomplete for property address input
+  - Impact: Better UX when setting user's property location
+  - COMPLETED: Replaced plain input with AddressAutocomplete, auto-sets location from place details
 
 ### 5.2 Bulk Operations
 - [ ] **5.2.1** Implement bulk listing fetch

@@ -3632,3 +3632,10 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Disabled POI clicks on mobile to prevent accidental taps
 - [x] Added responsive height: 350px mobile, 400px tablet, 500px desktop, 600px large screens
 - [x] Added touch-manipulation CSS class for better touch responsiveness
+
+
+### Completed: Address Autofill for My Property Dialog
+- [x] Add Google Places autocomplete to "My Property" popup in MapViewContent.tsx
+- [x] Replace plain text input with AddressAutocomplete component
+- [x] Auto-set location from place details (lat/lng) when address is selected
+- [x] Fallback to geocoding if place details don't include coordinates

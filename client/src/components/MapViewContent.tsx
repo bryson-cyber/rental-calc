@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapView } from '@/components/Map';
 import { HierarchicalLocationSelector, LocationSelection } from '@/components/HierarchicalLocationSelector';
+import { AddressAutocomplete, PlaceDetails } from '@/components/AddressAutocomplete';
 import { Button } from '@/components/ui/button';
 import { useProperty } from '@/contexts/PropertyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1150,19 +1151,32 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   <p className="text-xs text-slate-500">
                     Enter your property address to see how far competitors are from your location.
                   </p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter your address..."
-                      value={myPropertyAddress}
-                      onChange={(e) => setMyPropertyAddress(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
-                      className="text-sm"
-                    />
-                  </div>
-                  <div className="flex gap-2">
+                  <AddressAutocomplete
+                    value={myPropertyAddress}
+                    onChange={setMyPropertyAddress}
+                    onSelect={(address, placeId, details) => {
+                      setMyPropertyAddress(address);
+                      // Auto-set location from place details if available
+                      if (details?.lat && details?.lng) {
+                        setMyPropertyLocation({
+                          address: address,
+                          lat: details.lat,
+                          lng: details.lng
+                        });
+                        setMyPropertyError(null);
+                      } else {
+                        // Fallback to geocoding if no lat/lng in details
+                        geocodeMyProperty();
+                      }
+                    }}
+                    placeholder="Enter your address..."
+                    inputClassName="text-sm"
+                    variant="light"
+                  />
+                  <div className="flex gap-2 mt-2">
                     <Button
                       onClick={geocodeMyProperty}
-                      disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
+                      disabled={isGeocodingMyProperty || !myPropertyAddress.trim() || !!myPropertyLocation}
                       size="sm"
                       className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                     >
@@ -1171,7 +1185,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                       ) : (
                         <Navigation className="w-3 h-3 mr-1" />
                       )}
-                      Set Location
+                      {myPropertyLocation ? 'Location Set' : 'Set Location'}
                     </Button>
                     {myPropertyLocation && (
                       <Button
