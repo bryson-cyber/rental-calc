@@ -454,13 +454,17 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
     setError(null);
     setListings([]);
     
+    console.log('[MapView] performSearch called with selection:', JSON.stringify(selection, null, 2));
+    
     try {
       let marketId: string | null = null;
       
       if (selection.submarket) {
         marketId = selection.submarket.id;
+        console.log('[MapView] Using submarket ID:', marketId, 'name:', selection.submarket.name);
       } else if (selection.market) {
         marketId = selection.market.id;
+        console.log('[MapView] Using market ID:', marketId, 'name:', selection.market.name);
       }
       
       if (!marketId) {

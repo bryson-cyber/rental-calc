@@ -3446,3 +3446,21 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Complete AI prompt improvements for Step 7 (Market Advisor) - Pending
 - [x] Verify Gemini AI integration is working correctly - Using Gemini 3 Pro Preview with thinkingLevel: high
 - [x] Complete Step 5 Map data fixes (pagination for all listings)
+
+
+## Market Advisor Prompt & Step 5 Testing (Jan 22, 2026)
+
+### Tasks
+- [ ] Update Market Advisor AI prompt with Google Prompting Guide best practices
+- [ ] Test Step 5 Map with Soulard to verify pagination shows all bedroom types including 1BR
+
+
+## Market Advisor Prompt & Step 5 Test (Jan 22, 2026) - COMPLETE
+- [x] Update Market Advisor AI prompt with Google Prompting Guide best practices - DONE
+- [x] Test Step 5 Map with St. Louis to verify pagination and all bedroom types - FIXED
+  - Now shows 200 properties (up from 25)
+  - Includes Soulard listings (Soulard Retreat, Spacious Soulard Home, etc.)
+  - All bedroom types included (1BR-14BR)
+  - Revenue sorted from highest to lowest
+  - Map centered correctly on St. Louis area
+- [x] Fixed MapFirstLayout.tsx to use getAllListings with isMarketLevel parameter

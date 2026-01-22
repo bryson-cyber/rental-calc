@@ -1236,12 +1236,33 @@ export function HierarchicalLocationSelector({
     setShowCityResults(false);
     setDirectCitySearch('');
     
-    // Trigger search with the selected market
-    onSearch({
-      level: 'market',
-      state: foundState,
-      market: market
-    });
+    // Determine the correct level based on the market type from AirDNA API
+    // AirDNA returns type: 'market' or 'submarket' for each result
+    const isSubmarket = market.type === 'submarket' || market.isSubmarketAsMarket;
+    const level = isSubmarket ? 'submarket' : 'market';
+    
+    console.log(`[handleCityResultSelect] Selected: ${market.name}, type: ${market.type}, level: ${level}`);
+    
+    // Trigger search with the selected market/submarket
+    if (isSubmarket) {
+      // For submarkets, we need to pass it as a submarket
+      onSearch({
+        level: 'submarket',
+        state: foundState,
+        market: market, // Keep the market reference for parent info
+        submarket: {
+          id: market.id,
+          name: market.name,
+          listingCount: market.listingCount || 0,
+        }
+      });
+    } else {
+      onSearch({
+        level: 'market',
+        state: foundState,
+        market: market
+      });
+    }
   };
   
   return (

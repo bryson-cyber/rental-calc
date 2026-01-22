@@ -3212,7 +3212,13 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         try {
-          console.log(`[CompData.getAllListings] Fetching all listings for ${input.submarketId}, isMarketLevel: ${input.isMarketLevel}, maxListings: ${input.maxListings}`);
+          console.log(`\n========================================`);
+          console.log(`[CompData.getAllListings] REQUEST RECEIVED`);
+          console.log(`  - submarketId: ${input.submarketId}`);
+          console.log(`  - isMarketLevel: ${input.isMarketLevel}`);
+          console.log(`  - maxListings: ${input.maxListings}`);
+          console.log(`  - bedrooms: ${input.bedrooms || 'all'}`);
+          console.log(`========================================`);
           
           // Use the appropriate function based on whether it's a market or submarket search
           const allListings = input.isMarketLevel 
@@ -3228,6 +3234,10 @@ export const appRouter = router({
               });
 
           console.log(`[CompData.getAllListings] Fetched ${allListings.length} total listings`);
+          if (allListings.length > 0) {
+            console.log(`[CompData.getAllListings] First listing title: "${allListings[0].title}"`);
+            console.log(`[CompData.getAllListings] First listing lat/lng: ${allListings[0].latitude}, ${allListings[0].longitude}`);
+          }
 
           // Transform listings to match frontend interface
           const listings = allListings.map((listing: any) => ({

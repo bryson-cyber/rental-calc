@@ -324,23 +324,32 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     setError(null);
     
     try {
-      const params: any = {};
+      // Determine if this is a market-level or submarket-level search
+      const isMarketLevel = location.type === 'market';
+      const marketId = location.id || location.submarketId || location.marketId || '';
       
-      if (location.type === 'market') {
-        params.marketId = location.id;
-      } else if (location.type === 'submarket') {
-        params.submarketId = location.id;
-      } else if (location.zipcode || location.zip) {
-        params.zipcode = location.zipcode || location.zip;
-      }
+      console.log('[MapFirstLayout] fetchListings called:', {
+        name: location.name,
+        type: location.type,
+        id: marketId,
+        isMarketLevel
+      });
+      
+      // Build API params for getAllListings (handles pagination to get more than 25 listings)
+      const apiParams: any = { 
+        submarketId: marketId, 
+        isMarketLevel, 
+        maxListings: 200 
+      };
       
       if (apiBedroomFilter) {
-        params.bedrooms = apiBedroomFilter;
+        apiParams.bedrooms = apiBedroomFilter;
       }
       
-      // Use the compData.getListings query for submarkets
-      const response = await getListingsAsync(location.id || location.submarketId || '');
-      const listingsData = (response as any)?.listings || (response as any)?.data || response || [];
+      // Use getAllListings endpoint which properly handles both markets and submarkets
+      const response = await fetch(`/api/trpc/compData.getAllListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);  
+      const data = await response.json();
+      const listingsData = data.result?.data?.json?.listings || [];
       
       // Transform and calculate distances
       const processedListings = listingsData.map((listing: any) => {
