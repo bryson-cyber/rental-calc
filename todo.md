@@ -3153,3 +3153,31 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Missing data handling
 - [ ] Network error handling
 
+
+
+## QA Bug Fixes (Jan 22, 2026)
+
+### Input Validation Issues
+- [ ] Invalid Address: Add validation to prevent form submission with gibberish text (no Google Places match)
+- [ ] Negative Rent: Add min="0" constraint to prevent negative currency values
+- [ ] Monthly Rent Not Captured: Fix rent value not being passed correctly to profit calculation in Validate the Deal
+
+
+
+## QA Bug Fixes (Jan 22, 2026) - COMPLETE
+
+### Address Validation
+- [x] Added validation to AddressAutocomplete component
+- [x] Shows error message if user types gibberish but doesn't select from dropdown
+- [x] Added onValidationChange callback and required prop
+- [x] Added visual error styling (red border) on blur
+
+### Negative Rent Prevention
+- [x] Added min="0" constraint to all rent inputs
+- [x] Added onChange validation to prevent negative values
+- [x] Files updated: StartWithProperty.tsx, LeadMagnet.tsx, Home.tsx, ArbitrageTool.tsx
+
+### Monthly Rent Capture Fix
+- [x] Added monthlyRent prop to TeslaDashboard rendering in LeadMagnet.tsx
+- [x] Profit calculation now correctly uses user-entered rent value
+- [x] Fixed MarketInsightsPanel to convert marketId to string for API calls

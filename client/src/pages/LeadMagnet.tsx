@@ -1398,8 +1398,15 @@ export default function LeadMagnet() {
                   </label>
                   <Input
                     type="number"
+                    min="0"
                     value={monthlyRent}
-                    onChange={(e) => setMonthlyRent(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Prevent negative values
+                      if (val === '' || parseFloat(val) >= 0) {
+                        setMonthlyRent(val);
+                      }
+                    }}
                     placeholder="2000"
                     className="input-apple h-12"
                   />
@@ -2354,6 +2361,7 @@ export default function LeadMagnet() {
               address={address}
               bedrooms={parseInt(bedrooms)}
               bathrooms={parseFloat(bathrooms)}
+              monthlyRent={parseFloat(monthlyRent) || undefined}
               marketId={result.marketId}
             />
             

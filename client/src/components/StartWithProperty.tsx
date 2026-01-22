@@ -369,6 +369,7 @@ export function StartWithProperty({
             onSelect={handleAddressSelect}
             placeholder="Enter your property address..."
             variant="light"
+            required={true}
           />
         </div>
         
@@ -420,8 +421,15 @@ export function StartWithProperty({
             <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <Input
               type="number"
+              min="0"
               value={monthlyRent}
-              onChange={(e) => setMonthlyRent(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Prevent negative values
+                if (val === '' || parseFloat(val) >= 0) {
+                  setMonthlyRent(val);
+                }
+              }}
               placeholder="2,500"
               className="w-full h-12 pl-12 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
             />

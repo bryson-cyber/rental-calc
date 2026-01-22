@@ -41,9 +41,11 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
       setError(null);
       
       try {
+        // Convert marketId to string for API call (API accepts both but we normalize)
+        const marketIdStr = String(marketId);
         const [patternsResult, supplyResult] = await Promise.all([
-          getBookingPatterns.mutateAsync({ marketId }),
-          getSupplyTrend.mutateAsync({ marketId })
+          getBookingPatterns.mutateAsync({ marketId: marketIdStr }),
+          getSupplyTrend.mutateAsync({ marketId: marketIdStr })
         ]);
         
         if (patternsResult.success) {

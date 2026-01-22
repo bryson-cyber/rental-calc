@@ -35,27 +35,33 @@ interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onSelect?: (address: string, placeId: string, details?: PlaceDetails) => void;
+  onValidationChange?: (isValid: boolean) => void;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
   disabled?: boolean;
   variant?: 'dark' | 'light';
+  required?: boolean;
 }
 
 export function AddressAutocomplete({
   value,
   onChange,
   onSelect,
+  onValidationChange,
   placeholder = "Enter your property address...",
   className,
   inputClassName,
   disabled = false,
   variant = 'dark',
+  required = false,
 }: AddressAutocompleteProps) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [hasValidSelection, setHasValidSelection] = useState(false);
+  const [showError, setShowError] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,6 +144,13 @@ export function AddressAutocomplete({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       onChange(newValue);
+      
+      // When user types, invalidate the previous selection
+      setHasValidSelection(false);
+      setShowError(false);
+      if (onValidationChange) {
+        onValidationChange(false);
+      }
 
       // Clear existing timer
       if (debounceTimerRef.current) {
@@ -149,7 +162,7 @@ export function AddressAutocomplete({
         fetchPredictions(newValue);
       }, 300);
     },
-    [onChange, fetchPredictions]
+    [onChange, fetchPredictions, onValidationChange]
   );
 
   // Fetch full place details using place_id
@@ -227,6 +240,13 @@ export function AddressAutocomplete({
       setPredictions([]);
       setIsOpen(false);
       
+      // Mark as valid selection
+      setHasValidSelection(true);
+      setShowError(false);
+      if (onValidationChange) {
+        onValidationChange(true);
+      }
+      
       // Fetch full place details
       const details = await fetchPlaceDetails(prediction.placeId);
       
@@ -241,7 +261,7 @@ export function AddressAutocomplete({
         );
       }
     },
-    [onChange, onSelect, fetchPlaceDetails]
+    [onChange, onSelect, fetchPlaceDetails, onValidationChange]
   );
 
   // Handle keyboard navigation
@@ -302,6 +322,13 @@ export function AddressAutocomplete({
     };
   }, []);
 
+  // Validate on blur - show error if required and no valid selection
+  const handleBlur = useCallback(() => {
+    if (required && value.trim() && !hasValidSelection) {
+      setShowError(true);
+    }
+  }, [required, value, hasValidSelection]);
+
   return (
     <div ref={containerRef} className={cn("relative w-full", className)}>
       <div className="relative w-full">
@@ -311,6 +338,7 @@ export function AddressAutocomplete({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           onFocus={() => {
             if (predictions.length > 0) {
               setIsOpen(true);
@@ -325,6 +353,7 @@ export function AddressAutocomplete({
             variant === 'dark' 
               ? "bg-white/10 border border-white/20 text-white placeholder:text-white/60 placeholder:font-normal"
               : "bg-white border border-slate-200 text-slate-900 placeholder:text-slate-500 placeholder:font-normal",
+            showError && "border-red-500 focus:ring-red-500/50 focus:border-red-500",
             inputClassName
           )}
           autoComplete="off"
@@ -333,6 +362,13 @@ export function AddressAutocomplete({
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
         )}
       </div>
+      
+      {/* Validation Error Message */}
+      {showError && (
+        <p className="text-red-500 text-sm mt-1">
+          Please select an address from the dropdown suggestions
+        </p>
+      )}
 
       {/* Predictions Dropdown */}
       {isOpen && predictions.length > 0 && (

@@ -625,8 +625,16 @@ export default function RentalEstimator() {
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0F172A]/40" />
                   <input
                     type="number"
+                    min="0"
                     value={formData.monthlyRent || ''}
-                    onChange={(e) => setFormData({ ...formData, monthlyRent: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Prevent negative values
+                      const numVal = parseInt(val) || 0;
+                      if (val === '' || numVal >= 0) {
+                        setFormData({ ...formData, monthlyRent: Math.max(0, numVal) });
+                      }
+                    }}
                     placeholder="e.g., 2500"
                     className="w-full pl-10 pr-4 py-3 border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white placeholder:text-slate-500"
                   />

@@ -206,9 +206,16 @@ export default function ArbitrageTool() {
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F172A]/40" />
                   <Input
                     type="number"
+                    min="0"
                     placeholder="e.g., 2500"
                     value={monthlyRent}
-                    onChange={(e) => setMonthlyRent(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Prevent negative values
+                      if (val === '' || parseFloat(val) >= 0) {
+                        setMonthlyRent(val);
+                      }
+                    }}
                     className="pl-10"
                   />
                 </div>
