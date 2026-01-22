@@ -190,6 +190,14 @@ From AirDNA Rentalizer endpoint:
 - [x] Return airdna_native_comps with similarity_score in response
 - [x] TypeScript compilation clean
 
+### Phase 9: RevPAR Chart Implementation (Jan 22, 2026)
+- [x] Add revpar field to historicalData.months in routers.ts
+- [x] Add RevPAR Trend Chart section to StandaloneMarketAdvisor
+- [x] Display 12-month RevPAR trend with bar chart visualization
+- [x] Show average, peak, and low RevPAR values
+- [x] Add month-over-month change indicators
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

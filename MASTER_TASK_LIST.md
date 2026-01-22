@@ -49,7 +49,7 @@
 - [x] **1.2.6** Update Market Advisor prompt to include Submarket comparison - COMPLETED
 
 ### 1.3 Display New Metrics in UI
-- [ ] **1.3.1** Add RevPAR chart to Market Advisor results
+- [x] **1.3.1** Add RevPAR chart to Market Advisor results - COMPLETED
 - [x] **1.3.2** Add Booking Lead Time visualization (already in Booking Patterns section)
 - [x] **1.3.3** Add Length of Stay distribution chart (already in Booking Patterns section)
 - [x] **1.3.4** Add Active Listings trend chart (supply over time) - COMPLETED

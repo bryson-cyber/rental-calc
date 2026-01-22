@@ -69,6 +69,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     futurePricing: false,
     submarkets: false,
     supplyChart: false,
+    revparChart: false,
   });
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
 
@@ -925,6 +926,92 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-2">{marketData.supplyTrend.insight}</p>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* RevPAR Trend Chart */}
+          {marketData.historicalData?.months && marketData.historicalData.months.length > 0 && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('revparChart')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-emerald-500" />
+                    RevPAR Trend (Revenue Per Available Room)
+                  </CardTitle>
+                  {expandedSections.revparChart ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+                <CardDescription>
+                  RevPAR = ADR × Occupancy Rate - measures market efficiency
+                </CardDescription>
+              </CardHeader>
+              {expandedSections.revparChart && (
+                <CardContent>
+                  {/* RevPAR bar chart visualization */}
+                  <div className="space-y-2">
+                    {(() => {
+                      const data = marketData.historicalData.months.slice(0, 12).filter((m: any) => m.revpar);
+                      if (data.length === 0) {
+                        return <p className="text-sm text-slate-500">RevPAR data not available for this market.</p>;
+                      }
+                      const maxRevpar = Math.max(...data.map((m: any) => m.revpar || 0));
+                      const minRevpar = Math.min(...data.map((m: any) => m.revpar || 0));
+                      const avgRevpar = Math.round(data.reduce((sum: number, m: any) => sum + (m.revpar || 0), 0) / data.length);
+                      
+                      return (
+                        <>
+                          {data.map((month: any, index: number) => {
+                            const prevMonth = data[index + 1];
+                            const change = prevMonth ? month.revpar - prevMonth.revpar : 0;
+                            return (
+                              <div key={index} className="flex items-center gap-3">
+                                <div className="w-16 text-xs text-slate-600 text-right">
+                                  {month.date}
+                                </div>
+                                <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all"
+                                    style={{ width: `${(month.revpar / maxRevpar) * 100}%` }}
+                                  />
+                                </div>
+                                <div className="w-24 text-right">
+                                  <span className="text-sm font-medium">${Math.round(month.revpar).toLocaleString()}</span>
+                                  {change !== 0 && (
+                                    <span className={`text-xs ml-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {change > 0 ? '+' : ''}{Math.round(change)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                            <div className="grid grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <span className="text-slate-600">Average:</span>
+                                <span className="font-medium ml-2 text-emerald-700">${avgRevpar}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-600">Peak:</span>
+                                <span className="font-medium ml-2 text-emerald-700">${Math.round(maxRevpar)}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-600">Low:</span>
+                                <span className="font-medium ml-2 text-emerald-700">${Math.round(minRevpar)}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-2">
+                              RevPAR measures how efficiently a market converts available nights into revenue. Higher RevPAR indicates strong pricing power combined with good occupancy.
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               )}

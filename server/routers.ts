@@ -2626,6 +2626,7 @@ export const appRouter = router({
                 revenue: m.revenue,
                 occupancy: m.occupancy,
                 adr: m.adr,
+                revpar: m.revpar,
                 listingCount: m.listingCount,
               })),
             },
