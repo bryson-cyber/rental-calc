@@ -20,6 +20,7 @@ import { trpc } from '@/lib/trpc';
 import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
+import { AIAdvisorStep } from '@/components/AIAdvisorStep';
 import PropertyCard from '@/components/PropertyCard';
 import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
@@ -266,7 +267,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map';
+type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor';
 
 export default function LeadMagnet() {
   // Property context for property-centric workflow
@@ -945,6 +946,13 @@ export default function LeadMagnet() {
       job: "Answer: How does my property compare to nearby competition?",
       icon: Map,
       color: "from-teal-500 to-cyan-500"
+    },
+    advisor: {
+      title: "AI Advisor",
+      subtitle: "Get comprehensive AI-powered analysis of your property or market",
+      job: "Answer: What does all this data mean for me?",
+      icon: Sparkles,
+      color: "from-amber-500 to-yellow-500"
     }
   };
 
@@ -1101,8 +1109,8 @@ export default function LeadMagnet() {
           )}
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
-            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map'] as TabType[]).map((tab, index) => {
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-12">
+            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'advisor'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1126,7 +1134,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-xs text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'advisor' ? 'Step 6' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-base mb-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -1572,6 +1580,103 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'map' && (
               <MapViewContent embedded={true} />
+            )}
+
+            {/* ============================================ */}
+            {/* AI ADVISOR TAB */}
+            {/* ============================================ */}
+            {activeTab === 'advisor' && result && (
+              <AIAdvisorStep
+                property={{
+                  address: address,
+                  city: '',
+                  state: '',
+                  zipCode: '',
+                  bedrooms: parseInt(bedrooms) || 2,
+                  bathrooms: parseFloat(bathrooms) || 1,
+                  accommodates: (parseInt(bedrooms) || 2) * 2,
+                  monthlyRent: parseFloat(monthlyRent) || undefined,
+                }}
+                revenue={{
+                  projected: result.revenue.projected,
+                  low: result.revenue.low,
+                  high: result.revenue.high,
+                  adr: result.metrics.adr,
+                  occupancy: result.metrics.occupancy,
+                  revpar: result.metrics.adr * result.metrics.occupancy,
+                }}
+                cashFlow={result.cashFlow.monthlyRent ? {
+                  monthlyRevenue: result.cashFlow.monthlyRevenue,
+                  monthlyRent: result.cashFlow.monthlyRent,
+                  monthlyProfit: result.cashFlow.monthlyProfit,
+                  annualProfit: result.cashFlow.monthlyProfit * 12,
+                  profitMargin: (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100,
+                  breakEvenOccupancy: result.cashFlow.monthlyRent / (result.metrics.adr * 30),
+                } : undefined}
+                comparables={(result.comparables || []).map(c => ({
+                  title: c.title,
+                  bedrooms: c.bedrooms,
+                  bathrooms: c.bathrooms,
+                  accommodates: c.accommodates,
+                  revenue: c.revenue,
+                  adr: c.adr,
+                  occupancy: c.occupancy,
+                  revpar: c.adr * c.occupancy,
+                  rating: c.rating,
+                  reviews: c.reviews,
+                  distanceMeters: c.distanceMeters,
+                }))}
+                marketInsights={{
+                  professionallyManagedPct: result.marketInsights?.professionallyManagedPct || 0,
+                  superhostPct: result.marketInsights?.superhostPct || 0,
+                  avgRating: result.marketInsights?.avgRating || 0,
+                  totalListings: result.marketInsights?.totalListings || 0,
+                  marketScore: result.marketInsights?.marketScore || 50,
+                }}
+                historicalData={{
+                  yoyChange: result.historicalData?.summary?.yearly_pct_change || 0,
+                  trend: (result.historicalData?.summary?.trend as 'up' | 'down' | 'stable') || 'stable',
+                  months: (result.historicalData?.months || []).map((m: { date: string; revenue: number; occupancy: number; adr: number; listingCount?: number }) => ({
+                    date: m.date,
+                    revenue: m.revenue,
+                    occupancy: m.occupancy,
+                    adr: m.adr,
+                    revpar: m.adr * m.occupancy,
+                    listingCount: m.listingCount,
+                  })),
+                }}
+                seasonality={(result.forecast || []).map((s: { month: string; revenue: number; adr: number; occupancy: number }) => ({
+                  month: s.month,
+                  revenue: s.revenue,
+                  adr: s.adr,
+                  occupancy: s.occupancy,
+                  revpar: s.adr * s.occupancy,
+                  yoyChange: undefined,
+                }))}
+                marketGrade={{
+                  grade: 'C',
+                  score: result.marketInsights?.marketScore || 50,
+                  description: 'Market conditions based on available data',
+                  factors: [],
+                }}
+                marketPosition={{
+                  percentile: 50,
+                  rank: 0,
+                  totalListings: result.marketInsights?.totalListings || 0,
+                  vsAverage: 0,
+                }}
+              />
+            )}
+
+            {activeTab === 'advisor' && !result && (
+              <div className="text-center py-12">
+                <Sparkles className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">Validate a Property First</h3>
+                <p className="text-slate-600 mb-6">Run a property analysis in the "Validate the Deal" tab to unlock AI-powered insights.</p>
+                <Button onClick={() => setActiveTab('validate')} className="bg-amber-500 hover:bg-amber-600">
+                  Go to Validate the Deal
+                </Button>
+              </div>
             )}
           </div>
         </div>

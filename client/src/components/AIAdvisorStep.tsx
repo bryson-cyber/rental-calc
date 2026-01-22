@@ -1,0 +1,591 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Sparkles, 
+  Building2, 
+  TrendingUp, 
+  Loader2, 
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  BarChart3,
+  Target,
+  AlertTriangle,
+  CheckCircle2,
+  Info
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Streamdown } from 'streamdown';
+import { trpc } from '@/lib/trpc';
+
+interface AIAdvisorStepProps {
+  // Property data
+  property: {
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    bedrooms: number;
+    bathrooms: number;
+    accommodates: number;
+    monthlyRent?: number;
+    latitude?: number;
+    longitude?: number;
+  };
+  // Revenue projections
+  revenue: {
+    projected: number;
+    low: number;
+    high: number;
+    adr: number;
+    occupancy: number;
+    revpar: number;
+  };
+  // Cash flow analysis
+  cashFlow?: {
+    monthlyRevenue: number;
+    monthlyRent: number;
+    monthlyProfit: number;
+    annualProfit: number;
+    profitMargin: number;
+    breakEvenOccupancy: number;
+  };
+  // All comparables
+  comparables: Array<{
+    title: string;
+    bedrooms: number;
+    bathrooms: number;
+    accommodates: number;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    revpar: number;
+    rating: number;
+    reviews: number;
+    distanceMeters?: number;
+    isSuperhost?: boolean;
+    isProfessionallyManaged?: boolean;
+    propertyType?: string;
+    amenities?: string[];
+    lastReviewDate?: string;
+    listingUrl?: string;
+    photoCount?: number;
+  }>;
+  // Market insights
+  marketInsights: {
+    professionallyManagedPct: number;
+    superhostPct: number;
+    avgRating: number;
+    totalListings: number;
+    marketScore: number;
+    investabilityScore?: number;
+    rentalDemandScore?: number;
+    revenueGrowthScore?: number;
+    seasonalityScore?: number;
+    regulationScore?: number;
+  };
+  // Historical data
+  historicalData: {
+    yoyChange: number;
+    trend: 'up' | 'down' | 'stable';
+    months: Array<{
+      date: string;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      revpar: number;
+      listingCount?: number;
+    }>;
+  };
+  // Seasonality
+  seasonality: Array<{
+    month: string;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    revpar: number;
+    yoyChange?: number;
+  }>;
+  // Market grade
+  marketGrade: {
+    grade: string;
+    score: number;
+    description: string;
+    factors: Array<{
+      name: string;
+      score: number;
+      weight: number;
+    }>;
+  };
+  // Market position
+  marketPosition: {
+    percentile: number;
+    rank: number;
+    totalListings: number;
+    vsAverage: number;
+  };
+  // Market data for market advisor
+  marketData?: {
+    name: string;
+    city: string;
+    state: string;
+    country: string;
+    scores: {
+      marketScore: number;
+      investabilityScore: number;
+      rentalDemandScore: number;
+      revenueGrowthScore: number;
+      seasonalityScore: number;
+      regulationScore: number;
+    };
+    metrics: {
+      avgRevenue: number;
+      avgOccupancy: number;
+      avgAdr: number;
+      avgRevpar: number;
+      totalListings: number;
+      professionallyManagedPct: number;
+      superhostPct: number;
+      avgRating: number;
+    };
+    revenueByBedroom: Array<{
+      bedrooms: number;
+      avgRevenue: number;
+      avgOccupancy: number;
+      avgAdr: number;
+      listingCount: number;
+    }>;
+    topPerformers: Array<{
+      title: string;
+      bedrooms: number;
+      bathrooms: number;
+      revenue: number;
+      occupancy: number;
+      adr: number;
+      rating: number;
+      reviews: number;
+      isSuperhost: boolean;
+      isProfessionallyManaged: boolean;
+    }>;
+  };
+}
+
+export function AIAdvisorStep(props: AIAdvisorStepProps) {
+  const [activeTab, setActiveTab] = useState<'property' | 'market'>('property');
+  const [propertyAdvice, setPropertyAdvice] = useState<string | null>(null);
+  const [marketAdvice, setMarketAdvice] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const propertyAdvisorMutation = trpc.advanced.propertyAdvisorMax.useMutation();
+  const marketAdvisorMutation = trpc.advanced.marketAdvisorMax.useMutation();
+
+  const handleGeneratePropertyAdvice = async () => {
+    try {
+      const result = await propertyAdvisorMutation.mutateAsync({
+        property: props.property,
+        revenue: props.revenue,
+        cashFlow: props.cashFlow,
+        comparables: props.comparables,
+        marketInsights: props.marketInsights,
+        historicalData: props.historicalData,
+        seasonality: props.seasonality,
+        marketGrade: props.marketGrade,
+        marketPosition: props.marketPosition,
+      });
+      
+      if (result.success && result.data?.advice) {
+        setPropertyAdvice(result.data.advice);
+      }
+    } catch (error) {
+      console.error('Error generating property advice:', error);
+    }
+  };
+
+  const handleGenerateMarketAdvice = async () => {
+    if (!props.marketData) return;
+    
+    try {
+      const result = await marketAdvisorMutation.mutateAsync({
+        market: {
+          name: props.marketData.name,
+          city: props.marketData.city,
+          state: props.marketData.state,
+          country: props.marketData.country,
+        },
+        scores: props.marketData.scores,
+        metrics: props.marketData.metrics,
+        revenueByBedroom: props.marketData.revenueByBedroom,
+        historicalData: props.historicalData,
+        seasonality: props.seasonality,
+        topPerformers: props.marketData.topPerformers,
+      });
+      
+      if (result.success && result.data?.advice) {
+        setMarketAdvice(result.data.advice);
+      }
+    } catch (error) {
+      console.error('Error generating market advice:', error);
+    }
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl mb-4">
+          <Sparkles className="w-8 h-8 text-amber-600" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-900">AI Advisor</h2>
+        <p className="text-slate-600 max-w-2xl mx-auto">
+          Get comprehensive, AI-powered analysis of your property or market. 
+          Our advisor synthesizes all available data into actionable insights.
+        </p>
+      </div>
+
+      {/* Data Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-slate-900">
+              {props.comparables.length}
+            </div>
+            <div className="text-sm text-slate-600">Comparables Analyzed</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-slate-900">
+              {props.historicalData.months.length}
+            </div>
+            <div className="text-sm text-slate-600">Months of Data</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-slate-900">
+              {props.seasonality.length}
+            </div>
+            <div className="text-sm text-slate-600">Seasonal Periods</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-slate-900">
+              {props.marketGrade.factors.length}
+            </div>
+            <div className="text-sm text-slate-600">Market Factors</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Advisor Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'property' | 'market')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="property" className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Property Advisor
+          </TabsTrigger>
+          <TabsTrigger value="market" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Market Advisor
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Property Advisor Tab */}
+        <TabsContent value="property" className="space-y-6">
+          <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Building2 className="w-5 h-5 text-amber-600" />
+                    Property Analysis
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Comprehensive analysis of {props.property.address}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                  {props.property.bedrooms} BR / {props.property.bathrooms} BA
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Property Summary */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-amber-100">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-slate-900">
+                    {formatCurrency(props.revenue.projected)}
+                  </div>
+                  <div className="text-xs text-slate-600">Projected Revenue</div>
+                </div>
+                <div className="text-center border-x border-amber-100">
+                  <div className="text-lg font-bold text-slate-900">
+                    {(props.revenue.occupancy > 1 ? props.revenue.occupancy : props.revenue.occupancy * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-slate-600">Occupancy</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-slate-900">
+                    {formatCurrency(props.revenue.adr)}
+                  </div>
+                  <div className="text-xs text-slate-600">Avg Daily Rate</div>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              {!propertyAdvice && (
+                <Button
+                  onClick={handleGeneratePropertyAdvice}
+                  disabled={propertyAdvisorMutation.isPending}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white py-6 text-lg"
+                >
+                  {propertyAdvisorMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Analyzing Property Data...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Generate Property Analysis
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Error State */}
+              {propertyAdvisorMutation.isError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-red-800">Analysis Failed</div>
+                    <div className="text-sm text-red-600">
+                      Unable to generate property analysis. Please try again.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Analysis Result */}
+              {propertyAdvice && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">Analysis Complete</span>
+                  </div>
+                  
+                  <div className="prose prose-slate max-w-none bg-white rounded-lg border border-slate-200 p-6">
+                    <Streamdown>{propertyAdvice}</Streamdown>
+                  </div>
+
+                  <Button
+                    onClick={() => setPropertyAdvice(null)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Generate New Analysis
+                  </Button>
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Market Advisor Tab */}
+        <TabsContent value="market" className="space-y-6">
+          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    Market Analysis
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Comprehensive analysis of {props.marketData?.name || `${props.property.city}, ${props.property.state}`}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                  Grade: {props.marketGrade.grade}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Market Summary */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-blue-100">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-slate-900">
+                    {props.marketInsights.totalListings.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-slate-600">Total Listings</div>
+                </div>
+                <div className="text-center border-x border-blue-100">
+                  <div className="text-lg font-bold text-slate-900">
+                    {props.marketGrade.score}/100
+                  </div>
+                  <div className="text-xs text-slate-600">Market Score</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-lg font-bold ${props.historicalData.yoyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {props.historicalData.yoyChange >= 0 ? '+' : ''}{props.historicalData.yoyChange.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-slate-600">YoY Change</div>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              {!marketAdvice && (
+                <Button
+                  onClick={handleGenerateMarketAdvice}
+                  disabled={marketAdvisorMutation.isPending || !props.marketData}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+                >
+                  {marketAdvisorMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Analyzing Market Data...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Generate Market Analysis
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {!props.marketData && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-blue-800">Market Data Required</div>
+                    <div className="text-sm text-blue-600">
+                      Complete market data is needed for full market analysis. 
+                      The property analysis is available with current data.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error State */}
+              {marketAdvisorMutation.isError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-red-800">Analysis Failed</div>
+                    <div className="text-sm text-red-600">
+                      Unable to generate market analysis. Please try again.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Analysis Result */}
+              {marketAdvice && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">Analysis Complete</span>
+                  </div>
+                  
+                  <div className="prose prose-slate max-w-none bg-white rounded-lg border border-slate-200 p-6">
+                    <Streamdown>{marketAdvice}</Streamdown>
+                  </div>
+
+                  <Button
+                    onClick={() => setMarketAdvice(null)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Generate New Analysis
+                  </Button>
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Data Transparency Section */}
+      <Card className="border-slate-200">
+        <CardHeader 
+          className="cursor-pointer"
+          onClick={() => toggleSection('dataTransparency')}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="w-5 h-5 text-slate-600" />
+              Data Transparency
+            </CardTitle>
+            {expandedSections.dataTransparency ? (
+              <ChevronUp className="w-5 h-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-400" />
+            )}
+          </div>
+        </CardHeader>
+        <AnimatePresence>
+          {expandedSections.dataTransparency && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <CardContent className="pt-0">
+                <div className="text-sm text-slate-600 space-y-2">
+                  <p>
+                    <strong>Data Source:</strong> All analysis is based exclusively on AirDNA market data.
+                  </p>
+                  <p>
+                    <strong>Comparables:</strong> {props.comparables.length} properties analyzed within your market area.
+                  </p>
+                  <p>
+                    <strong>Historical Data:</strong> {props.historicalData.months.length} months of performance data.
+                  </p>
+                  <p>
+                    <strong>AI Model:</strong> Gemini 2.5 Pro with 65,000 token output capacity.
+                  </p>
+                  <p className="text-xs text-slate-500 mt-4">
+                    Note: This analysis is for informational purposes only and should not be considered financial advice. 
+                    Always conduct your own due diligence before making investment decisions.
+                  </p>
+                </div>
+              </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </div>
+  );
+}
+
+export default AIAdvisorStep;

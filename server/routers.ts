@@ -27,7 +27,7 @@ import {
   getMarketHistoricalData,
   getMarketListings,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, type PropertyAdvisorInput } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 import { generateFullArbitrageAnalysis } from "./sop-reports";
@@ -2280,6 +2280,213 @@ export const appRouter = router({
           return {
             success: false,
             error: "Failed to generate market trend narrative",
+            data: null,
+          };
+        }
+      }),
+
+    // Maximum Capacity Property Advisor - Full 65K token output
+    propertyAdvisorMax: publicProcedure
+      .input(z.object({
+        property: z.object({
+          address: z.string(),
+          city: z.string(),
+          state: z.string(),
+          zipCode: z.string(),
+          bedrooms: z.number(),
+          bathrooms: z.number(),
+          accommodates: z.number(),
+          monthlyRent: z.number().optional(),
+          latitude: z.number().optional(),
+          longitude: z.number().optional(),
+        }),
+        revenue: z.object({
+          projected: z.number(),
+          low: z.number(),
+          high: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+          revpar: z.number(),
+        }),
+        cashFlow: z.object({
+          monthlyRevenue: z.number(),
+          monthlyRent: z.number(),
+          monthlyProfit: z.number(),
+          annualProfit: z.number(),
+          profitMargin: z.number(),
+          breakEvenOccupancy: z.number(),
+        }).optional(),
+        comparables: z.array(z.object({
+          title: z.string(),
+          bedrooms: z.number(),
+          bathrooms: z.number(),
+          accommodates: z.number(),
+          revenue: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+          revpar: z.number(),
+          rating: z.number(),
+          reviews: z.number(),
+          distanceMeters: z.number().optional(),
+          isSuperhost: z.boolean().optional(),
+          isProfessionallyManaged: z.boolean().optional(),
+          propertyType: z.string().optional(),
+          amenities: z.array(z.string()).optional(),
+          lastReviewDate: z.string().optional(),
+          listingUrl: z.string().optional(),
+          photoCount: z.number().optional(),
+        })),
+        marketInsights: z.object({
+          professionallyManagedPct: z.number(),
+          superhostPct: z.number(),
+          avgRating: z.number(),
+          totalListings: z.number(),
+          marketScore: z.number(),
+          investabilityScore: z.number().optional(),
+          rentalDemandScore: z.number().optional(),
+          revenueGrowthScore: z.number().optional(),
+          seasonalityScore: z.number().optional(),
+          regulationScore: z.number().optional(),
+        }),
+        historicalData: z.object({
+          yoyChange: z.number(),
+          trend: z.enum(['up', 'down', 'stable']),
+          months: z.array(z.object({
+            date: z.string(),
+            revenue: z.number(),
+            occupancy: z.number(),
+            adr: z.number(),
+            revpar: z.number(),
+            listingCount: z.number().optional(),
+          })),
+        }),
+        seasonality: z.array(z.object({
+          month: z.string(),
+          revenue: z.number(),
+          adr: z.number(),
+          occupancy: z.number(),
+          revpar: z.number(),
+          yoyChange: z.number().optional(),
+        })),
+        marketGrade: z.object({
+          grade: z.string(),
+          score: z.number(),
+          description: z.string(),
+          factors: z.array(z.object({
+            name: z.string(),
+            score: z.number(),
+            weight: z.number(),
+          })),
+        }),
+        marketPosition: z.object({
+          percentile: z.number(),
+          rank: z.number(),
+          totalListings: z.number(),
+          vsAverage: z.number(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[AI Advisor Max] Generating maximum capacity property advice for:', input.property.address);
+          const advice = await generateMaxPropertyAdvice(input as MaxPropertyAdvisorInput);
+          return {
+            success: true,
+            data: { advice },
+          };
+        } catch (error) {
+          console.error('[AI Advisor Max] Error generating property advice:', error);
+          return {
+            success: false,
+            error: 'Failed to generate comprehensive property advice',
+            data: null,
+          };
+        }
+      }),
+
+    // Maximum Capacity Market Advisor - Full 65K token output
+    marketAdvisorMax: publicProcedure
+      .input(z.object({
+        market: z.object({
+          name: z.string(),
+          city: z.string(),
+          state: z.string(),
+          country: z.string(),
+        }),
+        scores: z.object({
+          marketScore: z.number(),
+          investabilityScore: z.number(),
+          rentalDemandScore: z.number(),
+          revenueGrowthScore: z.number(),
+          seasonalityScore: z.number(),
+          regulationScore: z.number(),
+        }),
+        metrics: z.object({
+          avgRevenue: z.number(),
+          avgOccupancy: z.number(),
+          avgAdr: z.number(),
+          avgRevpar: z.number(),
+          totalListings: z.number(),
+          professionallyManagedPct: z.number(),
+          superhostPct: z.number(),
+          avgRating: z.number(),
+        }),
+        revenueByBedroom: z.array(z.object({
+          bedrooms: z.number(),
+          avgRevenue: z.number(),
+          avgOccupancy: z.number(),
+          avgAdr: z.number(),
+          listingCount: z.number(),
+        })),
+        historicalData: z.object({
+          yoyChange: z.number(),
+          trend: z.enum(['up', 'down', 'stable']),
+          months: z.array(z.object({
+            date: z.string(),
+            revenue: z.number(),
+            occupancy: z.number(),
+            adr: z.number(),
+            listingCount: z.number().optional(),
+          })),
+        }),
+        seasonality: z.array(z.object({
+          month: z.string(),
+          revenue: z.number(),
+          occupancy: z.number(),
+          adr: z.number(),
+          yoyChange: z.number().optional(),
+        })),
+        topPerformers: z.array(z.object({
+          title: z.string(),
+          bedrooms: z.number(),
+          bathrooms: z.number(),
+          revenue: z.number(),
+          occupancy: z.number(),
+          adr: z.number(),
+          rating: z.number(),
+          reviews: z.number(),
+          isSuperhost: z.boolean().optional(),
+          isProfessionallyManaged: z.boolean().optional(),
+        })),
+        propertyTypes: z.array(z.object({
+          type: z.string(),
+          count: z.number(),
+          avgRevenue: z.number(),
+          avgOccupancy: z.number(),
+        })).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          console.log('[AI Advisor Max] Generating maximum capacity market advice for:', input.market.name);
+          const advice = await generateMaxMarketAdvice(input as MaxMarketAdvisorInput);
+          return {
+            success: true,
+            data: { advice },
+          };
+        } catch (error) {
+          console.error('[AI Advisor Max] Error generating market advice:', error);
+          return {
+            success: false,
+            error: 'Failed to generate comprehensive market advice',
             data: null,
           };
         }

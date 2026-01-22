@@ -3011,3 +3011,48 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Add API endpoint for AI Property Advisor
 - [x] Add AI Advisor section to TeslaDashboard UI
 - [ ] Test with real property analysis
+
+
+## Step 6: AI Advisor (Dedicated Tool) - Jan 21, 2026
+
+### Overview:
+Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity (1M input tokens, 65K output tokens).
+
+### Two Advisor Modes:
+1. **Property Advisor** - Deep analysis of a specific property
+2. **Market Advisor** - Comprehensive market analysis
+
+### Backend (gemini.ts):
+- [x] Create generateMaxPropertyAdvice function with all available data
+- [x] Create generateMaxMarketAdvice function with all available data
+- [x] Send ALL competitor data (30+ listings with full details)
+- [x] Send 24 months of historical data
+- [x] Send complete seasonality breakdown
+- [x] Send market health metrics and score breakdown
+- [x] Send regulation/risk indicators
+- [x] Request maximum output (65K tokens)
+
+### API Endpoints (routers.ts):
+- [x] Add propertyAdvisorMax endpoint
+- [x] Add marketAdvisorMax endpoint
+- [ ] Pass comprehensive data payload to Gemini
+
+### UI (Step 6 Component):
+- [ ] Create AIAdvisorStep component
+- [ ] Add mode selector (Property vs Market)
+- [ ] Add loading state with progress indicator
+- [ ] Display full AI response with proper formatting
+- [ ] Add section navigation for long reports
+- [ ] Make it scrollable with sticky header
+
+### Journey Integration:
+- [ ] Add Step 6 to the journey cards
+- [ ] Update step numbering
+- [ ] Add "Get AI Analysis" CTA from other steps
+- [ ] Remove embedded AI Advisor from Step 3 (now separate)
+
+### Testing:
+- [ ] Test Property Advisor with real property data
+- [ ] Test Market Advisor with real market data
+- [ ] Verify full output is displayed
+- [ ] Verify formatting is correct
