@@ -1138,7 +1138,7 @@ export function HierarchicalLocationSelector({
           });
           
           // Show a warning message that no market data is available
-          setDirectZipError(`Located ${geocodeResult.city}, ${geocodeResult.state}. No AirDNA market data available for this area. The map will center on this location, but listing data may be limited.`);
+          setDirectZipError(`Located ${geocodeResult.city}, ${geocodeResult.state}. No market data available for this area. The map will center on this location, but listing data may be limited.`);
         } else {
           // Show the error from geocoding or a default message
           const errorMsg = geocodeResult?.error || 

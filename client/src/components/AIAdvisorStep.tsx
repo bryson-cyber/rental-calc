@@ -563,7 +563,7 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
               <CardContent className="pt-0">
                 <div className="text-sm text-slate-600 space-y-2">
                   <p>
-                    <strong>Data Source:</strong> All analysis is based exclusively on AirDNA market data.
+                    <strong>Data Source:</strong> All analysis is based on comprehensive short-term rental market data.
                   </p>
                   <p>
                     <strong>Comparables:</strong> {props.comparables.length} properties analyzed within your market area.

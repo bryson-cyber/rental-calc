@@ -1691,13 +1691,111 @@ export default function LeadMagnet() {
             )}
 
             {activeTab === 'advisor' && !result && (
-              <div className="text-center py-12">
-                <Sparkles className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Validate a Property First</h3>
-                <p className="text-slate-600 mb-6">Run a property analysis in the "Validate the Deal" tab to unlock AI-powered insights.</p>
-                <Button onClick={() => setActiveTab('validate')} className="bg-amber-500 hover:bg-amber-600">
-                  Go to Validate the Deal
-                </Button>
+              <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl mb-4">
+                    <Sparkles className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">AI Property Advisor</h2>
+                  <p className="text-slate-600">
+                    Get AI-powered analysis of any property. Enter an address below to see projected revenue, 
+                    market insights, and personalized recommendations.
+                  </p>
+                </div>
+                
+                {/* Standalone Address Input Form */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                  <div className="space-y-4">
+                    {/* Address Input */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Property Address</label>
+                      <AddressAutocomplete
+                        value={address}
+                        onChange={setAddress}
+                        placeholder="Enter property address..."
+                        required
+                      />
+                    </div>
+                    
+                    {/* Property Details Row */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Bedrooms</label>
+                        <select
+                          value={bedrooms}
+                          onChange={(e) => setBedrooms(e.target.value)}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+                            <option key={n} value={n}>{n} BR</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Bathrooms</label>
+                        <select
+                          value={bathrooms}
+                          onChange={(e) => setBathrooms(e.target.value)}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                        >
+                          {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
+                            <option key={n} value={n}>{n} BA</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Monthly Rent</label>
+                        <Input
+                          type="number"
+                          value={monthlyRent}
+                          onChange={(e) => setMonthlyRent(e.target.value)}
+                          placeholder="Optional"
+                          min="0"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Analyze Button */}
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={!address || isAnalyzing}
+                      className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 text-lg font-semibold"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                          Analyzing Property...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          Get AI Analysis
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Or use existing data hint */}
+                {hasProperty && myProperty?.address && (
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-slate-500 mb-2">Or use your saved property:</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAddress(myProperty.address);
+                        setBedrooms(String(myProperty.bedrooms));
+                        setBathrooms(String(myProperty.bathrooms));
+                        if (myProperty.monthlyRent) setMonthlyRent(String(myProperty.monthlyRent));
+                      }}
+                      className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                    >
+                      <Home className="w-4 h-4 mr-2" />
+                      Use {myProperty.address.split(',')[0]}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

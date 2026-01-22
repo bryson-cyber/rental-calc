@@ -2,7 +2,7 @@
  * Tesla Dashboard Component
  * 
  * Design Philosophy:
- * - Same powerful insights as AirDNA, dramatically simpler interface
+ * - Powerful market insights with dramatically simpler interface
  * - One hero metric per section, progressive disclosure for details
  * - Smart defaults, visual over tabular, instant insights
  * - Color = meaning (green/yellow/red for quick decisions)
@@ -1266,18 +1266,18 @@ function MarketHealthGrade({
     seasonalityScore = Math.max(20, 100 - (coefficientOfVariation * 200));
   }
   
-  // 6. AirDNA Market Score (if available from API)
-  // This is a comprehensive score from AirDNA that factors in many market indicators
-  const airdnaScore = marketScore !== undefined ? marketScore : undefined;
+  // 6. Market Score (if available from API)
+  // This is a comprehensive score that factors in many market indicators
+  const apiMarketScore = marketScore !== undefined ? marketScore : undefined;
   
-  // Calculate weighted average - adjust weights if AirDNA score is available
-  const weights = airdnaScore !== undefined ? {
+  // Calculate weighted average - adjust weights if Market score is available
+  const weights = apiMarketScore !== undefined ? {
     occupancy: 0.20,
     growth: 0.20,
     competition: 0.15,
     quality: 0.10,
     seasonality: 0.10,
-    airdna: 0.25  // Give significant weight to AirDNA's comprehensive score
+    marketApi: 0.25  // Give significant weight to the comprehensive market score
   } : {
     occupancy: 0.30,
     growth: 0.25,
@@ -1286,13 +1286,13 @@ function MarketHealthGrade({
     seasonality: 0.10
   };
   
-  const overallScore = airdnaScore !== undefined
+  const overallScore = apiMarketScore !== undefined
     ? occupancyScore * weights.occupancy +
       growthScore * weights.growth +
       competitionScore * weights.competition +
       qualityScore * weights.quality +
       seasonalityScore * weights.seasonality +
-      airdnaScore * (weights as any).airdna
+      apiMarketScore * (weights as any).marketApi
     : occupancyScore * weights.occupancy +
       growthScore * weights.growth +
       competitionScore * weights.competition +
@@ -1348,13 +1348,23 @@ function MarketHealthGrade({
   }
   
   // Factor breakdown
+  // Factor definitions for user understanding
+  const factorDefinitions: Record<string, string> = {
+    'Market Score': 'Overall market health combining demand, supply, and revenue potential',
+    'Occupancy': 'How often properties are booked. Higher = more demand',
+    'Growth Trend': 'Year-over-year revenue change. Positive = growing market',
+    'Competition': 'Professional host saturation. Lower = easier entry for new hosts',
+    'Quality': 'Average guest ratings. Higher = better guest experiences',
+    'Seasonality': 'Revenue stability throughout the year. Higher = more consistent income',
+  };
+  
   const factors = [
-    ...(airdnaScore !== undefined ? [{ name: 'AirDNA Market Score', score: airdnaScore, weight: (weights as any).airdna }] : []),
-    { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy },
-    { name: 'Growth Trend', score: growthScore, weight: weights.growth },
-    { name: 'Competition', score: competitionScore, weight: weights.competition },
-    { name: 'Quality', score: qualityScore, weight: weights.quality },
-    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality },
+    ...(apiMarketScore !== undefined ? [{ name: 'Market Score', score: apiMarketScore, weight: (weights as any).marketApi, definition: factorDefinitions['Market Score'] }] : []),
+    { name: 'Occupancy', score: occupancyScore, weight: weights.occupancy, definition: factorDefinitions['Occupancy'] },
+    { name: 'Growth Trend', score: growthScore, weight: weights.growth, definition: factorDefinitions['Growth Trend'] },
+    { name: 'Competition', score: competitionScore, weight: weights.competition, definition: factorDefinitions['Competition'] },
+    { name: 'Quality', score: qualityScore, weight: weights.quality, definition: factorDefinitions['Quality'] },
+    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality, definition: factorDefinitions['Seasonality'] },
   ];
   
   return (
@@ -1417,28 +1427,27 @@ function MarketHealthGrade({
       </div>
       
       {/* Factor Breakdown */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <p className="text-sm font-medium text-slate-700">Score Breakdown</p>
         {factors.map((factor) => (
-          <div key={factor.name} className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-slate-600">{factor.name}</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {Math.round(factor.score)}
-                </span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all ${
-                    factor.score >= 70 ? 'bg-emerald-500' :
-                    factor.score >= 50 ? 'bg-blue-500' :
-                    factor.score >= 30 ? 'bg-amber-500' : 'bg-red-500'
-                  }`}
-                  style={{ width: `${factor.score}%` }}
-                />
-              </div>
+          <div key={factor.name} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-700">{factor.name}</span>
+              <span className="text-sm font-bold text-slate-900">
+                {Math.round(factor.score)}/100
+              </span>
             </div>
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all ${
+                  factor.score >= 70 ? 'bg-emerald-500' :
+                  factor.score >= 50 ? 'bg-blue-500' :
+                  factor.score >= 30 ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${factor.score}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-500">{factor.definition}</p>
           </div>
         ))}
       </div>

@@ -3191,3 +3191,10 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## New Feature Requests (Jan 22, 2026) - COMPLETE
 - [x] Map fullscreen toggle button - Added expand button in top-right corner, fullscreen view with legend overlay showing property counts
 - [x] Revenue threshold filter with property counts (top/middle/bottom 33%) - Now shows "9 properties", "8 properties", etc. next to each tier
+
+
+## Bug Fixes (Jan 22, 2026 - Session 2)
+- [x] Step 6 AI Advisor - Added standalone address input form with bedrooms, bathrooms, and rent fields
+- [x] Market Score - Added score number (e.g., 72/100) to each factor in the breakdown
+- [x] Factor Definitions - Added simple explanations under each factor (Occupancy, Growth, Competition, Quality, Seasonality)
+- [x] Remove all AirDNA branding - Removed from user-facing error messages and variable names

@@ -1,7 +1,7 @@
 /**
  * MarketInsightsPanel Component
  * 
- * Displays booking patterns and supply trend data from AirDNA API.
+ * Displays booking patterns and supply trend data from market data API.
  * Shows booking lead time, length of stay metrics, and supply trend chart.
  */
 import { useState, useEffect } from 'react';
@@ -9,7 +9,7 @@ import { trpc } from '@/lib/trpc';
 import { Calendar, Clock, TrendingUp, Users, Info } from 'lucide-react';
 
 interface MarketInsightsPanelProps {
-  marketId: string | number | undefined;
+  marketId?: string | number;
 }
 
 // Simple tooltip component
