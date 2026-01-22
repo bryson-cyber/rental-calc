@@ -67,6 +67,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     cancellationPolicies: false,
     professionalStats: false,
     futurePricing: false,
+    submarkets: false,
+    supplyChart: false,
   });
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
 
@@ -793,6 +795,136 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                         {marketData.professionalStats.revenuePremiumPercent > 0 ? '+' : ''}{marketData.professionalStats.revenuePremiumPercent}%
                       </Badge>
                     </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Submarkets Comparison */}
+          {marketData.submarkets && marketData.submarkets.length > 0 && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('submarkets')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-teal-500" />
+                    Neighborhoods & Submarkets ({marketData.submarkets.length})
+                  </CardTitle>
+                  {expandedSections.submarkets ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {expandedSections.submarkets && (
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-slate-50">
+                          <th className="text-left py-3 px-3 font-medium text-slate-600">Neighborhood</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Listings</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Avg Revenue</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">ADR</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Occupancy</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {marketData.submarkets
+                          .sort((a: any, b: any) => (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0))
+                          .slice(0, 15)
+                          .map((submarket: any, index: number) => (
+                          <tr key={index} className="border-b last:border-b-0 hover:bg-slate-50">
+                            <td className="py-3 px-3">
+                              <div className="font-medium text-slate-900">{submarket.name}</div>
+                            </td>
+                            <td className="text-right py-3 px-3 text-slate-600">
+                              {submarket.listingCount?.toLocaleString() || '-'}
+                            </td>
+                            <td className="text-right py-3 px-3 font-medium text-green-600">
+                              {submarket.metrics?.revenue ? formatCurrency(submarket.metrics.revenue) : '-'}
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              {submarket.metrics?.adr ? formatCurrency(submarket.metrics.adr) : '-'}
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              {submarket.metrics?.occupancy ? formatPercent(submarket.metrics.occupancy) : '-'}
+                            </td>
+                            <td className="text-right py-3 px-3">
+                              {submarket.metrics?.marketScore ? (
+                                <Badge className={getScoreColor(submarket.metrics.marketScore)}>
+                                  {submarket.metrics.marketScore}
+                                </Badge>
+                              ) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-3 text-center">
+                    Showing top 15 neighborhoods by revenue. Higher scores indicate better investment potential.
+                  </p>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Supply Trend Chart */}
+          {marketData.supplyTrend?.monthlyData && marketData.supplyTrend.monthlyData.length > 0 && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleSection('supplyChart')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-cyan-500" />
+                    Active Listings Trend (12 Months)
+                  </CardTitle>
+                  {expandedSections.supplyChart ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {expandedSections.supplyChart && (
+                <CardContent>
+                  {/* Simple bar chart visualization */}
+                  <div className="space-y-2">
+                    {(() => {
+                      const data = marketData.supplyTrend.monthlyData.slice(0, 12);
+                      const maxListings = Math.max(...data.map((m: any) => m.activeListings));
+                      return data.map((month: any, index: number) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <div className="w-16 text-xs text-slate-600 text-right">
+                            {month.month}
+                          </div>
+                          <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full transition-all"
+                              style={{ width: `${(month.activeListings / maxListings) * 100}%` }}
+                            />
+                          </div>
+                          <div className="w-20 text-right">
+                            <span className="text-sm font-medium">{month.activeListings.toLocaleString()}</span>
+                            {month.changeFromPrevious !== 0 && (
+                              <span className={`text-xs ml-1 ${month.changeFromPrevious > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {month.changeFromPrevious > 0 ? '+' : ''}{month.changeFromPrevious}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">12-Month Change:</span>
+                      <span className={`font-medium ${marketData.supplyTrend.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {marketData.supplyTrend.percentChange >= 0 ? '+' : ''}{marketData.supplyTrend.percentChange.toFixed(1)}%
+                        ({marketData.supplyTrend.netChange >= 0 ? '+' : ''}{marketData.supplyTrend.netChange.toLocaleString()} listings)
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">{marketData.supplyTrend.insight}</p>
                   </div>
                 </CardContent>
               )}

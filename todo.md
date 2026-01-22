@@ -179,6 +179,11 @@ From AirDNA Rentalizer endpoint:
 - [x] Fix type mismatches between gemini.ts and airdna.ts
 - [x] TypeScript compilation clean
 
+### Phase 7: Market Advisor UI Enhancements (Jan 22, 2026)
+- [x] Add Submarkets comparison table with revenue, ADR, occupancy, and score
+- [x] Add Active Listings trend chart with 12-month visualization
+- [x] Add expandable sections for new UI components
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

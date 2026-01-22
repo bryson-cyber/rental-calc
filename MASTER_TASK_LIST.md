@@ -42,19 +42,19 @@
 
 ### 1.2 Pass New Data to Gemini AI
 - [ ] **1.2.1** Update Market Advisor prompt to include RevPAR analysis
-- [ ] **1.2.2** Update Market Advisor prompt to include Booking Lead Time insights
-- [ ] **1.2.3** Update Market Advisor prompt to include Length of Stay patterns
-- [ ] **1.2.4** Update Market Advisor prompt to include Supply Trend analysis
-- [ ] **1.2.5** Update Market Advisor prompt to include Future Pricing outlook
-- [ ] **1.2.6** Update Market Advisor prompt to include Submarket comparison
+- [x] **1.2.2** Update Market Advisor prompt to include Booking Lead Time insights - COMPLETED
+- [x] **1.2.3** Update Market Advisor prompt to include Length of Stay patterns - COMPLETED
+- [x] **1.2.4** Update Market Advisor prompt to include Supply Trend analysis - COMPLETED
+- [x] **1.2.5** Update Market Advisor prompt to include Future Pricing outlook (removed per user request)
+- [x] **1.2.6** Update Market Advisor prompt to include Submarket comparison - COMPLETED
 
 ### 1.3 Display New Metrics in UI
 - [ ] **1.3.1** Add RevPAR chart to Market Advisor results
-- [ ] **1.3.2** Add Booking Lead Time visualization
-- [ ] **1.3.3** Add Length of Stay distribution chart
-- [ ] **1.3.4** Add Active Listings trend chart (supply over time)
-- [ ] **1.3.5** Add Future Pricing calendar/chart
-- [ ] **1.3.6** Add Submarkets comparison table
+- [x] **1.3.2** Add Booking Lead Time visualization (already in Booking Patterns section)
+- [x] **1.3.3** Add Length of Stay distribution chart (already in Booking Patterns section)
+- [x] **1.3.4** Add Active Listings trend chart (supply over time) - COMPLETED
+- [x] **1.3.5** Add Future Pricing calendar/chart (removed per user request)
+- [x] **1.3.6** Add Submarkets comparison table - COMPLETED
 
 ---
 
