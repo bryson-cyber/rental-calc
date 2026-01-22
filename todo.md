@@ -2903,3 +2903,20 @@ Allow users to click on a property card to see multiple photos (30-70 images per
 - [x] Test 3 (RevPAR Calculation): PASSED - $3,795 × 78% = $2,943 ✅
 - [x] Test 4 (Market Comps): PASSED - Comps change correctly between Miami and Denver
 - [x] Test 5 (Location Input): PASSED - Input field enabled and accepts text
+
+
+## Address Autocomplete Fix (Jan 21, 2026) - COMPLETE
+
+### Issues Fixed:
+- [x] Autocomplete suggestions not appearing - rewrote component to use REST API instead of deprecated JavaScript SDK
+- [x] Selected address not populating the search field - fixed by using Places API (New) REST endpoints
+- [x] Text visibility in input field - confirmed working with dark text on white background
+
+### Technical Changes:
+- [x] Replaced legacy AutocompleteService JavaScript SDK with REST API calls
+- [x] Using Google Places API (New) endpoints:
+  - POST https://places.googleapis.com/v1/places:autocomplete for suggestions
+  - GET https://places.googleapis.com/v1/places/{placeId} for place details
+- [x] Removed dependency on Google Maps JavaScript SDK for autocomplete
+- [x] Added session token for billing optimization
+- [x] Maintained all existing functionality (keyboard navigation, click outside to close, etc.)

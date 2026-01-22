@@ -1,71 +1,16 @@
 /**
- * Address Autocomplete Component using Google Places API
+ * Address Autocomplete Component using Google Places API (New)
  * 
- * Uses the Manus proxy for Google Maps services - no API key needed from user.
- * Provides address suggestions as the user types.
- * Fetches full place details including zip code when a place is selected.
+ * Uses REST API calls to the Google Places API (New) for autocomplete.
+ * This approach works reliably without the deprecated JavaScript SDK.
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Use user's Google Places API key if available, otherwise fall back to Manus proxy
+// Use user's Google Places API key
 const GOOGLE_PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
-  "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
-
-// Determine which API endpoint to use
-const USE_DIRECT_GOOGLE_API = !!GOOGLE_PLACES_API_KEY;
-
-// Track if Google Maps script is loaded
-let isScriptLoaded = false;
-let isScriptLoading = false;
-let scriptLoadPromise: Promise<void> | null = null;
-
-function loadGoogleMapsScript(): Promise<void> {
-  if (isScriptLoaded && window.google?.maps?.places) {
-    return Promise.resolve();
-  }
-
-  if (isScriptLoading && scriptLoadPromise) {
-    return scriptLoadPromise;
-  }
-
-  isScriptLoading = true;
-  scriptLoadPromise = new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (window.google?.maps?.places) {
-      isScriptLoaded = true;
-      isScriptLoading = false;
-      resolve();
-      return;
-    }
-
-    const script = document.createElement("script");
-    // Use direct Google API if user's API key is available, otherwise use Manus proxy
-    script.src = USE_DIRECT_GOOGLE_API
-      ? `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_PLACES_API_KEY}&v=weekly&libraries=places`
-      : `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=places`;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    script.onload = () => {
-      isScriptLoaded = true;
-      isScriptLoading = false;
-      resolve();
-    };
-    script.onerror = () => {
-      isScriptLoading = false;
-      reject(new Error("Failed to load Google Maps script"));
-    };
-    document.head.appendChild(script);
-  });
-
-  return scriptLoadPromise;
-}
 
 interface PlacePrediction {
   placeId: string;
@@ -110,79 +55,78 @@ export function AddressAutocomplete({
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionTokenRef = useRef<string>(generateSessionToken());
 
-  // Initialize Google Maps and Autocomplete Service
-  useEffect(() => {
-    let mounted = true;
+  // Generate a unique session token for billing optimization
+  function generateSessionToken(): string {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  }
 
-    async function init() {
-      try {
-        await loadGoogleMapsScript();
-        if (!mounted) return;
-        
-        autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
-        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
-        
-        // Create a hidden div for PlacesService (required by Google API)
-        const hiddenDiv = document.createElement('div');
-        hiddenDiv.style.display = 'none';
-        document.body.appendChild(hiddenDiv);
-        placesServiceRef.current = new google.maps.places.PlacesService(hiddenDiv);
-        
-        setIsInitialized(true);
-      } catch (error) {
-        console.error("Failed to initialize Google Places:", error);
-      }
-    }
-
-    init();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Fetch predictions when value changes
+  // Fetch predictions using REST API
   const fetchPredictions = useCallback(async (input: string) => {
-    if (!autocompleteServiceRef.current || !input.trim() || input.length < 3) {
+    if (!input.trim() || input.length < 3) {
       setPredictions([]);
       setIsOpen(false);
+      return;
+    }
+
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.error('[AddressAutocomplete] VITE_GOOGLE_PLACES_API_KEY not set');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await autocompleteServiceRef.current.getPlacePredictions({
-        input,
-        sessionToken: sessionTokenRef.current!,
-        types: ["address"],
-        componentRestrictions: { country: "us" }, // Restrict to US addresses
-      });
-
-      const formattedPredictions: PlacePrediction[] = (response.predictions || []).map(
-        (prediction) => ({
-          placeId: prediction.place_id,
-          description: prediction.description,
-          mainText: prediction.structured_formatting.main_text,
-          secondaryText: prediction.structured_formatting.secondary_text || "",
-        })
+      // Use the Places API (New) Autocomplete endpoint
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places:autocomplete',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+          },
+          body: JSON.stringify({
+            input,
+            includedRegionCodes: ['us'],
+            sessionToken: sessionTokenRef.current,
+          }),
+        }
       );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[AddressAutocomplete] API error:', response.status, errorText);
+        setPredictions([]);
+        setIsOpen(false);
+        return;
+      }
+
+      const data = await response.json();
+      
+      const formattedPredictions: PlacePrediction[] = (data.suggestions || [])
+        .filter((s: any) => s.placePrediction)
+        .map((s: any) => {
+          const pred = s.placePrediction;
+          return {
+            placeId: pred.placeId,
+            description: pred.text?.text || '',
+            mainText: pred.structuredFormat?.mainText?.text || pred.text?.text || '',
+            secondaryText: pred.structuredFormat?.secondaryText?.text || '',
+          };
+        });
 
       setPredictions(formattedPredictions);
       setIsOpen(formattedPredictions.length > 0);
       setHighlightedIndex(-1);
     } catch (error) {
-      console.error("Error fetching predictions:", error);
+      console.error('[AddressAutocomplete] Error fetching predictions:', error);
       setPredictions([]);
     } finally {
       setIsLoading(false);
@@ -209,70 +153,82 @@ export function AddressAutocomplete({
   );
 
   // Fetch full place details using place_id
-  const fetchPlaceDetails = useCallback((placeId: string): Promise<PlaceDetails | null> => {
-    return new Promise((resolve) => {
-      if (!placesServiceRef.current) {
-        console.error('PlacesService not initialized');
-        resolve(null);
-        return;
-      }
+  const fetchPlaceDetails = useCallback(async (placeId: string): Promise<PlaceDetails | null> => {
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.error('[AddressAutocomplete] VITE_GOOGLE_PLACES_API_KEY not set');
+      return null;
+    }
 
-      placesServiceRef.current.getDetails(
+    try {
+      // Use the Places API (New) Place Details endpoint
+      const response = await fetch(
+        `https://places.googleapis.com/v1/places/${placeId}?sessionToken=${sessionTokenRef.current}`,
         {
-          placeId,
-          fields: ['address_components', 'formatted_address', 'geometry', 'place_id'],
-          sessionToken: sessionTokenRef.current!,
-        },
-        (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-            const details: PlaceDetails = {
-              address: place.formatted_address || '',
-              placeId: place.place_id || placeId,
-              lat: place.geometry?.location?.lat(),
-              lng: place.geometry?.location?.lng(),
-            };
-
-            // Extract address components
-            if (place.address_components) {
-              for (const component of place.address_components) {
-                const types = component.types;
-                
-                if (types.includes('postal_code')) {
-                  details.zipCode = component.long_name;
-                } else if (types.includes('locality')) {
-                  details.city = component.long_name;
-                } else if (types.includes('administrative_area_level_1')) {
-                  details.state = component.short_name; // Use short name for state (e.g., "TN" instead of "Tennessee")
-                } else if (types.includes('country')) {
-                  details.country = component.short_name;
-                }
-              }
-            }
-
-            console.log('[AddressAutocomplete] Fetched place details:', details);
-            resolve(details);
-          } else {
-            console.error('Failed to fetch place details:', status);
-            resolve(null);
-          }
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+            'X-Goog-FieldMask': 'id,formattedAddress,addressComponents,location',
+          },
         }
       );
-    });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[AddressAutocomplete] Place details error:', response.status, errorText);
+        return null;
+      }
+
+      const place = await response.json();
+      
+      const details: PlaceDetails = {
+        address: place.formattedAddress || '',
+        placeId: place.id || placeId,
+        lat: place.location?.latitude,
+        lng: place.location?.longitude,
+      };
+
+      // Extract address components
+      if (place.addressComponents) {
+        for (const component of place.addressComponents) {
+          const types = component.types || [];
+          
+          if (types.includes('postal_code')) {
+            details.zipCode = component.longText;
+          } else if (types.includes('locality')) {
+            details.city = component.longText;
+          } else if (types.includes('administrative_area_level_1')) {
+            details.state = component.shortText; // Use short name for state (e.g., "TN" instead of "Tennessee")
+          } else if (types.includes('country')) {
+            details.country = component.shortText;
+          }
+        }
+      }
+
+      console.log('[AddressAutocomplete] Fetched place details:', details);
+      
+      // Generate a new session token for the next search
+      sessionTokenRef.current = generateSessionToken();
+      
+      return details;
+    } catch (error) {
+      console.error('[AddressAutocomplete] Error fetching place details:', error);
+      return null;
+    }
   }, []);
 
   // Handle prediction selection
   const handleSelect = useCallback(
     async (prediction: PlacePrediction) => {
       setIsLoading(true);
+      
+      // Update the input value immediately
       onChange(prediction.description);
       setPredictions([]);
       setIsOpen(false);
       
       // Fetch full place details
       const details = await fetchPlaceDetails(prediction.placeId);
-      
-      // Create a new session token for the next search
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
       
       setIsLoading(false);
       
@@ -361,7 +317,7 @@ export function AddressAutocomplete({
             }
           }}
           placeholder={placeholder}
-          disabled={disabled || !isInitialized}
+          disabled={disabled}
           className={cn(
             "w-full h-12 px-4 rounded-xl font-medium",
             "focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none",
