@@ -707,19 +707,62 @@ export async function generateMaxPropertyAdvice(
     ? ((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 100)
     : 0;
 
-  const prompt = `You are a world-class short-term rental investment analyst. Your job is to provide the most comprehensive, actionable property investment analysis possible.
+  // Get current date for the report
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  // Filter comparables to ONLY same bedroom count for apples-to-apples comparison
+  const sameBedroomComps = comparables.filter(c => c.bedrooms === property.bedrooms);
+  const otherBedroomComps = comparables.filter(c => c.bedrooms !== property.bedrooms);
+  
+  // Recalculate averages for same-bedroom comparables only
+  const sameBRAvgRevenue = sameBedroomComps.length > 0 
+    ? Math.round(sameBedroomComps.reduce((sum, c) => sum + c.revenue, 0) / sameBedroomComps.length)
+    : avgCompRevenue;
+  const sameBRAvgOccupancy = sameBedroomComps.length > 0
+    ? sameBedroomComps.reduce((sum, c) => sum + c.occupancy, 0) / sameBedroomComps.length
+    : avgCompOccupancy;
+  const sameBRAvgAdr = sameBedroomComps.length > 0
+    ? Math.round(sameBedroomComps.reduce((sum, c) => sum + c.adr, 0) / sameBedroomComps.length)
+    : avgCompAdr;
+  
+  // Get top earners from SAME bedroom count only
+  const sameBRTopEarners = [...sameBedroomComps].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const sameBRBottomEarners = [...sameBedroomComps].sort((a, b) => a.revenue - b.revenue).slice(0, 5);
+
+  const prompt = `You are a world-class RENTAL ARBITRAGE analyst. Your job is to help someone decide if they should RENT this property and sublease it on Airbnb for profit.
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-                                           COMPREHENSIVE PROPERTY INVESTMENT ANALYSIS
+                                    RENTAL ARBITRAGE PROPERTY ANALYSIS REPORT
+                                           Report Date: ${currentDate}
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+🚨 CRITICAL CONTEXT - RENTAL ARBITRAGE MODEL:
+This analysis is for RENTAL ARBITRAGE - where someone:
+1. Signs a lease to RENT this property (pays monthly rent to landlord)
+2. Furnishes and lists it on Airbnb/VRBO
+3. Earns short-term rental income from guests
+4. Keeps the profit (STR income minus rent and expenses)
+
+This is NOT about purchasing property. Focus on:
+- Can the STR revenue cover the monthly rent?
+- What's the monthly cash flow after rent?
+- Is there enough profit margin to be worth the effort?
+- What's the break-even occupancy needed?
 
 CRITICAL INSTRUCTIONS:
 1. ONLY use the data provided below - do not make assumptions or use external knowledge
-2. Be extremely specific with numbers - cite actual figures from the data
-3. Write for someone who is new to Airbnb investing - explain what metrics mean
-4. Be brutally honest about risks - do not oversell the opportunity
-5. Provide actionable recommendations with specific steps
-6. This should be a complete investment report that could stand alone
+2. ONLY compare to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is an apples-to-apples comparison
+3. Do NOT compare to luxury hotel residences, branded properties, or properties with different bedroom counts
+4. Be extremely specific with numbers - cite actual figures from the data
+5. Write for someone who is new to Airbnb arbitrage - explain what metrics mean
+6. Be honest about risks but also highlight genuine opportunities
+7. Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
+8. This should be a complete arbitrage analysis that could stand alone
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 1: PROPERTY OVERVIEW
@@ -828,30 +871,32 @@ ${seasonality.map(m =>
 ).join('\n')}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SECTION 6: COMPLETE COMPETITOR ANALYSIS (${comparables.length} PROPERTIES)
+SECTION 6: SAME-BEDROOM COMPETITOR ANALYSIS (${sameBedroomComps.length} ${property.bedrooms}BR PROPERTIES)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-📊 COMPETITOR SUMMARY STATISTICS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total Competitors Analyzed: ${comparables.length}
-Average Competitor Revenue: $${avgCompRevenue.toLocaleString()}
-Average Competitor Occupancy: ${avgCompOccupancy.toFixed(1)}%
-Average Competitor ADR: $${avgCompAdr.toLocaleString()}
-Average Competitor Rating: ${avgCompRating.toFixed(2)} stars
-Average Reviews per Listing: ${Math.round(avgCompReviews)}
+⚠️ IMPORTANT: This analysis ONLY compares to other ${property.bedrooms}-bedroom properties for a fair apples-to-apples comparison.
+We found ${sameBedroomComps.length} properties with ${property.bedrooms} bedrooms in this area.
+${otherBedroomComps.length > 0 ? `(${otherBedroomComps.length} properties with different bedroom counts were excluded from this comparison)` : ''}
 
-YOUR PROPERTY VS COMPETITORS:
-• Revenue: ${((revenue.projected - avgCompRevenue) / avgCompRevenue * 100).toFixed(1)}% ${revenue.projected >= avgCompRevenue ? 'above' : 'below'} average
-• Occupancy: ${(revenue.occupancy - avgCompOccupancy).toFixed(1)} percentage points ${revenue.occupancy >= avgCompOccupancy ? 'above' : 'below'} average
-• ADR: ${((revenue.adr - avgCompAdr) / avgCompAdr * 100).toFixed(1)}% ${revenue.adr >= avgCompAdr ? 'above' : 'below'} average
+📊 ${property.bedrooms}BR COMPETITOR STATISTICS (APPLES-TO-APPLES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total ${property.bedrooms}BR Competitors: ${sameBedroomComps.length}
+Average ${property.bedrooms}BR Revenue: $${sameBRAvgRevenue.toLocaleString()}
+Average ${property.bedrooms}BR Occupancy: ${sameBRAvgOccupancy.toFixed(1)}%
+Average ${property.bedrooms}BR ADR: $${sameBRAvgAdr.toLocaleString()}
+
+YOUR PROPERTY VS SAME-BEDROOM COMPETITORS:
+• Revenue: ${((revenue.projected - sameBRAvgRevenue) / sameBRAvgRevenue * 100).toFixed(1)}% ${revenue.projected >= sameBRAvgRevenue ? 'above' : 'below'} ${property.bedrooms}BR average
+• Occupancy: ${(revenue.occupancy - sameBRAvgOccupancy).toFixed(1)} percentage points ${revenue.occupancy >= sameBRAvgOccupancy ? 'above' : 'below'} average
+• ADR: ${((revenue.adr - sameBRAvgAdr) / sameBRAvgAdr * 100).toFixed(1)}% ${revenue.adr >= sameBRAvgAdr ? 'above' : 'below'} average
 
 COMPETITOR BREAKDOWN:
 • Superhosts: ${superhostComps} of ${comparables.length} (${(superhostComps/comparables.length*100).toFixed(0)}%)
 • Professionally Managed: ${professionalComps} of ${comparables.length} (${(professionalComps/comparables.length*100).toFixed(0)}%)
 • High-Rated (4.8+ stars): ${highRatedComps.length} of ${comparables.length} (${(highRatedComps.length/comparables.length*100).toFixed(0)}%)
 
-🏆 TOP 10 EARNERS (Learn from the best):
-${topEarners.map((c, i) => 
+🏆 TOP 5 ${property.bedrooms}BR EARNERS (Learn from the best in your category):
+${sameBRTopEarners.map((c, i) => 
   `${i+1}. "${c.title.substring(0, 50)}${c.title.length > 50 ? '...' : ''}"
      Revenue: $${c.revenue.toLocaleString()}/yr | ADR: $${c.adr} | Occupancy: ${c.occupancy}%
      Rating: ${c.rating} stars (${c.reviews} reviews) | ${c.bedrooms}BR/${c.bathrooms}BA | Sleeps ${c.accommodates}
@@ -860,69 +905,78 @@ ${topEarners.map((c, i) =>
      ${c.propertyType ? `Type: ${c.propertyType}` : ''}`
 ).join('\n\n')}
 
-📉 BOTTOM 10 EARNERS (Learn what to avoid):
-${bottomEarners.map((c, i) => 
+📉 BOTTOM 5 ${property.bedrooms}BR EARNERS (Learn what to avoid):
+${sameBRBottomEarners.map((c, i) => 
   `${i+1}. "${c.title.substring(0, 50)}${c.title.length > 50 ? '...' : ''}"
      Revenue: $${c.revenue.toLocaleString()}/yr | ADR: $${c.adr} | Occupancy: ${c.occupancy}%
      Rating: ${c.rating} stars (${c.reviews} reviews) | ${c.bedrooms}BR/${c.bathrooms}BA | Sleeps ${c.accommodates}`
 ).join('\n\n')}
 
-📋 COMPLETE COMPETITOR LIST:
-${comparables.map((c, i) => 
-  `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | $${c.adr} ADR | ${c.rating}★ (${c.reviews}) | ${c.bedrooms}BR ${c.isSuperhost ? '⭐' : ''} ${c.isProfessionallyManaged ? '🏢' : ''}`
+📋 COMPLETE ${property.bedrooms}BR COMPETITOR LIST:
+${sameBedroomComps.map((c, i) => 
+  `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | $${c.adr} ADR | ${c.rating}★ (${c.reviews}) | ${c.bedrooms}BR/${c.bathrooms}BA ${c.isSuperhost ? '⭐' : ''} ${c.isProfessionallyManaged ? '🏢' : ''}`
 ).join('\n')}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE INVESTMENT REPORT
+YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE RENTAL ARBITRAGE ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-Write an extremely comprehensive investment analysis report with the following sections. Be thorough - this should be a complete investment report that could stand alone as a professional document.
+IMPORTANT CONTEXT:
+- This analysis is for RENTAL ARBITRAGE investors (people who rent a property long-term and sublet it on Airbnb/VRBO)
+- The user is NOT buying this property - they would be RENTING it and subletting as a short-term rental
+- Compare ONLY to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is critical for accurate analysis
+- Today's date is ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+- Focus on: Can the STR revenue cover the monthly rent + expenses and generate profit?
+
+Write a comprehensive rental arbitrage analysis report. Be specific with numbers and provide actionable insights.
 
 # 🎯 EXECUTIVE SUMMARY
-Provide a clear, 3-5 sentence summary of the investment opportunity. Include:
-- Overall recommendation (Strong Buy / Buy / Hold / Avoid)
-- Key revenue and profit figures
-- Main opportunity and main risk
-- Who this property is best suited for
+Provide a clear, 3-5 sentence summary of the arbitrage opportunity. Include:
+- Overall recommendation (GO / PROCEED WITH CAUTION / PASS)
+- Projected monthly profit (if rent provided) or break-even rent threshold
+- How this property compares to other ${property.bedrooms}BR properties in the area
+- Who this opportunity is best suited for (new vs experienced arbitrage investors)
 
-# 💰 FINANCIAL ANALYSIS
+# 💰 RENTAL ARBITRAGE FINANCIAL ANALYSIS
 
-## Revenue Potential
-- Detailed breakdown of projected revenue vs competitors
-- Analysis of the revenue range (conservative to optimistic)
-- What would need to happen to hit the optimistic projection
-- What could cause revenue to fall to the conservative estimate
+## Revenue vs Same-Bedroom Competitors
+- Compare projected revenue ONLY to other ${property.bedrooms}BR properties
+- Average revenue for ${property.bedrooms}BR properties in this market: calculate from the data
+- Where does this property rank among ${property.bedrooms}BR competitors?
+- Revenue gap or advantage vs ${property.bedrooms}BR average
 
-## Cash Flow Deep Dive (if rent provided)
-- Monthly and annual profit analysis
-- Break-even analysis and safety margin
-- Scenario modeling: What if occupancy drops 10%? 20%? 30%?
-- Comparison to traditional rental income
+## Monthly Cash Flow Analysis
+${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
+- Projected Monthly Revenue: $${Math.round(revenue.projected / 12).toLocaleString()}
+- Estimated Expenses (supplies, utilities, cleaning): ~20-25% of revenue
+- Projected Monthly Profit: Calculate this
+- Annual Profit Projection: Calculate this` : `- No rent provided - calculate the MAXIMUM RENT this property could support
+- Break-even rent (revenue - 25% expenses): $${Math.round((revenue.projected * 0.75) / 12).toLocaleString()}/month
+- Recommended max rent for healthy profit margin: $${Math.round((revenue.projected * 0.60) / 12).toLocaleString()}/month`}
 
-## Return on Investment
-- Calculate key ROI metrics based on the data
-- Compare to competitor performance
-- Identify the path to top-tier earnings
+## Break-Even & Risk Scenarios
+- What occupancy rate is needed to break even?
+- What happens if occupancy drops 20% in slow season?
+- Safety margin analysis
 
-# 🏆 COMPETITIVE ANALYSIS
+# 🏆 COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
 
-## Market Position Assessment
-- Where does this property rank and why?
-- What separates top earners from bottom earners?
-- Specific lessons from the top 5 competitors
-- Warning signs from the bottom 5 competitors
+## Your Position Among ${property.bedrooms}BR Competitors
+- Rank this property among the ${sameBedroomComps.length} same-bedroom competitors
+- What separates top-earning ${property.bedrooms}BR properties from bottom earners?
+- Specific lessons from the top 5 ${property.bedrooms}BR performers
+- Warning signs from the bottom 5 ${property.bedrooms}BR performers
 
-## Competitive Advantages & Disadvantages
-- What advantages does this property have?
-- What disadvantages must be overcome?
-- How saturated is this market?
-- Is there room for a new listing to succeed?
+## What Top ${property.bedrooms}BR Earners Do Differently
+- Analyze ADR differences - why do some charge more?
+- Analyze occupancy differences - why do some book more?
+- Common amenities or features among top performers
+- Review and rating patterns
 
-## Success Factors
-- What do the top earners have in common?
-- What specific strategies are working?
-- What rating and review count is needed to compete?
-- Is Superhost status achievable and valuable here?
+## Can You Compete?
+- Is the ${property.bedrooms}BR segment saturated?
+- What would it take to reach top 25% of ${property.bedrooms}BR earners?
+- Realistic timeline to profitability
 
 # 📅 SEASONALITY & TIMING STRATEGY
 

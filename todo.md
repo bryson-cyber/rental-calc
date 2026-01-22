@@ -3056,3 +3056,24 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Test Market Advisor with real market data
 - [ ] Verify full output is displayed
 - [ ] Verify formatting is correct
+
+
+## AI Advisor Prompt Engineering Fixes (Jan 22, 2026)
+
+### Issues Identified:
+- [ ] Apples-to-oranges comparison - comparing 2BR to luxury hotel residences
+- [ ] Wrong date in report (hardcoded October 2023)
+- [ ] Missing rental arbitrage context - talks about purchasing instead of arbitrage
+- [ ] Overly negative tone without considering arbitrage profitability
+- [ ] No bedroom-filtered analysis
+- [ ] Misleading percentile interpretation
+
+### Fixes Required:
+- [ ] Filter comparables to same bedroom count only in prompt
+- [ ] Add rental arbitrage focus (can STR revenue cover rent + expenses?)
+- [ ] Use dynamic date (current date)
+- [ ] Add arbitrage-specific metrics (monthly cash flow, break-even rent, profit margins)
+- [ ] Balanced analysis with actionable insights
+- [ ] Compare only to true comparables (same BR/BA configuration)
+- [ ] Include monthly rent input in analysis
+- [ ] Remove references to purchasing/renovations
