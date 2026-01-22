@@ -176,13 +176,15 @@
   - Solution: Verify coordinates before centering
 
 ### 4.2 Loading States & Feedback
-- [ ] **4.2.1** Add progress indicator for Market Advisor AI analysis
+- [x] **4.2.1** Add progress indicator for Market Advisor AI analysis ✅
   - Show: "Fetching market data... Analyzing with AI... Generating report..."
   - Impact: Better UX during 30-60 second waits
+  - COMPLETED: Added 6-step visual progress indicator with checkmarks and progress bar
 
-- [ ] **4.2.2** Add progress indicator for Property Advisor AI analysis
+- [x] **4.2.2** Add progress indicator for Property Advisor AI analysis ✅
   - Show: Step-by-step progress
   - Impact: User knows what's happening
+  - COMPLETED: Already implemented with visual step-by-step progress
 
 - [ ] **4.2.3** Add skeleton loaders for data cards
   - Show: Placeholder shapes while loading

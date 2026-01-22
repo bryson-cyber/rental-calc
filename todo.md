@@ -3550,3 +3550,12 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Check if AirDNA API is filtering out 1BR listings
 - [ ] Verify bedroom filter is working correctly
 - [ ] Fix issue so all bedroom types appear in search results
+
+### Phase 14: Progress Indicators Implementation (Jan 22, 2026)
+- [x] Add analysisProgress state to StandaloneMarketAdvisor
+- [x] Add 6-step progress indicator with visual checkmarks
+- [x] Add progress bar with percentage completion
+- [x] Add step-by-step status messages during analysis
+- [x] Property Advisor already has progress indicator (verified)
+- [x] TypeScript compilation clean
+

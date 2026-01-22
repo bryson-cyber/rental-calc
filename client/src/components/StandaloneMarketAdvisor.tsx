@@ -97,6 +97,22 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
   const [superhostOnly, setSuperhostOnly] = useState(false);
   const [professionalOnly, setProfessionalOnly] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<{
+    step: number;
+    message: string;
+    steps: string[];
+  }>({
+    step: 0,
+    message: '',
+    steps: [
+      'Fetching market overview...',
+      'Gathering historical data...',
+      'Analyzing seasonality patterns...',
+      'Collecting top performers...',
+      'Generating AI insights...',
+      'Finalizing report...'
+    ]
+  });
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -146,6 +162,17 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const handleGenerateAnalysis = async () => {
     if (!selectedMarket) return;
     
+    // Start progress simulation
+    setAnalysisProgress(prev => ({ ...prev, step: 0, message: prev.steps[0] }));
+    
+    // Simulate progress steps (the actual API call happens in parallel)
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        const nextStep = Math.min(prev.step + 1, prev.steps.length - 1);
+        return { ...prev, step: nextStep, message: prev.steps[nextStep] };
+      });
+    }, 8000); // Update every 8 seconds to cover ~48 seconds of analysis
+    
     try {
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
         marketId: selectedMarket.id,
@@ -159,11 +186,16 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         professionalOnly: professionalOnly || undefined,
       });
       
+      clearInterval(progressInterval);
+      setAnalysisProgress(prev => ({ ...prev, step: prev.steps.length - 1, message: 'Complete!' }));
+      
       if (result.success && result.data) {
         setMarketData(result.data);
         setMarketAdvice(result.data.advice);
       }
     } catch (error) {
+      clearInterval(progressInterval);
+      setAnalysisProgress(prev => ({ ...prev, step: 0, message: '' }));
       console.error('Error generating market analysis:', error);
     }
   };
@@ -525,23 +557,74 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
 
           {/* Generate Button */}
           {selectedMarket && !marketAdvice && (
-            <Button
-              onClick={handleGenerateAnalysis}
-              disabled={standaloneMarketAdvisorMutation.isPending}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
-            >
-              {standaloneMarketAdvisorMutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Analyzing Market (this may take 30-60 seconds)...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Generate Comprehensive Market Analysis
-                </>
+            <div className="space-y-4">
+              <Button
+                onClick={handleGenerateAnalysis}
+                disabled={standaloneMarketAdvisorMutation.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+              >
+                {standaloneMarketAdvisorMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {analysisProgress.message}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Generate Comprehensive Market Analysis
+                  </>
+                )}
+              </Button>
+              
+              {/* Progress Steps */}
+              {standaloneMarketAdvisorMutation.isPending && (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-slate-500" />
+                    <span className="text-sm font-medium text-slate-700">Analysis Progress</span>
+                    <span className="text-xs text-slate-500 ml-auto">~30-60 seconds</span>
+                  </div>
+                  <div className="space-y-2">
+                    {analysisProgress.steps.map((step, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          index < analysisProgress.step
+                            ? 'bg-green-500'
+                            : index === analysisProgress.step
+                            ? 'bg-blue-500'
+                            : 'bg-slate-200'
+                        }`}>
+                          {index < analysisProgress.step ? (
+                            <CheckCircle2 className="w-3 h-3 text-white" />
+                          ) : index === analysisProgress.step ? (
+                            <Loader2 className="w-3 h-3 text-white animate-spin" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                          )}
+                        </div>
+                        <span className={`text-sm ${
+                          index < analysisProgress.step
+                            ? 'text-green-700 line-through'
+                            : index === analysisProgress.step
+                            ? 'text-blue-700 font-medium'
+                            : 'text-slate-400'
+                        }`}>
+                          {step}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${((analysisProgress.step + 1) / analysisProgress.steps.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
+            </div>
           )}
 
           {/* Error State */}
