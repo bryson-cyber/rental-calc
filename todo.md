@@ -166,6 +166,19 @@ From AirDNA Rentalizer endpoint:
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
 
+### Phase 6: Market Advisor Gemini Prompt Enhancements (Jan 22, 2026)
+- [x] Update MaxMarketAdvisorInput type to include all new data fields
+- [x] Update generateMaxMarketAdvice to destructure all new fields
+- [x] Add Section 6: Booking Patterns to Gemini prompt
+- [x] Add Section 7: Supply Trend (Market Saturation) to Gemini prompt
+- [x] Add Section 8: Submarkets / Neighborhoods to Gemini prompt
+- [x] Add Section 9: Cancellation Policy Analysis to Gemini prompt
+- [x] Add Section 10: Professional vs Individual Host Analysis to Gemini prompt
+- [x] Remove Future Pricing (not needed per user request)
+- [x] Update routers.ts to pass new data fields to Gemini
+- [x] Fix type mismatches between gemini.ts and airdna.ts
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data

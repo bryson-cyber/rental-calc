@@ -2620,6 +2620,21 @@ export const appRouter = router({
               avgRevenue: pt.avgRevenue,
               avgOccupancy: pt.avgOccupancy,
             })),
+            bookingPatterns: marketData.bookingPatterns ?? undefined,
+            supplyTrend: marketData.supplyTrend ?? undefined,
+            submarkets: marketData.submarkets ?? undefined,
+            cancellationPolicies: marketData.cancellationPolicies ?? undefined,
+            professionalStats: marketData.professionalStats ? {
+              totalListings: marketData.professionalStats.totalListings,
+              professionalCount: marketData.professionalStats.professionalCount,
+              individualCount: marketData.professionalStats.individualCount,
+              professionalPercentage: marketData.professionalStats.professionalPercentage,
+              superhostCount: marketData.professionalStats.superhostCount,
+              superhostPercentage: marketData.professionalStats.superhostPercentage,
+              avgRevenueProfessional: marketData.professionalStats.avgRevenueProfessional,
+              avgRevenueIndividual: marketData.professionalStats.avgRevenueIndividual,
+              revenuePremiumPercent: marketData.professionalStats.revenuePremiumPercent,
+            } : undefined,
           };
           
           const advice = await generateMaxMarketAdvice(adviceInput);
@@ -2642,7 +2657,6 @@ export const appRouter = router({
               propertyTypes: marketData.propertyTypes,
               cancellationPolicies: marketData.cancellationPolicies,
               professionalStats: marketData.professionalStats,
-              futurePricing: marketData.futurePricing,
               advice,
             },
           };

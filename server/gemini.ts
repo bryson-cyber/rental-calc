@@ -1161,6 +1161,72 @@ export interface MaxMarketAdvisorInput {
     avgRevenue: number;
     avgOccupancy: number;
   }>;
+  
+  // Booking Patterns (NEW)
+  bookingPatterns?: {
+    avgLeadTimeDays: number;
+    lastMinutePercent: number;
+    advanceBookingPercent: number;
+    avgLengthOfStay: number;
+    weekendPercent: number;
+    weekPlusPercent: number;
+    insights: string[];
+  };
+  
+  // Supply Trend (NEW)
+  supplyTrend?: {
+    currentListings: number;
+    listings12MonthsAgo: number;
+    netChange: number;
+    percentChange: number;
+    trend: 'growing' | 'declining' | 'stable';
+    insight: string;
+    monthlyData: Array<{
+      month: string;
+      activeListings: number;
+      changeFromPrevious: number;
+    }>;
+  };
+  
+  // Submarkets (NEW) - matches AirDNA structure
+  submarkets?: Array<{
+    id: string;
+    name: string;
+    listingCount: number;
+    metrics?: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      marketScore?: number;
+    };
+  }>;
+  
+  // Cancellation Policies (NEW)
+  cancellationPolicies?: {
+    totalListings: number;
+    policies: Array<{
+      policy: string;
+      count: number;
+      percentage: number;
+      avgRevenue: number;
+      avgOccupancy: number;
+    }>;
+    recommendation: string;
+  };
+  
+  // Professional Stats (NEW) - matches AirDNA structure
+  professionalStats?: {
+    totalListings: number;
+    professionalCount: number;
+    individualCount: number;
+    professionalPercentage: number;
+    superhostCount: number;
+    superhostPercentage: number;
+    avgRevenueProfessional: number;
+    avgRevenueIndividual: number;
+    revenuePremiumPercent: number;
+  };
 }
 
 /**
@@ -1171,7 +1237,7 @@ export interface MaxMarketAdvisorInput {
 export async function generateMaxMarketAdvice(
   input: MaxMarketAdvisorInput
 ): Promise<string> {
-  const { market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes } = input;
+  const { market, scores, metrics, revenueByBedroom, historicalData, seasonality, topPerformers, propertyTypes, bookingPatterns, supplyTrend, submarkets, cancellationPolicies, professionalStats } = input;
   
   const bestMonths = [...seasonality].sort((a, b) => b.revenue - a.revenue).slice(0, 4);
   const worstMonths = [...seasonality].sort((a, b) => a.revenue - b.revenue).slice(0, 4);
@@ -1311,6 +1377,92 @@ ${topPerformers.map((p, i) =>
      Rating: ${p.rating} stars (${p.reviews} reviews) | ${p.bedrooms}BR/${p.bathrooms}BA
      ${p.isSuperhost ? 'Superhost' : ''} ${p.isProfessionallyManaged ? 'Pro Managed' : ''}`
 ).join('\n\n')}
+
+${bookingPatterns ? `
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SECTION 6: BOOKING PATTERNS
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+GUEST BOOKING BEHAVIOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Average Booking Lead Time: ${bookingPatterns.avgLeadTimeDays} days in advance
+Last-Minute Bookings (0-7 days): ${bookingPatterns.lastMinutePercent}%
+Advance Bookings (30+ days): ${bookingPatterns.advanceBookingPercent}%
+Average Length of Stay: ${bookingPatterns.avgLengthOfStay} nights
+Weekend Stays: ${bookingPatterns.weekendPercent}%
+Week+ Stays: ${bookingPatterns.weekPlusPercent}%
+
+KEY INSIGHTS:
+${bookingPatterns.insights.map(i => `• ${i}`).join('\n')}
+` : ''}
+
+${supplyTrend ? `
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SECTION 7: SUPPLY TREND (MARKET SATURATION)
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+MARKET SUPPLY ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Current Active Listings: ${supplyTrend.currentListings.toLocaleString()}
+Listings 12 Months Ago: ${supplyTrend.listings12MonthsAgo.toLocaleString()}
+Net Change: ${supplyTrend.netChange >= 0 ? '+' : ''}${supplyTrend.netChange.toLocaleString()} listings
+Percent Change: ${supplyTrend.percentChange >= 0 ? '+' : ''}${supplyTrend.percentChange.toFixed(1)}%
+Trend: ${supplyTrend.trend.toUpperCase()}
+
+INSIGHT: ${supplyTrend.insight}
+
+MONTHLY SUPPLY DATA:
+${supplyTrend.monthlyData.slice(0, 12).map(m => 
+  `${m.month}: ${m.activeListings.toLocaleString()} listings (${m.changeFromPrevious >= 0 ? '+' : ''}${m.changeFromPrevious} from prev month)`
+).join('\n')}
+` : ''}
+
+${submarkets && submarkets.length > 0 ? `
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SECTION 8: SUBMARKETS / NEIGHBORHOODS
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+NEIGHBORHOOD BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${submarkets.slice(0, 15).map((s, i) => 
+  `${i+1}. ${s.name}\n   Listings: ${s.listingCount.toLocaleString()}${s.metrics ? ` | Revenue: $${s.metrics.revenue.toLocaleString()}/yr | ADR: $${s.metrics.adr} | Occupancy: ${s.metrics.occupancy}%${s.metrics.marketScore ? ` | Score: ${s.metrics.marketScore}` : ''}` : ''}`
+).join('\n\n')}
+` : ''}
+
+${cancellationPolicies ? `
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SECTION 9: CANCELLATION POLICY ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+POLICY DISTRIBUTION & PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Listings Analyzed: ${cancellationPolicies.totalListings.toLocaleString()}
+
+${cancellationPolicies.policies.map(p => 
+  `${p.policy.toUpperCase()} (${p.percentage}% of listings)\n   Avg Revenue: $${p.avgRevenue.toLocaleString()}/yr | Avg Occupancy: ${p.avgOccupancy}%`
+).join('\n\n')}
+
+RECOMMENDATION: ${cancellationPolicies.recommendation}
+` : ''}
+
+${professionalStats ? `
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SECTION 10: PROFESSIONAL VS INDIVIDUAL HOST ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+HOST TYPE BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Listings: ${professionalStats.totalListings.toLocaleString()}
+Professionally Managed: ${professionalStats.professionalCount.toLocaleString()} (${professionalStats.professionalPercentage}%)
+Individual Hosts: ${professionalStats.individualCount.toLocaleString()} (${(100 - professionalStats.professionalPercentage).toFixed(1)}%)
+Superhosts: ${professionalStats.superhostCount.toLocaleString()} (${professionalStats.superhostPercentage}%)
+
+REVENUE COMPARISON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Avg Revenue (Professional): $${professionalStats.avgRevenueProfessional.toLocaleString()}/yr
+Avg Revenue (Individual): $${professionalStats.avgRevenueIndividual.toLocaleString()}/yr
+Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '+' : ''}${professionalStats.revenuePremiumPercent}%
+` : ''}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET REPORT
