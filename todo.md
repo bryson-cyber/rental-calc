@@ -264,6 +264,13 @@ From AirDNA Rentalizer endpoint:
 - [x] Add instantBookOnly and listingType to filterContext in Gemini prompt
 - [x] TypeScript compilation clean
 
+### Phase 16: Skeleton Loaders Implementation (Jan 22, 2026)
+- [x] Create MarketAdvisorSkeleton component
+- [x] Create PropertyAdvisorSkeleton component
+- [x] Create DataCardSkeleton component
+- [x] Create TableRowSkeleton component
+- [x] TypeScript compilation clean
+
 ### API Fixes (Jan 22, 2026)
 - [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
 - [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data
