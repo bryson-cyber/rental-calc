@@ -1,502 +1,336 @@
 /**
- * Break-Even Calculator Component
+ * BreakEvenCalculator Component
  * 
  * Comprehensive break-even analysis for rental arbitrage.
- * Shows exactly what occupancy and ADR you need to be profitable.
+ * Shows break-even occupancy, ADR, cushion indicators, and scenario analysis.
  */
-
 import { useState, useMemo } from 'react';
-import {
-  Calculator,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  CheckCircle2,
-  DollarSign,
-  Percent,
-  Calendar,
-  Info,
-  ChevronDown,
-  ChevronUp,
-  Target,
-  Shield,
-  Zap
-} from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-// ============================================
-// TYPE DEFINITIONS
-// ============================================
+import { Calculator, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info, DollarSign } from 'lucide-react';
 
 interface BreakEvenCalculatorProps {
   monthlyRent: number;
-  projectedADR: number;
-  projectedOccupancy: number; // as percentage (e.g., 65 for 65%)
-  projectedRevenue: number;
-  className?: string;
+  estimatedADR: number;
+  estimatedOccupancy: number; // as decimal (e.g., 0.65 for 65%)
+  estimatedMonthlyRevenue: number;
 }
 
-// ============================================
-// TOOLTIP EXPLANATIONS (Third-grader friendly)
-// ============================================
-
-const TOOLTIPS = {
-  breakEvenOccupancy: "This is the minimum number of nights you need to book each month to pay your rent. If you book fewer nights than this, you lose money!",
-  breakEvenADR: "This is the minimum price per night you need to charge to pay your rent (at your current occupancy). If you charge less, you lose money!",
-  cushion: "This is your safety margin - how much room you have before you start losing money. Bigger cushion = safer investment!",
-  monthsToBreakEven: "This shows how many months of profit it takes to recover your startup costs (furniture, deposits, etc.). Shorter = better!",
-  worstCase: "This shows what happens if bookings drop by 30%. If you're still profitable here, you have a very safe investment!",
-  bestCase: "This shows what you could earn if bookings are 20% better than expected. This is your upside potential!",
-  safetyScore: "A score from 0-100 showing how safe this investment is. Higher = safer. We look at your cushion, worst-case scenario, and market conditions."
-};
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-
-// ============================================
-// SUB-COMPONENTS
-// ============================================
-
-function ScenarioCard({
-  title,
-  icon,
-  occupancy,
-  revenue,
-  profit,
-  isPositive,
-  tooltip,
-  variant = 'default'
-}: {
-  title: string;
-  icon: React.ReactNode;
-  occupancy: number;
-  revenue: number;
-  profit: number;
-  isPositive: boolean;
-  tooltip: string;
-  variant?: 'default' | 'warning' | 'success';
-}) {
-  const bgColor = variant === 'warning' 
-    ? 'bg-amber-50 border-amber-200' 
-    : variant === 'success' 
-    ? 'bg-emerald-50 border-emerald-200' 
-    : 'bg-slate-50 border-slate-200';
-    
+// Simple tooltip component
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   return (
-    <div className={`p-4 rounded-xl border ${bgColor}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {icon}
-          <span className="text-sm font-medium text-slate-700">{title}</span>
-        </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className="p-1 hover:bg-white/50 rounded transition-colors">
-              <Info className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-xs p-3 bg-white text-slate-900 shadow-lg border">
-            <p className="text-sm leading-relaxed">{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      
-      <div className="space-y-1">
-        <div className="flex justify-between text-xs text-slate-500">
-          <span>Occupancy</span>
-          <span className="font-medium">{occupancy.toFixed(0)}%</span>
-        </div>
-        <div className="flex justify-between text-xs text-slate-500">
-          <span>Revenue</span>
-          <span className="font-medium">{formatCurrency(revenue)}/mo</span>
-        </div>
-        <div className="flex justify-between text-sm pt-1 border-t border-slate-200 mt-1">
-          <span className="font-medium text-slate-700">Profit</span>
-          <span className={`font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
-            {isPositive ? '+' : ''}{formatCurrency(profit)}/mo
-          </span>
-        </div>
-      </div>
-    </div>
+    <span className="relative group">
+      {children}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[oklch(0.20_0.01_265)] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal pointer-events-none z-10 max-w-[220px] text-center">
+        {text}
+      </span>
+    </span>
   );
 }
 
-function SafetyMeter({ score }: { score: number }) {
-  const getColor = (s: number) => {
-    if (s >= 80) return 'emerald';
-    if (s >= 60) return 'blue';
-    if (s >= 40) return 'amber';
-    return 'red';
-  };
-  
-  const color = getColor(score);
-  const label = score >= 80 ? 'Very Safe' : score >= 60 ? 'Safe' : score >= 40 ? 'Moderate Risk' : 'High Risk';
-  
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1">
-        <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-          <div 
-            className={`h-full rounded-full transition-all ${
-              color === 'emerald' ? 'bg-emerald-500' :
-              color === 'blue' ? 'bg-blue-500' :
-              color === 'amber' ? 'bg-amber-500' : 'bg-red-500'
-            }`}
-            style={{ width: `${score}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-          <span>High Risk</span>
-          <span>Very Safe</span>
-        </div>
-      </div>
-      <div className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-        color === 'emerald' ? 'bg-emerald-100 text-emerald-700' :
-        color === 'blue' ? 'bg-blue-100 text-blue-700' :
-        color === 'amber' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-      }`}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
-
-export function BreakEvenCalculator({
+export default function BreakEvenCalculator({
   monthlyRent,
-  projectedADR,
-  projectedOccupancy,
-  projectedRevenue,
-  className = ''
+  estimatedADR,
+  estimatedOccupancy,
+  estimatedMonthlyRevenue,
 }: BreakEvenCalculatorProps) {
-  const [expanded, setExpanded] = useState(true);
-  const [startupCosts, setStartupCosts] = useState(15000); // Default startup costs
+  const [startupCosts, setStartupCosts] = useState(5000);
   
-  // Calculate all break-even metrics
+  // Calculate break-even metrics
   const calculations = useMemo(() => {
-    const daysPerMonth = 30;
+    // Days in month (average)
+    const daysInMonth = 30;
     
-    // Break-even occupancy (at current ADR)
-    // Revenue = ADR * Days * Occupancy
-    // Rent = ADR * Days * BreakEvenOcc
-    // BreakEvenOcc = Rent / (ADR * Days)
-    const breakEvenOccupancy = projectedADR > 0 
-      ? (monthlyRent / (projectedADR * daysPerMonth)) * 100 
-      : 100;
+    // Break-even occupancy: What occupancy do you need to cover rent?
+    // Revenue = ADR * Occupancy * Days
+    // Rent = ADR * BreakEvenOccupancy * Days
+    // BreakEvenOccupancy = Rent / (ADR * Days)
+    const breakEvenOccupancy = monthlyRent / (estimatedADR * daysInMonth);
     
-    // Break-even ADR (at current occupancy)
-    // Rent = BreakEvenADR * Days * Occupancy
-    // BreakEvenADR = Rent / (Days * Occupancy)
-    const breakEvenADR = projectedOccupancy > 0 
-      ? monthlyRent / (daysPerMonth * (projectedOccupancy / 100))
-      : 0;
+    // Break-even ADR: What nightly rate do you need to cover rent?
+    // Rent = BreakEvenADR * Occupancy * Days
+    // BreakEvenADR = Rent / (Occupancy * Days)
+    const breakEvenADR = monthlyRent / (estimatedOccupancy * daysInMonth);
     
-    // Cushion calculations
-    const occupancyCushion = projectedOccupancy - breakEvenOccupancy;
-    const adrCushion = projectedADR - breakEvenADR;
-    const adrCushionPercent = breakEvenADR > 0 ? ((projectedADR - breakEvenADR) / breakEvenADR) * 100 : 0;
+    // Cushion: How much room do you have before losing money?
+    const occupancyCushion = estimatedOccupancy - breakEvenOccupancy;
+    const adrCushion = estimatedADR - breakEvenADR;
     
     // Monthly profit
-    const monthlyProfit = projectedRevenue - monthlyRent;
+    const monthlyProfit = estimatedMonthlyRevenue - monthlyRent;
     
     // Months to recover startup costs
-    const monthsToBreakEven = monthlyProfit > 0 ? Math.ceil(startupCosts / monthlyProfit) : Infinity;
+    const monthsToBreakEven = monthlyProfit > 0 ? startupCosts / monthlyProfit : Infinity;
     
-    // Worst case scenario (30% drop in occupancy)
-    const worstCaseOccupancy = projectedOccupancy * 0.7;
-    const worstCaseRevenue = projectedADR * daysPerMonth * (worstCaseOccupancy / 100);
+    // Scenario analysis
+    const worstCaseOccupancy = estimatedOccupancy * 0.7; // 30% drop
+    const worstCaseRevenue = estimatedADR * worstCaseOccupancy * daysInMonth;
     const worstCaseProfit = worstCaseRevenue - monthlyRent;
     
-    // Best case scenario (20% increase in occupancy, capped at 95%)
-    const bestCaseOccupancy = Math.min(projectedOccupancy * 1.2, 95);
-    const bestCaseRevenue = projectedADR * daysPerMonth * (bestCaseOccupancy / 100);
+    const bestCaseOccupancy = Math.min(estimatedOccupancy * 1.2, 0.95); // 20% increase, capped at 95%
+    const bestCaseRevenue = estimatedADR * bestCaseOccupancy * daysInMonth;
     const bestCaseProfit = bestCaseRevenue - monthlyRent;
     
-    // Safety score (0-100)
-    // Based on: cushion size, worst case profitability, months to break even
-    let safetyScore = 50; // Start at neutral
+    // Investment safety score (0-100)
+    // Based on: occupancy cushion, profit margin, break-even speed
+    let safetyScore = 0;
     
-    // Cushion contribution (up to 30 points)
-    if (occupancyCushion >= 25) safetyScore += 30;
-    else if (occupancyCushion >= 15) safetyScore += 20;
-    else if (occupancyCushion >= 10) safetyScore += 10;
-    else if (occupancyCushion < 5) safetyScore -= 10;
+    // Occupancy cushion (0-30 points)
+    if (occupancyCushion > 0.3) safetyScore += 30;
+    else if (occupancyCushion > 0.2) safetyScore += 25;
+    else if (occupancyCushion > 0.1) safetyScore += 15;
+    else if (occupancyCushion > 0) safetyScore += 5;
     
-    // Worst case contribution (up to 30 points)
-    if (worstCaseProfit >= 500) safetyScore += 30;
-    else if (worstCaseProfit >= 0) safetyScore += 15;
-    else if (worstCaseProfit >= -500) safetyScore += 0;
-    else safetyScore -= 20;
+    // Profit margin (0-40 points)
+    const profitMargin = monthlyProfit / estimatedMonthlyRevenue;
+    if (profitMargin > 0.4) safetyScore += 40;
+    else if (profitMargin > 0.3) safetyScore += 30;
+    else if (profitMargin > 0.2) safetyScore += 20;
+    else if (profitMargin > 0.1) safetyScore += 10;
+    else if (profitMargin > 0) safetyScore += 5;
     
-    // Break-even time contribution (up to 20 points)
-    if (monthsToBreakEven <= 6) safetyScore += 20;
+    // Break-even speed (0-30 points)
+    if (monthsToBreakEven <= 3) safetyScore += 30;
+    else if (monthsToBreakEven <= 6) safetyScore += 25;
+    else if (monthsToBreakEven <= 9) safetyScore += 15;
     else if (monthsToBreakEven <= 12) safetyScore += 10;
-    else if (monthsToBreakEven <= 18) safetyScore += 0;
-    else safetyScore -= 10;
-    
-    // Clamp to 0-100
-    safetyScore = Math.max(0, Math.min(100, safetyScore));
+    else if (monthsToBreakEven < Infinity) safetyScore += 5;
     
     return {
       breakEvenOccupancy,
       breakEvenADR,
       occupancyCushion,
       adrCushion,
-      adrCushionPercent,
       monthlyProfit,
       monthsToBreakEven,
-      worstCaseOccupancy,
-      worstCaseRevenue,
       worstCaseProfit,
-      bestCaseOccupancy,
-      bestCaseRevenue,
       bestCaseProfit,
-      safetyScore
+      safetyScore,
     };
-  }, [monthlyRent, projectedADR, projectedOccupancy, projectedRevenue, startupCosts]);
+  }, [monthlyRent, estimatedADR, estimatedOccupancy, estimatedMonthlyRevenue, startupCosts]);
   
-  const isProfitable = calculations.monthlyProfit > 0;
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
   
+  const formatPercent = (value: number) => {
+    return `${Math.round(value * 100)}%`;
+  };
+  
+  // Safety score color
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return 'text-green-600';
+    if (score >= 50) return 'text-yellow-600';
+    if (score >= 30) return 'text-orange-600';
+    return 'text-red-600';
+  };
+  
+  const getScoreLabel = (score: number) => {
+    if (score >= 70) return 'Low Risk';
+    if (score >= 50) return 'Moderate Risk';
+    if (score >= 30) return 'Higher Risk';
+    return 'High Risk';
+  };
+
   return (
-    <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden ${className}`}>
-      {/* Header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-100 rounded-lg">
-            <Calculator className="w-5 h-5 text-slate-700" />
+    <div className="space-y-6">
+      {/* Section Header */}
+      <div className="flex items-center gap-2">
+        <Calculator className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+        <h3 className="text-lg font-semibold text-[oklch(0.25_0_0)]">Break-Even Analysis</h3>
+      </div>
+
+      {/* Main Metrics Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Break-Even Occupancy */}
+        <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-sm text-[oklch(0.50_0_0)]">Break-Even Occupancy</span>
+            <Tooltip text="The minimum occupancy you need to cover your rent. If you book fewer nights than this, you lose money.">
+              <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
+            </Tooltip>
           </div>
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-slate-900">Break-Even Calculator</h3>
-            <p className="text-sm text-slate-500">Know your numbers before you invest</p>
+          <div className="text-2xl font-semibold text-[oklch(0.25_0_0)]">
+            {formatPercent(calculations.breakEvenOccupancy)}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            {calculations.occupancyCushion > 0 ? (
+              <>
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-600">
+                  {formatPercent(calculations.occupancyCushion)} cushion
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <span className="text-sm text-red-600">
+                  Need {formatPercent(Math.abs(calculations.occupancyCushion))} more
+                </span>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-            isProfitable 
-              ? 'bg-emerald-100 text-emerald-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {isProfitable ? 'Profitable' : 'Not Profitable'}
+
+        {/* Break-Even ADR */}
+        <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-sm text-[oklch(0.50_0_0)]">Break-Even Nightly Rate</span>
+            <Tooltip text="The minimum nightly rate you need to cover your rent at your expected occupancy. Below this rate, you lose money.">
+              <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
+            </Tooltip>
           </div>
-          {expanded ? (
-            <ChevronUp className="w-5 h-5 text-slate-400" />
+          <div className="text-2xl font-semibold text-[oklch(0.25_0_0)]">
+            {formatCurrency(calculations.breakEvenADR)}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            {calculations.adrCushion > 0 ? (
+              <>
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-600">
+                  {formatCurrency(calculations.adrCushion)} cushion
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <span className="text-sm text-red-600">
+                  Need {formatCurrency(Math.abs(calculations.adrCushion))} more
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Startup Cost Recovery */}
+      <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Startup Cost Recovery</span>
+            <Tooltip text="How long until you earn back your initial investment (furniture, deposits, supplies). Adjust the slider to match your expected startup costs.">
+              <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
+            </Tooltip>
+          </div>
+          <span className="text-sm font-semibold text-[oklch(0.55_0.14_75)]">
+            {formatCurrency(startupCosts)}
+          </span>
+        </div>
+        
+        <input
+          type="range"
+          min={2000}
+          max={20000}
+          step={500}
+          value={startupCosts}
+          onChange={(e) => setStartupCosts(parseInt(e.target.value))}
+          className="w-full h-2 bg-[oklch(0.90_0.01_265)] rounded-lg appearance-none cursor-pointer accent-[oklch(0.55_0.14_75)]"
+        />
+        
+        <div className="flex justify-between text-xs text-[oklch(0.50_0_0)] mt-1">
+          <span>$2,000</span>
+          <span>$20,000</span>
+        </div>
+        
+        <div className="mt-4 text-center">
+          {calculations.monthsToBreakEven < Infinity ? (
+            <div>
+              <span className="text-3xl font-bold text-[oklch(0.55_0.14_75)]">
+                {calculations.monthsToBreakEven.toFixed(1)}
+              </span>
+              <span className="text-lg text-[oklch(0.45_0_0)] ml-2">months to recover</span>
+            </div>
           ) : (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
+            <div className="text-red-600">
+              <AlertTriangle className="w-5 h-5 inline mr-2" />
+              Not profitable - cannot recover costs
+            </div>
           )}
         </div>
-      </button>
-      
-      {/* Content */}
-      {expanded && (
-        <div className="p-4 pt-0 space-y-6">
-          {/* Safety Score */}
-          <div className="p-4 bg-slate-50 rounded-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-slate-600" />
-                <span className="font-semibold text-slate-900">Investment Safety Score</span>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className="p-1 hover:bg-white/50 rounded transition-colors">
-                    <Info className="w-4 h-4 text-slate-400" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs p-3 bg-white text-slate-900 shadow-lg border">
-                  <p className="text-sm leading-relaxed">{TOOLTIPS.safetyScore}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <SafetyMeter score={calculations.safetyScore} />
-          </div>
-          
-          {/* Break-Even Metrics */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Break-Even Occupancy */}
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Break-Even Occupancy</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="p-1 hover:bg-white/50 rounded transition-colors">
-                      <Info className="w-3.5 h-3.5 text-slate-400" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs p-3 bg-white text-slate-900 shadow-lg border">
-                    <p className="text-sm leading-relaxed">{TOOLTIPS.breakEvenOccupancy}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-900">{calculations.breakEvenOccupancy.toFixed(0)}%</span>
-                <span className="text-sm text-slate-500">minimum</span>
-              </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className={`text-sm font-medium ${calculations.occupancyCushion >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {calculations.occupancyCushion >= 0 ? '+' : ''}{calculations.occupancyCushion.toFixed(0)}%
-                </span>
-                <span className="text-xs text-slate-500">cushion</span>
-              </div>
-            </div>
-            
-            {/* Break-Even ADR */}
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Break-Even Nightly Rate</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="p-1 hover:bg-white/50 rounded transition-colors">
-                      <Info className="w-3.5 h-3.5 text-slate-400" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs p-3 bg-white text-slate-900 shadow-lg border">
-                    <p className="text-sm leading-relaxed">{TOOLTIPS.breakEvenADR}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-900">{formatCurrency(calculations.breakEvenADR)}</span>
-                <span className="text-sm text-slate-500">minimum</span>
-              </div>
-              <div className="mt-2 flex items-center gap-1">
-                <span className={`text-sm font-medium ${calculations.adrCushion >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {calculations.adrCushion >= 0 ? '+' : ''}{formatCurrency(calculations.adrCushion)}
-                </span>
-                <span className="text-xs text-slate-500">cushion ({calculations.adrCushionPercent.toFixed(0)}%)</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Months to Break Even */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-slate-900">Time to Recover Startup Costs</span>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className="p-1 hover:bg-white/50 rounded transition-colors">
-                    <Info className="w-4 h-4 text-slate-400" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs p-3 bg-white text-slate-900 shadow-lg border">
-                  <p className="text-sm leading-relaxed">{TOOLTIPS.monthsToBreakEven}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-blue-700">
-                {calculations.monthsToBreakEven === Infinity ? '∞' : calculations.monthsToBreakEven}
-              </span>
-              <span className="text-blue-600">months</span>
-            </div>
-            <p className="text-sm text-blue-700 mt-1">
-              Based on {formatCurrency(startupCosts)} startup costs and {formatCurrency(calculations.monthlyProfit)}/month profit
-            </p>
-            
-            {/* Startup Cost Adjuster */}
-            <div className="mt-3 pt-3 border-t border-blue-200">
-              <label className="text-xs text-blue-600 font-medium">Adjust Startup Costs:</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="range"
-                  min="5000"
-                  max="50000"
-                  step="1000"
-                  value={startupCosts}
-                  onChange={(e) => setStartupCosts(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-sm font-medium text-blue-700 w-20 text-right">
-                  {formatCurrency(startupCosts)}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Scenario Analysis */}
+      </div>
+
+      {/* Scenario Analysis */}
+      <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+        <div className="flex items-center gap-1 mb-4">
+          <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Scenario Analysis</span>
+          <Tooltip text="What happens if bookings are better or worse than expected? This shows your profit in different situations.">
+            <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
+          </Tooltip>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4 text-center">
+          {/* Worst Case */}
           <div>
-            <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              Scenario Analysis
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <ScenarioCard
-                title="Worst Case (-30%)"
-                icon={<AlertTriangle className="w-4 h-4 text-amber-600" />}
-                occupancy={calculations.worstCaseOccupancy}
-                revenue={calculations.worstCaseRevenue}
-                profit={calculations.worstCaseProfit}
-                isPositive={calculations.worstCaseProfit >= 0}
-                tooltip={TOOLTIPS.worstCase}
-                variant="warning"
-              />
-              <ScenarioCard
-                title="Expected"
-                icon={<CheckCircle2 className="w-4 h-4 text-slate-600" />}
-                occupancy={projectedOccupancy}
-                revenue={projectedRevenue}
-                profit={calculations.monthlyProfit}
-                isPositive={calculations.monthlyProfit >= 0}
-                tooltip="This is the projected scenario based on market data."
-              />
-              <ScenarioCard
-                title="Best Case (+20%)"
-                icon={<Zap className="w-4 h-4 text-emerald-600" />}
-                occupancy={calculations.bestCaseOccupancy}
-                revenue={calculations.bestCaseRevenue}
-                profit={calculations.bestCaseProfit}
-                isPositive={calculations.bestCaseProfit >= 0}
-                tooltip={TOOLTIPS.bestCase}
-                variant="success"
-              />
+            <div className="flex items-center justify-center gap-1 mb-2">
+              <TrendingDown className="w-4 h-4 text-red-500" />
+              <span className="text-xs text-[oklch(0.50_0_0)]">Worst Case</span>
+            </div>
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">-30% bookings</div>
+            <div className={`text-lg font-semibold ${calculations.worstCaseProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.worstCaseProfit >= 0 ? '+' : ''}{formatCurrency(calculations.worstCaseProfit)}
             </div>
           </div>
           
-          {/* Key Insight */}
-          <div className={`p-4 rounded-xl border ${
-            calculations.worstCaseProfit >= 0 
-              ? 'bg-emerald-50 border-emerald-200' 
-              : calculations.monthlyProfit >= 0
-              ? 'bg-amber-50 border-amber-200'
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <p className={`text-sm font-medium ${
-              calculations.worstCaseProfit >= 0 
-                ? 'text-emerald-800' 
-                : calculations.monthlyProfit >= 0
-                ? 'text-amber-800'
-                : 'text-red-800'
-            }`}>
-              {calculations.worstCaseProfit >= 0 
-                ? `Strong investment: Even if bookings drop 30%, you'd still profit ${formatCurrency(calculations.worstCaseProfit)}/month.`
-                : calculations.monthlyProfit >= 0
-                ? `Moderate risk: Profitable at expected occupancy, but a 30% drop would result in ${formatCurrency(Math.abs(calculations.worstCaseProfit))}/month loss.`
-                : `High risk: This property is not profitable at current projections. Consider negotiating lower rent or finding a different property.`
-              }
-            </p>
+          {/* Expected */}
+          <div className="border-x border-[oklch(0.90_0.01_265)]">
+            <div className="flex items-center justify-center gap-1 mb-2">
+              <DollarSign className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+              <span className="text-xs text-[oklch(0.50_0_0)]">Expected</span>
+            </div>
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">Current estimate</div>
+            <div className={`text-lg font-semibold ${calculations.monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.monthlyProfit >= 0 ? '+' : ''}{formatCurrency(calculations.monthlyProfit)}
+            </div>
+          </div>
+          
+          {/* Best Case */}
+          <div>
+            <div className="flex items-center justify-center gap-1 mb-2">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-xs text-[oklch(0.50_0_0)]">Best Case</span>
+            </div>
+            <div className="text-xs text-[oklch(0.60_0_0)] mb-1">+20% bookings</div>
+            <div className={`text-lg font-semibold ${calculations.bestCaseProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calculations.bestCaseProfit >= 0 ? '+' : ''}{formatCurrency(calculations.bestCaseProfit)}
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Investment Safety Score */}
+      <div className="bg-[oklch(0.98_0.01_265)] rounded-xl p-5 border border-[oklch(0.90_0.01_265)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium text-[oklch(0.35_0_0)]">Investment Safety Score</span>
+            <Tooltip text="A score from 0-100 based on your cushion, profit margin, and how fast you recover startup costs. Higher is safer.">
+              <Info className="w-3.5 h-3.5 text-[oklch(0.60_0_0)] cursor-help" />
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-2xl font-bold ${getScoreColor(calculations.safetyScore)}`}>
+              {calculations.safetyScore}
+            </span>
+            <span className={`text-sm ${getScoreColor(calculations.safetyScore)}`}>
+              {getScoreLabel(calculations.safetyScore)}
+            </span>
+          </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="mt-3 h-2 bg-[oklch(0.90_0.01_265)] rounded-full overflow-hidden">
+          <div 
+            className={`h-full rounded-full transition-all ${
+              calculations.safetyScore >= 70 ? 'bg-green-500' :
+              calculations.safetyScore >= 50 ? 'bg-yellow-500' :
+              calculations.safetyScore >= 30 ? 'bg-orange-500' : 'bg-red-500'
+            }`}
+            style={{ width: `${calculations.safetyScore}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
-
-export default BreakEvenCalculator;

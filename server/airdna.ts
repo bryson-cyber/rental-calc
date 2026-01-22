@@ -5191,12 +5191,6 @@ export async function getListingsByArea(
     offset?: number;
     sortBy?: 'proximity' | 'revenue' | 'rating' | 'occupancy';
     sortDirection?: 'ascending' | 'descending';
-    amenities?: {
-      pool?: boolean;
-      hotTub?: boolean;
-      petFriendly?: boolean;
-      parking?: boolean;
-    };
   }
 ): Promise<ListingsByAreaResponse | null> {
   const cacheKey = `listings-area:${JSON.stringify({ address, radiusMeters, ...options })}`;
@@ -5230,23 +5224,6 @@ export async function getListingsByArea(
           max: options.maxRevenue || 999999 
         } 
       });
-    }
-    
-    // Add amenities filter
-    if (options?.amenities) {
-      const amenitiesFilter: Record<string, boolean> = {};
-      if (options.amenities.pool) amenitiesFilter.has_pool = true;
-      if (options.amenities.hotTub) amenitiesFilter.has_hottub = true;
-      if (options.amenities.petFriendly) amenitiesFilter.has_pets_allowed = true;
-      if (options.amenities.parking) amenitiesFilter.has_parking = true;
-      
-      if (Object.keys(amenitiesFilter).length > 0) {
-        filters.push({
-          field: 'amenities',
-          type: 'jsonb_boolean',
-          value: amenitiesFilter
-        });
-      }
     }
 
     // First, geocode the address to get coordinates for the center marker
