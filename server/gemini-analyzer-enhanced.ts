@@ -306,11 +306,9 @@ export interface EnhancedNarrativeReportInput {
   // Booking patterns - ENHANCED with all available data
   booking_patterns?: {
     avg_lead_time_days: number;
-    median_lead_time_days: number;
     last_minute_booking_percent: number;
     advance_booking_percent: number;
     avg_length_of_stay: number;
-    median_length_of_stay: number;
     weekend_stay_percent: number;
     week_plus_stay_percent: number;
     insights: string[];

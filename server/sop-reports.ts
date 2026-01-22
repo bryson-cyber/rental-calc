@@ -188,15 +188,13 @@ export interface AmenityAnalysis {
 
 // NEW: Booking patterns analysis
 export interface BookingPatternsData {
-  booking_lead_time: {
+  lead_time: {
     avg_days: number;
-    median_days: number;
     last_minute_percent: number;
     advance_booking_percent: number;
   };
   length_of_stay: {
     avg_nights: number;
-    median_nights: number;
     weekend_percent: number;
     week_percent: number;
   };
@@ -3304,12 +3302,10 @@ export async function generateFullArbitrageAnalysis(
         revenue_premium_percent: professional_host_stats.revenue_premium_percent
       } : undefined,
       booking_patterns: booking_patterns ? {
-        avg_lead_time_days: booking_patterns.booking_lead_time.avg_days,
-        median_lead_time_days: booking_patterns.booking_lead_time.median_days,
-        last_minute_booking_percent: booking_patterns.booking_lead_time.last_minute_percent,
-        advance_booking_percent: booking_patterns.booking_lead_time.advance_booking_percent,
+        avg_lead_time_days: booking_patterns.lead_time.avg_days,
+        last_minute_booking_percent: booking_patterns.lead_time.last_minute_percent,
+        advance_booking_percent: booking_patterns.lead_time.advance_booking_percent,
         avg_length_of_stay: booking_patterns.length_of_stay.avg_nights,
-        median_length_of_stay: booking_patterns.length_of_stay.median_nights,
         weekend_stay_percent: booking_patterns.length_of_stay.weekend_percent,
         week_plus_stay_percent: booking_patterns.length_of_stay.week_percent,
         insights: booking_patterns.insights

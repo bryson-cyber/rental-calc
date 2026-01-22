@@ -4965,16 +4965,14 @@ export async function getMarketCancellationPolicies(
  * Get booking lead time and length of stay data
  */
 export interface BookingPatterns {
-  booking_lead_time: {
+  lead_time: {
     avg_days: number;
-    median_days: number;
     last_minute_percent: number; // booked within 7 days
     advance_booking_percent: number; // booked 30+ days ahead
   };
   length_of_stay: {
     avg_nights: number;
-    median_nights: number;
-    weekend_percent: number; // 1-2 night stays
+    weekend_percent: number; // 1-3 night stays
     week_percent: number; // 7+ night stays
   };
   insights: string[];
@@ -4999,22 +4997,64 @@ export async function getMarketBookingPatterns(
 
     // Fetch length of stay
     const losResponse = await makeApiRequest(
-      `/market/${marketId}/metrics/los`,
+      `/market/${marketId}/metrics/avg_length_of_stay`,
       "POST",
       { num_months: 12, filters }
     );
 
-    const leadTimeData = (leadTimeResponse as any)?.payload?.data || [];
-    const losData = (losResponse as any)?.payload?.data || [];
+    // Parse booking lead time data - API returns metrics array with reservation_counts
+    const leadTimeMetrics = (leadTimeResponse as any)?.payload?.metrics || [];
+    const losMetrics = (losResponse as any)?.payload?.metrics || [];
 
-    // Calculate averages
-    const avgLeadTime = leadTimeData.length > 0
-      ? leadTimeData.reduce((sum: number, d: any) => sum + (d.value || d.booking_lead_time || 0), 0) / leadTimeData.length
-      : 14; // default
+    // Calculate weighted average lead time from reservation counts
+    let totalReservations = 0;
+    let weightedLeadTime = 0;
+    let lastMinuteCount = 0;
+    let advanceBookingCount = 0;
 
-    const avgLOS = losData.length > 0
-      ? losData.reduce((sum: number, d: any) => sum + (d.value || d.los || 0), 0) / losData.length
-      : 3; // default
+    for (const month of leadTimeMetrics) {
+      for (const bucket of month.reservation_counts || []) {
+        const [minDays, maxDays] = bucket.lead_time_day_range;
+        const count = bucket.num_reservations || 0;
+        totalReservations += count;
+        
+        // Calculate midpoint of range for weighted average
+        const midpoint = maxDays !== null ? (minDays + maxDays) / 2 : minDays + 45; // 91+ days, use 136 as midpoint
+        weightedLeadTime += midpoint * count;
+        
+        // Track last-minute (0-6 days) and advance (31+ days) bookings
+        if (minDays === 0 && maxDays === 6) lastMinuteCount += count;
+        if (minDays >= 31) advanceBookingCount += count;
+      }
+    }
+
+    const avgLeadTime = totalReservations > 0 ? weightedLeadTime / totalReservations : 14;
+    const lastMinutePercent = totalReservations > 0 ? Math.round((lastMinuteCount / totalReservations) * 100) : 25;
+    const advanceBookingPercent = totalReservations > 0 ? Math.round((advanceBookingCount / totalReservations) * 100) : 20;
+
+    // Parse length of stay data - API returns metrics array with stay_length_counts
+    let totalStays = 0;
+    let weightedLOS = 0;
+    let weekendCount = 0;
+    let weekPlusCount = 0;
+
+    for (const month of losMetrics) {
+      for (const bucket of month.stay_length_counts || []) {
+        const [minNights, maxNights] = bucket.stay_length_night_range || [0, 0];
+        const count = bucket.num_reservations || 0;
+        totalStays += count;
+        
+        const midpoint = maxNights !== null ? (minNights + maxNights) / 2 : minNights + 7;
+        weightedLOS += midpoint * count;
+        
+        if (minNights <= 3 && (maxNights === null || maxNights <= 3)) weekendCount += count;
+        if (minNights >= 7 || (maxNights !== null && maxNights >= 7)) weekPlusCount += count;
+      }
+    }
+
+    const avgLOS = totalStays > 0 ? weightedLOS / totalStays : 3;
+    const weekendPercent = totalStays > 0 ? Math.round((weekendCount / totalStays) * 100) : 30;
+    const weekPercent = totalStays > 0 ? Math.round((weekPlusCount / totalStays) * 100) : 10;
 
     const insights: string[] = [];
     
@@ -5035,17 +5075,15 @@ export async function getMarketBookingPatterns(
     }
 
     return {
-      booking_lead_time: {
+      lead_time: {
         avg_days: Math.round(avgLeadTime),
-        median_days: Math.round(avgLeadTime * 0.9), // approximation
-        last_minute_percent: avgLeadTime < 14 ? 45 : 25,
-        advance_booking_percent: avgLeadTime > 21 ? 40 : 20,
+        last_minute_percent: lastMinutePercent,
+        advance_booking_percent: advanceBookingPercent,
       },
       length_of_stay: {
         avg_nights: Math.round(avgLOS * 10) / 10,
-        median_nights: Math.round(avgLOS * 0.85 * 10) / 10,
-        weekend_percent: avgLOS < 3 ? 55 : 30,
-        week_percent: avgLOS > 4 ? 25 : 10,
+        weekend_percent: weekendPercent,
+        week_percent: weekPercent,
       },
       insights,
     };
@@ -5088,8 +5126,8 @@ export async function getMarketSupplyTrend(
       { num_months: 12, filters }
     );
 
-    const responseData = (response as any)?.payload?.data;
-    if (!responseData) {
+    const responseData = (response as any)?.payload?.metrics;
+    if (!responseData || !Array.isArray(responseData) || responseData.length === 0) {
       return null;
     }
 
@@ -5098,8 +5136,8 @@ export async function getMarketSupplyTrend(
       new Date(a.date || a.month).getTime() - new Date(b.date || b.month).getTime()
     );
 
-    const current = sortedData[sortedData.length - 1]?.value || sortedData[sortedData.length - 1]?.active_listings || 0;
-    const yearAgo = sortedData[0]?.value || sortedData[0]?.active_listings || current;
+    const current = sortedData[sortedData.length - 1]?.listing_count || sortedData[sortedData.length - 1]?.value || 0;
+    const yearAgo = sortedData[0]?.listing_count || sortedData[0]?.value || current;
     const netChange = current - yearAgo;
     const percentChange = yearAgo > 0 ? Math.round((netChange / yearAgo) * 100) : 0;
 
@@ -5118,9 +5156,9 @@ export async function getMarketSupplyTrend(
 
     const monthlyData = sortedData.map((d: any, i: number) => ({
       month: d.date || d.month,
-      active_listings: d.value || d.active_listings || 0,
+      active_listings: d.listing_count || d.value || 0,
       change_from_previous: i > 0 
-        ? (d.value || d.active_listings || 0) - (sortedData[i-1].value || sortedData[i-1].active_listings || 0)
+        ? (d.listing_count || d.value || 0) - (sortedData[i-1].listing_count || sortedData[i-1].value || 0)
         : 0,
     }));
 

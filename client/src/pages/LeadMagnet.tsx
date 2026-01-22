@@ -158,6 +158,7 @@ interface AnalysisResult {
     totalListings?: number;
     marketScore?: number;
   };
+  marketId?: string | number;  // For MarketInsightsPanel
 }
 
 interface BulkPropertyInput {
@@ -525,6 +526,19 @@ export default function LeadMagnet() {
           totalListings: data.market?.listing_count || (data.same_bedroom_comps || []).length,
           marketScore: data.market?.metrics?.market_score || undefined,
         } : undefined,
+        // Market ID for MarketInsightsPanel
+        marketId: (() => {
+          const id = data.market?.id;
+          console.log('[handleAnalyze] market data:', data.market);
+          console.log('[handleAnalyze] marketId:', id);
+          // Debug: show toast with marketId
+          if (id) {
+            toast.success(`MarketId found: ${id}`);
+          } else {
+            toast.error('MarketId not found in API response');
+          }
+          return id || undefined;
+        })(),
         // Historical data for YoY trends - always use market.historical for months data
         historicalData: (() => {
           // Use market.historical for monthly data (needed for per-month YoY comparison)
@@ -593,6 +607,7 @@ export default function LeadMagnet() {
       });
       
       toast.success('Property validated! See your results below.');
+      console.log('[handleAnalyze] Result set successfully:', { hasResult: true, activeTab });
     } catch (error) {
       console.error('Analysis error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not analyze this property. Please try again.';
@@ -2339,6 +2354,7 @@ export default function LeadMagnet() {
               address={address}
               bedrooms={parseInt(bedrooms)}
               bathrooms={parseFloat(bathrooms)}
+              marketId={result.marketId}
             />
             
             {/* Next Step CTA */}

@@ -41,6 +41,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
+import MarketInsightsPanel from './MarketInsightsPanel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================
@@ -118,6 +119,7 @@ interface TeslaDashboardProps {
   bathrooms: number;
   accommodates?: number;
   monthlyRent?: number;
+  marketId?: string | number;  // For MarketInsightsPanel
 }
 
 // ============================================
@@ -2017,7 +2019,12 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, marketId }: TeslaDashboardProps) {
+  console.log('[TeslaDashboard] marketId received:', marketId);
+  // DEBUG: Remove this after testing
+  if (typeof window !== 'undefined') {
+    (window as any).__DEBUG_MARKET_ID__ = marketId;
+  }
   const yearlyChange = result.historicalData?.summary?.yearly_pct_change;
   
   return (
@@ -2067,6 +2074,11 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           adr={result.metrics.adr}
         />
       </div>
+      
+      {/* Market Insights Panel - Booking Patterns & Supply Trend - Updated */}
+      {marketId && (
+        <MarketInsightsPanel marketId={marketId} />
+      )}
       
       {/* Market Health Grade */}
       <MarketHealthGrade

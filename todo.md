@@ -166,6 +166,12 @@ From AirDNA Rentalizer endpoint:
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
 
+### API Fixes (Jan 22, 2026)
+- [x] Fixed avg_length_of_stay endpoint URL (was average_length_of_stay)
+- [x] Fixed supply trend data parsing to use payload.metrics instead of payload.data
+- [x] Fixed listing count field name to listing_count
+- [x] MarketInsightsPanel now displays booking patterns and supply trend correctly
+
 ---
 
 ## Next Steps
@@ -3106,3 +3112,44 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Compare only to true comparables (same BR/BA configuration)
 - [ ] Include monthly rent input in analysis
 - [ ] Remove references to purchasing/renovations
+
+
+## Comprehensive QA Testing (Jan 22, 2026)
+
+### Phase 1: Full Flow Testing
+- [ ] Test property analysis with real Denver address
+- [ ] Verify address autocomplete works
+- [ ] Verify monthly rent input validation
+- [ ] Verify bedrooms/bathrooms selection
+- [ ] Verify loading states and progress indicators
+
+### Phase 2: Report Output Verification
+- [ ] Chapter 1: Property overview data accuracy
+- [ ] Chapter 2: Market analysis data accuracy
+- [ ] Chapter 2: MarketInsightsPanel rendering
+- [ ] Chapter 3: Competitor data accuracy
+- [ ] Chapter 3: Competitor images loading
+- [ ] Chapter 3: Airbnb links clickable
+- [ ] Chapter 4: Profit projections accuracy
+- [ ] Chapter 4: BreakEvenCalculator rendering
+
+### Phase 3: Data Formatting
+- [ ] Currency formatting consistent ($X,XXX)
+- [ ] Percentage formatting consistent (XX%)
+- [ ] Date formatting consistent
+- [ ] Numbers not showing NaN or undefined
+- [ ] Empty states handled gracefully
+
+### Phase 4: Component Testing
+- [ ] MarketInsightsPanel loads data correctly
+- [ ] BreakEvenCalculator calculations correct
+- [ ] Tooltips display properly
+- [ ] Charts render correctly
+- [ ] Mobile responsiveness
+
+### Phase 5: Error Handling
+- [ ] Invalid address handling
+- [ ] API timeout handling
+- [ ] Missing data handling
+- [ ] Network error handling
+

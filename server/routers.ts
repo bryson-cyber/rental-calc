@@ -1098,6 +1098,8 @@ export const appRouter = router({
 
           // Get the market ID from the base report
           const marketId = baseReport.market?.id || baseReport.property.property?.market_id;
+          console.log('[getAIPropertyReport] baseReport.market:', JSON.stringify(baseReport.market, null, 2));
+          console.log('[getAIPropertyReport] marketId:', marketId);
           const bedrooms = input.bedrooms || baseReport.property.property?.bedrooms || 2;
           
           // Fetch ALL qualifying competitors from Market Charts API
@@ -1215,10 +1217,18 @@ export const appRouter = router({
           const annualExpenses = monthlyExpenses * 12;
           const meetsThreshold = qualifyingCompetitors.length > 0;
 
+          // Ensure market.id is included in the response
+          const marketData = baseReport.market ? {
+            ...baseReport.market,
+            id: marketId || baseReport.market.id,
+          } : { id: marketId };
+
           return {
             success: true,
             data: {
               ...baseReport,
+              // Ensure market.id is always included
+              market: marketData,
               // Override same_bedroom_comps with ALL competitors from Market Charts API
               same_bedroom_comps: allCompetitors,
               qualifying_comps: qualifyingCompetitors,
@@ -1474,9 +1484,10 @@ export const appRouter = router({
 
     // Get booking patterns for a market
     getBookingPatterns: publicProcedure
-      .input(z.object({ marketId: z.number() }))
+      .input(z.object({ marketId: z.union([z.number(), z.string()]) }))
       .mutation(async ({ input }) => {
         try {
+          // Keep the full market ID (e.g., 'airdna-163') - API requires it
           const result = await getMarketBookingPatterns(String(input.marketId));
           return {
             success: true,
@@ -1494,7 +1505,7 @@ export const appRouter = router({
 
     // Get supply trend for a market
     getSupplyTrend: publicProcedure
-      .input(z.object({ marketId: z.number() }))
+      .input(z.object({ marketId: z.union([z.number(), z.string()]) }))
       .mutation(async ({ input }) => {
         try {
           const result = await getMarketSupplyTrend(String(input.marketId));
