@@ -3576,28 +3576,63 @@ export async function getCountryMarkets(
   }
 ): Promise<CountryMarketsResponse> {
   try {
-    const filters: Record<string, unknown> = {};
+    // Build filters array in the API's expected format
+    const filtersArray: Array<{ type: string; field: string; value?: string | number; min?: number; max?: number }> = [];
     
     if (options?.market_type) {
-      filters.market_type = options.market_type;
+      filtersArray.push({
+        type: 'select',
+        field: 'market_type',
+        value: options.market_type,
+      });
     }
     if (options?.min_market_score) {
-      filters.min_market_score = options.min_market_score;
+      filtersArray.push({
+        type: 'range',
+        field: 'market_score',
+        min: options.min_market_score,
+        max: 100,
+      });
     }
     if (options?.min_investability) {
-      filters.min_investability = options.min_investability;
+      filtersArray.push({
+        type: 'range',
+        field: 'investability',
+        min: options.min_investability,
+        max: 100,
+      });
     }
     if (options?.min_rental_demand) {
-      filters.min_rental_demand = options.min_rental_demand;
+      filtersArray.push({
+        type: 'range',
+        field: 'rental_demand',
+        min: options.min_rental_demand,
+        max: 100,
+      });
     }
     if (options?.min_revenue_growth) {
-      filters.min_revenue_growth = options.min_revenue_growth;
+      filtersArray.push({
+        type: 'range',
+        field: 'revenue_growth',
+        min: options.min_revenue_growth,
+        max: 100,
+      });
     }
     if (options?.min_seasonality) {
-      filters.min_seasonality = options.min_seasonality;
+      filtersArray.push({
+        type: 'range',
+        field: 'seasonality',
+        min: options.min_seasonality,
+        max: 100,
+      });
     }
     if (options?.min_regulation) {
-      filters.min_regulation = options.min_regulation;
+      filtersArray.push({
+        type: 'range',
+        field: 'regulation',
+        min: options.min_regulation,
+        max: 100,
+      });
     }
 
     const requestBody: Record<string, unknown> = {
@@ -3607,8 +3642,8 @@ export async function getCountryMarkets(
       },
     };
 
-    if (Object.keys(filters).length > 0) {
-      requestBody.filters = filters;
+    if (filtersArray.length > 0) {
+      requestBody.filters = filtersArray;
     }
 
     if (options?.sort_by) {
