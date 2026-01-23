@@ -3734,3 +3734,53 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] 8 tests passing for market features
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
+
+
+---
+
+## Phase 7: Navigation, Pagination & Favoriting (Jan 22, 2026)
+
+### 7.1 Navigation Links
+- [x] Add "Compare Markets" link to homepage
+- [x] Add "Discover Markets" link to homepage
+- [x] Added to quick links grid on homepage form
+
+### 7.2 Market Discovery Pagination
+- [x] Pagination already implemented with "Load More Markets" button
+- [x] Increases limit by 50 each click
+- [x] Button only shows when more markets available
+- [ ] Update API call to support offset/limit
+
+### 7.3 Market Favoriting
+- [ ] Create favoriteMarkets table in schema
+- [ ] Add tRPC endpoints for favorite CRUD
+- [ ] Add favorite button to market cards
+- [ ] Create "My Favorites" section or page
+
+
+---
+
+## Phase 7: Navigation, Pagination & Favorites (Jan 22, 2026) - COMPLETE
+
+### 7.1 Navigation Links
+- [x] Add "Compare Markets" link to homepage Advanced Tools grid
+- [x] Add "Discover Markets" link to homepage Advanced Tools grid
+- [x] Links accessible via scrolling in the form card
+
+### 7.2 Market Discovery Pagination
+- [x] Pagination already implemented with "Load More Markets" button
+- [x] Increases limit by 50 each click
+- [x] Button only shows when more markets available
+
+### 7.3 Market Favoriting
+- [x] Created favoriteMarkets table in schema.ts
+- [x] Pushed database migration
+- [x] Added tRPC endpoints for favorite CRUD operations (list, add, remove, toggle)
+- [x] Added heart button to market cards in MarketDiscoveryPage
+- [x] Show filled red heart for favorited markets
+- [x] Wrote tests for favorite functionality (5 tests passing)
+
+### Bug Fixes
+- [x] Fixed Market Discovery filter format (changed from object to array format)
+- [x] Coastal filter now correctly returns 80 markets
+

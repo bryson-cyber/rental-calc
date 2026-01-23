@@ -472,3 +472,42 @@ export const propertyImages = mysqlTable("property_images", {
 
 export type PropertyImage = typeof propertyImages.$inferSelect;
 export type InsertPropertyImage = typeof propertyImages.$inferInsert;
+
+
+/**
+ * Favorite Markets table for storing user's starred/favorited markets
+ * Allows quick access to markets of interest from the Market Discovery page
+ */
+export const favoriteMarkets = mysqlTable("favorite_markets", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous saves via cookie)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Market information
+  marketId: varchar("marketId", { length: 64 }).notNull(),
+  marketName: varchar("marketName", { length: 255 }).notNull(),
+  marketType: varchar("marketType", { length: 100 }),
+  
+  // Location info
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  
+  // Cached metrics at time of favoriting
+  marketScore: decimal("marketScore", { precision: 5, scale: 2 }),
+  listingCount: int("listingCount"),
+  averageRevenue: int("averageRevenue"),
+  averageOccupancy: decimal("averageOccupancy", { precision: 5, scale: 2 }),
+  averageAdr: int("averageAdr"),
+  
+  // User notes
+  notes: text("notes"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FavoriteMarket = typeof favoriteMarkets.$inferSelect;
+export type InsertFavoriteMarket = typeof favoriteMarkets.$inferInsert;

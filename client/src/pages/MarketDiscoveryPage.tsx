@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,10 @@ import {
   Waves,
   TreePine,
   Home,
-  Building
+  Building,
+  Heart
 } from 'lucide-react';
+
 import { Link } from 'wouter';
 
 type MarketType = 'all' | 'coastal' | 'urban_metro' | 'mountains_lakes' | 'suburban' | 'rural' | 'mid_size_city';
@@ -51,6 +53,64 @@ export default function MarketDiscoveryPage() {
     limit: 50,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [sessionId] = useState(() => {
+    // Get or create a session ID for anonymous favorites
+    let id = localStorage.getItem('favoriteSessionId');
+    if (!id) {
+      id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('favoriteSessionId', id);
+    }
+    return id;
+  });
+  const [favoritedMarkets, setFavoritedMarkets] = useState<Set<string>>(new Set());
+
+  // Fetch user's favorites
+  const favoritesQuery = trpc.favoriteMarkets.list.useQuery({ sessionId });
+  
+  // Update local state when favorites load
+  useEffect(() => {
+    if (favoritesQuery.data) {
+      setFavoritedMarkets(new Set(favoritesQuery.data.map(f => f.marketId)));
+    }
+  }, [favoritesQuery.data]);
+
+  const addFavoriteMutation = trpc.favoriteMarkets.add.useMutation({
+    onSuccess: (_, variables) => {
+      setFavoritedMarkets(prev => new Set(Array.from(prev).concat(variables.marketId)));
+    },
+  });
+
+  const removeFavoriteMutation = trpc.favoriteMarkets.remove.useMutation({
+    onSuccess: (_, variables) => {
+      if (variables.marketId) {
+        setFavoritedMarkets(prev => {
+          const next = new Set(prev);
+          next.delete(variables.marketId!);
+          return next;
+        });
+      }
+    },
+  });
+
+  const toggleFavorite = (market: any) => {
+    if (favoritedMarkets.has(market.id)) {
+      removeFavoriteMutation.mutate({ marketId: market.id, sessionId });
+    } else {
+      addFavoriteMutation.mutate({
+        sessionId,
+        marketId: market.id,
+        marketName: market.name,
+        marketType: market.market_type,
+        state: market.location?.state,
+        country: market.location?.country,
+        marketScore: market.scores?.market_score,
+        listingCount: market.listing_count,
+        averageRevenue: market.metrics?.revenue,
+        averageOccupancy: market.metrics?.occupancy,
+        averageAdr: market.metrics?.adr,
+      });
+    }
+  };
 
   const marketsQuery = trpc.marketDiscovery.getCountryMarkets.useQuery({
     countryCode: 'us',
@@ -279,9 +339,29 @@ export default function MarketDiscoveryPage() {
                         {market.market_type && marketTypeIcons[market.market_type]}
                         <CardTitle className="text-lg">{market.name}</CardTitle>
                       </div>
-                      <Badge className={getScoreColor(market.scores?.market_score || 0)}>
-                        {market.scores?.market_score || 0}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleFavorite(market);
+                          }}
+                        >
+                          <Heart
+                            className={`w-4 h-4 transition-colors ${
+                              favoritedMarkets.has(market.id)
+                                ? 'fill-red-500 text-red-500'
+                                : 'text-slate-400 hover:text-red-400'
+                            }`}
+                          />
+                        </Button>
+                        <Badge className={getScoreColor(market.scores?.market_score || 0)}>
+                          {market.scores?.market_score || 0}
+                        </Badge>
+                      </div>
                     </div>
                     {market.market_type && (
                       <Badge variant="outline" className="w-fit text-xs">

@@ -778,6 +778,14 @@ export default function RentalEstimator() {
                       <Star className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Saved Searches</span>
                     </a>
+                    <a href="/compare-markets" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <BarChart3 className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Compare Markets</span>
+                    </a>
+                    <a href="/discover-markets" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Building className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Discover Markets</span>
+                    </a>
                   </div>
                 </div>
               </div>
