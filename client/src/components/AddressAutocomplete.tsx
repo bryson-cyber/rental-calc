@@ -410,7 +410,7 @@ export function AddressAutocomplete({
           autoComplete="off"
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500 animate-spin" />
         )}
       </div>
       

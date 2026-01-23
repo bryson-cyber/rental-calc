@@ -4019,3 +4019,8 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Fix dropdown appearing at bottom of page instead of under input field
 - [x] Ensure dropdown is positioned correctly relative to input (removed scrollY/scrollX from fixed positioning)
 - [x] Test on dev server - verified dropdown appears directly under input and selection works
+
+
+## Feature - Loading Indicator for Address Autocomplete (Jan 23, 2026)
+- [x] Add visible loading spinner in input field while fetching suggestions (amber color, larger size)
+- [x] Test loading indicator visibility on dev server - verified working
