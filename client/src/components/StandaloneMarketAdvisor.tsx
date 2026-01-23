@@ -64,7 +64,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [marketAdvice, setMarketAdvice] = useState<string | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    scores: true,
+    scores: false,
     metrics: true,
     seasonality: false,
     historical: false,
@@ -184,6 +184,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
 
   const handleGenerateAnalysis = async () => {
     if (!selectedMarket) return;
+    
+    // Close the search dropdown when analysis starts
+    setShowResults(false);
     
     const startTime = Date.now();
     const controller = new AbortController();
@@ -848,9 +851,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={`text-lg px-3 py-1 ${getScoreColor(marketData.scores.marketScore)}`}>
-                    Score: {marketData.scores.marketScore}/100
-                  </Badge>
+                  <div className={`text-2xl font-bold px-4 py-2 rounded-lg ${getScoreColor(marketData.scores.marketScore)}`}>
+                    {marketData.scores.marketScore}
+                    <span className="text-sm font-normal ml-1">/100</span>
+                  </div>
                 </div>
               </div>
             </CardHeader>

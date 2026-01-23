@@ -3852,3 +3852,7 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## Bug Fixes (Jan 23, 2026)
 - [x] Fix step cards layout - text displaying vertically instead of horizontally
 - [x] Remove distracting "Search for a Location" overlay on the map
+- [x] Restore search guidance on Step 5 map page in non-distracting location
+- [x] Simplify Market Advisor score display
+- [x] Keep Market Advisor breakdown collapsed by default
+- [x] Fix Market Advisor dropdown staying open during analysis

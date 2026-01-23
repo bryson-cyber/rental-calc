@@ -975,9 +975,13 @@ export default function MapViewPage() {
             </Card>
             
             {listings.length === 0 && !isLoading && (
-              <div className="mt-4 text-center text-muted-foreground">
-                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>Select a location and click "Show on Map" to see property markers</p>
+              <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex items-center justify-center gap-3 text-slate-600">
+                  <Map className="w-5 h-5 text-slate-400" />
+                  <p className="text-sm">
+                    <span className="font-medium">Search for a location</span> — Enter a city, zip code, or market name above to see property performance data
+                  </p>
+                </div>
               </div>
             )}
           </div>
