@@ -412,10 +412,10 @@ export function StartWithProperty({
           </div>
         </div>
         
-        {/* Monthly Rent (Optional) */}
+        {/* Monthly Rent or Mortgage (Required) */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Monthly Rent (Optional)
+            Monthly Rent or Mortgage <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -435,14 +435,14 @@ export function StartWithProperty({
             />
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Used for profit calculations in Validate the Deal
+            Required for profit calculations and break-even analysis
           </p>
         </div>
         
         {/* Submit Button */}
         <Button
           onClick={handleSetProperty}
-          disabled={!address}
+          disabled={!address || !monthlyRent || parseFloat(monthlyRent) <= 0}
           className="w-full h-12 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 disabled:opacity-50"
         >
           <Home className="w-5 h-5 mr-2" />

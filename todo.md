@@ -3985,3 +3985,31 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Verified sharedReports.get endpoint returns proper data
 - [x] Verified shared report page renders with complete data
 - [x] Confirmed shared report displays: $45,000 annual revenue, $150 nightly rate, 72% occupancy
+
+
+## PDF Export Feature (Jan 23, 2026)
+
+### Implementation
+- [ ] Add PDF download button to ShareReportButton component
+- [ ] Create server-side PDF generation endpoint using html-pdf or puppeteer
+- [ ] Style PDF output to match report design
+- [ ] Test PDF export locally
+- [ ] Test on live website (coachinayahturnkeytool.com)
+
+
+## Bug Fix - Google Places Autocomplete (Jan 23, 2026)
+- [ ] Fix Google Places autocomplete dropdown selection not triggering React state update
+- [ ] Test autocomplete fix on live website
+
+
+## Bug Fix - Break-even Occupancy (Jan 23, 2026)
+- [ ] Fix break-even occupancy showing 0% when rent is $0 or not provided
+- [ ] Show meaningful message when rent is not set
+- [ ] Test break-even calculation with various rent values
+
+
+## Bug Fix - Rent/Mortgage Required (Jan 23, 2026)
+- [x] Make rent/mortgage field required in Validate the Deal form
+- [x] Rename "Rent" label to "Rent or Mortgage"
+- [x] Add validation to prevent form submission without rent value
+- [x] Test break-even calculation with required rent value (verified: shows 52% break-even with $2000 rent)

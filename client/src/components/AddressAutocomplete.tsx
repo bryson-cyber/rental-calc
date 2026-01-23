@@ -67,6 +67,7 @@ export function AddressAutocomplete({
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionTokenRef = useRef<string>(generateSessionToken());
 
@@ -267,6 +268,7 @@ export function AddressAutocomplete({
   // Handle prediction selection
   const handleSelect = useCallback(
     async (prediction: PlacePrediction) => {
+      console.log('[AddressAutocomplete] handleSelect called with:', prediction.description);
       setIsLoading(true);
       
       // Update the input value immediately
@@ -331,16 +333,24 @@ export function AddressAutocomplete({
     [isOpen, predictions, highlightedIndex, handleSelect]
   );
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside - but NOT when clicking on the dropdown itself
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-        setHighlightedIndex(-1);
+      const target = event.target as Node;
+      
+      // Check if click is inside the container (input area)
+      if (containerRef.current && containerRef.current.contains(target)) {
+        return;
       }
+      
+      // Check if click is inside the dropdown (which is rendered via portal)
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
+      }
+      
+      // Click is outside both container and dropdown, so close it
+      setIsOpen(false);
+      setHighlightedIndex(-1);
     }
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -358,9 +368,12 @@ export function AddressAutocomplete({
 
   // Validate on blur - show error if required and no valid selection
   const handleBlur = useCallback(() => {
-    if (required && value.trim() && !hasValidSelection) {
-      setShowError(true);
-    }
+    // Small delay to allow click events on dropdown items to fire first
+    setTimeout(() => {
+      if (required && value.trim() && !hasValidSelection) {
+        setShowError(true);
+      }
+    }, 150);
   }, [required, value, hasValidSelection]);
 
   console.log('[AddressAutocomplete] Rendering with value:', value);
@@ -410,6 +423,7 @@ export function AddressAutocomplete({
       {/* Predictions Dropdown - Using Portal to avoid clipping */}
       {isOpen && predictions.length > 0 && createPortal(
         <div 
+          ref={dropdownRef}
           className={cn(
             "fixed rounded-lg shadow-lg overflow-y-auto max-h-64",
             variant === 'dark'
@@ -427,10 +441,15 @@ export function AddressAutocomplete({
             <button
               key={prediction.placeId}
               type="button"
-              onClick={() => handleSelect(prediction)}
+              // Use onMouseDown instead of onClick to fire before blur/click-outside handlers
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent input blur
+                e.stopPropagation(); // Stop event from bubbling
+                handleSelect(prediction);
+              }}
               onMouseEnter={() => setHighlightedIndex(index)}
               className={cn(
-                "w-full px-4 py-3 text-left flex items-start gap-3 transition-colors",
+                "w-full px-4 py-3 text-left flex items-start gap-3 transition-colors cursor-pointer",
                 variant === 'dark' 
                   ? "hover:bg-white/10" 
                   : "hover:bg-slate-100",

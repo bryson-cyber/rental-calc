@@ -1400,10 +1400,10 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                {/* Monthly Rent */}
+                {/* Monthly Rent or Mortgage */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Rent
+                    Rent or Mortgage <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="number"
@@ -1456,7 +1456,7 @@ export default function LeadMagnet() {
                 
                 <button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || !address}
+                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAnalyzing ? (
