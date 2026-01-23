@@ -853,7 +853,7 @@ export default function MapViewPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2">
                     {[
                       { key: 'pool', label: 'Pool', icon: Waves },
                       { key: 'hotTub', label: 'Hot Tub', icon: Thermometer },
@@ -864,17 +864,18 @@ export default function MapViewPage() {
                     ].map(({ key, label, icon: Icon }) => (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => setAmenitiesFilter(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                        className={`flex items-center gap-2 px-3 py-2.5 sm:py-2 rounded-lg text-sm sm:text-xs font-medium transition-all touch-manipulation ${
                           amenitiesFilter[key as keyof typeof amenitiesFilter]
-                            ? 'bg-teal-100 text-teal-700 border border-teal-300'
-                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                            ? 'bg-teal-100 text-teal-700 border border-teal-300 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 active:bg-slate-200'
                         }`}
                       >
-                        <Icon className="w-3.5 h-3.5" />
+                        <Icon className="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
                         <span className="truncate">{label}</span>
                         {amenitiesFilter[key as keyof typeof amenitiesFilter] && (
-                          <Check className="w-3 h-3 ml-auto" />
+                          <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 ml-auto flex-shrink-0" />
                         )}
                       </button>
                     ))}
@@ -960,7 +961,7 @@ export default function MapViewPage() {
           <div className="lg:col-span-3">
             <Card className="overflow-hidden">
               <MapView
-                className="h-[600px]"
+                className="h-[400px] sm:h-[500px] lg:h-[600px]"
                 initialCenter={{ lat: 36.1627, lng: -86.7816 }} // Nashville default
                 initialZoom={11}
                 onMapReady={(map) => {

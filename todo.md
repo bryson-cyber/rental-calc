@@ -3657,3 +3657,20 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Added "Clear all filters" button when filters are active
 - [x] Note: Amenity filtering is visual only placeholder - actual API filtering coming soon
 - [x] Tested and verified: clicking Pool shows "1 active" badge and Clear all filters link
+
+
+### Task 4.4.2: Mobile Filter Improvements - COMPLETED
+- [x] Improved amenities filter buttons with larger touch targets (py-2.5 on mobile)
+- [x] Added touch-manipulation class for better mobile interaction
+- [x] Made icons larger on mobile (w-4 h-4) for easier tapping
+- [x] Added active state styling for touch feedback
+- [x] Made map height responsive: 400px mobile, 500px tablet, 600px desktop
+- [x] Improved grid layout for amenities: 2 cols mobile, 3 cols tablet, 2 cols desktop sidebar
+
+### Task 4.1: Dropdown and Selection Bug Fixes - COMPLETED
+- [x] Improved city search dropdown with better accessibility (role="listbox", role="option")
+- [x] Added pointer-events-none to child elements to prevent click interception
+- [x] Added onMouseDown handler to prevent input blur before selection
+- [x] Increased z-index to 100 for dropdown visibility
+- [x] Added larger padding (py-3) for better click targets
+- [x] Added visual separator borders between items

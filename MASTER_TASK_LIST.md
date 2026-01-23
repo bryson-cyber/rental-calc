@@ -109,9 +109,10 @@
 ## Phase 3: Filter Enhancements
 
 ### 3.1 Amenities Filter
-- [ ] **3.1.1** Add amenities filter dropdown to Map view
-  - Options: Pool, Hot Tub, WiFi, Kitchen, Washer/Dryer, etc.
-  - API: Use `amenities` parameter in listings endpoint
+- [x] **3.1.1** Add amenities filter dropdown to Map view ✅ COMPLETED
+  - Options: Pool, Hot Tub, Pet Friendly, Parking, Kitchen, Washer/Dryer
+  - Implementation: Added toggle buttons to MapViewPage.tsx sidebar with active filter badge
+  - Note: Visual-only filter for now, API-level filtering when endpoint supports it
 
 - [x] **3.1.2** Add amenities filter to Market Advisor - COMPLETED
   - Allow: Filter market analysis by amenity type

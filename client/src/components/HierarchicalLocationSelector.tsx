@@ -1403,20 +1403,36 @@ export function HierarchicalLocationSelector({
             
             {/* City Search Results Dropdown - shows as user types */}
             {showCityResults && citySearchResults.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-[oklch(0.85_0_0)] rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              <div 
+                className="absolute z-[100] w-full mt-1 bg-white border border-[oklch(0.85_0_0)] rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                role="listbox"
+                aria-label="City search results"
+              >
                 {citySearchResults.map((market, index) => (
                   <button
                     key={market.id || index}
-                    onClick={() => handleCityResultSelect(market)}
-                    className="w-full px-3 py-2.5 text-left hover:bg-[oklch(0.96_0_0)] transition-colors flex items-center justify-between first:rounded-t-lg last:rounded-b-lg"
+                    type="button"
+                    role="option"
+                    data-market-id={market.id}
+                    data-market-name={market.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCityResultSelect(market);
+                    }}
+                    onMouseDown={(e) => {
+                      // Prevent blur on input before click completes
+                      e.preventDefault();
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-[oklch(0.94_0.02_250)] active:bg-[oklch(0.90_0.03_250)] transition-colors flex items-center justify-between first:rounded-t-lg last:rounded-b-lg cursor-pointer border-b border-[oklch(0.92_0_0)] last:border-b-0"
                   >
-                    <div>
+                    <div className="pointer-events-none">
                       <span className="font-medium text-[oklch(0.25_0_0)]">{market.name}</span>
                       {market.locationName && market.locationName !== market.name && (
                         <span className="text-[oklch(0.50_0_0)] text-sm ml-1">({market.locationName})</span>
                       )}
                     </div>
-                    <span className="text-xs text-[oklch(0.50_0_0)] bg-[oklch(0.96_0_0)] px-2 py-1 rounded">
+                    <span className="text-xs text-[oklch(0.50_0_0)] bg-[oklch(0.96_0_0)] px-2 py-1 rounded pointer-events-none">
                       {market.listingCount?.toLocaleString() || 0} listings
                     </span>
                   </button>
