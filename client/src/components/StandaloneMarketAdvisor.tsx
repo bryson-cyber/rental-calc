@@ -127,6 +127,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     isTakingLong: false
   });
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [justSelected, setJustSelected] = useState(false);
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
@@ -146,12 +147,17 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   useEffect(() => {
     if (searchMarketsMutation.data?.success && searchMarketsMutation.data.data) {
       setSearchResults(searchMarketsMutation.data.data);
-      setShowResults(true);
+      // Only show results if we didn't just select a market
+      if (!justSelected) {
+        setShowResults(true);
+      }
     }
-  }, [searchMarketsMutation.data]);
+  }, [searchMarketsMutation.data, justSelected]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    // Reset the justSelected flag when user starts typing again
+    setJustSelected(false);
     setSearchQuery(value);
     if (value.length < 2) {
       setSearchResults([]);
@@ -160,6 +166,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   };
 
   const handleMarketSelect = async (market: MarketSearchResult) => {
+    // Set flag to prevent dropdown from re-opening when query changes
+    setJustSelected(true);
     setSelectedMarket({
       id: market.id,
       name: market.name,
@@ -167,6 +175,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     });
     setSearchQuery(market.name);
     setShowResults(false);
+    setSearchResults([]);
     
     if (onMarketSelect) {
       onMarketSelect(market.id, market.name);

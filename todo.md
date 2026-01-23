@@ -3859,3 +3859,6 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Remove "[Your Name]" placeholder from Market Advisor report (updated LLM prompt)
 - [x] Populate 1-bedroom revenue data in Market Advisor (increased listing fetch to 500)
 - [x] Round Market Advisor score to whole number (added Math.round)
+- [ ] Fix Market Advisor dropdown staying open during analysis (not closing properly)
+
+- [x] Fix Market Advisor dropdown staying open after selection (closes properly now)
