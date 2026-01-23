@@ -49,6 +49,13 @@ import {
   Table2,
   ChevronLeft,
   ChevronRight,
+  Waves,
+  Thermometer,
+  PawPrint,
+  Car,
+  UtensilsCrossed,
+  WashingMachine,
+  Check,
 } from 'lucide-react';
 
 // Types
@@ -164,6 +171,23 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const [distanceFilter, setDistanceFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
   const [apiBedroomFilter, setApiBedroomFilter] = useState<number | null>(null);
+  
+  // Amenities filter state
+  const [amenitiesFilter, setAmenitiesFilter] = useState<{
+    pool: boolean;
+    hotTub: boolean;
+    petFriendly: boolean;
+    parking: boolean;
+    kitchen: boolean;
+    washerDryer: boolean;
+  }>({
+    pool: false,
+    hotTub: false,
+    petFriendly: false,
+    parking: false,
+    kitchen: false,
+    washerDryer: false,
+  });
   
   // Threshold state
   const [useCustomThreshold, setUseCustomThreshold] = useState(false);
@@ -783,8 +807,8 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </button>
           </div>
           
-          {/* Floating Panels - Left Side */}
-          <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-10">
+          {/* Floating Filters Button - Bottom Right */}
+          <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-20">
             {/* Filters Panel Toggle */}
             <button
               onClick={() => {
@@ -798,34 +822,15 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             >
               <Filter className="w-4 h-4" />
               <span className="text-sm font-medium">Filters</span>
-              {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all') && (
+              {(bedroomFilter !== 'all' || propertyTypeFilter !== 'all' || Object.values(amenitiesFilter).some(v => v)) && (
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
               )}
-            </button>
-            
-
-            
-            {/* My Property Panel Toggle */}
-            <button
-              onClick={() => {
-                setShowMyPropertyPanel(!showMyPropertyPanel);
-                setShowFiltersPanel(false);
-                setShowThresholdsPanel(false);
-              }}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg border transition-all ${
-                showMyPropertyPanel ? 'bg-slate-900 text-white border-slate-900' : 
-                myPropertyLocation ? 'bg-blue-500 text-white border-blue-500' :
-                'bg-white/95 hover:bg-white text-slate-700 border-slate-200'
-              }`}
-            >
-              <Home className="w-4 h-4" />
-              <span className="text-sm font-medium">{myPropertyLocation ? 'My Property' : 'Add Property'}</span>
             </button>
           </div>
           
           {/* Filters Panel */}
           {showFiltersPanel && (
-            <div className="absolute bottom-20 left-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20">
+            <div className="absolute bottom-20 right-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20 max-h-[60vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-slate-900">Filters</h3>
                 <button onClick={() => setShowFiltersPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -908,6 +913,93 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </Select>
                 </div>
                 
+                {/* Amenities Filter */}
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1.5 block">Amenities</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, pool: !prev.pool }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.pool
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Waves className="w-3.5 h-3.5" />
+                      Pool
+                      {amenitiesFilter.pool && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, hotTub: !prev.hotTub }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.hotTub
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Thermometer className="w-3.5 h-3.5" />
+                      Hot Tub
+                      {amenitiesFilter.hotTub && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, petFriendly: !prev.petFriendly }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.petFriendly
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <PawPrint className="w-3.5 h-3.5" />
+                      Pets OK
+                      {amenitiesFilter.petFriendly && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, parking: !prev.parking }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.parking
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Car className="w-3.5 h-3.5" />
+                      Parking
+                      {amenitiesFilter.parking && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, kitchen: !prev.kitchen }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.kitchen
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <UtensilsCrossed className="w-3.5 h-3.5" />
+                      Kitchen
+                      {amenitiesFilter.kitchen && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                    <button
+                      onClick={() => setAmenitiesFilter(prev => ({ ...prev, washerDryer: !prev.washerDryer }))}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        amenitiesFilter.washerDryer
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <WashingMachine className="w-3.5 h-3.5" />
+                      Washer
+                      {amenitiesFilter.washerDryer && <Check className="w-3 h-3 ml-auto" />}
+                    </button>
+                  </div>
+                  {Object.values(amenitiesFilter).some(v => v) && (
+                    <button
+                      onClick={() => setAmenitiesFilter({ pool: false, hotTub: false, petFriendly: false, parking: false, kitchen: false, washerDryer: false })}
+                      className="w-full mt-2 text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Clear amenities
+                    </button>
+                  )}
+                </div>
+                
                 {/* Comp Set Mode */}
                 <div className="pt-3 border-t border-slate-100">
                   <div className="flex items-center justify-between">
@@ -931,7 +1023,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
           
           {/* My Property Panel */}
           {showMyPropertyPanel && (
-            <div className="absolute bottom-20 left-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20">
+            <div className="absolute bottom-20 right-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-slate-900">My Property</h3>
                 <button onClick={() => setShowMyPropertyPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
@@ -1008,7 +1100,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
           
           {/* Stats Bar - Bottom of Map */}
           {listings.length > 0 && (
-            <div className="absolute bottom-4 right-4 left-auto md:left-1/2 md:-translate-x-1/2 z-10">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200 px-4 py-3 flex items-center gap-4">
                 <div className="text-center">
                   <div className="text-xs text-slate-500">Properties</div>

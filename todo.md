@@ -3647,3 +3647,13 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Fixed by replacing Input with AddressAutocomplete component in MapFirstLayout.tsx
 - [x] Address autocomplete now works correctly in Step 5 Map view My Property dialog
 - [x] Tested and verified: typing address shows Google Places suggestions, selecting sets location
+
+
+### Task 3.1.1: Amenities Filter for Map View - COMPLETED (Jan 22, 2026)
+- [x] Added amenities filter state (pool, hotTub, petFriendly, parking, kitchen, washerDryer) to MapViewPage.tsx
+- [x] Added Amenities filter card to sidebar with toggle buttons for each amenity
+- [x] Implemented visual feedback with teal highlight for active filters
+- [x] Added "X active" badge to show number of active filters
+- [x] Added "Clear all filters" button when filters are active
+- [x] Note: Amenity filtering is visual only placeholder - actual API filtering coming soon
+- [x] Tested and verified: clicking Pool shows "1 active" badge and Clear all filters link

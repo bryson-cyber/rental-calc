@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, Waves, Thermometer, PawPrint, Car, UtensilsCrossed, WashingMachine, Check, Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -249,6 +249,22 @@ export default function MapViewPage() {
   const [customThreshold, setCustomThreshold] = useState<number>(50000);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [bedroomFilter, setBedroomFilter] = useState<string>('all');
+  const [showAmenitiesFilter, setShowAmenitiesFilter] = useState(false);
+  const [amenitiesFilter, setAmenitiesFilter] = useState<{
+    pool: boolean;
+    hotTub: boolean;
+    petFriendly: boolean;
+    parking: boolean;
+    kitchen: boolean;
+    washerDryer: boolean;
+  }>({
+    pool: false,
+    hotTub: false,
+    petFriendly: false,
+    parking: false,
+    kitchen: false,
+    washerDryer: false,
+  });
   
   // My Property state
   const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
@@ -814,6 +830,73 @@ export default function MapViewPage() {
                       Showing {filteredListings.length} of {listings.length} properties
                     </p>
                   )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Amenities Filter */}
+            {listings.length > 0 && (
+              <Card className="border-slate-200 bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
+                        <Filter className="w-3.5 h-3.5 text-teal-500" />
+                      </div>
+                      <span className="text-slate-900">Amenities</span>
+                    </div>
+                    {Object.values(amenitiesFilter).some(v => v) && (
+                      <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">
+                        {Object.values(amenitiesFilter).filter(v => v).length} active
+                      </span>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'pool', label: 'Pool', icon: Waves },
+                      { key: 'hotTub', label: 'Hot Tub', icon: Thermometer },
+                      { key: 'petFriendly', label: 'Pet Friendly', icon: PawPrint },
+                      { key: 'parking', label: 'Parking', icon: Car },
+                      { key: 'kitchen', label: 'Kitchen', icon: UtensilsCrossed },
+                      { key: 'washerDryer', label: 'Washer/Dryer', icon: WashingMachine },
+                    ].map(({ key, label, icon: Icon }) => (
+                      <button
+                        key={key}
+                        onClick={() => setAmenitiesFilter(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          amenitiesFilter[key as keyof typeof amenitiesFilter]
+                            ? 'bg-teal-100 text-teal-700 border border-teal-300'
+                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="truncate">{label}</span>
+                        {amenitiesFilter[key as keyof typeof amenitiesFilter] && (
+                          <Check className="w-3 h-3 ml-auto" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {Object.values(amenitiesFilter).some(v => v) && (
+                    <button
+                      onClick={() => setAmenitiesFilter({
+                        pool: false,
+                        hotTub: false,
+                        petFriendly: false,
+                        parking: false,
+                        kitchen: false,
+                        washerDryer: false,
+                      })}
+                      className="mt-3 text-xs text-slate-500 hover:text-slate-700 underline"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Note: Amenity filtering is visual only. API filtering coming soon.
+                  </p>
                 </CardContent>
               </Card>
             )}

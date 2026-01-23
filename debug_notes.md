@@ -26,3 +26,30 @@
 1. **Desktop/mobile formatting** - Need to check and fix layout issues
 2. **Location autocomplete** - Need to improve search to work with all US cities/zip codes
 3. **Results caching** - Should cache results for performance
+
+
+---
+
+# Amenities Filter Implementation - Jan 22, 2026
+
+## Current State
+- Map view is loading with listings (25 properties shown for Aurora, Colorado)
+- Left sidebar shows: My Property, Revenue Thresholds, Filter by Bedrooms sections
+- The "Filters" button that was added in the code is positioned as a floating button at bottom-left of the map
+- However, it's not visible in the current view - may be hidden behind other elements or not rendering
+
+## Code Location
+- MapFirstLayout.tsx line 811-828: Floating Panels - Left Side with Filters button
+- The Filters button should appear at `absolute bottom-4 left-4` on the map
+
+## Issue
+The Filters button is inside the map container's relative positioning, but the left sidebar is overlapping the map area. The button may be hidden behind the sidebar.
+
+## Solution Needed
+Either:
+1. Move the Filters button to a visible location (not behind sidebar)
+2. Add the amenities filter to the existing left sidebar instead of as a floating button
+3. Adjust z-index or positioning
+
+## Recommended Approach
+Add amenities filter to the existing "Filter by Bedrooms" section in the left sidebar, making it a "Filters" section with both bedroom and amenities filters.
