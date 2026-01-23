@@ -19,8 +19,10 @@ import {
   ArrowRight,
   Home,
   Download,
-  FileText
+  FileText,
+  FileDown
 } from 'lucide-react';
+import { exportMarketComparisonPDF } from '@/lib/pdfExport';
 import { Link } from 'wouter';
 
 interface SelectedMarket {
@@ -97,6 +99,24 @@ export default function MarketComparisonPage() {
     link.href = URL.createObjectURL(blob);
     link.download = `market-comparison-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+  };
+
+  const exportToPDF = () => {
+    if (!comparisonQuery.data?.success || !comparisonQuery.data.data) return;
+
+    const markets = comparisonQuery.data.data.markets.map((market: any) => ({
+      name: market.market_name,
+      state: market.state,
+      avgRevenue: market.metrics.revenue,
+      avgOccupancy: market.metrics.occupancy,
+      avgAdr: market.metrics.adr,
+      propertyCount: market.listing_count,
+    }));
+
+    exportMarketComparisonPDF(markets, {
+      title: 'Market Comparison Report',
+      subtitle: `Comparing ${markets.length} Markets`,
+    });
   };
 
   return (
@@ -320,6 +340,15 @@ export default function MarketComparisonPage() {
               >
                 <Download className="w-4 h-4" />
                 Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToPDF}
+                className="gap-2"
+              >
+                <FileDown className="w-4 h-4" />
+                Export PDF
               </Button>
             </div>
           </CardHeader>

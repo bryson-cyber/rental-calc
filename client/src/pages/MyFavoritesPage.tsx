@@ -20,8 +20,10 @@ import {
   Trash2,
   BarChart3,
   Download,
-  FileText
+  FileText,
+  FileDown
 } from 'lucide-react';
+import { exportFavoritesPDF } from '@/lib/pdfExport';
 import { Link } from 'wouter';
 
 const marketTypeIcons: Record<string, React.ReactNode> = {
@@ -108,6 +110,25 @@ export default function MyFavoritesPage() {
     link.click();
   };
 
+  const exportToPDF = () => {
+    if (!favoritesQuery.data || favoritesQuery.data.length === 0) return;
+
+    const markets = favoritesQuery.data.map(fav => ({
+      name: fav.marketName,
+      state: fav.state || undefined,
+      avgRevenue: fav.averageRevenue ? parseFloat(String(fav.averageRevenue)) : undefined,
+      avgOccupancy: fav.averageOccupancy ? parseFloat(String(fav.averageOccupancy)) : undefined,
+      avgAdr: fav.averageAdr ? parseFloat(String(fav.averageAdr)) : undefined,
+      propertyCount: fav.listingCount || undefined,
+      // topPerformerRevenue not available in favorites data
+    }));
+
+    exportFavoritesPDF(markets, {
+      title: 'My Favorite Markets',
+      subtitle: `${markets.length} Saved Markets`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-amber-50/30">
       {/* Header */}
@@ -141,6 +162,15 @@ export default function MyFavoritesPage() {
                   >
                     <Download className="w-4 h-4" />
                     Export CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToPDF}
+                    className="gap-2"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Export PDF
                   </Button>
                   <Link href="/compare-markets">
                     <Button variant="default" size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700">

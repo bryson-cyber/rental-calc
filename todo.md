@@ -3831,3 +3831,19 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Fixed fetch calls in MapFirstLayout.tsx to use batch format for getAllListings
 - [x] Fixed fetch calls in MapViewContent.tsx to use batch format for getAllListings and getListingsByZipcode
 - [x] Updated response parsing to handle batch response format (data[0].result.data.json)
+
+
+## PDF Export Feature (Jan 23, 2026)
+- [ ] Set up PDF generation library (jspdf or pdfmake)
+- [ ] Create server-side PDF generation endpoint
+- [ ] Add PDF export button to Market Comparison page
+- [ ] Add PDF export button to My Favorites page
+- [ ] Format PDF with market data, charts, and branding
+
+
+## PDF Export Feature (Jan 23, 2026)
+- [x] Set up PDF generation library (jspdf)
+- [x] Create client-side PDF generation utility
+- [x] Add PDF export button to Market Comparison page
+- [x] Add PDF export button to My Favorites page
+- [x] Format PDF with market data and branding
