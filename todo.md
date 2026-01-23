@@ -3961,3 +3961,27 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] SharedReportPage created at /report/:shareId route
 
 ### Total: 99 feature tests passing
+
+
+## Share Report Feature Testing & Fixes (Jan 23, 2026)
+
+### Schema Sync Issues Fixed
+- [x] Updated sharedReports schema to match actual database structure
+- [x] Added accommodates, submarketId, submarketName fields
+- [x] Changed reportData from json to text type
+- [x] Added createdByName field, removed passwordHash and createdBySessionId
+- [x] Updated sharedReports.create mutation to match new schema
+- [x] Updated sharedReports.get query to remove passwordHash checks
+- [x] Updated sharedReports.list query to remove session-based filtering
+- [x] Updated sharedReports.delete mutation to remove session-based ownership check
+
+### ChapterPropertyReport Fixes
+- [x] Added null safety checks for revenue_estimate and other data fields
+- [x] Added default values for all destructured properties
+- [x] Fixed "Cannot read properties of undefined (reading 'annual')" error
+
+### API Testing
+- [x] Verified sharedReports.create endpoint works correctly
+- [x] Verified sharedReports.get endpoint returns proper data
+- [x] Verified shared report page renders with complete data
+- [x] Confirmed shared report displays: $45,000 annual revenue, $150 nightly rate, 72% occupancy

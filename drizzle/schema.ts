@@ -557,6 +557,8 @@ export type InsertMarketAlert = typeof marketAlerts.$inferInsert;
 /**
  * Shared Reports table for creating shareable links to property/market reports
  * Allows users to share reports with clients or colleagues via unique URLs
+ * 
+ * NOTE: Schema matches actual database structure
  */
 export const sharedReports = mysqlTable("shared_reports", {
   id: int("id").autoincrement().primaryKey(),
@@ -573,25 +575,25 @@ export const sharedReports = mysqlTable("shared_reports", {
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
   bedrooms: int("bedrooms"),
   bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  accommodates: int("accommodates"),
   
   // For market reports
   marketId: varchar("marketId", { length: 64 }),
   marketName: varchar("marketName", { length: 255 }),
+  submarketId: varchar("submarketId", { length: 64 }),
+  submarketName: varchar("submarketName", { length: 255 }),
   
-  // Cached report data (JSON blob of the full report)
-  reportData: json("reportData"),
-  
-  // Access controls
-  expiresAt: timestamp("expiresAt"), // Optional expiration
-  maxViews: int("maxViews"), // Optional view limit
-  viewCount: int("viewCount").default(0).notNull(),
-  
-  // Password protection (optional)
-  passwordHash: varchar("passwordHash", { length: 255 }),
+  // Cached report data (stored as text in actual DB)
+  reportData: text("reportData"),
   
   // Creator tracking
   createdByUserId: int("createdByUserId"),
-  createdBySessionId: varchar("createdBySessionId", { length: 64 }),
+  createdByName: varchar("createdByName", { length: 255 }),
+  
+  // Access controls
+  expiresAt: timestamp("expiresAt"), // Optional expiration
+  viewCount: int("viewCount").default(0).notNull(),
+  maxViews: int("maxViews"), // Optional view limit
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),

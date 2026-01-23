@@ -4048,17 +4048,19 @@ superhostOnly: input.superhostOnly,
         longitude: z.number().optional(),
         bedrooms: z.number().optional(),
         bathrooms: z.number().optional(),
+        accommodates: z.number().optional(),
         // Market fields
         marketId: z.string().optional(),
         marketName: z.string().optional(),
+        submarketId: z.string().optional(),
+        submarketName: z.string().optional(),
         // Report data
         reportData: z.any(),
         // Access controls
         expiresInDays: z.number().min(1).max(365).optional(),
         maxViews: z.number().min(1).max(1000).optional(),
-        password: z.string().optional(),
-        // Creator tracking
-        sessionId: z.string().optional(),
+        // Creator name (for display)
+        creatorName: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
@@ -4072,10 +4074,10 @@ superhostOnly: input.superhostOnly,
           ? new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000)
           : null;
         
-        // Hash password if provided (simple hash for demo)
-        const passwordHash = input.password 
-          ? Buffer.from(input.password).toString('base64')
-          : null;
+        // Serialize reportData to JSON string for text column
+        const reportDataStr = typeof input.reportData === 'string' 
+          ? input.reportData 
+          : JSON.stringify(input.reportData);
         
         await db.insert(sharedReports).values({
           shareId,
@@ -4085,14 +4087,16 @@ superhostOnly: input.superhostOnly,
           longitude: input.longitude?.toString(),
           bedrooms: input.bedrooms,
           bathrooms: input.bathrooms?.toString(),
+          accommodates: input.accommodates,
           marketId: input.marketId,
           marketName: input.marketName,
-          reportData: input.reportData,
+          submarketId: input.submarketId,
+          submarketName: input.submarketName,
+          reportData: reportDataStr,
           expiresAt,
           maxViews: input.maxViews,
-          passwordHash,
           createdByUserId: ctx.user?.id,
-          createdBySessionId: input.sessionId,
+          createdByName: input.creatorName || ctx.user?.name,
         });
         
         return { success: true, shareId };
@@ -4130,15 +4134,8 @@ superhostOnly: input.superhostOnly,
           return { success: false, error: 'This report has reached its view limit' };
         }
         
-        // Check password
-        if (report.passwordHash) {
-          const providedHash = input.password 
-            ? Buffer.from(input.password).toString('base64')
-            : null;
-          if (providedHash !== report.passwordHash) {
-            return { success: false, error: 'Password required', requiresPassword: true };
-          }
-        }
+        // Password protection removed from this version
+        // (passwordHash column no longer exists in database)
         
         // Increment view count
         await db.update(sharedReports)
@@ -4182,14 +4179,8 @@ superhostOnly: input.superhostOnly,
             .where(eq(sharedReports.createdByUserId, ctx.user.id))
             .orderBy(desc(sharedReports.createdAt))
             .limit(50);
-        } else if (input.sessionId) {
-          results = await db
-            .select()
-            .from(sharedReports)
-            .where(eq(sharedReports.createdBySessionId, input.sessionId))
-            .orderBy(desc(sharedReports.createdAt))
-            .limit(50);
         } else {
+          // Session-based filtering removed (createdBySessionId no longer exists)
           return { success: true, data: [] };
         }
         
@@ -4230,8 +4221,7 @@ superhostOnly: input.superhostOnly,
         }
         
         const report = results[0];
-        const isOwner = (ctx.user?.id && report.createdByUserId === ctx.user.id) ||
-                        (input.sessionId && report.createdBySessionId === input.sessionId);
+        const isOwner = (ctx.user?.id && report.createdByUserId === ctx.user.id);
         
         if (!isOwner) {
           return { success: false, error: 'Not authorized to delete this report' };

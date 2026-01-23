@@ -307,7 +307,17 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
 
-  const { property, revenue_estimate, monthly_forecast, comps, same_bedroom_comps, market_data, bedroom_performance, revenue_percentiles } = data;
+  // Safely destructure with defaults for shared reports that may have incomplete data
+  const { 
+    property = { address: '', city: '', state: '', zipCode: '', bedrooms: 0, bathrooms: 0, accommodates: 0 }, 
+    revenue_estimate = { annual: 0, monthly: 0, nightly: 0, occupancy: 0 }, 
+    monthly_forecast = [], 
+    comps = [], 
+    same_bedroom_comps, 
+    market_data = { name: '', metrics: { occupancy: 0, adr: 0, revenue: 0, revpar: 0, active_listings: 0 }, listing_count: 0 }, 
+    bedroom_performance = [], 
+    revenue_percentiles 
+  } = data || {};
 
   // Use same-bedroom comps if available, otherwise use all comps
   // Sort by annual revenue descending to show top performers first
