@@ -1,0 +1,23 @@
+CREATE TABLE `shared_reports` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`shareId` varchar(32) NOT NULL,
+	`reportType` enum('property','market') NOT NULL,
+	`address` text,
+	`latitude` decimal(10,7),
+	`longitude` decimal(10,7),
+	`bedrooms` int,
+	`bathrooms` decimal(3,1),
+	`marketId` varchar(64),
+	`marketName` varchar(255),
+	`reportData` json,
+	`expiresAt` timestamp,
+	`maxViews` int,
+	`viewCount` int NOT NULL DEFAULT 0,
+	`passwordHash` varchar(255),
+	`createdByUserId` int,
+	`createdBySessionId` varchar(64),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `shared_reports_id` PRIMARY KEY(`id`),
+	CONSTRAINT `shared_reports_shareId_unique` UNIQUE(`shareId`)
+);

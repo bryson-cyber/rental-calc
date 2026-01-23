@@ -552,3 +552,51 @@ export const marketAlerts = mysqlTable("market_alerts", {
 
 export type MarketAlert = typeof marketAlerts.$inferSelect;
 export type InsertMarketAlert = typeof marketAlerts.$inferInsert;
+
+
+/**
+ * Shared Reports table for creating shareable links to property/market reports
+ * Allows users to share reports with clients or colleagues via unique URLs
+ */
+export const sharedReports = mysqlTable("shared_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Unique share ID for URL (e.g., /report/abc123)
+  shareId: varchar("shareId", { length: 32 }).notNull().unique(),
+  
+  // Report type and reference
+  reportType: mysqlEnum("reportType", ["property", "market"]).notNull(),
+  
+  // For property reports
+  address: text("address"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  
+  // For market reports
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Cached report data (JSON blob of the full report)
+  reportData: json("reportData"),
+  
+  // Access controls
+  expiresAt: timestamp("expiresAt"), // Optional expiration
+  maxViews: int("maxViews"), // Optional view limit
+  viewCount: int("viewCount").default(0).notNull(),
+  
+  // Password protection (optional)
+  passwordHash: varchar("passwordHash", { length: 255 }),
+  
+  // Creator tracking
+  createdByUserId: int("createdByUserId"),
+  createdBySessionId: varchar("createdBySessionId", { length: 64 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SharedReport = typeof sharedReports.$inferSelect;
+export type InsertSharedReport = typeof sharedReports.$inferInsert;

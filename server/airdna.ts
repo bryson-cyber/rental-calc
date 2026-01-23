@@ -6807,3 +6807,139 @@ export async function compareMarkets(
     return null;
   }
 }
+
+
+/**
+ * Forward-Looking Demand Indicators
+ * Calculates demand trends for the next 30 and 180 days
+ */
+export interface ForwardDemandIndicators {
+  next30Days: {
+    avgOccupancy: number;
+    avgAdr: number;
+    avgSupply: number;
+    avgDemand: number;
+    trend: 'hot' | 'warm' | 'cool' | 'cold';
+    trendLabel: string;
+  };
+  next180Days: {
+    avgOccupancy: number;
+    avgAdr: number;
+    avgSupply: number;
+    avgDemand: number;
+    trend: 'hot' | 'warm' | 'cool' | 'cold';
+    trendLabel: string;
+  };
+  peakPeriod: {
+    startDate: string;
+    endDate: string;
+    avgOccupancy: number;
+  } | null;
+  lowPeriod: {
+    startDate: string;
+    endDate: string;
+    avgOccupancy: number;
+  } | null;
+}
+
+function classifyDemandTrend(occupancy: number): { trend: 'hot' | 'warm' | 'cool' | 'cold'; label: string } {
+  if (occupancy >= 75) return { trend: 'hot', label: 'Hot Market' };
+  if (occupancy >= 55) return { trend: 'warm', label: 'Warm Market' };
+  if (occupancy >= 35) return { trend: 'cool', label: 'Cool Market' };
+  return { trend: 'cold', label: 'Cold Market' };
+}
+
+export function calculateForwardLookingDemand(
+  futureDailyData: FutureDailyData[]
+): ForwardDemandIndicators | null {
+  if (!futureDailyData || futureDailyData.length === 0) {
+    return null;
+  }
+
+  // Sort by date
+  const sortedData = [...futureDailyData].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  // Get next 30 days data
+  const today = new Date();
+  const next30DaysEnd = new Date(today);
+  next30DaysEnd.setDate(next30DaysEnd.getDate() + 30);
+  
+  const next30DaysData = sortedData.filter(d => {
+    const date = new Date(d.date);
+    return date >= today && date <= next30DaysEnd;
+  });
+
+  // Get next 180 days data (all available data up to 180 days)
+  const next180DaysEnd = new Date(today);
+  next180DaysEnd.setDate(next180DaysEnd.getDate() + 180);
+  
+  const next180DaysData = sortedData.filter(d => {
+    const date = new Date(d.date);
+    return date >= today && date <= next180DaysEnd;
+  });
+
+  // Calculate averages for 30 days
+  const calc30 = next30DaysData.length > 0 ? {
+    avgOccupancy: next30DaysData.reduce((sum, d) => sum + (d.occupancy || 0), 0) / next30DaysData.length,
+    avgAdr: next30DaysData.reduce((sum, d) => sum + (d.adr || 0), 0) / next30DaysData.length,
+    avgSupply: next30DaysData.reduce((sum, d) => sum + (d.supply || 0), 0) / next30DaysData.length,
+    avgDemand: next30DaysData.reduce((sum, d) => sum + (d.demand || 0), 0) / next30DaysData.length,
+  } : { avgOccupancy: 0, avgAdr: 0, avgSupply: 0, avgDemand: 0 };
+
+  // Calculate averages for 180 days
+  const calc180 = next180DaysData.length > 0 ? {
+    avgOccupancy: next180DaysData.reduce((sum, d) => sum + (d.occupancy || 0), 0) / next180DaysData.length,
+    avgAdr: next180DaysData.reduce((sum, d) => sum + (d.adr || 0), 0) / next180DaysData.length,
+    avgSupply: next180DaysData.reduce((sum, d) => sum + (d.supply || 0), 0) / next180DaysData.length,
+    avgDemand: next180DaysData.reduce((sum, d) => sum + (d.demand || 0), 0) / next180DaysData.length,
+  } : { avgOccupancy: 0, avgAdr: 0, avgSupply: 0, avgDemand: 0 };
+
+  // Find peak and low periods (7-day rolling windows)
+  let peakPeriod: ForwardDemandIndicators['peakPeriod'] = null;
+  let lowPeriod: ForwardDemandIndicators['lowPeriod'] = null;
+  let maxAvgOccupancy = -Infinity;
+  let minAvgOccupancy = Infinity;
+
+  for (let i = 0; i <= sortedData.length - 7; i++) {
+    const window = sortedData.slice(i, i + 7);
+    const avgOcc = window.reduce((sum, d) => sum + (d.occupancy || 0), 0) / 7;
+    
+    if (avgOcc > maxAvgOccupancy) {
+      maxAvgOccupancy = avgOcc;
+      peakPeriod = {
+        startDate: window[0].date,
+        endDate: window[6].date,
+        avgOccupancy: avgOcc,
+      };
+    }
+    
+    if (avgOcc < minAvgOccupancy) {
+      minAvgOccupancy = avgOcc;
+      lowPeriod = {
+        startDate: window[0].date,
+        endDate: window[6].date,
+        avgOccupancy: avgOcc,
+      };
+    }
+  }
+
+  const trend30 = classifyDemandTrend(calc30.avgOccupancy);
+  const trend180 = classifyDemandTrend(calc180.avgOccupancy);
+
+  return {
+    next30Days: {
+      ...calc30,
+      trend: trend30.trend,
+      trendLabel: trend30.label,
+    },
+    next180Days: {
+      ...calc180,
+      trend: trend180.trend,
+      trendLabel: trend180.label,
+    },
+    peakPeriod,
+    lowPeriod,
+  };
+}

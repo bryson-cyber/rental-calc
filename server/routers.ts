@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -35,6 +35,8 @@ import {
   getListingComps,
   getListingHistoricalMetrics,
   compareMarkets,
+  calculateForwardLookingDemand,
+  getMarketFutureDailyData,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -1622,6 +1624,45 @@ export const appRouter = router({
           return {
             success: false,
             error: "Failed to get supply trend",
+            data: null,
+          };
+        }
+      }),
+
+    // Get forward-looking demand indicators
+    getForwardDemand: publicProcedure
+      .input(z.object({ 
+        marketId: z.union([z.number(), z.string()]),
+        numMonths: z.number().optional().default(6),
+        bedrooms: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const futureDailyData = await getMarketFutureDailyData(
+            String(input.marketId),
+            input.numMonths,
+            input.bedrooms
+          );
+          
+          if (!futureDailyData || futureDailyData.length === 0) {
+            return {
+              success: false,
+              error: "No future pricing data available",
+              data: null,
+            };
+          }
+          
+          const indicators = calculateForwardLookingDemand(futureDailyData);
+          
+          return {
+            success: true,
+            data: indicators,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting forward demand:", error);
+          return {
+            success: false,
+            error: "Failed to get forward demand indicators",
             data: null,
           };
         }
@@ -3992,6 +4033,213 @@ superhostOnly: input.superhostOnly,
           .where(eq(marketAlerts.id, input.id));
         
         return { success: true, isActive: newStatus };
+      }),
+  }),
+
+  // Shared Reports router for creating shareable links
+  sharedReports: router({
+    // Create a new shared report
+    create: publicProcedure
+      .input(z.object({
+        reportType: z.enum(['property', 'market']),
+        // Property fields
+        address: z.string().optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        // Market fields
+        marketId: z.string().optional(),
+        marketName: z.string().optional(),
+        // Report data
+        reportData: z.any(),
+        // Access controls
+        expiresInDays: z.number().min(1).max(365).optional(),
+        maxViews: z.number().min(1).max(1000).optional(),
+        password: z.string().optional(),
+        // Creator tracking
+        sessionId: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Generate unique share ID
+        const shareId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        
+        // Calculate expiration if specified
+        const expiresAt = input.expiresInDays 
+          ? new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000)
+          : null;
+        
+        // Hash password if provided (simple hash for demo)
+        const passwordHash = input.password 
+          ? Buffer.from(input.password).toString('base64')
+          : null;
+        
+        await db.insert(sharedReports).values({
+          shareId,
+          reportType: input.reportType,
+          address: input.address,
+          latitude: input.latitude?.toString(),
+          longitude: input.longitude?.toString(),
+          bedrooms: input.bedrooms,
+          bathrooms: input.bathrooms?.toString(),
+          marketId: input.marketId,
+          marketName: input.marketName,
+          reportData: input.reportData,
+          expiresAt,
+          maxViews: input.maxViews,
+          passwordHash,
+          createdByUserId: ctx.user?.id,
+          createdBySessionId: input.sessionId,
+        });
+        
+        return { success: true, shareId };
+      }),
+
+    // Get a shared report by ID
+    get: publicProcedure
+      .input(z.object({
+        shareId: z.string(),
+        password: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        const results = await db
+          .select()
+          .from(sharedReports)
+          .where(eq(sharedReports.shareId, input.shareId))
+          .limit(1);
+        
+        if (results.length === 0) {
+          return { success: false, error: 'Report not found' };
+        }
+        
+        const report = results[0];
+        
+        // Check expiration
+        if (report.expiresAt && new Date(report.expiresAt) < new Date()) {
+          return { success: false, error: 'This report has expired' };
+        }
+        
+        // Check view limit
+        if (report.maxViews && report.viewCount >= report.maxViews) {
+          return { success: false, error: 'This report has reached its view limit' };
+        }
+        
+        // Check password
+        if (report.passwordHash) {
+          const providedHash = input.password 
+            ? Buffer.from(input.password).toString('base64')
+            : null;
+          if (providedHash !== report.passwordHash) {
+            return { success: false, error: 'Password required', requiresPassword: true };
+          }
+        }
+        
+        // Increment view count
+        await db.update(sharedReports)
+          .set({ viewCount: report.viewCount + 1 })
+          .where(eq(sharedReports.shareId, input.shareId));
+        
+        return {
+          success: true,
+          data: {
+            reportType: report.reportType,
+            address: report.address,
+            latitude: report.latitude ? parseFloat(report.latitude) : null,
+            longitude: report.longitude ? parseFloat(report.longitude) : null,
+            bedrooms: report.bedrooms,
+            bathrooms: report.bathrooms ? parseFloat(report.bathrooms) : null,
+            marketId: report.marketId,
+            marketName: report.marketName,
+            reportData: report.reportData,
+            viewCount: report.viewCount + 1,
+            maxViews: report.maxViews,
+            expiresAt: report.expiresAt,
+            createdAt: report.createdAt,
+          },
+        };
+      }),
+
+    // List shared reports created by user/session
+    list: publicProcedure
+      .input(z.object({
+        sessionId: z.string().optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        let results;
+        if (ctx.user?.id) {
+          results = await db
+            .select()
+            .from(sharedReports)
+            .where(eq(sharedReports.createdByUserId, ctx.user.id))
+            .orderBy(desc(sharedReports.createdAt))
+            .limit(50);
+        } else if (input.sessionId) {
+          results = await db
+            .select()
+            .from(sharedReports)
+            .where(eq(sharedReports.createdBySessionId, input.sessionId))
+            .orderBy(desc(sharedReports.createdAt))
+            .limit(50);
+        } else {
+          return { success: true, data: [] };
+        }
+        
+        return {
+          success: true,
+          data: results.map(r => ({
+            shareId: r.shareId,
+            reportType: r.reportType,
+            address: r.address,
+            marketName: r.marketName,
+            viewCount: r.viewCount,
+            maxViews: r.maxViews,
+            expiresAt: r.expiresAt,
+            createdAt: r.createdAt,
+          })),
+        };
+      }),
+
+    // Delete a shared report
+    delete: publicProcedure
+      .input(z.object({
+        shareId: z.string(),
+        sessionId: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Verify ownership
+        const results = await db
+          .select()
+          .from(sharedReports)
+          .where(eq(sharedReports.shareId, input.shareId))
+          .limit(1);
+        
+        if (results.length === 0) {
+          return { success: false, error: 'Report not found' };
+        }
+        
+        const report = results[0];
+        const isOwner = (ctx.user?.id && report.createdByUserId === ctx.user.id) ||
+                        (input.sessionId && report.createdBySessionId === input.sessionId);
+        
+        if (!isOwner) {
+          return { success: false, error: 'Not authorized to delete this report' };
+        }
+        
+        await db.delete(sharedReports).where(eq(sharedReports.shareId, input.shareId));
+        
+        return { success: true };
       }),
   }),
 });
