@@ -8,6 +8,7 @@
  * - Stores user's property details (address, bedrooms, bathrooms, location)
  * - All tools can access and filter by the property's characteristics
  * - Enables apples-to-apples comparison (3BR property sees 3BR comps)
+ * - Persists Market Advisor filters across component remounts
  */
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
@@ -43,6 +44,80 @@ export interface PropertyDetails {
   adr?: number;
 }
 
+// Market Advisor amenities filter type
+export interface AmenitiesFilter {
+  pool: boolean;
+  hotTub: boolean;
+  petFriendly: boolean;
+  parking: boolean;
+  kitchen: boolean;
+  washerDryer: boolean;
+}
+
+// Market Advisor filters type
+export interface MarketAdvisorFilters {
+  bedroomFilter: string;
+  amenitiesFilter: AmenitiesFilter;
+  propertyTypeFilter: string;
+  ratingFilter: string;
+  reviewCountFilter: string;
+  superhostOnly: boolean;
+  professionalOnly: boolean;
+  instantBookOnly: boolean;
+  listingTypeFilter: string;
+}
+
+// Default filter values
+const defaultAmenitiesFilter: AmenitiesFilter = {
+  pool: false,
+  hotTub: false,
+  petFriendly: false,
+  parking: false,
+  kitchen: false,
+  washerDryer: false,
+};
+
+const defaultMarketAdvisorFilters: MarketAdvisorFilters = {
+  bedroomFilter: 'all',
+  amenitiesFilter: defaultAmenitiesFilter,
+  propertyTypeFilter: 'all',
+  ratingFilter: 'all',
+  reviewCountFilter: 'all',
+  superhostOnly: false,
+  professionalOnly: false,
+  instantBookOnly: false,
+  listingTypeFilter: 'all',
+};
+
+// LocalStorage key for Market Advisor filters
+const MARKET_ADVISOR_FILTERS_KEY = 'marketAdvisorFilters';
+
+// Helper to load filters from localStorage
+function loadFiltersFromStorage(): MarketAdvisorFilters {
+  if (typeof window === 'undefined') return defaultMarketAdvisorFilters;
+  try {
+    const saved = localStorage.getItem(MARKET_ADVISOR_FILTERS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with defaults to handle any missing keys
+      return { ...defaultMarketAdvisorFilters, ...parsed };
+    }
+  } catch (e) {
+    console.error('[PropertyContext] Error loading filters from localStorage:', e);
+  }
+  return defaultMarketAdvisorFilters;
+}
+
+// Helper to save filters to localStorage
+function saveFiltersToStorage(filters: MarketAdvisorFilters): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(MARKET_ADVISOR_FILTERS_KEY, JSON.stringify(filters));
+  } catch (e) {
+    console.error('[PropertyContext] Error saving filters to localStorage:', e);
+  }
+}
+
 interface PropertyContextType {
   // The user's property being analyzed
   myProperty: PropertyDetails | null;
@@ -66,9 +141,21 @@ interface PropertyContextType {
   enforceApplesToApples: boolean;
   setEnforceApplesToApples: (enforce: boolean) => void;
   
-  // Market Advisor bedroom filter (persists across component remounts)
-  marketAdvisorBedroomFilter: string;
+  // Market Advisor filters (persists across component remounts)
+  marketAdvisorFilters: MarketAdvisorFilters;
   setMarketAdvisorBedroomFilter: (filter: string) => void;
+  setMarketAdvisorAmenitiesFilter: (filter: AmenitiesFilter) => void;
+  setMarketAdvisorPropertyTypeFilter: (filter: string) => void;
+  setMarketAdvisorRatingFilter: (filter: string) => void;
+  setMarketAdvisorReviewCountFilter: (filter: string) => void;
+  setMarketAdvisorSuperhostOnly: (value: boolean) => void;
+  setMarketAdvisorProfessionalOnly: (value: boolean) => void;
+  setMarketAdvisorInstantBookOnly: (value: boolean) => void;
+  setMarketAdvisorListingTypeFilter: (filter: string) => void;
+  resetMarketAdvisorFilters: () => void;
+  
+  // Legacy accessor for backward compatibility
+  marketAdvisorBedroomFilter: string;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -76,22 +163,68 @@ const PropertyContext = createContext<PropertyContextType | undefined>(undefined
 export function PropertyProvider({ children }: { children: ReactNode }) {
   const [myProperty, setMyPropertyState] = useState<PropertyDetails | null>(null);
   const [enforceApplesToApples, setEnforceApplesToApples] = useState(true);
-  const [marketAdvisorBedroomFilter, setMarketAdvisorBedroomFilterState] = useState<string>(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('marketAdvisorBedroomFilter');
-      return saved || 'all';
-    }
-    return 'all';
+  const [marketAdvisorFilters, setMarketAdvisorFiltersState] = useState<MarketAdvisorFilters>(() => {
+    return loadFiltersFromStorage();
   });
+  
+  // Helper to update filters and persist to localStorage
+  const updateFilters = useCallback((updates: Partial<MarketAdvisorFilters>) => {
+    setMarketAdvisorFiltersState(prev => {
+      const newFilters = { ...prev, ...updates };
+      saveFiltersToStorage(newFilters);
+      return newFilters;
+    });
+  }, []);
   
   const setMarketAdvisorBedroomFilter = useCallback((filter: string) => {
     console.log('[PropertyContext] setMarketAdvisorBedroomFilter called with:', filter);
-    setMarketAdvisorBedroomFilterState(filter);
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('marketAdvisorBedroomFilter', filter);
-    }
+    updateFilters({ bedroomFilter: filter });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorAmenitiesFilter = useCallback((filter: AmenitiesFilter) => {
+    console.log('[PropertyContext] setMarketAdvisorAmenitiesFilter called with:', filter);
+    updateFilters({ amenitiesFilter: filter });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorPropertyTypeFilter = useCallback((filter: string) => {
+    console.log('[PropertyContext] setMarketAdvisorPropertyTypeFilter called with:', filter);
+    updateFilters({ propertyTypeFilter: filter });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorRatingFilter = useCallback((filter: string) => {
+    console.log('[PropertyContext] setMarketAdvisorRatingFilter called with:', filter);
+    updateFilters({ ratingFilter: filter });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorReviewCountFilter = useCallback((filter: string) => {
+    console.log('[PropertyContext] setMarketAdvisorReviewCountFilter called with:', filter);
+    updateFilters({ reviewCountFilter: filter });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorSuperhostOnly = useCallback((value: boolean) => {
+    console.log('[PropertyContext] setMarketAdvisorSuperhostOnly called with:', value);
+    updateFilters({ superhostOnly: value });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorProfessionalOnly = useCallback((value: boolean) => {
+    console.log('[PropertyContext] setMarketAdvisorProfessionalOnly called with:', value);
+    updateFilters({ professionalOnly: value });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorInstantBookOnly = useCallback((value: boolean) => {
+    console.log('[PropertyContext] setMarketAdvisorInstantBookOnly called with:', value);
+    updateFilters({ instantBookOnly: value });
+  }, [updateFilters]);
+  
+  const setMarketAdvisorListingTypeFilter = useCallback((filter: string) => {
+    console.log('[PropertyContext] setMarketAdvisorListingTypeFilter called with:', filter);
+    updateFilters({ listingTypeFilter: filter });
+  }, [updateFilters]);
+  
+  const resetMarketAdvisorFilters = useCallback(() => {
+    console.log('[PropertyContext] resetMarketAdvisorFilters called');
+    setMarketAdvisorFiltersState(defaultMarketAdvisorFilters);
+    saveFiltersToStorage(defaultMarketAdvisorFilters);
   }, []);
   
   const setMyProperty = useCallback((property: PropertyDetails | null) => {
@@ -125,8 +258,19 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
         bedroomFilter,
         enforceApplesToApples,
         setEnforceApplesToApples,
-        marketAdvisorBedroomFilter,
+        marketAdvisorFilters,
         setMarketAdvisorBedroomFilter,
+        setMarketAdvisorAmenitiesFilter,
+        setMarketAdvisorPropertyTypeFilter,
+        setMarketAdvisorRatingFilter,
+        setMarketAdvisorReviewCountFilter,
+        setMarketAdvisorSuperhostOnly,
+        setMarketAdvisorProfessionalOnly,
+        setMarketAdvisorInstantBookOnly,
+        setMarketAdvisorListingTypeFilter,
+        resetMarketAdvisorFilters,
+        // Legacy accessor for backward compatibility
+        marketAdvisorBedroomFilter: marketAdvisorFilters.bedroomFilter,
       }}
     >
       {children}
@@ -152,4 +296,35 @@ export function useBedroomFilter() {
 export function useHasProperty() {
   const { hasProperty, myProperty } = useProperty();
   return { hasProperty, myProperty };
+}
+
+// Helper hook to get Market Advisor filters
+export function useMarketAdvisorFilters() {
+  const { 
+    marketAdvisorFilters,
+    setMarketAdvisorBedroomFilter,
+    setMarketAdvisorAmenitiesFilter,
+    setMarketAdvisorPropertyTypeFilter,
+    setMarketAdvisorRatingFilter,
+    setMarketAdvisorReviewCountFilter,
+    setMarketAdvisorSuperhostOnly,
+    setMarketAdvisorProfessionalOnly,
+    setMarketAdvisorInstantBookOnly,
+    setMarketAdvisorListingTypeFilter,
+    resetMarketAdvisorFilters,
+  } = useProperty();
+  
+  return {
+    filters: marketAdvisorFilters,
+    setBedroomFilter: setMarketAdvisorBedroomFilter,
+    setAmenitiesFilter: setMarketAdvisorAmenitiesFilter,
+    setPropertyTypeFilter: setMarketAdvisorPropertyTypeFilter,
+    setRatingFilter: setMarketAdvisorRatingFilter,
+    setReviewCountFilter: setMarketAdvisorReviewCountFilter,
+    setSuperhostOnly: setMarketAdvisorSuperhostOnly,
+    setProfessionalOnly: setMarketAdvisorProfessionalOnly,
+    setInstantBookOnly: setMarketAdvisorInstantBookOnly,
+    setListingTypeFilter: setMarketAdvisorListingTypeFilter,
+    resetFilters: resetMarketAdvisorFilters,
+  };
 }

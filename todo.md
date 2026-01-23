@@ -3922,3 +3922,10 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Filter revenueByBedroom data on backend when bedroom filter is applied
 - [x] Show warning note when no data found for selected bedroom size
 - [x] Verify filter persists through entire analysis flow
+
+
+## Filter Persistence Fix (Jan 23, 2026)
+
+- [ ] Add all filter states to PropertyContext with localStorage persistence
+- [ ] Update StandaloneMarketAdvisor to use context for all filters
+- [ ] Test all filters persist correctly when clicking Generate

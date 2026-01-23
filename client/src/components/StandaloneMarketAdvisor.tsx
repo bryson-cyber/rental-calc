@@ -35,7 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
-import { useProperty } from '@/contexts/PropertyContext';
+import { useProperty, useMarketAdvisorFilters, type AmenitiesFilter } from '@/contexts/PropertyContext';
 
 interface MarketSearchResult {
   id: string;
@@ -57,8 +57,30 @@ interface StandaloneMarketAdvisorProps {
 }
 
 export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: StandaloneMarketAdvisorProps) {
-  // Use context for bedroom filter to persist across component remounts
-  const { marketAdvisorBedroomFilter, setMarketAdvisorBedroomFilter } = useProperty();
+  // Use context for all filters to persist across component remounts
+  const {
+    filters,
+    setBedroomFilter,
+    setAmenitiesFilter,
+    setPropertyTypeFilter,
+    setRatingFilter,
+    setReviewCountFilter,
+    setSuperhostOnly,
+    setProfessionalOnly,
+    setInstantBookOnly,
+    setListingTypeFilter,
+  } = useMarketAdvisorFilters();
+  
+  // Destructure filter values for easier access
+  const bedroomFilter = filters.bedroomFilter;
+  const amenitiesFilter = filters.amenitiesFilter;
+  const propertyTypeFilter = filters.propertyTypeFilter;
+  const ratingFilter = filters.ratingFilter;
+  const reviewCountFilter = filters.reviewCountFilter;
+  const superhostOnly = filters.superhostOnly;
+  const professionalOnly = filters.professionalOnly;
+  const instantBookOnly = filters.instantBookOnly;
+  const listingTypeFilter = filters.listingTypeFilter;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
@@ -80,38 +102,12 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     supplyChart: false,
     revparChart: false,
   });
-  // Use context value as the source of truth for bedroom filter
-  const bedroomFilter = marketAdvisorBedroomFilter;
-  const setBedroomFilter = useCallback((value: string) => {
-    console.log('[setBedroomFilter] Setting to:', value);
-    setMarketAdvisorBedroomFilter(value);
-  }, [setMarketAdvisorBedroomFilter]);
-  const [amenitiesFilter, setAmenitiesFilter] = useState<{
-    pool: boolean;
-    hotTub: boolean;
-    petFriendly: boolean;
-    parking: boolean;
-    kitchen: boolean;
-    washerDryer: boolean;
-  }>({
-    pool: false,
-    hotTub: false,
-    petFriendly: false,
-    parking: false,
-    kitchen: false,
-    washerDryer: false,
-  });
+  
+  // Local UI state for dropdowns (these don't need to persist)
   const [showAmenitiesDropdown, setShowAmenitiesDropdown] = useState(false);
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
   const [showPropertyTypeDropdown, setShowPropertyTypeDropdown] = useState(false);
-  const [ratingFilter, setRatingFilter] = useState<string>('all');
   const [showRatingDropdown, setShowRatingDropdown] = useState(false);
-  const [reviewCountFilter, setReviewCountFilter] = useState<string>('all');
   const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
-  const [superhostOnly, setSuperhostOnly] = useState(false);
-  const [professionalOnly, setProfessionalOnly] = useState(false);
-  const [instantBookOnly, setInstantBookOnly] = useState(false);
-  const [listingTypeFilter, setListingTypeFilter] = useState<string>('all');
   const [showListingTypeDropdown, setShowListingTypeDropdown] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<{
     step: number;
@@ -433,7 +429,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                         <input
                           type="checkbox"
                           checked={amenitiesFilter[key as keyof typeof amenitiesFilter]}
-                          onChange={(e) => setAmenitiesFilter(prev => ({ ...prev, [key]: e.target.checked }))}
+                          onChange={(e) => setAmenitiesFilter({ ...amenitiesFilter, [key as keyof AmenitiesFilter]: e.target.checked })}
                           className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                         />
                         <span className="text-sm">{icon} {label}</span>
