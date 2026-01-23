@@ -3929,3 +3929,35 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Add all filter states to PropertyContext with localStorage persistence
 - [ ] Update StandaloneMarketAdvisor to use context for all filters
 - [ ] Test all filters persist correctly when clicking Generate
+
+
+## UI Integration Tasks (2026-01-23)
+- [ ] Integrate ForwardDemandCard into Market Advisor
+- [ ] Integrate MultiYearTrends into Market Advisor
+- [ ] Integrate CompsMapView into Property Report
+- [ ] Add ShareReportButton to Property Report
+- [ ] Test full user flow end-to-end
+
+
+## AirDNA Feature Parity - UI Integration (Jan 23, 2026) - COMPLETE
+
+### Verified Existing Features:
+- [x] Task 1: Comp Set Strength Indicator - 10 tests ✓
+- [x] Task 3: Calendar Heatmap - 10 tests ✓
+- [x] Task 6: Save Reports - 10 tests ✓
+- [x] Task 8: Demand Driver Tags - 10 tests ✓
+
+### Implemented New Features:
+- [x] Task 2: Forward-Looking Demand - 11 tests ✓
+- [x] Task 4: Multi-Year Historical Trends - 13 tests ✓
+- [x] Task 5: Share Report - 18 tests ✓
+- [x] Task 7: Map Integration (Comps) - 17 tests ✓
+
+### UI Integration:
+- [x] ForwardDemandCard integrated into MarketInsightsPanel
+- [x] MultiYearTrends integrated into MarketInsightsPanel
+- [x] CompsMapView integrated into ChapterPropertyReport
+- [x] ShareReportButton integrated into ChapterPropertyReport header
+- [x] SharedReportPage created at /report/:shareId route
+
+### Total: 99 feature tests passing

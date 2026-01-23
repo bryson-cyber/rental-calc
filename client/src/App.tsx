@@ -16,6 +16,7 @@ import MarketComparisonPage from "./pages/MarketComparisonPage";
 import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
 import MyFavoritesPage from "./pages/MyFavoritesPage";
 import MarketAlertsPage from "./pages/MarketAlertsPage";
+import SharedReportPage from "./pages/SharedReportPage";
 
 function Router() {
   return (
@@ -40,6 +41,9 @@ function Router() {
       
       {/* Market Alerts */}
       <Route path={"/market-alerts"} component={MarketAlertsPage} />
+      
+      {/* Shared Reports */}
+      <Route path="/report/:shareId" component={SharedReportPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

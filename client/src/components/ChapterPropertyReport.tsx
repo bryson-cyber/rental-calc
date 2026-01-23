@@ -43,6 +43,8 @@ import { Link } from 'wouter';
 import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart, CompetitorDistributionChart } from './RevenueCharts';
 import MarketInsightsPanel from './MarketInsightsPanel';
 import BreakEvenCalculator from './BreakEvenCalculator';
+import { CompsMapView } from './CompsMapView';
+import { ShareReportButton } from './ShareReportButton';
 
 // Helper function to extract Airbnb listing ID and construct image URL
 const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
@@ -71,6 +73,8 @@ interface PropertyData {
   propertyType?: string;
   sqft?: number;
   monthlyRent?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface MarketMetrics {
@@ -119,6 +123,9 @@ interface ComparableProperty {
   revenue_trend?: 'growing' | 'stable' | 'declining';
   historical_total_revenue?: number;
   historical_avg_occupancy?: number;
+  latitude?: number;
+  longitude?: number;
+  airbnb_listing_id?: string;
 }
 
 interface BedroomPerformance {
@@ -389,13 +396,24 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
       {/* Title Page / Header */}
       <div className="bg-[#1A1A1A] text-white">
         <div className="container mx-auto px-4 py-12">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Calculator
-          </button>
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Calculator
+            </button>
+            <ShareReportButton
+              reportType="property"
+              reportData={data}
+              address={property.address}
+              latitude={property.latitude}
+              longitude={property.longitude}
+              bedrooms={property.bedrooms}
+              bathrooms={property.bathrooms}
+            />
+          </div>
 
           <div className="max-w-3xl">
             <div className="flex items-center gap-3 mb-4">
@@ -817,6 +835,34 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                 </p>
               )}
             </div>
+
+            {/* Comps Map View */}
+            {property.latitude && property.longitude && displayComps.length > 0 && (
+              <CompsMapView
+                comps={displayComps.map(c => ({
+                  title: c.title,
+                  bedrooms: c.bedrooms,
+                  bathrooms: c.bathrooms,
+                  rating: c.rating,
+                  reviews: c.reviews,
+                  annual_revenue: c.annual_revenue,
+                  adr: c.adr,
+                  occupancy: c.occupancy,
+                  distance_meters: c.distance_meters,
+                  latitude: c.latitude,
+                  longitude: c.longitude,
+                  airbnb_listing_id: c.airbnb_listing_id
+                }))}
+                subjectProperty={{
+                  address: property.address,
+                  latitude: property.latitude,
+                  longitude: property.longitude,
+                  bedrooms: property.bedrooms,
+                  bathrooms: property.bathrooms
+                }}
+                className="mb-8"
+              />
+            )}
 
             {/* Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

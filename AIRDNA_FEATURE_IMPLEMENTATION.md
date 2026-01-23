@@ -142,6 +142,16 @@
 ### Modified Files:
 - `server/airdna.ts` (added calculateForwardLookingDemand)
 - `server/routers.ts` (added getForwardDemand, sharedReports router)
+- `client/src/components/MarketInsightsPanel.tsx` (added ForwardDemandCard, MultiYearTrends)
+- `client/src/components/ChapterPropertyReport.tsx` (added CompsMapView, ShareReportButton)
+- `client/src/App.tsx` (added SharedReportPage route)
+
+### UI Integration Complete:
+- ForwardDemandCard rendered in MarketInsightsPanel (line 101)
+- MultiYearTrends rendered in MarketInsightsPanel (line 106)
+- CompsMapView rendered in ChapterPropertyReport (line 841)
+- ShareReportButton rendered in ChapterPropertyReport (line 407)
+- SharedReportPage accessible at /report/:shareId
 
 ---
 

@@ -1,12 +1,14 @@
 /**
  * MarketInsightsPanel Component
  * 
- * Displays booking patterns and supply trend data from market data API.
- * Shows booking lead time, length of stay metrics, and supply trend chart.
+ * Displays booking patterns, supply trend data, forward-looking demand,
+ * and multi-year historical trends from market data API.
  */
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Calendar, Clock, TrendingUp, Users, Info } from 'lucide-react';
+import { ForwardDemandCard } from './ForwardDemandCard';
+import { MultiYearTrends } from './MultiYearTrends';
 
 interface MarketInsightsPanelProps {
   marketId?: string | number;
@@ -27,11 +29,13 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
 export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelProps) {
   const [bookingPatterns, setBookingPatterns] = useState<any>(null);
   const [supplyTrend, setSupplyTrend] = useState<any>(null);
+  const [forwardDemand, setForwardDemand] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const getBookingPatterns = trpc.rental.getBookingPatterns.useMutation();
   const getSupplyTrend = trpc.rental.getSupplyTrend.useMutation();
+  const getForwardDemand = trpc.rental.getForwardDemand.useMutation();
 
   useEffect(() => {
     async function fetchData() {
@@ -43,9 +47,10 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
       try {
         // Convert marketId to string for API call (API accepts both but we normalize)
         const marketIdStr = String(marketId);
-        const [patternsResult, supplyResult] = await Promise.all([
+        const [patternsResult, supplyResult, forwardResult] = await Promise.all([
           getBookingPatterns.mutateAsync({ marketId: marketIdStr }),
-          getSupplyTrend.mutateAsync({ marketId: marketIdStr })
+          getSupplyTrend.mutateAsync({ marketId: marketIdStr }),
+          getForwardDemand.mutateAsync({ marketId: marketIdStr }).catch(() => null)
         ]);
         
         if (patternsResult.success) {
@@ -53,6 +58,9 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
         }
         if (supplyResult.success) {
           setSupplyTrend(supplyResult.data);
+        }
+        if (forwardResult?.success) {
+          setForwardDemand(forwardResult.data);
         }
       } catch (err) {
         console.error('Error fetching market insights:', err);
@@ -76,7 +84,7 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
     );
   }
 
-  if (error || (!bookingPatterns && !supplyTrend)) {
+  if (error || (!bookingPatterns && !supplyTrend && !forwardDemand)) {
     return null; // Silently fail if no data
   }
 
@@ -87,6 +95,16 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
         <TrendingUp className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
         <h3 className="text-lg font-semibold text-[oklch(0.25_0_0)]">Market Insights</h3>
       </div>
+
+      {/* Forward-Looking Demand */}
+      {forwardDemand && (
+        <ForwardDemandCard data={forwardDemand} />
+      )}
+
+      {/* Multi-Year Historical Trends */}
+      {marketId && (
+        <MultiYearTrends marketId={String(marketId)} />
+      )}
 
       {/* Booking Patterns */}
       {bookingPatterns && (
