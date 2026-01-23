@@ -77,12 +77,13 @@ export function AddressAutocomplete({
   }
 
   // Update dropdown position when input changes or window scrolls
+  // Using fixed positioning, so we use viewport-relative coordinates (no scrollY/scrollX)
   const updateDropdownPosition = useCallback(() => {
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: rect.bottom + 4, // 4px gap below input
+        left: rect.left,
         width: rect.width,
       });
     }

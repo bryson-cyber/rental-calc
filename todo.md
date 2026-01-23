@@ -4013,3 +4013,9 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Rename "Rent" label to "Rent or Mortgage"
 - [x] Add validation to prevent form submission without rent value
 - [x] Test break-even calculation with required rent value (verified: shows 52% break-even with $2000 rent)
+
+
+## Bug Fix - Autocomplete Dropdown Positioning (Jan 23, 2026)
+- [x] Fix dropdown appearing at bottom of page instead of under input field
+- [x] Ensure dropdown is positioned correctly relative to input (removed scrollY/scrollX from fixed positioning)
+- [x] Test on dev server - verified dropdown appears directly under input and selection works
