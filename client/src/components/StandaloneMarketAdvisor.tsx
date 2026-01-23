@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
@@ -76,7 +76,16 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     supplyChart: false,
     revparChart: false,
   });
-  const [bedroomFilter, setBedroomFilter] = useState<string>('all');
+  const [bedroomFilter, setBedroomFilterState] = useState<string>('all');
+  const bedroomFilterRef = useRef<string>('all');
+  const bedroomSelectRef = useRef<HTMLSelectElement | null>(null);
+  
+  // Wrapper to keep ref and state in sync
+  const setBedroomFilter = useCallback((value: string) => {
+    console.log('[setBedroomFilter] Setting to:', value);
+    bedroomFilterRef.current = value;
+    setBedroomFilterState(value);
+  }, []);
   const [amenitiesFilter, setAmenitiesFilter] = useState<{
     pool: boolean;
     hotTub: boolean;
@@ -153,6 +162,15 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       }
     }
   }, [searchMarketsMutation.data, justSelected]);
+
+  // Sync bedroom filter state from ref when component re-renders
+  // This handles cases where the state gets reset but the ref preserves the value
+  useEffect(() => {
+    if (bedroomFilterRef.current !== bedroomFilter) {
+      console.log('[useEffect] Syncing bedroom filter from ref:', bedroomFilterRef.current, 'state was:', bedroomFilter);
+      setBedroomFilterState(bedroomFilterRef.current);
+    }
+  }, [standaloneMarketAdvisorMutation.isPending]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -238,10 +256,14 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     }, 1000);
     
     try {
+      // Use ref value to ensure we have the correct filter even if state was reset
+      const currentBedroomFilter = bedroomFilterRef.current;
+      console.log('[handleGenerateAnalysis] bedroomFilter from ref:', currentBedroomFilter);
+      console.log('[handleGenerateAnalysis] bedroomFilter from state:', bedroomFilter);
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
         marketId: selectedMarket.id,
         marketType: selectedMarket.type,
-        bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
+        bedrooms: currentBedroomFilter !== 'all' ? parseInt(currentBedroomFilter) : undefined,
         amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
         propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
         minRating: ratingFilter !== 'all' ? parseFloat(ratingFilter) : undefined,
@@ -260,6 +282,12 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       if (result.success && result.data) {
         setMarketData(result.data);
         setMarketAdvice(result.data.advice);
+        // Restore filter state from ref after mutation completes
+        // This ensures the UI stays in sync even if React re-rendered
+        if (bedroomFilterRef.current !== bedroomFilter) {
+          console.log('[handleGenerateAnalysis] Restoring bedroom filter from ref:', bedroomFilterRef.current);
+          setBedroomFilterState(bedroomFilterRef.current);
+        }
       }
     } catch (error) {
       clearInterval(progressInterval);
@@ -374,8 +402,17 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700">Bedrooms:</label>
               <select
-                value={bedroomFilter}
-                onChange={(e) => setBedroomFilter(e.target.value)}
+                ref={(el) => {
+                  if (el) {
+                    bedroomSelectRef.current = el;
+                  }
+                }}
+                defaultValue="all"
+                onChange={(e) => {
+                  console.log('[BedroomFilter] Changed to:', e.target.value);
+                  bedroomFilterRef.current = e.target.value;
+                  setBedroomFilterState(e.target.value);
+                }}
                 className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All</option>

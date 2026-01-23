@@ -6069,10 +6069,37 @@ export async function getStandaloneMarketAdvisorData(
     // Step 3: Fetch seasonality, booking patterns, supply trend, listings in parallel
     console.log(`[StandaloneMarketAdvisor] Fetching seasonality, booking patterns, supply trend, and listings...`);
     
-    // Fetch more listings (500) to ensure we get a good distribution across all bedroom counts
+    // Fetch listings with bedroom filter applied if specified
+    // If bedroom filter is set, only fetch listings for that bedroom count
+    const listingFilters: ListingFilters = {};
+    if (filters?.bedrooms) {
+      listingFilters.bedrooms = filters.bedrooms;
+    }
+    if (filters?.amenities) {
+      listingFilters.amenities = filters.amenities;
+    }
+    if (filters?.propertyType) {
+      listingFilters.propertyType = filters.propertyType;
+    }
+    if (filters?.superhostOnly) {
+      listingFilters.superhost = true;
+    }
+    if (filters?.professionalOnly) {
+      listingFilters.professionallyManaged = true;
+    }
+    if (filters?.instantBookOnly) {
+      listingFilters.instantBook = true;
+    }
+    if (filters?.minRating) {
+      listingFilters.minRating = filters.minRating;
+    }
+    
+    const hasFilters = Object.keys(listingFilters).length > 0;
+    console.log(`[StandaloneMarketAdvisor] Fetching listings with filters:`, hasFilters ? listingFilters : 'none');
+    
     const listingsFn = marketType === 'submarket' || marketType === 'zipcode'
-      ? getSubmarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc' })
-      : getMarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc' });
+      ? getSubmarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined })
+      : getMarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined });
     
     const seasonalityFn = marketType === 'submarket' || marketType === 'zipcode'
       ? getSubmarketSeasonality(marketId)

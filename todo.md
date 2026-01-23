@@ -3862,3 +3862,41 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [ ] Fix Market Advisor dropdown staying open during analysis (not closing properly)
 
 - [x] Fix Market Advisor dropdown staying open after selection (closes properly now)
+
+
+## Market Advisor Report Fixes (Jan 23, 2026)
+- [x] Fix bedroom filter not being applied to Market Advisor data (passed to listings API)
+- [ ] Fix Revenue by Property Size section not showing
+- [ ] Fix Top Performers section not showing
+- [ ] Simplify RevPAR Trend (too complicated)
+- [ ] Fix Total Active Listings Trend accuracy (filter by bedroom)
+- [ ] Add listing changes (+/-) to Active Listings section
+
+
+## Bug Fix: Bedroom Filter Reset (Jan 23, 2026)
+
+### Issue
+- [x] Bedroom filter in Market Advisor was resetting from selected value (e.g., "1 BR") back to "All" when clicking "Generate Comprehensive Market Analysis"
+- [x] The filter value was not persisting during the mutation execution
+
+### Root Cause
+- React controlled component pattern was causing the select element to reset during re-renders triggered by the mutation state changes
+- The state value was being reset even though the ref was supposed to preserve it
+
+### Solution
+- [x] Changed the bedroom filter select from controlled to uncontrolled component pattern
+- [x] Used `defaultValue="all"` instead of `value={bedroomFilter}`
+- [x] Added `bedroomSelectRef` to reference the DOM element directly
+- [x] The ref value (`bedroomFilterRef.current`) is used when calling the API
+- [x] The uncontrolled component preserves the user's selection through React re-renders
+
+### Files Changed
+- `client/src/components/StandaloneMarketAdvisor.tsx`
+  - Added `bedroomSelectRef` for DOM element reference
+  - Changed select element from controlled to uncontrolled pattern
+  - Preserved ref-based API parameter passing
+
+### Verification
+- [x] Bedroom filter now persists when clicking "Generate Comprehensive Market Analysis"
+- [x] Select element maintains its value during and after mutation execution
+- [x] API receives the correct bedroom filter value
