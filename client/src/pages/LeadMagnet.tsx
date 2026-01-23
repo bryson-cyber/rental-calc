@@ -1133,7 +1133,7 @@ export default function LeadMagnet() {
           )}
           
           {/* Job-Focused Tab Navigation */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-12">
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
             {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'advisor', 'market'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
@@ -1143,28 +1143,28 @@ export default function LeadMagnet() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative p-6 rounded-2xl transition-all duration-300 text-left hover-lift ${
+                  className={`relative p-4 rounded-2xl transition-all duration-300 text-left hover-lift w-[140px] flex-shrink-0 ${
                     isActive
                       ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
                       : 'apple-card'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`step-badge ${
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`step-badge flex-shrink-0 ${
                       isActive 
                         ? 'bg-[oklch(0.55_0.14_75)]' 
                         : 'bg-[oklch(0.92_0_0)]'
                     }`}>
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
-                    <span className="text-xs text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
+                    <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
                       {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'advisor' ? 'Step 6' : tab === 'market' ? 'Step 7' : `Step ${index}`}
                     </span>
                   </div>
-                  <h3 className={`font-semibold text-base mb-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
+                  <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
                     {job.title}
                   </h3>
-                  <p className="text-sm text-[oklch(0.55_0_0)] hidden md:block leading-relaxed">
+                  <p className="text-xs text-[oklch(0.55_0_0)] leading-snug line-clamp-2">
                     {job.job}
                   </p>
                 </button>

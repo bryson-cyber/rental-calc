@@ -3847,3 +3847,7 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Add PDF export button to Market Comparison page
 - [x] Add PDF export button to My Favorites page
 - [x] Format PDF with market data and branding
+
+
+## Bug Fixes (Jan 23, 2026)
+- [x] Fix step cards layout - text displaying vertically instead of horizontally
