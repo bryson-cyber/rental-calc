@@ -1340,6 +1340,8 @@ Analyze the market data below and produce a COMPREHENSIVE MARKET INVESTMENT REPO
 - DO NOT include startup costs or furnishing budgets
 - Keep each section focused and scannable
 - Maximum 2,500 words total
+- DO NOT include any placeholder text like "[Your Name]", dates, or "Market Analyst" headers - start directly with the analysis content
+- When displaying scores, always round to whole numbers (e.g., 73 not 73.567)
 </CONSTRAINTS>
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════

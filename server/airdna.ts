@@ -6069,9 +6069,10 @@ export async function getStandaloneMarketAdvisorData(
     // Step 3: Fetch seasonality, booking patterns, supply trend, listings in parallel
     console.log(`[StandaloneMarketAdvisor] Fetching seasonality, booking patterns, supply trend, and listings...`);
     
+    // Fetch more listings (500) to ensure we get a good distribution across all bedroom counts
     const listingsFn = marketType === 'submarket' || marketType === 'zipcode'
-      ? getSubmarketListings(marketId, { limit: 100, orderBy: 'revenue', orderDirection: 'desc' })
-      : getMarketListings(marketId, { limit: 100, orderBy: 'revenue', orderDirection: 'desc' });
+      ? getSubmarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc' })
+      : getMarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc' });
     
     const seasonalityFn = marketType === 'submarket' || marketType === 'zipcode'
       ? getSubmarketSeasonality(marketId)

@@ -852,7 +852,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={`text-2xl font-bold px-4 py-2 rounded-lg ${getScoreColor(marketData.scores.marketScore)}`}>
-                    {marketData.scores.marketScore}
+                    {Math.round(marketData.scores.marketScore)}
                     <span className="text-sm font-normal ml-1">/100</span>
                   </div>
                 </div>
