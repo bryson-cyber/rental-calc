@@ -32,7 +32,8 @@ import {
   Clock,
   TrendingDown,
   Lightbulb,
-  Award
+  Award,
+  Heart
 } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { motion } from 'framer-motion';
@@ -785,6 +786,14 @@ export default function RentalEstimator() {
                     <a href="/discover-markets" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
                       <Building className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
                       <span className="text-xs font-medium text-[#0F172A]/70 text-center">Discover Markets</span>
+                    </a>
+                    <a href="/my-favorites" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <Heart className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">My Favorites</span>
+                    </a>
+                    <a href="/market-alerts" className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[#0F172A]/5 hover:bg-[#D4A84B]/10 transition-colors group">
+                      <AlertCircle className="w-5 h-5 text-[#0F172A]/60 group-hover:text-[#D4A84B]" />
+                      <span className="text-xs font-medium text-[#0F172A]/70 text-center">Market Alerts</span>
                     </a>
                   </div>
                 </div>

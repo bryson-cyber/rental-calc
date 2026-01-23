@@ -17,7 +17,9 @@ import {
   Trophy,
   Star,
   ArrowRight,
-  Home
+  Home,
+  Download,
+  FileText
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -67,6 +69,34 @@ export default function MarketComparisonPage() {
 
   const formatPercent = (value: number) => {
     return `${(value * 100).toFixed(1)}%`;
+  };
+
+  const exportToCSV = () => {
+    if (!comparisonQuery.data?.success || !comparisonQuery.data.data) return;
+
+    const markets = comparisonQuery.data.data.markets;
+    const headers = ['Market Name', 'Market Type', 'Annual Revenue', 'Occupancy', 'ADR', 'RevPAR', 'Market Score', 'Listing Count'];
+    const rows = markets.map((market: any) => [
+      market.market_name,
+      market.market_type || '',
+      market.metrics.revenue || 0,
+      `${(market.metrics.occupancy * 100).toFixed(1)}%`,
+      market.metrics.adr || 0,
+      market.metrics.revpar || 0,
+      market.metrics.market_score || '',
+      market.listing_count || 0,
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `market-comparison-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   return (
@@ -277,11 +307,22 @@ export default function MarketComparisonPage() {
             {/* Detailed Comparison Table */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-amber-600" />
-                  Detailed Comparison
-                </CardTitle>
-              </CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-amber-600" />
+              Detailed Comparison
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </Button>
+            </div>
+          </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">

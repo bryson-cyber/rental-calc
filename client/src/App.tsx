@@ -14,6 +14,8 @@ import MapViewPage from "./pages/MapViewPage";
 import MarketAdvisor from "./pages/MarketAdvisor";
 import MarketComparisonPage from "./pages/MarketComparisonPage";
 import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
+import MyFavoritesPage from "./pages/MyFavoritesPage";
+import MarketAlertsPage from "./pages/MarketAlertsPage";
 
 function Router() {
   return (
@@ -32,6 +34,12 @@ function Router() {
       
       {/* US Market Discovery */}
       <Route path={"/discover-markets"} component={MarketDiscoveryPage} />
+      
+      {/* My Favorites */}
+      <Route path={"/my-favorites"} component={MyFavoritesPage} />
+      
+      {/* Market Alerts */}
+      <Route path={"/market-alerts"} component={MarketAlertsPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

@@ -511,3 +511,44 @@ export const favoriteMarkets = mysqlTable("favorite_markets", {
 
 export type FavoriteMarket = typeof favoriteMarkets.$inferSelect;
 export type InsertFavoriteMarket = typeof favoriteMarkets.$inferInsert;
+
+
+/**
+ * Market Alerts table for storing email alert subscriptions
+ * Users can subscribe to receive notifications when market metrics change significantly
+ */
+export const marketAlerts = mysqlTable("market_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous saves via cookie)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Contact information for alerts
+  email: varchar("email", { length: 320 }).notNull(),
+  
+  // Market information
+  marketId: varchar("marketId", { length: 64 }).notNull(),
+  marketName: varchar("marketName", { length: 255 }).notNull(),
+  
+  // Alert configuration
+  alertType: mysqlEnum("alertType", ["revenue_change", "occupancy_change", "adr_change", "all_changes"]).default("all_changes").notNull(),
+  thresholdPercent: int("thresholdPercent").default(10).notNull(), // Minimum % change to trigger alert
+  
+  // Baseline metrics (to compare against for changes)
+  baselineRevenue: int("baselineRevenue"),
+  baselineOccupancy: decimal("baselineOccupancy", { precision: 5, scale: 2 }),
+  baselineAdr: int("baselineAdr"),
+  
+  // Alert status
+  isActive: mysqlEnum("isActive", ["true", "false"]).default("true").notNull(),
+  lastCheckedAt: timestamp("lastCheckedAt"),
+  lastAlertSentAt: timestamp("lastAlertSentAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MarketAlert = typeof marketAlerts.$inferSelect;
+export type InsertMarketAlert = typeof marketAlerts.$inferInsert;

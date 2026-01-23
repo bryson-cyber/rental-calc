@@ -3784,3 +3784,41 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Fixed Market Discovery filter format (changed from object to array format)
 - [x] Coastal filter now correctly returns 80 markets
 
+
+
+## New Features (Jan 23, 2026) - COMPLETE
+
+### My Favorites Page
+- [x] Create MyFavoritesPage component with favorited markets display
+- [x] Show summary stats (saved markets, avg score, total listings, avg revenue)
+- [x] Display market cards with key metrics (revenue, occupancy, ADR, score)
+- [x] Add Export CSV button for favorites list
+- [x] Add Compare Markets button to compare selected favorites
+- [x] Add View Details link to market analysis
+- [x] Add delete functionality for removing favorites
+- [x] Add route to App.tsx
+- [x] Add navigation link to Home.tsx Advanced Tools section
+
+### Export to CSV Functionality
+- [x] Add Export CSV button to Market Comparison page
+- [x] Export market comparison data (name, type, revenue, occupancy, ADR, RevPAR, score, listings)
+- [x] Generate downloadable CSV file with proper formatting
+- [x] Add Export CSV button to My Favorites page
+
+### Market Alerts (Email Notifications)
+- [x] Create marketAlerts table in database schema
+- [x] Add alert fields: email, marketId, alertType, thresholdPercent, baseline metrics
+- [x] Create marketAlerts router with CRUD operations (list, create, update, delete, toggle)
+- [x] Create MarketAlertsPage component with alert management UI
+- [x] Add create alert form with email, market selection, alert type, threshold slider
+- [x] Show favorites as quick-select options for market selection
+- [x] Add toggle switch for enabling/disabling alerts
+- [x] Add delete functionality for removing alerts
+- [x] Add informational card explaining how alerts work
+- [x] Add route to App.tsx
+- [x] Add navigation link to Home.tsx Advanced Tools section
+
+### Testing
+- [x] 12 tests passing for new features (new-features.test.ts)
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors
