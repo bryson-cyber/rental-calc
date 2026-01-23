@@ -3851,3 +3851,4 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 
 ## Bug Fixes (Jan 23, 2026)
 - [x] Fix step cards layout - text displaying vertically instead of horizontally
+- [x] Remove distracting "Search for a Location" overlay on the map

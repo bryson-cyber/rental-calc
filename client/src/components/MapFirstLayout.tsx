@@ -1142,20 +1142,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </div>
           )}
           
-          {/* Empty State */}
-          {!isLoading && listings.length === 0 && !error && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <Map className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">Search for a Location</h3>
-                <p className="text-slate-500 max-w-sm">
-                  Enter a city, zip code, or market name above to see property performance data
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Empty State - Removed distracting overlay, map is self-explanatory */}
         </div>
         
         {/* Legend Bar - Below Map */}
