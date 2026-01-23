@@ -34,6 +34,7 @@ import {
   getStandaloneMarketAdvisorData,
   getListingComps,
   getListingHistoricalMetrics,
+  compareMarkets,
 } from "./airdna";
 import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
@@ -3626,6 +3627,90 @@ superhostOnly: input.superhostOnly,
             success: false,
             error: error instanceof Error ? error.message : 'Failed to fetch bulk summary',
             data: null,
+          };
+        }
+      }),
+  }),
+
+  // Market comparison router
+  marketComparison: router({
+    // Compare multiple markets side-by-side
+    compare: publicProcedure
+      .input(z.object({
+        marketIds: z.array(z.string()).min(2).max(5),
+        bedrooms: z.number().int().min(0).max(10).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log('[MarketComparison] Comparing markets:', input.marketIds);
+          
+          const result = await compareMarkets(input.marketIds, {
+            bedrooms: input.bedrooms,
+          });
+          
+          if (!result) {
+            return {
+              success: false,
+              error: 'Could not compare markets',
+              data: null,
+            };
+          }
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error('[MarketComparison] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to compare markets',
+            data: null,
+          };
+        }
+      }),
+  }),
+
+  // US Market Discovery router
+  marketDiscovery: router({
+    // Get all markets in a country with filtering
+    getCountryMarkets: publicProcedure
+      .input(z.object({
+        countryCode: z.string().default('us'),
+        minMarketScore: z.number().min(0).max(100).optional(),
+        minInvestability: z.number().min(0).max(100).optional(),
+        minRentalDemand: z.number().min(0).max(100).optional(),
+        minRevenueGrowth: z.number().optional(),
+        marketType: z.enum(['coastal', 'urban_metro', 'mountains_lakes', 'suburban', 'rural', 'mid_size_city', 'all']).default('all'),
+        limit: z.number().min(1).max(500).default(100),
+        offset: z.number().min(0).default(0),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log('[MarketDiscovery] Fetching markets for:', input.countryCode);
+          
+          const result = await getCountryMarkets(input.countryCode, {
+            market_type: input.marketType === 'all' ? undefined : input.marketType as "coastal" | "urban_metro" | "mountains_lakes" | "suburban" | "rural" | "mid_size_city",
+            min_market_score: input.minMarketScore,
+            min_investability: input.minInvestability,
+            min_rental_demand: input.minRentalDemand,
+            min_revenue_growth: input.minRevenueGrowth,
+            limit: input.limit,
+            offset: input.offset,
+          });
+          
+          return {
+            success: true,
+            data: result.markets,
+            total: result.total_count,
+          };
+        } catch (error) {
+          console.error('[MarketDiscovery] Error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to fetch markets',
+            data: [],
+            total: 0,
           };
         }
       }),

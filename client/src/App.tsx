@@ -12,6 +12,8 @@ import AdminReports from "./pages/AdminReports";
 import AdminDashboard from "./pages/Admin";
 import MapViewPage from "./pages/MapViewPage";
 import MarketAdvisor from "./pages/MarketAdvisor";
+import MarketComparisonPage from "./pages/MarketComparisonPage";
+import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
 
 function Router() {
   return (
@@ -24,6 +26,12 @@ function Router() {
       
       {/* Market Advisor - Standalone market analysis */}
       <Route path={"/market-advisor"} component={MarketAdvisor} />
+      
+      {/* Market Comparison */}
+      <Route path={"/compare-markets"} component={MarketComparisonPage} />
+      
+      {/* US Market Discovery */}
+      <Route path={"/discover-markets"} component={MarketDiscoveryPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

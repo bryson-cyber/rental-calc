@@ -3674,3 +3674,63 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Increased z-index to 100 for dropdown visibility
 - [x] Added larger padding (py-3) for better click targets
 - [x] Added visual separator borders between items
+
+
+---
+
+## Phase 6: New Feature Implementation (Jan 23, 2026)
+
+### 6.1 Market Comparison UI Page
+- [ ] Create tRPC endpoint for market comparison
+- [ ] Build MarketComparisonPage.tsx with market selector
+- [ ] Add side-by-side comparison cards with metrics
+- [ ] Add comparison charts (revenue, occupancy, ADR)
+- [ ] Add route to App.tsx
+
+### 6.2 US Market Discovery Page
+- [ ] Create tRPC endpoint for country markets
+- [ ] Build MarketDiscoveryPage.tsx with interactive US map
+- [ ] Add market filtering controls (score, type, demand)
+- [ ] Add market cards grid with key metrics
+- [ ] Add click-to-analyze functionality
+- [ ] Add route to App.tsx
+
+### 6.3 Saved Searches Functionality
+- [ ] Create database schema for saved searches
+- [ ] Create tRPC endpoints for CRUD operations
+- [ ] Build SavedSearches component in sidebar
+- [ ] Add save search button to Market Advisor
+- [ ] Add save search button to Map View
+- [ ] Add quick-load functionality from saved searches
+
+
+---
+
+## Phase 6: New Feature Implementation (Jan 22, 2026) - COMPLETE
+
+### 6.1 Market Comparison UI
+- [x] Create MarketComparisonPage.tsx with side-by-side market cards
+- [x] Add search to find and select markets (up to 5)
+- [x] Display comparison summary (highest revenue, occupancy, ADR, market score)
+- [x] Show detailed comparison table with all metrics
+- [x] Add top neighborhoods section for each market
+- [x] Add route /compare-markets to App.tsx
+
+### 6.2 US Market Discovery Page
+- [x] Create MarketDiscoveryPage.tsx with market grid
+- [x] Add filters for market type, min scores
+- [x] Display market cards with key metrics
+- [x] Add summary stats (total markets, avg score, avg revenue)
+- [x] Link to Market Advisor for detailed view
+- [x] Add route /discover-markets to App.tsx
+
+### 6.3 Saved Searches (Already Implemented)
+- [x] Verify savedSearches router exists in routers.ts
+- [x] Verify savedSearches table exists in schema.ts
+- [x] Verify SavedSearches component exists
+- [x] Test save/load/delete functionality
+
+### Testing
+- [x] 8 tests passing for market features
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors
