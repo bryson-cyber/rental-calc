@@ -2780,23 +2780,45 @@ superhostOnly: input.superhostOnly,
           
           console.log('[Standalone Market Advisor] AI advice generated, length:', advice.length);
           
+          // Filter revenueByBedroom if bedroom filter is applied
+          let filteredRevenueByBedroom = input.bedrooms 
+            ? marketData.revenueByBedroom.filter(r => r.bedrooms === input.bedrooms)
+            : marketData.revenueByBedroom;
+          
+          // Filter topPerformers if bedroom filter is applied
+          let filteredTopPerformers = input.bedrooms
+            ? marketData.topPerformers.filter(p => p.bedrooms === input.bedrooms)
+            : marketData.topPerformers;
+          
+          // If bedroom filter results in empty data, fall back to all data with a note
+          let bedroomFilterNote = '';
+          if (input.bedrooms && filteredRevenueByBedroom.length === 0) {
+            console.log('[Standalone Market Advisor] No data for', input.bedrooms, 'BR, falling back to all data');
+            filteredRevenueByBedroom = marketData.revenueByBedroom;
+            filteredTopPerformers = marketData.topPerformers;
+            bedroomFilterNote = `Note: No ${input.bedrooms}-bedroom properties found in this market. Showing all bedroom sizes.`;
+          }
+          
+          console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms, 'Filtered revenueByBedroom count:', filteredRevenueByBedroom.length, 'Filtered topPerformers count:', filteredTopPerformers.length);
+          
           return {
             success: true,
             data: {
               market: marketData.market,
               scores: marketData.scores,
               metrics: marketData.metrics,
-              revenueByBedroom: marketData.revenueByBedroom,
+              revenueByBedroom: filteredRevenueByBedroom,
               historicalData: marketData.historicalData,
               seasonality: marketData.seasonality,
               bookingPatterns: marketData.bookingPatterns,
               supplyTrend: marketData.supplyTrend,
-              topPerformers: marketData.topPerformers,
+              topPerformers: filteredTopPerformers,
               submarkets: marketData.submarkets,
               propertyTypes: marketData.propertyTypes,
               cancellationPolicies: marketData.cancellationPolicies,
               professionalStats: marketData.professionalStats,
               advice,
+              bedroomFilterNote,
             },
           };
         } catch (error) {

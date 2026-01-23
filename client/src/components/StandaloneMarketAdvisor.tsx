@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
+import { useProperty } from '@/contexts/PropertyContext';
 
 interface MarketSearchResult {
   id: string;
@@ -56,6 +57,9 @@ interface StandaloneMarketAdvisorProps {
 }
 
 export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: StandaloneMarketAdvisorProps) {
+  // Use context for bedroom filter to persist across component remounts
+  const { marketAdvisorBedroomFilter, setMarketAdvisorBedroomFilter } = useProperty();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -76,16 +80,12 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     supplyChart: false,
     revparChart: false,
   });
-  const [bedroomFilter, setBedroomFilterState] = useState<string>('all');
-  const bedroomFilterRef = useRef<string>('all');
-  const bedroomSelectRef = useRef<HTMLSelectElement | null>(null);
-  
-  // Wrapper to keep ref and state in sync
+  // Use context value as the source of truth for bedroom filter
+  const bedroomFilter = marketAdvisorBedroomFilter;
   const setBedroomFilter = useCallback((value: string) => {
     console.log('[setBedroomFilter] Setting to:', value);
-    bedroomFilterRef.current = value;
-    setBedroomFilterState(value);
-  }, []);
+    setMarketAdvisorBedroomFilter(value);
+  }, [setMarketAdvisorBedroomFilter]);
   const [amenitiesFilter, setAmenitiesFilter] = useState<{
     pool: boolean;
     hotTub: boolean;
@@ -163,14 +163,6 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     }
   }, [searchMarketsMutation.data, justSelected]);
 
-  // Sync bedroom filter state from ref when component re-renders
-  // This handles cases where the state gets reset but the ref preserves the value
-  useEffect(() => {
-    if (bedroomFilterRef.current !== bedroomFilter) {
-      console.log('[useEffect] Syncing bedroom filter from ref:', bedroomFilterRef.current, 'state was:', bedroomFilter);
-      setBedroomFilterState(bedroomFilterRef.current);
-    }
-  }, [standaloneMarketAdvisorMutation.isPending]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -256,14 +248,12 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     }, 1000);
     
     try {
-      // Use ref value to ensure we have the correct filter even if state was reset
-      const currentBedroomFilter = bedroomFilterRef.current;
-      console.log('[handleGenerateAnalysis] bedroomFilter from ref:', currentBedroomFilter);
-      console.log('[handleGenerateAnalysis] bedroomFilter from state:', bedroomFilter);
+      // Use context value directly - it persists across component remounts
+      console.log('[handleGenerateAnalysis] bedroomFilter from context:', bedroomFilter);
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
         marketId: selectedMarket.id,
         marketType: selectedMarket.type,
-        bedrooms: currentBedroomFilter !== 'all' ? parseInt(currentBedroomFilter) : undefined,
+        bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
         amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
         propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
         minRating: ratingFilter !== 'all' ? parseFloat(ratingFilter) : undefined,
@@ -282,12 +272,6 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       if (result.success && result.data) {
         setMarketData(result.data);
         setMarketAdvice(result.data.advice);
-        // Restore filter state from ref after mutation completes
-        // This ensures the UI stays in sync even if React re-rendered
-        if (bedroomFilterRef.current !== bedroomFilter) {
-          console.log('[handleGenerateAnalysis] Restoring bedroom filter from ref:', bedroomFilterRef.current);
-          setBedroomFilterState(bedroomFilterRef.current);
-        }
       }
     } catch (error) {
       clearInterval(progressInterval);
@@ -402,16 +386,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700">Bedrooms:</label>
               <select
-                ref={(el) => {
-                  if (el) {
-                    bedroomSelectRef.current = el;
-                  }
-                }}
-                defaultValue="all"
+                value={bedroomFilter}
                 onChange={(e) => {
                   console.log('[BedroomFilter] Changed to:', e.target.value);
-                  bedroomFilterRef.current = e.target.value;
-                  setBedroomFilterState(e.target.value);
+                  setBedroomFilter(e.target.value);
                 }}
                 className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
@@ -1026,6 +1004,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               </CardHeader>
               {expandedSections.metrics && (
                 <CardContent>
+                  {/* Show note if bedroom filter returned no results */}
+                  {marketData.bedroomFilterNote && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-800 text-sm">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>{marketData.bedroomFilterNote}</span>
+                    </div>
+                  )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -1038,13 +1023,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                         </tr>
                       </thead>
                       <tbody>
-                        {marketData.revenueByBedroom
-                          .filter((br: any) => {
-                            if (bedroomFilter === 'all') return true;
-                            if (bedroomFilter === '5') return br.bedrooms >= 5;
-                            return br.bedrooms === parseInt(bedroomFilter);
-                          })
-                          .map((br: any) => (
+                        {/* Data is already filtered on backend, just display it */}
+                        {marketData.revenueByBedroom.map((br: any) => (
                           <tr key={br.bedrooms} className="border-b hover:bg-slate-50">
                             <td className="py-2 px-3 font-medium">{br.bedrooms} BR</td>
                             <td className="text-right py-2 px-3 text-green-600 font-medium">

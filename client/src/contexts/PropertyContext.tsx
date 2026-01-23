@@ -65,6 +65,10 @@ interface PropertyContextType {
   // Toggle whether to enforce apples-to-apples filtering
   enforceApplesToApples: boolean;
   setEnforceApplesToApples: (enforce: boolean) => void;
+  
+  // Market Advisor bedroom filter (persists across component remounts)
+  marketAdvisorBedroomFilter: string;
+  setMarketAdvisorBedroomFilter: (filter: string) => void;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -72,6 +76,23 @@ const PropertyContext = createContext<PropertyContextType | undefined>(undefined
 export function PropertyProvider({ children }: { children: ReactNode }) {
   const [myProperty, setMyPropertyState] = useState<PropertyDetails | null>(null);
   const [enforceApplesToApples, setEnforceApplesToApples] = useState(true);
+  const [marketAdvisorBedroomFilter, setMarketAdvisorBedroomFilterState] = useState<string>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('marketAdvisorBedroomFilter');
+      return saved || 'all';
+    }
+    return 'all';
+  });
+  
+  const setMarketAdvisorBedroomFilter = useCallback((filter: string) => {
+    console.log('[PropertyContext] setMarketAdvisorBedroomFilter called with:', filter);
+    setMarketAdvisorBedroomFilterState(filter);
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('marketAdvisorBedroomFilter', filter);
+    }
+  }, []);
   
   const setMyProperty = useCallback((property: PropertyDetails | null) => {
     setMyPropertyState(property);
@@ -104,6 +125,8 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
         bedroomFilter,
         enforceApplesToApples,
         setEnforceApplesToApples,
+        marketAdvisorBedroomFilter,
+        setMarketAdvisorBedroomFilter,
       }}
     >
       {children}

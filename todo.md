@@ -3900,3 +3900,25 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] Bedroom filter now persists when clicking "Generate Comprehensive Market Analysis"
 - [x] Select element maintains its value during and after mutation execution
 - [x] API receives the correct bedroom filter value
+
+
+## Feature: Bedroom-Specific Data Filtering on Backend (Jan 23, 2026)
+
+### Goal
+- [ ] Filter "Revenue by Property Size" table to only show selected bedroom size when filter is applied
+- [ ] Apply bedroom filter to other relevant data sections (top performers, etc.)
+
+### Implementation
+- [ ] Modify getStandaloneMarketAdvisorData to filter revenueByBedroom data
+- [ ] Filter topPerformers by bedroom count
+- [ ] Update response to indicate filter was applied
+- [ ] Test with 1 BR, 2 BR, and other bedroom filters
+
+
+## Bedroom Filter Fix (Jan 23, 2026) - COMPLETE
+
+- [x] Fix bedroom filter reset bug when clicking Generate
+- [x] Implement localStorage persistence for bedroom filter
+- [x] Filter revenueByBedroom data on backend when bedroom filter is applied
+- [x] Show warning note when no data found for selected bedroom size
+- [x] Verify filter persists through entire analysis flow
