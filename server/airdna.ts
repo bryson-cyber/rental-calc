@@ -6307,3 +6307,440 @@ export async function getStandaloneMarketAdvisorData(
     return null;
   }
 }
+
+
+// ============================================
+// BULK LISTING FETCH
+// ============================================
+
+export interface BulkListingResult {
+  id: string;
+  title: string;
+  airbnb_url?: string;
+  image_url?: string;
+  images?: string[];
+  bedrooms: number;
+  bathrooms: number;
+  accommodates: number;
+  property_type: string;
+  rating: number | null;
+  reviews: number;
+  annual_revenue: number;
+  adr: number;
+  occupancy: number;
+  last_review_date?: string;
+  amenities?: string[];
+  superhost?: boolean;
+  professionally_managed?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  zipcode?: string;
+}
+
+export interface BulkListingFetchResponse {
+  listings: BulkListingResult[];
+  failures: string[];
+  total_requested: number;
+  total_fetched: number;
+}
+
+/**
+ * Fetch multiple listings in a single API call using the bulk fetch endpoint.
+ * Much more efficient than fetching listings one by one.
+ * 
+ * @param listingIds Array of AirDNA listing IDs (e.g., "abnb_12345678")
+ * @param currency Currency for monetary values (default: "usd")
+ * @returns Bulk listing fetch response with listings and any failures
+ */
+export async function getBulkListings(
+  listingIds: string[],
+  currency: string = "usd"
+): Promise<BulkListingFetchResponse | null> {
+  if (!listingIds || listingIds.length === 0) {
+    console.log('[getBulkListings] No listing IDs provided');
+    return { listings: [], failures: [], total_requested: 0, total_fetched: 0 };
+  }
+
+  // Check cache first for individual listings
+  const cachedListings: BulkListingResult[] = [];
+  const uncachedIds: string[] = [];
+  
+  for (const id of listingIds) {
+    const cacheKey = `bulk_listing:${id}:${currency}`;
+    const cached = apiCache.get<BulkListingResult>(cacheKey);
+    if (cached) {
+      cachedListings.push(cached);
+    } else {
+      uncachedIds.push(id);
+    }
+  }
+
+  console.log(`[getBulkListings] ${cachedListings.length} cached, ${uncachedIds.length} to fetch`);
+
+  // If all listings are cached, return immediately
+  if (uncachedIds.length === 0) {
+    return {
+      listings: cachedListings,
+      failures: [],
+      total_requested: listingIds.length,
+      total_fetched: cachedListings.length,
+    };
+  }
+
+  try {
+    const response = await makeApiRequest<{
+      payload: {
+        listings: Array<{
+          property_id?: string;
+          id?: string;
+          title?: string;
+          name?: string;
+          platforms?: { airbnb?: { url?: string } };
+          airbnb_url?: string;
+          image_url?: string;
+          thumbnail_url?: string;
+          images?: string[];
+          bedrooms?: number;
+          bathrooms?: number;
+          accommodates?: number;
+          property_type?: string;
+          rating?: number;
+          reviews?: number;
+          stats?: { annual?: { revenue?: number; adr?: number; occupancy?: number } };
+          annual_revenue?: number;
+          adr?: number;
+          occupancy?: number;
+          last_review_date?: string;
+          amenities?: string[];
+          superhost?: boolean;
+          professionally_managed?: boolean;
+          location?: { lat?: number; lng?: number; zipcode?: string };
+          latitude?: number;
+          longitude?: number;
+          zipcode?: string;
+        }>;
+        failures: string[];
+      };
+    }>("/listing/bulk/fetch", "POST", {
+      listing_ids: uncachedIds,
+      currency,
+    });
+
+    const fetchedListings: BulkListingResult[] = [];
+    const failures: string[] = [];
+
+    // Process successful listings
+    if (response.payload?.listings && Array.isArray(response.payload.listings)) {
+      for (const listing of response.payload.listings) {
+        const processed: BulkListingResult = {
+          id: listing.property_id || listing.id || '',
+          title: listing.title || listing.name || 'Untitled Listing',
+          airbnb_url: listing.platforms?.airbnb?.url || listing.airbnb_url,
+          image_url: listing.image_url || listing.thumbnail_url,
+          images: listing.images || [],
+          bedrooms: listing.bedrooms || 0,
+          bathrooms: listing.bathrooms || 0,
+          accommodates: listing.accommodates || 0,
+          property_type: listing.property_type || 'Unknown',
+          rating: listing.rating || null,
+          reviews: listing.reviews || 0,
+          annual_revenue: listing.stats?.annual?.revenue || listing.annual_revenue || 0,
+          adr: listing.stats?.annual?.adr || listing.adr || 0,
+          occupancy: listing.stats?.annual?.occupancy || listing.occupancy || 0,
+          last_review_date: listing.last_review_date,
+          amenities: listing.amenities || [],
+          superhost: listing.superhost,
+          professionally_managed: listing.professionally_managed,
+          latitude: listing.location?.lat || listing.latitude,
+          longitude: listing.location?.lng || listing.longitude,
+          zipcode: listing.location?.zipcode || listing.zipcode,
+        };
+
+        fetchedListings.push(processed);
+
+        // Cache individual listing
+        const cacheKey = `bulk_listing:${processed.id}:${currency}`;
+        apiCache.set(cacheKey, processed, 'listing_details');
+      }
+    }
+
+    // Track failures
+    if (response.payload?.failures && Array.isArray(response.payload.failures)) {
+      failures.push(...response.payload.failures);
+    }
+
+    // Combine cached and fetched listings
+    const allListings = [...cachedListings, ...fetchedListings];
+
+    console.log(`[getBulkListings] Fetched ${fetchedListings.length} listings, ${failures.length} failures`);
+
+    return {
+      listings: allListings,
+      failures,
+      total_requested: listingIds.length,
+      total_fetched: allListings.length,
+    };
+
+  } catch (error) {
+    console.error('[getBulkListings] Error:', error);
+    
+    // Return cached listings even if API fails
+    if (cachedListings.length > 0) {
+      return {
+        listings: cachedListings,
+        failures: uncachedIds,
+        total_requested: listingIds.length,
+        total_fetched: cachedListings.length,
+      };
+    }
+    
+    return null;
+  }
+}
+
+/**
+ * Fetch listings in batches to avoid API limits.
+ * Splits large requests into smaller chunks and combines results.
+ * 
+ * @param listingIds Array of AirDNA listing IDs
+ * @param batchSize Number of listings per batch (default: 50)
+ * @param currency Currency for monetary values
+ * @returns Combined bulk listing fetch response
+ */
+export async function getBulkListingsInBatches(
+  listingIds: string[],
+  batchSize: number = 50,
+  currency: string = "usd"
+): Promise<BulkListingFetchResponse | null> {
+  if (!listingIds || listingIds.length === 0) {
+    return { listings: [], failures: [], total_requested: 0, total_fetched: 0 };
+  }
+
+  const allListings: BulkListingResult[] = [];
+  const allFailures: string[] = [];
+
+  // Split into batches
+  const batches: string[][] = [];
+  for (let i = 0; i < listingIds.length; i += batchSize) {
+    batches.push(listingIds.slice(i, i + batchSize));
+  }
+
+  console.log(`[getBulkListingsInBatches] Processing ${listingIds.length} listings in ${batches.length} batches`);
+
+  // Process batches with rate limiting
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+    console.log(`[getBulkListingsInBatches] Processing batch ${i + 1}/${batches.length} (${batch.length} listings)`);
+
+    const result = await getBulkListings(batch, currency);
+    
+    if (result) {
+      allListings.push(...result.listings);
+      allFailures.push(...result.failures);
+    } else {
+      // If batch fails, add all IDs to failures
+      allFailures.push(...batch);
+    }
+
+    // Add delay between batches to avoid rate limiting
+    if (i < batches.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  return {
+    listings: allListings,
+    failures: allFailures,
+    total_requested: listingIds.length,
+    total_fetched: allListings.length,
+  };
+}
+
+
+// ============================================
+// MARKET COMPARISON
+// ============================================
+
+export interface MarketComparisonMetrics {
+  market_id: string;
+  market_name: string;
+  state: string;
+  market_type: string;
+  listing_count: number;
+  metrics: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
+    market_score?: number;
+    investability?: number;
+    rental_demand?: number;
+    revenue_growth?: number;
+    seasonality?: number;
+    regulation?: number;
+  };
+  bedroom_performance?: Array<{
+    bedrooms: number;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    listing_count: number;
+  }>;
+  top_submarkets?: Array<{
+    id: string;
+    name: string;
+    listing_count: number;
+    revenue: number;
+  }>;
+}
+
+export interface MarketComparisonResult {
+  markets: MarketComparisonMetrics[];
+  comparison_summary: {
+    highest_revenue: { market_id: string; market_name: string; value: number };
+    highest_occupancy: { market_id: string; market_name: string; value: number };
+    highest_adr: { market_id: string; market_name: string; value: number };
+    best_market_score: { market_id: string; market_name: string; value: number };
+    most_listings: { market_id: string; market_name: string; value: number };
+  };
+  generated_at: string;
+}
+
+/**
+ * Compare multiple markets side-by-side with key metrics.
+ * Fetches detailed data for each market and provides a comparison summary.
+ * 
+ * @param marketIds Array of market IDs to compare (max 5)
+ * @param options Optional parameters for bedroom filtering
+ * @returns Market comparison result with metrics and summary
+ */
+export async function compareMarkets(
+  marketIds: string[],
+  options?: {
+    bedrooms?: number;
+  }
+): Promise<MarketComparisonResult | null> {
+  if (!marketIds || marketIds.length === 0) {
+    console.log('[compareMarkets] No market IDs provided');
+    return null;
+  }
+
+  // Limit to 5 markets for comparison
+  const limitedIds = marketIds.slice(0, 5);
+  
+  console.log(`[compareMarkets] Comparing ${limitedIds.length} markets: ${limitedIds.join(', ')}`);
+
+  try {
+    // Fetch data for all markets in parallel
+    const marketPromises = limitedIds.map(async (marketId) => {
+      const [details, submarkets] = await Promise.all([
+        getMarketDetails(marketId),
+        getSubmarketsInMarket(marketId),
+      ]);
+
+      if (!details) {
+        console.warn(`[compareMarkets] Failed to fetch details for market ${marketId}`);
+        return null;
+      }
+
+      // Get top 3 submarkets by listing count
+      const topSubmarkets = submarkets
+        .sort((a, b) => (b.listing_count || 0) - (a.listing_count || 0))
+        .slice(0, 3)
+        .map(s => ({
+          id: s.id,
+          name: s.name,
+          listing_count: s.listing_count || 0,
+          revenue: s.metrics?.revenue || 0,
+        }));
+
+      const result: MarketComparisonMetrics = {
+        market_id: marketId,
+        market_name: details.name,
+        state: '', // Not available from getMarketDetails
+        market_type: details.market_type || 'unknown',
+        listing_count: details.listing_count || 0,
+        metrics: {
+          occupancy: details.metrics?.booked || 0, // 'booked' is the occupancy field
+          adr: details.metrics?.daily_rate || 0, // 'daily_rate' is the ADR field
+          revenue: details.metrics?.revenue || 0,
+          revpar: details.metrics?.revpar || 0,
+          market_score: details.metrics?.market_score,
+          // These fields are not available from getMarketDetails
+          investability: undefined,
+          rental_demand: undefined,
+          revenue_growth: undefined,
+          seasonality: undefined,
+          regulation: undefined,
+        },
+        bedroom_performance: undefined, // Not available from getMarketDetails
+        top_submarkets: topSubmarkets,
+      };
+
+      return result;
+    });
+
+    const results = await Promise.all(marketPromises);
+    const validMarkets = results.filter((m): m is MarketComparisonMetrics => m !== null);
+
+    if (validMarkets.length === 0) {
+      console.error('[compareMarkets] No valid market data retrieved');
+      return null;
+    }
+
+    // Calculate comparison summary
+    const highestRevenue = validMarkets.reduce((max, m) => 
+      m.metrics.revenue > (max?.metrics.revenue || 0) ? m : max, validMarkets[0]);
+    
+    const highestOccupancy = validMarkets.reduce((max, m) => 
+      m.metrics.occupancy > (max?.metrics.occupancy || 0) ? m : max, validMarkets[0]);
+    
+    const highestAdr = validMarkets.reduce((max, m) => 
+      m.metrics.adr > (max?.metrics.adr || 0) ? m : max, validMarkets[0]);
+    
+    const bestMarketScore = validMarkets.reduce((max, m) => 
+      (m.metrics.market_score || 0) > (max?.metrics.market_score || 0) ? m : max, validMarkets[0]);
+    
+    const mostListings = validMarkets.reduce((max, m) => 
+      m.listing_count > (max?.listing_count || 0) ? m : max, validMarkets[0]);
+
+    const comparisonResult: MarketComparisonResult = {
+      markets: validMarkets,
+      comparison_summary: {
+        highest_revenue: {
+          market_id: highestRevenue.market_id,
+          market_name: highestRevenue.market_name,
+          value: highestRevenue.metrics.revenue,
+        },
+        highest_occupancy: {
+          market_id: highestOccupancy.market_id,
+          market_name: highestOccupancy.market_name,
+          value: highestOccupancy.metrics.occupancy,
+        },
+        highest_adr: {
+          market_id: highestAdr.market_id,
+          market_name: highestAdr.market_name,
+          value: highestAdr.metrics.adr,
+        },
+        best_market_score: {
+          market_id: bestMarketScore.market_id,
+          market_name: bestMarketScore.market_name,
+          value: bestMarketScore.metrics.market_score || 0,
+        },
+        most_listings: {
+          market_id: mostListings.market_id,
+          market_name: mostListings.market_name,
+          value: mostListings.listing_count,
+        },
+      },
+      generated_at: new Date().toISOString(),
+    };
+
+    console.log(`[compareMarkets] Successfully compared ${validMarkets.length} markets`);
+    return comparisonResult;
+
+  } catch (error) {
+    console.error('[compareMarkets] Error:', error);
+    return null;
+  }
+}

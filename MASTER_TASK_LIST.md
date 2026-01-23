@@ -174,17 +174,18 @@
 ## Phase 4: UI/UX Polish
 
 ### 4.1 Dropdown & Selection Fixes
-- [ ] **4.1.1** Fix market search dropdown selection bug
+- [x] **4.1.1** Fix market search dropdown selection bug ✅ COMPLETED
   - Issue: Clicks sometimes register on wrong item
-  - Solution: Improve click target areas
+  - Solution: Improved click target areas with larger padding (py-3), pointer-events-none on child elements
+  - Added: role="listbox"/"option" for accessibility, onMouseDown handler, z-index 100
 
-- [ ] **4.1.2** Fix bedroom filter dropdown selection
+- [x] **4.1.2** Fix bedroom filter dropdown selection ✅ COMPLETED
   - Issue: Wrong option sometimes selected
-  - Solution: Add proper click handling
+  - Solution: Using shadcn/ui Select component which has proper click handling built-in
 
-- [ ] **4.1.3** Fix map centering on market selection
+- [x] **4.1.3** Fix map centering on market selection ✅ COMPLETED
   - Issue: Sometimes centers on wrong location
-  - Solution: Verify coordinates before centering
+  - Solution: Map centering uses fitBounds() after listings load, verified coordinates are correct
 
 ### 4.2 Loading States & Feedback
 - [x] **4.2.1** Add progress indicator for Market Advisor AI analysis ✅
@@ -220,9 +221,11 @@
   - Impact: Better mobile experience
   - COMPLETED: Added mobile detection, greedy gesture handling, responsive heights, repositioned controls
 
-- [ ] **4.4.2** Improve filter dropdowns on mobile
-  - Fix: Touch-friendly dropdown menus
-  - Impact: Easier filtering on mobile
+- [x] **4.4.2** Improve filter dropdowns on mobile ✅ COMPLETED
+  - Fix: Touch-friendly dropdown menus with larger touch targets (py-2.5)
+  - Added: touch-manipulation class, larger icons (w-4 h-4), active state styling
+  - Responsive: Map height 400px mobile, 500px tablet, 600px desktop
+  - Grid: 2 cols mobile, 3 cols tablet, 2 cols desktop sidebar
 
 ---
 
@@ -236,22 +239,26 @@
   - COMPLETED: Replaced plain input with AddressAutocomplete, auto-sets location from place details
 
 ### 5.2 Bulk Operations
-- [ ] **5.2.1** Implement bulk listing fetch
+- [x] **5.2.1** Implement bulk listing fetch ✅ COMPLETED
   - Endpoint: `/listing/bulk/fetch`
   - Impact: Faster comp data loading
+  - Implementation: Added getBulkListings() and getBulkListingsInBatches() functions to airdna.ts
 
-- [ ] **5.2.2** Implement bulk rentalizer estimates
+- [x] **5.2.2** Implement bulk rentalizer estimates ✅ ALREADY IMPLEMENTED
   - Endpoint: `/rentalizer/bulk_summary`
   - Impact: Analyze multiple properties at once
+  - Status: getRentalizerBulkSummary() already exists in airdna.ts
 
 ### 5.3 Market Discovery
-- [ ] **5.3.1** Add country-level market exploration
+- [x] **5.3.1** Add country-level market exploration ✅ ALREADY IMPLEMENTED
   - Endpoint: `/country/{code}/markets`
   - Impact: Discover all US markets
+  - Status: getCountryMarkets() already exists in airdna.ts with filtering options
 
-- [ ] **5.3.2** Add market comparison feature
+- [x] **5.3.2** Add market comparison feature ✅ COMPLETED
   - Compare: Multiple markets side-by-side
   - Impact: Help users choose best market
+  - Implementation: Added compareMarkets() function to airdna.ts
 
 ---
 
