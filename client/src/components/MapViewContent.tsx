@@ -489,12 +489,12 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       if (apiBedroomFilter) {
         apiParams.bedrooms = apiBedroomFilter;
       }
-      const response = await fetch(`/api/trpc/compData.getAllListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);
+      const response = await fetch(`/api/trpc/compData.getAllListings?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: apiParams } }))}`);
       console.log('[MapView] Fetching ALL listings (up to 200) for', marketId);
       const data = await response.json();
       
-      if (data.result?.data?.json?.listings) {
-        const fetchedListings = data.result.data.json.listings;
+      if (data?.[0]?.result?.data?.json?.listings) {
+        const fetchedListings = data[0].result.data.json.listings;
         console.log('[MapView] Received', fetchedListings.length, 'listings');
         
         const listingsWithCoords = fetchedListings
@@ -622,11 +622,11 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         console.log('[MapView] Auto-searching by zip code:', zipCode);
         
         // Fetch listings for this zip code
-        fetch(`/api/trpc/compData.getListingsByZipcode?input=${encodeURIComponent(JSON.stringify({ json: { zipcode: zipCode, pageSize: 50 } }))}`)
+        fetch(`/api/trpc/compData.getListingsByZipcode?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: { zipcode: zipCode, pageSize: 50 } } }))}`)
           .then(response => response.json())
           .then(data => {
-            if (data.result?.data?.json?.listings) {
-              const fetchedListings = data.result.data.json.listings;
+            if (data?.[0]?.result?.data?.json?.listings) {
+              const fetchedListings = data[0].result.data.json.listings;
               console.log('[MapView] Auto-search received', fetchedListings.length, 'listings for zip', zipCode);
               
               const listingsWithCoords = fetchedListings

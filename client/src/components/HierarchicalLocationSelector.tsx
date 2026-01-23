@@ -1055,9 +1055,9 @@ export function HierarchicalLocationSelector({
         console.log(`[DirectZipSearch] No direct results for ${zip}, trying geocoding fallback...`);
         
         // Use fetch directly since we need to await the result
-        const geocodeResponse = await fetch(`/api/trpc/rental.geocodeZipCode?input=${encodeURIComponent(JSON.stringify({ zipcode: zip }))}`);
+        const geocodeResponse = await fetch(`/api/trpc/rental.geocodeZipCode?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: { zipcode: zip } } }))}`);
         const geocodeData = await geocodeResponse.json();
-        const geocodeResult = geocodeData?.result?.data;
+        const geocodeResult = geocodeData?.[0]?.result?.data?.json;
         
         if (geocodeResult?.success && geocodeResult?.market) {
           console.log(`[DirectZipSearch] Geocoding found: ${geocodeResult.city}, ${geocodeResult.state} -> ${geocodeResult.market.name}`);

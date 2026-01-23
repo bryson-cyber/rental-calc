@@ -3822,3 +3822,12 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - [x] 12 tests passing for new features (new-features.test.ts)
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
+
+
+## Bug Fixes (Jan 23, 2026)
+
+### TRPC Batch Format Fix
+- [x] Fixed fetch calls in HierarchicalLocationSelector.tsx to use batch format for geocodeZipCode
+- [x] Fixed fetch calls in MapFirstLayout.tsx to use batch format for getAllListings
+- [x] Fixed fetch calls in MapViewContent.tsx to use batch format for getAllListings and getListingsByZipcode
+- [x] Updated response parsing to handle batch response format (data[0].result.data.json)

@@ -372,9 +372,9 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       }
       
       // Use getAllListings endpoint which properly handles both markets and submarkets
-      const response = await fetch(`/api/trpc/compData.getAllListings?input=${encodeURIComponent(JSON.stringify({ json: apiParams }))}`);  
+      const response = await fetch(`/api/trpc/compData.getAllListings?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: apiParams } }))}`);  
       const data = await response.json();
-      const listingsData = data.result?.data?.json?.listings || [];
+      const listingsData = data?.[0]?.result?.data?.json?.listings || [];
       
       // Transform and calculate distances
       const processedListings = listingsData.map((listing: any) => {
