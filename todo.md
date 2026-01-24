@@ -4024,3 +4024,45 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 ## Feature - Loading Indicator for Address Autocomplete (Jan 23, 2026)
 - [x] Add visible loading spinner in input field while fetching suggestions (amber color, larger size)
 - [x] Test loading indicator visibility on dev server - verified working
+
+
+## Bug Verification Session (Jan 23, 2026) - ALL VERIFIED
+
+### High Priority Bugs Verified:
+
+1. **Distance badges on comp cards** - ✅ WORKING
+   - Comp cards show distance when API provides data (e.g., "0.2 mi")
+   - Shows "N/A" when AirDNA API doesn't return distance_meters
+   - This is expected behavior due to API limitations
+
+2. **Bulk comparison $0 rent (Tool 2)** - ✅ WORKING
+   - Tested with $2,000 rent input
+   - Profit calculation correct: $4,229 revenue - $2,000 rent = $2,229 profit
+   - Rent value properly captured and used in calculations
+
+3. **1BR properties not showing (Tool 1)** - ✅ FIXED
+   - Atlanta, Georgia now shows all bedroom types:
+     - 1 BR: $111,824/yr, 91% occupancy, 2 listings
+     - 2 BR: $106,771/yr, 68% occupancy, 7 listings
+     - 3 BR: $113,636/yr, 76% occupancy, 19 listings
+     - 4 BR: $113,973/yr, 68% occupancy, 28 listings
+     - 5 BR: $123,999/yr, 63% occupancy, 40 listings
+
+4. **Map markers not displaying (Tool 5)** - ✅ FIXED
+   - Atlanta, Georgia shows 200 property markers
+   - Revenue amounts displayed on markers ($422k, $241k, etc.)
+   - Color-coded by revenue tier
+   - Property table shows all listings with details
+
+5. **Year-over-year trends not showing** - ✅ FIXED
+   - Historical Trends section displays correctly:
+     - Occupancy: 53% (-1.7% YoY)
+     - Avg Revenue: $2,436 (+2.1% YoY)
+     - ADR: $157 (+4.0% YoY)
+   - 24-month chart with Occupancy/Revenue/ADR/Listings tabs
+   - Interactive chart shows seasonal patterns
+
+### Test Details:
+- Test Location: Atlanta, Georgia
+- Test Date: 2026-01-23
+- All 5 high-priority bugs verified as working/fixed

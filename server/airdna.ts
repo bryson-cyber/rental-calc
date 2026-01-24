@@ -2425,37 +2425,61 @@ export async function getComprehensivePropertyReport(
   
   // If no market_id from rentalizer, search for it
   if (!marketId) {
-    // Try to extract city from address for market search
-    const cityMatch = address.match(/,\s*([^,]+),\s*[A-Z]{2}/);
+    // Try to extract city and state from address for market search
+    const cityMatch = address.match(/,\s*([^,]+),\s*([A-Z]{2})/);
     const searchTerm = cityMatch ? cityMatch[1].trim() : address.split(',')[1]?.trim() || address;
+    const stateFromAddress = cityMatch ? cityMatch[2] : null;
+    
+    // Also try to extract state from zip code pattern
+    const stateFromZip = address.match(/,\s*([A-Z]{2})\s*\d{5}/)?.[1];
+    const state = stateFromAddress || stateFromZip;
+    
+    console.log('[Market Search] Extracted city:', searchTerm, 'state:', state);
     
     if (searchTerm) {
       const markets = await searchMarkets(searchTerm, 20); // Increased limit for better matching
       if (markets.length > 0) {
         console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
-        // Find a market (not submarket) that matches the state
-        const stateMatch = address.match(/,\s*([A-Z]{2})\s*\d{5}/);
-        const state = stateMatch ? stateMatch[1] : null;
         console.log('[Market Search] Looking for state:', state);
         
-        // First try to find a parent market in the same state
+        // Helper function to check if market matches the state
+        const matchesState = (m: typeof markets[0]) => {
+          if (!state) return true; // No state to match, accept any
+          // Check exact state match (case-insensitive)
+          if (m.state?.toUpperCase() === state.toUpperCase()) return true;
+          // Check if location_name contains the state abbreviation
+          if (m.location_name?.toUpperCase().includes(`, ${state.toUpperCase()}`)) return true;
+          // Check if name contains the state abbreviation (e.g., "Fort Worth, TX")
+          if (m.name?.toUpperCase().includes(`, ${state.toUpperCase()}`)) return true;
+          return false;
+        };
+        
+        // Helper function to check if market name matches the city
+        const matchesCity = (m: typeof markets[0]) => {
+          const cityLower = searchTerm.toLowerCase();
+          const nameLower = m.name?.toLowerCase() || '';
+          // Check if market name starts with or contains the city name
+          return nameLower.startsWith(cityLower) || nameLower.includes(cityLower);
+        };
+        
+        // First try to find a parent market that matches BOTH city and state
         let parentMarket = markets.find(m => 
-          m.type === 'market' && 
-          (!state || m.state?.toLowerCase().includes(state.toLowerCase()) || m.location_name?.includes(state))
+          m.type === 'market' && matchesState(m) && matchesCity(m)
         );
         
-        // If no parent market found, try to find any market (not submarket) that matches the search term
-        if (!parentMarket) {
-          parentMarket = markets.find(m => m.type === 'market');
+        // If no exact match, try to find a parent market that matches just the state
+        if (!parentMarket && state) {
+          parentMarket = markets.find(m => m.type === 'market' && matchesState(m));
         }
         
-        // If still no market, use the first result regardless of type
-        if (!parentMarket && markets.length > 0) {
-          // Use the first market-type result, or first submarket if no markets
-          const anyMarket = markets.find(m => m.type === 'market') || markets[0];
-          if (anyMarket) {
-            parentMarket = anyMarket;
-          }
+        // If still no match, try any market that matches the city name
+        if (!parentMarket) {
+          parentMarket = markets.find(m => m.type === 'market' && matchesCity(m));
+        }
+        
+        // Last resort: use the first market-type result
+        if (!parentMarket) {
+          parentMarket = markets.find(m => m.type === 'market') || markets[0];
         }
         
         console.log('[Market Search] Found parent market:', parentMarket);
@@ -2465,15 +2489,14 @@ export async function getComprehensivePropertyReport(
           marketListingCount = parentMarket.listing_count; // Get listing count from search
           console.log('[Market Search] Using market ID:', marketId, 'with listing count:', marketListingCount);
         } else {
-          // Fall back to first market with parent_market in same state
+          // Fall back to first submarket with parent_market in same state
           const submarketWithParent = markets.find(m => 
-            m.type === 'submarket' && 
-            (!state || m.state?.toLowerCase().includes(state.toLowerCase()) || m.location_name?.includes(state))
+            m.type === 'submarket' && matchesState(m)
           );
           if (submarketWithParent) {
             // Search for the parent market name
             const parentSearch = await searchMarkets(submarketWithParent.name, 5);
-            const parent = parentSearch.find(m => m.type === 'market');
+            const parent = parentSearch.find(m => m.type === 'market' && matchesState(m));
             if (parent) {
               marketId = parent.id;
               marketListingCount = parent.listing_count;

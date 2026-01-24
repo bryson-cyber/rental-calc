@@ -1118,8 +1118,12 @@ export const appRouter = router({
           const minRevenueThreshold = input.monthlyRent * 12 * 2;
           
           // Get subject property coordinates for distance calculation
+          // baseReport.property is a RentalizerResponse, and RentalizerResponse.property contains lat/lng
           const subjectLat = baseReport.property.property?.latitude;
           const subjectLng = baseReport.property.property?.longitude;
+          console.log(`[getAIPropertyReport] Subject coordinates: lat=${subjectLat}, lng=${subjectLng}`);
+          console.log(`[getAIPropertyReport] baseReport.property keys:`, Object.keys(baseReport.property || {}));
+          console.log(`[getAIPropertyReport] baseReport.property.property keys:`, Object.keys(baseReport.property?.property || {}));
           
           // Helper function to calculate distance in meters using Haversine formula
           const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number | null | undefined, lng2: number | null | undefined): number | undefined => {
