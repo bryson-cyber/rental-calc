@@ -576,7 +576,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                 <div style="font-size: 16px; font-weight: 600; color: #1e293b;">${listing.rating ? `⭐ ${listing.rating.toFixed(1)}` : 'N/A'}</div>
               </div>
             </div>
-            ${listing.distanceToMyProperty ? `<div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">📍 ${listing.distanceToMyProperty.toFixed(1)} mi from your property</div>` : ''}
+            ${listing.distanceToMyProperty !== undefined ? `
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">
+                <span style="font-size: 14px;">📍</span>
+                <span>${listing.distanceToMyProperty.toFixed(1)} mi from your property</span>
+              </div>` : ''}
             <a href="${listing.airbnbUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #C9A962; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500;">View on Airbnb →</a>
           </div>
         `;
@@ -1345,6 +1349,14 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                     <tr className="bg-slate-50 border-b border-slate-200">
                       <th className="text-left p-3 font-semibold text-slate-700">Property</th>
                       <th className="text-center p-3 font-semibold text-slate-700">BR/BA</th>
+                      {hasProperty && (
+                        <th className="text-right p-3 font-semibold text-slate-700">
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-blue-500" />
+                            Distance
+                          </span>
+                        </th>
+                      )}
                       <th className="text-right p-3 font-semibold text-slate-700">
                         <button 
                           onClick={() => setSortBy(sortBy === 'revenue-desc' ? 'revenue-asc' : 'revenue-desc')}
@@ -1369,9 +1381,6 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                       </th>
                       <th className="text-right p-3 font-semibold text-slate-700">ADR</th>
                       <th className="text-center p-3 font-semibold text-slate-700">Rating</th>
-                      {myPropertyLocation && (
-                        <th className="text-right p-3 font-semibold text-slate-700">Distance</th>
-                      )}
                       <th className="text-center p-3 font-semibold text-slate-700">Link</th>
                       {showCompSetMode && <th className="w-10"></th>}
                     </tr>
@@ -1420,6 +1429,22 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                               {listing.bedrooms}BR / {listing.bathrooms}BA
                             </span>
                           </td>
+                          {hasProperty && (
+                            <td className="p-3 text-right">
+                              {myPropertyLocation ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">
+                                  <MapPin className="w-3 h-3 text-blue-500" />
+                                  <span className="font-semibold text-blue-600">
+                                    {listing.distanceToMyProperty !== undefined 
+                                      ? formatDistance(listing.distanceToMyProperty)
+                                      : '—'}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-xs">Locating...</span>
+                              )}
+                            </td>
+                          )}
                           <td className="p-3 text-right">
                             <span className="font-semibold" style={{ color: markerColor }}>
                               {formatCurrency(listing.revenue)}
@@ -1443,13 +1468,6 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
-                          {myPropertyLocation && (
-                            <td className="p-3 text-right font-semibold text-blue-600">
-                              {listing.distanceToMyProperty !== undefined 
-                                ? formatDistance(listing.distanceToMyProperty)
-                                : '—'}
-                            </td>
-                          )}
                           <td className="p-3 text-center">
                             <a 
                               href={listing.airbnbUrl} 

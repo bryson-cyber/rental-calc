@@ -4102,3 +4102,19 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Distance Filter dropdown shows "Any Distance" option
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
+
+
+## Distance Display on Listing Cards (Jan 24, 2026)
+- [ ] Add distance badge/indicator on listing cards in MapFirstLayout
+- [ ] Show distance from user's property on each competitor card
+- [ ] Style the distance indicator to be visually clear and consistent
+
+
+## Distance Display on Listing Cards (Jan 24, 2026) - COMPLETE
+
+### Implementation:
+- [x] Move Distance column to prominent position (after BR/BA)
+- [x] Show distance in miles with location pin icon
+- [x] Add loading state while geocoding property location
+- [x] Enhanced InfoWindow popup with distance badge
+- [x] Distance visible without horizontal scrolling
