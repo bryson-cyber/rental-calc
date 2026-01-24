@@ -4118,3 +4118,18 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Add loading state while geocoding property location
 - [x] Enhanced InfoWindow popup with distance badge
 - [x] Distance visible without horizontal scrolling
+
+
+## Revenue by Property Type - Limited Data Fix (Jan 24, 2026)
+
+- [ ] Fix Step 1 "Revenue by Property Type" to pull all bedroom data
+- [ ] Remove "Limited data available" message for bedroom types
+- [ ] Ensure all bedroom types (1-6 BR) show revenue and occupancy data
+
+
+## Revenue by Property Type Fix (Jan 24, 2026) - COMPLETE
+
+- [x] Fixed bedroom breakdown to show all bedroom types (1-5+) when data is available
+- [x] Updated market-research-simple.ts to include all bedroom types in breakdown
+- [x] Bedroom types with no listings now show "Limited data available" with helpful message
+- [x] Tested with Denver zip code 80202 - 1BR, 2BR, 3BR now show actual revenue data

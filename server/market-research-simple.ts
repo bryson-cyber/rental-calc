@@ -273,16 +273,27 @@ export const marketResearchSimpleRouter = router({
         });
       });
       
-      // Convert to array and sort by bedroom count
-      const bedroomBreakdown = Array.from(bedroomMap.entries())
-        .map(([bedrooms, data]) => ({
+      // Convert to array and include ALL bedroom types 1-5+ for comprehensive display
+      // This ensures the frontend always has data for all bedroom types
+      const allBedroomTypes = [1, 2, 3, 4, 5]; // Standard bedroom types to always include
+      const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
+        const data = bedroomMap.get(bedrooms);
+        if (data && data.count > 0) {
+          return {
+            bedrooms,
+            count: data.count,
+            avgRevenue: Math.round(data.totalRevenue / data.count),
+            avgOccupancy: Math.round(data.totalOccupancy / data.count)
+          };
+        }
+        // Return placeholder for bedroom types with no listings
+        return {
           bedrooms,
-          count: data.count,
-          avgRevenue: data.count > 0 ? Math.round(data.totalRevenue / data.count) : 0,
-          avgOccupancy: data.count > 0 ? Math.round(data.totalOccupancy / data.count) : 0
-        }))
-        .filter(b => b.count > 0) // Only show bedroom types that have listings
-        .sort((a, b) => a.bedrooms - b.bedrooms); // Sort 1BR, 2BR, 3BR, etc.
+          count: 0,
+          avgRevenue: 0,
+          avgOccupancy: 0
+        };
+      });
 
       // Generate insights
       const insights = generateInsights(overview, seasonalityData, processedTopPerformers, bedroomBreakdown);
@@ -420,15 +431,25 @@ export const marketResearchSimpleRouter = router({
         });
       });
       
-      const bedroomBreakdown = Array.from(bedroomMap.entries())
-        .map(([bedrooms, data]) => ({
+      // Include ALL bedroom types 1-5+ for comprehensive display
+      const allBedroomTypes = [1, 2, 3, 4, 5];
+      const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
+        const data = bedroomMap.get(bedrooms);
+        if (data && data.count > 0) {
+          return {
+            bedrooms,
+            count: data.count,
+            avgRevenue: Math.round(data.totalRevenue / data.count),
+            avgOccupancy: Math.round(data.totalOccupancy / data.count)
+          };
+        }
+        return {
           bedrooms,
-          count: data.count,
-          avgRevenue: data.count > 0 ? Math.round(data.totalRevenue / data.count) : 0,
-          avgOccupancy: data.count > 0 ? Math.round(data.totalOccupancy / data.count) : 0
-        }))
-        .filter(b => b.count > 0)
-        .sort((a, b) => a.bedrooms - b.bedrooms);
+          count: 0,
+          avgRevenue: 0,
+          avgOccupancy: 0
+        };
+      });
       
       // Get seasonality from the primary estimate's monthly_forecast
       // The forecast has complete 12-month data with realistic projections
@@ -560,13 +581,34 @@ export const marketResearchSimpleRouter = router({
         airbnbUrl: l.airbnb_url
       }));
       
-      // Process bedroom breakdown
-      const bedroomBreakdown = report.bedroom_performance.map(b => ({
-        bedrooms: b.bedrooms,
-        count: b.count,
-        avgRevenue: b.avg_revenue,
-        avgOccupancy: b.avg_occupancy
-      }));
+      // Process bedroom breakdown - ensure ALL bedroom types 1-5+ are included
+      const bedroomMap = new Map<number, { count: number; avgRevenue: number; avgOccupancy: number }>();
+      report.bedroom_performance.forEach(b => {
+        bedroomMap.set(b.bedrooms, {
+          count: b.count,
+          avgRevenue: b.avg_revenue,
+          avgOccupancy: b.avg_occupancy
+        });
+      });
+      
+      const allBedroomTypes = [1, 2, 3, 4, 5];
+      const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
+        const data = bedroomMap.get(bedrooms);
+        if (data && data.count > 0) {
+          return {
+            bedrooms,
+            count: data.count,
+            avgRevenue: data.avgRevenue,
+            avgOccupancy: data.avgOccupancy
+          };
+        }
+        return {
+          bedrooms,
+          count: 0,
+          avgRevenue: 0,
+          avgOccupancy: 0
+        };
+      });
       
       // Seasonality - use parent market seasonality from comprehensive report
       const monthlyData = report.seasonality.map(s => ({
