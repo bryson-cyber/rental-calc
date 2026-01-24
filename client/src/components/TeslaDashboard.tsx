@@ -625,15 +625,15 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-slate-700" />
+          <div className="w-3 h-3 rounded-full bg-emerald-500" />
           <span className="text-xs text-slate-600">Peak (Top 33%)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-slate-500" />
+          <div className="w-3 h-3 rounded-full bg-amber-500" />
           <span className="text-xs text-slate-600">Shoulder (Middle 33%)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-slate-300" />
+          <div className="w-3 h-3 rounded-full bg-rose-400" />
           <span className="text-xs text-slate-600">Slow (Bottom 33%)</span>
         </div>
       </div>
@@ -701,10 +701,10 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                   <div 
                     className={`w-full rounded-t transition-all cursor-pointer ${
                       category === 'peak'
-                        ? 'bg-gradient-to-t from-slate-700 to-slate-500' 
+                        ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
                         : category === 'slow'
-                        ? 'bg-gradient-to-t from-slate-400 to-slate-300'
-                        : 'bg-gradient-to-t from-slate-500 to-slate-400'
+                        ? 'bg-gradient-to-t from-rose-400 to-rose-300'
+                        : 'bg-gradient-to-t from-amber-500 to-amber-400'
                     }`}
                     style={{ height: `${Math.max(heightPct, 8)}%` }}
                   />

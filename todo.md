@@ -4145,3 +4145,20 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] AI Advisor consistency - lowered LLM temperature from 0.7 to 0.1 for deterministic outputs
 
 ### All 5 feedback items COMPLETE (Jan 24, 2026)
+
+- [x] Enhanced property marker visibility on comp map (56px size, brighter glow, renders on top, stronger shadow) - via Poe/GPT-5.2-Codex
+
+- [ ] Fix Step 5 tool not working (reported Jan 24, 2026)
+
+- [ ] Fix Seasonal Forecast chart colors - bars are all gray instead of showing Peak/Shoulder/Slow colors (Jan 24, 2026)
+- [ ] Fix Step 5 Map auto-fill - should auto-load user's property market when they have a property set (Jan 24, 2026)
+
+- [ ] Make Step 5 Map fully automatic - auto-select first search result and load listings without clicks
+
+
+## Step 5 Map Fixes (Jan 24, 2026) - COMPLETE
+
+- [x] Fix Seasonal Forecast chart colors - bars now show Peak (green/emerald), Shoulder (amber), Slow (rose) colors
+- [x] Fix Step 5 Map auto-fill - search box now pre-fills with user's city based on property address
+- [x] Fix Step 5 Map auto-select - automatically selects best match and loads listings without requiring clicks
+- [x] Make Step 5 fully automatic - user goes to Step 5 and sees their market's listings immediately

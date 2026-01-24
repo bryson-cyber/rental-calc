@@ -1610,7 +1610,12 @@ export default function LeadMagnet() {
             {/* MAP TAB */}
             {/* ============================================ */}
             {activeTab === 'map' && (
-              <MapFirstLayout embedded={false} className="min-h-[600px]" />
+              <MapFirstLayout 
+                key={`map-${myProperty?.address || 'no-property'}`}
+                myProperty={myProperty}
+                embedded={false} 
+                className="min-h-[600px]" 
+              />
             )}
 
             {/* ============================================ */}

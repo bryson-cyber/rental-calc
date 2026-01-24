@@ -68,49 +68,15 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
     markersRef.current = [];
     infoWindowRef.current = new google.maps.InfoWindow();
 
-    // Add subject property marker (amber/gold) - Enhanced for visibility
-    if (subjectProperty.latitude && subjectProperty.longitude) {
-      const el = document.createElement("div");
-      el.innerHTML = `
-        <style>
-          @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 0.4; }
-            100% { transform: scale(0.8); opacity: 0.8; }
-          }
-        </style>
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-          <!-- Pulsing ring -->
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:rgba(245,158,11,0.3);border-radius:50%;animation:pulse-ring 2s infinite;"></div>
-          <!-- Main marker -->
-          <div style="position:relative;background:linear-gradient(135deg,#F59E0B,#D97706);border:4px solid #fff;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.4),0 0 0 3px #B45309;z-index:10;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <!-- Label -->
-          <div style="margin-top:4px;background:#B45309;color:white;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
-            YOUR PROPERTY
-          </div>
-        </div>
-      `;
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: { lat: subjectProperty.latitude, lng: subjectProperty.longitude },
-        title: "Your Property",
-        content: el,
-        zIndex: 9999 // Ensure it's always on top
-      });
-      marker.addListener("click", () => {
-        infoWindowRef.current?.setContent(`<div style="padding:8px;max-width:200px;"><b style="color:#B45309;">Subject Property</b><p style="font-size:12px;color:#666;">${subjectProperty.address}</p>${subjectProperty.bedrooms ? `<p style="font-size:12px;">${subjectProperty.bedrooms} BR / ${subjectProperty.bathrooms || "?"} BA</p>` : ""}</div>`);
-        infoWindowRef.current?.open(map, marker);
-      });
-      markersRef.current.push(marker);
-    }
-
-    // Add comp markers
+    // Add comp markers FIRST (so subject marker renders on top)
     compsWithCoords.forEach((comp, i) => {
       const color = getMarkerColor(comp.annual_revenue);
       const el = document.createElement("div");
-      el.innerHTML = `<div style="background:${color};border:2px solid white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:12px;font-weight:bold;color:white;">${i + 1}</div>`;
+      el.innerHTML = `
+        <div style="background:${color};border:2px solid white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:12px;font-weight:bold;color:white;">
+          ${i + 1}
+        </div>
+      `;
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map,
         position: { lat: comp.latitude!, lng: comp.longitude! },
@@ -125,6 +91,80 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
       });
       markersRef.current.push(marker);
     });
+
+    // Add subject property marker LAST (amber/gold, larger, brighter, stronger shadow)
+    if (subjectProperty.latitude && subjectProperty.longitude) {
+      const el = document.createElement("div");
+      el.innerHTML = `
+        <style>
+          @keyframes pulse-ring-strong {
+            0%   { transform: scale(0.75); opacity: 0.95; }
+            50%  { transform: scale(1.35); opacity: 0.45; }
+            100% { transform: scale(0.75); opacity: 0.95; }
+          }
+        </style>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;z-index:1000;">
+          <div style="
+            position:absolute;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            width:80px;
+            height:80px;
+            background:rgba(255,193,7,0.5);
+            border-radius:50%;
+            box-shadow:0 0 24px rgba(255,193,7,0.9), 0 0 48px rgba(255,193,7,0.6);
+            animation:pulse-ring-strong 1.6s infinite;
+          "></div>
+          <div style="
+            position:relative;
+            background:linear-gradient(135deg,#FBBF24,#F59E0B,#D97706);
+            border:4px solid #fff;
+            border-radius:50%;
+            width:56px;
+            height:56px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-shadow:
+              0 10px 24px rgba(0,0,0,0.55),
+              0 0 0 4px #B45309,
+              0 0 20px rgba(255,193,7,0.9);
+            z-index:10;
+          ">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.75">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div style="
+            margin-top:6px;
+            background:#B45309;
+            color:white;
+            font-size:11px;
+            font-weight:700;
+            padding:3px 8px;
+            border-radius:4px;
+            white-space:nowrap;
+            box-shadow:0 4px 10px rgba(0,0,0,0.35);
+          ">
+            YOUR PROPERTY
+          </div>
+        </div>
+      `;
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat: subjectProperty.latitude, lng: subjectProperty.longitude },
+        title: "Your Property",
+        content: el,
+        zIndex: 9999
+      });
+      marker.addListener("click", () => {
+        infoWindowRef.current?.setContent(`<div style="padding:8px;max-width:200px;"><b style="color:#B45309;">Subject Property</b><p style="font-size:12px;color:#666;">${subjectProperty.address}</p>${subjectProperty.bedrooms ? `<p style="font-size:12px;">${subjectProperty.bedrooms} BR / ${subjectProperty.bathrooms || "?"} BA</p>` : ""}</div>`);
+        infoWindowRef.current?.open(map, marker);
+      });
+      markersRef.current.push(marker);
+    }
 
     // Fit bounds to show all markers
     if (markersRef.current.length > 0) {

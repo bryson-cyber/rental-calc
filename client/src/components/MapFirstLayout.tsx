@@ -173,14 +173,31 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   // Combined hasProperty check - use context first, then localStorage fallback
   const hasProperty = contextHasProperty || (localStorageProperty !== null && localStorageProperty.address?.length > 0);
   
-  // Get the effective property data (context takes precedence)
-  const effectiveProperty = contextProperty || localStorageProperty;
+  // Get the effective property data (context takes precedence, then prop, then localStorage)
+  const effectiveProperty = contextProperty || myProperty || localStorageProperty;
   
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
+  // Search state - initialize from property if available
+  const [searchQuery, setSearchQuery] = useState(() => {
+    // Try to get initial search term from property
+    const property = contextProperty || myProperty || localStorageProperty;
+    if (property?.address) {
+      const addressParts = property.address.split(',').map((p: string) => p.trim());
+      if (addressParts.length >= 3) {
+        const city = addressParts[1];
+        const stateZip = addressParts[2];
+        const stateMatch = stateZip.match(/^([A-Z]{2})/);
+        if (stateMatch) {
+          return `${city}, ${stateMatch[1]}`;
+        }
+        return city;
+      }
+    }
+    return '';
+  });
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasAutoLoadedListings, setHasAutoLoadedListings] = useState(false);
   
   // Location state
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
@@ -380,8 +397,13 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     setCurrentPage(1);
   }, [bedroomFilter, propertyTypeFilter, distanceFilter, sortBy]);
   
-  // Debounced search
+  // Debounced search - skip if we're auto-loading or already have listings
   useEffect(() => {
+    // Skip if we already have a selected location with listings
+    if (selectedLocation && listings.length > 0) {
+      return;
+    }
+    
     if (searchQuery.length < 2) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -398,8 +420,29 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
         
         if (results.length > 0) {
-          setSearchResults(results.slice(0, 10));
-          setShowSearchResults(true);
+          console.log('[AUTO-SELECT DEBUG] results:', results.length, 'hasAutoLoadedListings:', hasAutoLoadedListings, 'listings.length:', listings.length);
+          // If this is an auto-fill search (no listings loaded yet), auto-select the best match
+          if (!hasAutoLoadedListings && listings.length === 0) {
+            console.log('[AUTO-SELECT] Auto-selecting first result:', results[0]?.name);
+            const searchTermLower = searchQuery.toLowerCase().split(',')[0].trim();
+            const exactMatch = results.find((r: any) => 
+              r.name?.toLowerCase().includes(searchTermLower)
+            );
+            const selectedResult = exactMatch || results[0];
+            
+            // Auto-select and fetch listings - don't update searchQuery to avoid re-triggering
+            setSelectedLocation(selectedResult);
+            setLocationName(selectedResult.name);
+            setShowSearchResults(false);
+            setHasAutoLoadedListings(true);
+            await fetchListings(selectedResult);
+            // Update search query after fetch completes to show the full market name
+            setSearchQuery(selectedResult.name);
+          } else {
+            // Normal search - show dropdown
+            setSearchResults(results.slice(0, 10));
+            setShowSearchResults(true);
+          }
         } else {
           setSearchResults([]);
           setShowSearchResults(false);
@@ -697,24 +740,70 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     }
   };
   
-  // Initialize from myProperty prop
+  // Initialize from myProperty prop or effectiveProperty from context
+  const [isAutoLoading, setIsAutoLoading] = useState(true); // Start true to prevent debounced search on mount
+  
+  // Auto-search effect - runs when searchQuery is pre-filled and we haven't loaded yet
   useEffect(() => {
-    if (myProperty?.address) {
-      setMyPropertyAddress(myProperty.address);
+    // Skip if we've already auto-loaded listings
+    if (hasAutoLoadedListings) {
+      setIsAutoLoading(false);
+      return;
     }
-    if (myProperty?.zipCode) {
-      setSearchQuery(myProperty.zipCode);
-      // Auto-search
-      setTimeout(() => {
-        searchMarketsAsync(myProperty.zipCode!).then((response: any) => {
-          const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
-          if (results.length > 0) {
-            handleSelectLocation(results[0]);
-          }
-        });
-      }, 500);
+    
+    // Skip if searchQuery is empty (no property data)
+    if (!searchQuery || searchQuery.length < 2) {
+      setIsAutoLoading(false);
+      return;
     }
-  }, [myProperty]);
+    
+    // Use the pre-filled searchQuery as the search term
+    const searchTerm = searchQuery;
+    
+    // Set the address field from effectiveProperty if available
+    const propertyToUse = effectiveProperty || myProperty;
+    if (propertyToUse?.address && !myPropertyAddress) {
+      setMyPropertyAddress(propertyToUse.address);
+    }
+    
+    // Mark as auto-loaded BEFORE starting the search to prevent race conditions
+    setHasAutoLoadedListings(true);
+    
+    // Auto-search for the market with a slight delay to ensure component is mounted
+    console.log('[MapFirstLayout] Starting auto-search for:', searchTerm);
+    const timeoutId = setTimeout(async () => {
+      try {
+        console.log('[MapFirstLayout] Executing searchMarketsAsync for:', searchTerm);
+        const response = await searchMarketsAsync(searchTerm);
+        console.log('[MapFirstLayout] Search response:', response);
+        const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
+        
+        if (results.length > 0) {
+          // Find the best matching result (prefer exact city match)
+          const exactMatch = results.find((r: any) => 
+            r.name?.toLowerCase().includes(searchTerm.toLowerCase().split(',')[0])
+          );
+          const selectedResult = exactMatch || results[0];
+          
+          // Update UI state
+          setSelectedLocation(selectedResult);
+          setLocationName(selectedResult.name);
+          setSearchQuery(selectedResult.name);
+          setShowSearchResults(false);
+          
+          // Fetch listings for this location
+          await fetchListings(selectedResult);
+        }
+        // Auto-load complete, allow debounced search for manual searches
+        setIsAutoLoading(false);
+      } catch (err) {
+        console.error('[MapFirstLayout] Auto-search failed:', err);
+        setIsAutoLoading(false);  // Allow manual search even if auto-load fails
+      }
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, hasAutoLoadedListings, effectiveProperty, myProperty, myPropertyAddress]);
   
   return (
     <div className={`relative ${embedded ? 'h-full' : 'min-h-screen'} bg-slate-50 ${className}`}>
