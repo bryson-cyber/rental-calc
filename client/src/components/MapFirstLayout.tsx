@@ -592,26 +592,44 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       markersRef.current.push(marker);
     });
     
-    // Add my property marker
+    // Add my property marker - Enhanced for visibility
     if (myPropertyLocation) {
       const myPropertyElement = document.createElement('div');
       myPropertyElement.innerHTML = `
-        <div style="
-          width: 40px;
-          height: 40px;
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        ">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
+        <style>
+          @keyframes pulse-ring-blue {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.4; }
+            100% { transform: scale(0.8); opacity: 0.8; }
+          }
+        </style>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+          <!-- Pulsing ring -->
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:rgba(59,130,246,0.3);border-radius:50%;animation:pulse-ring-blue 2s infinite;"></div>
+          <!-- Main marker -->
+          <div style="
+            position:relative;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5), 0 0 0 3px #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+          ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2.5">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </div>
+          <!-- Label -->
+          <div style="margin-top:4px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+            YOUR PROPERTY
+          </div>
         </div>
       `;
       
@@ -620,6 +638,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         position: { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng },
         title: 'My Property',
         content: myPropertyElement.firstElementChild as HTMLElement,
+        zIndex: 9999 // Ensure it's always on top
       });
       
       markersRef.current.push(myMarker);

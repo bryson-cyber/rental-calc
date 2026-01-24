@@ -1134,7 +1134,7 @@ export default function LeadMagnet() {
           
           {/* Job-Focused Tab Navigation */}
           <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'advisor', 'market'] as TabType[]).map((tab, index) => {
+            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1158,7 +1158,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
-                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'advisor' ? 'Step 6' : tab === 'market' ? 'Step 7' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -2172,61 +2172,9 @@ export default function LeadMagnet() {
                 </div>
               );
             })()}
-            {/* Next Step CTA */}
-            <div className="bg-white border border-slate-200 rounded-xl p-6 text-center">
-              <h4 className="text-lg font-semibold text-slate-900 mb-2">Ready for the Next Step?</h4>
-              <p className="text-slate-500 mb-4">Find specific opportunities in this market</p>
-              <Button
-                onClick={() => {
-                  setExploreAddress(researchResult.marketName);
-                  setActiveTab('find');
-                }}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Find Opportunities in {researchResult.marketName}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const marketName = researchResult.marketName.split(',')[0].trim();
-                  const state = researchResult.marketName.split(',')[1]?.trim() || '';
-                  saveMarket({
-                    name: marketName,
-                    state: state,
-                    avgRevenue: researchResult.avgRevenue,
-                    avgOccupancy: researchResult.avgOccupancy,
-                  });
-                  toast.success(`Saved ${marketName} to your list!`);
-                }}
-                className={`ml-3 border-amber-500 text-amber-600 hover:bg-amber-50 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-amber-50' : ''}`}
-              >
-                {isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? (
-                  <>
-                    <BookmarkCheck className="w-4 h-4 mr-2" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Bookmark className="w-4 h-4 mr-2" />
-                    Save Market
-                  </>
-                )}
-              </Button>
-            </div>
             
-            {/* Comp Data Table - Individual Property Listings */}
-            {(locationSelection?.submarket?.id || locationSelection?.market?.id) && (
-              <div className="mt-8">
-                <CompDataTable
-                  key={`comp-table-${locationSelection.submarket?.id || locationSelection.market?.id}-${researchResult.marketName}`}
-                  submarketId={locationSelection.submarket?.id || locationSelection.market?.id || ''}
-                  marketName={researchResult.marketName}
-                />
-              </div>
-            )}
-            
-            {/* Historical Charts - Market Trends */}
+            {/* Historical Charts - Market Trends (YoY Data) */}
+            {/* Moved closer to Seasonality section per feedback */}
             {/* Note: Historical data API only works with market IDs, not submarket IDs */}
             {/* When a submarket is selected as a market (isSubmarketAsMarket), use the parent market ID if available */}
             {locationSelection?.market?.id && (
@@ -2268,6 +2216,60 @@ export default function LeadMagnet() {
                 )}
               </div>
             )}
+            
+            {/* Comp Data Table - Individual Property Listings */}
+            {(locationSelection?.submarket?.id || locationSelection?.market?.id) && (
+              <div className="mt-8">
+                <CompDataTable
+                  key={`comp-table-${locationSelection.submarket?.id || locationSelection.market?.id}-${researchResult.marketName}`}
+                  submarketId={locationSelection.submarket?.id || locationSelection.market?.id || ''}
+                  marketName={researchResult.marketName}
+                />
+              </div>
+            )}
+            
+            {/* Next Step CTA - Moved after Comp Data per feedback */}
+            <div className="mt-8 bg-white border border-slate-200 rounded-xl p-6 text-center">
+              <h4 className="text-lg font-semibold text-slate-900 mb-2">Ready for the Next Step?</h4>
+              <p className="text-slate-500 mb-4">Find specific opportunities in this market</p>
+              <Button
+                onClick={() => {
+                  setExploreAddress(researchResult.marketName);
+                  setActiveTab('find');
+                }}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Find Opportunities in {researchResult.marketName}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const marketName = researchResult.marketName.split(',')[0].trim();
+                  const state = researchResult.marketName.split(',')[1]?.trim() || '';
+                  saveMarket({
+                    name: marketName,
+                    state: state,
+                    avgRevenue: researchResult.avgRevenue,
+                    avgOccupancy: researchResult.avgOccupancy,
+                  });
+                  toast.success(`Saved ${marketName} to your list!`);
+                }}
+                className={`ml-3 border-amber-500 text-amber-600 hover:bg-amber-50 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-amber-50' : ''}`}
+              >
+                {isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? (
+                  <>
+                    <BookmarkCheck className="w-4 h-4 mr-2" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Save Market
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </section>
       )}

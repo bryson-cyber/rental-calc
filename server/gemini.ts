@@ -533,7 +533,7 @@ async function callGeminiMax(prompt: string): Promise<string> {
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0.1, // Low temperature for consistent, deterministic outputs
           maxOutputTokens: 65536, // Maximum output capacity
         }
       }),

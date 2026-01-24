@@ -4133,3 +4133,15 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Updated market-research-simple.ts to include all bedroom types in breakdown
 - [x] Bedroom types with no listings now show "Limited data available" with helpful message
 - [x] Tested with Denver zip code 80202 - 1BR, 2BR, 3BR now show actual revenue data
+
+
+## Turnkey Tool Feedback Implementation (Jan 24, 2026)
+
+### From TurnkeytoolFeedback.pdf:
+- [x] Move YoY data closer to market seasonality section (before or after), not after comps
+- [x] Move "Ready for Next Step" button after competitive market analysis (comp data)
+- [x] Fix property marker visibility on comp map - ensure user's property location is clearly visible
+- [x] Market Advisor placement - moved from Step 7 to Step 6 (after Step 5 Map) for better logical flow
+- [x] AI Advisor consistency - lowered LLM temperature from 0.7 to 0.1 for deterministic outputs
+
+### All 5 feedback items COMPLETE (Jan 24, 2026)

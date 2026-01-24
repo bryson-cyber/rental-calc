@@ -68,16 +68,36 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
     markersRef.current = [];
     infoWindowRef.current = new google.maps.InfoWindow();
 
-    // Add subject property marker (amber/gold)
+    // Add subject property marker (amber/gold) - Enhanced for visibility
     if (subjectProperty.latitude && subjectProperty.longitude) {
       const el = document.createElement("div");
-      el.innerHTML = `<div style="background:#F59E0B;border:3px solid #B45309;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`;
+      el.innerHTML = `
+        <style>
+          @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.4; }
+            100% { transform: scale(0.8); opacity: 0.8; }
+          }
+        </style>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+          <!-- Pulsing ring -->
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:rgba(245,158,11,0.3);border-radius:50%;animation:pulse-ring 2s infinite;"></div>
+          <!-- Main marker -->
+          <div style="position:relative;background:linear-gradient(135deg,#F59E0B,#D97706);border:4px solid #fff;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.4),0 0 0 3px #B45309;z-index:10;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <!-- Label -->
+          <div style="margin-top:4px;background:#B45309;color:white;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+            YOUR PROPERTY
+          </div>
+        </div>
+      `;
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map,
         position: { lat: subjectProperty.latitude, lng: subjectProperty.longitude },
-        title: "Subject Property",
+        title: "Your Property",
         content: el,
-        zIndex: 1000
+        zIndex: 9999 // Ensure it's always on top
       });
       marker.addListener("click", () => {
         infoWindowRef.current?.setContent(`<div style="padding:8px;max-width:200px;"><b style="color:#B45309;">Subject Property</b><p style="font-size:12px;color:#666;">${subjectProperty.address}</p>${subjectProperty.bedrooms ? `<p style="font-size:12px;">${subjectProperty.bedrooms} BR / ${subjectProperty.bathrooms || "?"} BA</p>` : ""}</div>`);
