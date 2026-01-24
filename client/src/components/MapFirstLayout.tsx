@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useProperty } from '@/contexts/PropertyContext';
 import { trpc } from '@/lib/trpc';
 import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,8 @@ interface MyPropertyData {
   bedrooms: number;
   bathrooms: number;
   zipCode?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface MapFirstLayoutProps {
@@ -150,6 +153,29 @@ const createMarkerElement = (color: string, revenue: number) => {
 const ITEMS_PER_PAGE = 20;
 
 export default function MapFirstLayout({ embedded = false, className = '', myProperty }: MapFirstLayoutProps) {
+  // PropertyContext integration
+  const { myProperty: contextProperty, hasProperty: contextHasProperty } = useProperty();
+  
+  // Load property from localStorage as fallback (for initial render before context is ready)
+  const [localStorageProperty, setLocalStorageProperty] = useState<MyPropertyData | null>(() => {
+    try {
+      const stored = localStorage.getItem('myProperty');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed;
+      }
+    } catch (e) {
+      console.error('[MapFirstLayout] Error loading from localStorage:', e);
+    }
+    return null;
+  });
+  
+  // Combined hasProperty check - use context first, then localStorage fallback
+  const hasProperty = contextHasProperty || (localStorageProperty !== null && localStorageProperty.address?.length > 0);
+  
+  // Get the effective property data (context takes precedence)
+  const effectiveProperty = contextProperty || localStorageProperty;
+  
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -216,6 +242,63 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Track if we've auto-populated from context
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
+  const [googleMapsReady, setGoogleMapsReady] = useState(false);
+  
+  // Check for Google Maps availability
+  useEffect(() => {
+    const checkGoogleMaps = () => {
+      if (window.google?.maps?.Geocoder) {
+        setGoogleMapsReady(true);
+      } else {
+        setTimeout(checkGoogleMaps, 100);
+      }
+    };
+    checkGoogleMaps();
+  }, []);
+  
+  // Auto-populate myPropertyLocation from PropertyContext
+  useEffect(() => {
+    // If we have a property from context with coordinates, use them directly
+    if (hasProperty && effectiveProperty?.latitude && effectiveProperty?.longitude && !myPropertyLocation) {
+      setMyPropertyLocation({
+        address: effectiveProperty.address,
+        lat: effectiveProperty.latitude,
+        lng: effectiveProperty.longitude
+      });
+      setMyPropertyAddress(effectiveProperty.address);
+      return;
+    }
+    
+    // If we have a property from context but no coordinates, geocode the address
+    if (hasProperty && effectiveProperty?.address && !myPropertyLocation && !hasAutoPopulated && googleMapsReady) {
+      setHasAutoPopulated(true);
+      
+      const geocoder = geocoderRef.current || new google.maps.Geocoder();
+      if (!geocoderRef.current) {
+        geocoderRef.current = geocoder;
+      }
+      
+      geocoder.geocode({ address: effectiveProperty.address })
+        .then((result) => {
+          if (result.results && result.results.length > 0) {
+            const location = result.results[0].geometry.location;
+            const newLocation = {
+              address: result.results[0].formatted_address,
+              lat: location.lat(),
+              lng: location.lng()
+            };
+            setMyPropertyLocation(newLocation);
+            setMyPropertyAddress(effectiveProperty.address);
+          }
+        })
+        .catch((error) => {
+          console.error('[MapFirstLayout] Geocoding failed:', error);
+        });
+    }
+  }, [hasProperty, effectiveProperty, myPropertyLocation, hasAutoPopulated, googleMapsReady]);
   
   // tRPC queries - using manual fetch pattern for dynamic queries
   const trpcUtils = trpc.useUtils();
@@ -876,21 +959,28 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </Select>
                 </div>
                 
-                {myPropertyLocation && (
+                {hasProperty && (
                   <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Max Distance</Label>
-                    <Select value={distanceFilter} onValueChange={setDistanceFilter}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Any Distance" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Any Distance</SelectItem>
-                        <SelectItem value="0.5">Within 0.5 miles</SelectItem>
-                        <SelectItem value="1">Within 1 mile</SelectItem>
-                        <SelectItem value="2">Within 2 miles</SelectItem>
-                        <SelectItem value="5">Within 5 miles</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs text-slate-500 mb-1.5 block">Max Distance from My Property</Label>
+                    {myPropertyLocation ? (
+                      <Select value={distanceFilter} onValueChange={setDistanceFilter}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Any Distance" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Any Distance</SelectItem>
+                          <SelectItem value="0.5">Within 0.5 miles</SelectItem>
+                          <SelectItem value="1">Within 1 mile</SelectItem>
+                          <SelectItem value="2">Within 2 miles</SelectItem>
+                          <SelectItem value="5">Within 5 miles</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="h-9 flex items-center text-sm text-slate-400">
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Locating your property...
+                      </div>
+                    )}
                   </div>
                 )}
                 

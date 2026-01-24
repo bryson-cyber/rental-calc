@@ -89,8 +89,37 @@ const defaultMarketAdvisorFilters: MarketAdvisorFilters = {
   listingTypeFilter: 'all',
 };
 
-// LocalStorage key for Market Advisor filters
+// LocalStorage keys
 const MARKET_ADVISOR_FILTERS_KEY = 'marketAdvisorFilters';
+const MY_PROPERTY_KEY = 'myProperty';
+
+// Helper to load property from localStorage
+function loadPropertyFromStorage(): PropertyDetails | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem(MY_PROPERTY_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('[PropertyContext] Error loading property from localStorage:', e);
+  }
+  return null;
+}
+
+// Helper to save property to localStorage
+function savePropertyToStorage(property: PropertyDetails | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (property) {
+      localStorage.setItem(MY_PROPERTY_KEY, JSON.stringify(property));
+    } else {
+      localStorage.removeItem(MY_PROPERTY_KEY);
+    }
+  } catch (e) {
+    console.error('[PropertyContext] Error saving property to localStorage:', e);
+  }
+}
 
 // Helper to load filters from localStorage
 function loadFiltersFromStorage(): MarketAdvisorFilters {
@@ -161,7 +190,9 @@ interface PropertyContextType {
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
 export function PropertyProvider({ children }: { children: ReactNode }) {
-  const [myProperty, setMyPropertyState] = useState<PropertyDetails | null>(null);
+  const [myProperty, setMyPropertyState] = useState<PropertyDetails | null>(() => {
+    return loadPropertyFromStorage();
+  });
   const [enforceApplesToApples, setEnforceApplesToApples] = useState(true);
   const [marketAdvisorFilters, setMarketAdvisorFiltersState] = useState<MarketAdvisorFilters>(() => {
     return loadFiltersFromStorage();
@@ -229,17 +260,21 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
   
   const setMyProperty = useCallback((property: PropertyDetails | null) => {
     setMyPropertyState(property);
+    savePropertyToStorage(property);
   }, []);
   
   const updateProperty = useCallback((updates: Partial<PropertyDetails>) => {
     setMyPropertyState(prev => {
       if (!prev) return null;
-      return { ...prev, ...updates };
+      const updated = { ...prev, ...updates };
+      savePropertyToStorage(updated);
+      return updated;
     });
   }, []);
   
   const clearProperty = useCallback(() => {
     setMyPropertyState(null);
+    savePropertyToStorage(null);
   }, []);
   
   const hasProperty = myProperty !== null && myProperty.address.length > 0;

@@ -4066,3 +4066,39 @@ Create a dedicated AI Advisor step that maximizes Gemini 2.5 Pro's full capacity
 - Test Location: Atlanta, Georgia
 - Test Date: 2026-01-23
 - All 5 high-priority bugs verified as working/fixed
+
+
+## Distance Filter Fix (Jan 24, 2026) - COMPLETE
+
+### Issue
+The "Max Distance from My Property" filter was not appearing in the Map View Filters panel even when a property was set.
+
+### Root Cause
+1. The PropertyContext was not persisting the property data to localStorage
+2. The MapFirstLayout component was not reading from PropertyContext correctly
+3. The Distance Filter condition was checking for coordinates that weren't being saved
+
+### Fix Applied
+1. **PropertyContext localStorage persistence:**
+   - Added `loadPropertyFromStorage()` function to load property from localStorage on mount
+   - Added `savePropertyToStorage()` function to save property to localStorage on change
+   - Updated `setMyProperty`, `updateProperty`, and `clearProperty` to persist to localStorage
+   - Updated state initialization to load from localStorage: `useState(() => loadPropertyFromStorage())`
+
+2. **MapFirstLayout PropertyContext integration:**
+   - Added `useProperty()` hook import
+   - Added localStorage fallback for property data
+   - Added auto-geocoding effect to get coordinates from property address
+   - Updated Distance Filter condition to show when `hasProperty` is true
+
+### Files Modified
+- `client/src/contexts/PropertyContext.tsx` - Added localStorage persistence
+- `client/src/components/MapFirstLayout.tsx` - Added PropertyContext integration and auto-geocoding
+
+### Verification
+- [x] Property persists across page refresh
+- [x] My Property card shows on home page
+- [x] Distance Filter appears in Map View Filters panel
+- [x] Distance Filter dropdown shows "Any Distance" option
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors
