@@ -4234,3 +4234,29 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Add Excel (.xlsx) export option using xlsx library
 - [x] Include filters applied in export filename
 - [x] Added to both MapFirstLayout and MapViewContent tables
+
+
+## Custom Notification System (Jan 25, 2026)
+
+### Email Notifications (Owner Alerts) - COMPLETE
+- [x] Set up email service integration (using built-in Manus notification)
+- [x] Create email notification triggers for Property Advisor reports
+- [x] Create email notification triggers for Market Advisor reports
+- [x] Include report summary data in email (property address, key metrics)
+- [x] Add user info to notifications (who ran the report)
+
+### In-App Toast Notifications - COMPLETE
+- [x] Create Toast notification component (client/src/components/ui/toast.tsx)
+- [x] Create ToastProvider context for global toast management
+- [x] Add success/error/info/warning toast variants
+- [x] Auto-dismiss with configurable duration (5s default, 8s for errors)
+- [x] Add toast notifications to key user actions
+
+### Notification Bell & History - COMPLETE
+- [x] Create notifications database table
+- [x] Create NotificationBell component with unread count badge
+- [x] Create NotificationPanel dropdown with notification list
+- [x] Add mark as read functionality
+- [x] Add clear all notifications option
+- [x] Store notification history for logged-in users
+- [x] Added notification bell to main page header

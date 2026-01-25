@@ -651,3 +651,68 @@ export const aiAdvisorCache = mysqlTable("ai_advisor_cache", {
 
 export type AiAdvisorCache = typeof aiAdvisorCache.$inferSelect;
 export type InsertAiAdvisorCache = typeof aiAdvisorCache.$inferInsert;
+
+
+/**
+ * Notifications table for storing in-app notifications
+ * Supports both user-specific and broadcast notifications
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Target user (null for broadcast notifications)
+  userId: int("userId"),
+  
+  // Notification type
+  type: mysqlEnum("type", ["report_generated", "system", "alert", "info"]).notNull(),
+  
+  // Notification content
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  
+  // Optional metadata (JSON for flexible data like report IDs, links, etc.)
+  metadata: json("metadata"),
+  
+  // Read status
+  isRead: int("isRead").default(0).notNull(), // 0 = unread, 1 = read
+  readAt: timestamp("readAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Owner notification log for tracking emails sent to the owner
+ * This helps avoid duplicate notifications and provides audit trail
+ */
+export const ownerNotificationLog = mysqlTable("owner_notification_log", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Notification type
+  notificationType: mysqlEnum("notificationType", ["property_report", "market_report", "lead_capture", "system"]).notNull(),
+  
+  // Report/entity reference
+  reportId: int("reportId"),
+  
+  // Notification content summary
+  title: varchar("title", { length: 255 }).notNull(),
+  summary: text("summary"),
+  
+  // User who triggered the notification (if applicable)
+  triggeredByIp: varchar("triggeredByIp", { length: 45 }),
+  triggeredByUserId: int("triggeredByUserId"),
+  
+  // Delivery status
+  deliveryStatus: mysqlEnum("deliveryStatus", ["pending", "sent", "failed"]).default("pending").notNull(),
+  deliveredAt: timestamp("deliveredAt"),
+  errorMessage: text("errorMessage"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OwnerNotificationLog = typeof ownerNotificationLog.$inferSelect;
+export type InsertOwnerNotificationLog = typeof ownerNotificationLog.$inferInsert;

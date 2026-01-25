@@ -83,6 +83,7 @@ import { StartWithProperty } from '@/components/StartWithProperty';
 import { useProperty } from '@/contexts/PropertyContext';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
 import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
+import { NotificationBell } from '@/components/NotificationBell';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -986,6 +987,11 @@ export default function LeadMagnet() {
   
   return (
     <div className="min-h-screen bg-white">
+      
+      {/* Fixed Notification Bell */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
       
       {/* ============================================ */}
       {/* HERO HEADLINE */}
