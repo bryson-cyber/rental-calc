@@ -4421,3 +4421,18 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Show: Stock Market (S&P 500), Real Estate Appreciation, High-Yield Savings time to match your profit
 - [x] Display right under the payback period for automatic framing
 - [x] Shows "To earn $X/year from $Y, other investments would take:" with specific years
+
+
+## Math Verification & Expense Slider Labels (Jan 25, 2026)
+### Math Audit
+- [x] Verify monthly revenue calculation ($59,767 / 12 = $4,980.58 ✓)
+- [x] Verify expense calculation ($4,980.58 × 20% = $996.12 ✓)
+- [x] Verify net profit calculation ($4,980.58 - $2,500 - $996.12 = $1,484.47 ✓)
+- [x] Verify break-even occupancy formula ($2,500 / ($257 × 30 × 0.8) = 40.5% ✓)
+- [x] Verify months-to-recoup calculation ($15,000 / $1,484.47 = 10.1 → 11 months ✓)
+- [x] Verify investment comparison years calculations (Stock 12+, RE 24+, Savings 30+ ✓)
+
+### Expense Slider Labels
+- [x] Add "Below Avg" label for 10-15%
+- [x] Add "Recommended" label for 20% (green, centered)
+- [x] Add "Above Avg" label for 25%+

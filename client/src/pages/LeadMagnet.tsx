@@ -1500,12 +1500,17 @@ export default function LeadMagnet() {
                     onChange={(e) => setExpensePercent(parseInt(e.target.value))}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
                   />
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>10%</span>
-                    <span>25%</span>
-                    <span>40%</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">10%</span>
+                    <span className="text-emerald-600 font-medium">20% Recommended</span>
+                    <span className="text-slate-400">40%</span>
                   </div>
-                  <p className="text-xs text-slate-500">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
+                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>Below Avg</span>
+                    <span></span>
+                    <span>Above Avg</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
                 </div>
                 
                 <button

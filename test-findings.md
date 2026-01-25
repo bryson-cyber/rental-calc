@@ -210,3 +210,20 @@ All calculations are correct and the UI is displaying properly!
 - Year 1 Profit: $17,814 (green)
 
 **Framing is now positive and comparative - shows Airbnb as dramatically faster than traditional investments**
+
+
+## Expense Slider Labels Test (Jan 25, 2026)
+
+**Expense Slider - Verified Working:**
+- Shows "20%" in amber at top right
+- Slider at 20% position (default)
+- Labels below slider:
+  - "10%" on left
+  - "20% Recommended" in green (center)
+  - "40%" on right
+- Second row of labels:
+  - "Below Avg" on left
+  - "Above Avg" on right
+- Helper text: "Covers cleaning, supplies, utilities, repairs, and platform fees"
+
+**All labels displaying correctly for demo**
