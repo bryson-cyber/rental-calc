@@ -214,7 +214,7 @@ function HeroRevenueCard({
                 <Info className="w-3.5 h-3.5" />
               </p>
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-[oklch(0.25_0_0)] text-white">
+            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
               <p className="text-sm leading-relaxed">{METRIC_TOOLTIPS.revenue}</p>
             </TooltipContent>
           </Tooltip>
@@ -378,7 +378,7 @@ function MetricCard({
         <TooltipTrigger asChild>
           {cardContent}
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs text-center p-3 bg-slate-900 text-white">
+        <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
           <p className="text-sm leading-relaxed">{tooltip}</p>
         </TooltipContent>
       </Tooltip>
@@ -484,15 +484,16 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
   };
   
   // Format YoY change display
-  const formatYoYChange = (change: number | null) => {
+  const formatYoYChange = (change: number | null, showLabel: boolean = false) => {
     if (change === null) return null;
     const isPositive = change >= 0;
     return (
       <span className={`inline-flex items-center text-xs font-medium ${
         isPositive ? 'text-emerald-600' : 'text-red-500'
-      }`}>
+      }`} title="Compared to same month last year">
         {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {Math.abs(change).toFixed(1)}%
+        {showLabel && <span className="ml-1 text-slate-400 font-normal">vs LY</span>}
       </span>
     );
   };
@@ -563,7 +564,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                 {METRIC_CONFIG[metric].label}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-slate-900 text-white">
+            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
               <p className="text-sm leading-relaxed">
                 {metric === 'revenue' && METRIC_TOOLTIPS.revenue}
                 {metric === 'adr' && METRIC_TOOLTIPS.adr}
@@ -651,7 +652,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                 <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                    <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                    <div className="bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg border border-[oklch(0.90_0_0)]">
                       <p className="font-medium mb-1">{formatMonth(month.month)}</p>
                       {selectedMetrics.includes('revenue') && (
                         <div className="flex items-center gap-2">
@@ -761,7 +762,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                     <div key={idx} className="flex flex-col items-center h-full justify-end group relative">
                       {/* Tooltip */}
                       <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                        <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                        <div className="bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg border border-[oklch(0.90_0_0)]">
                           <p className="font-medium mb-2">{formatMonth(month.month)}</p>
                           <div className="space-y-1">
                             <div className="flex justify-between gap-4">
@@ -981,13 +982,11 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
           <p className="text-xs font-medium text-slate-700 mb-2">Best Months</p>
           <div className="space-y-1">
             {peakMonths.map((m, i) => {
-              const yoyChange = getYoYChange(m);
               return (
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-slate-900">{formatCurrency(m.revenue)}</span>
-                    {showYoY && formatYoYChange(yoyChange.revenue)}
                   </div>
                 </div>
               );
@@ -998,13 +997,11 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
           <p className="text-xs font-medium text-slate-700 mb-2">Slowest Months</p>
           <div className="space-y-1">
             {slowMonths.map((m, i) => {
-              const yoyChange = getYoYChange(m);
               return (
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-slate-700">{formatCurrency(m.revenue)}</span>
-                    {showYoY && formatYoYChange(yoyChange.revenue)}
                   </div>
                 </div>
               );
@@ -1568,8 +1565,8 @@ function MarketInsights({
           </p>
           <p className="text-xs text-slate-500">Similar Listings</p>
           <p className="text-xs mt-1 text-purple-600">
-            {(totalListings || totalComparables) > 50 ? 'Saturated market' : 
-             (totalListings || totalComparables) > 20 ? 'Moderate competition' : 'Low competition'}
+            {(totalListings || totalComparables) > 50 ? 'Established market' : 
+             (totalListings || totalComparables) > 20 ? 'Growing market' : 'Emerging market'}
           </p>
         </div>
       </div>
@@ -1833,7 +1830,7 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
             <Info className="w-4 h-4 text-slate-400" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs p-3 bg-slate-900 text-white">
+        <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
           <p className="text-sm leading-relaxed">
             More comps = more reliable estimate. Closer comps = more accurate for your specific location. 
             10+ comps within 1 mile is ideal!
@@ -2086,7 +2083,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* Market Insights Panel - Booking Patterns & Supply Trend - Updated */}
       {marketId && (
-        <MarketInsightsPanel marketId={String(marketId)} />
+        <MarketInsightsPanel marketId={String(marketId)} bedrooms={bedrooms} />
       )}
       
       {/* Market Health Grade */}

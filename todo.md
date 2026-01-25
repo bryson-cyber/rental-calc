@@ -4316,3 +4316,40 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [ ] Add explainer tooltips/descriptions for "Occupancy"
 - [ ] Add explainer tooltips/descriptions for other key metrics
 - [ ] Help users understand what each metric means with contextual help
+
+
+## Step 3 UI Fixes (Jan 25, 2026)
+
+- [ ] Multi-Year Trends: 1/2/3/5 Year buttons don't change data when clicked
+- [ ] Best/Slowest Months: Red YoY percentages are confusing - need to clarify what they mean
+- [ ] Supply Trend: Add Y-axis labels with actual numbers to anchor the bars
+- [ ] Market Insights: Improve color scheme (brown/muddy colors look unprofessional)
+
+
+## Live Demo Stress Test Fixes (Jan 25, 2026)
+- [x] Forward-Looking Demand: Remove gradient, match styling to Booking Patterns/Supply Trends (white/light card background)
+
+
+## Step 3 Demo Critical Fixes (Jan 25, 2026)
+- [x] Supply Trend: Add hover tooltip showing exact number for each month bar
+- [x] Forward-Looking Demand: Revert layout to original, only change colors (not layout)
+- [x] Forward-Looking Demand: Add tooltip explanation that's visible on UI
+- [x] All tooltips: Change from dark mode to light mode (professional look)
+- [x] Multi-Year Trends: Add explanation of what "Multi-Year Trends" means
+- [x] Multi-Year Trends: Fix styling to match UI guidelines (light mode)
+- [x] Market Landscape: Change "Saturated market" to "Established market" (less intimidating)
+- [ ] Supply Trend: Fix 12-Month Change showing 0% (verify data accuracy)
+- [x] Seasonal Forecast: Removed YoY percentages from Best/Slowest months summary (kept in detailed YoY tab)
+- [ ] Test every button in Step 3 systematically
+
+
+## Step 3 Critical Fixes (Jan 25, 2026 - Demo Day)
+- [ ] Multi-Year Trends: Change labels from "1 Year, 2 Years" to "1 Year Ago, 2 Years Ago"
+- [ ] Supply Trend: Fix 12-Month Change calculation (showing 0% incorrectly)
+- [ ] Forward-Looking Demand: Fix card design - cards too small, awkward spacing
+- [ ] CRITICAL: Filter ALL data by bedroom count (apples-to-apples comparison)
+  - Revenue must be for selected bedroom count only
+  - Occupancy must be for selected bedroom count only
+  - Active Listings must be for selected bedroom count only
+  - Supply Trend must be for selected bedroom count only
+  - All market data must match user's property configuration

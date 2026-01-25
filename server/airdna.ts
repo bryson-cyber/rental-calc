@@ -4430,15 +4430,22 @@ export async function getMarketFutureDailyData(
       return [];
     }
 
+    // Log first item to debug field names
+    if (responseData.length > 0) {
+      console.log('[AirDNA] Future pricing first item fields:', Object.keys(responseData[0]));
+      console.log('[AirDNA] Future pricing sample:', JSON.stringify(responseData[0]));
+    }
+
     return responseData.map((d: any) => ({
       date: d.date,
-      supply: d.supply || 0,
-      demand: d.demand || 0,
-      adr: d.adr || 0,
-      adr_percentile_25: d.adr_percentile_25 || 0,
-      adr_percentile_50: d.adr_percentile_50 || 0,
-      adr_percentile_75: d.adr_percentile_75 || 0,
-      occupancy: d.occupancy || 0,
+      // Check all possible field names for supply/demand/adr
+      supply: d.supply ?? d.active_listings ?? d.listing_count ?? d.available ?? 0,
+      demand: d.demand ?? d.booked ?? d.reserved ?? d.nights_booked ?? 0,
+      adr: d.adr ?? d.daily_rate ?? d.average_daily_rate ?? d.rate ?? 0,
+      adr_percentile_25: d.adr_percentile_25 ?? d.adr_p25 ?? 0,
+      adr_percentile_50: d.adr_percentile_50 ?? d.adr_p50 ?? d.adr ?? 0,
+      adr_percentile_75: d.adr_percentile_75 ?? d.adr_p75 ?? 0,
+      occupancy: d.occupancy ?? d.occ ?? d.occupancy_rate ?? 0,
     }));
   } catch (error) {
     console.error("Error fetching future daily data:", error);
@@ -5403,8 +5410,13 @@ export async function getMarketSupplyTrend(
     );
     console.log('[getMarketSupplyTrend] Sorted data sample:', JSON.stringify(sortedData.slice(0, 2)));
 
-    const current = sortedData[sortedData.length - 1]?.listing_count || sortedData[sortedData.length - 1]?.value || 0;
-    const yearAgo = sortedData[0]?.listing_count || sortedData[0]?.value || current;
+    // Helper to extract listing count from any possible field name
+    const getListingCount = (item: any): number => {
+      return item?.active_listings ?? item?.active_listings_count ?? item?.listing_count ?? item?.value ?? item?.count ?? 0;
+    };
+    
+    const current = getListingCount(sortedData[sortedData.length - 1]);
+    const yearAgo = getListingCount(sortedData[0]) || current;
     const netChange = current - yearAgo;
     const percentChange = yearAgo > 0 ? Math.round((netChange / yearAgo) * 100) : 0;
 
@@ -5423,9 +5435,9 @@ export async function getMarketSupplyTrend(
 
     const monthlyData = sortedData.map((d: any, i: number) => ({
       month: d.date || d.month,
-      active_listings: d.listing_count || d.value || 0,
+      active_listings: getListingCount(d),
       change_from_previous: i > 0 
-        ? (d.listing_count || d.value || 0) - (sortedData[i-1].listing_count || sortedData[i-1].value || 0)
+        ? getListingCount(d) - getListingCount(sortedData[i-1])
         : 0,
     }));
 

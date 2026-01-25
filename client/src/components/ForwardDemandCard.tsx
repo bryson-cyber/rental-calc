@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Calendar, ChevronDown, ChevronUp, Flame, Sun, Cloud, Snowflake } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, ChevronDown, ChevronUp, Flame, Sun, Cloud, Snowflake, Info } from 'lucide-react';
 
 interface ForwardDemandIndicators {
   next30Days: {
@@ -35,6 +35,30 @@ interface ForwardDemandCardProps {
   isLoading?: boolean;
 }
 
+// Simple tooltip component - LIGHT MODE for professional look
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <span className="relative group inline-flex w-full">
+      {children}
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg shadow-lg border border-[oklch(0.90_0_0)] opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal pointer-events-none z-10 max-w-xs text-center">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+// Tooltip explanations (third-grader friendly)
+const DEMAND_TOOLTIPS = {
+  forwardDemand: "This shows how busy the market will be in the future. Think of it like a weather forecast, but for bookings!",
+  next30Days: "How booked up properties will be in the next month. Hot = very busy, Cold = slow season.",
+  next180Days: "A 6-month outlook. This helps you plan for the bigger picture.",
+  peakPeriod: "The busiest week coming up - when most guests want to book. Great time to charge more!",
+  lowPeriod: "The slowest week coming up - fewer guests booking. Consider discounts or minimum stays.",
+  avgAdr: "Average nightly rate hosts are charging. Higher = guests willing to pay more.",
+  avgSupply: "How many listings are available. More supply = more competition.",
+  avgDemand: "How many nights guests want to book. Higher demand = easier to get bookings.",
+};
+
 const trendIcons = {
   hot: <Flame className="w-5 h-5 text-red-500" />,
   warm: <Sun className="w-5 h-5 text-orange-500" />,
@@ -42,11 +66,19 @@ const trendIcons = {
   cold: <Snowflake className="w-5 h-5 text-blue-600" />,
 };
 
+// Light theme colors matching other Step 3 cards
 const trendColors = {
-  hot: 'bg-red-500/20 text-red-400 border-red-500/30',
-  warm: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  cool: 'bg-blue-400/20 text-blue-400 border-blue-400/30',
-  cold: 'bg-blue-600/20 text-blue-300 border-blue-600/30',
+  hot: 'bg-emerald-50 border-emerald-200',
+  warm: 'bg-amber-50 border-amber-200',
+  cool: 'bg-slate-50 border-slate-200',
+  cold: 'bg-blue-50 border-blue-200',
+};
+
+const trendTextColors = {
+  hot: 'text-emerald-700',
+  warm: 'text-amber-700',
+  cool: 'text-slate-700',
+  cold: 'text-blue-700',
 };
 
 const formatDate = (dateStr: string) => {
@@ -68,92 +100,116 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-[#0F172A]/50 rounded-xl border border-white/10 p-6 animate-pulse">
-        <div className="h-6 bg-white/10 rounded w-48 mb-4" />
+      <div className="bg-[oklch(0.98_0.01_265)] rounded-xl border border-[oklch(0.90_0.01_265)] p-6 animate-pulse">
+        <div className="h-6 bg-[oklch(0.90_0.01_265)] rounded w-48 mb-4" />
         <div className="grid grid-cols-2 gap-4">
-          <div className="h-24 bg-white/10 rounded" />
-          <div className="h-24 bg-white/10 rounded" />
+          <div className="h-32 bg-[oklch(0.90_0.01_265)] rounded" />
+          <div className="h-32 bg-[oklch(0.90_0.01_265)] rounded" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0F172A]/50 rounded-xl border border-white/10 overflow-hidden">
+    <div className="bg-[oklch(0.98_0.01_265)] rounded-xl border border-[oklch(0.90_0.01_265)] overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-[oklch(0.90_0.01_265)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="text-lg font-semibold text-white">Forward-Looking Demand</h3>
+            <Calendar className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="text-base font-medium text-[oklch(0.30_0_0)] flex items-center gap-2">
+              Forward-Looking Demand
+              <Tooltip text={DEMAND_TOOLTIPS.forwardDemand}>
+                <Info className="w-4 h-4 text-[oklch(0.60_0_0)] cursor-help" />
+              </Tooltip>
+            </h3>
           </div>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-white/60 hover:text-white transition-colors"
+            className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.30_0_0)] transition-colors"
           >
             {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
+        <p className="text-xs text-[oklch(0.55_0_0)] mt-1">
+          Forecast based on booking trends and market data
+        </p>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Full width cards */}
       <div className="p-4">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Next 30 Days */}
-          <div className={`p-4 rounded-lg border ${trendColors[data.next30Days.trend]}`}>
-            <div className="flex items-center gap-2 mb-2">
-              {trendIcons[data.next30Days.trend]}
-              <span className="text-sm font-medium">Next 30 Days</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Next 30 Days - Full width card */}
+          <Tooltip text={DEMAND_TOOLTIPS.next30Days}>
+            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${trendColors[data.next30Days.trend]}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {trendIcons[data.next30Days.trend]}
+                  <span className={`text-sm font-semibold ${trendTextColors[data.next30Days.trend]}`}>Next 30 Days</span>
+                </div>
+              </div>
+              <div className={`text-4xl font-bold mb-2 ${trendTextColors[data.next30Days.trend]}`}>
+                {Math.round(data.next30Days.avgOccupancy)}%
+              </div>
+              <div className={`text-sm font-medium ${trendTextColors[data.next30Days.trend]} opacity-80`}>
+                {data.next30Days.trendLabel}
+              </div>
             </div>
-            <div className="text-2xl font-bold mb-1">
-              {Math.round(data.next30Days.avgOccupancy)}%
-            </div>
-            <div className="text-xs opacity-80">{data.next30Days.trendLabel}</div>
-          </div>
+          </Tooltip>
 
-          {/* Next 180 Days */}
-          <div className={`p-4 rounded-lg border ${trendColors[data.next180Days.trend]}`}>
-            <div className="flex items-center gap-2 mb-2">
-              {trendIcons[data.next180Days.trend]}
-              <span className="text-sm font-medium">Next 180 Days</span>
+          {/* Next 180 Days - Full width card */}
+          <Tooltip text={DEMAND_TOOLTIPS.next180Days}>
+            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${trendColors[data.next180Days.trend]}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {trendIcons[data.next180Days.trend]}
+                  <span className={`text-sm font-semibold ${trendTextColors[data.next180Days.trend]}`}>Next 180 Days</span>
+                </div>
+              </div>
+              <div className={`text-4xl font-bold mb-2 ${trendTextColors[data.next180Days.trend]}`}>
+                {Math.round(data.next180Days.avgOccupancy)}%
+              </div>
+              <div className={`text-sm font-medium ${trendTextColors[data.next180Days.trend]} opacity-80`}>
+                {data.next180Days.trendLabel}
+              </div>
             </div>
-            <div className="text-2xl font-bold mb-1">
-              {Math.round(data.next180Days.avgOccupancy)}%
-            </div>
-            <div className="text-xs opacity-80">{data.next180Days.trendLabel}</div>
-          </div>
+          </Tooltip>
         </div>
 
-        {/* Peak & Low Periods */}
+        {/* Peak & Low Periods - Full width cards */}
         {(data.peakPeriod || data.lowPeriod) && (
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {data.peakPeriod && (
-              <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
-                <div className="flex items-center gap-2 text-green-400 text-sm mb-1">
-                  <TrendingUp className="w-4 h-4" />
-                  Peak Period
+              <Tooltip text={DEMAND_TOOLTIPS.peakPeriod}>
+                <div className="p-4 bg-emerald-50 rounded-xl border-2 border-emerald-200 cursor-help w-full">
+                  <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                    <TrendingUp className="w-5 h-5" />
+                    <span className="font-semibold">Peak Period</span>
+                  </div>
+                  <div className="text-[oklch(0.25_0_0)] text-lg font-bold">
+                    {formatDate(data.peakPeriod.startDate)} - {formatDate(data.peakPeriod.endDate)}
+                  </div>
+                  <div className="text-emerald-600 text-sm font-medium mt-1">
+                    {Math.round(data.peakPeriod.avgOccupancy)}% occupancy
+                  </div>
                 </div>
-                <div className="text-white text-sm font-medium">
-                  {formatDate(data.peakPeriod.startDate)} - {formatDate(data.peakPeriod.endDate)}
-                </div>
-                <div className="text-green-400 text-xs">
-                  {Math.round(data.peakPeriod.avgOccupancy)}% occupancy
-                </div>
-              </div>
+              </Tooltip>
             )}
             {data.lowPeriod && (
-              <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                <div className="flex items-center gap-2 text-amber-400 text-sm mb-1">
-                  <TrendingDown className="w-4 h-4" />
-                  Low Period
+              <Tooltip text={DEMAND_TOOLTIPS.lowPeriod}>
+                <div className="p-4 bg-amber-50 rounded-xl border-2 border-amber-200 cursor-help w-full">
+                  <div className="flex items-center gap-2 text-amber-600 mb-2">
+                    <TrendingDown className="w-5 h-5" />
+                    <span className="font-semibold">Low Period</span>
+                  </div>
+                  <div className="text-[oklch(0.25_0_0)] text-lg font-bold">
+                    {formatDate(data.lowPeriod.startDate)} - {formatDate(data.lowPeriod.endDate)}
+                  </div>
+                  <div className="text-amber-600 text-sm font-medium mt-1">
+                    {Math.round(data.lowPeriod.avgOccupancy)}% occupancy
+                  </div>
                 </div>
-                <div className="text-white text-sm font-medium">
-                  {formatDate(data.lowPeriod.startDate)} - {formatDate(data.lowPeriod.endDate)}
-                </div>
-                <div className="text-amber-400 text-xs">
-                  {Math.round(data.lowPeriod.avgOccupancy)}% occupancy
-                </div>
-              </div>
+              </Tooltip>
             )}
           </div>
         )}
@@ -161,40 +217,40 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
 
       {/* Expanded Details */}
       {expanded && (
-        <div className="p-4 border-t border-white/10 bg-white/5">
-          <h4 className="text-sm font-medium text-white/70 mb-3">Detailed Metrics</h4>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <div className="text-xs text-white/50 mb-2">30-Day Forecast</div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg ADR</span>
-                  <span className="text-white font-medium">{formatCurrency(data.next30Days.avgAdr)}</span>
+        <div className="p-4 border-t border-[oklch(0.90_0.01_265)] bg-[oklch(0.96_0.01_265)]">
+          <h4 className="text-sm font-semibold text-[oklch(0.40_0_0)] mb-4">Detailed Metrics</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg p-4 border border-[oklch(0.90_0.01_265)]">
+              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">30-Day Forecast</div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Nightly Rate</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(data.next30Days.avgAdr)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg Supply</span>
-                  <span className="text-white font-medium">{Math.round(data.next30Days.avgSupply).toLocaleString()}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Supply</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next30Days.avgSupply).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg Demand</span>
-                  <span className="text-white font-medium">{Math.round(data.next30Days.avgDemand).toLocaleString()}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Demand</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next30Days.avgDemand).toLocaleString()}</span>
                 </div>
               </div>
             </div>
-            <div>
-              <div className="text-xs text-white/50 mb-2">180-Day Forecast</div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg ADR</span>
-                  <span className="text-white font-medium">{formatCurrency(data.next180Days.avgAdr)}</span>
+            <div className="bg-white rounded-lg p-4 border border-[oklch(0.90_0.01_265)]">
+              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">180-Day Forecast</div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Nightly Rate</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(data.next180Days.avgAdr)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg Supply</span>
-                  <span className="text-white font-medium">{Math.round(data.next180Days.avgSupply).toLocaleString()}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Supply</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next180Days.avgSupply).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">Avg Demand</span>
-                  <span className="text-white font-medium">{Math.round(data.next180Days.avgDemand).toLocaleString()}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Demand</span>
+                  <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next180Days.avgDemand).toLocaleString()}</span>
                 </div>
               </div>
             </div>

@@ -1595,11 +1595,11 @@ export const appRouter = router({
 
     // Get booking patterns for a market
     getBookingPatterns: publicProcedure
-      .input(z.object({ marketId: z.union([z.number(), z.string()]) }))
+      .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
       .mutation(async ({ input }) => {
         try {
           // Keep the full market ID (e.g., 'airdna-163') - API requires it
-          const result = await getMarketBookingPatterns(String(input.marketId));
+          const result = await getMarketBookingPatterns(String(input.marketId), input.bedrooms);
           return {
             success: true,
             data: result,
@@ -1616,10 +1616,10 @@ export const appRouter = router({
 
     // Get supply trend for a market
     getSupplyTrend: publicProcedure
-      .input(z.object({ marketId: z.union([z.number(), z.string()]) }))
+      .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
       .mutation(async ({ input }) => {
         try {
-          const result = await getMarketSupplyTrend(String(input.marketId));
+          const result = await getMarketSupplyTrend(String(input.marketId), input.bedrooms);
           console.log('[getSupplyTrend] Result monthly_data sample:', result?.monthly_data?.slice(0, 2));
           return {
             success: true,

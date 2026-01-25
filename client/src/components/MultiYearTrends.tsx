@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calendar, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { trpc } from '@/lib/trpc';
 
 interface DataPoint {
@@ -14,10 +15,10 @@ interface MultiYearTrendsProps {
 type TimeRange = 12 | 24 | 36 | 60;
 
 const timeRangeLabels: Record<TimeRange, string> = {
-  12: '1 Year',
-  24: '2 Years',
-  36: '3 Years',
-  60: '5 Years',
+  12: '1 Year Ago',
+  24: '2 Years Ago',
+  36: '3 Years Ago',
+  60: '5 Years Ago',
 };
 
 function calculateCAGR(startValue: number, endValue: number, years: number): number {
@@ -31,6 +32,22 @@ function calculateYoY(data: DataPoint[]): number {
   const yearAgoValue = data[data.length - 13]?.value || 0;
   if (yearAgoValue === 0) return 0;
   return ((currentValue - yearAgoValue) / yearAgoValue) * 100;
+}
+
+// Calculate average of all values in the selected time range
+function calculateAverage(data: DataPoint[]): number {
+  if (!data || data.length === 0) return 0;
+  const sum = data.reduce((acc, d) => acc + d.value, 0);
+  return sum / data.length;
+}
+
+// Calculate change from first to last value in the period
+function calculatePeriodChange(data: DataPoint[]): number {
+  if (!data || data.length < 2) return 0;
+  const firstValue = data[0]?.value || 0;
+  const lastValue = data[data.length - 1]?.value || 0;
+  if (firstValue === 0) return 0;
+  return ((lastValue - firstValue) / firstValue) * 100;
 }
 
 function Sparkline({ data, color }: { data: DataPoint[]; color: string }) {
@@ -87,11 +104,56 @@ export function MultiYearTrends({ marketId }: MultiYearTrendsProps) {
     const revValues = getFirstLast(revenue);
     const adrValues = getFirstLast(adr);
     const listValues = getFirstLast(listings);
+    
+    // Use AVERAGE values for the display, not just the latest
+    const occAvg = calculateAverage(occupancy);
+    const revAvg = calculateAverage(revenue);
+    const adrAvg = calculateAverage(adr);
+    const listAvg = calculateAverage(listings);
+    
+    // Use period change (first to last) for the trend indicator
+    const occChange = calculatePeriodChange(occupancy);
+    const revChange = calculatePeriodChange(revenue);
+    const adrChange = calculatePeriodChange(adr);
+    const listChange = calculatePeriodChange(listings);
+    
     return {
-      occupancy: { data: occupancy, current: occValues.last, yoy: calculateYoY(occupancy), cagr: calculateCAGR(occValues.first, occValues.last, years), color: '#22c55e', format: (v: number) => `${Math.round(v)}%` },
-      revenue: { data: revenue, current: revValues.last, yoy: calculateYoY(revenue), cagr: calculateCAGR(revValues.first, revValues.last, years), color: '#C9A962', format: (v: number) => `$${Math.round(v).toLocaleString()}` },
-      adr: { data: adr, current: adrValues.last, yoy: calculateYoY(adr), cagr: calculateCAGR(adrValues.first, adrValues.last, years), color: '#3b82f6', format: (v: number) => `$${Math.round(v)}` },
-      listings: { data: listings, current: listValues.last, yoy: calculateYoY(listings), cagr: calculateCAGR(listValues.first, listValues.last, years), color: '#a855f7', format: (v: number) => Math.round(v).toLocaleString() },
+      occupancy: { 
+        data: occupancy, 
+        current: occAvg, // Average over period
+        latest: occValues.last, // Latest value for reference
+        yoy: occChange, // Change over selected period
+        cagr: calculateCAGR(occValues.first, occValues.last, years), 
+        color: '#22c55e', 
+        format: (v: number) => `${Math.round(v)}%` 
+      },
+      revenue: { 
+        data: revenue, 
+        current: revAvg, 
+        latest: revValues.last,
+        yoy: revChange, 
+        cagr: calculateCAGR(revValues.first, revValues.last, years), 
+        color: '#C9A962', 
+        format: (v: number) => `$${Math.round(v).toLocaleString()}` 
+      },
+      adr: { 
+        data: adr, 
+        current: adrAvg, 
+        latest: adrValues.last,
+        yoy: adrChange, 
+        cagr: calculateCAGR(adrValues.first, adrValues.last, years), 
+        color: '#3b82f6', 
+        format: (v: number) => `$${Math.round(v)}` 
+      },
+      listings: { 
+        data: listings, 
+        current: listAvg, 
+        latest: listValues.last,
+        yoy: listChange, 
+        cagr: calculateCAGR(listValues.first, listValues.last, years), 
+        color: '#a855f7', 
+        format: (v: number) => Math.round(v).toLocaleString() 
+      },
     };
   }, [data, timeRange]);
 
@@ -118,65 +180,81 @@ export function MultiYearTrends({ marketId }: MultiYearTrendsProps) {
   }
 
   return (
-    <div className="bg-[#0F172A]/50 rounded-xl border border-white/10 overflow-hidden">
-      <div className="p-4 border-b border-white/10">
+    <div className="bg-[oklch(0.98_0.01_265)] rounded-xl border border-[oklch(0.90_0.01_265)] overflow-hidden">
+      <div className="p-4 border-b border-[oklch(0.90_0.01_265)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="text-lg font-semibold text-white">Multi-Year Trends</h3>
+            <Calendar className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="text-base font-medium text-[oklch(0.30_0_0)]">Multi-Year Trends</h3>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-4 h-4 text-[oklch(0.60_0_0)] cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                <p className="text-sm leading-relaxed">See how this market has performed over time. Like looking at a stock chart - you can see if the market is growing, stable, or declining. Use the buttons to view 1, 2, 3, or 5 years of history.</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-white/5 rounded-lg p-1">
+            <div className="flex bg-[oklch(0.95_0_0)] rounded-lg p-1">
               {([12, 24, 36, 60] as TimeRange[]).map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    timeRange === range ? 'bg-[#C9A962] text-[#0F172A]' : 'text-white/60 hover:text-white'
+                    timeRange === range ? 'bg-[oklch(0.55_0.14_75)] text-white' : 'text-[oklch(0.50_0_0)] hover:text-[oklch(0.30_0_0)]'
                   }`}
                 >
                   {timeRangeLabels[range]}
                 </button>
               ))}
             </div>
-            <button onClick={() => setExpanded(!expanded)} className="text-white/60 hover:text-white transition-colors">
+            <button onClick={() => setExpanded(!expanded)} className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.30_0_0)] transition-colors">
               {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
           </div>
         </div>
+        {/* Period indicator */}
+        <p className="text-xs text-[oklch(0.55_0_0)] mt-1">
+          Showing {timeRangeLabels[timeRange]} average • Change from start to end of period
+        </p>
       </div>
       <div className="p-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <div className="p-4 bg-[oklch(0.96_0.01_265)] rounded-lg border border-[oklch(0.90_0.01_265)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Occupancy</span>
+              <span className="text-sm text-[oklch(0.45_0_0)]">Occupancy</span>
               <TrendIndicator value={metrics.occupancy.yoy} />
             </div>
-            <div className="text-2xl font-bold text-white mb-2">{metrics.occupancy.format(metrics.occupancy.current)}</div>
+            <div className="text-2xl font-bold text-[oklch(0.25_0_0)] mb-1">{metrics.occupancy.format(metrics.occupancy.current)}</div>
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-2">avg over {timeRangeLabels[timeRange]}</div>
             <Sparkline data={metrics.occupancy.data} color={metrics.occupancy.color} />
           </div>
-          <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <div className="p-4 bg-[oklch(0.96_0.01_265)] rounded-lg border border-[oklch(0.90_0.01_265)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Avg Revenue</span>
+              <span className="text-sm text-[oklch(0.45_0_0)]">Avg Revenue</span>
               <TrendIndicator value={metrics.revenue.yoy} />
             </div>
-            <div className="text-2xl font-bold text-white mb-2">{metrics.revenue.format(metrics.revenue.current)}</div>
+            <div className="text-2xl font-bold text-[oklch(0.25_0_0)] mb-1">{metrics.revenue.format(metrics.revenue.current)}</div>
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-2">avg over {timeRangeLabels[timeRange]}</div>
             <Sparkline data={metrics.revenue.data} color={metrics.revenue.color} />
           </div>
-          <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <div className="p-4 bg-[oklch(0.96_0.01_265)] rounded-lg border border-[oklch(0.90_0.01_265)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Avg Daily Rate</span>
+              <span className="text-sm text-[oklch(0.45_0_0)]">Avg Daily Rate</span>
               <TrendIndicator value={metrics.adr.yoy} />
             </div>
-            <div className="text-2xl font-bold text-white mb-2">{metrics.adr.format(metrics.adr.current)}</div>
+            <div className="text-2xl font-bold text-[oklch(0.25_0_0)] mb-1">{metrics.adr.format(metrics.adr.current)}</div>
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-2">avg over {timeRangeLabels[timeRange]}</div>
             <Sparkline data={metrics.adr.data} color={metrics.adr.color} />
           </div>
-          <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+          <div className="p-4 bg-[oklch(0.96_0.01_265)] rounded-lg border border-[oklch(0.90_0.01_265)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white/70">Active Listings</span>
+              <span className="text-sm text-[oklch(0.45_0_0)]">Active Listings</span>
               <TrendIndicator value={metrics.listings.yoy} />
             </div>
-            <div className="text-2xl font-bold text-white mb-2">{metrics.listings.format(metrics.listings.current)}</div>
+            <div className="text-2xl font-bold text-[oklch(0.25_0_0)] mb-1">{metrics.listings.format(metrics.listings.current)}</div>
+            <div className="text-xs text-[oklch(0.55_0_0)] mb-2">avg over {timeRangeLabels[timeRange]}</div>
             <Sparkline data={metrics.listings.data} color={metrics.listings.color} />
           </div>
         </div>
