@@ -311,6 +311,8 @@ export default function LeadMagnet() {
   const [monthlyRent, setMonthlyRent] = useState('');
   const [bedrooms, setBedrooms] = useState('2');
   const [bathrooms, setBathrooms] = useState('1');
+  const [furnitureCost, setFurnitureCost] = useState('15000');
+  const [expensePercent, setExpensePercent] = useState(20);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -1460,6 +1462,52 @@ export default function LeadMagnet() {
                   </div>
                 </div>
                 
+                {/* Furniture/Setup Cost */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                    Furniture & Setup Cost
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={furnitureCost}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || parseFloat(val) >= 0) {
+                        setFurnitureCost(val);
+                      }
+                    }}
+                    placeholder="15000"
+                    className="input-apple h-12"
+                  />
+                  <p className="text-xs text-slate-500">Estimated cost to furnish and set up the property</p>
+                </div>
+                
+                {/* Expense Percentage Slider */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                      Operating Expenses
+                    </label>
+                    <span className="text-sm font-semibold text-amber-600">{expensePercent}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="40"
+                    step="5"
+                    value={expensePercent}
+                    onChange={(e) => setExpensePercent(parseInt(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <div className="flex justify-between text-xs text-slate-400">
+                    <span>10%</span>
+                    <span>25%</span>
+                    <span>40%</span>
+                  </div>
+                  <p className="text-xs text-slate-500">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
+                </div>
+                
                 <button
                   onClick={handleAnalyze}
                   disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0}
@@ -2489,6 +2537,8 @@ export default function LeadMagnet() {
               bedrooms={parseInt(bedrooms)}
               bathrooms={parseFloat(bathrooms)}
               monthlyRent={parseFloat(monthlyRent) || undefined}
+              furnitureCost={parseFloat(furnitureCost) || 0}
+              expensePercent={expensePercent}
               marketId={result.marketId}
             />
             

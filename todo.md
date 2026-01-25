@@ -4392,3 +4392,18 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 ### Data Freshness Indicator
 - [x] Add indicator showing when market data was last updated (shows "Data as of Month Year" in comp strength bar)
+
+
+## Furniture Costs & Expense Slider Feature (Jan 25, 2026)
+
+### Input Fields
+- [x] Add furniture/setup cost input field to the form
+- [x] Add expense percentage slider (default 20%) to the form
+
+### Break-Even Calculation
+- [x] Update break-even meter to show "Months to Recoup Investment"
+- [x] Formula: Furniture Cost ÷ Monthly Profit (after expenses) = Months
+
+### Profit Display
+- [x] Update monthly profit to deduct expense percentage from revenue
+- [x] Show expense deduction in the profit breakdown (4-column layout: Revenue, Rent, Expenses, Net Profit)

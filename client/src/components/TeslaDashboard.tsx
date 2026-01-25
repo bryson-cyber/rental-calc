@@ -119,6 +119,8 @@ interface TeslaDashboardProps {
   bathrooms: number;
   accommodates?: number;
   monthlyRent?: number;
+  furnitureCost?: number;  // Furniture & setup cost for break-even calculation
+  expensePercent?: number;  // Operating expense percentage (default 20%)
   marketId?: string | number;  // For MarketInsightsPanel
 }
 
@@ -170,15 +172,22 @@ function HeroRevenueCard({
   annualRevenue, 
   monthlyProfit, 
   monthlyRent,
-  yearlyChange 
+  yearlyChange,
+  expensePercent = 20
 }: { 
   annualRevenue: number;
   monthlyProfit: number;
   monthlyRent: number;
   yearlyChange?: number;
+  expensePercent?: number;
 }) {
-  const isProfitable = monthlyProfit > 0;
-  const profitMargin = monthlyRent > 0 ? ((monthlyProfit / monthlyRent) * 100) : 0;
+  // Calculate monthly values
+  const monthlyRevenue = annualRevenue / 12;
+  const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
+  const trueMonthlyProfit = monthlyRevenue - monthlyRent - monthlyExpenses;
+  
+  const isProfitable = trueMonthlyProfit > 0;
+  const profitMargin = monthlyRent > 0 ? ((trueMonthlyProfit / monthlyRent) * 100) : 0;
   
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.98_0.01_265)] to-white border border-[oklch(0.90_0.01_265)] p-6 md:p-8 shadow-sm">
@@ -237,22 +246,26 @@ function HeroRevenueCard({
           </div>
         </div>
         
-        {/* Monthly Breakdown */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Monthly Breakdown - 4 columns now */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
             <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Monthly Revenue</p>
-            <p className="text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(annualRevenue / 12)}</p>
+            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRevenue)}</p>
           </div>
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
             <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Your Rent</p>
-            <p className="text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRent)}</p>
+            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRent)}</p>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Expenses ({expensePercent}%)</p>
+            <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses)}</p>
           </div>
           <div className={`rounded-xl p-4 border ${
             isProfitable ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
           }`}>
-            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Monthly Profit</p>
-            <p className={`text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
-              {formatCurrency(monthlyProfit)}
+            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Net Profit</p>
+            <p className={`text-lg md:text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
+              {formatCurrency(trueMonthlyProfit)}
             </p>
           </div>
         </div>
@@ -261,9 +274,9 @@ function HeroRevenueCard({
         {monthlyRent > 0 && (
           <p className="text-[oklch(0.50_0_0)] text-sm mt-4">
             {isProfitable ? (
-              <>Your revenue covers rent <span className="text-emerald-600 font-medium">{(profitMargin + 100).toFixed(0)}%</span> — you keep {formatCurrency(monthlyProfit)}/month</>
+              <>After {expensePercent}% expenses, you keep <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit)}/month</span> — that's <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit * 12)}/year</span> profit</>
             ) : (
-              <>Revenue covers only <span className="text-red-600 font-medium">{(100 - Math.abs(profitMargin)).toFixed(0)}%</span> of rent — you'd lose {formatCurrency(Math.abs(monthlyProfit))}/month</>
+              <>After {expensePercent}% expenses, you'd lose <span className="text-red-600 font-medium">{formatCurrency(Math.abs(trueMonthlyProfit))}/month</span> — consider negotiating rent or increasing rates</>
             )}
           </p>
         )}
@@ -1014,25 +1027,43 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
 }
 
 /**
- * Arbitrage Calculator - Break-even and risk analysis
+ * Arbitrage Calculator - Break-even and investment recoup analysis
  */
 function ArbitrageCalculator({ 
   monthlyRevenue, 
   monthlyRent, 
   occupancy,
-  adr
+  adr,
+  furnitureCost = 0,
+  expensePercent = 20
 }: { 
   monthlyRevenue: number;
   monthlyRent: number;
   occupancy: number;
   adr: number;
+  furnitureCost?: number;
+  expensePercent?: number;
 }) {
-  // Calculate break-even occupancy
+  // Calculate expenses as percentage of revenue
+  const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
+  
+  // Calculate true monthly profit (revenue - rent - expenses)
+  const trueMonthlyProfit = monthlyRevenue - monthlyRent - monthlyExpenses;
+  
+  // Calculate months to recoup furniture investment
+  const monthsToRecoup = furnitureCost > 0 && trueMonthlyProfit > 0
+    ? Math.ceil(furnitureCost / trueMonthlyProfit)
+    : furnitureCost > 0 && trueMonthlyProfit <= 0
+    ? Infinity
+    : 0;
+  
+  // Calculate break-even occupancy (to cover rent + expenses)
   // Monthly Revenue = ADR * Days * Occupancy
-  // Break-even: Rent = ADR * 30 * BreakEvenOcc
-  // BreakEvenOcc = Rent / (ADR * 30)
-  const breakEvenOccupancy = monthlyRent > 0 && adr > 0 
-    ? (monthlyRent / (adr * 30)) * 100 
+  // Break-even: (Rent + Expenses) = ADR * 30 * BreakEvenOcc * (1 - expensePercent/100)
+  // Simplified: Rent = ADR * 30 * BreakEvenOcc * (1 - expensePercent/100)
+  const effectiveRate = adr * 30 * (1 - expensePercent / 100);
+  const breakEvenOccupancy = monthlyRent > 0 && effectiveRate > 0 
+    ? (monthlyRent / effectiveRate) * 100 
     : 0;
   
   // Calculate cushion
@@ -1041,15 +1072,16 @@ function ArbitrageCalculator({
   // Risk scenario: 20% drop in occupancy
   const riskOccupancy = occupancy * 0.8;
   const riskRevenue = (riskOccupancy / 100) * adr * 30;
-  const riskProfit = riskRevenue - monthlyRent;
+  const riskExpenses = riskRevenue * (expensePercent / 100);
+  const riskProfit = riskRevenue - monthlyRent - riskExpenses;
   
-  // Determine risk level
-  const riskLevel = occupancyCushion >= 20 ? 'low' : occupancyCushion >= 10 ? 'medium' : 'high';
+  // Determine risk level based on months to recoup
+  const riskLevel = monthsToRecoup <= 12 ? 'low' : monthsToRecoup <= 18 ? 'medium' : 'high';
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       <div className="flex items-center gap-2 mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Arbitrage Analysis</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Investment Analysis</h3>
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
           riskLevel === 'low' 
             ? 'bg-emerald-100 text-emerald-700'
@@ -1062,6 +1094,54 @@ function ArbitrageCalculator({
       </div>
       
       <div className="space-y-4">
+        {/* Months to Recoup Investment */}
+        {furnitureCost > 0 && (
+          <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm font-medium text-slate-700">Time to Recoup Investment</span>
+              <span className={`text-2xl font-bold ${
+                monthsToRecoup <= 12 ? 'text-emerald-600' : 
+                monthsToRecoup <= 18 ? 'text-amber-600' : 'text-red-600'
+              }`}>
+                {monthsToRecoup === Infinity ? '—' : `${monthsToRecoup} mo`}
+              </span>
+            </div>
+            
+            {/* Progress bar showing months */}
+            <div className="h-3 bg-white/50 rounded-full overflow-hidden mb-2">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  monthsToRecoup <= 12 ? 'bg-emerald-500' : 
+                  monthsToRecoup <= 18 ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${Math.min((12 / Math.max(monthsToRecoup, 1)) * 100, 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>0 mo</span>
+              <span className="text-emerald-600 font-medium">12 mo (ideal)</span>
+              <span>24 mo</span>
+            </div>
+            
+            <div className="mt-3 pt-3 border-t border-amber-200/50 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-slate-500">Furniture Cost</p>
+                <p className="font-semibold text-slate-700">{formatCurrency(furnitureCost)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Monthly Profit</p>
+                <p className={`font-semibold ${trueMonthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {formatCurrency(trueMonthlyProfit)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Expenses ({expensePercent}%)</p>
+                <p className="font-semibold text-slate-700">{formatCurrency(monthlyExpenses)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Break-even Analysis */}
         <div className="p-4 bg-slate-50 rounded-xl">
           <div className="flex justify-between items-center mb-2">
@@ -1084,7 +1164,7 @@ function ArbitrageCalculator({
             </div>
           </div>
           <p className="text-sm text-slate-600 mt-3">
-            You need <span className="font-medium">{breakEvenOccupancy.toFixed(0)}%</span> occupancy to cover rent. 
+            You need <span className="font-medium">{breakEvenOccupancy.toFixed(0)}%</span> occupancy to cover rent + expenses. 
             Current projection is <span className="font-medium text-emerald-600">{Math.round(occupancy)}%</span> — 
             that's a <span className={`font-medium ${occupancyCushion >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {occupancyCushion.toFixed(0)}%
@@ -1107,7 +1187,7 @@ function ArbitrageCalculator({
             }
           </p>
           <p className="text-xs text-slate-500 mt-1">
-            At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue
+            At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue (after {expensePercent}% expenses)
           </p>
         </div>
       </div>
@@ -2029,7 +2109,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, marketId }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -2061,6 +2141,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         monthlyProfit={result.cashFlow.monthlyProfit}
         monthlyRent={result.cashFlow.monthlyRent}
         yearlyChange={yearlyChange}
+        expensePercent={expensePercent}
       />
       
       {/* Key Metrics */}
@@ -2082,6 +2163,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           monthlyRent={result.cashFlow.monthlyRent}
           occupancy={result.metrics.occupancy}
           adr={result.metrics.adr}
+          furnitureCost={furnitureCost}
+          expensePercent={expensePercent}
         />
       </div>
       
