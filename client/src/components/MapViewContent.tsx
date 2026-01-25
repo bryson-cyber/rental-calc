@@ -484,8 +484,8 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
       // Search level determined
       
       // Build the API request with optional bedroom filter
-      // Use getAllListings to fetch up to 200 listings (bypasses 25 per page API limit)
-      const apiParams: any = { submarketId: marketId, isMarketLevel, maxListings: 200 };
+      // Use getAllListings to fetch all available listings (bypasses 25 per page API limit)
+      const apiParams: any = { submarketId: marketId, isMarketLevel, maxListings: 5000 };
       if (apiBedroomFilter) {
         apiParams.bedrooms = apiBedroomFilter;
       }

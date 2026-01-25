@@ -1791,9 +1791,9 @@ export async function getAllSubmarketListings(
   const pageSize = 25; // API max
   let offset = 0;
   let totalCount = 0;
-  const maxListings = options?.maxListings || 500; // Safety limit
+  const maxListings = options?.maxListings || 5000; // Fetch all available by default
   const minFilteredCount = options?.minFilteredCount || 10;
-  const absoluteMax = 1000;
+  const absoluteMax = 10000; // Allow fetching all listings
   
   console.log(`[getAllSubmarketListings] CACHE MISS - Fetching listings for submarket ${submarketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}`);
   
@@ -2551,9 +2551,9 @@ export async function getComprehensivePropertyReport(
         historical: historicalData,
       };
       
-      // Get market insights from listings sample
+      // Get market insights from all listings
       try {
-        const { listings } = await getMarketListings(marketId, { limit: 25 });
+        const { listings } = await getMarketListings(marketId, { limit: 500 });
         if (listings.length > 0) {
           marketInsights = calculateMarketInsights(listings);
         }
@@ -2714,7 +2714,7 @@ export async function getComprehensiveMarketReport(
   const [historicalData, submarkets, listingsResult] = await Promise.all([
     getMarketHistoricalData(marketId, 12),
     getSubmarketsInMarket(marketId),
-    getMarketListings(marketId, { limit: 25, orderBy: "revenue", orderDirection: "desc" }),
+    getMarketListings(marketId, { limit: 500, orderBy: "revenue", orderDirection: "desc" }),
   ]);
   
   // Calculate current metrics from market details
@@ -2989,9 +2989,9 @@ export async function getAllMarketListings(
   const pageSize = 25; // API max
   let offset = 0;
   let totalCount = 0;
-  const maxListings = options?.maxListings || 500; // Safety limit
+  const maxListings = options?.maxListings || 5000; // Fetch all available by default
   const minFilteredCount = options?.minFilteredCount || 10; // Ensure at least 10 filtered listings
-  const absoluteMax = 1000; // Absolute maximum to prevent infinite loops
+  const absoluteMax = 10000; // Allow fetching all listings
   
   console.log(`[getAllMarketListings] Fetching listings for market ${marketId}, bedrooms: ${options?.bedrooms}, minRevenue: ${options?.minRevenue}, minFilteredCount: ${minFilteredCount}`);
   
@@ -3100,10 +3100,10 @@ export async function getQualifyingCompetitors(
   
   console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}, ExcludeInactive: ${excludeInactive}`);
   
-  // Get all listings for this bedroom count - fetch more to ensure we get enough same-bedroom listings
+  // Get all listings for this bedroom count - fetch all available listings
   const allSameBedroomListings = await getAllMarketListings(marketId, {
     bedrooms,
-    maxListings: 500, // Fetch more listings to ensure we get at least 10 same-bedroom
+    maxListings: 5000, // Fetch all available listings
     minFilteredCount: 15, // Continue fetching until we have at least 15 same-bedroom listings
   });
   
@@ -6121,8 +6121,8 @@ export async function getStandaloneMarketAdvisorData(
     console.log(`[StandaloneMarketAdvisor] Fetching listings with filters:`, hasFilters ? listingFilters : 'none');
     
     const listingsFn = marketType === 'submarket' || marketType === 'zipcode'
-      ? getSubmarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined })
-      : getMarketListings(marketId, { limit: 500, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined });
+      ? getSubmarketListings(marketId, { limit: 5000, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined })
+      : getMarketListings(marketId, { limit: 5000, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined });
     
     const seasonalityFn = marketType === 'submarket' || marketType === 'zipcode'
       ? getSubmarketSeasonality(marketId)

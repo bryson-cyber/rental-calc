@@ -4162,3 +4162,52 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Fix Step 5 Map auto-fill - search box now pre-fills with user's city based on property address
 - [x] Fix Step 5 Map auto-select - automatically selects best match and loads listings without requiring clicks
 - [x] Make Step 5 fully automatic - user goes to Step 5 and sees their market's listings immediately
+
+
+## New Features (Jan 24, 2026)
+
+- [ ] Add user's property marker to Step 5 Map - show distinct gold marker for user's property among competitors
+- [ ] Cache AI Advisor results in database - store analysis so users can revisit without regenerating
+- [ ] Add distance column to Step 5 table - calculate distance from each competitor to user's property
+
+
+## New Features Implementation (Jan 24, 2026) - COMPLETE
+
+### User Property Marker on Step 5 Map
+- [x] Main map marker already uses gold/amber color (#F59E0B, #D97706)
+- [x] Pulsing ring animation with gold glow
+- [x] "YOUR PROPERTY" label below marker
+- [x] Updated fullscreen map marker to match gold theme (was blue)
+
+### AI Advisor Result Caching
+- [x] Created ai_advisor_cache table in database schema
+- [x] Implemented cache check in propertyAdvisorMax mutation
+- [x] Implemented cache check in marketAdvisorMax mutation
+- [x] Cache stores: cacheType, cacheKey, address/market info, advice, expiresAt
+- [x] 7-day cache expiration
+- [x] Hit count and last accessed tracking
+- [x] Returns cached: true/false flag in response
+
+### Distance Column in Step 5 Table
+- [x] Already implemented - distance column shows after BR/BA
+- [x] Uses Haversine formula for accurate distance calculation
+- [x] Shows distance in miles with location pin icon
+- [x] Sorting by distance (closest first) available
+- [x] Distance filter dropdown (0.5, 1, 2, 5 miles)
+
+
+## Remove Listing Limits (Jan 24, 2026) - COMPLETE
+
+- [x] Remove or increase listing limits in all data fetching operations
+- [x] Update API calls to fetch all available listings
+- [x] Ensure market research fetches complete data
+- [x] Update Step 5 Map to load all listings in area (5000 max)
+- [x] Updated getAllMarketListings default from 500 to 5000
+- [x] Updated getAllSubmarketListings default from 500 to 5000
+- [x] Updated absoluteMax from 1000 to 10000
+- [x] Updated MapFirstLayout maxListings from 200 to 5000
+- [x] Updated MapViewContent maxListings from 200 to 5000
+- [x] Updated getStandaloneMarketAdvisorData limits from 500 to 5000
+- [x] Updated getQualifyingCompetitors maxListings from 500 to 5000
+- [x] Updated market-research-simple.ts to use getAllMarketListings
+- [x] Updated ai-advisor.ts getTopPerformers limits from 25/50 to 500

@@ -957,7 +957,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         // Use market listings API with bedroom filter to get actual listings
         const performers = await getTopPerformers({
           marketId: market.id,
-          limit: 25,
+          limit: 500, // Fetch all available performers
           sort_by: 'revenue',
           filters: { bedrooms }
         });
@@ -1022,7 +1022,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         // Get top performers to analyze their amenities
         const performers = await getTopPerformers({
           marketId,
-          limit: 25,
+          limit: 500, // Fetch all available performers
           sort_by: 'revenue'
         });
         
@@ -1892,7 +1892,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         
         const performersResult = await getTopPerformers({
           marketId: markets[0].id,
-          limit: 50,
+          limit: 500, // Fetch all available performers
           sort_by: 'revenue',
           filters: bedrooms ? { bedrooms } : undefined
         });
@@ -1934,7 +1934,7 @@ async function executeFunctionCall(functionName: string, args: Record<string, un
         
         const performersResult = await getTopPerformers({
           marketId: markets[0].id,
-          limit: 50,
+          limit: 500, // Fetch all available performers
           sort_by: 'revenue',
           filters: bedrooms ? { bedrooms } : undefined
         });

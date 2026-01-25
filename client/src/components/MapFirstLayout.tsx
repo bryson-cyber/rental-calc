@@ -487,10 +487,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       });
       
       // Build API params for getAllListings (handles pagination to get more than 25 listings)
+      // Fetch all available listings - no artificial limit
       const apiParams: any = { 
         submarketId: marketId, 
         isMarketLevel, 
-        maxListings: 200 
+        maxListings: 5000 // Fetch all available listings
       };
       
       if (apiBedroomFilter) {
@@ -640,7 +641,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       const myPropertyElement = document.createElement('div');
       myPropertyElement.innerHTML = `
         <style>
-          @keyframes pulse-ring-blue {
+          @keyframes pulse-ring-gold {
             0% { transform: scale(0.8); opacity: 0.8; }
             50% { transform: scale(1.2); opacity: 0.4; }
             100% { transform: scale(0.8); opacity: 0.8; }
@@ -648,29 +649,29 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         </style>
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
           <!-- Pulsing ring -->
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:rgba(59,130,246,0.3);border-radius:50%;animation:pulse-ring-blue 2s infinite;"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70px;height:70px;background:rgba(245,158,11,0.4);border-radius:50%;animation:pulse-ring-gold 1.8s infinite;box-shadow:0 0 20px rgba(245,158,11,0.6);"></div>
           <!-- Main marker -->
           <div style="
             position:relative;
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #F59E0B, #D97706);
             border-radius: 50%;
             border: 4px solid white;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5), 0 0 0 3px #1d4ed8;
+            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.6), 0 0 0 3px #B45309, 0 0 24px rgba(245, 158, 11, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 10;
           ">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2.5">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2.5">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
           </div>
           <!-- Label -->
-          <div style="margin-top:4px;background:#1d4ed8;color:white;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+          <div style="margin-top:4px;background:linear-gradient(135deg, #B45309, #92400E);color:white;font-size:12px;font-weight:700;padding:4px 12px;border-radius:6px;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,0.3);letter-spacing:0.5px;">
             YOUR PROPERTY
           </div>
         </div>
@@ -840,10 +841,10 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                     <div style="
                       width: 40px;
                       height: 40px;
-                      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                      background: linear-gradient(135deg, #F59E0B, #D97706);
                       border-radius: 50%;
                       border: 3px solid white;
-                      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+                      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
                       display: flex;
                       align-items: center;
                       justify-content: center;

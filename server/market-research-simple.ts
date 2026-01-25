@@ -20,6 +20,7 @@ import {
   getSubmarketsInMarket,
   getMarketHistoricalData,
   getMarketListings,
+  getAllMarketListings,
   MarketSearchResult,
   getRentalizerEstimate
 } from './airdna';
@@ -147,51 +148,28 @@ export const marketResearchSimpleRouter = router({
       const { marketId, marketName } = input;
 
       // Fetch all data in parallel for speed
-      // Fetch MORE listings (200+) to get representative bedroom distribution
+      // Fetch all listings for comprehensive bedroom distribution analysis
       const [
         marketDetails,
         seasonality,
         topPerformers,
         submarkets,
         historicalData,
-        listingsPage1,
-        listingsPage2,
-        listingsPage3,
-        listingsPage4,
-        listingsPage5,
-        listingsPage6,
-        listingsPage7,
-        listingsPage8
+        allListingsData
       ] = await Promise.all([
         getMarketDetails(marketId).catch(() => null),
         getMarketSeasonality(marketId).catch(() => null),
         getTopPerformers({ marketId, limit: 10, sort_by: 'revenue' }).catch(() => []),
         getSubmarketsInMarket(marketId).catch(() => []),
         getMarketHistoricalData(marketId, 12).catch(() => null),
-        // Fetch 200 listings across multiple pages to get bedroom distribution
-        getMarketListings(marketId, { limit: 25, offset: 0, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 25, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 50, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 75, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 100, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 125, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 150, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
-        getMarketListings(marketId, { limit: 25, offset: 175, orderBy: 'revenue', orderDirection: 'desc' }).catch(() => ({ listings: [], total_count: 0 })),
+        // Fetch all listings for comprehensive bedroom distribution analysis
+        getAllMarketListings(marketId, { maxListings: 5000 }).catch(() => []),
       ]);
 
-      // Combine all listings for bedroom analysis
-      const allListings = [
-        ...listingsPage1.listings,
-        ...listingsPage2.listings,
-        ...listingsPage3.listings,
-        ...listingsPage4.listings,
-        ...listingsPage5.listings,
-        ...listingsPage6.listings,
-        ...listingsPage7.listings,
-        ...listingsPage8.listings,
-      ];
+      // Use all listings for bedroom analysis
+      const allListings = allListingsData || [];
       
-      const totalCount = listingsPage1.total_count || 0;
+      const totalCount = allListings.length;
 
       // Build overview from available data
       const details = marketDetails as any;

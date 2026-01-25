@@ -602,3 +602,52 @@ export const sharedReports = mysqlTable("shared_reports", {
 
 export type SharedReport = typeof sharedReports.$inferSelect;
 export type InsertSharedReport = typeof sharedReports.$inferInsert;
+
+
+/**
+ * AI Advisor Cache table for storing generated AI analysis results
+ * This allows users to revisit their analysis without regenerating it each time
+ * Cache key is based on property address + bedrooms + bathrooms for property advisor
+ * Cache key is based on market name + state for market advisor
+ */
+export const aiAdvisorCache = mysqlTable("ai_advisor_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Cache type: 'property' or 'market'
+  cacheType: mysqlEnum("cacheType", ["property", "market"]).notNull(),
+  
+  // Cache key (unique identifier for the analysis)
+  // For property: normalized address + bedrooms + bathrooms
+  // For market: market name + state
+  cacheKey: varchar("cacheKey", { length: 255 }).notNull(),
+  
+  // Property information (for property advisor)
+  address: text("address"),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  
+  // Market information (for market advisor)
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Input data hash (to detect if input data has changed significantly)
+  inputHash: varchar("inputHash", { length: 64 }),
+  
+  // Cached AI response (the full advice text)
+  advice: text("advice").notNull(),
+  
+  // Metadata
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(), // Cache expiration (e.g., 7 days)
+  hitCount: int("hitCount").default(0).notNull(), // Number of times this cache was used
+  lastAccessedAt: timestamp("lastAccessedAt").defaultNow().notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AiAdvisorCache = typeof aiAdvisorCache.$inferSelect;
+export type InsertAiAdvisorCache = typeof aiAdvisorCache.$inferInsert;

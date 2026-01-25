@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -2589,11 +2589,73 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          console.log('[AI Advisor Max] Generating maximum capacity property advice for:', input.property.address);
+          const db = await getDb();
+          
+          // Generate cache key from property address + bedrooms + bathrooms
+          const normalizedAddress = input.property.address.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const cacheKey = `property_${normalizedAddress}_${input.property.bedrooms}_${input.property.bathrooms}`;
+          
+          // Check cache first (only if db is available)
+          if (db) {
+            const cachedResult = await db.select().from(aiAdvisorCache)
+              .where(and(
+                eq(aiAdvisorCache.cacheType, 'property'),
+                eq(aiAdvisorCache.cacheKey, cacheKey)
+              ))
+              .limit(1);
+            
+            if (cachedResult.length > 0 && cachedResult[0].expiresAt > new Date()) {
+              console.log('[AI Advisor Max] Cache HIT for property:', input.property.address);
+              // Update hit count and last accessed
+              await db.update(aiAdvisorCache)
+                .set({ 
+                  hitCount: cachedResult[0].hitCount + 1,
+                  lastAccessedAt: new Date()
+                })
+                .where(eq(aiAdvisorCache.id, cachedResult[0].id));
+              
+              return {
+                success: true,
+                data: { advice: cachedResult[0].advice, cached: true },
+              };
+            }
+          }
+          
+          console.log('[AI Advisor Max] Cache MISS - Generating maximum capacity property advice for:', input.property.address);
           const advice = await generateMaxPropertyAdvice(input as MaxPropertyAdvisorInput);
+          
+          // Store in cache (expires in 7 days) - only if db is available
+          if (db) {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+            
+            // Delete old cache entry if exists
+            await db.delete(aiAdvisorCache)
+              .where(and(
+                eq(aiAdvisorCache.cacheType, 'property'),
+                eq(aiAdvisorCache.cacheKey, cacheKey)
+              ));
+            
+            // Insert new cache entry
+            await db.insert(aiAdvisorCache).values({
+              cacheType: 'property',
+              cacheKey,
+              address: input.property.address,
+              city: input.property.city,
+              state: input.property.state,
+              zipCode: input.property.zipCode,
+              bedrooms: input.property.bedrooms,
+              bathrooms: String(input.property.bathrooms),
+              advice,
+              expiresAt,
+            });
+            
+            console.log('[AI Advisor Max] Cached property advice for:', input.property.address);
+          }
+          
           return {
             success: true,
-            data: { advice },
+            data: { advice, cached: false },
           };
         } catch (error) {
           console.error('[AI Advisor Max] Error generating property advice:', error);
@@ -2678,11 +2740,71 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          console.log('[AI Advisor Max] Generating maximum capacity market advice for:', input.market.name);
+          const db = await getDb();
+          
+          // Generate cache key from market name + state
+          const normalizedMarket = input.market.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const normalizedState = input.market.state.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const cacheKey = `market_${normalizedMarket}_${normalizedState}`;
+          
+          // Check cache first (only if db is available)
+          if (db) {
+            const cachedResult = await db.select().from(aiAdvisorCache)
+              .where(and(
+                eq(aiAdvisorCache.cacheType, 'market'),
+                eq(aiAdvisorCache.cacheKey, cacheKey)
+              ))
+              .limit(1);
+            
+            if (cachedResult.length > 0 && cachedResult[0].expiresAt > new Date()) {
+              console.log('[AI Advisor Max] Cache HIT for market:', input.market.name);
+              // Update hit count and last accessed
+              await db.update(aiAdvisorCache)
+                .set({ 
+                  hitCount: cachedResult[0].hitCount + 1,
+                  lastAccessedAt: new Date()
+                })
+                .where(eq(aiAdvisorCache.id, cachedResult[0].id));
+              
+              return {
+                success: true,
+                data: { advice: cachedResult[0].advice, cached: true },
+              };
+            }
+          }
+          
+          console.log('[AI Advisor Max] Cache MISS - Generating maximum capacity market advice for:', input.market.name);
           const advice = await generateMaxMarketAdvice(input as MaxMarketAdvisorInput);
+          
+          // Store in cache (expires in 7 days) - only if db is available
+          if (db) {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+            
+            // Delete old cache entry if exists
+            await db.delete(aiAdvisorCache)
+              .where(and(
+                eq(aiAdvisorCache.cacheType, 'market'),
+                eq(aiAdvisorCache.cacheKey, cacheKey)
+              ));
+            
+            // Insert new cache entry
+            await db.insert(aiAdvisorCache).values({
+              cacheType: 'market',
+              cacheKey,
+              marketName: input.market.name,
+              city: input.market.city,
+              state: input.market.state,
+              advice,
+              expiresAt,
+            });
+            
+            console.log('[AI Advisor Max] Cached market advice for:', input.market.name);
+          }
+          
           return {
             success: true,
-            data: { advice },
+            data: { advice, cached: false },
           };
         } catch (error) {
           console.error('[AI Advisor Max] Error generating market advice:', error);
