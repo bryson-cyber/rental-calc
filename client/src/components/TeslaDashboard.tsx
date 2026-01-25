@@ -979,14 +979,14 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
       {/* Best/Worst Months Summary */}
       <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-200">
         <div className="p-3 bg-slate-100 rounded-lg">
-          <p className="text-xs font-medium text-slate-700 mb-2">Best Months</p>
+          <p className="text-xs font-medium text-slate-700 mb-2">Best Months (Avg)</p>
           <div className="space-y-1">
             {peakMonths.map((m, i) => {
               return (
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900">{formatCurrency(m.revenue)}</span>
+                    <span className="font-semibold text-slate-900">Avg {formatCurrency(m.revenue)}</span>
                   </div>
                 </div>
               );
@@ -994,14 +994,14 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
           </div>
         </div>
         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <p className="text-xs font-medium text-slate-700 mb-2">Slowest Months</p>
+          <p className="text-xs font-medium text-slate-700 mb-2">Slowest Months (Avg)</p>
           <div className="space-y-1">
             {slowMonths.map((m, i) => {
               return (
                 <div key={i} className="flex justify-between items-center text-sm">
                   <span className="text-slate-700">{formatMonth(m.month)}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-700">{formatCurrency(m.revenue)}</span>
+                    <span className="font-semibold text-slate-700">Avg {formatCurrency(m.revenue)}</span>
                   </div>
                 </div>
               );

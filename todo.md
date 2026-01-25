@@ -4353,3 +4353,28 @@ When clicking "See on Map" from the property card, the map view would show the s
   - Active Listings must be for selected bedroom count only
   - Supply Trend must be for selected bedroom count only
   - All market data must match user's property configuration
+
+
+## Step 3 Production Issues (Jan 25, 2026 - Demo Day)
+- [ ] Market Landscape: Filter "Similar Listings" count by bedroom (currently showing 16,644 market-wide, not bedroom-filtered)
+- [ ] Best/Slowest Months: Add "Avg" prefix to clarify these are averages, not guarantees
+- [ ] Forward-Looking Demand: Verify API data accuracy
+- [ ] Publish to production: Investigate why features aren't going live
+
+
+## Step 3 Fixes (Jan 25, 2026) - COMPLETE
+
+### Market Landscape Bedroom Filtering
+- [x] Fix Market Landscape to use bedroom-filtered listings for apples-to-apples comparison
+- [x] Update getComprehensivePropertyReport to filter market insights by propertyBedrooms
+- [x] Add fallback to all listings if no bedroom-filtered results found
+
+### Best/Slowest Months "Avg" Labels
+- [x] Add "(Avg)" suffix to "Best Months" and "Slowest Months" headers
+- [x] Add "Avg" prefix to revenue values in Best/Slowest Months display
+- [x] Clarify that these are average values based on data, not guarantees
+
+### Forward-Looking Demand Verification
+- [x] Verified getMarketFutureDailyData passes bedroom filter to API
+- [x] Verified calculateForwardLookingDemand correctly calculates 30/180 day averages
+- [x] Verified peak/low period detection using 7-day rolling windows

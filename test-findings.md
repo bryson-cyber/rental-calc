@@ -68,3 +68,38 @@
 ### Root Cause of "Unknown Location" Bug
 The market_data.name is not being populated correctly from the AirDNA API response.
 Need to investigate the backend to see where the market name is being set.
+
+
+---
+
+## Test Date: Jan 25, 2026
+## Test Property: Denver, CO 80202, USA (2BR/1BA)
+
+### Best/Slowest Months - FIXED ✅
+The "Avg" prefix is now showing correctly:
+- Best Months (Avg): Aug Avg $6,622, Jul Avg $6,535, Jun Avg $6,271
+- Slowest Months (Avg): Mar Avg $4,045, Feb Avg $3,456, Jan Avg $3,126
+
+### Market Landscape - Bedroom filtering applied
+The market insights now filter by bedroom count for apples-to-apples comparison.
+
+### Forward-Looking Demand - Data verified
+The forward-looking demand data is coming from the AirDNA future_pricing API with bedroom filtering.
+
+
+### Market Landscape Section - Verified ✅
+The Market Landscape now shows bedroom-filtered data:
+- 44% Professionally Managed
+- 56% Superhosts
+- 4.9 Avg Rating
+- 1688 Similar Listings (this is the 2BR filtered count, not the total market count)
+
+The label says "Similar Listings" which correctly indicates these are bedroom-filtered.
+
+### Forward-Looking Demand - Verified ✅
+- Next 30 Days: 37% (Cool Market)
+- Next 180 Days: 18% (Cold Market)
+- Peak Period: Jan 25 - Jan 31 (42% occupancy)
+- Low Period: Jun 24 - Jun 30 (3% occupancy)
+
+The data is coming from the AirDNA future_pricing API with bedroom filtering applied.

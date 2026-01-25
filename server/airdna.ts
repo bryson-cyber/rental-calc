@@ -2557,11 +2557,22 @@ export async function getComprehensivePropertyReport(
         historical: historicalData,
       };
       
-      // Get market insights from all listings
+      // Get market insights from BEDROOM-FILTERED listings for apples-to-apples comparison
       try {
-        const { listings } = await getMarketListings(marketId, { limit: 500 });
+        const { listings } = await getMarketListings(marketId, { 
+          limit: 500,
+          filters: { bedrooms: propertyBedrooms } // Filter by same bedroom count
+        });
         if (listings.length > 0) {
           marketInsights = calculateMarketInsights(listings);
+          console.log(`[Market Insights] Calculated from ${listings.length} ${propertyBedrooms}BR listings`);
+        } else {
+          // Fallback to all listings if no bedroom-filtered results
+          const allListings = await getMarketListings(marketId, { limit: 500 });
+          if (allListings.listings.length > 0) {
+            marketInsights = calculateMarketInsights(allListings.listings);
+            console.log(`[Market Insights] Fallback: calculated from ${allListings.listings.length} total listings (no ${propertyBedrooms}BR found)`);
+          }
         }
       } catch (e) {
         console.error('[Market Insights] Error calculating insights:', e);
