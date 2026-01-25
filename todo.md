@@ -4260,3 +4260,31 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Add clear all notifications option
 - [x] Store notification history for logged-in users
 - [x] Added notification bell to main page header
+
+
+## Auto-Search Fix for Map View (Jan 25, 2026) - COMPLETE
+
+### Issue
+When clicking "See on Map" from the property card, the map view would show the search input pre-filled with "Denver, CO" but no listings would load automatically. Users had to manually search to see results.
+
+### Root Causes Identified
+1. **API Parameter Error**: The `maxListings` parameter was set to 5000, but the API limit is 500, causing a 400 validation error
+2. **Response Parsing**: Using raw `fetch` instead of tRPC client caused superjson response parsing issues
+3. **Dropdown Persistence**: The debounced search effect was showing the dropdown even after auto-loading completed
+
+### Fixes Applied
+- [x] Changed `maxListings` from 5000 to 500 (API maximum)
+- [x] Added `getAllListingsAsync` helper using tRPC client for proper response handling
+- [x] Updated `fetchListings` to use tRPC client instead of raw fetch
+- [x] Fixed debounced search to not show dropdown when `hasAutoLoadedRef.current` is true
+- [x] Fixed `onFocus` handler to not show dropdown after auto-load
+- [x] Cleaned up debug code (removed debug state, debug UI panel, console.log statements)
+
+### Result
+- Auto-search now works correctly when clicking "See on Map"
+- 500 listings load automatically for the property's market
+- Dropdown is hidden after auto-loading
+- Map displays all listings with revenue markers
+- Stats summary shows: Properties count, Avg Revenue, Top Performer
+- Listings table shows all comparable properties
+

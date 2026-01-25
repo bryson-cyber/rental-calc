@@ -96,6 +96,8 @@ interface MyPropertyData {
   bedrooms: number;
   bathrooms: number;
   zipCode?: string;
+  city?: string;
+  state?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -157,8 +159,12 @@ const createMarkerElement = (color: string, revenue: number) => {
 const ITEMS_PER_PAGE = 20;
 
 export default function MapFirstLayout({ embedded = false, className = '', myProperty }: MapFirstLayoutProps) {
+  // DEBUG: Log component render
+  console.warn('[MapFirstLayout] RENDER - myProperty:', myProperty?.address, 'embedded:', embedded);
+  
   // PropertyContext integration
   const { myProperty: contextProperty, hasProperty: contextHasProperty } = useProperty();
+  console.warn('[MapFirstLayout] Context - contextProperty:', contextProperty?.address, 'contextHasProperty:', contextHasProperty);
   
   // Load property from localStorage as fallback (for initial render before context is ready)
   const [localStorageProperty, setLocalStorageProperty] = useState<MyPropertyData | null>(() => {
@@ -180,13 +186,41 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   // Get the effective property data (context takes precedence, then prop, then localStorage)
   const effectiveProperty = contextProperty || myProperty || localStorageProperty;
   
+  // Check for URL parameter to force auto-search (for testing)
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceAutoSearch = urlParams.get('autoSearch');
+  
   // Search state - initialize from property if available
   const [searchQuery, setSearchQuery] = useState(() => {
+    // If forceAutoSearch URL param is set, use it
+    if (forceAutoSearch) {
+      return forceAutoSearch;
+    }
     // Try to get initial search term from property
     const property = contextProperty || myProperty || localStorageProperty;
+    
+    // First try to use the city field if available
+    if (property?.city && property?.state) {
+      return `${property.city}, ${property.state}`;
+    }
+    
+    // Fall back to parsing the address
     if (property?.address) {
       const addressParts = property.address.split(',').map((p: string) => p.trim());
-      if (addressParts.length >= 3) {
+      
+      // Handle "City, State Zip, Country" format (3 parts)
+      if (addressParts.length === 3) {
+        const city = addressParts[0];
+        const stateZip = addressParts[1];
+        const stateMatch = stateZip.match(/^([A-Z]{2})/);
+        if (stateMatch) {
+          return `${city}, ${stateMatch[1]}`;
+        }
+        return city;
+      }
+      
+      // Handle "Street, City, State Zip, Country" format (4+ parts)
+      if (addressParts.length >= 4) {
         const city = addressParts[1];
         const stateZip = addressParts[2];
         const stateMatch = stateZip.match(/^([A-Z]{2})/);
@@ -198,6 +232,8 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     }
     return '';
   });
+  console.warn('[MapFirstLayout] Initial searchQuery:', searchQuery);
+  
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -262,12 +298,94 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [useVirtualizedTable, setUseVirtualizedTable] = useState(false);
   
+  
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasAutoLoadedRef = useRef(false); // Ref to avoid stale closure in debounced search
+  const listingsRef = useRef(listings); // Ref to track current listings for debounced callback
+  const selectedLocationRef = useRef(selectedLocation); // Ref to track current selectedLocation for debounced callback
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    listingsRef.current = listings;
+  }, [listings]);
+  
+  useEffect(() => {
+    selectedLocationRef.current = selectedLocation;
+  }, [selectedLocation]);
+  
+  // Track if we've already attempted auto-search for this component instance
+  const hasAttemptedAutoSearch = useRef(false);
+  
+  // Auto-search effect that runs when the component mounts with a search query
+  // This handles the case where the user clicks "See on Map" from their property card
+  useEffect(() => {
+    const performAutoSearch = async () => {
+      // Only attempt auto-search once per component instance
+      if (hasAttemptedAutoSearch.current) {
+        return;
+      }
+      
+      // Only run if we have a search query
+      if (!searchQuery || searchQuery.length < 2) {
+        return;
+      }
+      
+      // Check current state using refs to avoid stale closures
+      if (listingsRef.current.length > 0 || selectedLocationRef.current) {
+        return;
+      }
+      
+      // Mark that we've attempted auto-search
+      hasAttemptedAutoSearch.current = true;
+      
+      // Mark that we're doing auto-search to prevent the debounced search from showing dropdown
+      hasAutoLoadedRef.current = true;
+      setHasAutoLoadedListings(true);
+      
+      try {
+        // Extract just the city name for API compatibility
+        const searchTerm = searchQuery.split(',')[0].trim();
+        
+        const response = await searchMarketsAsync(searchTerm);
+        const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
+        
+        if (results.length > 0) {
+          // Find the best match
+          const searchTermLower = searchQuery.toLowerCase().split(',')[0].trim();
+          const exactMatch = results.find((r: any) => 
+            r.name?.toLowerCase().includes(searchTermLower)
+          );
+          const selectedResult = exactMatch || results[0];
+          
+          // Auto-select and fetch listings
+          setSelectedLocation(selectedResult);
+          setLocationName(selectedResult.name);
+          setShowSearchResults(false);
+          await fetchListings(selectedResult);
+          // Update search query after fetch completes
+          setSearchQuery(selectedResult.name);
+        }
+      } catch (error: any) {
+        console.error('[MapFirstLayout] Auto-search error:', error);
+        // Reset the flag so user can try manual search
+        hasAutoLoadedRef.current = false;
+        setHasAutoLoadedListings(false);
+        hasAttemptedAutoSearch.current = false;
+      }
+    };
+    
+    // Add a small delay to ensure tRPC client is ready
+    const timeoutId = setTimeout(() => {
+      performAutoSearch();
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]); // Only run when searchQuery changes - use refs for other values to avoid re-render interruptions
   
   // Track if we've auto-populated from context
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
@@ -339,6 +457,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     return trpcUtils.compData.getListings.fetch({ submarketId });
   };
   
+  // Helper function to get ALL listings (handles pagination)
+  const getAllListingsAsync = async (params: { submarketId: string; isMarketLevel: boolean; maxListings?: number; bedrooms?: number }) => {
+    return trpcUtils.compData.getAllListings.fetch(params);
+  };
+  
   // Calculate thresholds
   const thresholds = useMemo((): ThresholdData => {
     if (listings.length === 0) {
@@ -408,8 +531,17 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   
   // Debounced search - skip if we're auto-loading or already have listings
   useEffect(() => {
+    console.log('[DEBOUNCED SEARCH] Effect triggered - searchQuery:', searchQuery, 'selectedLocation:', selectedLocation?.name, 'listings:', listings.length, 'hasAutoLoadedListings:', hasAutoLoadedListings, 'hasAutoLoadedRef:', hasAutoLoadedRef.current);
+    
+    // Skip if auto-search has already run - this prevents showing the dropdown after auto-search
+    if (hasAutoLoadedRef.current) {
+      console.log('[DEBOUNCED SEARCH] Skipping - auto-search has already run');
+      return;
+    }
+    
     // Skip if we already have a selected location with listings
     if (selectedLocation && listings.length > 0) {
+      console.log('[DEBOUNCED SEARCH] Skipping - already have location and listings');
       return;
     }
     
@@ -419,38 +551,58 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       return;
     }
     
+    // Note: We'll check the ref inside the timeout callback to get the latest value
+    console.log('[DEBOUNCED SEARCH] Effect starting - listings:', listings.length, 'selectedLocation:', selectedLocation?.name, 'hasAutoLoadedRef:', hasAutoLoadedRef.current);
+    
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
       try {
         // Check if it's a zip code (5 digits)
         const isZipCode = /^\d{5}$/.test(searchQuery.trim());
         
-        const response = await searchMarketsAsync(searchQuery);
+        // Extract just the city name for API compatibility
+        // AirDNA API doesn't accept "City, State" format, only "City"
+        const searchTerm = searchQuery.split(',')[0].trim();
+        console.log('[DEBOUNCED SEARCH] Calling API with searchTerm:', searchTerm, '(original:', searchQuery, ')');
+        
+        const response = await searchMarketsAsync(searchTerm);
         const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
         
         if (results.length > 0) {
-          console.log('[AUTO-SELECT DEBUG] results:', results.length, 'hasAutoLoadedListings:', hasAutoLoadedListings, 'listings.length:', listings.length);
-          // If this is an auto-fill search (no listings loaded yet), auto-select the best match
-          if (!hasAutoLoadedListings && listings.length === 0) {
+          // Check the ref NOW (inside the callback) to get the latest value
+          // This avoids stale closure issues from capturing the value outside the timeout
+          const shouldAutoSelect = listingsRef.current.length === 0 && !selectedLocationRef.current && !hasAutoLoadedRef.current;
+          console.log('[AUTO-SELECT CHECK] shouldAutoSelect:', shouldAutoSelect, '(listingsRef:', listingsRef.current.length, 'selectedLocationRef:', selectedLocationRef.current?.name, 'hasAutoLoadedRef:', hasAutoLoadedRef.current, ')');
+          
+          if (shouldAutoSelect) {
             console.log('[AUTO-SELECT] Auto-selecting first result:', results[0]?.name);
+            hasAutoLoadedRef.current = true;
+            setHasAutoLoadedListings(true);
+            
             const searchTermLower = searchQuery.toLowerCase().split(',')[0].trim();
             const exactMatch = results.find((r: any) => 
               r.name?.toLowerCase().includes(searchTermLower)
             );
             const selectedResult = exactMatch || results[0];
             
-            // Auto-select and fetch listings - don't update searchQuery to avoid re-triggering
+            // Auto-select and fetch listings
             setSelectedLocation(selectedResult);
             setLocationName(selectedResult.name);
             setShowSearchResults(false);
-            setHasAutoLoadedListings(true);
             await fetchListings(selectedResult);
-            // Update search query after fetch completes to show the full market name
+            // Update search query after fetch completes
             setSearchQuery(selectedResult.name);
           } else {
-            // Normal search - show dropdown
-            setSearchResults(results.slice(0, 10));
-            setShowSearchResults(true);
+            // Normal search - show dropdown ONLY if we haven't auto-loaded
+            // If we've already auto-loaded listings, don't show the dropdown
+            if (!hasAutoLoadedRef.current) {
+              setSearchResults(results.slice(0, 10));
+              setShowSearchResults(true);
+            } else {
+              // We've auto-loaded, so just update search results but don't show dropdown
+              setSearchResults(results.slice(0, 10));
+              setShowSearchResults(false);
+            }
           }
         } else {
           setSearchResults([]);
@@ -483,26 +635,19 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     setIsLoading(true);
     setError(null);
     setLoadingStartTime(Date.now());
-    setLoadingProgress({ current: 0, total: 5000 }); // Estimate total
+    setLoadingProgress({ current: 0, total: 500 }); // Estimate total (API max is 500)
     
     try {
       // Determine if this is a market-level or submarket-level search
       const isMarketLevel = location.type === 'market';
       const marketId = location.id || location.submarketId || location.marketId || '';
       
-      console.log('[MapFirstLayout] fetchListings called:', {
-        name: location.name,
-        type: location.type,
-        id: marketId,
-        isMarketLevel
-      });
-      
       // Build API params for getAllListings (handles pagination to get more than 25 listings)
-      // Fetch all available listings - no artificial limit
+      // API max is 500, so we request the maximum allowed
       const apiParams: any = { 
         submarketId: marketId, 
         isMarketLevel, 
-        maxListings: 5000 // Fetch all available listings
+        maxListings: 500 // API max is 500
       };
       
       if (apiBedroomFilter) {
@@ -510,9 +655,10 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       }
       
       // Use getAllListings endpoint which properly handles both markets and submarkets
-      const response = await fetch(`/api/trpc/compData.getAllListings?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: apiParams } }))}`);
-      const data = await response.json();
-      const listingsData = data?.[0]?.result?.data?.json?.listings || [];
+      // Use tRPC client for proper response handling
+      const response = await getAllListingsAsync(apiParams);
+      
+      const listingsData = response?.listings || [];
       
       // Update progress with actual count
       setLoadingProgress({ current: listingsData.length, total: listingsData.length });
@@ -572,7 +718,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         mapRef.current.fitBounds(bounds, 50);
       }
     } catch (err: any) {
-      console.error('Error fetching listings:', err);
+      console.error('[MapFirstLayout] Error fetching listings:', err);
       setError(err.message || 'Failed to fetch listings');
     } finally {
       setIsLoading(false);
@@ -759,69 +905,13 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   };
   
   // Initialize from myProperty prop or effectiveProperty from context
-  const [isAutoLoading, setIsAutoLoading] = useState(true); // Start true to prevent debounced search on mount
-  
-  // Auto-search effect - runs when searchQuery is pre-filled and we haven't loaded yet
+  // Set the address field from effectiveProperty if available on mount
   useEffect(() => {
-    // Skip if we've already auto-loaded listings
-    if (hasAutoLoadedListings) {
-      setIsAutoLoading(false);
-      return;
-    }
-    
-    // Skip if searchQuery is empty (no property data)
-    if (!searchQuery || searchQuery.length < 2) {
-      setIsAutoLoading(false);
-      return;
-    }
-    
-    // Use the pre-filled searchQuery as the search term
-    const searchTerm = searchQuery;
-    
-    // Set the address field from effectiveProperty if available
     const propertyToUse = effectiveProperty || myProperty;
     if (propertyToUse?.address && !myPropertyAddress) {
       setMyPropertyAddress(propertyToUse.address);
     }
-    
-    // Mark as auto-loaded BEFORE starting the search to prevent race conditions
-    setHasAutoLoadedListings(true);
-    
-    // Auto-search for the market with a slight delay to ensure component is mounted
-    console.log('[MapFirstLayout] Starting auto-search for:', searchTerm);
-    const timeoutId = setTimeout(async () => {
-      try {
-        console.log('[MapFirstLayout] Executing searchMarketsAsync for:', searchTerm);
-        const response = await searchMarketsAsync(searchTerm);
-        console.log('[MapFirstLayout] Search response:', response);
-        const results = Array.isArray(response) ? response : ((response as any)?.data || response || []);
-        
-        if (results.length > 0) {
-          // Find the best matching result (prefer exact city match)
-          const exactMatch = results.find((r: any) => 
-            r.name?.toLowerCase().includes(searchTerm.toLowerCase().split(',')[0])
-          );
-          const selectedResult = exactMatch || results[0];
-          
-          // Update UI state
-          setSelectedLocation(selectedResult);
-          setLocationName(selectedResult.name);
-          setSearchQuery(selectedResult.name);
-          setShowSearchResults(false);
-          
-          // Fetch listings for this location
-          await fetchListings(selectedResult);
-        }
-        // Auto-load complete, allow debounced search for manual searches
-        setIsAutoLoading(false);
-      } catch (err) {
-        console.error('[MapFirstLayout] Auto-search failed:', err);
-        setIsAutoLoading(false);  // Allow manual search even if auto-load fails
-      }
-    }, 100);
-    
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, hasAutoLoadedListings, effectiveProperty, myProperty, myPropertyAddress]);
+  }, [effectiveProperty, myProperty, myPropertyAddress]);
   
   return (
     <div className={`relative ${embedded ? 'h-full' : 'min-h-screen'} bg-slate-50 ${className}`}>
@@ -923,7 +1013,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                  onFocus={() => searchResults.length > 0 && !hasAutoLoadedListings && setShowSearchResults(true)}
                   placeholder="Search by city, zip code, or market name..."
                   className="flex-1 text-lg outline-none placeholder:text-slate-400"
                 />
@@ -1377,6 +1467,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   <span className="font-medium">Search for a location</span> — Enter a city, zip code, or market name above to see property performance data
                 </p>
               </div>
+
             </div>
           </div>
         )}
