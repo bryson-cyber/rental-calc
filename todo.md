@@ -4211,3 +4211,26 @@ The "Max Distance from My Property" filter was not appearing in the Map View Fil
 - [x] Updated getQualifyingCompetitors maxListings from 500 to 5000
 - [x] Updated market-research-simple.ts to use getAllMarketListings
 - [x] Updated ai-advisor.ts getTopPerformers limits from 25/50 to 500
+
+
+## UX Enhancements for Large Data Sets (Jan 24, 2026) - COMPLETE
+
+### Loading Progress Indicator - COMPLETE
+- [x] Add progress bar component for data fetching (LoadingProgress.tsx)
+- [x] Show percentage or count of listings loaded
+- [x] Display estimated time remaining
+- [x] Integrate into MapFirstLayout loading overlay
+
+### Virtual Scrolling for Large Tables - COMPLETE
+- [x] Install @tanstack/react-virtual virtualization library
+- [x] Implement VirtualizedTable component for listings (100+ rows)
+- [x] Maintain smooth scrolling performance with overscan
+- [x] Preserve sorting and filtering functionality
+- [x] Auto-enable for datasets > 100 listings
+
+### CSV/Excel Export Functionality - COMPLETE
+- [x] Add ExportListings component with dropdown menu
+- [x] Implement CSV export with all listing data
+- [x] Add Excel (.xlsx) export option using xlsx library
+- [x] Include filters applied in export filename
+- [x] Added to both MapFirstLayout and MapViewContent tables

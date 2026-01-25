@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2, Maximize2, Minimize2, X } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2, Maximize2, Minimize2, X, Download } from 'lucide-react';
+import { ExportListings } from '@/components/ExportListings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -1516,15 +1517,25 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
         {filteredListings.length > 0 && (
           <Card className="mt-6 border-slate-200">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg text-slate-900">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <Table2 className="w-4 h-4 text-amber-500" />
-                </div>
-                Comparable Properties
-                <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
-                  {filteredListings.length}
-                </span>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg text-slate-900">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <Table2 className="w-4 h-4 text-amber-500" />
+                  </div>
+                  Comparable Properties
+                  <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
+                    {filteredListings.length}
+                  </span>
+                </CardTitle>
+                <ExportListings
+                  listings={filteredListings}
+                  locationName={locationSelection?.submarket?.name || locationSelection?.market?.name || locationSelection?.zipcode || 'listings'}
+                  filters={{
+                    bedrooms: bedroomFilter,
+                    propertyType: propertyTypeFilter,
+                  }}
+                />
+              </div>
               <p className="text-sm text-slate-500">
                 All properties shown on the map, sorted by {sortBy.replace('-desc', ' (High to Low)').replace('-asc', ' (Low to High)')}
               </p>

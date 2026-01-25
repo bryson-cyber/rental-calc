@@ -57,7 +57,11 @@ import {
   UtensilsCrossed,
   WashingMachine,
   Check,
+  Download,
 } from 'lucide-react';
+import { LoadingProgress } from '@/components/LoadingProgress';
+import { ExportListings } from '@/components/ExportListings';
+import { VirtualizedTable } from '@/components/VirtualizedTable';
 
 // Types
 interface Listing {
@@ -252,6 +256,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const [excludedListingIds, setExcludedListingIds] = useState<Set<string>>(new Set());
   const [showCompSetMode, setShowCompSetMode] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  
+  // Loading progress state
+  const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
+  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
+  const [useVirtualizedTable, setUseVirtualizedTable] = useState(false);
   
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -473,6 +482,8 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const fetchListings = async (location: any) => {
     setIsLoading(true);
     setError(null);
+    setLoadingStartTime(Date.now());
+    setLoadingProgress({ current: 0, total: 5000 }); // Estimate total
     
     try {
       // Determine if this is a market-level or submarket-level search
@@ -499,9 +510,12 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       }
       
       // Use getAllListings endpoint which properly handles both markets and submarkets
-      const response = await fetch(`/api/trpc/compData.getAllListings?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: apiParams } }))}`);  
+      const response = await fetch(`/api/trpc/compData.getAllListings?batch=1&input=${encodeURIComponent(JSON.stringify({ "0": { json: apiParams } }))}`);
       const data = await response.json();
       const listingsData = data?.[0]?.result?.data?.json?.listings || [];
+      
+      // Update progress with actual count
+      setLoadingProgress({ current: listingsData.length, total: listingsData.length });
       
       // Transform and calculate distances
       const processedListings = listingsData.map((listing: any) => {
@@ -542,6 +556,9 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       });
       
       setListings(processedListings);
+      
+      // Enable virtualized table for large datasets (100+ listings)
+      setUseVirtualizedTable(processedListings.length > 100);
       
       // Update map
       updateMapMarkers(processedListings);
@@ -1325,15 +1342,17 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </div>
           )}
           
-          {/* Loading Overlay */}
+          {/* Loading Overlay with Progress */}
           {isLoading && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-30">
-              <div className="bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center gap-3">
-                <Loader2 className="w-10 h-10 text-[#C9A962] animate-spin" />
-                <div className="text-center">
-                  <p className="font-semibold text-slate-800">Loading Properties</p>
-                  <p className="text-sm text-slate-500">Fetching comparable listings...</p>
-                </div>
+              <div className="w-full max-w-md px-4">
+                <LoadingProgress
+                  current={loadingProgress.current}
+                  total={loadingProgress.total}
+                  label="Loading Properties"
+                  showEstimate={true}
+                  startTime={loadingStartTime || undefined}
+                />
               </div>
             </div>
           )}
@@ -1444,14 +1463,41 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </div>
                 </div>
                 
-                {/* Location Privacy Note */}
-                <div className="hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
-                  <Info className="w-4 h-4" />
-                  Locations are approximate (~1km offset) for privacy
+                <div className="flex items-center gap-3">
+                  {/* Export Button */}
+                  <ExportListings
+                    listings={filteredListings}
+                    locationName={locationName}
+                    filters={{
+                      bedrooms: bedroomFilter,
+                      propertyType: propertyTypeFilter,
+                      distance: distanceFilter,
+                    }}
+                  />
+                  
+                  {/* Location Privacy Note */}
+                  <div className="hidden md:flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                    <Info className="w-4 h-4" />
+                    Locations are approximate (~1km offset) for privacy
+                  </div>
                 </div>
               </div>
               
-              {/* Table */}
+              {/* Table - Use virtualized table for large datasets */}
+              {useVirtualizedTable && filteredListings.length > 100 ? (
+                <VirtualizedTable
+                  listings={filteredListings}
+                  thresholds={thresholds}
+                  customThreshold={useCustomThreshold ? customThreshold : null}
+                  hasProperty={hasProperty}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  onRowClick={(listing) => setSelectedListing(listing)}
+                  showCompSetMode={showCompSetMode}
+                  excludedListingIds={excludedListingIds}
+                  onExcludeListing={(id) => setExcludedListingIds(prev => new Set([...Array.from(prev), id]))}
+                />
+              ) : (
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-sm">
                   <thead>
@@ -1612,9 +1658,10 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </tbody>
                 </table>
               </div>
+              )}
               
-              {/* Pagination */}
-              {totalPages > 1 && (
+              {/* Pagination - only show for non-virtualized table */}
+              {!useVirtualizedTable && totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
                   <div className="text-sm text-slate-500">
                     Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredListings.length)} of {filteredListings.length}
