@@ -57,6 +57,7 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
           setBookingPatterns(patternsResult.data);
         }
         if (supplyResult.success) {
+          console.log('[MarketInsightsPanel] supplyResult.data:', JSON.stringify(supplyResult.data, null, 2));
           setSupplyTrend(supplyResult.data);
         }
         if (forwardResult?.success) {
@@ -186,9 +187,16 @@ export default function MarketInsightsPanel({ marketId }: MarketInsightsPanelPro
           
           {/* Simple bar chart */}
           <div className="h-32 flex items-end gap-1">
+            {(() => {
+              console.log('[SupplyTrend] monthly_data:', supplyTrend.monthly_data);
+              console.log('[SupplyTrend] last 12 months:', supplyTrend.monthly_data.slice(-12));
+              return null;
+            })()}
             {supplyTrend.monthly_data.slice(-12).map((month: any, i: number) => {
-              const maxCount = Math.max(...supplyTrend.monthly_data.slice(-12).map((m: any) => m.active_listings));
-              const height = (month.active_listings / maxCount) * 100;
+              const allListings = supplyTrend.monthly_data.slice(-12).map((m: any) => m.active_listings || 0);
+              const maxCount = Math.max(...allListings, 1); // Ensure at least 1 to avoid division by zero
+              const height = ((month.active_listings || 0) / maxCount) * 100;
+              console.log(`[SupplyTrend] Month ${i}: active_listings=${month.active_listings}, maxCount=${maxCount}, height=${height}%`);
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div 

@@ -1013,6 +1013,7 @@ async function getMarketMetric(
           active_listings_count?: number;
           active_listings?: number;
           available_listings?: number;
+          listing_count?: number;
           booking_lead_time?: number;
           los?: number;
         }>;
@@ -1028,6 +1029,10 @@ async function getMarketMetric(
       console.log(`[AirDNA] ${metricType} returned 0 results for ${numMonths} months`);
     } else {
       console.log(`[AirDNA] ${metricType} returned ${results.length} results for ${numMonths} months`);
+      // Debug: log first result to see the actual field names
+      if (metricType === 'active_listings_count') {
+        console.log(`[AirDNA] active_listings_count sample result:`, JSON.stringify(results[0], null, 2));
+      }
     }
     
     return results.map((r) => {
@@ -1041,7 +1046,7 @@ async function getMarketMetric(
           case "avg_revenue": value = r.revenue || r.avg_revenue; break;
           case "adr": value = r.adr; break;
           case "revpar": value = r.revpar; break;
-          case "active_listings_count": value = r.active_listings || r.active_listings_count; break;
+          case "active_listings_count": value = r.listing_count || r.active_listings || r.active_listings_count; break;
           case "booking_lead_time": value = r.booking_lead_time; break;
           case "los": value = r.los; break;
         }
@@ -1080,6 +1085,7 @@ async function getSubmarketMetric(
           active_listings_count?: number;
           active_listings?: number;
           available_listings?: number;
+          listing_count?: number;
           booking_lead_time?: number;
           los?: number;
         }>;
@@ -1108,7 +1114,7 @@ async function getSubmarketMetric(
           case "avg_revenue": value = r.revenue || r.avg_revenue; break;
           case "adr": value = r.adr; break;
           case "revpar": value = r.revpar; break;
-          case "active_listings_count": value = r.active_listings || r.active_listings_count; break;
+          case "active_listings_count": value = r.listing_count || r.active_listings || r.active_listings_count; break;
           case "booking_lead_time": value = r.booking_lead_time; break;
           case "los": value = r.los; break;
         }
@@ -5391,9 +5397,11 @@ export async function getMarketSupplyTrend(
     }
 
     const data = responseData;
+    console.log('[getMarketSupplyTrend] Raw data sample:', JSON.stringify(data.slice(0, 2)));
     const sortedData = [...data].sort((a: any, b: any) => 
       new Date(a.date || a.month).getTime() - new Date(b.date || b.month).getTime()
     );
+    console.log('[getMarketSupplyTrend] Sorted data sample:', JSON.stringify(sortedData.slice(0, 2)));
 
     const current = sortedData[sortedData.length - 1]?.listing_count || sortedData[sortedData.length - 1]?.value || 0;
     const yearAgo = sortedData[0]?.listing_count || sortedData[0]?.value || current;

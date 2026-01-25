@@ -181,16 +181,16 @@ function HeroRevenueCard({
   const profitMargin = monthlyRent > 0 ? ((monthlyProfit / monthlyRent) * 100) : 0;
   
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 md:p-8">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.98_0.01_265)] to-white border border-[oklch(0.90_0.01_265)] p-6 md:p-8 shadow-sm">
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[oklch(0.55_0.14_75)]/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
       
       <div className="relative">
         {/* Verdict Badge */}
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${
           isProfitable 
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
           {isProfitable ? (
             <>
@@ -209,22 +209,22 @@ function HeroRevenueCard({
         <div className="mb-6">
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="text-slate-400 text-sm font-medium mb-1 inline-flex items-center gap-1 cursor-help hover:text-slate-300 transition-colors">
+              <p className="text-[oklch(0.50_0_0)] text-sm font-medium mb-1 inline-flex items-center gap-1 cursor-help hover:text-[oklch(0.40_0_0)] transition-colors">
                 Projected Annual Revenue
                 <Info className="w-3.5 h-3.5" />
               </p>
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-slate-900">
+            <TooltipContent side="top" className="max-w-xs text-center p-3 bg-[oklch(0.25_0_0)] text-white">
               <p className="text-sm leading-relaxed">{METRIC_TOOLTIPS.revenue}</p>
             </TooltipContent>
           </Tooltip>
           <div className="flex items-baseline gap-3">
-            <span className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+            <span className="text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
               {formatCurrency(annualRevenue)}
             </span>
             {yearlyChange !== undefined && (
               <span className={`flex items-center gap-1 text-sm font-medium ${
-                yearlyChange >= 0 ? 'text-emerald-400' : 'text-red-400'
+                yearlyChange >= 0 ? 'text-emerald-600' : 'text-red-600'
               }`}>
                 {yearlyChange >= 0 ? (
                   <ArrowUpRight className="w-4 h-4" />
@@ -239,19 +239,19 @@ function HeroRevenueCard({
         
         {/* Monthly Breakdown */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-slate-400 text-xs font-medium mb-1">Monthly Revenue</p>
-            <p className="text-xl font-bold text-white">{formatCurrency(annualRevenue / 12)}</p>
+          <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Monthly Revenue</p>
+            <p className="text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(annualRevenue / 12)}</p>
           </div>
-          <div className="bg-white/5 rounded-xl p-4">
-            <p className="text-slate-400 text-xs font-medium mb-1">Your Rent</p>
-            <p className="text-xl font-bold text-white">{formatCurrency(monthlyRent)}</p>
+          <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Your Rent</p>
+            <p className="text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRent)}</p>
           </div>
-          <div className={`rounded-xl p-4 ${
-            isProfitable ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          <div className={`rounded-xl p-4 border ${
+            isProfitable ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
           }`}>
-            <p className="text-slate-400 text-xs font-medium mb-1">Monthly Profit</p>
-            <p className={`text-xl font-bold ${isProfitable ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Monthly Profit</p>
+            <p className={`text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
               {formatCurrency(monthlyProfit)}
             </p>
           </div>
@@ -259,11 +259,11 @@ function HeroRevenueCard({
         
         {/* Profit Insight */}
         {monthlyRent > 0 && (
-          <p className="text-slate-400 text-sm mt-4">
+          <p className="text-[oklch(0.50_0_0)] text-sm mt-4">
             {isProfitable ? (
-              <>Your revenue covers rent <span className="text-emerald-400 font-medium">{(profitMargin + 100).toFixed(0)}%</span> — you keep {formatCurrency(monthlyProfit)}/month</>
+              <>Your revenue covers rent <span className="text-emerald-600 font-medium">{(profitMargin + 100).toFixed(0)}%</span> — you keep {formatCurrency(monthlyProfit)}/month</>
             ) : (
-              <>Revenue covers only <span className="text-red-400 font-medium">{(100 - Math.abs(profitMargin)).toFixed(0)}%</span> of rent — you'd lose {formatCurrency(Math.abs(monthlyProfit))}/month</>
+              <>Revenue covers only <span className="text-red-600 font-medium">{(100 - Math.abs(profitMargin)).toFixed(0)}%</span> of rent — you'd lose {formatCurrency(Math.abs(monthlyProfit))}/month</>
             )}
           </p>
         )}

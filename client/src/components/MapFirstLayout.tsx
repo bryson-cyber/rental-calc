@@ -318,6 +318,29 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     selectedLocationRef.current = selectedLocation;
   }, [selectedLocation]);
   
+  // Calculate bedroom counts from listings
+  const bedroomCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: listings.length,
+      '1': 0,
+      '2': 0,
+      '3': 0,
+      '4': 0,
+      '5': 0, // 5+ bedrooms
+    };
+    
+    listings.forEach(listing => {
+      const br = listing.bedrooms;
+      if (br === 1) counts['1']++;
+      else if (br === 2) counts['2']++;
+      else if (br === 3) counts['3']++;
+      else if (br === 4) counts['4']++;
+      else if (br >= 5) counts['5']++;
+    });
+    
+    return counts;
+  }, [listings]);
+  
   // Track if we've already attempted auto-search for this component instance
   const hasAttemptedAutoSearch = useRef(false);
   
@@ -1042,12 +1065,12 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                       <SelectValue placeholder="Beds" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Beds</SelectItem>
-                      <SelectItem value="1">1 BR</SelectItem>
-                      <SelectItem value="2">2 BR</SelectItem>
-                      <SelectItem value="3">3 BR</SelectItem>
-                      <SelectItem value="4">4 BR</SelectItem>
-                      <SelectItem value="5">5+ BR</SelectItem>
+                      <SelectItem value="all">All Beds ({bedroomCounts.all})</SelectItem>
+                      <SelectItem value="1">1 BR ({bedroomCounts['1']})</SelectItem>
+                      <SelectItem value="2">2 BR ({bedroomCounts['2']})</SelectItem>
+                      <SelectItem value="3">3 BR ({bedroomCounts['3']})</SelectItem>
+                      <SelectItem value="4">4 BR ({bedroomCounts['4']})</SelectItem>
+                      <SelectItem value="5">5+ BR ({bedroomCounts['5']})</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

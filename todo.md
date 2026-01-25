@@ -4288,3 +4288,31 @@ When clicking "See on Map" from the property card, the map view would show the s
 - Stats summary shows: Properties count, Avg Revenue, Top Performer
 - Listings table shows all comparable properties
 
+
+
+## Market Insights UI/Data Issues (Reported Jan 25, 2026)
+
+- [ ] Supply Trend chart - Empty, no data showing (just axis labels)
+- [ ] Forward-Looking Demand - "Next 30 Days" grayed out, Detailed Metrics show $0/0 values
+- [ ] Multi-Year Trends - Active Listings shows 0 (incorrect)
+- [ ] Seasonal Forecast - 68% Avg Occupancy text not aligned with other stats
+- [ ] Best/Slow Months - Red down arrows confusing (why "Best Months" showing negative percentages?)
+- [ ] Projected Annual Cash Flow - Dark mode styling doesn't match light mode page
+
+
+## New Issues to Address (Jan 25, 2026)
+
+### File Structure Documentation
+- [ ] Create comprehensive file structure documentation showing which file controls each part of the site
+
+### Map Feature Issues
+- [ ] Fix map to show all bedroom counts, not just 1BR
+- [ ] Add zip code filtering - properties should be filtered by specific zip code (e.g., 92126)
+- [ ] Fix bedroom count filter - showing incorrect counts (21 for 2BR seems wrong)
+
+### Step 3 (Validate the Deal) - Explanatory Labels
+- [ ] Add explainer tooltips/descriptions for "Active Listings"
+- [ ] Add explainer tooltips/descriptions for "ADR" (Average Daily Rate)
+- [ ] Add explainer tooltips/descriptions for "Occupancy"
+- [ ] Add explainer tooltips/descriptions for other key metrics
+- [ ] Help users understand what each metric means with contextual help

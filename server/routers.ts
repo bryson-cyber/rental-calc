@@ -1620,6 +1620,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         try {
           const result = await getMarketSupplyTrend(String(input.marketId));
+          console.log('[getSupplyTrend] Result monthly_data sample:', result?.monthly_data?.slice(0, 2));
           return {
             success: true,
             data: result,
