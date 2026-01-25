@@ -188,3 +188,25 @@ Running analysis to verify calculations...
 - Months to Recoup: $15,000 ÷ $1,484 = 10.1 months ≈ 11 mo ✓
 
 All calculations are correct and the UI is displaying properly!
+
+
+## Investment Comparison Test (Jan 25, 2026)
+
+**Investment Analysis Section - Verified Working:**
+- Header shows "Exceptional ROI" badge (green)
+- Main display: "Time to Recoup Your $15,000 Investment" → **11 months**
+- Tagline: "Then you keep $1,484/month profit forever"
+
+**Comparison Section - Working Correctly:**
+- "TO EARN $17,814/YEAR FROM $15,000, OTHER INVESTMENTS WOULD TAKE:"
+- Your Airbnb: **11 months** (green, highlighted)
+- Stock Market (S&P 500): **12+ years** (gray)
+- Real Estate Appreciation: **24+ years** (gray)
+- High-Yield Savings: **30+ years** (gray)
+
+**Investment Breakdown:**
+- Setup Cost: $15,000
+- Monthly Profit: $1,484 (green)
+- Year 1 Profit: $17,814 (green)
+
+**Framing is now positive and comparative - shows Airbnb as dramatically faster than traditional investments**

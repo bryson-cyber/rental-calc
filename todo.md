@@ -4407,3 +4407,17 @@ When clicking "See on Map" from the property card, the map view would show the s
 ### Profit Display
 - [x] Update monthly profit to deduct expense percentage from revenue
 - [x] Show expense deduction in the profit breakdown (4-column layout: Revenue, Rent, Expenses, Net Profit)
+
+
+## Investment Analysis Reframing (Jan 25, 2026)
+- [x] Remove "ideal" label and red/negative coloring from time-to-recoup
+- [x] Add comparison context (vs stock market ~10%/year, real estate ~5%/year, savings ~4%/year)
+- [x] Frame the metric positively - show Annual ROI % with comparison bars
+- [x] Added ROI rating badges: Exceptional (100%+), Excellent (50%+), Strong (30%+), Good (15%+)
+
+
+## Investment Comparison - Time to Recoup (Jan 25, 2026)
+- [x] Add concrete comparison showing how long other investments take to generate same returns
+- [x] Show: Stock Market (S&P 500), Real Estate Appreciation, High-Yield Savings time to match your profit
+- [x] Display right under the payback period for automatic framing
+- [x] Shows "To earn $X/year from $Y, other investments would take:" with specific years

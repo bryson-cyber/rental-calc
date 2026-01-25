@@ -1075,72 +1075,130 @@ function ArbitrageCalculator({
   const riskExpenses = riskRevenue * (expensePercent / 100);
   const riskProfit = riskRevenue - monthlyRent - riskExpenses;
   
-  // Determine risk level based on months to recoup
-  const riskLevel = monthsToRecoup <= 12 ? 'low' : monthsToRecoup <= 18 ? 'medium' : 'high';
+  // Calculate annual ROI percentage
+  const annualProfit = trueMonthlyProfit * 12;
+  const annualROI = furnitureCost > 0 ? (annualProfit / furnitureCost) * 100 : 0;
+  
+  // Get ROI rating message
+  const getROIRating = () => {
+    if (annualROI >= 100) return { label: 'Exceptional', color: 'emerald', message: 'You could 2x your investment in year one' };
+    if (annualROI >= 50) return { label: 'Excellent', color: 'emerald', message: 'Outperforms most investment vehicles' };
+    if (annualROI >= 30) return { label: 'Strong', color: 'emerald', message: 'Better than real estate appreciation' };
+    if (annualROI >= 15) return { label: 'Good', color: 'amber', message: 'Competitive with stock market returns' };
+    return { label: 'Moderate', color: 'slate', message: 'Consider optimizing pricing or expenses' };
+  };
+  const roiRating = getROIRating();
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-lg font-semibold text-slate-900">Investment Analysis</h3>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          riskLevel === 'low' 
-            ? 'bg-emerald-100 text-emerald-700'
-            : riskLevel === 'medium'
-            ? 'bg-amber-100 text-amber-700'
-            : 'bg-red-100 text-red-700'
-        }`}>
-          {riskLevel === 'low' ? 'Low Risk' : riskLevel === 'medium' ? 'Medium Risk' : 'High Risk'}
-        </span>
+        {furnitureCost > 0 && (
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+            roiRating.color === 'emerald' 
+              ? 'bg-emerald-100 text-emerald-700'
+              : roiRating.color === 'amber'
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-slate-100 text-slate-700'
+          }`}>
+            {roiRating.label} ROI
+          </span>
+        )}
       </div>
       
       <div className="space-y-4">
-        {/* Months to Recoup Investment */}
-        {furnitureCost > 0 && (
-          <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-medium text-slate-700">Time to Recoup Investment</span>
-              <span className={`text-2xl font-bold ${
-                monthsToRecoup <= 12 ? 'text-emerald-600' : 
-                monthsToRecoup <= 18 ? 'text-amber-600' : 'text-red-600'
-              }`}>
-                {monthsToRecoup === Infinity ? '—' : `${monthsToRecoup} mo`}
-              </span>
+        {/* ROI & Payback Period */}
+        {furnitureCost > 0 && (() => {
+          // Calculate how long other investments would take to generate the same annual profit
+          const stockMarketYears = annualProfit > 0 ? Math.ceil(annualProfit / (furnitureCost * 0.10)) : 999;
+          const realEstateYears = annualProfit > 0 ? Math.ceil(annualProfit / (furnitureCost * 0.05)) : 999;
+          const savingsYears = annualProfit > 0 ? Math.ceil(annualProfit / (furnitureCost * 0.04)) : 999;
+          
+          return (
+          <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
+            {/* Main Payback Display */}
+            <div className="text-center mb-4">
+              <span className="text-sm font-medium text-slate-600">Time to Recoup Your {formatCurrency(furnitureCost)} Investment</span>
+              <div className="flex items-baseline justify-center gap-2 mt-2">
+                <span className="text-4xl font-bold text-emerald-600">
+                  {monthsToRecoup === Infinity ? '—' : monthsToRecoup}
+                </span>
+                <span className="text-xl text-slate-600">months</span>
+              </div>
+              <p className="text-sm text-emerald-700 font-medium mt-1">
+                Then you keep {formatCurrency(trueMonthlyProfit)}/month profit forever
+              </p>
             </div>
             
-            {/* Progress bar showing months */}
-            <div className="h-3 bg-white/50 rounded-full overflow-hidden mb-2">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${
-                  monthsToRecoup <= 12 ? 'bg-emerald-500' : 
-                  monthsToRecoup <= 18 ? 'bg-amber-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${Math.min((12 / Math.max(monthsToRecoup, 1)) * 100, 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>0 mo</span>
-              <span className="text-emerald-600 font-medium">12 mo (ideal)</span>
-              <span>24 mo</span>
+            {/* Time Comparison - How long would other investments take? */}
+            <div className="bg-white/70 rounded-lg p-4 mb-4">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
+                To earn {formatCurrency(annualProfit)}/year from {formatCurrency(furnitureCost)}, other investments would take:
+              </p>
+              <div className="space-y-3">
+                {/* Your Airbnb */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                    <span className="text-sm font-medium text-slate-700">Your Airbnb</span>
+                  </div>
+                  <span className="text-lg font-bold text-emerald-600">
+                    {monthsToRecoup === Infinity ? '—' : `${monthsToRecoup} months`}
+                  </span>
+                </div>
+                
+                {/* Stock Market */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-300" />
+                    <span className="text-sm text-slate-600">Stock Market (S&P 500)</span>
+                  </div>
+                  <span className="text-sm text-slate-500">
+                    {stockMarketYears >= 999 ? '—' : `${stockMarketYears}+ years`}
+                  </span>
+                </div>
+                
+                {/* Real Estate */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-300" />
+                    <span className="text-sm text-slate-600">Real Estate Appreciation</span>
+                  </div>
+                  <span className="text-sm text-slate-500">
+                    {realEstateYears >= 999 ? '—' : `${realEstateYears}+ years`}
+                  </span>
+                </div>
+                
+                {/* Savings */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-slate-300" />
+                    <span className="text-sm text-slate-600">High-Yield Savings</span>
+                  </div>
+                  <span className="text-sm text-slate-500">
+                    {savingsYears >= 999 ? '—' : `${savingsYears}+ years`}
+                  </span>
+                </div>
+              </div>
             </div>
             
-            <div className="mt-3 pt-3 border-t border-amber-200/50 grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-xs text-slate-500">Furniture Cost</p>
+            {/* Investment breakdown */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white/50 rounded-lg p-2">
+                <p className="text-xs text-slate-500">Setup Cost</p>
                 <p className="font-semibold text-slate-700">{formatCurrency(furnitureCost)}</p>
               </div>
-              <div>
+              <div className="bg-white/50 rounded-lg p-2">
                 <p className="text-xs text-slate-500">Monthly Profit</p>
-                <p className={`font-semibold ${trueMonthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {formatCurrency(trueMonthlyProfit)}
-                </p>
+                <p className="font-semibold text-emerald-600">{formatCurrency(trueMonthlyProfit)}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-500">Expenses ({expensePercent}%)</p>
-                <p className="font-semibold text-slate-700">{formatCurrency(monthlyExpenses)}</p>
+              <div className="bg-white/50 rounded-lg p-2">
+                <p className="text-xs text-slate-500">Year 1 Profit</p>
+                <p className="font-semibold text-emerald-600">{formatCurrency(annualProfit)}</p>
               </div>
             </div>
           </div>
-        )}
+        );})()}
         
         {/* Break-even Analysis */}
         <div className="p-4 bg-slate-50 rounded-xl">
