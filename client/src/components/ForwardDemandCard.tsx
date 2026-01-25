@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Calendar, ChevronDown, ChevronUp, Flame, Sun, Cloud, Snowflake, Info } from 'lucide-react';
+import { TrendingUp, Sparkles, Calendar, ChevronDown, ChevronUp, Rocket, Target, Zap, Star, Info } from 'lucide-react';
 
 interface ForwardDemandIndicators {
   next30Days: {
@@ -47,38 +47,34 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
   );
 }
 
-// Tooltip explanations (third-grader friendly)
+// Optimistic tooltip explanations
 const DEMAND_TOOLTIPS = {
-  forwardDemand: "This shows how busy the market will be in the future. Think of it like a weather forecast, but for bookings!",
-  next30Days: "How booked up properties will be in the next month. Hot = very busy, Cold = slow season.",
-  next180Days: "A 6-month outlook. This helps you plan for the bigger picture.",
-  peakPeriod: "The busiest week coming up - when most guests want to book. Great time to charge more!",
-  lowPeriod: "The slowest week coming up - fewer guests booking. Consider discounts or minimum stays.",
-  avgAdr: "Average nightly rate hosts are charging. Higher = guests willing to pay more.",
-  avgSupply: "How many listings are available. More supply = more competition.",
-  avgDemand: "How many nights guests want to book. Higher demand = easier to get bookings.",
+  marketOutlook: "See what's coming up in this market! Use this to plan your launch timing and pricing strategy.",
+  next30Days: "Your immediate opportunity window. This shows expected booking activity in the next month.",
+  next180Days: "Your 6-month runway. Plan ahead and prepare for seasonal shifts.",
+  peakPeriod: "Prime earning window! This is when guests are most eager to book - perfect for premium pricing.",
+  opportunity: "Strategic opportunity! Lower competition means easier bookings and room to stand out.",
+  avgAdr: "What guests are willing to pay. Higher rates = more revenue per booking.",
+  avgSupply: "Number of active listings. Know your competition.",
+  avgDemand: "Guest booking interest. Higher demand = more booking opportunities.",
 };
 
-const trendIcons = {
-  hot: <Flame className="w-5 h-5 text-red-500" />,
-  warm: <Sun className="w-5 h-5 text-orange-500" />,
-  cool: <Cloud className="w-5 h-5 text-blue-400" />,
-  cold: <Snowflake className="w-5 h-5 text-blue-600" />,
+// Optimistic trend labels based on occupancy
+const getOptimisticLabel = (occupancy: number): { label: string; subtext: string } => {
+  if (occupancy >= 70) return { label: 'High Demand', subtext: 'Excellent booking potential' };
+  if (occupancy >= 55) return { label: 'Strong Activity', subtext: 'Good booking momentum' };
+  if (occupancy >= 40) return { label: 'Steady Market', subtext: 'Consistent opportunities' };
+  if (occupancy >= 25) return { label: 'Growing Season', subtext: 'Build your reviews now' };
+  return { label: 'Strategic Window', subtext: 'Less competition, easier to stand out' };
 };
 
-// Light theme colors matching other Step 3 cards
-const trendColors = {
-  hot: 'bg-emerald-50 border-emerald-200',
-  warm: 'bg-amber-50 border-amber-200',
-  cool: 'bg-slate-50 border-slate-200',
-  cold: 'bg-blue-50 border-blue-200',
-};
-
-const trendTextColors = {
-  hot: 'text-emerald-700',
-  warm: 'text-amber-700',
-  cool: 'text-slate-700',
-  cold: 'text-blue-700',
+// All-positive color scheme - greens and golds
+const getOptimisticColors = (occupancy: number) => {
+  if (occupancy >= 70) return { bg: 'bg-emerald-50 border-emerald-300', text: 'text-emerald-700', icon: <Rocket className="w-5 h-5 text-emerald-500" /> };
+  if (occupancy >= 55) return { bg: 'bg-green-50 border-green-300', text: 'text-green-700', icon: <Zap className="w-5 h-5 text-green-500" /> };
+  if (occupancy >= 40) return { bg: 'bg-amber-50 border-amber-300', text: 'text-amber-700', icon: <Target className="w-5 h-5 text-amber-500" /> };
+  if (occupancy >= 25) return { bg: 'bg-yellow-50 border-yellow-300', text: 'text-yellow-700', icon: <Star className="w-5 h-5 text-yellow-500" /> };
+  return { bg: 'bg-orange-50 border-orange-300', text: 'text-orange-700', icon: <Sparkles className="w-5 h-5 text-orange-500" /> };
 };
 
 const formatDate = (dateStr: string) => {
@@ -110,6 +106,11 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
     );
   }
 
+  const next30Colors = getOptimisticColors(data.next30Days.avgOccupancy);
+  const next180Colors = getOptimisticColors(data.next180Days.avgOccupancy);
+  const next30Label = getOptimisticLabel(data.next30Days.avgOccupancy);
+  const next180Label = getOptimisticLabel(data.next180Days.avgOccupancy);
+
   return (
     <div className="bg-[oklch(0.98_0.01_265)] rounded-xl border border-[oklch(0.90_0.01_265)] overflow-hidden">
       {/* Header */}
@@ -118,8 +119,8 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
             <h3 className="text-base font-medium text-[oklch(0.30_0_0)] flex items-center gap-2">
-              Forward-Looking Demand
-              <Tooltip text={DEMAND_TOOLTIPS.forwardDemand}>
+              Market Outlook
+              <Tooltip text={DEMAND_TOOLTIPS.marketOutlook}>
                 <Info className="w-4 h-4 text-[oklch(0.60_0_0)] cursor-help" />
               </Tooltip>
             </h3>
@@ -132,7 +133,7 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
           </button>
         </div>
         <p className="text-xs text-[oklch(0.55_0_0)] mt-1">
-          Forecast based on booking trends and market data
+          Plan your timing based on upcoming market activity
         </p>
       </div>
 
@@ -141,72 +142,84 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Next 30 Days - Full width card */}
           <Tooltip text={DEMAND_TOOLTIPS.next30Days}>
-            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${trendColors[data.next30Days.trend]}`}>
+            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${next30Colors.bg}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {trendIcons[data.next30Days.trend]}
-                  <span className={`text-sm font-semibold ${trendTextColors[data.next30Days.trend]}`}>Next 30 Days</span>
+                  {next30Colors.icon}
+                  <span className={`text-sm font-semibold ${next30Colors.text}`}>Next 30 Days</span>
                 </div>
               </div>
-              <div className={`text-4xl font-bold mb-2 ${trendTextColors[data.next30Days.trend]}`}>
+              <div className={`text-4xl font-bold mb-1 ${next30Colors.text}`}>
                 {Math.round(data.next30Days.avgOccupancy)}%
               </div>
-              <div className={`text-sm font-medium ${trendTextColors[data.next30Days.trend]} opacity-80`}>
-                {data.next30Days.trendLabel}
+              <div className={`text-sm font-semibold ${next30Colors.text}`}>
+                {next30Label.label}
+              </div>
+              <div className={`text-xs ${next30Colors.text} opacity-75 mt-1`}>
+                {next30Label.subtext}
               </div>
             </div>
           </Tooltip>
 
           {/* Next 180 Days - Full width card */}
           <Tooltip text={DEMAND_TOOLTIPS.next180Days}>
-            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${trendColors[data.next180Days.trend]}`}>
+            <div className={`p-5 rounded-xl border-2 cursor-help w-full ${next180Colors.bg}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {trendIcons[data.next180Days.trend]}
-                  <span className={`text-sm font-semibold ${trendTextColors[data.next180Days.trend]}`}>Next 180 Days</span>
+                  {next180Colors.icon}
+                  <span className={`text-sm font-semibold ${next180Colors.text}`}>Next 6 Months</span>
                 </div>
               </div>
-              <div className={`text-4xl font-bold mb-2 ${trendTextColors[data.next180Days.trend]}`}>
+              <div className={`text-4xl font-bold mb-1 ${next180Colors.text}`}>
                 {Math.round(data.next180Days.avgOccupancy)}%
               </div>
-              <div className={`text-sm font-medium ${trendTextColors[data.next180Days.trend]} opacity-80`}>
-                {data.next180Days.trendLabel}
+              <div className={`text-sm font-semibold ${next180Colors.text}`}>
+                {next180Label.label}
+              </div>
+              <div className={`text-xs ${next180Colors.text} opacity-75 mt-1`}>
+                {next180Label.subtext}
               </div>
             </div>
           </Tooltip>
         </div>
 
-        {/* Peak & Low Periods - Full width cards */}
+        {/* Peak Period & Strategic Opportunity - Full width cards */}
         {(data.peakPeriod || data.lowPeriod) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {data.peakPeriod && (
               <Tooltip text={DEMAND_TOOLTIPS.peakPeriod}>
-                <div className="p-4 bg-emerald-50 rounded-xl border-2 border-emerald-200 cursor-help w-full">
+                <div className="p-4 bg-emerald-50 rounded-xl border-2 border-emerald-300 cursor-help w-full">
                   <div className="flex items-center gap-2 text-emerald-600 mb-2">
                     <TrendingUp className="w-5 h-5" />
-                    <span className="font-semibold">Peak Period</span>
+                    <span className="font-semibold">Peak Earning Window</span>
                   </div>
                   <div className="text-[oklch(0.25_0_0)] text-lg font-bold">
                     {formatDate(data.peakPeriod.startDate)} - {formatDate(data.peakPeriod.endDate)}
                   </div>
                   <div className="text-emerald-600 text-sm font-medium mt-1">
-                    {Math.round(data.peakPeriod.avgOccupancy)}% occupancy
+                    {Math.round(data.peakPeriod.avgOccupancy)}% booking activity
+                  </div>
+                  <div className="text-emerald-500 text-xs mt-1">
+                    Great time for premium pricing
                   </div>
                 </div>
               </Tooltip>
             )}
             {data.lowPeriod && (
-              <Tooltip text={DEMAND_TOOLTIPS.lowPeriod}>
-                <div className="p-4 bg-amber-50 rounded-xl border-2 border-amber-200 cursor-help w-full">
+              <Tooltip text={DEMAND_TOOLTIPS.opportunity}>
+                <div className="p-4 bg-amber-50 rounded-xl border-2 border-amber-300 cursor-help w-full">
                   <div className="flex items-center gap-2 text-amber-600 mb-2">
-                    <TrendingDown className="w-5 h-5" />
-                    <span className="font-semibold">Low Period</span>
+                    <Sparkles className="w-5 h-5" />
+                    <span className="font-semibold">Strategic Opportunity</span>
                   </div>
                   <div className="text-[oklch(0.25_0_0)] text-lg font-bold">
                     {formatDate(data.lowPeriod.startDate)} - {formatDate(data.lowPeriod.endDate)}
                   </div>
                   <div className="text-amber-600 text-sm font-medium mt-1">
-                    {Math.round(data.lowPeriod.avgOccupancy)}% occupancy
+                    {Math.round(data.lowPeriod.avgOccupancy)}% booking activity
+                  </div>
+                  <div className="text-amber-500 text-xs mt-1">
+                    Perfect time to build reviews & stand out
                   </div>
                 </div>
               </Tooltip>
@@ -218,38 +231,38 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
       {/* Expanded Details */}
       {expanded && (
         <div className="p-4 border-t border-[oklch(0.90_0.01_265)] bg-[oklch(0.96_0.01_265)]">
-          <h4 className="text-sm font-semibold text-[oklch(0.40_0_0)] mb-4">Detailed Metrics</h4>
+          <h4 className="text-sm font-semibold text-[oklch(0.40_0_0)] mb-4">Detailed Market Metrics</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg p-4 border border-[oklch(0.90_0.01_265)]">
-              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">30-Day Forecast</div>
+              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">30-Day Outlook</div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-[oklch(0.50_0_0)]">Avg Nightly Rate</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(data.next30Days.avgAdr)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Supply</span>
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Active Listings</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next30Days.avgSupply).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Demand</span>
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Guest Interest</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next30Days.avgDemand).toLocaleString()}</span>
                 </div>
               </div>
             </div>
             <div className="bg-white rounded-lg p-4 border border-[oklch(0.90_0.01_265)]">
-              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">180-Day Forecast</div>
+              <div className="text-sm font-medium text-[oklch(0.40_0_0)] mb-3 pb-2 border-b border-[oklch(0.92_0_0)]">6-Month Outlook</div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-[oklch(0.50_0_0)]">Avg Nightly Rate</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(data.next180Days.avgAdr)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Supply</span>
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Active Listings</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next180Days.avgSupply).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[oklch(0.50_0_0)]">Avg Demand</span>
+                  <span className="text-sm text-[oklch(0.50_0_0)]">Guest Interest</span>
                   <span className="text-[oklch(0.25_0_0)] font-semibold">{Math.round(data.next180Days.avgDemand).toLocaleString()}</span>
                 </div>
               </div>

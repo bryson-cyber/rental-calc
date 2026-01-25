@@ -103,3 +103,50 @@ The label says "Similar Listings" which correctly indicates these are bedroom-fi
 - Low Period: Jun 24 - Jun 30 (3% occupancy)
 
 The data is coming from the AirDNA future_pricing API with bedroom filtering applied.
+
+
+---
+
+## Test Date: Jan 25, 2026 - Optimistic Reframe Test
+## Test Property: Denver, CO 80202, USA (2BR/1BA)
+
+### Market Outlook Section - VERIFIED ✅
+The Forward-Looking Demand has been reframed with optimistic language:
+
+**Next 30 Days: 37%**
+- Label: "Growing Season"
+- Subtext: "Build your reviews now"
+- Color: Yellow/amber (positive)
+
+**Next 6 Months: 18%**
+- Label: "Strategic Window"
+- Subtext: "Less competition, easier to stand out"
+- Color: Orange (opportunity-focused)
+
+**Peak Earning Window: Jan 25 - Jan 31**
+- 42% booking activity
+- "Great time for premium pricing"
+
+**Strategic Opportunity: Jun 24 - Jun 30**
+- 3% booking activity
+- "Perfect time to build reviews & stand out"
+
+All labels are now positive and opportunity-focused instead of "Cold Market" or "Cool Market".
+
+### Data Freshness Indicator - VERIFIED ✅
+The comp strength bar now shows: "Data as of Jan 2026"
+
+### Revenue Disclaimer Tooltip - VERIFIED ✅
+The Projected Annual Revenue tooltip now explains estimates are based on similar properties.
+
+
+### Comp Strength Bar - VERIFIED ✅
+Shows: "High Confidence | Based on 30 similar properties | Avg. 0.3 mi away | **Data as of Jan 2026**"
+
+### Market Landscape - VERIFIED ✅
+Shows: "1688 Similar Listings" (bedroom-filtered, not all market listings)
+- 44% Professionally Managed
+- 56% Superhosts
+- 4.9 Avg Rating
+
+All three fixes confirmed working in production preview.

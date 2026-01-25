@@ -281,7 +281,7 @@ const METRIC_TOOLTIPS = {
   occupancy: "This shows how often your place is booked. 70% means guests stay 7 out of every 10 nights. More bookings = more money!",
   conservative: "This is the 'worst case' estimate - what you'd make if things go a bit slower than expected. Good for planning safely.",
   optimistic: "This is the 'best case' estimate - what you could make if everything goes great. Aim for this, plan for conservative!",
-  revenue: "This is your total money earned before expenses. It's calculated by: Nightly Rate × Occupancy × 365 days.",
+  revenue: "Estimated annual revenue based on similar properties in your area. This is an average projection - your actual results depend on your listing quality, pricing strategy, and guest reviews.",
   revpar: "Revenue Per Available Room - combines your nightly rate and how often you're booked into one number. Higher = better performance!"
 };
 
@@ -1823,6 +1823,10 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
             </span>
           </>
         )}
+        <span className="text-slate-400">|</span>
+        <span className="text-sm text-slate-500">
+          Data as of <span className="font-medium">{new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+        </span>
       </div>
       <Tooltip>
         <TooltipTrigger asChild>

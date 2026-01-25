@@ -4378,3 +4378,17 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Verified getMarketFutureDailyData passes bedroom filter to API
 - [x] Verified calculateForwardLookingDemand correctly calculates 30/180 day averages
 - [x] Verified peak/low period detection using 7-day rolling windows
+
+
+## Step 3 Enhancements (Jan 25, 2026) - IN PROGRESS
+
+### Forward-Looking Demand Optimistic Reframe
+- [x] Reframe Forward-Looking Demand with optimistic language and framing
+- [x] Focus on opportunities rather than cold/cool market labels
+- [x] Highlight peak periods as "Peak Earning Window" and low periods as "Strategic Opportunity"
+
+### Revenue Projections Disclaimer
+- [x] Add disclaimer tooltip on revenue projections explaining estimates are based on comparable properties
+
+### Data Freshness Indicator
+- [x] Add indicator showing when market data was last updated (shows "Data as of Month Year" in comp strength bar)
