@@ -1153,19 +1153,22 @@ function RentValidationSection({
         </div>
       </div>
       
-      {/* Key Comparison Stats */}
+      {/* Key Comparison Stats - Simplified for layman understanding */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="text-center p-3 bg-slate-50 rounded-lg">
-          <p className="text-xs text-slate-500 mb-1">25th Percentile</p>
-          <p className="text-lg font-semibold text-slate-700">{formatCurrency(rentometerData.percentile25)}</p>
+        <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+          <p className="text-xs text-emerald-600 font-medium mb-1">Budget Rent</p>
+          <p className="text-lg font-semibold text-emerald-700">{formatCurrency(rentometerData.percentile25)}</p>
+          <p className="text-[10px] text-emerald-500">Lower 25%</p>
         </div>
         <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-600 mb-1">Market Median</p>
+          <p className="text-xs text-blue-600 font-medium mb-1">Typical Rent</p>
           <p className="text-lg font-semibold text-blue-700">{formatCurrency(rentometerData.median)}</p>
+          <p className="text-[10px] text-blue-500">Average</p>
         </div>
-        <div className="text-center p-3 bg-slate-50 rounded-lg">
-          <p className="text-xs text-slate-500 mb-1">75th Percentile</p>
-          <p className="text-lg font-semibold text-slate-700">{formatCurrency(rentometerData.percentile75)}</p>
+        <div className="text-center p-3 bg-amber-50 rounded-lg border border-amber-200">
+          <p className="text-xs text-amber-600 font-medium mb-1">Premium Rent</p>
+          <p className="text-lg font-semibold text-amber-700">{formatCurrency(rentometerData.percentile75)}</p>
+          <p className="text-[10px] text-amber-500">Upper 25%</p>
         </div>
       </div>
       

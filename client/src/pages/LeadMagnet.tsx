@@ -1564,23 +1564,40 @@ export default function LeadMagnet() {
                     </label>
                     <span className="text-sm font-semibold text-amber-600">{expensePercent}%</span>
                   </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="40"
-                    step="5"
-                    value={expensePercent}
-                    onChange={(e) => setExpensePercent(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                  />
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">10%</span>
-                    <span className="text-emerald-600 font-medium">20% Recommended</span>
-                    <span className="text-slate-400">40%</span>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="10"
+                      max="40"
+                      step="5"
+                      value={expensePercent}
+                      onChange={(e) => setExpensePercent(parseInt(e.target.value))}
+                      className="expense-slider"
+                      style={{ '--slider-progress': `${((expensePercent - 10) / 30) * 100}%` } as React.CSSProperties}
+                    />
+                    {/* Tick marks */}
+                    <div className="absolute top-4 left-0 right-0 flex justify-between px-[2px] pointer-events-none">
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-slate-300"></div>
+                        <span className="text-[10px] text-slate-400 mt-1">10%</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-3 bg-emerald-500"></div>
+                        <span className="text-[10px] text-emerald-600 font-medium mt-1">20%</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-slate-300"></div>
+                        <span className="text-[10px] text-slate-400 mt-1">30%</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="w-0.5 h-2 bg-slate-300"></div>
+                        <span className="text-[10px] text-slate-400 mt-1">40%</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div className="flex justify-between text-xs text-slate-400 mt-8">
                     <span>Below Avg</span>
-                    <span></span>
+                    <span className="text-emerald-600 font-medium">Recommended</span>
                     <span>Above Avg</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
