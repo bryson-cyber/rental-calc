@@ -215,8 +215,8 @@ export function HistoricalCharts({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">Market Performance Over Time</h3>
-            <p className="text-sm text-gray-500 mt-1">See how {marketName} has performed month-by-month</p>
+            <h3 className="text-xl font-semibold text-gray-900">Is this market growing or declining?</h3>
+            <p className="text-sm text-gray-500 mt-1">Track {marketName}'s performance over time to spot trends</p>
           </div>
           <Select value={String(timeRange)} onValueChange={(v) => setTimeRange(parseInt(v))}>
             <SelectTrigger className="w-32">

@@ -2303,9 +2303,12 @@ export default function LeadMagnet() {
               
               return (
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-amber-600" />
-                    <h4 className="font-semibold text-slate-800">Quick Insights</h4>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-5 h-5 text-amber-600" />
+                      <h4 className="font-semibold text-slate-800">What should I know first about this market?</h4>
+                    </div>
+                    <p className="text-sm text-slate-500 ml-7">Here are the key takeaways at a glance</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Best Revenue */}
@@ -2445,8 +2448,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Market Health Score</h4>
-                      <p className="text-slate-500 text-sm">Overall investment potential assessment</p>
+                      <h4 className="text-lg font-semibold text-slate-900">Is this market healthy for investors?</h4>
+                      <p className="text-slate-500 text-sm">Overall investment potential across 5 key factors</p>
                     </div>
                     <div className="text-right">
                       <div className={`text-3xl font-bold ${getScoreColor(scores.overall)}`}>{scores.overall}</div>
@@ -2491,8 +2494,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Revenue Distribution</h4>
-                      <p className="text-slate-500 text-sm">What hosts actually earn in this market</p>
+                      <h4 className="text-lg font-semibold text-slate-900">How much can I realistically expect to earn?</h4>
+                      <p className="text-slate-500 text-sm">See the full range of what hosts actually earn here</p>
                     </div>
                     <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">Annual revenue</span>
                   </div>
@@ -2528,8 +2531,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Guest Behavior Insights</h4>
-                      <p className="text-slate-500 text-sm">How guests book in this market</p>
+                      <h4 className="text-lg font-semibold text-slate-900">How do guests typically book here?</h4>
+                      <p className="text-slate-500 text-sm">Understanding booking patterns helps you plan pricing and availability</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -2603,8 +2606,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Competition Landscape</h4>
-                      <p className="text-slate-500 text-sm">Who you're competing against</p>
+                      <h4 className="text-lg font-semibold text-slate-900">How competitive is this market?</h4>
+                      <p className="text-slate-500 text-sm">Know your competition before you enter</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2746,8 +2749,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Revenue by Property Type</h4>
-                      <p className="text-slate-500 text-sm">See what's working in this market</p>
+                      <h4 className="text-lg font-semibold text-slate-900">Which property types earn the most?</h4>
+                      <p className="text-slate-500 text-sm">Compare revenue and occupancy by bedroom count</p>
                     </div>
                     <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-medium">By Bedroom</span>
                   </div>

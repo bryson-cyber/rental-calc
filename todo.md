@@ -5054,3 +5054,15 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [ ] Add submarket breakdown table for large cities (top 5-10 neighborhoods)
 - [ ] Assess Step 1 against Step 3 quality benchmark
 - [ ] Identify and fix any remaining gaps
+
+
+## Step 1 Quality Improvements - Guiding Questions (Jan 26, 2026)
+
+- [x] Add guiding question to Quick Insights section: "What should I know first about this market?"
+- [x] Add guiding question to Market Health Score section: "Is this market healthy for investors?"
+- [x] Add guiding question to Revenue Distribution section: "How much can I realistically expect to earn?"
+- [x] Add guiding question to Guest Behavior Insights section: "How do guests typically book here?"
+- [x] Add guiding question to Competition Landscape section: "How competitive is this market?"
+- [x] Add guiding question to Revenue by Property Type section: "Which property types earn the most?"
+- [x] Add guiding question to Market Performance Over Time section: "Is this market growing or declining?"
+- [x] Add guiding question to Comp Data Table section: "What are successful properties doing?"
