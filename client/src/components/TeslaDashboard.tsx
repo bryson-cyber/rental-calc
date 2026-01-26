@@ -208,7 +208,7 @@ function HeroRevenueCard({
       <div className="relative">
         {/* Section Headline - Why this matters */}
         <p className="text-sm text-slate-600 mb-3 font-medium">
-          💰 The bottom line — will this property make money after all costs?
+          The bottom line — will this property make money after all costs?
         </p>
         
         {/* Verdict Badge */}
@@ -1103,7 +1103,7 @@ function RentValidationSection({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        🏠 Are you overpaying for rent?
+        How does your rent compare to similar properties in the area?
       </p>
       
       <div className="flex items-center justify-between mb-4">
@@ -1242,7 +1242,7 @@ function AirbnbVsLongTermComparison({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        💰 How much more can you make with short-term rentals?
+        Short-Term vs Long-Term — Which strategy earns more?
       </p>
       
       <div className="flex items-center gap-2 mb-4">
@@ -1341,75 +1341,33 @@ function AirbnbVsLongTermComparison({
 }
 
 /**
- * Revenue Percentile Projections
- * Shows 25th, 50th, and 75th percentile revenue scenarios based on NEARBY comparable properties
- * Uses same filtering criteria as the main report (same bedrooms + within distance)
+ * Revenue Projection Range
+ * Shows conservative, expected, and optimistic revenue scenarios from the same Rentalizer methodology
+ * All three values come from AirDNA's Rentalizer API for consistency
  */
 function RevenuePercentileProjections({
-  comparables,
-  projectedRevenue,
-  maxDistanceMeters = 5000 // Default 5km radius for apples-to-apples comparison
+  revenueData,
+  bedrooms
 }: {
-  comparables: Comparable[];
-  projectedRevenue: number;
-  maxDistanceMeters?: number;
+  revenueData: { projected: number; low: number; high: number };
+  bedrooms?: number;
 }) {
-  if (!comparables || comparables.length < 3) return null;
+  const { projected, low, high } = revenueData;
   
-  // Filter to only nearby comps (apples-to-apples comparison)
-  // Only include comps that have distance data AND are within the max distance
-  const nearbyComps = comparables.filter(c => {
-    // If no distance data, include it (better to have more data than less)
-    if (c.distanceMeters === undefined || c.distanceMeters === null) return true;
-    return c.distanceMeters <= maxDistanceMeters;
-  });
-  
-  // If we filtered too aggressively and have less than 3 comps, use all comps
-  const compsToUse = nearbyComps.length >= 3 ? nearbyComps : comparables;
-  const isFiltered = nearbyComps.length >= 3 && nearbyComps.length < comparables.length;
-  
-  // Sort comparables by revenue
-  const sortedRevenues = compsToUse.map(c => c.revenue).sort((a, b) => a - b);
-  
-  // Calculate percentiles
-  const getPercentile = (arr: number[], percentile: number): number => {
-    const index = Math.ceil((percentile / 100) * arr.length) - 1;
-    return arr[Math.max(0, Math.min(index, arr.length - 1))];
-  };
-  
-  const p25 = getPercentile(sortedRevenues, 25);
-  const p50 = getPercentile(sortedRevenues, 50);
-  const p75 = getPercentile(sortedRevenues, 75);
-  const min = sortedRevenues[0];
-  const max = sortedRevenues[sortedRevenues.length - 1];
-  
-  // Determine where the projected revenue falls
-  const getProjectedPercentile = (): number => {
-    if (projectedRevenue <= p25) return 25;
-    if (projectedRevenue <= p50) return 50;
-    if (projectedRevenue <= p75) return 75;
-    return 90;
-  };
-  
-  const projectedPercentile = getProjectedPercentile();
-  
-  // Format distance for display
-  const formatDistance = (meters: number) => {
-    if (meters < 1000) return `${meters}m`;
-    return `${(meters / 1000).toFixed(1)}km`;
-  };
+  // Don't show if we don't have valid data
+  if (!projected || projected <= 0) return null;
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        📊 See what similar {compsToUse[0]?.bedrooms || ''}BR properties nearby actually earn
+        What can you realistically expect to earn{bedrooms ? ` with this ${bedrooms}BR property` : ''}?
       </p>
       
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-indigo-600" />
         <h3 className="text-lg font-semibold text-slate-900">
-          Revenue Range ({compsToUse.length} Nearby Comps{isFiltered ? ` within ${formatDistance(maxDistanceMeters)}` : ''})
+          Revenue Projection Range
         </h3>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1419,61 +1377,61 @@ function RevenuePercentileProjections({
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
             <p className="text-sm leading-relaxed">
-              This shows the range of what similar properties actually earn. 
-              The 25th percentile means 25% of properties earn less than this amount. 
-              Aim for the 75th percentile with great photos, reviews, and pricing!
+              These projections are based on market data analysis of similar properties. 
+              Conservative assumes lower occupancy, while Optimistic assumes you optimize 
+              pricing, photos, and guest experience to outperform the market.
             </p>
           </TooltipContent>
         </Tooltip>
       </div>
       
-      {/* Percentile Cards */}
+      {/* Scenario Cards */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
-          <p className="text-xs font-medium text-amber-600 mb-1">Conservative (25th)</p>
-          <p className="text-xl font-bold text-amber-700">{formatCompactCurrency(p25)}</p>
-          <p className="text-[10px] text-amber-600">Lower performers</p>
+          <p className="text-xs font-medium text-amber-600 mb-1">Conservative</p>
+          <p className="text-xl font-bold text-amber-700">{formatCompactCurrency(low)}</p>
+          <p className="text-[10px] text-amber-600">Lower occupancy scenario</p>
         </div>
         <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-          <p className="text-xs font-medium text-blue-600 mb-1">Median (50th)</p>
-          <p className="text-xl font-bold text-blue-700">{formatCompactCurrency(p50)}</p>
-          <p className="text-[10px] text-blue-600">Typical property</p>
+          <p className="text-xs font-medium text-blue-600 mb-1">Expected</p>
+          <p className="text-xl font-bold text-blue-700">{formatCompactCurrency(projected)}</p>
+          <p className="text-[10px] text-blue-600">Most likely outcome</p>
         </div>
         <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-          <p className="text-xs font-medium text-emerald-600 mb-1">Optimistic (75th)</p>
-          <p className="text-xl font-bold text-emerald-700">{formatCompactCurrency(p75)}</p>
-          <p className="text-[10px] text-emerald-600">Top performers</p>
+          <p className="text-xs font-medium text-emerald-600 mb-1">Optimistic</p>
+          <p className="text-xl font-bold text-emerald-700">{formatCompactCurrency(high)}</p>
+          <p className="text-[10px] text-emerald-600">Optimized performance</p>
         </div>
       </div>
       
       {/* Visual Range Bar */}
       <div className="mb-4">
         <div className="flex justify-between text-xs text-slate-500 mb-1">
-          <span>{formatCompactCurrency(min)}</span>
-          <span className="font-medium">Revenue Distribution</span>
-          <span>{formatCompactCurrency(max)}</span>
+          <span>{formatCompactCurrency(low)}</span>
+          <span className="font-medium">Projection Range</span>
+          <span>{formatCompactCurrency(high)}</span>
         </div>
         <div className="relative h-8 bg-gradient-to-r from-amber-200 via-blue-200 to-emerald-200 rounded-full">
-          {/* 25th percentile marker */}
+          {/* Conservative marker */}
           <div 
             className="absolute top-0 bottom-0 w-0.5 bg-amber-500"
-            style={{ left: `${((p25 - min) / (max - min)) * 100}%` }}
+            style={{ left: '0%' }}
           />
-          {/* 50th percentile marker */}
+          {/* Expected marker */}
           <div 
             className="absolute top-0 bottom-0 w-1 bg-blue-500"
-            style={{ left: `${((p50 - min) / (max - min)) * 100}%` }}
+            style={{ left: `${((projected - low) / (high - low)) * 100}%` }}
           />
-          {/* 75th percentile marker */}
+          {/* Optimistic marker */}
           <div 
             className="absolute top-0 bottom-0 w-0.5 bg-emerald-500"
-            style={{ left: `${((p75 - min) / (max - min)) * 100}%` }}
+            style={{ left: '100%' }}
           />
-          {/* Projected revenue position */}
+          {/* Your expected position */}
           <div 
             className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center bg-indigo-500"
             style={{ 
-              left: `${Math.min(Math.max(((projectedRevenue - min) / (max - min)) * 100, 3), 97)}%`,
+              left: `${((projected - low) / (high - low)) * 100}%`,
               transform: 'translate(-50%, -50%)'
             }}
           >
@@ -1481,26 +1439,22 @@ function RevenuePercentileProjections({
           </div>
         </div>
         <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-          <span>25th: {formatCompactCurrency(p25)}</span>
-          <span className="font-medium">50th: {formatCompactCurrency(p50)}</span>
-          <span>75th: {formatCompactCurrency(p75)}</span>
+          <span>Low: {formatCompactCurrency(low)}</span>
+          <span className="font-medium">Expected: {formatCompactCurrency(projected)}</span>
+          <span>High: {formatCompactCurrency(high)}</span>
         </div>
       </div>
       
-      {/* Your Projection */}
+      {/* Upside Potential */}
       <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-700">Your Projection</p>
-            <p className="text-2xl font-bold text-indigo-800">{formatCompactCurrency(projectedRevenue)}</p>
+            <p className="text-sm font-medium text-indigo-700">Upside Potential</p>
+            <p className="text-2xl font-bold text-indigo-800">+{formatCompactCurrency(high - projected)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-indigo-600">~{projectedPercentile}th percentile</p>
-            <p className="text-xs text-indigo-500">
-              {projectedPercentile >= 75 ? 'Top performer territory!' : 
-               projectedPercentile >= 50 ? 'Above average' : 
-               'Room to optimize'}
-            </p>
+            <p className="text-sm text-indigo-600">+{Math.round(((high - projected) / projected) * 100)}% above expected</p>
+            <p className="text-xs text-indigo-500">With optimized pricing and reviews</p>
           </div>
         </div>
       </div>
@@ -1766,7 +1720,7 @@ function MarketPosition({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-2 font-medium">
-        🏆 How does this property stack up against the competition?
+        How does this property stack up against the competition?
       </p>
       <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Competitive Ranking</h3>
       
@@ -1817,6 +1771,13 @@ function MarketPosition({
             <span>Top 25%</span>
           </div>
         </div>
+      </div>
+      
+      {/* Methodology Explanation */}
+      <div className="mt-4 pt-4 border-t border-slate-100">
+        <p className="text-xs text-slate-500">
+          <span className="font-medium">How this is calculated:</span> Your property's projected annual revenue ({formatCompactCurrency(propertyRevenue)}) is compared against {allRevenues.length} similar properties in the area with the same bedroom count. The grade reflects where you rank in terms of earning potential.
+        </p>
       </div>
     </div>
   );
@@ -1993,7 +1954,7 @@ function MarketHealthGrade({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-2 font-medium">
-        📊 Is this a good market for short-term rentals?
+        Is this a good market for short-term rentals?
       </p>
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -2116,7 +2077,7 @@ function MarketInsights({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-2 font-medium">
-        👥 Who are you competing against?
+        Who are you competing against?
       </p>
       <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
         <Building2 className="w-5 h-5 text-slate-600" />
@@ -2728,10 +2689,10 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         expensePercent={expensePercent}
       />
       
-      {/* SECTION 4.6: Revenue Percentile Projections */}
+      {/* SECTION 4.6: Revenue Projection Range */}
       <RevenuePercentileProjections
-        comparables={result.comparables}
-        projectedRevenue={result.revenue.projected}
+        revenueData={result.revenue}
+        bedrooms={bedrooms}
       />
       
       {/* SECTION 5: Seasonal Forecast - "When are the peak/slow months?" */}

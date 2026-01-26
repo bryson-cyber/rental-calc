@@ -4631,3 +4631,48 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] "Market Position" -> "Your Competitive Ranking" with headline "How does this property stack up against the competition?"
 - [x] "Market Health Grade" -> "Market Score" with headline "Is this a good market for short-term rentals?"
 - [x] "Market Landscape" -> "Your Competition" with headline "Who are you competing against?"
+
+
+## Bug Fixes Round 3 (Jan 25, 2026)
+
+### Revenue Range Data Mismatch - CRITICAL FIX REQUIRED
+- [ ] Revenue Range shows $12K-$17K but projection is $78K - fundamental data mismatch
+- [ ] Revenue Range percentiles must use SAME data source as the projection
+- [ ] The projection comes from AirDNA Rentalizer, so percentiles should too
+- [ ] Current issue: using comps' annual_revenue which is different from projection methodology
+
+### Remove Emojis - FIX REQUIRED
+- [ ] Remove all emojis from report section headlines
+- [ ] Keep professional appearance throughout
+
+### Competitive Ranking Explanation - FIX REQUIRED
+- [ ] Add explanation of what factors go into the ranking calculation
+- [ ] Show the data/methodology behind the grade
+
+### Rent Validation Headline - FIX REQUIRED
+- [ ] Rewrite "Are you overpaying for rent?" more professionally
+- [ ] Keep the same framing but make it sound more polished
+
+
+## Bug Fixes Round 3 (Jan 25, 2026) - COMPLETE
+
+### Revenue Range Data Mismatch - FIXED
+- [x] Revenue Range now uses Rentalizer low/high estimates instead of comp percentiles
+- [x] Conservative: $47K (low), Expected: $51K (projected), Optimistic: $55K (high)
+- [x] Data is now consistent since all values come from same Rentalizer methodology
+
+### Remove Emojis - FIXED
+- [x] Removed all emojis from report section headlines
+- [x] Professional look maintained
+
+### Competitive Ranking Explanation - FIXED
+- [x] Added explanation: "How this is calculated: Your property's projected annual revenue is compared against similar properties in the area with the same bedroom count. The grade reflects where you rank in terms of earning potential."
+
+### Rent Validation Headline - FIXED
+- [x] Changed to "How does your rent compare to similar properties in the area?"
+- [x] Professional framing while keeping the same intent
+
+### Airbnb vs Long-Term Reframe - FIXED
+- [x] Changed to "Short-Term vs Long-Term Income" - neutral for both renters and owners
+- [x] Updated headline to "Short-Term vs Long-Term — Which strategy earns more?"
+- [x] Works for both property owners and arbitrage operators
