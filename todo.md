@@ -4588,3 +4588,24 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Added hover tooltips to Revenue/yr metric explaining it's average annual income
 - [x] Added hover tooltips to Occupancy metric explaining booking frequency
 - [x] Styled with dotted underline to indicate interactive help
+
+
+## Bug Fixes & Improvements (Jan 26, 2026)
+
+### Revenue Range Data Mismatch - FIXED
+- [x] Revenue Range now filters to only nearby comps (within 5km) for apples-to-apples comparison
+- [x] Revenue Range uses same bedroom count as subject property
+- [x] Shows count of nearby comps used and distance filter applied
+- [x] Falls back to all comps if not enough nearby data
+
+### Context Headlines for Each Section - FIXED
+- [x] Add headline to Rent Validation: "Your rent determines your profit margin"
+- [x] Add headline to Cash Flow section: "The bottom line - will this property make money?"
+- [x] Add headline to Airbnb vs Long-Term: "Is short-term rental worth the extra effort?"
+- [x] Add headline to Revenue Range: "See what similar properties nearby actually earn"
+
+### Missing Hover Tooltips - FIXED
+- [x] Add tooltip to "Monthly Revenue": "What you'll earn each month from Airbnb bookings"
+- [x] Add tooltip to "Your Rent": "The monthly rent you pay to your landlord"
+- [x] Add tooltip to "Expenses (20%)": "Operating costs: cleaning, supplies, utilities, Airbnb fees"
+- [x] Add tooltip to "Net Profit": "What you keep after paying rent and all expenses"

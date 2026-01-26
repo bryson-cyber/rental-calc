@@ -206,6 +206,11 @@ function HeroRevenueCard({
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[oklch(0.55_0.14_75)]/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
       
       <div className="relative">
+        {/* Section Headline - Why this matters */}
+        <p className="text-sm text-slate-600 mb-3 font-medium">
+          💰 The bottom line — will this property make money after all costs?
+        </p>
+        
         {/* Verdict Badge */}
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${
           isProfitable 
@@ -257,24 +262,52 @@ function HeroRevenueCard({
           </div>
         </div>
         
-        {/* Monthly Breakdown - 4 columns now */}
+        {/* Monthly Breakdown - 4 columns with tooltips */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
-            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Monthly Revenue</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Monthly Revenue</p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                <p className="text-sm">What you'll earn each month from Airbnb bookings before any expenses</p>
+              </TooltipContent>
+            </Tooltip>
             <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRevenue)}</p>
           </div>
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
-            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Your Rent</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Your Rent</p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                <p className="text-sm">The monthly rent you pay to your landlord — your biggest fixed cost</p>
+              </TooltipContent>
+            </Tooltip>
             <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRent)}</p>
           </div>
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Expenses ({expensePercent}%)</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Expenses ({expensePercent}%)</p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                <p className="text-sm">Operating costs: cleaning, supplies, utilities, Airbnb fees, repairs. Industry standard is 20-30% of revenue.</p>
+              </TooltipContent>
+            </Tooltip>
             <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses)}</p>
           </div>
           <div className={`rounded-xl p-4 border ${
             isProfitable ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
           }`}>
-            <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1">Net Profit</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Net Profit</p>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                <p className="text-sm">What you keep after paying rent and all expenses. This is your actual take-home profit.</p>
+              </TooltipContent>
+            </Tooltip>
             <p className={`text-lg md:text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
               {formatCurrency(trueMonthlyProfit)}
             </p>
@@ -1068,6 +1101,11 @@ function RentValidationSection({
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-3 font-medium">
+        🏠 Your rent determines your profit margin — here's how it compares to market rates
+      </p>
+      
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Home className="w-5 h-5 text-blue-600" />
@@ -1202,6 +1240,11 @@ function AirbnbVsLongTermComparison({
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-3 font-medium">
+        🎯 Is short-term rental worth the extra effort? Compare your options
+      </p>
+      
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-purple-600" />
         <h3 className="text-lg font-semibold text-slate-900">Airbnb vs Long-Term Rental</h3>
@@ -1299,19 +1342,34 @@ function AirbnbVsLongTermComparison({
 
 /**
  * Revenue Percentile Projections
- * Shows 25th, 50th, and 75th percentile revenue scenarios based on comparable properties
+ * Shows 25th, 50th, and 75th percentile revenue scenarios based on NEARBY comparable properties
+ * Uses same filtering criteria as the main report (same bedrooms + within distance)
  */
 function RevenuePercentileProjections({
   comparables,
-  projectedRevenue
+  projectedRevenue,
+  maxDistanceMeters = 5000 // Default 5km radius for apples-to-apples comparison
 }: {
   comparables: Comparable[];
   projectedRevenue: number;
+  maxDistanceMeters?: number;
 }) {
   if (!comparables || comparables.length < 3) return null;
   
+  // Filter to only nearby comps (apples-to-apples comparison)
+  // Only include comps that have distance data AND are within the max distance
+  const nearbyComps = comparables.filter(c => {
+    // If no distance data, include it (better to have more data than less)
+    if (c.distanceMeters === undefined || c.distanceMeters === null) return true;
+    return c.distanceMeters <= maxDistanceMeters;
+  });
+  
+  // If we filtered too aggressively and have less than 3 comps, use all comps
+  const compsToUse = nearbyComps.length >= 3 ? nearbyComps : comparables;
+  const isFiltered = nearbyComps.length >= 3 && nearbyComps.length < comparables.length;
+  
   // Sort comparables by revenue
-  const sortedRevenues = comparables.map(c => c.revenue).sort((a, b) => a - b);
+  const sortedRevenues = compsToUse.map(c => c.revenue).sort((a, b) => a - b);
   
   // Calculate percentiles
   const getPercentile = (arr: number[], percentile: number): number => {
@@ -1335,11 +1393,24 @@ function RevenuePercentileProjections({
   
   const projectedPercentile = getProjectedPercentile();
   
+  // Format distance for display
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) return `${meters}m`;
+    return `${(meters / 1000).toFixed(1)}km`;
+  };
+  
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-3 font-medium">
+        📊 See what similar {compsToUse[0]?.bedrooms || ''}BR properties nearby actually earn
+      </p>
+      
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-indigo-600" />
-        <h3 className="text-lg font-semibold text-slate-900">Revenue Range (Based on {comparables.length} Comps)</h3>
+        <h3 className="text-lg font-semibold text-slate-900">
+          Revenue Range ({compsToUse.length} Nearby Comps{isFiltered ? ` within ${formatDistance(maxDistanceMeters)}` : ''})
+        </h3>
         <Tooltip>
           <TooltipTrigger asChild>
             <button className="p-1 hover:bg-slate-100 rounded-full transition-colors">
