@@ -4750,3 +4750,8 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Conservative: $47K, Expected: $51K, Optimistic: $55K - all from same methodology
 - [x] Data is consistent since all values come from same Rentalizer API
 
+
+
+## Bug Fixes (Jan 25, 2026)
+- [x] Fixed operating expenses slider alignment - thumb now positioned correctly at 20% recommended with tick marks
+- [x] Simplified rent validation terminology (Budget Rent, Typical Rent, Premium Rent instead of percentiles)
