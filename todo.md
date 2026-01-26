@@ -4982,3 +4982,48 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add info/hover tooltips to all technical metrics
 - [x] Add "Best for Beginners" recommendation in submarket section
 - [x] Fetch and display submarket metrics (revenue, occupancy) for neighborhood comparison
+
+
+## Step 1 Bug Fixes Round 2 (Jan 26, 2026)
+
+### Shared Report Issues:
+- [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
+- [ ] Investigate SharedReportPage component for data loading issues
+
+### Glendale, Arizona Issues:
+- [ ] Fix market health score showing 0/100 instead of actual score
+- [ ] Fix Revenue by Property Type showing "Limited data" despite 1,100+ 2BR listings in Similar Listings
+- [ ] Fix comp data count showing 300 instead of actual total
+- [ ] Add encouraging disclaimer for challenging markets (C+ grade)
+
+
+## Step 1 Bug Fixes Round 2 (Jan 26, 2026)
+
+### Shared Report Issues:
+- [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
+- [ ] Investigate SharedReportPage component for data loading issues
+
+### Glendale, Arizona Issues:
+- [ ] Fix market health score showing 0/100 instead of actual score
+- [ ] Fix Revenue by Property Type showing "Limited data" despite 1,108 2BR listings in Similar Listings
+- [ ] Fix data source mismatch - summary cards use market overview, bedroom cards use sampled listings
+- [ ] Fix comp data count showing 300 instead of actual total
+- [ ] Add encouraging disclaimer for challenging markets (C+ grade)
+
+
+## Step 1 Bug Fixes Round 2 (Jan 26, 2026) - COMPLETE
+
+### Data Bugs Fixed:
+- [x] Fix market health score showing 0/100 for Glendale (now calculates from occupancy/revenue)
+- [x] Fix Revenue by Property Type showing 'Limited data' - now shows 'Uncommon in this market' with helpful Pro Tip
+- [x] Fix Comp Data count showing 300 instead of actual - now shows 'X sample listings (Y total in market)'
+- [x] Add encouraging disclaimer for challenging markets (C+ and C grades)
+- [x] Rename 'Historical Trends' to 'Market Performance Over Time' with beginner-friendly labels
+- [x] Add Market Verdict Card with letter grade (A+, B, C, etc.) and plain English explanation
+- [x] Fix total listings count in Quick Insights (was showing 350, now shows actual count like 1,108)
+- [x] Fix Competition Landscape showing 0% for Entire Homes and Single Hosts
+
+### UI Improvements:
+- [x] Add info/hover tooltips to technical metrics throughout Step 1
+- [x] Add "What does this mean?" section with occupancy and revenue context
+- [x] Add Pro Tip for uncommon bedroom types explaining market dynamics

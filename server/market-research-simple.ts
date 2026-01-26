@@ -301,6 +301,9 @@ export const marketResearchSimpleRouter = router({
         });
       });
       
+      // Log bedroom distribution for debugging
+      console.log(`[MarketResearch] Bedroom distribution from ${allListings.length} listings:`, Object.fromEntries(bedroomMap));
+      
       // Convert to array and include ALL bedroom types 1-5+ for comprehensive display
       // This ensures the frontend always has data for all bedroom types
       const allBedroomTypes = [1, 2, 3, 4, 5]; // Standard bedroom types to always include

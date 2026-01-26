@@ -56,6 +56,7 @@ export function CompDataTable({
 
   // Get raw listings from the query
   const rawListings = allData?.listings || [];
+  const marketTotalCount = allData?.marketTotalCount || rawListings.length;
 
   // Debug logging - use useEffect to avoid re-logging on every render
   useEffect(() => {
@@ -153,9 +154,9 @@ export function CompDataTable({
             <h3 className="text-xl font-semibold text-gray-900">Comp Data - {marketName}</h3>
             <p className="text-sm text-gray-500 mt-1">
               {bedroomFilter ? (
-                <>Showing {listings.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}-{Math.min(currentPage * pageSize, totalCount)} of {totalCount} {bedroomFilter === 5 ? '5+ BR' : `${bedroomFilter} BR`} listings (filtered from {rawListings.length} total)</>
+                <>Showing {listings.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}-{Math.min(currentPage * pageSize, totalCount)} of {totalCount} {bedroomFilter === 5 ? '5+ BR' : `${bedroomFilter} BR`} listings (from {marketTotalCount.toLocaleString()} total in market)</>
               ) : (
-                <>Showing {listings.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}-{Math.min(currentPage * pageSize, totalCount)} of {totalCount} listings</>
+                <>Showing {listings.length > 0 ? ((currentPage - 1) * pageSize) + 1 : 0}-{Math.min(currentPage * pageSize, totalCount)} of {rawListings.length} sample listings ({marketTotalCount.toLocaleString()} total in market)</>
               )}
             </p>
           </div>

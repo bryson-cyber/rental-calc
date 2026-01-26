@@ -3602,8 +3602,9 @@ superhostOnly: input.superhostOnly,
           
           // Handle both old array format and new { listings, total_count } format
           const allListings = Array.isArray(allListingsResult) ? allListingsResult : allListingsResult.listings;
+          const marketTotalCount = Array.isArray(allListingsResult) ? allListings.length : (allListingsResult.total_count || allListings.length);
 
-          console.log(`[CompData.getAllListings] Fetched ${allListings.length} total listings`);
+          console.log(`[CompData.getAllListings] Fetched ${allListings.length} listings (market total: ${marketTotalCount})`);
           if (allListings.length > 0) {
             console.log(`[CompData.getAllListings] First listing title: "${allListings[0].title}"`);
             console.log(`[CompData.getAllListings] First listing lat/lng: ${allListings[0].latitude}, ${allListings[0].longitude}`);
@@ -3634,6 +3635,7 @@ superhostOnly: input.superhostOnly,
             success: true,
             listings,
             totalCount: listings.length,
+            marketTotalCount, // The actual total count in the market (not just sampled)
           };
         } catch (error) {
           console.error('[CompData.getAllListings] Error:', error);
@@ -3642,6 +3644,7 @@ superhostOnly: input.superhostOnly,
             error: error instanceof Error ? error.message : 'Failed to fetch all listings',
             listings: [],
             totalCount: 0,
+            marketTotalCount: 0,
           };
         }
       }),

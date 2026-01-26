@@ -1505,7 +1505,7 @@ export async function getMarketListings(
       if (options?.filters?.bedrooms) {
         console.log(`[getMarketListings] Adding bedroom filter: ${options.filters.bedrooms}`);
         filters.push({
-          type: "eq",  // Changed from select to eq for numeric equality
+          type: "select",  // AirDNA API requires 'select' type for bedroom filtering
           field: "bedrooms",
           value: options.filters.bedrooms
         });
@@ -1624,7 +1624,7 @@ export async function getSubmarketListings(
     
     if (options?.filters?.bedrooms) {
       filters.push({
-        type: "eq",  // Changed from select to eq for numeric equality
+        type: "select",  // AirDNA API requires 'select' type for bedroom filtering
         field: "bedrooms",
         value: options.filters.bedrooms
       });
@@ -1667,7 +1667,7 @@ export async function getSubmarketListings(
     
     if (options?.filters?.superhost) {
       filters.push({
-        type: "eq",  // Changed from select to eq for numeric equality
+        type: "select",  // AirDNA API requires 'select' type
         field: "superhost",
         value: true
       });
@@ -1675,7 +1675,7 @@ export async function getSubmarketListings(
     
     if (options?.filters?.instantBook) {
       filters.push({
-        type: "eq",  // Changed from select to eq for numeric equality
+        type: "select",  // AirDNA API requires 'select' type
         field: "instant_book",
         value: true
       });
@@ -2065,7 +2065,7 @@ export async function exploreListingsInRadius(
     
     if (filters?.bedrooms !== undefined) {
       filterArray.push({
-        type: "eq",  // Changed from select to eq for numeric equality
+        type: "select",  // AirDNA API requires 'select' type for bedroom filtering
         field: "bedrooms",
         value: filters.bedrooms,
       });
@@ -2073,7 +2073,7 @@ export async function exploreListingsInRadius(
     
     if (filters?.bathrooms !== undefined) {
       filterArray.push({
-        type: "eq",  // Changed from select to eq for numeric equality
+        type: "select",  // AirDNA API requires 'select' type for bathroom filtering
         field: "bathrooms",
         value: filters.bathrooms,
       });
@@ -3072,9 +3072,10 @@ export async function getAllMarketListings(
     // Add first batch
     allListings.push(...firstResult.listings);
     
-    // SMART SAMPLING STRATEGY: Fetch from multiple offsets to get diverse bedroom distribution
-    // Instead of sequential fetching, sample from different parts of the revenue-sorted list
+    // SMART SAMPLING STRATEGY: Fetch from multiple offsets AND sort orders to get diverse bedroom distribution
     // This ensures we get 1BR, 2BR, 3BR, 4BR, 5BR+ listings
+    
+    // Strategy 1: Sample from different offsets in revenue-sorted list
     const sampleOffsets = [
       25, 50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000, 7000, 9000, 11000
     ].filter(offset => offset < totalCount);
@@ -3101,6 +3102,79 @@ export async function getAllMarketListings(
       
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Strategy 2: Fetch from the END of the list (lowest revenue = often 1BR/2BR)
+    // This helps get smaller properties that are at the bottom of revenue-sorted lists
+    const lowRevenueOffsets = [
+      Math.max(0, totalCount - 25),
+      Math.max(0, totalCount - 100),
+      Math.max(0, totalCount - 250),
+      Math.max(0, totalCount - 500),
+    ].filter(offset => offset > 0 && offset < totalCount);
+    
+    console.log(`[getAllMarketListings] Also fetching from low-revenue offsets: ${lowRevenueOffsets.join(', ')}`);
+    
+    for (const offset of lowRevenueOffsets) {
+      if (allListings.length >= maxListings) break;
+      
+      const result = await getMarketListings(marketId, {
+        limit: pageSize,
+        offset,
+        orderBy: "revenue",
+        orderDirection: "desc",
+      });
+      
+      if (result.listings.length === 0) continue;
+      
+      const existingIds = new Set(allListings.map(l => l.id));
+      const newListings = result.listings.filter(l => !existingIds.has(l.id));
+      allListings.push(...newListings);
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Strategy 3: ALWAYS fetch 1BR and 2BR listings SPECIFICALLY using bedroom filter
+    // This ensures we get data for smaller property types that are underrepresented in revenue-sorted lists
+    // We fetch these regardless of existing count to ensure comprehensive bedroom coverage
+    console.log(`[getAllMarketListings] Fetching 1BR and 2BR listings specifically using bedroom filter`);
+    
+    const bedroomTypesToFetch = [1, 2]; // Focus on 1BR and 2BR which are often missing
+    for (const bedrooms of bedroomTypesToFetch) {
+      if (allListings.length >= maxListings) break;
+      
+      const existingCount = allListings.filter(l => l.bedrooms === bedrooms).length;
+      console.log(`[getAllMarketListings] Fetching ${bedrooms}BR listings (currently have ${existingCount})`);
+      
+      // Fetch multiple pages of this bedroom type - ALWAYS fetch to ensure we have data
+      for (const offset of [0, 25, 50, 75]) {
+        const result = await getMarketListings(marketId, {
+          limit: pageSize,
+          offset,
+          orderBy: "revenue",
+          orderDirection: "desc",
+          filters: { bedrooms }, // Use bedroom filter!
+        });
+        
+        console.log(`[getAllMarketListings] ${bedrooms}BR fetch at offset ${offset}: got ${result.listings.length} listings, total_count=${result.total_count}`);
+        
+        if (result.listings.length === 0) {
+          console.log(`[getAllMarketListings] No more ${bedrooms}BR listings available at offset ${offset}`);
+          break;
+        }
+        
+        const existingIds = new Set(allListings.map(l => l.id));
+        const newListings = result.listings.filter(l => !existingIds.has(l.id));
+        allListings.push(...newListings);
+        
+        console.log(`[getAllMarketListings] Added ${newListings.length} unique ${bedrooms}BR listings from offset ${offset}`);
+        
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      // Log final count for this bedroom type
+      const finalCount = allListings.filter(l => l.bedrooms === bedrooms).length;
+      console.log(`[getAllMarketListings] Final ${bedrooms}BR count: ${finalCount}`);
     }
     
     // Log bedroom distribution for debugging
@@ -4468,7 +4542,7 @@ export async function getMarketFutureDailyData(
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
-      filters.push({ type: "eq", field: "bedrooms", value: bedrooms });
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
     }
 
     const response = await makeApiRequest(
@@ -5003,7 +5077,7 @@ export async function getFilteredMarketListings(
 
     // Basic filters
     if (filters.bedrooms !== undefined) {
-      apiFilters.push({ type: "eq", field: "bedrooms", value: filters.bedrooms });
+      apiFilters.push({ type: "select", field: "bedrooms", value: filters.bedrooms });
     }
     if (filters.bathrooms !== undefined) {
       apiFilters.push({ type: "gte", field: "bathrooms", value: filters.bathrooms });
@@ -5151,7 +5225,7 @@ export async function getMarketProfessionalStats(
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
-      filters.push({ type: "eq", field: "bedrooms", value: bedrooms });
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
     }
 
     // Get all listings
@@ -5224,7 +5298,7 @@ export async function getMarketCancellationPolicies(
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
-      filters.push({ type: "eq", field: "bedrooms", value: bedrooms });
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
     }
 
     const response = await makeApiRequest(
@@ -5314,7 +5388,7 @@ export async function getMarketBookingPatterns(
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
-      filters.push({ type: "eq", field: "bedrooms", value: bedrooms });
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
     }
 
     // Fetch booking lead time
@@ -5446,7 +5520,7 @@ export async function getMarketSupplyTrend(
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
-      filters.push({ type: "eq", field: "bedrooms", value: bedrooms });
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
     }
 
     const response = await makeApiRequest(
@@ -5581,7 +5655,7 @@ export async function getListingsByArea(
     const filters: Array<{ field: string; type: string; value: any }> = [];
     
     if (options?.bedrooms) {
-      filters.push({ field: 'bedrooms', type: 'eq', value: options.bedrooms });
+      filters.push({ field: 'bedrooms', type: 'select', value: options.bedrooms });
     }
     if (options?.bathrooms) {
       filters.push({ field: 'bathrooms', type: 'select', value: options.bathrooms });

@@ -2175,9 +2175,30 @@ export default function LeadMagnet() {
             {/* Market Verdict Card - The Big Answer */}
             {(() => {
               // Calculate letter grade based on market score and key metrics
-              const marketScore = researchResult.marketScores?.overall || 0;
+              // If market score is 0 or undefined, calculate grade primarily from occupancy and revenue
+              const rawMarketScore = researchResult.marketScores?.overall;
               const occupancy = researchResult.avgOccupancy || 0;
               const revenue = researchResult.avgRevenue || 0;
+              
+              // If no market score from API, estimate one based on occupancy and revenue
+              // Occupancy 60%+ is strong, 50-60% is decent, below 50% is challenging
+              // Revenue $50k+ is strong, $30-50k is decent, below $30k is challenging
+              let marketScore = rawMarketScore || 0;
+              if (!rawMarketScore || rawMarketScore === 0) {
+                // Calculate estimated score from available metrics
+                let estimatedScore = 50; // Start at average
+                if (occupancy >= 65) estimatedScore += 20;
+                else if (occupancy >= 55) estimatedScore += 10;
+                else if (occupancy >= 45) estimatedScore += 0;
+                else estimatedScore -= 10;
+                
+                if (revenue >= 60000) estimatedScore += 15;
+                else if (revenue >= 40000) estimatedScore += 5;
+                else if (revenue >= 25000) estimatedScore += 0;
+                else estimatedScore -= 10;
+                
+                marketScore = Math.max(0, Math.min(100, estimatedScore));
+              }
               
               // Determine letter grade
               let grade = 'C';
@@ -2185,6 +2206,7 @@ export default function LeadMagnet() {
               let gradeBg = 'bg-amber-50 border-amber-200';
               let verdict = 'Average Market';
               let verdictDetail = 'This market shows moderate potential for short-term rentals.';
+              let encouragement = ''; // Extra encouragement for challenging markets
               
               if (marketScore >= 75 && occupancy >= 60) {
                 grade = 'A';
@@ -2210,12 +2232,14 @@ export default function LeadMagnet() {
                 gradeBg = 'bg-amber-50 border-amber-200';
                 verdict = 'Challenging Market';
                 verdictDetail = 'Below-average metrics. May require exceptional property or strategy to succeed.';
+                encouragement = 'Even in challenging markets, great opportunities exist. Look for unique properties, underserved neighborhoods, or niche guest experiences.';
               } else {
                 grade = 'C';
                 gradeColor = 'text-orange-600';
                 gradeBg = 'bg-orange-50 border-orange-200';
                 verdict = 'Difficult Market';
                 verdictDetail = 'Low demand or high competition. Proceed with caution and thorough research.';
+                encouragement = 'Difficult markets can still have hidden gems. Focus on specific neighborhoods, unique amenities, or targeting specific guest types.';
               }
               
               return (
@@ -2254,8 +2278,13 @@ export default function LeadMagnet() {
                   {/* What This Means Section */}
                   <div className="mt-6 pt-6 border-t border-slate-200/50">
                     <p className="text-sm text-slate-600">
-                      <span className="font-semibold">What does this mean?</span> This grade is based on the market's overall health score ({marketScore}/100), average occupancy rate ({occupancy}%), and revenue potential. A higher grade indicates stronger demand and better earning potential for short-term rental investors.
+                      <span className="font-semibold">What does this mean?</span> This grade is based on the market's occupancy rate ({occupancy}%), average revenue (${revenue.toLocaleString()}/year), and overall demand. A higher grade indicates stronger demand and better earning potential for short-term rental investors.
                     </p>
+                    {encouragement && (
+                      <p className="text-sm text-amber-700 mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <span className="font-semibold">💡 Pro Tip:</span> {encouragement}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -2769,17 +2798,22 @@ export default function LeadMagnet() {
                             <p className="text-xs text-slate-400">{type.count} listings</p>
                           </div>
                         ) : (
-                          <p className="text-xs text-slate-400 italic">
-                            Limited data available
-                          </p>
+                          <div className="space-y-1">
+                            <p className="text-xs text-slate-400 italic">
+                              Uncommon in this market
+                            </p>
+                            <p className="text-[10px] text-slate-300">
+                              Few {type.type} rentals here
+                            </p>
+                          </div>
                         )}
                       </div>
                     ))}
                   </div>
                   {typesToShow.some(t => t.count === 0) && (
-                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-xs text-amber-700">
-                        Note: Some bedroom types show limited data because there are few active listings in this specific area. Try searching a broader market for more complete data.
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        <span className="font-semibold">💡 Pro Tip:</span> Some bedroom types are uncommon in this area. This tells you what property types are most popular here. Focus on the bedroom counts with the most listings—that's where demand is proven!
                       </p>
                     </div>
                   )}
