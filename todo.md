@@ -4676,3 +4676,43 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Changed to "Short-Term vs Long-Term Income" - neutral for both renters and owners
 - [x] Updated headline to "Short-Term vs Long-Term — Which strategy earns more?"
 - [x] Works for both property owners and arbitrage operators
+
+
+## Bug Fixes Round 4 (Jan 25, 2026)
+
+### Comp Filtering Issue - FIX REQUIRED
+- [ ] Revenue Range showing only 5 comps instead of all available comps
+- [ ] Distance filter (5km) is too restrictive - limiting data
+- [ ] Need to use ALL same-bedroom comps (API returns up to 30)
+- [ ] More data = better analysis
+
+### Revenue Range Data Verification - VERIFY
+- [ ] Confirm Revenue Range uses actual AirDNA API data (revenue_low, revenue_potential, revenue_high)
+- [ ] Ensure values are NOT fixed/hardcoded
+- [ ] Values should change based on property location, bedrooms, market conditions
+
+
+## Bug Fixes Round 4 (Jan 25, 2026) - COMPLETE
+
+### Revenue Range Data Consistency - FIXED
+- [x] Revenue Range now uses Rentalizer API's low/high estimates for consistency
+- [x] Conservative: $47K, Expected: $51K, Optimistic: $55K - all from same methodology
+- [x] 29 comps being used (verified in report) - not limited to 5
+- [x] Data is actual API data, not fixed numbers
+
+### Emojis Removed - FIXED
+- [x] Removed all emojis from section headlines
+- [x] Professional appearance maintained
+
+### Competitive Ranking Explanation - FIXED
+- [x] Added explanation: "How this is calculated: Your property's projected annual revenue ($51K) is compared against 29 similar properties in the area with the same bedroom count. The grade reflects where you rank in terms of earning potential."
+
+### Rent Validation Headline - FIXED
+- [x] Changed to professional "How does your rent compare to similar properties in the area?"
+- [x] Removed casual "Are you overpaying for rent?" phrasing
+
+### Step 2 Location Bug - FIXED (Earlier)
+- [x] Fixed geocoding issue where "Denver, CO" returned Lake Hartwell, SC results
+- [x] Now uses Google Maps geocoding to get lat/lng before querying AirDNA
+- [x] Verified: Denver search now returns actual Denver properties
+
