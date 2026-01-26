@@ -1153,45 +1153,19 @@ function RentValidationSection({
         </div>
       </div>
       
-      {/* Visual Range Indicator */}
-      <div className="mb-2">
-        <div className="flex justify-between text-xs text-slate-500 mb-1">
-          <span>{formatCurrency(rentometerData.min)}</span>
-          <span className="font-medium">Market Range</span>
-          <span>{formatCurrency(rentometerData.max)}</span>
+      {/* Key Comparison Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="text-center p-3 bg-slate-50 rounded-lg">
+          <p className="text-xs text-slate-500 mb-1">25th Percentile</p>
+          <p className="text-lg font-semibold text-slate-700">{formatCurrency(rentometerData.percentile25)}</p>
         </div>
-        <div className="relative h-8 bg-gradient-to-r from-emerald-200 via-blue-200 to-amber-200 rounded-full">
-          {/* 25th percentile marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
-            style={{ left: `${((rentometerData.percentile25 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-          />
-          {/* Median marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-1 bg-slate-600"
-            style={{ left: `${((rentometerData.median - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-          />
-          {/* 75th percentile marker */}
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
-            style={{ left: `${((rentometerData.percentile75 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-          />
-          {/* User's rent position */}
-          <div 
-            className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
-            style={{ 
-              left: `${Math.min(Math.max(((monthlyRent - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100, 2), 98)}%`,
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: rentometerData.userRentVsMarket === 'below' ? '#10b981' : rentometerData.userRentVsMarket === 'above' ? '#f59e0b' : '#6366f1'
-            }}
-          >
-            <span className="text-[9px] font-bold text-white">$</span>
-          </div>
+        <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-xs text-blue-600 mb-1">Market Median</p>
+          <p className="text-lg font-semibold text-blue-700">{formatCurrency(rentometerData.median)}</p>
         </div>
-        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-          <span>25th: {formatCurrency(rentometerData.percentile25)}</span>
-          <span className="font-medium">Median: {formatCurrency(rentometerData.median)}</span>
-          <span>75th: {formatCurrency(rentometerData.percentile75)}</span>
+        <div className="text-center p-3 bg-slate-50 rounded-lg">
+          <p className="text-xs text-slate-500 mb-1">75th Percentile</p>
+          <p className="text-lg font-semibold text-slate-700">{formatCurrency(rentometerData.percentile75)}</p>
         </div>
       </div>
       

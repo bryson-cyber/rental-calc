@@ -4716,3 +4716,37 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Now uses Google Maps geocoding to get lat/lng before querying AirDNA
 - [x] Verified: Denver search now returns actual Denver properties
 
+
+
+## Bug Fixes Round 5 (Jan 26, 2026)
+
+### Comparable Properties Limited to 5 - FIXED
+- [x] Found limitation in sop-reports.ts: competitors.slice(0, 10) and competitors.slice(0, 8)
+- [x] Removed both slice limitations to return ALL comps
+- [x] Now returns full competitor list from API
+
+### Rent Validation Market Range Bars - FIXED
+- [x] Removed confusing gradient bar with percentile markers
+- [x] Replaced with clean 3-column grid showing 25th, Median, and 75th percentile
+- [x] Much cleaner and easier to understand
+
+
+
+## Bug Fixes Round 5 (Jan 25, 2026) - COMPLETE
+
+### Comparable Properties - FIXED
+- [x] Found limitation in sop-reports.ts: competitors.slice(0, 10) and competitors.slice(0, 8)
+- [x] Removed both slice limitations to return ALL comps
+- [x] Now shows 29 similar properties (verified in report)
+- [x] "See all 29" button available to view all comps
+
+### Rent Validation Market Range Bars - FIXED
+- [x] Removed confusing gradient bar with percentile markers
+- [x] Replaced with clean 3-column grid showing 25th, Median, and 75th percentile
+- [x] Much cleaner and easier to understand
+
+### Revenue Projection Range - FIXED
+- [x] Now uses Rentalizer API's low/high estimates for consistency
+- [x] Conservative: $47K, Expected: $51K, Optimistic: $55K - all from same methodology
+- [x] Data is consistent since all values come from same Rentalizer API
+

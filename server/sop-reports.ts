@@ -3247,7 +3247,7 @@ export async function generateFullArbitrageAnalysis(
       annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
       annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
       annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
-      competitors: competitors.slice(0, 10).map(c => ({
+      competitors: competitors.map(c => ({
         name: c.name,
         annual_revenue: c.annual_revenue,
         occupancy: c.occupancy,
@@ -3624,7 +3624,7 @@ export async function generateFullArbitrageAnalysis(
         annual_profit_conservative: profitability.scenarios.conservative.estimated_profit,
         annual_profit_realistic: profitability.scenarios.realistic.estimated_profit,
         annual_profit_optimistic: profitability.scenarios.optimistic.estimated_profit,
-        competitors: competitors.slice(0, 8).map(c => ({
+        competitors: competitors.map(c => ({
           name: c.name,
           annual_revenue: c.annual_revenue,
           occupancy: c.occupancy,
