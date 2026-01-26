@@ -4776,3 +4776,46 @@ When clicking "See on Map" from the property card, the map view would show the s
 ### Step 1 & Step 2 Review:
 - [x] Reviewed Step 1 (See Real Revenue) - Working correctly with comprehensive market data
 - [x] Reviewed Step 2 (Explore Listings) - Working correctly with 1339 opportunities found for Denver
+
+
+## Step 1 & Step 2 Enhancements (Jan 25, 2026)
+
+### Step 2 (Explore Listings) Enhancements:
+- [x] Add minimum revenue filter ($30K+, $50K+, $75K+, $100K+)
+- [x] Property images already displayed in listing cards
+- [x] Add "Analyze This Property" button to jump to Step 3
+- [x] Add Superhost filter toggle
+- [ ] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter
+
+### Step 1 (See Real Revenue) Enhancements:
+- [x] Add "Quick Insights" summary with key takeaways at top (Top Earner, Most Booked, Market Size)
+- [x] Add "Best Performing" bedroom type highlight (included in Quick Insights)
+- [ ] Add year-over-year trend comparison
+
+
+## Step 1 & Step 2 Enhancements (Jan 25, 2026)
+
+### Step 1 (See Real Revenue) Enhancements:
+- [x] Add "Quick Insights" summary with key takeaways at top
+  - Top Earner: Shows highest revenue bedroom type with annual revenue
+  - Most Booked: Shows highest occupancy bedroom type with percentage
+  - Market Size: Shows total active listings count
+- [x] Dark gradient background (slate-900 to slate-800) for visual prominence
+- [x] Trophy, TrendingUp, and Home icons for visual hierarchy
+
+### Step 2 (Explore Listings) Enhancements:
+- [x] Add minimum revenue filter ($30K+, $50K+, $75K+, $100K+)
+- [x] Add Superhost filter toggle (All Hosts / Superhosts Only)
+- [x] Add "Analyze This Property" button to each property card
+  - Pre-fills Step 3 form with property data (address, beds, baths)
+  - Automatically switches to Step 3 tab
+  - Shows toast notification for user feedback
+- [x] Property images already displayed in listing cards
+- [ ] Add amenities filter (Pool, Hot Tub, Pet Friendly) - API doesn't support this filter
+
+### Operating Expenses Slider Fix:
+- [x] Fixed tick mark alignment using absolute positioning
+- [x] 10% at 0%, 20% at 33.33%, 30% at 66.67%, 40% at 100%
+- [x] "Recommended" label positioned directly under 20% tick mark
+- [x] Slider thumb now aligns correctly with tick marks
+

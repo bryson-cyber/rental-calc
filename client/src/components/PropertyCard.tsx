@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Star, Home, Bed, Bath, TrendingUp, Calendar, MapPin, Bookmark, BookmarkCheck, DollarSign, Percent } from 'lucide-react';
+import { ExternalLink, Star, Home, Bed, Bath, TrendingUp, Calendar, MapPin, Bookmark, BookmarkCheck, DollarSign, Percent, Target } from 'lucide-react';
 
 interface PropertyCardProps {
   id: string;
@@ -22,6 +22,7 @@ interface PropertyCardProps {
   rank?: number;
   isSaved?: boolean;
   onSave?: () => void;
+  onAnalyze?: () => void;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -45,6 +46,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   rank,
   isSaved = false,
   onSave,
+  onAnalyze,
 }) => {
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -196,6 +198,20 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </a>
           ) : (
             <div className="flex-1 text-center text-xs text-slate-400 italic py-2.5">No Airbnb link</div>
+          )}
+          
+          {/* Analyze Button */}
+          {onAnalyze && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAnalyze();
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+            >
+              <Target className="w-4 h-4" />
+              Analyze
+            </button>
           )}
           
           {/* Save Button */}

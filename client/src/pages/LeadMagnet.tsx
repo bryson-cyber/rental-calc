@@ -352,6 +352,8 @@ export default function LeadMagnet() {
   const [exploreSortBy, setExploreSortBy] = useState<'proximity' | 'revenue' | 'rating' | 'occupancy' | 'revpar'>('revenue');
   const [explorePropertyType, setExplorePropertyType] = useState<string | null>(null);
   const [exploreMinOccupancy, setExploreMinOccupancy] = useState<number | null>(null);
+  const [exploreMinRevenue, setExploreMinRevenue] = useState<number | null>(null);
+  const [exploreSuperhostOnly, setExploreSuperhostOnly] = useState(false);
   const [areaListings, setAreaListings] = useState<AreaListing[] | null>(null);
   const [isExploring, setIsExploring] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
@@ -2101,6 +2103,58 @@ export default function LeadMagnet() {
               </p>
             </div>
             
+            {/* Quick Insights Summary */}
+            {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
+              // Find the best performing bedroom type
+              const sortedByRevenue = [...researchResult.propertyTypes]
+                .filter(t => t.count > 0)
+                .sort((a, b) => b.avgRevenue - a.avgRevenue);
+              const bestPerformer = sortedByRevenue[0];
+              const highestOccupancy = [...researchResult.propertyTypes]
+                .filter(t => t.count > 0)
+                .sort((a, b) => (b.occupancy || 0) - (a.occupancy || 0))[0];
+              
+              return (
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-6 mb-8 text-white">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <h4 className="font-semibold">Quick Insights</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Best Revenue */}
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="w-4 h-4 text-amber-400" />
+                        <span className="text-sm text-white/70">Top Earner</span>
+                      </div>
+                      <p className="text-lg font-bold text-emerald-400">{bestPerformer?.type || 'N/A'}</p>
+                      <p className="text-sm text-white/60">{formatCurrency(bestPerformer?.avgRevenue || 0)}/year avg</p>
+                    </div>
+                    
+                    {/* Highest Occupancy */}
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm text-white/70">Most Booked</span>
+                      </div>
+                      <p className="text-lg font-bold text-blue-400">{highestOccupancy?.type || 'N/A'}</p>
+                      <p className="text-sm text-white/60">{highestOccupancy?.occupancy || 0}% occupancy</p>
+                    </div>
+                    
+                    {/* Market Size */}
+                    <div className="bg-white/10 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Home className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm text-white/70">Market Size</span>
+                      </div>
+                      <p className="text-lg font-bold text-purple-400">{researchResult.totalListings.toLocaleString()}</p>
+                      <p className="text-sm text-white/60">active listings</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {/* Key Metrics - Tesla Dashboard Style */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
               <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${isFiltered ? 'border-emerald-300 ring-1 ring-emerald-100' : 'border-slate-200'}`}>
@@ -2551,6 +2605,37 @@ export default function LeadMagnet() {
                   </select>
                 </div>
               </div>
+              {/* Second row of filters */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Revenue</label>
+                  <select 
+                    className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                    value={exploreMinRevenue || ''}
+                    onChange={(e) => setExploreMinRevenue(e.target.value ? parseInt(e.target.value) : null)}
+                  >
+                    <option value="">Any Revenue</option>
+                    <option value="30000">$30K+/year</option>
+                    <option value="50000">$50K+/year</option>
+                    <option value="75000">$75K+/year</option>
+                    <option value="100000">$100K+/year</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Host Type</label>
+                  <button
+                    onClick={() => setExploreSuperhostOnly(!exploreSuperhostOnly)}
+                    className={`w-full h-11 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      exploreSuperhostOnly 
+                        ? 'bg-amber-500 text-white border-amber-500' 
+                        : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Star className={`w-4 h-4 ${exploreSuperhostOnly ? 'fill-white' : ''}`} />
+                    {exploreSuperhostOnly ? 'Superhosts Only' : 'All Hosts'}
+                  </button>
+                </div>
+              </div>
             </div>
             {/* View Toggle - Tesla Dashboard Style */}
             <div className="flex justify-center gap-2 mb-8">
@@ -2590,6 +2675,10 @@ export default function LeadMagnet() {
                   .filter(listing => !exploreMinRating || (listing.rating && listing.rating >= exploreMinRating))
                   // Filter by min occupancy
                   .filter(listing => !exploreMinOccupancy || (listing.occupancy && listing.occupancy >= exploreMinOccupancy))
+                  // Filter by min revenue
+                  .filter(listing => !exploreMinRevenue || (listing.annual_revenue && listing.annual_revenue >= exploreMinRevenue))
+                  // Filter by superhost
+                  .filter(listing => !exploreSuperhostOnly || listing.superhost === true)
                   // Sort by selected criteria
                   .sort((a, b) => {
                     if (exploreSortBy === 'revenue') return (b.annual_revenue || 0) - (a.annual_revenue || 0);
@@ -2633,6 +2722,16 @@ export default function LeadMagnet() {
                         airbnbUrl: listing.airbnb_url,
                       });
                       toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
+                    }}
+                    onAnalyze={() => {
+                      // Pre-fill the validate form with this property's data
+                      setAddress(exploreAddress);
+                      setBedrooms(listing.bedrooms.toString());
+                      setBathrooms(listing.bathrooms.toString());
+                      setActiveTab('validate');
+                      // Scroll to top
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      toast.success('Property loaded! Fill in the monthly rent to analyze.');
                     }}
                   />
                 ))}
