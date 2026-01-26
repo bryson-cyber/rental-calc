@@ -5027,3 +5027,24 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add info/hover tooltips to technical metrics throughout Step 1
 - [x] Add "What does this mean?" section with occupancy and revenue context
 - [x] Add Pro Tip for uncommon bedroom types explaining market dynamics
+
+
+## 1BR/2BR Data Bug Fix (Jan 26, 2026)
+- [ ] Investigate why 1BR/2BR listings are not being returned from API for Glendale
+- [ ] Fix the API call to fetch all bedroom types correctly
+- [ ] Test with Glendale to verify 1BR/2BR data is now showing
+- [ ] Browser test on live site to confirm fix
+
+
+## 1BR/2BR Data Bug Fix (Jan 26, 2026) - COMPLETED
+- [x] Fixed getComprehensiveSubmarketReport to fetch 1BR and 2BR listings specifically
+- [x] Increased sample size from 50 to 330 listings for submarkets
+- [x] Added bedroom-specific API calls with 'select' filter type
+- [x] Verified Glendale now returns: 100 1BR, 100 2BR, 55 3BR, 60 4BR, 15 5BR listings
+- [x] Fixed getAllMarketListings to return total_count from API
+- [x] Fixed Competition Landscape to use correct property_type values (house, villa, etc.)
+- [x] Fixed Competition Landscape to use correct host_size values (1, 2-5, 6-20, 21+)
+- [x] Updated CompDataTable to show "X sample listings (Y total in market)"
+- [x] Added Market Verdict Card with letter grade and plain English explanation
+- [x] Updated "Limited data" message to "Uncommon in this market" with Pro Tip
+- [x] Added encouraging disclaimer for challenging markets (C+ and C grades)

@@ -2888,36 +2888,94 @@ export async function getComprehensiveSubmarketReport(
     return null;
   }
   
-  // Step 2: Get listings - fetch more to get better bedroom representation
-  // First fetch by revenue for top performers
+  // Step 2: Get listings - fetch comprehensive data for bedroom analysis
+  // Use getAllSubmarketListings to get a representative sample across all bedroom types
+  console.log(`[getComprehensiveSubmarketReport] Fetching comprehensive listings for submarket ${submarketId}`);
+  
+  const allListings: ListingData[] = [];
+  const listingIds = new Set<string>();
+  let totalCount = 0;
+  
+  // Fetch top performers by revenue (for top_listings display)
   const topListingsResult = await getSubmarketListings(submarketId, {
     limit: 25,
     orderBy: "revenue",
     orderDirection: "desc",
   });
-  
-  // Also fetch a broader sample for bedroom statistics
-  const allListingsResult = await getSubmarketListings(submarketId, {
-    limit: 25,
-    offset: 0,
-    orderBy: "occupancy",
-    orderDirection: "desc",
-  });
-  
-  // Combine unique listings for bedroom analysis
-  const listingIds = new Set<string>();
-  const combinedListings = [...topListingsResult.listings];
-  allListingsResult.listings.forEach(l => {
+  totalCount = topListingsResult.total_count;
+  topListingsResult.listings.forEach(l => {
     if (!listingIds.has(l.id)) {
       listingIds.add(l.id);
-      combinedListings.push(l);
+      allListings.push(l);
     }
   });
-  topListingsResult.listings.forEach(l => listingIds.add(l.id));
+  
+  // Fetch multiple pages to get broader bedroom representation
+  const offsets = [25, 50, 75, 100, 125, 150];
+  for (const offset of offsets) {
+    if (allListings.length >= 350) break; // Cap at 350 listings
+    const result = await getSubmarketListings(submarketId, {
+      limit: 25,
+      offset,
+      orderBy: "revenue",
+      orderDirection: "desc",
+    });
+    if (result.listings.length === 0) break;
+    result.listings.forEach(l => {
+      if (!listingIds.has(l.id)) {
+        listingIds.add(l.id);
+        allListings.push(l);
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // CRITICAL: Fetch 1BR and 2BR listings specifically using bedroom filter
+  // These are often underrepresented in revenue-sorted lists
+  const bedroomTypesToFetch = [1, 2];
+  for (const bedrooms of bedroomTypesToFetch) {
+    const existingCount = allListings.filter(l => l.bedrooms === bedrooms).length;
+    console.log(`[getComprehensiveSubmarketReport] Fetching ${bedrooms}BR listings (currently have ${existingCount})`);
+    
+    // Fetch multiple pages of this bedroom type
+    for (const offset of [0, 25, 50, 75]) {
+      if (allListings.length >= 500) break; // Cap total
+      const result = await getSubmarketListings(submarketId, {
+        limit: 25,
+        offset,
+        orderBy: "revenue",
+        orderDirection: "desc",
+        filters: { bedrooms },
+      });
+      
+      console.log(`[getComprehensiveSubmarketReport] ${bedrooms}BR fetch at offset ${offset}: got ${result.listings.length} listings`);
+      
+      if (result.listings.length === 0) break;
+      
+      result.listings.forEach(l => {
+        if (!listingIds.has(l.id)) {
+          listingIds.add(l.id);
+          allListings.push(l);
+        }
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    const finalCount = allListings.filter(l => l.bedrooms === bedrooms).length;
+    console.log(`[getComprehensiveSubmarketReport] Final ${bedrooms}BR count: ${finalCount}`);
+  }
+  
+  // Log bedroom distribution for debugging
+  const bedroomCounts = new Map<number, number>();
+  allListings.forEach(l => {
+    bedroomCounts.set(l.bedrooms, (bedroomCounts.get(l.bedrooms) || 0) + 1);
+  });
+  console.log(`[getComprehensiveSubmarketReport] Bedroom distribution:`, Object.fromEntries(bedroomCounts));
   
   const listingsResult = {
-    listings: combinedListings,
-    total_count: topListingsResult.total_count,
+    listings: allListings,
+    total_count: totalCount,
   };
   
   // Calculate metrics from submarket details
