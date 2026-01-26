@@ -4819,3 +4819,20 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] "Recommended" label positioned directly under 20% tick mark
 - [x] Slider thumb now aligns correctly with tick marks
 
+
+## Comprehensive Review Findings (Jan 25, 2026)
+
+### HIGH PRIORITY FIXES:
+- [ ] Step 4: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of just "1"
+- [ ] Step 7: Fix Beds/Baths dropdowns to show "1 Bedroom" instead of "1 BR"
+- [ ] Step 5: Fix "All Beds (0)" to show "All Beds" without confusing count
+
+### MEDIUM PRIORITY FIXES:
+- [ ] Step 4: Add "Remove Property" button for each property card
+- [ ] Step 6: Add "Clear All Filters" button
+- [ ] Step 5: Add legend explaining map markers
+
+### LOW PRIORITY (SUGGESTIONS):
+- [ ] Guide: Add estimated total reading time
+- [ ] Step 7: Add example prompts for AI
+- [ ] Step 5: Add "My Property" pin option
