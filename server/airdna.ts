@@ -1386,11 +1386,37 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
     // Sort by listing count descending (most active first)
     submarkets.sort((a, b) => b.listing_count - a.listing_count);
     
-    return submarkets.slice(0, 20).map(s => ({
-      id: s.id,
-      name: s.name,
-      listing_count: s.listing_count,
-    }));
+    // Get top 10 submarkets and fetch their metrics
+    const topSubmarkets = submarkets.slice(0, 10);
+    
+    // Fetch metrics for each submarket in parallel
+    const submarketsWithMetrics = await Promise.all(
+      topSubmarkets.map(async (s) => {
+        try {
+          const metrics = await getSubmarketMetrics(s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            listing_count: s.listing_count,
+            metrics: metrics ? {
+              revenue: metrics.revenue || 0,
+              occupancy: metrics.occupancy || 0,
+              adr: metrics.adr || 0,
+              revpar: metrics.revpar || 0,
+            } : undefined,
+          };
+        } catch (err) {
+          console.log(`[getSubmarketsInMarket] Failed to get metrics for ${s.name}:`, err);
+          return {
+            id: s.id,
+            name: s.name,
+            listing_count: s.listing_count,
+          };
+        }
+      })
+    );
+    
+    return submarketsWithMetrics;
   } catch (error) {
     console.error("Error fetching submarkets:", error);
     return [];
@@ -3010,7 +3036,7 @@ export async function getAllMarketListings(
     maxListings?: number;
     minFilteredCount?: number; // Minimum number of filtered listings to return
   }
-): Promise<ListingData[]> {
+): Promise<{ listings: ListingData[]; total_count: number }> {
   const allListings: ListingData[] = [];
   const pageSize = 25; // API max
   let totalCount = 0;
@@ -3105,10 +3131,10 @@ export async function getAllMarketListings(
     // Sort by revenue (highest first)
     filtered.sort((a, b) => b.annual_revenue - a.annual_revenue);
     
-    return filtered;
+    return { listings: filtered, total_count: totalCount };
   } catch (error) {
     console.error("[getAllMarketListings] Error:", error);
-    return [];
+    return { listings: [], total_count: 0 };
   }
 }
 
@@ -3137,17 +3163,18 @@ export async function getQualifyingCompetitors(
   console.log(`[getQualifyingCompetitors] Market: ${marketId}, Bedrooms: ${bedrooms}, Threshold: $${revenueThreshold}, ExcludeInactive: ${excludeInactive}`);
   
   // Get all listings for this bedroom count - fetch all available listings
-  const allSameBedroomListings = await getAllMarketListings(marketId, {
+  const allListingsResult = await getAllMarketListings(marketId, {
     bedrooms,
     maxListings: 5000, // Fetch all available listings
     minFilteredCount: 15, // Continue fetching until we have at least 15 same-bedroom listings
   });
+  const allSameBedroomListings = allListingsResult.listings;
   
   // Filter out inactive properties (last review > 2 months ago)
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
   
-  const activeListings = allSameBedroomListings.filter(l => {
+  const activeListings = allSameBedroomListings.filter((l: ListingData) => {
     if (!l.last_review_date) return true; // Keep if no review date (can't determine activity)
     const lastReview = new Date(l.last_review_date);
     return lastReview >= twoMonthsAgo;
@@ -3161,7 +3188,7 @@ export async function getQualifyingCompetitors(
   
   // Filter to those meeting revenue threshold
   const qualifyingListings = listingsToFilter.filter(
-    l => l.annual_revenue >= revenueThreshold
+    (l: ListingData) => l.annual_revenue >= revenueThreshold
   );
   
   console.log(`[getQualifyingCompetitors] Found ${qualifyingListings.length} qualifying listings out of ${listingsToFilter.length} active same-bedroom listings`);

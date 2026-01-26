@@ -2193,7 +2193,8 @@ export async function generateFullArbitrageAnalysis(
     // Step 15.7: Fetch complete market listings for saturation analysis
     try {
       console.log(`[ArbitrageAnalysis] Fetching complete market listings for saturation analysis...`);
-      const allListings = await getAllMarketListings(marketId, { maxListings: 200 });
+      const allListingsResult = await getAllMarketListings(marketId, { maxListings: 200 });
+      const allListings = allListingsResult.listings;
       
       if (allListings.length > 0) {
         // Calculate bedroom distribution

@@ -6,14 +6,17 @@ describe('getAllMarketListings', () => {
     // Austin, TX market ID
     const marketId = 'austin-tx';
     
-    const listings = await getAllMarketListings(marketId, { maxListings: 50 });
+    const result = await getAllMarketListings(marketId, { maxListings: 50 });
     
-    // Should return an array
-    expect(Array.isArray(listings)).toBe(true);
+    // Should return an object with listings array and total_count
+    expect(result).toHaveProperty('listings');
+    expect(result).toHaveProperty('total_count');
+    expect(Array.isArray(result.listings)).toBe(true);
+    expect(typeof result.total_count).toBe('number');
     
     // Each listing should have expected properties
-    if (listings.length > 0) {
-      const listing = listings[0];
+    if (result.listings.length > 0) {
+      const listing = result.listings[0];
       expect(listing).toHaveProperty('bedrooms');
       expect(listing).toHaveProperty('annual_revenue');
     }

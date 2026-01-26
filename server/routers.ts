@@ -3588,7 +3588,7 @@ superhostOnly: input.superhostOnly,
           console.log(`========================================`);
           
           // Use the appropriate function based on whether it's a market or submarket search
-          const allListings = input.isMarketLevel 
+          const allListingsResult = input.isMarketLevel 
             ? await getAllMarketListings(input.submarketId, {
                 bedrooms: input.bedrooms,
                 maxListings: input.maxListings,
@@ -3599,6 +3599,9 @@ superhostOnly: input.superhostOnly,
                 maxListings: input.maxListings,
                 minFilteredCount: 10,
               });
+          
+          // Handle both old array format and new { listings, total_count } format
+          const allListings = Array.isArray(allListingsResult) ? allListingsResult : allListingsResult.listings;
 
           console.log(`[CompData.getAllListings] Fetched ${allListings.length} total listings`);
           if (allListings.length > 0) {

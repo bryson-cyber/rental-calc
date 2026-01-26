@@ -207,21 +207,18 @@ export const marketResearchSimpleRouter = router({
         getMarketBookingPatterns(marketId).catch((err) => { console.error('[getMarketReport] getMarketBookingPatterns error:', err); return null; }),
       ]);
       
-      console.log(`[getMarketReport] allListingsData type: ${typeof allListingsData}, isArray: ${Array.isArray(allListingsData)}, length: ${allListingsData?.length || 0}`);
-      if (allListingsData && allListingsData.length > 0) {
-        console.log(`[getMarketReport] Sample listing:`, JSON.stringify(allListingsData[0], null, 2).substring(0, 500));
-      }
-
-      // Use all listings for bedroom analysis
-      const allListings = allListingsData || [];
+      // getAllMarketListings now returns { listings, total_count }
+      const allListingsResult = allListingsData as { listings: any[]; total_count: number } | any[];
+      const allListings = Array.isArray(allListingsResult) ? allListingsResult : (allListingsResult?.listings || []);
+      const actualTotalCount = Array.isArray(allListingsResult) ? allListings.length : (allListingsResult?.total_count || allListings.length);
       
-      // Log the allListings data for debugging
-      console.log(`[getMarketReport] allListings count: ${allListings.length}`);
+      console.log(`[getMarketReport] allListings count: ${allListings.length}, actual total in market: ${actualTotalCount}`);
+      if (allListings.length > 0) {
+        console.log(`[getMarketReport] Sample listing:`, JSON.stringify(allListings[0], null, 2).substring(0, 500));
+      }
       if (allListings.length === 0) {
         console.log(`[getMarketReport] WARNING: No listings returned from getAllMarketListings for market ${marketId}`);
       }
-      
-      const totalCount = allListings.length;
 
       // Build overview from available data
       const details = marketDetails as any;
@@ -233,7 +230,8 @@ export const marketResearchSimpleRouter = router({
       const avgOccupancy = rawOccupancy > 1 ? rawOccupancy : rawOccupancy * 100;
       
       const overview = {
-        totalListings: details?.listing_count || totalCount || 0,
+        // Use actual total count from API, not sampled count
+        totalListings: actualTotalCount || details?.listing_count || 0,
         avgOccupancy: Math.round(avgOccupancy), // Now properly converted to percentage
         avgAdr: Math.round(details?.metrics?.daily_rate || details?.metrics?.adr || 0),
         avgRevenue: Math.round(details?.metrics?.revenue || 0),
@@ -359,14 +357,33 @@ export const marketResearchSimpleRouter = router({
       } : undefined;
 
       // Calculate competition data from market insights
+      // Note: AirDNA API returns property_type as "house", "villa", "townhouse", "condominium", etc.
+      // and host_size as "1", "2-5", "6-20", "21+"
+      const entireHomeTypes = ['house', 'villa', 'townhouse', 'condominium', 'apartment', 'cabin', 'cottage', 'bungalow', 'chalet', 'guesthouse', 'guest suite', 'loft', 'serviced apartment'];
+      const privateRoomTypes = ['private room', 'room', 'private room in house', 'private room in apartment'];
+      const sharedRoomTypes = ['shared room', 'hostel', 'dorm'];
+      
+      const entireHomePct = marketInsights.property_type_breakdown
+        .filter(p => entireHomeTypes.includes(p.type.toLowerCase()))
+        .reduce((sum, p) => sum + p.pct, 0);
+      const privateRoomPct = marketInsights.property_type_breakdown
+        .filter(p => privateRoomTypes.includes(p.type.toLowerCase()))
+        .reduce((sum, p) => sum + p.pct, 0);
+      const sharedRoomPct = marketInsights.property_type_breakdown
+        .filter(p => sharedRoomTypes.includes(p.type.toLowerCase()))
+        .reduce((sum, p) => sum + p.pct, 0);
+      
+      // host_size "1" means single host (1 listing only)
+      const singleHostPct = marketInsights.host_size_breakdown.find(h => h.size === '1')?.pct || 0;
+      
       const competitionData = marketInsights.total_listings > 0 ? {
         professionallyManagedPct: marketInsights.professionally_managed_pct,
         superhostPct: marketInsights.superhost_pct,
-        entireHomePct: marketInsights.property_type_breakdown.find(p => p.type === 'Entire home/apt')?.pct || 0,
-        privateRoomPct: marketInsights.property_type_breakdown.find(p => p.type === 'Private room')?.pct || 0,
-        sharedRoomPct: marketInsights.property_type_breakdown.find(p => p.type === 'Shared room')?.pct || 0,
-        singleHostPct: marketInsights.host_size_breakdown.find(h => h.size === '1 listing')?.pct || 0,
-        multiHostPct: 100 - (marketInsights.host_size_breakdown.find(h => h.size === '1 listing')?.pct || 0),
+        entireHomePct: entireHomePct,
+        privateRoomPct: privateRoomPct,
+        sharedRoomPct: sharedRoomPct,
+        singleHostPct: singleHostPct,
+        multiHostPct: 100 - singleHostPct,
       } : undefined;
 
       // Extract revenue percentiles

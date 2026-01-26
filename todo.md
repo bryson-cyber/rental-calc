@@ -4948,3 +4948,37 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add info/hover tooltips to main market overview metrics in LeadMagnet
 - [x] Create SharedMarketReport component for Step 1 market data sharing
 - [x] Update SharedReportPage to use SharedMarketReport for Step 1 data
+
+## Step 1 Enhancement: "How's This Market?" (Jan 26, 2026)
+- [ ] Add market summary section with clear verdict (e.g., "Atlanta is a Strong Market for Airbnb")
+- [ ] Add guiding question at top: "How's this market for short-term rentals?"
+- [ ] Show submarket breakdown for large cities (different neighborhoods/areas)
+- [ ] Add plain English explanations for market health indicators
+- [ ] Include letter grades (A+, B+, C) for quick market assessment
+- [ ] Add "Based on X properties" confidence indicators
+- [ ] Translate all technical metrics to beginner-friendly language
+- [ ] Add contextual comparisons (vs national average, vs similar cities)
+
+## Step 1 Bug Fixes (Jan 26, 2026) - PRIORITY
+- [ ] Fix listing count showing 350 for Atlanta (should be thousands)
+- [ ] Fix Competition Landscape showing 0% for Single Host, Entire Home, etc.
+- [ ] Investigate where Quick Insights data is pulling from
+- [ ] Rename "Historical Trends" to beginner-friendly language
+- [ ] Trace API data flow to find source of incorrect data
+
+
+## Step 1 Data Bug Fixes & Enhancements (Jan 26, 2026)
+
+### Data Bug Fixes:
+- [x] Fix total listings count showing 350 instead of actual count (25,103 for Atlanta)
+- [x] Fix Competition Landscape showing 0% for Entire Homes and Single Hosts
+- [x] Fix property_type matching to use actual API values (house, villa, townhouse, etc.)
+- [x] Fix host_size matching to use actual API values (1, 2-5, 6-20, 21+)
+
+### UI Enhancements:
+- [x] Rename "Historical Trends" to "Market Performance Over Time" with beginner-friendly labels
+- [x] Add Market Verdict Card with letter grade (A+, B, C, etc.) and plain English explanation
+- [x] Add submarket comparison section with metrics for large cities
+- [x] Add info/hover tooltips to all technical metrics
+- [x] Add "Best for Beginners" recommendation in submarket section
+- [x] Fetch and display submarket metrics (revenue, occupancy) for neighborhood comparison

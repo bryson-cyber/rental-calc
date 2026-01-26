@@ -151,36 +151,36 @@ export function HistoricalCharts({
 
   const metrics = {
     occupancy: {
-      label: 'Occupancy',
+      label: 'Booking Rate',
       icon: Percent,
       color: '#3B82F6',
       format: (v: number) => `${Math.round(v)}%`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
-      tooltip: 'How often properties are booked. Higher % = more demand in this market. 60%+ is considered healthy.',
+      tooltip: 'How often properties are booked throughout the year. 60%+ is healthy. If this number is going UP, demand is growing!',
     },
     revenue: {
-      label: 'Avg Revenue',
+      label: 'Annual Income',
       icon: DollarSign,
       color: '#10B981',
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
-      tooltip: 'Average annual income for properties in this market. This is what hosts typically earn before expenses.',
+      tooltip: 'Average yearly income hosts earn in this market (before expenses). This is the "gross revenue" you can expect.',
     },
     adr: {
-      label: 'ADR',
+      label: 'Nightly Rate',
       icon: BarChart3,
       color: '#8B5CF6',
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
-      tooltip: 'Average Daily Rate - the typical nightly price guests pay. Higher ADR = more premium market.',
+      tooltip: 'Average price per night guests pay. Higher = more premium market. This affects your revenue potential.',
     },
     listings: {
-      label: 'Active Listings',
+      label: 'Competition',
       icon: Home,
       color: '#F59E0B',
       format: (v: number) => Math.round(v).toLocaleString(),
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
-      tooltip: 'Total number of active short-term rentals in this market. More listings = more competition.',
+      tooltip: 'Total active short-term rentals in this market. More listings = more competition. Watch if this is growing faster than demand.',
     },
   };
 
@@ -214,7 +214,10 @@ export function HistoricalCharts({
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-gray-900">Historical Trends - {marketName}</h3>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">Market Performance Over Time</h3>
+            <p className="text-sm text-gray-500 mt-1">See how {marketName} has performed month-by-month</p>
+          </div>
           <Select value={String(timeRange)} onValueChange={(v) => setTimeRange(parseInt(v))}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -281,10 +284,10 @@ export function HistoricalCharts({
         {/* Chart Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="occupancy">Occupancy</TabsTrigger>
-            <TabsTrigger value="revenue">Revenue</TabsTrigger>
-            <TabsTrigger value="adr">ADR</TabsTrigger>
-            <TabsTrigger value="listings">Listings</TabsTrigger>
+            <TabsTrigger value="occupancy" className="text-xs sm:text-sm">Booking Rate</TabsTrigger>
+            <TabsTrigger value="revenue" className="text-xs sm:text-sm">Annual Income</TabsTrigger>
+            <TabsTrigger value="adr" className="text-xs sm:text-sm">Nightly Rate</TabsTrigger>
+            <TabsTrigger value="listings" className="text-xs sm:text-sm">Competition</TabsTrigger>
           </TabsList>
 
           {Object.entries(metrics).map(([key, metric]) => {

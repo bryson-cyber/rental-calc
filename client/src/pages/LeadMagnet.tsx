@@ -210,6 +210,13 @@ interface MarketResearchResult {
     occupancy: number;
     adr: number;
   }>;
+  // Submarkets for large cities
+  submarkets?: Array<{
+    name: string;
+    listingCount: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }>;
   // Step 1 Super Experience fields
   marketScores?: {
     overall: number;
@@ -986,6 +993,8 @@ export default function LeadMagnet() {
         bookingPatterns: (report as any).bookingPatterns,
         revenuePercentiles: (report as any).revenuePercentiles,
         competitionData: (report as any).competitionData,
+        // Submarkets for large cities
+        submarkets: (report as any).submarkets,
       });
       
       toast.success('Market proven! See the real revenue data below.');
@@ -2163,6 +2172,95 @@ export default function LeadMagnet() {
               </p>
             </div>
             
+            {/* Market Verdict Card - The Big Answer */}
+            {(() => {
+              // Calculate letter grade based on market score and key metrics
+              const marketScore = researchResult.marketScores?.overall || 0;
+              const occupancy = researchResult.avgOccupancy || 0;
+              const revenue = researchResult.avgRevenue || 0;
+              
+              // Determine letter grade
+              let grade = 'C';
+              let gradeColor = 'text-amber-600';
+              let gradeBg = 'bg-amber-50 border-amber-200';
+              let verdict = 'Average Market';
+              let verdictDetail = 'This market shows moderate potential for short-term rentals.';
+              
+              if (marketScore >= 75 && occupancy >= 60) {
+                grade = 'A';
+                gradeColor = 'text-emerald-600';
+                gradeBg = 'bg-emerald-50 border-emerald-200';
+                verdict = 'Strong Market';
+                verdictDetail = 'High demand and healthy occupancy rates. Properties here tend to perform well.';
+              } else if (marketScore >= 65 && occupancy >= 55) {
+                grade = 'B+';
+                gradeColor = 'text-emerald-500';
+                gradeBg = 'bg-emerald-50/70 border-emerald-200';
+                verdict = 'Good Market';
+                verdictDetail = 'Solid fundamentals with good booking rates. Worth investigating further.';
+              } else if (marketScore >= 55 && occupancy >= 50) {
+                grade = 'B';
+                gradeColor = 'text-blue-600';
+                gradeBg = 'bg-blue-50 border-blue-200';
+                verdict = 'Decent Market';
+                verdictDetail = 'Reasonable performance. Success depends on property quality and pricing strategy.';
+              } else if (marketScore >= 45 || occupancy >= 45) {
+                grade = 'C+';
+                gradeColor = 'text-amber-600';
+                gradeBg = 'bg-amber-50 border-amber-200';
+                verdict = 'Challenging Market';
+                verdictDetail = 'Below-average metrics. May require exceptional property or strategy to succeed.';
+              } else {
+                grade = 'C';
+                gradeColor = 'text-orange-600';
+                gradeBg = 'bg-orange-50 border-orange-200';
+                verdict = 'Difficult Market';
+                verdictDetail = 'Low demand or high competition. Proceed with caution and thorough research.';
+              }
+              
+              return (
+                <div className={`${gradeBg} border rounded-2xl p-6 mb-8 shadow-sm`}>
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    {/* Grade Circle */}
+                    <div className="flex-shrink-0">
+                      <div className={`w-24 h-24 rounded-full bg-white shadow-md flex items-center justify-center border-4 ${gradeBg.replace('bg-', 'border-').replace('-50', '-300')}`}>
+                        <span className={`text-4xl font-bold ${gradeColor}`}>{grade}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Verdict Text */}
+                    <div className="flex-1 text-center md:text-left">
+                      <h4 className={`text-2xl font-bold ${gradeColor} mb-1`}>
+                        {researchResult.marketName} is a {verdict}
+                      </h4>
+                      <p className="text-slate-600 mb-3">{verdictDetail}</p>
+                      <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm">
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
+                          <span className="font-medium">{researchResult.totalListings.toLocaleString()}</span>
+                          <span className="text-slate-500">active listings</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
+                          <span className="font-medium">{researchResult.avgOccupancy}%</span>
+                          <span className="text-slate-500">avg occupancy</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
+                          <span className="font-medium">{formatCurrency(researchResult.avgRevenue)}</span>
+                          <span className="text-slate-500">avg revenue</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* What This Means Section */}
+                  <div className="mt-6 pt-6 border-t border-slate-200/50">
+                    <p className="text-sm text-slate-600">
+                      <span className="font-semibold">What does this mean?</span> This grade is based on the market's overall health score ({marketScore}/100), average occupancy rate ({occupancy}%), and revenue potential. A higher grade indicates stronger demand and better earning potential for short-term rental investors.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {/* Quick Insights Summary */}
             {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
               // Find the best performing bedroom type
@@ -2210,6 +2308,85 @@ export default function LeadMagnet() {
                       <p className="text-lg font-bold text-purple-600">{researchResult.totalListings.toLocaleString()}</p>
                       <p className="text-sm text-slate-500">active listings</p>
                     </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Submarket Comparison - "Where in [City]?" */}
+            {researchResult.submarkets && researchResult.submarkets.length > 0 && (() => {
+              // Sort by revenue to show best areas first
+              const sortedSubmarkets = [...researchResult.submarkets]
+                .filter(s => s.avgRevenue > 0)
+                .sort((a, b) => b.avgRevenue - a.avgRevenue)
+                .slice(0, 8);
+              
+              if (sortedSubmarkets.length === 0) return null;
+              
+              // Find the best submarket for beginners (high occupancy, good revenue)
+              const bestForBeginners = [...researchResult.submarkets]
+                .filter(s => s.avgOccupancy >= 50 && s.avgRevenue > 0)
+                .sort((a, b) => (b.avgOccupancy * b.avgRevenue) - (a.avgOccupancy * a.avgRevenue))[0];
+              
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-[#C9A962]" />
+                        Where in {researchResult.marketName.split(',')[0]}?
+                      </h4>
+                      <p className="text-slate-500 text-sm">Not all neighborhoods perform the same. Here are the top areas:</p>
+                    </div>
+                  </div>
+                  
+                  {/* Best for Beginners Callout */}
+                  {bestForBeginners && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm font-semibold text-emerald-700">Best for Beginners</span>
+                      </div>
+                      <p className="text-emerald-800 font-medium">{bestForBeginners.name}</p>
+                      <p className="text-emerald-600 text-sm">
+                        {bestForBeginners.avgOccupancy}% occupancy • {formatCurrency(bestForBeginners.avgRevenue)}/year avg
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Submarket Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          <th className="text-left py-2 px-3 font-medium text-slate-600">Neighborhood</th>
+                          <th className="text-right py-2 px-3 font-medium text-slate-600">Listings</th>
+                          <th className="text-right py-2 px-3 font-medium text-slate-600">Avg Revenue</th>
+                          <th className="text-right py-2 px-3 font-medium text-slate-600">Occupancy</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedSubmarkets.map((submarket, idx) => (
+                          <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="py-2 px-3 font-medium text-slate-800">
+                              {submarket.name}
+                              {bestForBeginners && submarket.name === bestForBeginners.name && (
+                                <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Recommended</span>
+                              )}
+                            </td>
+                            <td className="text-right py-2 px-3 text-slate-600">{submarket.listingCount.toLocaleString()}</td>
+                            <td className="text-right py-2 px-3 text-emerald-600 font-medium">{formatCurrency(submarket.avgRevenue)}</td>
+                            <td className="text-right py-2 px-3 text-blue-600 font-medium">{submarket.avgOccupancy}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-sm text-slate-500">
+                      <span className="font-medium">Pro tip:</span> Higher occupancy areas are often better for beginners - consistent bookings mean more predictable income.
+                    </p>
                   </div>
                 </div>
               );
@@ -2742,7 +2919,7 @@ export default function LeadMagnet() {
               <div className="mt-8">
                 <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                   <p className="text-slate-600 text-sm">
-                    <span className="font-medium">Historical Trends:</span> Year-over-year market data showing how this market has performed over time. These are metro-level averages across all property types.
+                    <span className="font-medium">Is this market growing or shrinking?</span> See how booking rates, income, and competition have changed over time. Look for upward trends in revenue and stable or growing occupancy.
                   </p>
                 </div>
                 {/* For submarkets with parent market info, show the charts with parent market data */}
