@@ -5048,3 +5048,9 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Added Market Verdict Card with letter grade and plain English explanation
 - [x] Updated "Limited data" message to "Uncommon in this market" with Pro Tip
 - [x] Added encouraging disclaimer for challenging markets (C+ and C grades)
+
+
+## Step 1 Submarket Breakdown & Quality Assessment (Jan 26, 2026)
+- [ ] Add submarket breakdown table for large cities (top 5-10 neighborhoods)
+- [ ] Assess Step 1 against Step 3 quality benchmark
+- [ ] Identify and fix any remaining gaps

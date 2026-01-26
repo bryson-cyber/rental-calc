@@ -1318,7 +1318,8 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
     
     for (const term of searchTerms) {
       console.log(`[getSubmarketsInMarket] Searching for: ${term}`);
-      const results = await searchMarkets(term, 50); // Increased limit
+      // Use searchMarketsAPI which returns the actual type (market/submarket) from AirDNA
+      const results = await searchMarketsAPI(term, 50); // Increased limit
       console.log(`[getSubmarketsInMarket] Found ${results.length} results for "${term}"`);
       allResults.push(...results);
     }
@@ -1330,6 +1331,8 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
     console.log(`[getSubmarketsInMarket] Sample results:`, uniqueResults.slice(0, 5).map(r => ({ id: r.id, name: r.name, type: r.type, listings: r.listing_count })));
     
     // Filter to find related submarkets/neighborhoods
+    // NOTE: listing_count may be null from search API, so we filter by name first
+    // and then fetch actual listing counts later
     const submarkets = uniqueResults.filter(m => {
       // Exclude the current market
       if (m.id === marketId) {
@@ -1337,9 +1340,9 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
         return false;
       }
       
-      // Must have some listings (lowered threshold)
-      if (m.listing_count < 50) {
-        return false; // Minimum 50 listings for meaningful data
+      // Only include submarkets (not markets)
+      if (m.type !== 'submarket') {
+        return false;
       }
       
       // Check if this is a related neighborhood:
@@ -1347,7 +1350,7 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
       const baseNameLower = baseName.toLowerCase();
       const fullNameLower = fullName.toLowerCase();
       
-      // 1. Name contains the base city name (e.g., "East Austin" contains "Austin")
+      // 1. Name contains the base city name (e.g., "Downtown Atlanta" contains "Atlanta")
       if (mNameLower.includes(baseNameLower)) {
         console.log(`[getSubmarketsInMarket] Including ${m.name} - contains base name`);
         return true;
@@ -1365,15 +1368,16 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
         return true;
       }
       
-      // 4. Check location_name similarity
+      // 4. Check location_name similarity (same state/metro area)
       const mLocation = m.location_name?.toLowerCase() || '';
       const marketLocation = marketDetails.location_name?.toLowerCase() || '';
       if (mLocation && marketLocation) {
-        // Extract city/state from location (e.g., "Austin, TX" -> "austin")
-        const mCity = mLocation.split(',')[0].trim();
-        const marketCity = marketLocation.split(',')[0].trim();
-        if (mCity === marketCity || mCity.includes(baseNameLower) || baseNameLower.includes(mCity)) {
-          console.log(`[getSubmarketsInMarket] Including ${m.name} - same location`);
+        // Extract state from location (e.g., "Atlanta, Georgia" -> "georgia")
+        const mState = mLocation.split(',').pop()?.trim() || '';
+        const marketState = marketLocation.split(',').pop()?.trim() || '';
+        // If same state and name contains city-related terms, include it
+        if (mState === marketState && mState.length > 0) {
+          console.log(`[getSubmarketsInMarket] Including ${m.name} - same state (${mState})`);
           return true;
         }
       }
@@ -1383,40 +1387,95 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
     
     console.log(`[getSubmarketsInMarket] Filtered to ${submarkets.length} related submarkets`);
     
-    // Sort by listing count descending (most active first)
-    submarkets.sort((a, b) => b.listing_count - a.listing_count);
+    // Get top 15 submarkets (we'll filter down to 10 after getting metrics)
+    // Take more initially since some may not have valid data
+    const topSubmarkets = submarkets.slice(0, 15);
     
-    // Get top 10 submarkets and fetch their metrics
-    const topSubmarkets = submarkets.slice(0, 10);
-    
-    // Fetch metrics for each submarket in parallel
+    // Fetch details and metrics for each submarket in parallel
+    // Use getMarketDetails for airdna- prefixed IDs, getSubmarketDetails for submarket- prefixed IDs
     const submarketsWithMetrics = await Promise.all(
       topSubmarkets.map(async (s) => {
         try {
-          const metrics = await getSubmarketMetrics(s.id);
+          let details: { listing_count?: number; metrics?: { revenue?: number; booked?: number; daily_rate?: number; revpar?: number } } | null = null;
+          
+          // Try getMarketDetails first (works for airdna- prefixed IDs)
+          if (s.id.startsWith('airdna-')) {
+            const marketDetails = await getMarketDetails(s.id);
+            if (marketDetails) {
+              details = {
+                listing_count: marketDetails.listing_count,
+                metrics: undefined, // getMarketDetails doesn't return metrics, we'll fetch separately
+              };
+            }
+          }
+          
+          // Fall back to getSubmarketDetails for submarket- prefixed IDs
+          if (!details && s.id.startsWith('submarket-')) {
+            const submarketDetails = await getSubmarketDetails(s.id);
+            if (submarketDetails) {
+              details = {
+                listing_count: submarketDetails.listing_count,
+                metrics: submarketDetails.metrics,
+              };
+            }
+          }
+          
+          if (!details) {
+            console.log(`[getSubmarketsInMarket] No details for ${s.name} (${s.id})`);
+            return null;
+          }
+          
+          // Filter out submarkets with too few listings
+          if ((details.listing_count || 0) < 20) {
+            console.log(`[getSubmarketsInMarket] Skipping ${s.name} - only ${details.listing_count} listings`);
+            return null;
+          }
+          
+          // If we don't have metrics, try to get them from getSubmarketMetrics
+          let metrics = details.metrics;
+          if (!metrics) {
+            try {
+              const fetchedMetrics = await getSubmarketMetrics(s.id);
+              if (fetchedMetrics) {
+                metrics = {
+                  revenue: fetchedMetrics.revenue,
+                  booked: fetchedMetrics.occupancy ? fetchedMetrics.occupancy / 100 : undefined,
+                  daily_rate: fetchedMetrics.adr,
+                  revpar: fetchedMetrics.revpar,
+                };
+              }
+            } catch (e) {
+              console.log(`[getSubmarketsInMarket] Could not fetch metrics for ${s.name}`);
+            }
+          }
+          
           return {
             id: s.id,
             name: s.name,
-            listing_count: s.listing_count,
+            listing_count: details.listing_count || 0,
             metrics: metrics ? {
               revenue: metrics.revenue || 0,
-              occupancy: metrics.occupancy || 0,
-              adr: metrics.adr || 0,
+              occupancy: metrics.booked ? Math.round(metrics.booked * 100) : 0,
+              adr: metrics.daily_rate || 0,
               revpar: metrics.revpar || 0,
             } : undefined,
           };
         } catch (err) {
-          console.log(`[getSubmarketsInMarket] Failed to get metrics for ${s.name}:`, err);
-          return {
-            id: s.id,
-            name: s.name,
-            listing_count: s.listing_count,
-          };
+          console.log(`[getSubmarketsInMarket] Failed to get details for ${s.name}:`, err);
+          return null;
         }
       })
     );
     
-    return submarketsWithMetrics;
+    // Filter out nulls and sort by listing count
+    const validSubmarkets = submarketsWithMetrics
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .sort((a, b) => b.listing_count - a.listing_count)
+      .slice(0, 10);
+    
+    console.log(`[getSubmarketsInMarket] Returning ${validSubmarkets.length} submarkets with metrics`);
+    
+    return validSubmarkets;
   } catch (error) {
     console.error("Error fetching submarkets:", error);
     return [];
