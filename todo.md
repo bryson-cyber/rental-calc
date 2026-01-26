@@ -5066,3 +5066,27 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add guiding question to Revenue by Property Type section: "Which property types earn the most?"
 - [x] Add guiding question to Market Performance Over Time section: "Is this market growing or declining?"
 - [x] Add guiding question to Comp Data Table section: "What are successful properties doing?"
+
+
+## Browser Testing - Guiding Questions Verification (Jan 26, 2026)
+- [ ] Test Market 1 - Atlanta, GA: Verify all 8 guiding questions display correctly
+- [ ] Test Market 2 - Miami, FL: Verify all 8 guiding questions display correctly
+- [ ] Test Market 3 - Austin, TX: Verify all 8 guiding questions display correctly
+
+
+## Browser Testing - Guiding Questions Verification (Jan 26, 2026) - COMPLETE
+
+- [x] Test Market 1: Atlanta, GA - All 8 guiding questions verified
+- [x] Test Market 2: Miami, FL - All 8 guiding questions verified
+- [x] Test Market 3: Austin, TX - All 8 guiding questions verified
+
+### Summary:
+All guiding questions display correctly across all three test markets:
+1. "What should I know first about this market?" - Quick Insights
+2. "Is this market healthy for investors?" - Market Health Score
+3. "How much can I realistically expect to earn?" - Revenue Distribution
+4. "How do guests typically book here?" - Guest Behavior
+5. "How competitive is this market?" - Competition Landscape
+6. "Which property types earn the most?" - Revenue by Property Type
+7. "Is this market growing or shrinking?" - Historical Charts
+8. "What are successful properties doing?" - Comp Data Table
