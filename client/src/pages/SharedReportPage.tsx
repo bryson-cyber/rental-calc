@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ChapterPropertyReport from '@/components/ChapterPropertyReport';
+import ChapterMarketReport from '@/components/ChapterMarketReport';
+import { SharedMarketReport } from '@/components/SharedMarketReport';
 
 export default function SharedReportPage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -191,12 +193,36 @@ export default function SharedReportPage() {
     );
   }
 
-  // For market reports, we'd render a different component
+  // For market reports, check if it's Step 1 data or ChapterMarketReport data
+  if (reportInfo.reportType === 'market') {
+    // Check if this is Step 1 market data (has marketName, avgRevenue, etc.)
+    if (reportData.marketName && reportData.avgRevenue !== undefined) {
+      return (
+        <SharedMarketReport
+          data={reportData}
+          onBack={() => setLocation('/')}
+        />
+      );
+    }
+    
+    // Otherwise, it's a ChapterMarketReport format
+    const isSubmarket = reportData.submarket && !reportData.market;
+    return (
+      <ChapterMarketReport
+        data={reportData}
+        reportType={isSubmarket ? 'submarket' : 'market'}
+        onBack={() => setLocation('/')}
+        clientName="Shared Report"
+      />
+    );
+  }
+
+  // Fallback for unknown report types
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
       <div className="text-center">
         <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-        <p className="text-[#1A1A1A]/70">Market reports are not yet supported for sharing</p>
+        <p className="text-[#1A1A1A]/70">Unknown report type: {reportInfo.reportType}</p>
       </div>
     </div>
   );

@@ -3502,6 +3502,8 @@ superhostOnly: input.superhostOnly,
           
           // Build filters object if bedrooms is specified
           const filters = input.bedrooms ? { bedrooms: input.bedrooms } : undefined;
+          console.log(`[CompData.getListings] Input:`, { submarketId: input.submarketId, isMarketLevel: input.isMarketLevel, page: input.page, bedrooms: input.bedrooms, filters });
+          console.log(`[CompData.getListings] Calling ${input.isMarketLevel ? 'getMarketListings' : 'getSubmarketListings'} with filters:`, JSON.stringify(filters));
           
           // Use the appropriate function based on whether it's a market or submarket search
           const result = input.isMarketLevel 

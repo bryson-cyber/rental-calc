@@ -156,6 +156,7 @@ export function HistoricalCharts({
       color: '#3B82F6',
       format: (v: number) => `${Math.round(v)}%`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      tooltip: 'How often properties are booked. Higher % = more demand in this market. 60%+ is considered healthy.',
     },
     revenue: {
       label: 'Avg Revenue',
@@ -163,6 +164,7 @@ export function HistoricalCharts({
       color: '#10B981',
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      tooltip: 'Average annual income for properties in this market. This is what hosts typically earn before expenses.',
     },
     adr: {
       label: 'ADR',
@@ -170,6 +172,7 @@ export function HistoricalCharts({
       color: '#8B5CF6',
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      tooltip: 'Average Daily Rate - the typical nightly price guests pay. Higher ADR = more premium market.',
     },
     listings: {
       label: 'Active Listings',
@@ -177,6 +180,7 @@ export function HistoricalCharts({
       color: '#F59E0B',
       format: (v: number) => Math.round(v).toLocaleString(),
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      tooltip: 'Total number of active short-term rentals in this market. More listings = more competition.',
     },
   };
 
@@ -236,7 +240,7 @@ export function HistoricalCharts({
             return (
               <div 
                 key={key}
-                className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                className={`p-4 rounded-lg border cursor-pointer transition-colors relative group ${
                   activeTab === key 
                     ? 'border-[#C9A962] bg-[#C9A962]/5' 
                     : 'border-gray-200 hover:border-gray-300'
@@ -245,7 +249,7 @@ export function HistoricalCharts({
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className="w-4 h-4 text-gray-500" />
-                  <span className="text-xs text-gray-500 uppercase tracking-wider">{metric.label}</span>
+                  <span className="text-xs text-gray-500 uppercase tracking-wider cursor-help border-b border-dotted border-gray-400">{metric.label}</span>
                 </div>
                 <p className="text-xl font-bold text-gray-900">
                   {metric.format(currentValue)}
@@ -262,6 +266,13 @@ export function HistoricalCharts({
                     {metric.yoyFormat(yoyChange)} YoY
                   </div>
                 )}
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-56 pointer-events-none">
+                  <div className="bg-slate-900 text-white text-xs p-3 rounded-lg shadow-lg">
+                    {metric.tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
               </div>
             );
           })}

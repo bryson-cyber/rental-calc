@@ -4901,3 +4901,50 @@ When clicking "See on Map" from the property card, the map view would show the s
 ### Remaining Minor Issues:
 - [ ] Historical Trends chart shows "No data available for this time range"
 - [ ] Entire Homes and Single Hosts show 0% (may need API field mapping)
+
+
+## Step 1 UI Fixes (Jan 26, 2026 - Round 2)
+
+### Critical Fixes:
+- [ ] Quick Insights section - change from dark gradient to light theme matching rest of page
+- [ ] Revenue by Property Type - fetch ALL listings, not limited data (currently showing 4, 8, 12, 16 listings)
+- [ ] Add hover tooltips with beginner-friendly explanations for all metrics and terms
+- [ ] Remove ALL emojis from reports (currently has emojis which is unprofessional)
+- [ ] Fix Comp Data bedroom filter - clicking filter does nothing
+
+### Tooltip Content Needed:
+- [ ] Top Earner - explain what this means
+- [ ] Most Booked - explain occupancy
+- [ ] Market Size - explain active listings
+- [ ] Market Health Score - explain overall score
+- [ ] Investability - explain ROI potential
+- [ ] Rental Demand - explain guest interest
+- [ ] Revenue Growth - explain YoY trend
+- [ ] Seasonality - explain consistency
+- [ ] Regulation - explain STR friendliness
+- [ ] Revenue Distribution percentiles - explain what each means
+- [ ] Booking Lead Time - explain advance booking
+- [ ] Length of Stay - explain average duration
+- [ ] Pro Managed - explain professional hosts
+- [ ] Superhosts - explain top-rated hosts
+
+## Share Button Feature (Jan 26, 2026)
+- [ ] Add share button to Step 1 results
+- [ ] Create shareable report link that works without login
+- [ ] Store report data for shared links
+
+
+## Bug Fixes and Enhancements (Jan 26, 2026)
+- [ ] Remove debug alert popup from bedroom filter in CompDataTable
+- [ ] Fix Revenue by Property Type showing 'Limited data available' for 1 Bedroom when data exists
+- [ ] Add info/hover tooltips for scores, charts, and metrics (beginner-friendly explanations)
+- [ ] Fix market reports sharing feature (currently shows 'not yet supported')
+
+
+## Bug Fixes and Enhancements (Jan 26, 2026)
+- [x] Remove debug alert from bedroom filter in CompDataTable
+- [x] Add info/hover tooltips to HistoricalCharts metrics (Occupancy, Revenue, ADR, Listings)
+- [x] Add info/hover tooltips to CompDataTable metrics (Revenue, ADR, Occupancy, Rating)
+- [x] Add info/hover tooltips to main market overview metrics in LeadMagnet
+- [x] Create SharedMarketReport component for Step 1 market data sharing
+- [x] Update SharedReportPage to use SharedMarketReport for Step 1 data
