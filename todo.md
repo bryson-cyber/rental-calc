@@ -4436,3 +4436,38 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add "Below Avg" label for 10-15%
 - [x] Add "Recommended" label for 20% (green, centered)
 - [x] Add "Above Avg" label for 25%+
+
+
+## Step 1 (See Real Revenue) Audit (Jan 25, 2026)
+### Review Items
+- [x] Check revenue data accuracy and source
+- [x] Verify bedroom filtering is applied (apples-to-apples) - ISSUE FOUND
+- [x] Check seasonality data display
+- [x] Verify ADR and occupancy calculations
+- [x] Check framing and labels for clarity - ISSUES FOUND
+- [x] Ensure "average" language is used where appropriate - ISSUE FOUND
+- [x] Review any error states or edge cases
+
+### Issues to Fix
+- [ ] ISSUE 1: Apply bedroom filtering to hero metrics (show 2BR data when toggle is ON)
+- [ ] ISSUE 2: Clarify "Per listing" label - show "Avg across all property types" or filter by bedroom
+- [ ] ISSUE 3: Make hero metrics match the bedroom-filtered data when toggle is ON
+- [ ] ISSUE 4: Add "Avg" or "Historical Avg" labels to seasonality data
+- [ ] ISSUE 5: Clarify Historical Trends data source (different from hero metrics)
+
+
+## Step 1 (See Real Revenue) Audit Fixes (Jan 25, 2026) - COMPLETE
+
+### Issues Fixed:
+- [x] ISSUE 1: Apply bedroom filtering to hero metrics (show 2BR data when toggle is ON)
+- [x] ISSUE 2: Clarify "Per listing" label - now shows "All property types" or "2BR avg" when filtered
+- [x] ISSUE 3: Make hero metrics match the bedroom-filtered data when toggle is ON
+- [x] ISSUE 4: Add "Avg" or "Historical Avg" labels to seasonality data - renamed to "Historical Seasonality"
+- [x] ISSUE 5: Clarify Historical Trends data source - added explanatory note about metro-level data
+
+### Changes Made:
+- Hero metrics now use bedroom-filtered data when bedroomFilter is active
+- Labels updated: "All property types" vs "2BR avg" based on filter state
+- Seasonality section renamed to "Historical Seasonality" with "12-month avg" badge
+- Chart labels updated to "Avg Occupancy by Month" and "Avg Nightly Rate by Month"
+- Historical Trends section now has explanatory note about metro-level data

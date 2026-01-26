@@ -1971,7 +1971,22 @@ export default function LeadMagnet() {
       )}
       
       {/* Prove the Market Results */}
-      {activeTab === 'prove' && researchResult && !isResearching && (
+      {activeTab === 'prove' && researchResult && !isResearching && (() => {
+        // Get bedroom-filtered metrics if filter is active
+        const filteredBedroomData = bedroomFilter && researchResult.propertyTypes 
+          ? researchResult.propertyTypes.find(t => {
+              const bedroomNum = parseInt(t.type.split(' ')[0]) || 0;
+              return bedroomNum === bedroomFilter;
+            })
+          : null;
+        
+        // Use filtered data if available, otherwise use market-wide averages
+        const displayRevenue = filteredBedroomData?.avgRevenue || researchResult.avgRevenue;
+        const displayOccupancy = filteredBedroomData?.occupancy || researchResult.avgOccupancy;
+        const displayListings = filteredBedroomData?.count || researchResult.totalListings;
+        const isFiltered = bedroomFilter && filteredBedroomData;
+        
+        return (
         <section className="py-12 bg-slate-50">
           <div className="container max-w-4xl mx-auto">
             {/* Hero Header */}
@@ -1984,43 +1999,46 @@ export default function LeadMagnet() {
                 {researchResult.marketName} is Profitable
               </h3>
               <p className="text-slate-500">
-                Real revenue data from active Airbnb hosts in this market
+                {isFiltered 
+                  ? `Avg revenue data for ${bedroomFilter}BR properties in this market`
+                  : 'Avg revenue data from active Airbnb hosts in this market'
+                }
               </p>
             </div>
             
             {/* Key Metrics - Tesla Dashboard Style */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+              <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${isFiltered ? 'border-emerald-300 ring-1 ring-emerald-100' : 'border-slate-200'}`}>
                 <div className="inline-flex p-2 rounded-lg mb-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                   <DollarSign className="w-5 h-5" />
                 </div>
                 <p className="text-slate-500 text-xs font-medium">Avg Annual Revenue</p>
-                <p className="text-xl font-bold text-slate-900">{formatCurrency(researchResult.avgRevenue)}</p>
-                <p className="text-slate-400 text-xs">Per listing</p>
+                <p className="text-xl font-bold text-slate-900">{formatCurrency(displayRevenue)}</p>
+                <p className="text-slate-400 text-xs">{isFiltered ? `${bedroomFilter}BR avg` : 'All property types'}</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
                 <div className="inline-flex p-2 rounded-lg mb-2 bg-blue-500/10 text-blue-500 border border-blue-500/20">
                   <Calendar className="w-5 h-5" />
                 </div>
-                <p className="text-slate-500 text-xs font-medium">Nightly Rate</p>
+                <p className="text-slate-500 text-xs font-medium">Avg Nightly Rate</p>
                 <p className="text-xl font-bold text-slate-900">{formatCurrency(researchResult.avgAdr)}</p>
-                <p className="text-slate-400 text-xs">Average ADR</p>
+                <p className="text-slate-400 text-xs">Market average ADR</p>
               </div>
-              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+              <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${isFiltered ? 'border-purple-300 ring-1 ring-purple-100' : 'border-slate-200'}`}>
                 <div className="inline-flex p-2 rounded-lg mb-2 bg-purple-500/10 text-purple-500 border border-purple-500/20">
                   <Percent className="w-5 h-5" />
                 </div>
-                <p className="text-slate-500 text-xs font-medium">Occupancy</p>
-                <p className="text-xl font-bold text-slate-900">{Math.round(researchResult.avgOccupancy)}%</p>
-                <p className="text-slate-400 text-xs">Booked nights</p>
+                <p className="text-slate-500 text-xs font-medium">Avg Occupancy</p>
+                <p className="text-xl font-bold text-slate-900">{Math.round(displayOccupancy)}%</p>
+                <p className="text-slate-400 text-xs">{isFiltered ? `${bedroomFilter}BR avg` : 'Market average'}</p>
               </div>
-              <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+              <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${isFiltered ? 'border-amber-300 ring-1 ring-amber-100' : 'border-slate-200'}`}>
                 <div className="inline-flex p-2 rounded-lg mb-2 bg-amber-500/10 text-amber-500 border border-amber-500/20">
                   <Home className="w-5 h-5" />
                 </div>
-                <p className="text-slate-500 text-xs font-medium">Active Listings</p>
-                <p className="text-xl font-bold text-slate-900">{researchResult.totalListings.toLocaleString()}</p>
-                <p className="text-slate-400 text-xs">In this market</p>
+                <p className="text-slate-500 text-xs font-medium">{isFiltered ? 'Similar Listings' : 'Active Listings'}</p>
+                <p className="text-xl font-bold text-slate-900">{displayListings.toLocaleString()}</p>
+                <p className="text-slate-400 text-xs">{isFiltered ? `${bedroomFilter}BR in market` : 'All types in market'}</p>
               </div>
             </div>
             
@@ -2158,15 +2176,16 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Market Seasonality</h4>
-                      <p className="text-slate-500 text-sm">Monthly performance patterns</p>
+                      <h4 className="text-lg font-semibold text-slate-900">Historical Seasonality</h4>
+                      <p className="text-slate-500 text-sm">Avg monthly performance based on historical data</p>
                     </div>
+                    <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">12-month avg</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Occupancy Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-slate-500">Occupancy by Month</p>
+                        <p className="text-sm text-slate-500">Avg Occupancy by Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-amber-500"></div>
                           <span className="text-xs text-amber-600 font-medium">Avg: {Math.round(avgOccupancy)}%</span>
@@ -2199,7 +2218,7 @@ export default function LeadMagnet() {
                     {/* ADR Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-slate-500">Average Daily Rate by Month</p>
+                        <p className="text-sm text-slate-500">Avg Nightly Rate by Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-blue-500"></div>
                           <span className="text-xs text-blue-600 font-medium">Avg: {formatCurrency(avgAdr)}</span>
@@ -2243,6 +2262,11 @@ export default function LeadMagnet() {
             {/* When a submarket is selected as a market (isSubmarketAsMarket), use the parent market ID if available */}
             {locationSelection?.market?.id && (
               <div className="mt-8">
+                <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <p className="text-slate-600 text-sm">
+                    <span className="font-medium">Historical Trends:</span> Year-over-year market data showing how this market has performed over time. These are metro-level averages across all property types.
+                  </p>
+                </div>
                 {/* For submarkets with parent market info, show the charts with parent market data */}
                 {locationSelection.market.isSubmarketAsMarket && locationSelection.market.parentMarketId ? (
                   <div>
@@ -2336,7 +2360,8 @@ export default function LeadMagnet() {
             </div>
           </div>
         </section>
-      )}
+        );
+      })()}
       
       {/* Find Your Market Results */}
       {activeTab === 'find' && areaListings && (
