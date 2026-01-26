@@ -320,10 +320,12 @@ export default function LeadMagnet() {
     median: number;
     percentile25: number;
     percentile75: number;
+    min: number;
+    max: number;
     sampleCount: number;
     userRentVsMarket: 'below' | 'at' | 'above';
-    percentDiff: number;
     rentAdvantage: number;
+    percentileRank: number;
   } | null>(null);
   const [isLoadingRentometer, setIsLoadingRentometer] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -468,14 +470,29 @@ export default function LeadMagnet() {
             const userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
               : data.userRentComparison.rentAdvantage < 0 ? 'above' 
               : 'at';
+            // Calculate percentile rank based on where user's rent falls
+            const userRent = rentValue;
+            let percentileRank = 50; // default to median
+            if (userRent <= data.marketData.percentile25) {
+              percentileRank = 25;
+            } else if (userRent <= data.marketData.median) {
+              percentileRank = 50 - ((data.marketData.median - userRent) / (data.marketData.median - data.marketData.percentile25)) * 25;
+            } else if (userRent <= data.marketData.percentile75) {
+              percentileRank = 50 + ((userRent - data.marketData.median) / (data.marketData.percentile75 - data.marketData.median)) * 25;
+            } else {
+              percentileRank = 75 + ((userRent - data.marketData.percentile75) / (data.marketData.max - data.marketData.percentile75)) * 25;
+            }
+            
             setRentometerData({
               median: data.marketData.median,
               percentile25: data.marketData.percentile25,
               percentile75: data.marketData.percentile75,
+              min: data.marketData.min,
+              max: data.marketData.max,
               sampleCount: data.marketData.samples,
               userRentVsMarket,
-              percentDiff: data.userRentComparison.rentAdvantagePercent,
               rentAdvantage: data.userRentComparison.rentAdvantage,
+              percentileRank: Math.round(percentileRank),
             });
           }
         } catch (rentError) {
@@ -1482,54 +1499,7 @@ export default function LeadMagnet() {
                       </div>
                     )}
                   </div>
-                  
-                  {/* Rentometer Market Comparison */}
-                  {rentometerData && (
-                    <div className={`p-3 rounded-lg border ${
-                      rentometerData.userRentVsMarket === 'below' 
-                        ? 'bg-emerald-50 border-emerald-200' 
-                        : rentometerData.userRentVsMarket === 'above'
-                        ? 'bg-amber-50 border-amber-200'
-                        : 'bg-slate-50 border-slate-200'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-slate-600">Market Rent Analysis</span>
-                        <span className="text-xs text-slate-400">{rentometerData.sampleCount} comps</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {rentometerData.userRentVsMarket === 'below' ? (
-                          <TrendingDown className="w-4 h-4 text-emerald-600" />
-                        ) : rentometerData.userRentVsMarket === 'above' ? (
-                          <TrendingUp className="w-4 h-4 text-amber-600" />
-                        ) : (
-                          <span className="w-4 h-4 text-slate-500">=</span>
-                        )}
-                        <span className={`text-sm font-semibold ${
-                          rentometerData.userRentVsMarket === 'below' 
-                            ? 'text-emerald-700' 
-                            : rentometerData.userRentVsMarket === 'above'
-                            ? 'text-amber-700'
-                            : 'text-slate-700'
-                        }`}>
-                          {rentometerData.userRentVsMarket === 'below' 
-                            ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/mo below market` 
-                            : rentometerData.userRentVsMarket === 'above'
-                            ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/mo above market`
-                            : 'At market rate'}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-slate-500">
-                        Market median: ${rentometerData.median.toLocaleString()}/mo
-                        <span className="mx-1">•</span>
-                        Range: ${rentometerData.percentile25.toLocaleString()} - ${rentometerData.percentile75.toLocaleString()}
-                      </div>
-                      {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
-                        <div className="mt-2 p-2 bg-emerald-100 rounded text-xs text-emerald-800">
-                          <strong>Rent Advantage:</strong> +${(rentometerData.rentAdvantage * 12).toLocaleString()}/year built-in profit margin
-                        </div>
-                      )}
-                    </div>
-                  )}
+
                 </div>
                 
                 {/* Bedrooms & Bathrooms */}
@@ -2673,6 +2643,7 @@ export default function LeadMagnet() {
               furnitureCost={parseFloat(furnitureCost) || 0}
               expensePercent={expensePercent}
               marketId={result.marketId}
+              rentometerData={rentometerData}
             />
             
             {/* Next Step CTA */}

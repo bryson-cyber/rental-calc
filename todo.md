@@ -4497,3 +4497,20 @@ When clicking "See on Map" from the property card, the map view would show the s
 - User rent: $2,000/mo
 - Market median: $2,760/mo (39 comps)
 - Result: "$760/mo below market" with "+$9,120/year built-in profit margin"
+
+
+## Move Rentometer to Investment Analysis (Jan 25, 2026)
+- [ ] Remove Rentometer display from form input area in LeadMagnet.tsx
+- [ ] Add Rent Validation subsection to Investment Analysis in TeslaDashboard
+- [ ] Create visual range indicator showing where user's rent falls
+- [ ] Pass rentometerData from LeadMagnet to TeslaDashboard
+- [ ] Show compact summary: "Your rent: $X → Xth percentile (great deal/fair/high)"
+
+
+## Rent Validation Move to Investment Analysis (Jan 25, 2026) - COMPLETE
+- [x] Remove Rentometer display from form input area
+- [x] Add "Rent Validation" subsection to Investment Analysis in TeslaDashboard
+- [x] Show visual range indicator with user's rent position (green dot)
+- [x] Display percentile context (25th: $2,214, Median: $2,760, 75th: $3,355)
+- [x] Show annual rent savings compared to median (+$9,120 for $2,000 rent)
+- [x] Show percentile assessment ("Bottom 25% — Great deal!")

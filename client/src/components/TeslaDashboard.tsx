@@ -122,6 +122,17 @@ interface TeslaDashboardProps {
   furnitureCost?: number;  // Furniture & setup cost for break-even calculation
   expensePercent?: number;  // Operating expense percentage (default 20%)
   marketId?: string | number;  // For MarketInsightsPanel
+  rentometerData?: {
+    median: number;
+    percentile25: number;
+    percentile75: number;
+    min: number;
+    max: number;
+    sampleCount: number;
+    userRentVsMarket: 'below' | 'above' | 'at';
+    rentAdvantage: number;
+    percentileRank: number;
+  } | null;  // Rentometer rent validation data
 }
 
 // ============================================
@@ -1035,7 +1046,8 @@ function ArbitrageCalculator({
   occupancy,
   adr,
   furnitureCost = 0,
-  expensePercent = 20
+  expensePercent = 20,
+  rentometerData
 }: { 
   monthlyRevenue: number;
   monthlyRent: number;
@@ -1043,6 +1055,17 @@ function ArbitrageCalculator({
   adr: number;
   furnitureCost?: number;
   expensePercent?: number;
+  rentometerData?: {
+    median: number;
+    percentile25: number;
+    percentile75: number;
+    min: number;
+    max: number;
+    sampleCount: number;
+    userRentVsMarket: 'below' | 'above' | 'at';
+    rentAdvantage: number;
+    percentileRank: number;
+  } | null;
 }) {
   // Calculate expenses as percentage of revenue
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
@@ -1248,6 +1271,100 @@ function ArbitrageCalculator({
             At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue (after {expensePercent}% expenses)
           </p>
         </div>
+        
+        {/* Rent Validation - Rentometer Data */}
+        {rentometerData && (
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Home className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-slate-700">Rent Validation</span>
+              </div>
+              <span className="text-xs text-slate-400">{rentometerData.sampleCount} rental comps</span>
+            </div>
+            
+            {/* Visual Range Indicator */}
+            <div className="mb-3">
+              <div className="flex justify-between text-xs text-slate-500 mb-1">
+                <span>${rentometerData.min.toLocaleString()}</span>
+                <span>Market Range</span>
+                <span>${rentometerData.max.toLocaleString()}</span>
+              </div>
+              <div className="relative h-6 bg-gradient-to-r from-emerald-200 via-blue-200 to-amber-200 rounded-full">
+                {/* 25th percentile marker */}
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
+                  style={{ left: `${((rentometerData.percentile25 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+                />
+                {/* Median marker */}
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-slate-600"
+                  style={{ left: `${((rentometerData.median - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+                />
+                {/* 75th percentile marker */}
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
+                  style={{ left: `${((rentometerData.percentile75 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+                />
+                {/* User's rent position */}
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md flex items-center justify-center"
+                  style={{ 
+                    left: `${Math.min(Math.max(((monthlyRent - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100, 2), 98)}%`,
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: rentometerData.userRentVsMarket === 'below' ? '#10b981' : rentometerData.userRentVsMarket === 'above' ? '#f59e0b' : '#6366f1'
+                  }}
+                >
+                  <span className="text-[8px] font-bold text-white">$</span>
+                </div>
+              </div>
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                <span>25th: ${rentometerData.percentile25.toLocaleString()}</span>
+                <span>Median: ${rentometerData.median.toLocaleString()}</span>
+                <span>75th: ${rentometerData.percentile75.toLocaleString()}</span>
+              </div>
+            </div>
+            
+            {/* Summary */}
+            <div className={`p-3 rounded-lg ${
+              rentometerData.userRentVsMarket === 'below' 
+                ? 'bg-emerald-100' 
+                : rentometerData.userRentVsMarket === 'above'
+                ? 'bg-amber-100'
+                : 'bg-blue-100'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">
+                    Your rent: ${monthlyRent.toLocaleString()}/mo
+                  </p>
+                  <p className={`text-xs ${
+                    rentometerData.userRentVsMarket === 'below' 
+                      ? 'text-emerald-700' 
+                      : rentometerData.userRentVsMarket === 'above'
+                      ? 'text-amber-700'
+                      : 'text-blue-700'
+                  }`}>
+                    {rentometerData.percentileRank <= 25 
+                      ? `Bottom 25% — Great deal!`
+                      : rentometerData.percentileRank <= 50
+                      ? `Below median — Good deal`
+                      : rentometerData.percentileRank <= 75
+                      ? `Above median — Fair price`
+                      : `Top 25% — Premium rent`
+                    }
+                  </p>
+                </div>
+                {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-emerald-700">+${(rentometerData.rentAdvantage * 12).toLocaleString()}</p>
+                    <p className="text-[10px] text-emerald-600">annual rent savings</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2167,7 +2284,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -2223,6 +2340,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
           adr={result.metrics.adr}
           furnitureCost={furnitureCost}
           expensePercent={expensePercent}
+          rentometerData={rentometerData}
         />
       </div>
       
