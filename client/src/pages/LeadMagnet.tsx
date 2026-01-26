@@ -314,6 +314,18 @@ export default function LeadMagnet() {
   const [furnitureCost, setFurnitureCost] = useState('15000');
   const [expensePercent, setExpensePercent] = useState(20);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Rentometer state for rent validation
+  const [rentometerData, setRentometerData] = useState<{
+    median: number;
+    percentile25: number;
+    percentile75: number;
+    sampleCount: number;
+    userRentVsMarket: 'below' | 'at' | 'above';
+    percentDiff: number;
+    rentAdvantage: number;
+  } | null>(null);
+  const [isLoadingRentometer, setIsLoadingRentometer] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   
@@ -373,6 +385,7 @@ export default function LeadMagnet() {
   const getMarketReport = trpc.marketResearchSimple.getMarketReport.useMutation();
   const getSubmarketReport = trpc.marketResearchSimple.getSubmarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
+  const analyzeRent = trpc.rentometer.analyzeRent.useMutation();
 
   // ============================================
   // AUTO-POPULATE FROM PROPERTY CONTEXT
@@ -437,8 +450,41 @@ export default function LeadMagnet() {
     
     setIsAnalyzing(true);
     setLoadingStep(1);
+    setRentometerData(null); // Clear previous rentometer data
     
     try {
+      // Fetch Rentometer data in parallel if rent is provided
+      const rentValue = parseFloat(monthlyRent) || 0;
+      if (rentValue > 0 && address) {
+        setIsLoadingRentometer(true);
+        try {
+          const rentometerResponse = await analyzeRent.mutateAsync({
+            address,
+            bedrooms: parseInt(bedrooms),
+            userRent: rentValue,
+          });
+          if (rentometerResponse.success && rentometerResponse.data) {
+            const data = rentometerResponse.data;
+            const userRentVsMarket = data.userRentComparison.rentAdvantage > 0 ? 'below' 
+              : data.userRentComparison.rentAdvantage < 0 ? 'above' 
+              : 'at';
+            setRentometerData({
+              median: data.marketData.median,
+              percentile25: data.marketData.percentile25,
+              percentile75: data.marketData.percentile75,
+              sampleCount: data.marketData.samples,
+              userRentVsMarket,
+              percentDiff: data.userRentComparison.rentAdvantagePercent,
+              rentAdvantage: data.userRentComparison.rentAdvantage,
+            });
+          }
+        } catch (rentError) {
+          console.log('[Rentometer] Could not fetch rent data:', rentError);
+          // Don't fail the main analysis if Rentometer fails
+        } finally {
+          setIsLoadingRentometer(false);
+        }
+      }
       const loadingInterval = setInterval(() => {
         setLoadingStep(prev => prev < 4 ? prev + 1 : prev);
       }, 1500);
@@ -1413,20 +1459,77 @@ export default function LeadMagnet() {
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                     Rent or Mortgage <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={monthlyRent}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      // Prevent negative values
-                      if (val === '' || parseFloat(val) >= 0) {
-                        setMonthlyRent(val);
-                      }
-                    }}
-                    placeholder="2000"
-                    className="input-apple h-12"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={monthlyRent}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Prevent negative values
+                        if (val === '' || parseFloat(val) >= 0) {
+                          setMonthlyRent(val);
+                          // Clear rentometer data when rent changes
+                          setRentometerData(null);
+                        }
+                      }}
+                      placeholder="2000"
+                      className="input-apple h-12"
+                    />
+                    {isLoadingRentometer && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Rentometer Market Comparison */}
+                  {rentometerData && (
+                    <div className={`p-3 rounded-lg border ${
+                      rentometerData.userRentVsMarket === 'below' 
+                        ? 'bg-emerald-50 border-emerald-200' 
+                        : rentometerData.userRentVsMarket === 'above'
+                        ? 'bg-amber-50 border-amber-200'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-slate-600">Market Rent Analysis</span>
+                        <span className="text-xs text-slate-400">{rentometerData.sampleCount} comps</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {rentometerData.userRentVsMarket === 'below' ? (
+                          <TrendingDown className="w-4 h-4 text-emerald-600" />
+                        ) : rentometerData.userRentVsMarket === 'above' ? (
+                          <TrendingUp className="w-4 h-4 text-amber-600" />
+                        ) : (
+                          <span className="w-4 h-4 text-slate-500">=</span>
+                        )}
+                        <span className={`text-sm font-semibold ${
+                          rentometerData.userRentVsMarket === 'below' 
+                            ? 'text-emerald-700' 
+                            : rentometerData.userRentVsMarket === 'above'
+                            ? 'text-amber-700'
+                            : 'text-slate-700'
+                        }`}>
+                          {rentometerData.userRentVsMarket === 'below' 
+                            ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/mo below market` 
+                            : rentometerData.userRentVsMarket === 'above'
+                            ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/mo above market`
+                            : 'At market rate'}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500">
+                        Market median: ${rentometerData.median.toLocaleString()}/mo
+                        <span className="mx-1">•</span>
+                        Range: ${rentometerData.percentile25.toLocaleString()} - ${rentometerData.percentile75.toLocaleString()}
+                      </div>
+                      {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
+                        <div className="mt-2 p-2 bg-emerald-100 rounded text-xs text-emerald-800">
+                          <strong>Rent Advantage:</strong> +${(rentometerData.rentAdvantage * 12).toLocaleString()}/year built-in profit margin
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Bedrooms & Bathrooms */}

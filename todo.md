@@ -4471,3 +4471,29 @@ When clicking "See on Map" from the property card, the map view would show the s
 - Seasonality section renamed to "Historical Seasonality" with "12-month avg" badge
 - Chart labels updated to "Avg Occupancy by Month" and "Avg Nightly Rate by Month"
 - Historical Trends section now has explanatory note about metro-level data
+
+
+## Rentometer QuickView Integration (Jan 25, 2026) ✓ COMPLETE
+
+### Backend Integration
+- [x] Create rentometer.ts service with QuickView endpoint
+- [x] Add getRentSummary function to fetch market rent data
+- [x] Add analyzeRentVsMarket function for rent comparison
+- [x] Add tRPC procedure for analyzeRent
+- [x] Vitest tests passing for API validation
+
+### Frontend Integration
+- [x] Add rentometerData state to LeadMagnet
+- [x] Add isLoadingRentometer state for loading indicator
+- [x] Call Rentometer API when user enters rent
+- [x] Display Market Rent Analysis card below rent input
+- [x] Show: "$X/mo below/above market" with green/red framing
+- [x] Show: Market median, range (25th-75th percentile)
+- [x] Show: Rent Advantage (+$X/year built-in profit margin)
+- [x] Show: Sample size (X comps)
+
+### Test Results
+- Address: 1321 15th St, Denver, CO 80202
+- User rent: $2,000/mo
+- Market median: $2,760/mo (39 comps)
+- Result: "$760/mo below market" with "+$9,120/year built-in profit margin"
