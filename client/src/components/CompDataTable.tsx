@@ -18,11 +18,13 @@ import {
 interface CompDataTableProps {
   submarketId: string;
   marketName: string;
+  isMarketLevel?: boolean; // true = city/metro level, false = neighborhood level
 }
 
 export function CompDataTable({ 
   submarketId, 
-  marketName
+  marketName,
+  isMarketLevel = false
 }: CompDataTableProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,6 +35,7 @@ export function CompDataTable({
   // Fetch listings using tRPC
   const { data, isLoading, error } = trpc.compData.getListings.useQuery({
     submarketId,
+    isMarketLevel, // Pass whether this is a market-level or submarket-level query
     page: currentPage,
     pageSize,
     orderBy,

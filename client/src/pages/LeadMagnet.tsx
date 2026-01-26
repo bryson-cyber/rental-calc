@@ -67,7 +67,8 @@ import {
   Bookmark,
   BookmarkCheck,
   Heart,
-  HeartOff
+  HeartOff,
+  Building
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
@@ -208,6 +209,39 @@ interface MarketResearchResult {
     occupancy: number;
     adr: number;
   }>;
+  // Step 1 Super Experience fields
+  marketScores?: {
+    overall: number;
+    investability: number;
+    rentalDemand: number;
+    revenueGrowth: number;
+    seasonality: number;
+    regulation: number;
+  };
+  bookingPatterns?: {
+    avgLeadTime: number;
+    lastMinutePercent: number;
+    advanceBookingPercent: number;
+    avgLengthOfStay: number;
+    weekendPercent: number;
+    weekPlusPercent: number;
+  };
+  revenuePercentiles?: {
+    p10: number;
+    p25: number;
+    p50: number;
+    p75: number;
+    p90: number;
+  };
+  competitionData?: {
+    professionallyManagedPct: number;
+    superhostPct: number;
+    entireHomePct: number;
+    privateRoomPct: number;
+    sharedRoomPct: number;
+    singleHostPct: number;
+    multiHostPct: number;
+  };
 }
 
 interface AreaListing {
@@ -945,7 +979,12 @@ export default function LeadMagnet() {
           month: m.month,
           occupancy: m.occupancy,
           adr: m.adr
-        }))
+        })),
+        // Step 1 Super Experience fields
+        marketScores: (report as any).marketScores,
+        bookingPatterns: (report as any).bookingPatterns,
+        revenuePercentiles: (report as any).revenuePercentiles,
+        competitionData: (report as any).competitionData,
       });
       
       toast.success('Market proven! See the real revenue data below.');
@@ -2155,6 +2194,235 @@ export default function LeadMagnet() {
               );
             })()}
             
+            {/* Market Health Score Card */}
+            {researchResult.marketScores && (() => {
+              const scores = researchResult.marketScores;
+              const getScoreColor = (score: number) => {
+                if (score >= 70) return 'text-emerald-500';
+                if (score >= 50) return 'text-amber-500';
+                return 'text-red-500';
+              };
+              const getScoreBg = (score: number) => {
+                if (score >= 70) return 'bg-emerald-500';
+                if (score >= 50) return 'bg-amber-500';
+                return 'bg-red-500';
+              };
+              const getScoreLabel = (score: number) => {
+                if (score >= 80) return 'Excellent';
+                if (score >= 70) return 'Good';
+                if (score >= 50) return 'Fair';
+                return 'Needs Review';
+              };
+              
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Market Health Score</h4>
+                      <p className="text-slate-500 text-sm">Overall investment potential assessment</p>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-3xl font-bold ${getScoreColor(scores.overall)}`}>{scores.overall}</div>
+                      <div className="text-xs text-slate-500">{getScoreLabel(scores.overall)}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {[
+                      { label: 'Investability', value: scores.investability, icon: '💰', desc: 'ROI potential' },
+                      { label: 'Rental Demand', value: scores.rentalDemand, icon: '📈', desc: 'Guest interest' },
+                      { label: 'Revenue Growth', value: scores.revenueGrowth, icon: '🚀', desc: 'YoY trend' },
+                      { label: 'Seasonality', value: scores.seasonality, icon: '📅', desc: 'Consistency' },
+                      { label: 'Regulation', value: scores.regulation, icon: '📋', desc: 'STR friendliness' },
+                    ].map((item, idx) => (
+                      <div key={idx} className="bg-slate-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="text-xs text-slate-600 font-medium">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-200 rounded-full h-2">
+                            <div className={`h-2 rounded-full ${getScoreBg(item.value)}`} style={{ width: `${item.value}%` }} />
+                          </div>
+                          <span className={`text-sm font-bold ${getScoreColor(item.value)}`}>{item.value}</span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Revenue Distribution */}
+            {researchResult.revenuePercentiles && (() => {
+              const percentiles = researchResult.revenuePercentiles;
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Revenue Distribution</h4>
+                      <p className="text-slate-500 text-sm">What hosts actually earn in this market</p>
+                    </div>
+                    <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">Annual revenue</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 mb-4">
+                    {[
+                      { label: 'Bottom 10%', value: percentiles.p10, color: 'bg-red-100 text-red-700 border-red-200' },
+                      { label: 'Lower 25%', value: percentiles.p25, color: 'bg-amber-100 text-amber-700 border-amber-200' },
+                      { label: 'Median', value: percentiles.p50, color: 'bg-blue-100 text-blue-700 border-blue-200' },
+                      { label: 'Upper 25%', value: percentiles.p75, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                      { label: 'Top 10%', value: percentiles.p90, color: 'bg-purple-100 text-purple-700 border-purple-200' },
+                    ].map((item, idx) => (
+                      <div key={idx} className={`rounded-lg p-3 border ${item.color}`}>
+                        <p className="text-xs font-medium mb-1">{item.label}</p>
+                        <p className="text-lg font-bold">{formatCurrency(item.value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-600">
+                      💡 <strong>What this means:</strong> Top performers (90th percentile) earn {formatCurrency(percentiles.p90)}/year, 
+                      while the median host earns {formatCurrency(percentiles.p50)}. The gap of {formatCurrency(percentiles.p90 - percentiles.p50)} 
+                      shows the potential upside with better optimization.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Guest Behavior Insights */}
+            {researchResult.bookingPatterns && (() => {
+              const patterns = researchResult.bookingPatterns;
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Guest Behavior Insights</h4>
+                      <p className="text-slate-500 text-sm">How guests book in this market</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-5 h-5 text-blue-500" />
+                        <span className="text-sm font-medium text-blue-900">Booking Lead Time</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-700">{Math.round(patterns.avgLeadTime)} days</p>
+                      <p className="text-xs text-blue-600 mt-1">Average advance booking</p>
+                      <div className="mt-2 flex gap-2">
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          {Math.round(patterns.lastMinutePercent)}% last-minute
+                        </span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          {Math.round(patterns.advanceBookingPercent)}% advance
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-5 h-5 text-purple-500" />
+                        <span className="text-sm font-medium text-purple-900">Length of Stay</span>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-700">{patterns.avgLengthOfStay.toFixed(1)} nights</p>
+                      <p className="text-xs text-purple-600 mt-1">Average stay duration</p>
+                      <div className="mt-2 flex gap-2">
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                          {Math.round(patterns.weekendPercent)}% weekends
+                        </span>
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                          {Math.round(patterns.weekPlusPercent)}% week+
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-5 h-5 text-amber-500" />
+                        <span className="text-sm font-medium text-amber-900">Guest Mix</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-amber-700">Weekend Stays</span>
+                            <span className="font-medium text-amber-800">{Math.round(patterns.weekendPercent)}%</span>
+                          </div>
+                          <div className="bg-amber-200 rounded-full h-2">
+                            <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${patterns.weekendPercent}%` }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-amber-700">Week+ Stays</span>
+                            <span className="font-medium text-amber-800">{Math.round(patterns.weekPlusPercent)}%</span>
+                          </div>
+                          <div className="bg-amber-200 rounded-full h-2">
+                            <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${patterns.weekPlusPercent}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
+            {/* Competition Landscape */}
+            {researchResult.competitionData && (() => {
+              const comp = researchResult.competitionData;
+              return (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">Competition Landscape</h4>
+                      <p className="text-slate-500 text-sm">Who you're competing against</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Building className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs text-slate-600 font-medium">Pro Managed</span>
+                      </div>
+                      <p className="text-2xl font-bold text-slate-900">{comp.professionallyManagedPct}%</p>
+                      <p className="text-xs text-slate-500">Professional hosts</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs text-slate-600 font-medium">Superhosts</span>
+                      </div>
+                      <p className="text-2xl font-bold text-slate-900">{comp.superhostPct}%</p>
+                      <p className="text-xs text-slate-500">Top-rated hosts</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Home className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs text-slate-600 font-medium">Entire Homes</span>
+                      </div>
+                      <p className="text-2xl font-bold text-slate-900">{comp.entireHomePct}%</p>
+                      <p className="text-xs text-slate-500">Full property rentals</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-4 h-4 text-purple-500" />
+                        <span className="text-xs text-slate-600 font-medium">Single Hosts</span>
+                      </div>
+                      <p className="text-2xl font-bold text-slate-900">{comp.singleHostPct}%</p>
+                      <p className="text-xs text-slate-500">1 listing only</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-600">
+                      💡 <strong>Market insight:</strong> 
+                      {comp.professionallyManagedPct > 30 
+                        ? ` This is a competitive market with ${comp.professionallyManagedPct}% professional managers. Focus on unique amenities and guest experience to stand out.`
+                        : ` This market has ${100 - comp.professionallyManagedPct}% individual hosts, suggesting opportunity for professional-level service to differentiate.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {/* Key Metrics - Tesla Dashboard Style */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
               <div className={`bg-white border rounded-xl p-4 hover:shadow-md transition-shadow ${isFiltered ? 'border-emerald-300 ring-1 ring-emerald-100' : 'border-slate-200'}`}>
@@ -2473,6 +2741,7 @@ export default function LeadMagnet() {
                   key={`comp-table-${locationSelection.submarket?.id || locationSelection.market?.id}-${researchResult.marketName}`}
                   submarketId={locationSelection.submarket?.id || locationSelection.market?.id || ''}
                   marketName={researchResult.marketName}
+                  isMarketLevel={!locationSelection?.submarket?.id && !!locationSelection?.market?.id}
                 />
               </div>
             )}
