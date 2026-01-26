@@ -1038,6 +1038,406 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
 }
 
 /**
+ * Rent Validation Section - First thing investors want to know: "Is my rent assumption valid?"
+ */
+function RentValidationSection({
+  rentometerData,
+  monthlyRent
+}: {
+  rentometerData: {
+    median: number;
+    percentile25: number;
+    percentile75: number;
+    min: number;
+    max: number;
+    sampleCount: number;
+    userRentVsMarket: 'below' | 'at' | 'above';
+    rentAdvantage: number;
+    percentileRank: number;
+  };
+  monthlyRent: number;
+}) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Home className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900">Rent Validation</h3>
+        </div>
+        <span className="text-sm text-slate-400">{rentometerData.sampleCount} rental comps</span>
+      </div>
+      
+      {/* Main Status */}
+      <div className={`p-4 rounded-xl mb-4 ${
+        rentometerData.userRentVsMarket === 'below' 
+          ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200' 
+          : rentometerData.userRentVsMarket === 'above'
+          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'
+          : 'bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-2xl font-bold text-slate-900">
+              {formatCurrency(monthlyRent)}<span className="text-base font-normal text-slate-500">/mo</span>
+            </p>
+            <p className={`text-sm font-medium ${
+              rentometerData.userRentVsMarket === 'below' 
+                ? 'text-emerald-700' 
+                : rentometerData.userRentVsMarket === 'above'
+                ? 'text-amber-700'
+                : 'text-blue-700'
+            }`}>
+              {rentometerData.percentileRank <= 25
+                ? `Bottom 25% of market — Great deal!`
+                : rentometerData.percentileRank <= 50
+                ? `Below median — Good deal`
+                : rentometerData.percentileRank <= 75
+                ? `Above median — Fair price`
+                : `Top 25% — Premium rent`
+              }
+            </p>
+          </div>
+          {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(rentometerData.rentAdvantage * 12)}</p>
+              <p className="text-xs text-emerald-600">annual rent savings vs median</p>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Visual Range Indicator */}
+      <div className="mb-2">
+        <div className="flex justify-between text-xs text-slate-500 mb-1">
+          <span>{formatCurrency(rentometerData.min)}</span>
+          <span className="font-medium">Market Range</span>
+          <span>{formatCurrency(rentometerData.max)}</span>
+        </div>
+        <div className="relative h-8 bg-gradient-to-r from-emerald-200 via-blue-200 to-amber-200 rounded-full">
+          {/* 25th percentile marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
+            style={{ left: `${((rentometerData.percentile25 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+          />
+          {/* Median marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-1 bg-slate-600"
+            style={{ left: `${((rentometerData.median - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+          />
+          {/* 75th percentile marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
+            style={{ left: `${((rentometerData.percentile75 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
+          />
+          {/* User's rent position */}
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
+            style={{ 
+              left: `${Math.min(Math.max(((monthlyRent - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100, 2), 98)}%`,
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: rentometerData.userRentVsMarket === 'below' ? '#10b981' : rentometerData.userRentVsMarket === 'above' ? '#f59e0b' : '#6366f1'
+            }}
+          >
+            <span className="text-[9px] font-bold text-white">$</span>
+          </div>
+        </div>
+        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+          <span>25th: {formatCurrency(rentometerData.percentile25)}</span>
+          <span className="font-medium">Median: {formatCurrency(rentometerData.median)}</span>
+          <span>75th: {formatCurrency(rentometerData.percentile75)}</span>
+        </div>
+      </div>
+      
+      <p className="text-xs text-slate-500 text-center mt-3">
+        Based on {rentometerData.sampleCount} similar rentals in this area
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Airbnb vs Long-Term Rental Comparison
+ * Shows the financial advantage of short-term rentals over traditional long-term rentals
+ */
+function AirbnbVsLongTermComparison({
+  annualAirbnbRevenue,
+  monthlyRent,
+  rentometerMedian,
+  expensePercent = 20
+}: {
+  annualAirbnbRevenue: number;
+  monthlyRent: number;
+  rentometerMedian?: number;
+  expensePercent?: number;
+}) {
+  // Calculate long-term rental income (what you'd earn as a landlord)
+  // Use Rentometer median if available, otherwise use user's rent as proxy
+  const monthlyLongTermIncome = rentometerMedian || monthlyRent;
+  const annualLongTermIncome = monthlyLongTermIncome * 12;
+  
+  // Calculate Airbnb net income (after expenses)
+  const airbnbExpenses = annualAirbnbRevenue * (expensePercent / 100);
+  const annualAirbnbNet = annualAirbnbRevenue - airbnbExpenses;
+  
+  // Long-term rental expenses (typically 5-10% for maintenance, vacancy, etc.)
+  const longTermExpenseRate = 0.08; // 8% average
+  const annualLongTermNet = annualLongTermIncome * (1 - longTermExpenseRate);
+  
+  // Calculate the difference
+  const annualDifference = annualAirbnbNet - annualLongTermNet;
+  const percentageIncrease = annualLongTermNet > 0 
+    ? ((annualAirbnbNet - annualLongTermNet) / annualLongTermNet) * 100 
+    : 0;
+  
+  const isAirbnbBetter = annualDifference > 0;
+  
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="w-5 h-5 text-purple-600" />
+        <h3 className="text-lg font-semibold text-slate-900">Airbnb vs Long-Term Rental</h3>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+              <Info className="w-4 h-4 text-slate-400" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+            <p className="text-sm leading-relaxed">
+              This compares what you could earn with Airbnb vs renting to a long-term tenant. 
+              Airbnb typically earns 2-3x more but requires more work and has higher expenses.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      
+      {/* Comparison Cards */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* Airbnb Column */}
+        <div className={`p-4 rounded-xl ${isAirbnbBetter ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300' : 'bg-slate-50 border border-slate-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">A</span>
+            </div>
+            <span className="text-sm font-medium text-slate-700">Airbnb</span>
+            {isAirbnbBetter && (
+              <span className="ml-auto px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">Winner</span>
+            )}
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{formatCurrency(annualAirbnbNet)}</p>
+          <p className="text-xs text-slate-500">Annual net income (after {expensePercent}% expenses)</p>
+          <div className="mt-2 pt-2 border-t border-slate-200">
+            <p className="text-xs text-slate-400">Gross: {formatCurrency(annualAirbnbRevenue)}</p>
+            <p className="text-xs text-slate-400">Expenses: -{formatCurrency(airbnbExpenses)}</p>
+          </div>
+        </div>
+        
+        {/* Long-Term Column */}
+        <div className={`p-4 rounded-xl ${!isAirbnbBetter ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300' : 'bg-slate-50 border border-slate-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+              <Home className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Long-Term</span>
+            {!isAirbnbBetter && (
+              <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Winner</span>
+            )}
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{formatCurrency(annualLongTermNet)}</p>
+          <p className="text-xs text-slate-500">Annual net income (after 8% expenses)</p>
+          <div className="mt-2 pt-2 border-t border-slate-200">
+            <p className="text-xs text-slate-400">Gross: {formatCurrency(annualLongTermIncome)}</p>
+            <p className="text-xs text-slate-400">Expenses: -{formatCurrency(annualLongTermIncome * longTermExpenseRate)}</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Summary */}
+      <div className={`p-4 rounded-xl ${isAirbnbBetter ? 'bg-emerald-100' : 'bg-blue-100'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className={`text-sm font-medium ${isAirbnbBetter ? 'text-emerald-800' : 'text-blue-800'}`}>
+              {isAirbnbBetter ? 'Airbnb Advantage' : 'Long-Term Advantage'}
+            </p>
+            <p className={`text-2xl font-bold ${isAirbnbBetter ? 'text-emerald-700' : 'text-blue-700'}`}>
+              +{formatCurrency(Math.abs(annualDifference))}/year
+            </p>
+          </div>
+          <div className="text-right">
+            <p className={`text-3xl font-bold ${isAirbnbBetter ? 'text-emerald-600' : 'text-blue-600'}`}>
+              {Math.abs(percentageIncrease).toFixed(0)}%
+            </p>
+            <p className="text-xs text-slate-600">more income</p>
+          </div>
+        </div>
+        {isAirbnbBetter && (
+          <p className="text-xs text-emerald-700 mt-2">
+            That's {formatCurrency(Math.abs(annualDifference) / 12)}/month extra in your pocket with Airbnb
+          </p>
+        )}
+      </div>
+      
+      {/* Considerations */}
+      <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+        <p className="text-xs text-slate-500">
+          <span className="font-medium">Note:</span> Airbnb requires more active management, furnishing costs, and has variable income. 
+          Long-term rentals offer stable, passive income with less work. Consider your time and goals.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Revenue Percentile Projections
+ * Shows 25th, 50th, and 75th percentile revenue scenarios based on comparable properties
+ */
+function RevenuePercentileProjections({
+  comparables,
+  projectedRevenue
+}: {
+  comparables: Comparable[];
+  projectedRevenue: number;
+}) {
+  if (!comparables || comparables.length < 3) return null;
+  
+  // Sort comparables by revenue
+  const sortedRevenues = comparables.map(c => c.revenue).sort((a, b) => a - b);
+  
+  // Calculate percentiles
+  const getPercentile = (arr: number[], percentile: number): number => {
+    const index = Math.ceil((percentile / 100) * arr.length) - 1;
+    return arr[Math.max(0, Math.min(index, arr.length - 1))];
+  };
+  
+  const p25 = getPercentile(sortedRevenues, 25);
+  const p50 = getPercentile(sortedRevenues, 50);
+  const p75 = getPercentile(sortedRevenues, 75);
+  const min = sortedRevenues[0];
+  const max = sortedRevenues[sortedRevenues.length - 1];
+  
+  // Determine where the projected revenue falls
+  const getProjectedPercentile = (): number => {
+    if (projectedRevenue <= p25) return 25;
+    if (projectedRevenue <= p50) return 50;
+    if (projectedRevenue <= p75) return 75;
+    return 90;
+  };
+  
+  const projectedPercentile = getProjectedPercentile();
+  
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="w-5 h-5 text-indigo-600" />
+        <h3 className="text-lg font-semibold text-slate-900">Revenue Range (Based on {comparables.length} Comps)</h3>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+              <Info className="w-4 h-4 text-slate-400" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+            <p className="text-sm leading-relaxed">
+              This shows the range of what similar properties actually earn. 
+              The 25th percentile means 25% of properties earn less than this amount. 
+              Aim for the 75th percentile with great photos, reviews, and pricing!
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      
+      {/* Percentile Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+          <p className="text-xs font-medium text-amber-600 mb-1">Conservative (25th)</p>
+          <p className="text-xl font-bold text-amber-700">{formatCompactCurrency(p25)}</p>
+          <p className="text-[10px] text-amber-600">Lower performers</p>
+        </div>
+        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+          <p className="text-xs font-medium text-blue-600 mb-1">Median (50th)</p>
+          <p className="text-xl font-bold text-blue-700">{formatCompactCurrency(p50)}</p>
+          <p className="text-[10px] text-blue-600">Typical property</p>
+        </div>
+        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+          <p className="text-xs font-medium text-emerald-600 mb-1">Optimistic (75th)</p>
+          <p className="text-xl font-bold text-emerald-700">{formatCompactCurrency(p75)}</p>
+          <p className="text-[10px] text-emerald-600">Top performers</p>
+        </div>
+      </div>
+      
+      {/* Visual Range Bar */}
+      <div className="mb-4">
+        <div className="flex justify-between text-xs text-slate-500 mb-1">
+          <span>{formatCompactCurrency(min)}</span>
+          <span className="font-medium">Revenue Distribution</span>
+          <span>{formatCompactCurrency(max)}</span>
+        </div>
+        <div className="relative h-8 bg-gradient-to-r from-amber-200 via-blue-200 to-emerald-200 rounded-full">
+          {/* 25th percentile marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-amber-500"
+            style={{ left: `${((p25 - min) / (max - min)) * 100}%` }}
+          />
+          {/* 50th percentile marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-1 bg-blue-500"
+            style={{ left: `${((p50 - min) / (max - min)) * 100}%` }}
+          />
+          {/* 75th percentile marker */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-emerald-500"
+            style={{ left: `${((p75 - min) / (max - min)) * 100}%` }}
+          />
+          {/* Projected revenue position */}
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center bg-indigo-500"
+            style={{ 
+              left: `${Math.min(Math.max(((projectedRevenue - min) / (max - min)) * 100, 3), 97)}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            <span className="text-[8px] font-bold text-white">YOU</span>
+          </div>
+        </div>
+        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+          <span>25th: {formatCompactCurrency(p25)}</span>
+          <span className="font-medium">50th: {formatCompactCurrency(p50)}</span>
+          <span>75th: {formatCompactCurrency(p75)}</span>
+        </div>
+      </div>
+      
+      {/* Your Projection */}
+      <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-indigo-700">Your Projection</p>
+            <p className="text-2xl font-bold text-indigo-800">{formatCompactCurrency(projectedRevenue)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-indigo-600">~{projectedPercentile}th percentile</p>
+            <p className="text-xs text-indigo-500">
+              {projectedPercentile >= 75 ? 'Top performer territory!' : 
+               projectedPercentile >= 50 ? 'Above average' : 
+               'Room to optimize'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Arbitrage Calculator - Break-even and investment recoup analysis
  */
 function ArbitrageCalculator({ 
@@ -1046,8 +1446,7 @@ function ArbitrageCalculator({
   occupancy,
   adr,
   furnitureCost = 0,
-  expensePercent = 20,
-  rentometerData
+  expensePercent = 20
 }: { 
   monthlyRevenue: number;
   monthlyRent: number;
@@ -1055,17 +1454,6 @@ function ArbitrageCalculator({
   adr: number;
   furnitureCost?: number;
   expensePercent?: number;
-  rentometerData?: {
-    median: number;
-    percentile25: number;
-    percentile75: number;
-    min: number;
-    max: number;
-    sampleCount: number;
-    userRentVsMarket: 'below' | 'above' | 'at';
-    rentAdvantage: number;
-    percentileRank: number;
-  } | null;
 }) {
   // Calculate expenses as percentage of revenue
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
@@ -1271,100 +1659,7 @@ function ArbitrageCalculator({
             At {riskOccupancy.toFixed(0)}% occupancy = {formatCurrency(riskRevenue)}/month revenue (after {expensePercent}% expenses)
           </p>
         </div>
-        
-        {/* Rent Validation - Rentometer Data */}
-        {rentometerData && (
-          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Home className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-semibold text-slate-700">Rent Validation</span>
-              </div>
-              <span className="text-xs text-slate-400">{rentometerData.sampleCount} rental comps</span>
-            </div>
-            
-            {/* Visual Range Indicator */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-slate-500 mb-1">
-                <span>${rentometerData.min.toLocaleString()}</span>
-                <span>Market Range</span>
-                <span>${rentometerData.max.toLocaleString()}</span>
-              </div>
-              <div className="relative h-6 bg-gradient-to-r from-emerald-200 via-blue-200 to-amber-200 rounded-full">
-                {/* 25th percentile marker */}
-                <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
-                  style={{ left: `${((rentometerData.percentile25 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-                />
-                {/* Median marker */}
-                <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-slate-600"
-                  style={{ left: `${((rentometerData.median - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-                />
-                {/* 75th percentile marker */}
-                <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-slate-400"
-                  style={{ left: `${((rentometerData.percentile75 - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100}%` }}
-                />
-                {/* User's rent position */}
-                <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md flex items-center justify-center"
-                  style={{ 
-                    left: `${Math.min(Math.max(((monthlyRent - rentometerData.min) / (rentometerData.max - rentometerData.min)) * 100, 2), 98)}%`,
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: rentometerData.userRentVsMarket === 'below' ? '#10b981' : rentometerData.userRentVsMarket === 'above' ? '#f59e0b' : '#6366f1'
-                  }}
-                >
-                  <span className="text-[8px] font-bold text-white">$</span>
-                </div>
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                <span>25th: ${rentometerData.percentile25.toLocaleString()}</span>
-                <span>Median: ${rentometerData.median.toLocaleString()}</span>
-                <span>75th: ${rentometerData.percentile75.toLocaleString()}</span>
-              </div>
-            </div>
-            
-            {/* Summary */}
-            <div className={`p-3 rounded-lg ${
-              rentometerData.userRentVsMarket === 'below' 
-                ? 'bg-emerald-100' 
-                : rentometerData.userRentVsMarket === 'above'
-                ? 'bg-amber-100'
-                : 'bg-blue-100'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Your rent: ${monthlyRent.toLocaleString()}/mo
-                  </p>
-                  <p className={`text-xs ${
-                    rentometerData.userRentVsMarket === 'below' 
-                      ? 'text-emerald-700' 
-                      : rentometerData.userRentVsMarket === 'above'
-                      ? 'text-amber-700'
-                      : 'text-blue-700'
-                  }`}>
-                    {rentometerData.percentileRank <= 25 
-                      ? `Bottom 25% — Great deal!`
-                      : rentometerData.percentileRank <= 50
-                      ? `Below median — Good deal`
-                      : rentometerData.percentileRank <= 75
-                      ? `Above median — Fair price`
-                      : `Top 25% — Premium rent`
-                    }
-                  </p>
-                </div>
-                {rentometerData.userRentVsMarket === 'below' && rentometerData.rentAdvantage > 0 && (
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-emerald-700">+${(rentometerData.rentAdvantage * 12).toLocaleString()}</p>
-                    <p className="text-[10px] text-emerald-600">annual rent savings</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );
@@ -2310,7 +2605,12 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         </div>
       </div>
       
-      {/* Hero Revenue Card */}
+      {/* SECTION 1: Rent Validation - "Is my rent assumption valid?" */}
+      {rentometerData && (
+        <RentValidationSection rentometerData={rentometerData} monthlyRent={result.cashFlow.monthlyRent} />
+      )}
+      
+      {/* SECTION 2: Revenue Projection - "What can I make?" */}
       <HeroRevenueCard
         annualRevenue={result.revenue.projected}
         monthlyProfit={result.cashFlow.monthlyProfit}
@@ -2319,7 +2619,7 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         expensePercent={expensePercent}
       />
       
-      {/* Key Metrics */}
+      {/* SECTION 3: Key Metrics - ADR, Occupancy, Revenue Range */}
       <KeyMetricsRow
         adr={result.metrics.adr}
         occupancy={result.metrics.occupancy}
@@ -2327,29 +2627,38 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         revenueHigh={result.revenue.high}
       />
       
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Seasonal Forecast */}
-        <SeasonalForecast forecast={result.forecast} historicalData={result.historicalData} />
-        
-        {/* Arbitrage Calculator */}
-        <ArbitrageCalculator
-          monthlyRevenue={result.cashFlow.monthlyRevenue}
-          monthlyRent={result.cashFlow.monthlyRent}
-          occupancy={result.metrics.occupancy}
-          adr={result.metrics.adr}
-          furnitureCost={furnitureCost}
-          expensePercent={expensePercent}
-          rentometerData={rentometerData}
-        />
-      </div>
+      {/* SECTION 4: Profit & Break-even - "What's left? When do I recoup?" */}
+      <ArbitrageCalculator
+        monthlyRevenue={result.cashFlow.monthlyRevenue}
+        monthlyRent={result.cashFlow.monthlyRent}
+        occupancy={result.metrics.occupancy}
+        adr={result.metrics.adr}
+        furnitureCost={furnitureCost}
+        expensePercent={expensePercent}
+      />
       
-      {/* Market Insights Panel - Booking Patterns & Supply Trend - Updated */}
+      {/* SECTION 4.5: Airbnb vs Long-Term Comparison */}
+      <AirbnbVsLongTermComparison
+        annualAirbnbRevenue={result.revenue.projected}
+        monthlyRent={result.cashFlow.monthlyRent}
+        rentometerMedian={rentometerData?.median}
+        expensePercent={expensePercent}
+      />
+      
+      {/* SECTION 4.6: Revenue Percentile Projections */}
+      <RevenuePercentileProjections
+        comparables={result.comparables}
+        projectedRevenue={result.revenue.projected}
+      />
+      
+      {/* SECTION 5: Seasonal Forecast - "When are the peak/slow months?" */}
+      <SeasonalForecast forecast={result.forecast} historicalData={result.historicalData} />
+      
+      {/* SECTION 6: Market Context - "What's the market like?" */}
       {marketId && (
         <MarketInsightsPanel marketId={String(marketId)} bedrooms={bedrooms} />
       )}
       
-      {/* Market Health Grade */}
       <MarketHealthGrade
         occupancy={result.metrics.occupancy}
         yoyChange={yearlyChange}
@@ -2361,21 +2670,17 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         marketScore={result.marketInsights?.marketScore}
       />
       
-      {/* Market Position */}
       <MarketPosition
         propertyRevenue={result.revenue.projected}
         comparables={result.comparables}
       />
       
-      {/* Market Insights - Professional Management & Superhost Stats */}
       <MarketInsights
         insights={result.marketInsights}
         totalComparables={result.comparables.length}
       />
       
-      {/* AI Property Advisor removed - now only in Step 6 */}
-      
-      {/* Comparable Properties */}
+      {/* SECTION 7: Proof - "Show me the comps" */}
       <ComparableProperties comparables={result.comparables} />
     </div>
   );

@@ -5575,17 +5575,34 @@ export async function getListingsByArea(
       console.error('Error geocoding address:', geocodeError);
     }
 
-    const requestBody: Record<string, any> = {
-      address,
-      radius: radiusMeters,
-      currency: 'usd',
-      sort_order: options?.sortBy || 'proximity',
-      sort_direction: options?.sortDirection || 'ascending',
-      pagination: {
-        page_size: options?.pageSize || 25,
-        offset: options?.offset || 0,
-      },
-    };
+    // Use lat/lng if we successfully geocoded, otherwise fall back to address
+    // This fixes the issue where AirDNA's geocoding returns wrong locations for city names
+    const requestBody: Record<string, any> = centerLat !== 0 && centerLng !== 0
+      ? {
+          lat: centerLat,
+          lng: centerLng,
+          radius: radiusMeters,
+          currency: 'usd',
+          sort_order: options?.sortBy || 'proximity',
+          sort_direction: options?.sortDirection || 'ascending',
+          pagination: {
+            page_size: options?.pageSize || 25,
+            offset: options?.offset || 0,
+          },
+        }
+      : {
+          address,
+          radius: radiusMeters,
+          currency: 'usd',
+          sort_order: options?.sortBy || 'proximity',
+          sort_direction: options?.sortDirection || 'ascending',
+          pagination: {
+            page_size: options?.pageSize || 25,
+            offset: options?.offset || 0,
+          },
+        };
+    
+    console.log(`[ListingsByArea] Using ${centerLat !== 0 ? 'coordinates' : 'address'}: ${centerLat !== 0 ? `${centerLat}, ${centerLng}` : address}`);
 
     if (filters.length > 0) {
       requestBody.filters = filters;

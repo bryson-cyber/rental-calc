@@ -2176,13 +2176,25 @@ export default function LeadMagnet() {
                         </div>
                         {type.count > 0 ? (
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-slate-500">Revenue/yr</p>
+                            <div className="flex items-center justify-between group relative">
+                              <p className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-400">Revenue/yr</p>
                               <p className="text-emerald-600 font-bold text-sm">{formatCurrency(type.avgRevenue)}</p>
+                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48">
+                                <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
+                                  Average annual income from similar {type.type} properties in this area
+                                  <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-slate-500">Occupancy</p>
+                            <div className="flex items-center justify-between group relative">
+                              <p className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-400">Occupancy</p>
                               <p className="text-slate-900 font-semibold text-sm">{type.occupancy}%</p>
+                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48">
+                                <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
+                                  How often these properties are booked. Higher = more demand for this type
+                                  <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                              </div>
                             </div>
                             <p className="text-xs text-slate-400">{type.count} listings</p>
                           </div>

@@ -4514,3 +4514,77 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Display percentile context (25th: $2,214, Median: $2,760, 75th: $3,355)
 - [x] Show annual rent savings compared to median (+$9,120 for $2,000 rent)
 - [x] Show percentile assessment ("Bottom 25% — Great deal!")
+
+
+## Competitor Research & Report Reorder (Jan 26, 2026)
+
+### Competitor Research
+- [ ] Research AirDNA via SimilarWeb for traffic and feature analysis
+- [ ] Research Mashvisor via SimilarWeb
+- [ ] Research AllTheRooms via SimilarWeb
+- [ ] Research Rabbu via SimilarWeb
+- [ ] Research PriceLabs via SimilarWeb
+- [ ] Identify missing angles and features we should add
+
+### Report Reorder (Investor Mental Model)
+- [ ] Move Rent Validation to top of report (validate assumptions first)
+- [ ] Reorder sections to match investor decision flow:
+  1. Rent Validation (is my rent assumption correct?)
+  2. Revenue Projection (what will I make?)
+  3. Profit Breakdown (what do I keep?)
+  4. Break-even Analysis (what's my safety margin?)
+  5. Investment ROI (how does this compare to other investments?)
+  6. Market Context (what's the market doing?)
+  7. Comparable Properties (who's my competition?)
+
+
+## Report Reorder - COMPLETE (Jan 25, 2026)
+- [x] Move Rent Validation to top of Property Analysis section
+- [x] Verify report flow matches investor mental model
+
+## Step 2 (Explore Listings) Audit (Jan 25, 2026)
+- [ ] Review data accuracy and filtering
+- [ ] Check framing and labels for clarity
+- [ ] Verify bedroom filtering is applied
+- [ ] Check for any misleading or confusing metrics
+- [ ] Ensure professional investor language throughout
+
+## High-Priority Features from Competitor Research (Jan 25, 2026)
+- [ ] Add ROI metrics (Cap Rate, Cash-on-Cash Return, Gross Yield)
+- [ ] Add tax deduction estimates (bonus depreciation)
+- [ ] Add Airbnb vs Long-Term Rental comparison
+- [ ] Add 25th/75th percentile revenue projections (range of outcomes)
+- [ ] Add tooltips explaining "What does this mean?" for Revenue by Property Type cards
+
+
+## Step 2 Location Bug Fix (Jan 25, 2026) - COMPLETE
+- [x] Identified bug: AirDNA API returning wrong location for city names (Denver → Lake Hartwell)
+- [x] Fixed by pre-geocoding address with Google Maps API
+- [x] Now using lat/lng coordinates instead of raw address string for AirDNA API
+- [x] Verified fix: Denver search now returns 1,339 Denver properties (not Lake Hartwell)
+
+
+
+## New Features Added (Jan 25, 2026)
+
+### Airbnb vs Long-Term Rental Comparison - COMPLETE
+- [x] Added side-by-side comparison showing Airbnb vs Long-Term rental income
+- [x] Shows gross revenue, expenses, and net income for both options
+- [x] Calculates "Airbnb Advantage" showing extra annual income
+- [x] Includes helpful note about management differences
+
+### Revenue Range (Percentile Projections) - COMPLETE
+- [x] Added 25th/50th/75th percentile revenue projections based on comps
+- [x] Visual distribution chart showing where user's projection falls
+- [x] Shows Conservative ($73K), Median ($77K), and Optimistic ($83K) scenarios
+- [x] "Room to optimize" indicator when below median
+
+### Step 2 Location Bug Fix - COMPLETE
+- [x] Fixed geocoding issue where "Denver, CO" returned Lake Hartwell, SC results
+- [x] Now uses Google Maps geocoding to get lat/lng before querying AirDNA
+- [x] Verified: Denver search now returns 1,339 actual Denver properties
+
+### Step 1 Revenue by Property Type Tooltips - COMPLETE
+- [x] Added hover tooltips to Revenue/yr metric explaining it's average annual income
+- [x] Added hover tooltips to Occupancy metric explaining booking frequency
+- [x] Styled with dotted underline to indicate interactive help
