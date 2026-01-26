@@ -4609,3 +4609,25 @@ When clicking "See on Map" from the property card, the map view would show the s
 - [x] Add tooltip to "Your Rent": "The monthly rent you pay to your landlord"
 - [x] Add tooltip to "Expenses (20%)": "Operating costs: cleaning, supplies, utilities, Airbnb fees"
 - [x] Add tooltip to "Net Profit": "What you keep after paying rent and all expenses"
+
+
+## Report Framing Improvements (Jan 26, 2026)
+
+### Problem: Good data, bad framing - needs clearer language that speaks to investors
+
+### Rent Validation Reframe - DONE
+- [x] Changed headline to simple "Are you overpaying for rent?"
+
+### Airbnb vs Long-Term Reframe - DONE
+- [x] Changed to "Short-Term vs Long-Term Income" - neutral for both renters and owners
+- [x] Updated headline to "How much more can you make with short-term rentals?"
+- [x] Updated tooltip to explain it works for both property owners and arbitrage operators
+
+### Market Outlook Reframe - DONE
+- [x] Updated tooltip to "When is the best time to launch?"
+- [x] Updated subtitle to "Is now a good time to launch, or should you wait?"
+
+### Market Position & Market Landscape Reframe - DONE
+- [x] "Market Position" -> "Your Competitive Ranking" with headline "How does this property stack up against the competition?"
+- [x] "Market Health Grade" -> "Market Score" with headline "Is this a good market for short-term rentals?"
+- [x] "Market Landscape" -> "Your Competition" with headline "Who are you competing against?"

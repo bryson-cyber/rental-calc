@@ -1103,7 +1103,7 @@ function RentValidationSection({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        🏠 Your rent determines your profit margin — here's how it compares to market rates
+        🏠 Are you overpaying for rent?
       </p>
       
       <div className="flex items-center justify-between mb-4">
@@ -1242,12 +1242,12 @@ function AirbnbVsLongTermComparison({
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       {/* Section Headline - Why this matters */}
       <p className="text-sm text-slate-600 mb-3 font-medium">
-        🎯 Is short-term rental worth the extra effort? Compare your options
+        💰 How much more can you make with short-term rentals?
       </p>
       
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-purple-600" />
-        <h3 className="text-lg font-semibold text-slate-900">Airbnb vs Long-Term Rental</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Short-Term vs Long-Term Income</h3>
         <Tooltip>
           <TooltipTrigger asChild>
             <button className="p-1 hover:bg-slate-100 rounded-full transition-colors">
@@ -1256,8 +1256,8 @@ function AirbnbVsLongTermComparison({
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
             <p className="text-sm leading-relaxed">
-              This compares what you could earn with Airbnb vs renting to a long-term tenant. 
-              Airbnb typically earns 2-3x more but requires more work and has higher expenses.
+              Compares short-term rental income (Airbnb) vs traditional long-term rental income for this property.
+              Works for both property owners and rental arbitrage operators.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -1271,7 +1271,7 @@ function AirbnbVsLongTermComparison({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center">
               <span className="text-white text-xs font-bold">A</span>
             </div>
-            <span className="text-sm font-medium text-slate-700">Airbnb</span>
+            <span className="text-sm font-medium text-slate-700">Short-Term (Airbnb)</span>
             {isAirbnbBetter && (
               <span className="ml-auto px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">Winner</span>
             )}
@@ -1290,7 +1290,7 @@ function AirbnbVsLongTermComparison({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
               <Home className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-medium text-slate-700">Long-Term</span>
+            <span className="text-sm font-medium text-slate-700">Long-Term Tenant</span>
             {!isAirbnbBetter && (
               <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Winner</span>
             )}
@@ -1309,7 +1309,7 @@ function AirbnbVsLongTermComparison({
         <div className="flex items-center justify-between">
           <div>
             <p className={`text-sm font-medium ${isAirbnbBetter ? 'text-emerald-800' : 'text-blue-800'}`}>
-              {isAirbnbBetter ? 'Airbnb Advantage' : 'Long-Term Advantage'}
+              {isAirbnbBetter ? 'Short-Term Wins' : 'Long-Term Wins'}
             </p>
             <p className={`text-2xl font-bold ${isAirbnbBetter ? 'text-emerald-700' : 'text-blue-700'}`}>
               +{formatCurrency(Math.abs(annualDifference))}/year
@@ -1324,7 +1324,7 @@ function AirbnbVsLongTermComparison({
         </div>
         {isAirbnbBetter && (
           <p className="text-xs text-emerald-700 mt-2">
-            That's {formatCurrency(Math.abs(annualDifference) / 12)}/month extra in your pocket with Airbnb
+            That's {formatCurrency(Math.abs(annualDifference) / 12)}/month extra with short-term rentals
           </p>
         )}
       </div>
@@ -1764,7 +1764,11 @@ function MarketPosition({
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">Market Position</h3>
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-2 font-medium">
+        🏆 How does this property stack up against the competition?
+      </p>
+      <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Competitive Ranking</h3>
       
       <div className="flex items-center gap-6">
         {/* Grade Circle */}
@@ -1987,13 +1991,17 @@ function MarketHealthGrade({
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-2 font-medium">
+        📊 Is this a good market for short-term rentals?
+      </p>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             <Award className="w-5 h-5 text-slate-600" />
-            Market Health Grade
+            Market Score
           </h3>
-          <p className="text-sm text-slate-500 mt-1">Overall market assessment based on key factors</p>
+          <p className="text-sm text-slate-500 mt-1">Based on demand, competition, and growth trends</p>
         </div>
         
         {/* Big Grade Badge */}
@@ -2106,9 +2114,13 @@ function MarketInsights({
   
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
+      {/* Section Headline - Why this matters */}
+      <p className="text-sm text-slate-600 mb-2 font-medium">
+        👥 Who are you competing against?
+      </p>
       <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
         <Building2 className="w-5 h-5 text-slate-600" />
-        Market Landscape
+        Your Competition
       </h3>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

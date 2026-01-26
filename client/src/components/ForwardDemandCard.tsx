@@ -49,7 +49,7 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
 
 // Optimistic tooltip explanations
 const DEMAND_TOOLTIPS = {
-  marketOutlook: "See what's coming up in this market! Use this to plan your launch timing and pricing strategy.",
+  marketOutlook: "When is the best time to launch? This shows upcoming demand so you can time your entry.",
   next30Days: "Your immediate opportunity window. This shows expected booking activity in the next month.",
   next180Days: "Your 6-month runway. Plan ahead and prepare for seasonal shifts.",
   peakPeriod: "Prime earning window! This is when guests are most eager to book - perfect for premium pricing.",
@@ -133,7 +133,7 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
           </button>
         </div>
         <p className="text-xs text-[oklch(0.55_0_0)] mt-1">
-          Plan your timing based on upcoming market activity
+          Is now a good time to launch, or should you wait?
         </p>
       </div>
 
