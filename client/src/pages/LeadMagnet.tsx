@@ -1564,7 +1564,7 @@ export default function LeadMagnet() {
                     </label>
                     <span className="text-sm font-semibold text-amber-600">{expensePercent}%</span>
                   </div>
-                  <div className="relative">
+                  <div className="relative pb-8">
                     <input
                       type="range"
                       min="10"
@@ -1575,29 +1575,34 @@ export default function LeadMagnet() {
                       className="expense-slider"
                       style={{ '--slider-progress': `${((expensePercent - 10) / 30) * 100}%` } as React.CSSProperties}
                     />
-                    {/* Tick marks */}
-                    <div className="absolute top-4 left-0 right-0 flex justify-between px-[2px] pointer-events-none">
-                      <div className="flex flex-col items-center">
+                    {/* Tick marks - positioned at actual percentage positions */}
+                    {/* 10% = 0%, 20% = 33.33%, 30% = 66.67%, 40% = 100% of the range */}
+                    <div className="absolute top-4 left-0 right-0 pointer-events-none">
+                      {/* 10% tick - at 0% */}
+                      <div className="absolute left-0 flex flex-col items-center" style={{ transform: 'translateX(-50%)' }}>
                         <div className="w-0.5 h-2 bg-slate-300"></div>
                         <span className="text-[10px] text-slate-400 mt-1">10%</span>
                       </div>
-                      <div className="flex flex-col items-center">
+                      {/* 20% tick - at 33.33% (recommended) */}
+                      <div className="absolute flex flex-col items-center" style={{ left: '33.33%', transform: 'translateX(-50%)' }}>
                         <div className="w-0.5 h-3 bg-emerald-500"></div>
                         <span className="text-[10px] text-emerald-600 font-medium mt-1">20%</span>
+                        <span className="text-[9px] text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5">Recommended</span>
                       </div>
-                      <div className="flex flex-col items-center">
+                      {/* 30% tick - at 66.67% */}
+                      <div className="absolute flex flex-col items-center" style={{ left: '66.67%', transform: 'translateX(-50%)' }}>
                         <div className="w-0.5 h-2 bg-slate-300"></div>
                         <span className="text-[10px] text-slate-400 mt-1">30%</span>
                       </div>
-                      <div className="flex flex-col items-center">
+                      {/* 40% tick - at 100% */}
+                      <div className="absolute right-0 flex flex-col items-center" style={{ transform: 'translateX(50%)' }}>
                         <div className="w-0.5 h-2 bg-slate-300"></div>
                         <span className="text-[10px] text-slate-400 mt-1">40%</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-8">
+                  <div className="flex justify-between text-xs text-slate-400 mt-4">
                     <span>Below Avg</span>
-                    <span className="text-emerald-600 font-medium">Recommended</span>
                     <span>Above Avg</span>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">Covers cleaning, supplies, utilities, repairs, and platform fees</p>

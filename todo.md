@@ -4755,3 +4755,24 @@ When clicking "See on Map" from the property card, the map view would show the s
 ## Bug Fixes (Jan 25, 2026)
 - [x] Fixed operating expenses slider alignment - thumb now positioned correctly at 20% recommended with tick marks
 - [x] Simplified rent validation terminology (Budget Rent, Typical Rent, Premium Rent instead of percentiles)
+
+- [x] Fix slider tick marks to align with actual percentage positions (20% label should be at 1/3 of the way, not in the middle)
+- [ ] Review and improve Step 1 (See Real Revenue) tool
+- [ ] Review and improve Step 2 (Explore Listings) tool
+
+
+## Bug Fixes (Jan 25, 2026)
+
+### Slider Alignment Fix:
+- [x] Fixed operating expenses slider tick marks to align with actual percentage positions
+- [x] 20% label and "Recommended" text now properly aligned with slider thumb
+- [x] Tick marks at 10%, 20%, 30%, 40% using absolute positioning with correct percentages
+
+### Rent Validation Terminology Simplification:
+- [x] Changed "25th Percentile" to "Budget Rent" (green, "Lower 25%")
+- [x] Changed "Market Median" to "Typical Rent" (blue, "Average")
+- [x] Changed "75th Percentile" to "Premium Rent" (amber, "Upper 25%")
+
+### Step 1 & Step 2 Review:
+- [x] Reviewed Step 1 (See Real Revenue) - Working correctly with comprehensive market data
+- [x] Reviewed Step 2 (Explore Listings) - Working correctly with 1339 opportunities found for Denver
