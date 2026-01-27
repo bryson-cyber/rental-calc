@@ -2983,7 +2983,15 @@ export default function LeadMagnet() {
                                 </div>
                               </div>
                             </div>
-                            <p className="text-xs text-slate-400">{type.count} listings</p>
+                            <div className="flex items-center justify-between group relative">
+                              <p className="text-xs text-slate-400 cursor-help border-b border-dotted border-slate-300">{type.count} listings</p>
+                              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-52">
+                                <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
+                                  Total active {type.type} short-term rentals currently listed in this market
+                                  <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <div className="space-y-1">
@@ -3005,6 +3013,49 @@ export default function LeadMagnet() {
                       </p>
                     </div>
                   )}
+                  
+                  {/* Data-Driven Insight Summary */}
+                  {(() => {
+                    const typesWithData = typesToShow.filter(t => t.count > 0);
+                    if (typesWithData.length === 0) return null;
+                    
+                    // Find highest revenue type
+                    const highestRevenue = typesWithData.reduce((max, t) => t.avgRevenue > max.avgRevenue ? t : max, typesWithData[0]);
+                    // Find highest occupancy type
+                    const highestOccupancy = typesWithData.reduce((max, t) => (t.occupancy || 0) > (max.occupancy || 0) ? t : max, typesWithData[0]);
+                    // Find most common type (most listings)
+                    const mostCommon = typesWithData.reduce((max, t) => t.count > max.count ? t : max, typesWithData[0]);
+                    
+                    // Calculate total listings from breakdown
+                    const totalListingsFromBreakdown = typesWithData.reduce((sum, t) => sum + t.count, 0);
+                    
+                    return (
+                      <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <TrendingUp className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h5 className="font-semibold text-slate-900 mb-2">📊 What This Data Shows</h5>
+                            <div className="space-y-2 text-sm text-slate-700">
+                              <p>
+                                <span className="font-medium text-emerald-700">Highest Revenue:</span> {highestRevenue.type} properties average <span className="font-bold text-emerald-600">{formatCurrency(highestRevenue.avgRevenue)}/year</span>
+                              </p>
+                              <p>
+                                <span className="font-medium text-blue-700">Highest Demand:</span> {highestOccupancy.type} properties have <span className="font-bold text-blue-600">{highestOccupancy.occupancy}% occupancy</span>
+                              </p>
+                              <p>
+                                <span className="font-medium text-purple-700">Most Common:</span> {mostCommon.type} has <span className="font-bold text-purple-600">{mostCommon.count} active listings</span> ({Math.round(mostCommon.count / totalListingsFromBreakdown * 100)}% of market)
+                              </p>
+                            </div>
+                            <p className="mt-3 text-xs text-slate-500 italic">
+                              Based on {totalListingsFromBreakdown.toLocaleString()} active short-term rentals in this market
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}

@@ -5239,3 +5239,85 @@ All guiding questions display correctly across all three test markets:
 - [x] Add "My Saved Items" link to user dropdown menu
 - [x] Add "My Account" link to user dropdown menu
 - [x] Update dropdown with Bookmark and Settings icons
+
+
+## Step 1 Optimization (Jan 26, 2026) - Per bnb-lead-magnet-dev Skill
+
+### Property Type Breakdown Section
+- [ ] Investigate why bedroom breakdown total doesn't match active listings count
+- [ ] Ensure all bedroom types (0-6+) are fetched from API
+- [ ] Add guiding question to property type section
+- [ ] Add tooltips for Revenue/yr, Occupancy %, and listing count
+- [ ] Add beginner-friendly verdict explaining which property type is best
+- [ ] Add confidence indicator (e.g., "Based on X listings in this market")
+
+### Tooltip Audit for Step 1
+- [ ] Add tooltip for "Active Listings" metric
+- [ ] Add tooltip for "Avg Annual Revenue" metric
+- [ ] Add tooltip for "Avg Nightly Rate" metric
+- [ ] Add tooltip for "Avg Occupancy" metric
+- [ ] Add tooltip for each property type card (explain what bedroom count means for revenue)
+- [ ] Add tooltip for Monthly Earnings Pattern bars
+- [ ] Add tooltip for "Top Earner" and "Most Booked" badges
+
+### Data Quality
+- [ ] Verify API is returning all bedroom types (0-6+)
+- [ ] Check if API has pagination limits causing data loss
+- [ ] Add fallback messaging if data is incomplete
+
+
+### Accurate Bedroom Counts (Jan 26, 2026)
+- [ ] Investigate AirDNA API for per-bedroom-type total counts
+- [ ] Modify backend to fetch actual counts per bedroom type
+- [ ] Update frontend to display accurate counts instead of sampled counts
+- [ ] Verify counts add up to total active listings
+
+### Shareable Links Feature (Jan 26, 2026)
+- [ ] Add Share button to Step 1 results
+- [ ] Generate shareable URL with market/search parameters
+- [ ] Parse URL parameters on page load to restore search state
+- [ ] Add copy-to-clipboard functionality
+- [ ] Consider extending to other steps (2-7)
+
+### Step 1 Skill Compliance (Jan 26, 2026)
+- [ ] Add verdict section for property type recommendations
+- [ ] Add "What This Means For You" insight box
+- [ ] Add confidence indicator for bedroom data
+
+
+## Step 1 Optimization - Bedroom Counts Fix (Jan 26, 2026) - COMPLETE
+
+### Accurate Bedroom Counts
+- [x] Fixed bedroom filter to handle bedrooms=0 (Studio) correctly
+- [x] Updated getSubmarketListings, getMarketListings, and related functions
+- [x] Changed truthy check `if (options?.filters?.bedrooms)` to explicit `if (options?.filters?.bedrooms !== undefined && options?.filters?.bedrooms !== null)`
+- [x] Verified totals now match: 469 listings = 469 market total for zip 63104
+- [x] Added "What This Data Shows" verdict section with:
+  - Highest Revenue property type
+  - Highest Demand property type
+  - Most Common property type
+
+### Shareable Links
+- [x] Verified ShareReportButton component already exists and works
+- [x] Share functionality creates unique URLs with search parameters
+
+### My Saved Items Dashboard
+- [x] Created SavedItemsPage.tsx component
+- [x] Display saved markets with key metrics
+- [x] Display saved properties with key metrics
+- [x] Add delete/remove functionality
+- [x] Add "Re-analyze" button for each saved item
+- [x] Add route /saved-items to App.tsx
+
+### My Account Settings Page
+- [x] Created AccountPage.tsx component
+- [x] Display user profile information
+- [x] Add email preferences section (placeholder for future)
+- [x] Add saved data management section
+- [x] Add logout button
+- [x] Add route /account to App.tsx
+
+### AuthButton Navigation Update
+- [x] Add "My Saved Items" link to user dropdown menu
+- [x] Add "My Account" link to user dropdown menu
+- [x] Update dropdown with Bookmark and Settings icons

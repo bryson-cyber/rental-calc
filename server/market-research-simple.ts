@@ -25,7 +25,9 @@ import {
   getRentalizerEstimate,
   getMarketBookingPatterns,
   calculateMarketInsights,
-  ListingData
+  ListingData,
+  getBedroomCounts,
+  getSubmarketBedroomCounts
 } from './airdna';
 
 // ============================================
@@ -284,61 +286,21 @@ export const marketResearchSimpleRouter = router({
         avgOccupancy: s.metrics?.occupancy || 0
       }));
 
-      // FIX: Calculate bedroom breakdown from ALL fetched listings (200+)
-      // This gives us a much better distribution including 1BR and 2BR
-      const bedroomMap = new Map<number, { count: number; totalRevenue: number; totalOccupancy: number }>();
+      // ACCURATE BEDROOM COUNTS: Use API total_count for each bedroom type
+      // This gives us the REAL count of listings per bedroom type, not sampled counts
+      // Detect if this is a submarket (starts with 'submarket-') vs a market ID
+      const isSubmarket = marketId.startsWith('submarket-');
+      console.log(`[MarketResearch] Fetching accurate bedroom counts from API... (isSubmarket: ${isSubmarket})`);
       
-      allListings.forEach((listing: any) => {
-        const br = listing.bedrooms ?? 0; // Use nullish coalescing to handle 0 bedrooms (Studios)
-        if (br < 0 || br > 10) return; // Skip invalid bedroom counts (allow 0 for Studios)
-        
-        const existing = bedroomMap.get(br) || { count: 0, totalRevenue: 0, totalOccupancy: 0 };
-        bedroomMap.set(br, {
-          count: existing.count + 1,
-          totalRevenue: existing.totalRevenue + (listing.annual_revenue || 0),
-          // Handle occupancy - could be decimal or percentage
-          totalOccupancy: existing.totalOccupancy + ((listing.occupancy || 0) > 1 ? listing.occupancy : (listing.occupancy || 0) * 100),
-        });
-      });
+      // Use the appropriate function based on whether this is a market or submarket
+      const accurateBedroomData = isSubmarket 
+        ? await getSubmarketBedroomCounts(marketId)
+        : await getBedroomCounts(marketId);
+      console.log(`[MarketResearch] Accurate bedroom counts:`, accurateBedroomData.bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+      console.log(`[MarketResearch] Total from bedroom counts: ${accurateBedroomData.totalListings}, Market total: ${overview.totalListings}`);
+      console.log(`[MarketResearch] Using ${isSubmarket ? 'submarket' : 'market'}-specific bedroom counts`);
       
-      // Log bedroom distribution for debugging
-      console.log(`[MarketResearch] Bedroom distribution from ${allListings.length} listings:`, Object.fromEntries(bedroomMap));
-      
-      // Convert to array and include ALL bedroom types 0-6+ for comprehensive display
-      // This ensures the frontend always has data for Studios (0), 1-5 BR, and 6+ BR
-      const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6]; // Include Studios (0) and 6+ bedrooms
-      
-      // Aggregate 6+ bedrooms into a single "6+" category
-      const sixPlusData = { count: 0, totalRevenue: 0, totalOccupancy: 0 };
-      bedroomMap.forEach((data, bedrooms) => {
-        if (bedrooms >= 6) {
-          sixPlusData.count += data.count;
-          sixPlusData.totalRevenue += data.totalRevenue;
-          sixPlusData.totalOccupancy += data.totalOccupancy;
-        }
-      });
-      if (sixPlusData.count > 0) {
-        bedroomMap.set(6, sixPlusData); // Store aggregated 6+ data under key 6
-      }
-      
-      const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
-        const data = bedroomMap.get(bedrooms);
-        if (data && data.count > 0) {
-          return {
-            bedrooms,
-            count: data.count,
-            avgRevenue: Math.round(data.totalRevenue / data.count),
-            avgOccupancy: Math.round(data.totalOccupancy / data.count)
-          };
-        }
-        // Return placeholder for bedroom types with no listings
-        return {
-          bedrooms,
-          count: 0,
-          avgRevenue: 0,
-          avgOccupancy: 0
-        };
-      });
+      const bedroomBreakdown = accurateBedroomData.bedroomCounts;
 
       // Generate insights
       const insights = generateInsights(overview, seasonalityData, processedTopPerformers, bedroomBreakdown);
@@ -714,51 +676,14 @@ export const marketResearchSimpleRouter = router({
         airbnbUrl: l.airbnb_url
       }));
       
-      // Process bedroom breakdown - ensure ALL bedroom types 0-6+ are included (Studios through 6+ BR)
-      const bedroomMap = new Map<number, { count: number; avgRevenue: number; avgOccupancy: number }>();
-      report.bedroom_performance.forEach(b => {
-        bedroomMap.set(b.bedrooms, {
-          count: b.count,
-          avgRevenue: b.avg_revenue,
-          avgOccupancy: b.avg_occupancy
-        });
-      });
+      // ACCURATE BEDROOM COUNTS: Use API total_count for each bedroom type
+      // This gives us the REAL count of listings per bedroom type, not sampled counts
+      console.log(`[getSubmarketReport] Fetching accurate bedroom counts from API...`);
+      const accurateBedroomData = await getSubmarketBedroomCounts(submarketId);
+      console.log(`[getSubmarketReport] Accurate bedroom counts:`, accurateBedroomData.bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+      console.log(`[getSubmarketReport] Total from bedroom counts: ${accurateBedroomData.totalListings}, Submarket total: ${overview.totalListings}`);
       
-      // Aggregate 6+ bedrooms into a single "6+" category
-      const sixPlusData = { count: 0, totalRevenue: 0, totalOccupancy: 0 };
-      bedroomMap.forEach((data, bedrooms) => {
-        if (bedrooms >= 6) {
-          sixPlusData.count += data.count;
-          sixPlusData.totalRevenue += data.avgRevenue * data.count;
-          sixPlusData.totalOccupancy += data.avgOccupancy * data.count;
-        }
-      });
-      if (sixPlusData.count > 0) {
-        bedroomMap.set(6, {
-          count: sixPlusData.count,
-          avgRevenue: Math.round(sixPlusData.totalRevenue / sixPlusData.count),
-          avgOccupancy: Math.round(sixPlusData.totalOccupancy / sixPlusData.count)
-        });
-      }
-      
-      const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6];
-      const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
-        const data = bedroomMap.get(bedrooms);
-        if (data && data.count > 0) {
-          return {
-            bedrooms,
-            count: data.count,
-            avgRevenue: data.avgRevenue,
-            avgOccupancy: data.avgOccupancy
-          };
-        }
-        return {
-          bedrooms,
-          count: 0,
-          avgRevenue: 0,
-          avgOccupancy: 0
-        };
-      });
+      const bedroomBreakdown = accurateBedroomData.bedroomCounts;
       
       // Seasonality - use parent market seasonality from comprehensive report
       const monthlyData = report.seasonality.map(s => ({

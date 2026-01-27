@@ -1561,7 +1561,8 @@ export async function getMarketListings(
       // Build filters array based on options
       const filters: Array<Record<string, unknown>> = [];
       
-      if (options?.filters?.bedrooms) {
+      // Use explicit undefined check to handle bedrooms=0 (Studio)
+      if (options?.filters?.bedrooms !== undefined && options?.filters?.bedrooms !== null) {
         console.log(`[getMarketListings] Adding bedroom filter: ${options.filters.bedrooms}`);
         filters.push({
           type: "select",  // AirDNA API requires 'select' type for bedroom filtering
@@ -1602,7 +1603,7 @@ export async function getMarketListings(
     // Log the bedroom counts of returned listings to verify filtering
     const bedroomCounts = response.payload.listings.map(r => r.bedrooms);
     console.log(`[getMarketListings] Returned ${response.payload.listings.length} listings with bedrooms:`, bedroomCounts.slice(0, 10), '...');
-    if (options?.filters?.bedrooms) {
+    if (options?.filters?.bedrooms !== undefined && options?.filters?.bedrooms !== null) {
       const matchingCount = response.payload.listings.filter(r => r.bedrooms === options.filters!.bedrooms).length;
       console.log(`[getMarketListings] Expected bedroom: ${options.filters.bedrooms}, Matching: ${matchingCount}/${response.payload.listings.length}`);
     }
@@ -1681,7 +1682,8 @@ export async function getSubmarketListings(
     // Build filters array based on options
     const filters: Array<Record<string, unknown>> = [];
     
-    if (options?.filters?.bedrooms) {
+    // Use explicit undefined check to handle bedrooms=0 (Studio)
+    if (options?.filters?.bedrooms !== undefined && options?.filters?.bedrooms !== null) {
       filters.push({
         type: "select",  // AirDNA API requires 'select' type for bedroom filtering
         field: "bedrooms",
@@ -6204,7 +6206,8 @@ export async function getStandaloneMarketAdvisorData(
   }
 ): Promise<StandaloneMarketAdvisorData | null> {
   console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);
-  if (filters?.bedrooms) console.log(`[StandaloneMarketAdvisor] Bedroom filter: ${filters.bedrooms}`);
+  // Use explicit undefined check to handle bedrooms=0 (Studio)
+  if (filters?.bedrooms !== undefined && filters?.bedrooms !== null) console.log(`[StandaloneMarketAdvisor] Bedroom filter: ${filters.bedrooms}`);
   if (filters?.amenities) console.log(`[StandaloneMarketAdvisor] Amenities filter:`, filters.amenities);
   
   try {
@@ -6380,7 +6383,8 @@ export async function getStandaloneMarketAdvisorData(
     // Fetch listings with bedroom filter applied if specified
     // If bedroom filter is set, only fetch listings for that bedroom count
     const listingFilters: ListingFilters = {};
-    if (filters?.bedrooms) {
+    // Use explicit undefined check to handle bedrooms=0 (Studio)
+    if (filters?.bedrooms !== undefined && filters?.bedrooms !== null) {
       listingFilters.bedrooms = filters.bedrooms;
     }
     if (filters?.amenities) {
@@ -7249,5 +7253,246 @@ export function calculateForwardLookingDemand(
     },
     peakPeriod,
     lowPeriod,
+  };
+}
+
+
+// ============================================
+// ACCURATE BEDROOM COUNTS FROM API
+// ============================================
+
+/**
+ * Get accurate listing counts per bedroom type from the API
+ * This makes quick API calls for each bedroom type (0-6+) to get the actual total_count
+ * Much more accurate than counting from sampled listings
+ */
+export async function getBedroomCounts(
+  marketId: string
+): Promise<{
+  bedroomCounts: Array<{
+    bedrooms: number;
+    count: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }>;
+  totalListings: number;
+}> {
+  console.log(`[getBedroomCounts] Fetching accurate bedroom counts for market ${marketId}`);
+  
+  const bedroomTypes = [0, 1, 2, 3, 4, 5, 6]; // 0 = Studio, 6 = 6+ bedrooms
+  const bedroomCounts: Array<{
+    bedrooms: number;
+    count: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }> = [];
+  
+  let totalListings = 0;
+  
+  // Fetch counts for each bedroom type in parallel for speed
+  const results = await Promise.all(
+    bedroomTypes.map(async (bedrooms) => {
+      try {
+        // For 6+ bedrooms, we need to aggregate 6, 7, 8, 9, 10+ 
+        if (bedrooms === 6) {
+          // Fetch 6, 7, 8, 9, 10 bedrooms and aggregate
+          let totalCount = 0;
+          let totalRevenue = 0;
+          let totalOccupancy = 0;
+          let listingsWithData = 0;
+          
+          for (const br of [6, 7, 8, 9, 10]) {
+            const result = await getMarketListings(marketId, {
+              limit: 10, // Just need a few to get averages
+              offset: 0,
+              orderBy: "revenue",
+              orderDirection: "desc",
+              filters: { bedrooms: br },
+            });
+            
+            totalCount += result.total_count;
+            
+            // Calculate averages from the returned listings
+            if (result.listings.length > 0) {
+              const avgRev = result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length;
+              const avgOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
+              totalRevenue += avgRev * result.listings.length;
+              totalOccupancy += avgOcc * result.listings.length;
+              listingsWithData += result.listings.length;
+            }
+            
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 30));
+          }
+          
+          return {
+            bedrooms: 6,
+            count: totalCount,
+            avgRevenue: listingsWithData > 0 ? Math.round(totalRevenue / listingsWithData) : 0,
+            avgOccupancy: listingsWithData > 0 ? Math.round((totalOccupancy / listingsWithData) * (totalOccupancy / listingsWithData > 1 ? 1 : 100)) : 0,
+          };
+        }
+        
+        // For regular bedroom types (0-5)
+        const result = await getMarketListings(marketId, {
+          limit: 25, // Fetch 25 to get good average
+          offset: 0,
+          orderBy: "revenue",
+          orderDirection: "desc",
+          filters: { bedrooms },
+        });
+        
+        // Calculate averages from returned listings
+        let avgRevenue = 0;
+        let avgOccupancy = 0;
+        if (result.listings.length > 0) {
+          avgRevenue = Math.round(result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length);
+          const rawOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
+          avgOccupancy = Math.round(rawOcc > 1 ? rawOcc : rawOcc * 100);
+        }
+        
+        return {
+          bedrooms,
+          count: result.total_count,
+          avgRevenue,
+          avgOccupancy,
+        };
+      } catch (error) {
+        console.error(`[getBedroomCounts] Error fetching ${bedrooms}BR:`, error);
+        return {
+          bedrooms,
+          count: 0,
+          avgRevenue: 0,
+          avgOccupancy: 0,
+        };
+      }
+    })
+  );
+  
+  // Process results
+  results.forEach(result => {
+    bedroomCounts.push(result);
+    totalListings += result.count;
+  });
+  
+  console.log(`[getBedroomCounts] Results:`, bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+  console.log(`[getBedroomCounts] Total: ${totalListings} listings`);
+  
+  return {
+    bedroomCounts,
+    totalListings,
+  };
+}
+
+/**
+ * Get accurate bedroom counts for a submarket
+ */
+export async function getSubmarketBedroomCounts(
+  submarketId: string
+): Promise<{
+  bedroomCounts: Array<{
+    bedrooms: number;
+    count: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }>;
+  totalListings: number;
+}> {
+  console.log(`[getSubmarketBedroomCounts] Fetching accurate bedroom counts for submarket ${submarketId}`);
+  
+  const bedroomTypes = [0, 1, 2, 3, 4, 5, 6];
+  const bedroomCounts: Array<{
+    bedrooms: number;
+    count: number;
+    avgRevenue: number;
+    avgOccupancy: number;
+  }> = [];
+  
+  let totalListings = 0;
+  
+  const results = await Promise.all(
+    bedroomTypes.map(async (bedrooms) => {
+      try {
+        if (bedrooms === 6) {
+          let totalCount = 0;
+          let totalRevenue = 0;
+          let totalOccupancy = 0;
+          let listingsWithData = 0;
+          
+          for (const br of [6, 7, 8, 9, 10]) {
+            const result = await getSubmarketListings(submarketId, {
+              limit: 10,
+              offset: 0,
+              orderBy: "revenue",
+              orderDirection: "desc",
+              filters: { bedrooms: br },
+            });
+            
+            totalCount += result.total_count;
+            
+            if (result.listings.length > 0) {
+              const avgRev = result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length;
+              const avgOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
+              totalRevenue += avgRev * result.listings.length;
+              totalOccupancy += avgOcc * result.listings.length;
+              listingsWithData += result.listings.length;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 30));
+          }
+          
+          return {
+            bedrooms: 6,
+            count: totalCount,
+            avgRevenue: listingsWithData > 0 ? Math.round(totalRevenue / listingsWithData) : 0,
+            avgOccupancy: listingsWithData > 0 ? Math.round((totalOccupancy / listingsWithData) * (totalOccupancy / listingsWithData > 1 ? 1 : 100)) : 0,
+          };
+        }
+        
+        const result = await getSubmarketListings(submarketId, {
+          limit: 25,
+          offset: 0,
+          orderBy: "revenue",
+          orderDirection: "desc",
+          filters: { bedrooms },
+        });
+        
+        let avgRevenue = 0;
+        let avgOccupancy = 0;
+        if (result.listings.length > 0) {
+          avgRevenue = Math.round(result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length);
+          const rawOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
+          avgOccupancy = Math.round(rawOcc > 1 ? rawOcc : rawOcc * 100);
+        }
+        
+        return {
+          bedrooms,
+          count: result.total_count,
+          avgRevenue,
+          avgOccupancy,
+        };
+      } catch (error) {
+        console.error(`[getSubmarketBedroomCounts] Error fetching ${bedrooms}BR:`, error);
+        return {
+          bedrooms,
+          count: 0,
+          avgRevenue: 0,
+          avgOccupancy: 0,
+        };
+      }
+    })
+  );
+  
+  results.forEach(result => {
+    bedroomCounts.push(result);
+    totalListings += result.count;
+  });
+  
+  console.log(`[getSubmarketBedroomCounts] Results:`, bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+  console.log(`[getSubmarketBedroomCounts] Total: ${totalListings} listings`);
+  
+  return {
+    bedroomCounts,
+    totalListings,
   };
 }
