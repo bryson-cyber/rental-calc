@@ -69,8 +69,8 @@ export default function Contact() {
                 <div>
                   <h3 className="text-lg font-semibold text-[oklch(0.20_0_0)] mb-1">Business Address</h3>
                   <p className="text-[oklch(0.35_0_0)]">
-                    Coach Inayah LLC<br />
-                    St. Louis, MO 63104<br />
+                    I&B Coaching<br />
+                    Las Vegas, NV 89134<br />
                     United States
                   </p>
                 </div>
@@ -111,8 +111,8 @@ export default function Contact() {
                   How do I request a refund?
                 </h3>
                 <p className="text-[oklch(0.45_0_0)]">
-                  Email us at support@coachinayah.com within 14 days of your purchase with your order 
-                  number. See our <Link href="/refund-policy" className="text-[oklch(0.55_0.14_75)] hover:underline">Refund Policy</Link> for full details.
+                  Email us at support@coachinayah.com within the refund window (3 days for standard purchases, 
+                  30 days for Affirm financing). See our <Link href="/refund-policy" className="text-[oklch(0.55_0.14_75)] hover:underline">Refund Policy</Link> for full details.
                 </p>
               </div>
 
@@ -133,7 +133,7 @@ export default function Contact() {
       {/* Footer */}
       <footer className="border-t border-[oklch(0.92_0_0)] bg-[oklch(0.98_0_0)] py-8 mt-12">
         <div className="container max-w-4xl mx-auto px-4 text-center text-[oklch(0.50_0_0)] text-sm">
-          <p>&copy; {new Date().getFullYear()} Coach Inayah LLC. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} I&B Coaching. All rights reserved.</p>
         </div>
       </footer>
     </div>

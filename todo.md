@@ -5937,3 +5937,12 @@ All guiding questions display correctly across all three test markets:
 - [x] Clear description of services being sold - "Free research tools"
 - [x] Visible customer support section - Footer with email and contact page
 - [x] Legal business name and address visible - Footer shows Coach Inayah LLC, St. Louis, MO
+
+
+## Business Info Updates (Jan 27, 2026) - COMPLETE
+
+### Updates Completed
+- [x] Change business name from "Coach Inayah LLC" to "I&B Coaching" across all pages
+- [x] Change zip code from 63104 to 89134 (Las Vegas, NV) across all pages
+- [x] Update refund policy: 30 days for Affirm-financed purchases
+- [x] Update refund policy: 3 calendar days for all other purchases

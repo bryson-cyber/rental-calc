@@ -4613,9 +4613,9 @@ export default function LeadMagnet() {
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             {/* Business Info */}
             <div>
-              <h4 className="font-semibold text-[oklch(0.20_0_0)] mb-3">Coach Inayah LLC</h4>
+              <h4 className="font-semibold text-[oklch(0.20_0_0)] mb-3">I&B Coaching</h4>
               <p className="text-[oklch(0.50_0_0)] text-sm leading-relaxed">
-                St. Louis, MO 63104<br />
+                Las Vegas, NV 89134<br />
                 United States
               </p>
             </div>
@@ -4651,7 +4651,7 @@ export default function LeadMagnet() {
           </div>
           
           <div className="border-t border-[oklch(0.90_0_0)] pt-6 text-center text-[oklch(0.55_0_0)] text-sm">
-            <p>&copy; {new Date().getFullYear()} Coach Inayah LLC. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} I&B Coaching. All rights reserved.</p>
           </div>
         </div>
       </footer>

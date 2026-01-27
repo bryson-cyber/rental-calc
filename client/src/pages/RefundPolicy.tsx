@@ -38,23 +38,49 @@ export default function RefundPolicy() {
 
           <section className="mb-10">
             <h2 className="text-2xl font-semibold text-[oklch(0.20_0_0)] mb-4">
-              Paid Services (Turnkey Program)
+              Paid Services (Standard Purchases)
             </h2>
             <p className="mb-4">
-              For paid coaching and consulting services through the Turnkey Program:
+              For paid coaching and consulting services through the Turnkey Program purchased without financing:
             </p>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>
-                <strong>Eligibility:</strong> Refund requests must be submitted within 14 days of purchase.
+                <strong>Eligibility:</strong> Refund requests must be submitted within 3 calendar days of purchase.
               </li>
               <li>
-                <strong>Time Window:</strong> You have 14 calendar days from the date of purchase to request a refund.
+                <strong>Time Window:</strong> You have 3 calendar days from the date of purchase to request a refund.
               </li>
               <li>
                 <strong>Refund Method:</strong> Refunds will be processed using the original payment method.
               </li>
               <li>
                 <strong>Processing Time:</strong> Approved refunds are processed within 5-7 business days.
+              </li>
+            </ul>
+          </section>
+
+          <section className="mb-10">
+            <h2 className="text-2xl font-semibold text-[oklch(0.20_0_0)] mb-4">
+              Financing Through Affirm
+            </h2>
+            <p className="mb-4">
+              If you financed your purchase through Affirm, you have an extended refund window:
+            </p>
+            <ul className="list-disc pl-6 mb-4 space-y-2">
+              <li>
+                <strong>Eligibility:</strong> Refund requests must be submitted within 30 days of purchase.
+              </li>
+              <li>
+                <strong>Time Window:</strong> You have 30 calendar days from the date of purchase to request a refund.
+              </li>
+              <li>
+                <strong>Refund Processing:</strong> Refunds will be applied to your Affirm loan balance.
+              </li>
+              <li>
+                <strong>Interest Credit:</strong> Any interest paid on the refunded amount will also be credited.
+              </li>
+              <li>
+                <strong>Loan Questions:</strong> Contact Affirm directly for questions about your loan status after a refund.
               </li>
             </ul>
           </section>
@@ -69,23 +95,10 @@ export default function RefundPolicy() {
             <ol className="list-decimal pl-6 mb-4 space-y-2">
               <li>Email us at <a href="mailto:support@coachinayah.com" className="text-[oklch(0.55_0.14_75)] hover:underline">support@coachinayah.com</a></li>
               <li>Include your order number and the email used for purchase</li>
+              <li>Specify whether you paid with Affirm financing or another payment method</li>
               <li>Provide a brief explanation of your refund request</li>
               <li>Our team will respond within 2 business days</li>
             </ol>
-          </section>
-
-          <section className="mb-10">
-            <h2 className="text-2xl font-semibold text-[oklch(0.20_0_0)] mb-4">
-              Financing Through Affirm
-            </h2>
-            <p className="mb-4">
-              If you financed your purchase through Affirm:
-            </p>
-            <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li>Refunds will be applied to your Affirm loan balance</li>
-              <li>Any interest paid on the refunded amount will also be credited</li>
-              <li>Contact Affirm directly for questions about your loan status after a refund</li>
-            </ul>
           </section>
 
           <section className="mb-10">
@@ -106,7 +119,7 @@ export default function RefundPolicy() {
       {/* Footer */}
       <footer className="border-t border-[oklch(0.92_0_0)] bg-[oklch(0.98_0_0)] py-8">
         <div className="container max-w-4xl mx-auto px-4 text-center text-[oklch(0.50_0_0)] text-sm">
-          <p>&copy; {new Date().getFullYear()} Coach Inayah. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} I&B Coaching. All rights reserved.</p>
         </div>
       </footer>
     </div>
