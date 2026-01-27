@@ -5788,3 +5788,23 @@ All guiding questions display correctly across all three test markets:
 - [x] Studio filter option visible in dropdown
 - [x] Days of data showing on property cards
 - [x] No AirDNA mentions in visible tooltips
+
+
+## Step 2 Bug Fixes (Jan 27, 2026) - COMPLETE
+
+### Issue 1: Studio Filter Not Working
+- [x] Investigated why Studio (0 bedrooms) filter doesn't return results
+- [x] Root cause: Server-side bedroom filter check used truthy check which excluded 0
+- [x] Fixed in routers.ts: Changed `if (input.bedrooms)` to `if (input.bedrooms !== undefined && input.bedrooms !== null)`
+- [x] Verified: Studio filter now returns 171 properties in St. Louis, Missouri
+
+### Issue 2: Days of Data Source Verification
+- [x] Verified days_available field comes from AirDNA API response (r.metrics?.days_available)
+- [x] This is real data from the API, not fabricated
+- [x] Shows how many days the property has been tracked/available
+
+### Issue 3: Zip Code Search Shows All Zip Codes
+- [x] Investigated AirDNA API - zip codes are returned per submarket, not per search
+- [x] When searching 63104, API returns Soulard submarket which only has 63104 in its legacy_location.zipcodes
+- [x] This is accurate per the API - each submarket has its defined zip codes
+- [x] The API returns the correct zip codes for each submarket, not a limitation of our code

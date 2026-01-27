@@ -4657,7 +4657,7 @@ superhostOnly: input.superhostOnly,
         try {
           // Build filters
           const filters: any = {};
-          if (input.bedrooms) filters.bedrooms = input.bedrooms;
+          if (input.bedrooms !== undefined && input.bedrooms !== null) filters.bedrooms = input.bedrooms;
           if (input.propertyType) filters.propertyType = input.propertyType;
           if (input.minRating) filters.minRating = input.minRating;
 

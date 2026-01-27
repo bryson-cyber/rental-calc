@@ -995,7 +995,7 @@ export default function LeadMagnet() {
       const listingsResult = await trpcUtils.marketExplorer.getListings.fetch({
         marketId: market.id,
         marketType: market.type,
-        bedrooms: bedroomFilter || undefined,
+        bedrooms: bedroomFilter !== null ? bedroomFilter : undefined,
         sortBy: sortByFilter === 'revpar' ? 'revenue' : (sortByFilter === 'proximity' ? 'revenue' : sortByFilter) as 'revenue' | 'occupancy' | 'adr' | 'rating',
         limit: 50,
       });
