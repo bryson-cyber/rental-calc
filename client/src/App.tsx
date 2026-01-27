@@ -17,6 +17,8 @@ import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
 import MyFavoritesPage from "./pages/MyFavoritesPage";
 import MarketAlertsPage from "./pages/MarketAlertsPage";
 import SharedReportPage from "./pages/SharedReportPage";
+import SavedItemsPage from "./pages/SavedItemsPage";
+import AccountPage from "./pages/AccountPage";
 
 function Router() {
   return (
@@ -41,6 +43,12 @@ function Router() {
       
       {/* Market Alerts */}
       <Route path={"/market-alerts"} component={MarketAlertsPage} />
+      
+      {/* My Saved Items */}
+      <Route path={"/saved-items"} component={SavedItemsPage} />
+      
+      {/* My Account */}
+      <Route path={"/account"} component={AccountPage} />
       
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />

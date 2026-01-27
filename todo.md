@@ -5202,3 +5202,40 @@ All guiding questions display correctly across all three test markets:
 - [x] Format numbers with currency symbols and percentages
 - [x] Added helpful context (e.g., "Excellent booking rate" for 70%+, monthly breakdown for revenue)
 - [x] Test tooltips across different markets - Verified working on Phoenix/Scottsdale (shows "Dec 24, Booking Rate: 59%, ✓ Good booking rate")
+
+
+## New Features & Bug Fixes (Jan 26, 2026)
+
+### Monthly Earnings Pattern Tooltips
+- [x] Add interactive tooltips to Monthly Earnings Pattern bar charts
+- [x] Show actual booking rate percentage on hover
+- [x] Show actual nightly rate on hover
+- [x] Add helpful context (e.g., "Peak Season", "Premium Pricing", estimated monthly revenue)
+
+### Property Type Listings Discrepancy Fix
+- [x] Investigate why bedroom breakdown doesn't equal total active listings (API caps at 100 per type)
+- [x] Add Studio (0 bedroom) to property type breakdown
+- [x] Add 6+ bedroom to property type breakdown
+- [x] Ensure all property types are displayed
+
+### My Saved Items Dashboard
+- [x] Create SavedItemsPage component
+- [x] Display saved markets with key metrics
+- [x] Display saved properties with key metrics
+- [x] Add delete/remove functionality
+- [x] Add "View Details" link to each saved item (Re-analyze button)
+- [x] Add route to App.tsx
+
+### My Account Settings Page
+- [x] Create AccountPage component
+- [x] Display user profile information
+- [x] Add email preferences section (placeholder for future)
+- [x] Add saved data management section
+- [x] Add logout button
+- [x] Add route to App.tsx
+
+
+### AuthButton Navigation Update
+- [x] Add "My Saved Items" link to user dropdown menu
+- [x] Add "My Account" link to user dropdown menu
+- [x] Update dropdown with Bookmark and Settings icons

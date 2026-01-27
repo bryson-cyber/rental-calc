@@ -1019,7 +1019,7 @@ export default function LeadMagnet() {
         avgOccupancy: report.overview.avgOccupancy,
         totalListings: report.overview.totalListings,
         propertyTypes: report.bedroomBreakdown.map(b => ({
-          type: `${b.bedrooms} Bedroom`,
+          type: b.bedrooms === 0 ? 'Studio' : b.bedrooms === 6 ? '6+ Bedroom' : `${b.bedrooms} Bedroom`,
           count: b.count,
           avgRevenue: b.avgRevenue,
           occupancy: b.avgOccupancy
@@ -2894,29 +2894,39 @@ export default function LeadMagnet() {
             
             {/* Property Types - Show all bedroom types */}
             {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
-              // Ensure we show all bedroom types from Studio to 5+
-              const allBedroomTypes = [0, 1, 2, 3, 4, 5];
+              // Ensure we show all bedroom types from Studio (0) to 6+ BR
+              const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6];
               const existingTypesMap: Record<number, typeof researchResult.propertyTypes[0]> = {};
               researchResult.propertyTypes.forEach(t => {
-                const bedroomNum = parseInt(t.type.split(' ')[0]) || 0;
+                // Handle "Studio", "0 Bedroom", "6 Bedroom" (which represents 6+), etc.
+                const bedroomNum = t.type === 'Studio' ? 0 : parseInt(t.type.split(' ')[0]) || 0;
                 existingTypesMap[bedroomNum] = t;
               });
               
               // Create complete list with placeholders for missing types
               const completeTypes = allBedroomTypes.map(bedrooms => {
                 const existing = existingTypesMap[bedrooms];
-                if (existing) return existing;
+                if (existing) {
+                  // Ensure proper display name
+                  return {
+                    ...existing,
+                    type: bedrooms === 0 ? 'Studio' : bedrooms === 6 ? '6+ Bedroom' : `${bedrooms} Bedroom`
+                  };
+                }
                 return {
-                  type: bedrooms === 0 ? 'Studio' : `${bedrooms} Bedroom`,
+                  type: bedrooms === 0 ? 'Studio' : bedrooms === 6 ? '6+ Bedroom' : `${bedrooms} Bedroom`,
                   count: 0,
                   avgRevenue: 0,
                   occupancy: 0
                 };
               });
               
+              // Calculate total from bedroom breakdown to show coverage
+              const totalFromBreakdown = completeTypes.reduce((sum, t) => sum + t.count, 0);
+              
               // Filter to only show types with data or common types (1-4 BR)
               const typesToShow = completeTypes.filter(t => {
-                const bedroomNum = t.type === 'Studio' ? 0 : parseInt(t.type.split(' ')[0]);
+                const bedroomNum = t.type === 'Studio' ? 0 : t.type === '6+ Bedroom' ? 6 : parseInt(t.type.split(' ')[0]);
                 return t.count > 0 || (bedroomNum >= 1 && bedroomNum <= 4);
               });
               
@@ -2944,7 +2954,7 @@ export default function LeadMagnet() {
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
                               type.count > 0 ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-200 text-slate-400'
                             }`}>
-                              {type.type === 'Studio' ? 'S' : type.type.split(' ')[0]}
+                              {type.type === 'Studio' ? 'S' : type.type === '6+ Bedroom' ? '6+' : type.type.split(' ')[0]}
                             </div>
                             <p className={`font-semibold text-sm ${type.count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
                               {type.type}
@@ -3061,10 +3071,12 @@ export default function LeadMagnet() {
                       <div className="space-y-2">
                         {researchResult.seasonality.map((month, idx) => {
                           const isAboveAvg = month.occupancy >= avgOccupancy;
+                          const diffFromAvg = month.occupancy - avgOccupancy;
+                          const seasonLabel = month.occupancy >= 70 ? 'Peak Season' : month.occupancy >= 55 ? 'Good Season' : month.occupancy >= 40 ? 'Moderate Season' : 'Slow Season';
                           return (
-                            <div key={idx} className="flex items-center gap-3">
+                            <div key={idx} className="flex items-center gap-3 group relative">
                               <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
-                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
+                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative cursor-pointer">
                                 {/* Average line indicator */}
                                 <div 
                                   className="absolute top-0 bottom-0 w-0.5 bg-amber-500 z-10"
@@ -3076,6 +3088,18 @@ export default function LeadMagnet() {
                                 />
                               </div>
                               <span className={`text-xs font-semibold w-10 text-right ${isAboveAvg ? 'text-emerald-600' : 'text-amber-600'}`}>{Math.round(month.occupancy)}%</span>
+                              {/* Tooltip */}
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50">
+                                <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                                  <p className="font-semibold">{formatMonth(month.month)} - Booking Rate</p>
+                                  <p className="text-slate-300">{Math.round(month.occupancy)}% of nights booked</p>
+                                  <p className={`${diffFromAvg >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {diffFromAvg >= 0 ? '+' : ''}{Math.round(diffFromAvg)}% vs average
+                                  </p>
+                                  <p className="text-slate-400 mt-1">✓ {seasonLabel}</p>
+                                </div>
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                              </div>
                             </div>
                           );
                         })}
@@ -3097,10 +3121,13 @@ export default function LeadMagnet() {
                           const barWidth = 20 + ((month.adr - minAdr) / adrRange) * 80;
                           const isAboveAvg = month.adr >= avgAdr;
                           const avgPosition = 20 + ((avgAdr - minAdr) / adrRange) * 80;
+                          const diffFromAvg = month.adr - avgAdr;
+                          const priceLabel = month.adr >= maxAdr * 0.9 ? 'Premium Pricing' : month.adr >= avgAdr ? 'Above Average' : month.adr <= minAdr * 1.1 ? 'Budget Season' : 'Below Average';
+                          const estimatedMonthlyRevenue = Math.round(month.adr * month.occupancy / 100 * 30);
                           return (
-                            <div key={idx} className="flex items-center gap-3">
+                            <div key={idx} className="flex items-center gap-3 group relative">
                               <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
-                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
+                              <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative cursor-pointer">
                                 {/* Average line indicator */}
                                 <div 
                                   className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-10"
@@ -3112,6 +3139,19 @@ export default function LeadMagnet() {
                                 />
                               </div>
                               <span className={`text-xs font-semibold w-14 text-right ${isAboveAvg ? 'text-blue-600' : 'text-slate-500'}`}>{formatCurrency(month.adr)}</span>
+                              {/* Tooltip */}
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block z-50">
+                                <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                                  <p className="font-semibold">{formatMonth(month.month)} - Nightly Rate</p>
+                                  <p className="text-slate-300">{formatCurrency(month.adr)} per night</p>
+                                  <p className={`${diffFromAvg >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+                                    {diffFromAvg >= 0 ? '+' : ''}{formatCurrency(diffFromAvg)} vs average
+                                  </p>
+                                  <p className="text-emerald-400 mt-1">Est. monthly: {formatCurrency(estimatedMonthlyRevenue)}</p>
+                                  <p className="text-slate-400">✓ {priceLabel}</p>
+                                </div>
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                              </div>
                             </div>
                           );
                         })}

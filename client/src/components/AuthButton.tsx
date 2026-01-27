@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogIn, LogOut, User, ChevronDown, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings } from 'lucide-react';
+import { Link } from 'wouter';
 
 export function AuthButton() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -59,11 +60,18 @@ export function AuthButton() {
           <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
           <p className="text-xs text-slate-500 truncate">{user.email}</p>
         </div>
-        <DropdownMenuItem className="gap-2 cursor-pointer" disabled>
-          <User className="w-4 h-4" />
-          <span>My Account</span>
-          <span className="ml-auto text-xs text-slate-400">Coming soon</span>
-        </DropdownMenuItem>
+        <Link href="/saved-items">
+          <DropdownMenuItem className="gap-2 cursor-pointer">
+            <Save className="w-4 h-4" />
+            <span>My Saved Items</span>
+          </DropdownMenuItem>
+        </Link>
+        <Link href="/account">
+          <DropdownMenuItem className="gap-2 cursor-pointer">
+            <Settings className="w-4 h-4" />
+            <span>Account Settings</span>
+          </DropdownMenuItem>
+        </Link>
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"

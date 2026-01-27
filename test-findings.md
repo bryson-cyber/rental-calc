@@ -227,3 +227,38 @@ All calculations are correct and the UI is displaying properly!
 - Helper text: "Covers cleaning, supplies, utilities, repairs, and platform fees"
 
 **All labels displaying correctly for demo**
+
+
+---
+
+## Test Date: Jan 26, 2026 - Property Type Listings Verification
+## Test Location: 63104 St. Louis, MO (Soulard neighborhood)
+
+### Active Listings Total: 469
+
+### Property Type Breakdown (Now includes all bedroom types):
+- **Studio**: 2 listings, $31,579/yr, 82% occupancy
+- **1 Bedroom**: 100 listings, $24,734/yr, 74% occupancy  
+- **2 Bedroom**: 100 listings, $26,089/yr, 62% occupancy
+- **3 Bedroom**: 40 listings, $41,250/yr, 60% occupancy
+- **4 Bedroom**: 24 listings, $62,798/yr, 59% occupancy
+- **5 Bedroom**: 7 listings, $52,091/yr, 49% occupancy
+- **6+ Bedroom**: 13 listings, $76,999/yr, 64% occupancy
+
+### Total from breakdown: 2 + 100 + 100 + 40 + 24 + 7 + 13 = 286 listings
+
+### Note: 
+The bedroom breakdown shows 286 listings, while the total active listings is 469.
+This discrepancy is due to the API returning capped data (max 100 per bedroom type).
+The fix successfully added Studio and 6+ Bedroom categories that were previously missing.
+
+### Monthly Earnings Pattern - VERIFIED ✅
+- Tooltips are implemented using CSS hover (hidden group-hover:block)
+- Shows both Occupancy Rate and Nightly Rate by month
+- Jan-Dec data visible with percentages and dollar amounts
+
+### New Features Verified
+1. ✅ My Saved Items page - Working with tabs for Markets and Properties
+2. ✅ My Account page - Working with profile info, saved data summary, and account actions
+3. ✅ Property type breakdown now includes Studio and 6+ Bedroom
+4. ✅ Monthly Earnings Pattern has tooltip functionality

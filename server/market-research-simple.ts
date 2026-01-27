@@ -289,8 +289,8 @@ export const marketResearchSimpleRouter = router({
       const bedroomMap = new Map<number, { count: number; totalRevenue: number; totalOccupancy: number }>();
       
       allListings.forEach((listing: any) => {
-        const br = listing.bedrooms || 0;
-        if (br < 1 || br > 10) return; // Skip invalid bedroom counts
+        const br = listing.bedrooms ?? 0; // Use nullish coalescing to handle 0 bedrooms (Studios)
+        if (br < 0 || br > 10) return; // Skip invalid bedroom counts (allow 0 for Studios)
         
         const existing = bedroomMap.get(br) || { count: 0, totalRevenue: 0, totalOccupancy: 0 };
         bedroomMap.set(br, {
@@ -304,9 +304,23 @@ export const marketResearchSimpleRouter = router({
       // Log bedroom distribution for debugging
       console.log(`[MarketResearch] Bedroom distribution from ${allListings.length} listings:`, Object.fromEntries(bedroomMap));
       
-      // Convert to array and include ALL bedroom types 1-5+ for comprehensive display
-      // This ensures the frontend always has data for all bedroom types
-      const allBedroomTypes = [1, 2, 3, 4, 5]; // Standard bedroom types to always include
+      // Convert to array and include ALL bedroom types 0-6+ for comprehensive display
+      // This ensures the frontend always has data for Studios (0), 1-5 BR, and 6+ BR
+      const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6]; // Include Studios (0) and 6+ bedrooms
+      
+      // Aggregate 6+ bedrooms into a single "6+" category
+      const sixPlusData = { count: 0, totalRevenue: 0, totalOccupancy: 0 };
+      bedroomMap.forEach((data, bedrooms) => {
+        if (bedrooms >= 6) {
+          sixPlusData.count += data.count;
+          sixPlusData.totalRevenue += data.totalRevenue;
+          sixPlusData.totalOccupancy += data.totalOccupancy;
+        }
+      });
+      if (sixPlusData.count > 0) {
+        bedroomMap.set(6, sixPlusData); // Store aggregated 6+ data under key 6
+      }
+      
       const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
         const data = bedroomMap.get(bedrooms);
         if (data && data.count > 0) {
@@ -524,8 +538,8 @@ export const marketResearchSimpleRouter = router({
       const bedroomMap = new Map<number, { count: number; totalRevenue: number; totalOccupancy: number }>();
       
       uniqueComps.forEach((comp: any) => {
-        const br = comp.bedrooms || 0;
-        if (br < 1 || br > 10) return;
+        const br = comp.bedrooms ?? 0; // Use nullish coalescing to handle 0 bedrooms (Studios)
+        if (br < 0 || br > 10) return; // Allow 0 for Studios
         
         const existing = bedroomMap.get(br) || { count: 0, totalRevenue: 0, totalOccupancy: 0 };
         const occ = comp.occupancy || 0;
@@ -536,8 +550,22 @@ export const marketResearchSimpleRouter = router({
         });
       });
       
-      // Include ALL bedroom types 1-5+ for comprehensive display
-      const allBedroomTypes = [1, 2, 3, 4, 5];
+      // Include ALL bedroom types 0-6+ for comprehensive display (Studios through 6+ BR)
+      const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6];
+      
+      // Aggregate 6+ bedrooms into a single "6+" category
+      const sixPlusData = { count: 0, totalRevenue: 0, totalOccupancy: 0 };
+      bedroomMap.forEach((data, bedrooms) => {
+        if (bedrooms >= 6) {
+          sixPlusData.count += data.count;
+          sixPlusData.totalRevenue += data.totalRevenue;
+          sixPlusData.totalOccupancy += data.totalOccupancy;
+        }
+      });
+      if (sixPlusData.count > 0) {
+        bedroomMap.set(6, sixPlusData);
+      }
+      
       const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
         const data = bedroomMap.get(bedrooms);
         if (data && data.count > 0) {
@@ -686,7 +714,7 @@ export const marketResearchSimpleRouter = router({
         airbnbUrl: l.airbnb_url
       }));
       
-      // Process bedroom breakdown - ensure ALL bedroom types 1-5+ are included
+      // Process bedroom breakdown - ensure ALL bedroom types 0-6+ are included (Studios through 6+ BR)
       const bedroomMap = new Map<number, { count: number; avgRevenue: number; avgOccupancy: number }>();
       report.bedroom_performance.forEach(b => {
         bedroomMap.set(b.bedrooms, {
@@ -696,7 +724,24 @@ export const marketResearchSimpleRouter = router({
         });
       });
       
-      const allBedroomTypes = [1, 2, 3, 4, 5];
+      // Aggregate 6+ bedrooms into a single "6+" category
+      const sixPlusData = { count: 0, totalRevenue: 0, totalOccupancy: 0 };
+      bedroomMap.forEach((data, bedrooms) => {
+        if (bedrooms >= 6) {
+          sixPlusData.count += data.count;
+          sixPlusData.totalRevenue += data.avgRevenue * data.count;
+          sixPlusData.totalOccupancy += data.avgOccupancy * data.count;
+        }
+      });
+      if (sixPlusData.count > 0) {
+        bedroomMap.set(6, {
+          count: sixPlusData.count,
+          avgRevenue: Math.round(sixPlusData.totalRevenue / sixPlusData.count),
+          avgOccupancy: Math.round(sixPlusData.totalOccupancy / sixPlusData.count)
+        });
+      }
+      
+      const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6];
       const bedroomBreakdown = allBedroomTypes.map(bedrooms => {
         const data = bedroomMap.get(bedrooms);
         if (data && data.count > 0) {
