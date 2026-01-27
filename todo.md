@@ -5955,3 +5955,23 @@ All guiding questions display correctly across all three test markets:
 - [x] Add banner to homepage hero section below CTA buttons
 - [x] Link banner to https://www.trustpilot.com/review/coachinayah.com
 - [x] Verify banner displays correctly in browser
+
+
+## Privacy Policy Page (Jan 27, 2026) - COMPLETE
+
+- [x] Review Affirm compliance requirements for privacy policy
+- [x] Create Privacy Policy page with required sections:
+  - [x] Information We Collect (personal info, automatic collection)
+  - [x] How We Use Your Information
+  - [x] Information Sharing (service providers, payment processing, legal)
+  - [x] Data Security
+  - [x] Your Rights and Choices (access, correction, deletion, opt-out)
+  - [x] Cookies and Tracking
+  - [x] Third-Party Services (including Affirm financing section)
+  - [x] Contact Information (email, address)
+  - [x] Data Retention
+  - [x] Children's Privacy
+  - [x] Changes to Policy
+- [x] Add route for /privacy-policy
+- [x] Add footer link to Privacy Policy
+- [x] Verify page displays correctly

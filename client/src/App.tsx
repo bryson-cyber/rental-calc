@@ -21,6 +21,7 @@ import SavedItemsPage from "./pages/SavedItemsPage";
 import AccountPage from "./pages/AccountPage";
 import RefundPolicy from "./pages/RefundPolicy";
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function Router() {
   return (
@@ -55,6 +56,7 @@ function Router() {
       {/* Policy Pages (Affirm Compliance) */}
       <Route path={"/refund-policy"} component={RefundPolicy} />
       <Route path={"/contact"} component={Contact} />
+      <Route path={"/privacy-policy"} component={PrivacyPolicy} />
       
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />

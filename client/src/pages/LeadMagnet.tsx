@@ -4674,6 +4674,11 @@ export default function LeadMagnet() {
                     Refund Policy
                   </a>
                 </li>
+                <li>
+                  <a href="/privacy-policy" className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
