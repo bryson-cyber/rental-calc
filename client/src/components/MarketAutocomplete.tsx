@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Building2, Loader2 } from 'lucide-react';
+import { Search, MapPin, Building2, Loader2, Navigation } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+
+// Helper to detect if input is a US zip code (5 digits)
+const isZipCode = (input: string): boolean => {
+  return /^\d{5}$/.test(input.trim());
+};
 
 interface MarketResult {
   id: string;
@@ -22,12 +27,13 @@ interface MarketAutocompleteProps {
 
 export function MarketAutocomplete({ 
   onSelect, 
-  placeholder = "Search for a city or neighborhood...",
+  placeholder = "Search city, neighborhood, or zip code...",
   className 
 }: MarketAutocompleteProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<MarketResult | null>(null);
+  const [zipLookupResult, setZipLookupResult] = useState<MarketResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,11 +47,48 @@ export function MarketAutocomplete({
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Search markets using tRPC
-  const { data: results, isLoading } = trpc.marketExplorer.searchMarkets.useQuery(
+  // Check if current query is a zip code
+  const queryIsZipCode = isZipCode(debouncedQuery);
+
+  // Search markets using tRPC (for city/neighborhood search)
+  const { data: results, isLoading: isSearchLoading } = trpc.marketExplorer.searchMarkets.useQuery(
     { query: debouncedQuery, limit: 10 },
-    { enabled: debouncedQuery.length >= 2 }
+    { enabled: debouncedQuery.length >= 2 && !queryIsZipCode }
   );
+
+  // Zip code lookup using tRPC
+  const { data: zipResult, isLoading: isZipLoading } = trpc.rental.geocodeZipCode.useQuery(
+    { zipcode: debouncedQuery.trim() },
+    { enabled: queryIsZipCode }
+  );
+
+  // Process zip code result into MarketResult format
+  useEffect(() => {
+    if (zipResult?.success && (zipResult.market || zipResult.submarket)) {
+      // Prefer submarket if available, otherwise use market
+      const marketData = zipResult.submarket || zipResult.market;
+      if (marketData) {
+        const result: MarketResult = {
+          id: marketData.id,
+          name: `${zipResult.city || marketData.name}, ${zipResult.stateCode || zipResult.state || ''}`.trim(),
+          type: zipResult.submarket ? 'submarket' : 'market',
+          listingCount: marketData.listingCount,
+          state: zipResult.stateCode || zipResult.state,
+          country: 'US',
+          parentMarket: zipResult.submarket && zipResult.market ? {
+            id: zipResult.market.id,
+            name: zipResult.market.name
+          } : undefined,
+          zipcodes: [debouncedQuery.trim()]
+        };
+        setZipLookupResult(result);
+      }
+    } else {
+      setZipLookupResult(null);
+    }
+  }, [zipResult, debouncedQuery]);
+
+  const isLoading = isSearchLoading || isZipLoading;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -73,15 +116,25 @@ export function MarketAutocomplete({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
     setSelectedMarket(null);
+    setZipLookupResult(null);
     setIsOpen(true);
   };
 
   const handleClear = () => {
     setQuery('');
     setSelectedMarket(null);
+    setZipLookupResult(null);
     setIsOpen(false);
     inputRef.current?.focus();
   };
+
+  // Determine what results to show
+  const displayResults = queryIsZipCode 
+    ? (zipLookupResult ? [zipLookupResult] : [])
+    : (results || []);
+
+  const hasResults = displayResults.length > 0;
+  const showNoResults = isOpen && debouncedQuery.length >= 2 && !isLoading && !hasResults;
 
   return (
     <div className={cn("relative", className)}>
@@ -128,12 +181,22 @@ export function MarketAutocomplete({
       )}
 
       {/* Dropdown Results */}
-      {isOpen && results && results.length > 0 && (
+      {isOpen && hasResults && (
         <div 
           ref={dropdownRef}
           className="absolute z-50 w-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-80 overflow-y-auto"
         >
-          {results.map((market) => (
+          {/* Zip code result header */}
+          {queryIsZipCode && zipLookupResult && (
+            <div className="px-4 py-2 bg-teal-50 border-b border-teal-100">
+              <div className="flex items-center gap-2 text-xs text-teal-700">
+                <Navigation className="w-3 h-3" />
+                <span>Found market for zip code <strong>{debouncedQuery}</strong></span>
+              </div>
+            </div>
+          )}
+          
+          {displayResults.map((market) => (
             <button
               key={market.id}
               onClick={() => handleSelect(market)}
@@ -181,12 +244,19 @@ export function MarketAutocomplete({
       )}
 
       {/* No Results */}
-      {isOpen && debouncedQuery.length >= 2 && !isLoading && results?.length === 0 && (
+      {showNoResults && (
         <div 
           ref={dropdownRef}
           className="absolute z-50 w-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-lg p-4 text-center text-neutral-500"
         >
-          No markets found for "{debouncedQuery}"
+          {queryIsZipCode ? (
+            <div>
+              <p>No market found for zip code "{debouncedQuery}"</p>
+              <p className="text-xs mt-1">Try searching by city name instead</p>
+            </div>
+          ) : (
+            <p>No markets found for "{debouncedQuery}"</p>
+          )}
         </div>
       )}
     </div>

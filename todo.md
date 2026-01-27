@@ -5671,3 +5671,19 @@ All guiding questions display correctly across all three test markets:
 - Market Performance Grade displays with color coding
 - Share Report creates shareable links with 7-day expiration
 - Analyze button navigates to Step 3 with pre-filled property data
+
+
+## Zip Code Search Feature (Jan 27, 2026)
+- [ ] Add zip code detection to Step 2 city/neighborhood search
+- [ ] When user types a zip code, automatically find and show the corresponding market
+- [ ] Test with various zip codes (e.g., 63101 → St. Louis, 80202 → Denver)
+
+
+## Zip Code Search Feature (Jan 27, 2026) - COMPLETE
+
+- [x] Detect zip codes in Step 2 city/neighborhood search input
+- [x] Call geocodeZipCode API endpoint when zip code detected
+- [x] Display zip code lookup results in dropdown with clear indication
+- [x] Auto-populate market/submarket from zip code lookup
+- [x] Show zip codes in results section header
+- [x] Test with St. Louis zip code 63101 - SUCCESS
