@@ -6112,3 +6112,47 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 
 ### No Emojis Check
 - [x] Scan all Step 4 text for emojis and remove them (none found)
+
+
+## Step 4 Letter Grades (Jan 27, 2026) - COMPLETE
+
+- [x] Design grading system based on profit multiplier (A+ to F scale)
+- [x] Add letter grade badges (A+/A/B+/B/C+/C/D/F) to each property card
+- [x] Add grade column to comparison table
+- [x] Add grade explanation card with color-coded badges
+- [x] Test with sample properties (4662 & 4665 W Kings Ave)
+
+### Grading Scale Implemented:
+- A+: 3x+ rent (Excellent) - Green
+- A: 2.5x+ rent (Great) - Green
+- B+: 2x+ rent (Good) - Blue
+- B: 1.75x+ rent (Solid) - Blue
+- C+: 1.5x+ rent (Fair) - Yellow
+- C: 1.25x+ rent (Moderate) - Yellow
+- D: 1x+ rent (Risky) - Orange
+- F: Below 1x (Losing $) - Red
+
+
+## Step 4 Data Transparency (Jan 27, 2026) - COMPLETE
+
+- [x] Add "How We Calculate This" collapsible explainer (Powered by Airbnb & VRBO data)
+- [x] Add Airbnb and VRBO logos to methodology section
+- [x] Add grade explanation card (A+/B/C breakdown with meanings)
+- [x] Add "What's NOT Included" disclaimer (cleaning fees, supplies, utilities, platform fees)
+- [x] Test all new components in browser
+
+### How We Calculate This Content:
+- Revenue Estimates: Based on actual performance data from similar Airbnb and VRBO listings
+- Nightly Rate (ADR): Average price per night comparable properties charge
+- Booking Rate: How often similar properties are booked throughout the year
+- Profit Calculation: Monthly Revenue minus Rent = Take-Home Profit
+- "We analyze properties with similar bedrooms, bathrooms, and location"
+
+### What's NOT Included Disclaimer:
+- Cleaning fees (typically $75-150/turnover)
+- Supplies & consumables
+- Furniture & setup costs
+- Platform fees (Airbnb takes ~3%, VRBO ~5%)
+- Utilities (if not included in rent)
+- Property management (if outsourced)
+- "Actual results depend on your listing quality, pricing strategy, and guest reviews"

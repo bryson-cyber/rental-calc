@@ -70,7 +70,9 @@ import {
   BookmarkCheck,
   Heart,
   HeartOff,
-  Building
+  Building,
+  Calculator,
+  Award
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
@@ -402,6 +404,7 @@ export default function LeadMagnet() {
   const [isBulkAnalyzing, setIsBulkAnalyzing] = useState(false);
   const [bulkSortBy, setBulkSortBy] = useState<'profit' | 'revenue' | 'ratio'>('profit');
   const [bulkSortDir, setBulkSortDir] = useState<'desc' | 'asc'>('desc');
+  const [showMethodology, setShowMethodology] = useState(false);
   
   // ============================================
   // FIND YOUR MARKET STATE (formerly Explore Area)
@@ -4322,15 +4325,33 @@ export default function LeadMagnet() {
                   <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
                   
                   <div className="relative z-10">
-                    {/* Winner Badge */}
+                    {/* Winner Badge with Grade */}
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                         <Trophy className="w-8 h-8 text-yellow-300" />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-2xl md:text-3xl font-bold">Your Best Deal</h3>
                         <p className="text-emerald-100">Highest profit potential of {sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
                       </div>
+                      {/* Letter Grade Badge */}
+                      <InfoTooltip
+                        content={`Grade based on profit multiplier. A+ = 3x+ (excellent), A = 2.5x+, B+ = 2x+, B = 1.75x+, C+ = 1.5x+, C = 1.25x+, D = 1x+, F = below 1x (losing money).`}
+                        iconClassName="text-emerald-200 hover:text-white"
+                      >
+                        <div className="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+                          <span className="text-xs text-emerald-100 uppercase tracking-wide">Grade</span>
+                          <span className="text-3xl font-bold">
+                            {sortedBulkResults[0].ratio >= 3 ? 'A+' : 
+                             sortedBulkResults[0].ratio >= 2.5 ? 'A' : 
+                             sortedBulkResults[0].ratio >= 2 ? 'B+' : 
+                             sortedBulkResults[0].ratio >= 1.75 ? 'B' : 
+                             sortedBulkResults[0].ratio >= 1.5 ? 'C+' : 
+                             sortedBulkResults[0].ratio >= 1.25 ? 'C' : 
+                             sortedBulkResults[0].ratio >= 1 ? 'D' : 'F'}
+                          </span>
+                        </div>
+                      </InfoTooltip>
                     </div>
                     
                     {/* Winner Property Details */}
@@ -4436,6 +4457,86 @@ export default function LeadMagnet() {
               </div>
             )}
             
+            {/* ===== HOW WE CALCULATE THIS + GRADE GUIDE ===== */}
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              {/* How We Calculate This */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5">
+                <button 
+                  onClick={() => setShowMethodology(!showMethodology)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <img src="/images/airbnb-logo.png" alt="Airbnb" className="h-8 w-auto" />
+                      <span className="text-slate-300 text-lg">+</span>
+                      <img src="/images/vrbo-logo.png" alt="VRBO" className="h-6 w-auto" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">How We Calculate This</h4>
+                      <p className="text-sm text-slate-500">Powered by real performance data</p>
+                    </div>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showMethodology ? 'rotate-180' : ''}`} />
+                </button>
+                {showMethodology && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-3 text-sm text-slate-600">
+                    <p><strong>Revenue Estimates:</strong> Based on actual performance data from similar Airbnb and VRBO listings in your area.</p>
+                    <p><strong>Nightly Rate (ADR):</strong> The average price per night that comparable properties charge in this market.</p>
+                    <p><strong>Booking Rate:</strong> How often similar properties are booked throughout the year.</p>
+                    <p><strong>Profit Calculation:</strong> Monthly Revenue minus your Rent = Your Take-Home Profit.</p>
+                    <p className="text-slate-500 italic">We analyze properties with similar bedrooms, bathrooms, and location to give you the most accurate estimate.</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Grade Guide */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Award className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Understanding Grades</h4>
+                    <p className="text-sm text-slate-500">Based on profit multiplier</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-emerald-500 text-white font-bold flex items-center justify-center text-xs">A+</span>
+                    <span className="text-slate-600">3x+ rent (Excellent)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-emerald-400 text-white font-bold flex items-center justify-center text-xs">A</span>
+                    <span className="text-slate-600">2.5x+ rent (Great)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-blue-500 text-white font-bold flex items-center justify-center text-xs">B+</span>
+                    <span className="text-slate-600">2x+ rent (Good)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-blue-400 text-white font-bold flex items-center justify-center text-xs">B</span>
+                    <span className="text-slate-600">1.75x+ rent (Solid)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-amber-400 text-white font-bold flex items-center justify-center text-xs">C+</span>
+                    <span className="text-slate-600">1.5x+ rent (Fair)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-amber-500 text-white font-bold flex items-center justify-center text-xs">C</span>
+                    <span className="text-slate-600">1.25x+ rent (Moderate)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-orange-500 text-white font-bold flex items-center justify-center text-xs">D</span>
+                    <span className="text-slate-600">1x+ rent (Risky)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded bg-red-500 text-white font-bold flex items-center justify-center text-xs">F</span>
+                    <span className="text-slate-600">Below 1x (Losing $)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             {/* ===== QUICK COMPARISON TABLE ===== */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
               <div className="p-6 border-b border-slate-100">
@@ -4504,6 +4605,11 @@ export default function LeadMagnet() {
                           <span>Booking</span>
                         </InfoTooltip>
                       </th>
+                      <th className="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="Letter grade based on profit multiplier. A+ = 3x+ (excellent), B+ = 2x+ (good), C = 1.25x+ (moderate), F = losing money.">
+                          <span>Grade</span>
+                        </InfoTooltip>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -4568,9 +4674,29 @@ export default function LeadMagnet() {
                             <td className="py-4 px-4 text-right">
                               <span className="text-slate-600">{Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%</span>
                             </td>
+                            <td className="py-4 px-4 text-center">
+                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-sm font-bold ${
+                                result.ratio >= 3 ? 'bg-emerald-500 text-white' :
+                                result.ratio >= 2.5 ? 'bg-emerald-400 text-white' :
+                                result.ratio >= 2 ? 'bg-blue-500 text-white' :
+                                result.ratio >= 1.75 ? 'bg-blue-400 text-white' :
+                                result.ratio >= 1.5 ? 'bg-amber-400 text-white' :
+                                result.ratio >= 1.25 ? 'bg-amber-500 text-white' :
+                                result.ratio >= 1 ? 'bg-orange-500 text-white' :
+                                'bg-red-500 text-white'
+                              }`}>
+                                {result.ratio >= 3 ? 'A+' : 
+                                 result.ratio >= 2.5 ? 'A' : 
+                                 result.ratio >= 2 ? 'B+' : 
+                                 result.ratio >= 1.75 ? 'B' : 
+                                 result.ratio >= 1.5 ? 'C+' : 
+                                 result.ratio >= 1.25 ? 'C' : 
+                                 result.ratio >= 1 ? 'D' : 'F'}
+                              </span>
+                            </td>
                           </>
                         ) : (
-                          <td colSpan={4} className="py-4 px-4 text-center">
+                          <td colSpan={5} className="py-4 px-4 text-center">
                             <span className="text-red-500 text-sm flex items-center justify-center gap-1">
                               <AlertCircle className="w-4 h-4" />
                               {result.error || 'Analysis failed'}
@@ -4598,7 +4724,7 @@ export default function LeadMagnet() {
                 >
                   <div className="p-5">
                     <div className="flex flex-col lg:flex-row gap-5">
-                      {/* Left: Rank + Property Info */}
+                      {/* Left: Rank + Grade + Property Info */}
                       <div className="flex gap-4 items-start flex-1 min-w-0">
                         {/* Rank Badge */}
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${
@@ -4612,6 +4738,28 @@ export default function LeadMagnet() {
                         }`}>
                           {idx === 0 ? <Trophy className="w-5 h-5" /> : `#${idx + 1}`}
                         </div>
+                        
+                        {/* Grade Badge */}
+                        <InfoTooltip content={`Grade based on profit multiplier. A+ = 3x+ (excellent), B+ = 2x+ (good), C = 1.25x+ (moderate), F = losing money.`}>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${
+                            result.ratio >= 3 ? 'bg-emerald-500 text-white' :
+                            result.ratio >= 2.5 ? 'bg-emerald-400 text-white' :
+                            result.ratio >= 2 ? 'bg-blue-500 text-white' :
+                            result.ratio >= 1.75 ? 'bg-blue-400 text-white' :
+                            result.ratio >= 1.5 ? 'bg-amber-400 text-white' :
+                            result.ratio >= 1.25 ? 'bg-amber-500 text-white' :
+                            result.ratio >= 1 ? 'bg-orange-500 text-white' :
+                            'bg-red-500 text-white'
+                          }`}>
+                            {result.ratio >= 3 ? 'A+' : 
+                             result.ratio >= 2.5 ? 'A' : 
+                             result.ratio >= 2 ? 'B+' : 
+                             result.ratio >= 1.75 ? 'B' : 
+                             result.ratio >= 1.5 ? 'C+' : 
+                             result.ratio >= 1.25 ? 'C' : 
+                             result.ratio >= 1 ? 'D' : 'F'}
+                          </div>
+                        </InfoTooltip>
                         
                         <div className="min-w-0">
                           <h4 className="text-slate-900 font-semibold text-lg truncate">{result.address}</h4>
@@ -4717,6 +4865,47 @@ export default function LeadMagnet() {
                 </ul>
               </div>
             )}
+            
+            {/* ===== WHAT'S NOT INCLUDED DISCLAIMER ===== */}
+            <div className="mt-8 bg-amber-50 border border-amber-200 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-amber-900 mb-2">What's Not Included in These Estimates</h4>
+                  <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-amber-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Cleaning fees (typically $75-150/turnover)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Platform fees (Airbnb takes ~3%, VRBO ~5%)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Supplies & consumables</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Utilities (if not included in rent)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Furniture & setup costs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>Property management (if outsourced)</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-3 italic">
+                    Actual results depend on your listing quality, pricing strategy, and guest reviews.
+                  </p>
+                </div>
+              </div>
+            </div>
             
             {/* CTA */}
             <div className="mt-8 bg-white border border-slate-200 rounded-xl p-8">
