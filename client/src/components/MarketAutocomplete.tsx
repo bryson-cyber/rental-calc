@@ -79,7 +79,7 @@ export function MarketAutocomplete({
             id: zipResult.market.id,
             name: zipResult.market.name
           } : undefined,
-          zipcodes: [debouncedQuery.trim()]
+          zipcodes: zipResult.allZipcodes || [debouncedQuery.trim()]
         };
         setZipLookupResult(result);
       }

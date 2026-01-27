@@ -1601,7 +1601,7 @@ export default function LeadMagnet() {
                   description="See real Airbnb properties that are actually making money in your target city or neighborhood. This helps you understand what success looks like before you invest."
                   example="You've heard St. Louis has good Airbnb potential. Now you want to see actual properties making $50K+ per year so you know what to look for."
                   steps={[
-                    'Type a city or neighborhood name (e.g., "St. Louis" or "Central West End")',
+                    'Type a zip code, city, or neighborhood (e.g., "63101", "St. Louis", or "Central West End")',
                     'Select from the dropdown to see which zip codes are included',
                     'Filter by bedroom count if you have a target property type',
                     'Browse real listings sorted by annual revenue',
@@ -1641,7 +1641,7 @@ export default function LeadMagnet() {
                         sortBy: exploreSortByRef.current 
                       });
                     }}
-                    placeholder="Type a city or neighborhood (e.g., St. Louis, Central West End)..."
+                    placeholder="Type a zip code, city, or neighborhood (e.g., 63101, St. Louis)..."
                   />
                 </div>
                 

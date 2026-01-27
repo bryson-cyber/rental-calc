@@ -5687,3 +5687,10 @@ All guiding questions display correctly across all three test markets:
 - [x] Auto-populate market/submarket from zip code lookup
 - [x] Show zip codes in results section header
 - [x] Test with St. Louis zip code 63101 - SUCCESS
+
+
+## Zip Code Search UX Improvements (Jan 27, 2026)
+
+- [x] Update placeholder text to mention zip codes
+- [x] Investigate if Deer Valley, AZ has multiple zip codes (7 zip codes: 85027, 85022, 85023, 85306, 85308, 85053, 85032)
+- [x] Display all zip codes for a submarket in the results

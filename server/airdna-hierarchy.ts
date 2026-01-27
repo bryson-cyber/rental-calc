@@ -331,6 +331,7 @@ export interface ZipCodeLookupResult {
     name: string;
     listingCount: number;
   };
+  allZipcodes?: string[]; // All zip codes in this submarket/market
   error?: string;
 }
 
@@ -453,6 +454,9 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
         state = foundMarket.location?.state;
       }
       
+      // Get all zip codes for this submarket/market
+      const allZipcodes = foundSubmarket?.legacy_location?.zipcodes || foundMarket?.legacy_location?.zipcodes || [zipcode];
+      
       return {
         success: true,
         zipcode,
@@ -460,6 +464,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
         state,
         stateCode,
         coordinates,
+        allZipcodes, // All zip codes in this submarket
         market: foundMarket ? {
           id: foundMarket.id,
           name: foundMarket.name,
