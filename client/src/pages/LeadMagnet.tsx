@@ -2535,6 +2535,25 @@ export default function LeadMagnet() {
                       </div>
                     ))}
                   </div>
+                  {/* Section Verdict */}
+                  <div className="mt-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 mb-1">What This Means For You</p>
+                        <p className="text-sm text-slate-600">
+                          {scores.overall >= 70 
+                            ? `With an overall score of ${scores.overall}, this market shows strong fundamentals. ${scores.rentalDemand >= 70 ? 'Guest interest is high, meaning properties get booked consistently.' : ''} ${scores.seasonality >= 70 ? 'Income stays steady throughout the year.' : scores.seasonality < 50 ? 'Expect some seasonal ups and downs in bookings.' : ''}`
+                            : scores.overall >= 50
+                            ? `This market scores ${scores.overall}, indicating moderate opportunity. ${scores.investability >= 70 ? 'Profit margins look healthy.' : scores.investability < 50 ? 'Profit margins may be tighter than other markets.' : ''} ${scores.regulation >= 70 ? 'Local rules are favorable for short-term rentals.' : scores.regulation < 50 ? 'Check local regulations carefully before investing.' : ''}`
+                            : `This market scores ${scores.overall}, suggesting caution. ${scores.rentalDemand < 50 ? 'Guest demand is lower than average.' : ''} ${scores.seasonality < 50 ? 'Income varies significantly by season.' : ''} Consider researching nearby markets for comparison.`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
@@ -2576,6 +2595,26 @@ export default function LeadMagnet() {
                       while the median host earns {formatCurrency(percentiles.p50)}. The gap of {formatCurrency(percentiles.p90 - percentiles.p50)} 
                       shows the potential upside with better optimization.
                     </p>
+                  </div>
+                  {/* Section Verdict */}
+                  <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <DollarSign className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 mb-1">Realistic Earning Expectation</p>
+                        <p className="text-sm text-slate-600">
+                          {(() => {
+                            const monthlyMedian = Math.round(percentiles.p50 / 12);
+                            const monthlyTop = Math.round(percentiles.p90 / 12);
+                            const gap = percentiles.p90 - percentiles.p50;
+                            const gapPercent = Math.round((gap / percentiles.p50) * 100);
+                            return `Most hosts earn around ${formatCurrency(monthlyMedian)}/month (${formatCurrency(percentiles.p50)}/year). Top performers earn ${formatCurrency(monthlyTop)}/month—that's ${gapPercent}% more. The difference usually comes from better photos, pricing strategy, and guest reviews.`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -2657,6 +2696,34 @@ export default function LeadMagnet() {
                       </div>
                     </div>
                   </div>
+                  {/* Section Verdict */}
+                  <div className="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <Calendar className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 mb-1">Booking Strategy Insight</p>
+                        <p className="text-sm text-slate-600">
+                          {(() => {
+                            const isLastMinuteMarket = patterns.lastMinutePercent > 40;
+                            const isWeekendMarket = patterns.weekendPercent > 50;
+                            const avgStay = patterns.avgLengthOfStay;
+                            
+                            if (isLastMinuteMarket && isWeekendMarket) {
+                              return `This market favors last-minute weekend getaways (${Math.round(patterns.lastMinutePercent)}% book within days). Keep your calendar flexible and consider dynamic pricing that increases as dates approach.`;
+                            } else if (isLastMinuteMarket) {
+                              return `With ${Math.round(patterns.lastMinutePercent)}% last-minute bookings, guests here decide quickly. Stay responsive to inquiries and keep your listing updated for spontaneous travelers.`;
+                            } else if (avgStay > 5) {
+                              return `Guests stay an average of ${avgStay.toFixed(1)} nights—this is a longer-stay market. Consider weekly discounts and amenities like workspaces or full kitchens.`;
+                            } else {
+                              return `Most guests book ${Math.round(patterns.avgLeadTime)} days ahead for ${avgStay.toFixed(1)}-night stays. Plan your pricing calendar in advance and offer early-bird discounts to secure bookings.`;
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
@@ -2719,6 +2786,35 @@ export default function LeadMagnet() {
                         : ` This market has ${100 - comp.professionallyManagedPct}% individual hosts, suggesting opportunity for professional-level service to differentiate.`
                       }
                     </p>
+                  </div>
+                  {/* Section Verdict */}
+                  <div className="mt-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <Target className="w-4 h-4 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 mb-1">How to Stand Out Here</p>
+                        <p className="text-sm text-slate-600">
+                          {(() => {
+                            const isHighlyProfessional = comp.professionallyManagedPct > 40;
+                            const hasManySuperhost = comp.superhostPct > 30;
+                            const mostlyEntireHomes = comp.entireHomePct > 70;
+                            const manySingleHosts = comp.singleHostPct > 60;
+                            
+                            if (isHighlyProfessional && hasManySuperhost) {
+                              return `This is a mature market with ${comp.professionallyManagedPct}% professional managers and ${comp.superhostPct}% top-rated hosts. Success here requires excellent photos, fast response times, and standout amenities like hot tubs or unique decor.`;
+                            } else if (manySingleHosts) {
+                              return `With ${comp.singleHostPct}% single-property hosts, this market has room for someone who treats hosting professionally. Consistent quality, great communication, and attention to detail can help you rise above the crowd.`;
+                            } else if (mostlyEntireHomes) {
+                              return `${comp.entireHomePct}% of listings are entire homes. If you're considering a private room or shared space, you'll face less direct competition but a smaller guest pool.`;
+                            } else {
+                              return `This market has a healthy mix of host types. Focus on what makes your property unique—location, amenities, or experience—and highlight it in your listing title and photos.`;
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
