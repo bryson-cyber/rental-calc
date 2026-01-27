@@ -5975,3 +5975,112 @@ All guiding questions display correctly across all three test markets:
 - [x] Add route for /privacy-policy
 - [x] Add footer link to Privacy Policy
 - [x] Verify page displays correctly
+
+
+## Step 4 Backend Logic Investigation (Jan 27, 2026)
+
+### Issues Identified
+- [ ] Step 4 shows photos, ratings, and reviews from EXISTING Airbnb listings
+- [ ] User's use case is for POTENTIAL properties not yet on Airbnb
+- [ ] "Could not analyze" error when address has no existing Airbnb listing
+- [ ] Tool is fundamentally misaligned with rental arbitrage use case
+
+### Investigation Tasks
+- [ ] Review Step 4 backend logic in routers.ts
+- [ ] Identify what API endpoints are being called
+- [ ] Understand where photos, ratings, reviews come from
+- [ ] Document current flow vs. desired flow
+
+### Proposed Fix
+- [ ] Use market-based estimates (like Step 3) instead of existing listing data
+- [ ] Remove misleading photos/ratings/reviews for non-existing listings
+- [ ] Show estimated revenue based on property specs and market data
+- [ ] Make comparison work for ANY address, not just existing Airbnb listings
+
+
+## Step 4 Redesign (Jan 27, 2026)
+
+### Issue Investigation
+- [ ] Investigate why API fails for one address but works for adjacent address
+- [ ] Check server logs for specific error messages
+- [ ] Test both addresses directly against AirDNA API
+
+### Skill Compliance (bnb-lead-magnet-dev)
+Step 4 answers: "Which property should I choose?"
+
+Required patterns from Step 3:
+- [ ] Guiding question for each section
+- [ ] Plain English verdicts (not technical jargon)
+- [ ] Beginner-friendly terminology
+- [ ] Contextual comparisons
+- [ ] Letter grades for quick understanding
+- [ ] Confidence indicators
+- [ ] Info/hover bubbles on all metrics
+
+### Current Issues to Fix
+- [ ] Photo/rating/reviews from nearby listings are misleading
+- [ ] Need to clarify these are MARKET-BASED ESTIMATES for potential properties
+- [ ] "Could not analyze" error needs better explanation
+- [ ] Missing tooltips on comparison metrics
+
+### Redesign Tasks
+- [ ] Remove misleading photo/rating/reviews from comparable listings
+- [ ] Add "Market-Based Estimate" label to clarify data source
+- [ ] Add guiding question: "Which property should I choose?"
+- [ ] Add letter grade for each property (A/B/C based on profit potential)
+- [ ] Add confidence indicator ("Based on X similar properties in the area")
+- [ ] Add tooltips to all metrics (Profit, Revenue, Booking Rate, Profit Multiplier)
+- [ ] Add comparison summary showing winner clearly
+- [ ] Handle API errors gracefully with helpful message
+
+
+## Step 4 Redesign - Zillow Screening Tool (Jan 27, 2026)
+
+### Goal
+Make Step 4 a quick screening tool for comparing properties from Zillow to find which one has the best earning potential.
+
+### Changes to Implement
+- [ ] Remove misleading photos from comparable listings (use generic house icon)
+- [ ] Remove misleading ratings and reviews (these are from nearby listings, not the property)
+- [ ] Add "Market-Based Estimate" label to clarify these are projections
+- [ ] Add confidence indicator ("Based on X comparable properties")
+- [ ] Create cleaner side-by-side comparison table view
+- [ ] Add clear "Best Deal" winner with explanation ("Highest monthly profit")
+- [ ] Keep revenue, profit, booking rate data (these ARE valid market estimates)
+- [ ] Ensure tooltips are present on all metrics
+
+### Testing
+- [ ] Test with 2 adjacent addresses to verify both return results
+- [ ] Verify no misleading photos/ratings/reviews appear
+- [ ] Verify comparison table is clear and easy to read
+- [ ] Verify "Best Deal" badge appears on winner
+
+## Step 4 UI Redesign (Jan 27, 2026)
+
+- [ ] Redesign Step 4 results UI to be more beneficial and actionable
+- [ ] Remove hardcoded 'Based on 10 similar properties' text (bulk API doesn't return this)
+- [ ] Add clear visual hierarchy showing winner vs other properties
+- [ ] Add actionable insights (profit margin, ROI indicators)
+- [ ] Make the comparison table scannable and decision-focused
+
+
+## Step 4 UI Redesign (Jan 27, 2026) - COMPLETE
+
+### Changes Made
+- [x] Redesigned Step 4 "Find the Best Deal" results UI
+- [x] Added hero winner card with green gradient background
+- [x] Added comprehensive comparison table with sorting (Profit/Revenue/Multiplier)
+- [x] Added detailed breakdown cards for each property
+- [x] Added key metrics: Annual Profit, Profit Margin, Nightly Rate, Break-Even occupancy
+- [x] Removed misleading "Based on X similar properties" text (bulk API doesn't return this)
+- [x] Removed misleading photos from comparable listings
+- [x] Added generic house icons for properties
+- [x] Added "Ready to Take Action?" CTA section
+- [x] Tested with real addresses (4662 & 4665 W Kings Ave, Glendale, AZ)
+- [x] Verified all metrics display correctly
+
+### API Investigation
+- Confirmed using AirDNA bulk_summary endpoint for Step 4
+- Bulk endpoint returns: ADR, Revenue, Occupancy (no comps, no images)
+- Individual endpoint returns: Full details with up to 10 comps
+- Both endpoints return property-specific estimates, not generic market data

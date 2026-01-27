@@ -192,10 +192,8 @@ interface BulkPropertyResult {
   occupancy: number;
   status: 'success' | 'error';
   error?: string;
-  imageUrl?: string;
   propertyType?: string;
-  rating?: number;
-  reviews?: number;
+  comparableCount?: number; // Number of similar properties used for estimate
 }
 
 interface MarketResearchResult {
@@ -851,12 +849,10 @@ export default function LeadMagnet() {
         const monthlyRevenue = annualRevenue / 12;
         const profit = monthlyRevenue - prop.rent;
         
-        // Get image from first comparable property if available
+        // Get property type and comparable count for confidence indicator
         const firstComp = data.property.comps?.[0];
-        const imageUrl = firstComp?.image_url || undefined;
         const propertyType = firstComp?.property_type || undefined;
-        const rating = firstComp?.rating || undefined;
-        const reviews = firstComp?.reviews || undefined;
+        const comparableCount = data.property.comps?.length || 0;
         
         results.push({
           id: prop.id,
@@ -874,10 +870,8 @@ export default function LeadMagnet() {
             return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
           })(),
           status: 'success',
-          imageUrl,
           propertyType,
-          rating,
-          reviews,
+          comparableCount,
         });
       } catch (error) {
         results.push({
@@ -4310,257 +4304,350 @@ export default function LeadMagnet() {
       
       {/* Find the Best Deal Results */}
       {activeTab === 'compare' && sortedBulkResults && (
-        <section className="py-12 bg-slate-50">
-          <div className="container max-w-5xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
-                <Trophy className="w-4 h-4" />
-                <MetricLabel 
-                  label={`${sortedBulkResults.filter(r => r.status === 'success').length} Properties Compared`}
-                  tooltip="The number of properties successfully analyzed and compared. Properties are ranked by profitability to help you identify the best investment opportunity."
-                  className=""
-                />
-              </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-                Property Comparison Results
-              </h3>
-              <p className="text-slate-500">
-                Ranked by profitability to help you find the best investment opportunity
-              </p>
-            </div>
+        <section className="py-12 bg-gradient-to-b from-slate-50 to-white">
+          <div className="container max-w-6xl mx-auto">
             
-            {/* Sort Controls */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <span className="text-sm font-medium text-slate-700">Sort by:</span>
-                <div className="flex gap-2">
-                  {(['profit', 'revenue', 'ratio'] as const).map(sortType => (
-                    <button
-                      key={sortType}
-                      onClick={() => {
-                        if (bulkSortBy === sortType) {
-                          setBulkSortDir(bulkSortDir === 'desc' ? 'asc' : 'desc');
-                        } else {
-                          setBulkSortBy(sortType);
-                          setBulkSortDir('desc');
-                        }
-                      }}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                        bulkSortBy === sortType 
-                          ? 'bg-slate-900 text-white shadow-md' 
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {sortType === 'profit' ? 'Monthly Profit' : sortType === 'revenue' ? 'Revenue' : 'Profit Multiplier'}
-                      {bulkSortBy === sortType && (
-                        bulkSortDir === 'desc' ? <SortDesc className="w-4 h-4" /> : <SortAsc className="w-4 h-4" />
-                      )}
-                    </button>
-                  ))}
+            {/* ===== WINNER HERO SECTION ===== */}
+            {sortedBulkResults.length > 0 && sortedBulkResults[0].status === 'success' && (
+              <div className="mb-10">
+                <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 rounded-2xl p-8 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+                  {/* Background decoration */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  
+                  <div className="relative z-10">
+                    {/* Winner Badge */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <Trophy className="w-8 h-8 text-yellow-300" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl md:text-3xl font-bold">Your Best Deal</h3>
+                        <p className="text-emerald-100">Highest profit potential of {sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
+                      </div>
+                    </div>
+                    
+                    {/* Winner Property Details */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Left: Property Info */}
+                      <div>
+                        <h4 className="text-xl font-semibold mb-2 truncate">{sortedBulkResults[0].address}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-emerald-100 text-sm mb-4">
+                          <span className="flex items-center gap-1">
+                            <BedDouble className="w-4 h-4" />
+                            {sortedBulkResults[0].bedrooms} bed
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Bath className="w-4 h-4" />
+                            {sortedBulkResults[0].bathrooms} bath
+                          </span>
+                          <span className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full">
+                            <DollarSign className="w-4 h-4" />
+                            {formatCurrency(sortedBulkResults[0].rent)}/mo rent
+                          </span>
+                        </div>
+                        
+                        {/* Annual Summary */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                          <p className="text-emerald-100 text-sm mb-1">Annual Profit Potential</p>
+                          <p className="text-3xl font-bold">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-emerald-100">/year</span></p>
+                        </div>
+                      </div>
+                      
+                      {/* Right: Key Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Monthly Profit</p>
+                          <p className="text-2xl font-bold">{formatCurrency(sortedBulkResults[0].profit)}</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Profit Multiplier</p>
+                          <p className="text-2xl font-bold">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Monthly Revenue</p>
+                          <p className="text-2xl font-bold">{formatCurrency(sortedBulkResults[0].revenue)}</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Booking Rate</p>
+                          <p className="text-2xl font-bold">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Profit Margin Indicator */}
+                    <div className="mt-6 pt-6 border-t border-white/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-emerald-100 text-sm">Profit Margin</p>
+                          <p className="text-lg font-semibold">
+                            {Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% of revenue is profit
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-emerald-100 text-sm">Nightly Rate</p>
+                          <p className="text-lg font-semibold">${Math.round(sortedBulkResults[0].adr)}/night</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+            
+            {/* ===== QUICK COMPARISON TABLE ===== */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+              <div className="p-6 border-b border-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">All Properties Compared</h3>
+                    <p className="text-slate-500 text-sm mt-1">Ranked by {bulkSortBy === 'profit' ? 'monthly profit' : bulkSortBy === 'revenue' ? 'revenue' : 'profit multiplier'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {(['profit', 'revenue', 'ratio'] as const).map(sortType => (
+                      <button
+                        key={sortType}
+                        onClick={() => {
+                          if (bulkSortBy === sortType) {
+                            setBulkSortDir(bulkSortDir === 'desc' ? 'asc' : 'desc');
+                          } else {
+                            setBulkSortBy(sortType);
+                            setBulkSortDir('desc');
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                          bulkSortBy === sortType 
+                            ? 'bg-slate-900 text-white' 
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {sortType === 'profit' ? 'Profit' : sortType === 'revenue' ? 'Revenue' : 'Multiplier'}
+                        {bulkSortBy === sortType && (
+                          bulkSortDir === 'desc' ? <SortDesc className="w-3.5 h-3.5" /> : <SortAsc className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Rank</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Property</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Rent</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Profit</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Multiplier</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sortedBulkResults.map((result, idx) => (
+                      <tr 
+                        key={result.id} 
+                        className={`hover:bg-slate-50 transition-colors ${
+                          idx === 0 && result.status === 'success' ? 'bg-emerald-50/50' : ''
+                        }`}
+                      >
+                        <td className="py-4 px-4">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                            idx === 0 && result.status === 'success'
+                              ? 'bg-emerald-500 text-white'
+                              : idx === 1 && result.status === 'success'
+                              ? 'bg-blue-500 text-white'
+                              : idx === 2 && result.status === 'success'
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {idx === 0 && result.status === 'success' ? (
+                              <Trophy className="w-4 h-4" />
+                            ) : (
+                              idx + 1
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                              <Home className="w-5 h-5 text-slate-400" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 truncate max-w-[200px]">{result.address}</p>
+                              <p className="text-xs text-slate-500">{result.bedrooms} bed • {result.bathrooms} bath</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <span className="text-slate-600">{formatCurrency(result.rent)}</span>
+                        </td>
+                        {result.status === 'success' ? (
+                          <>
+                            <td className="py-4 px-4 text-right">
+                              <span className="font-medium text-slate-900">{formatCurrency(result.revenue)}</span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className={`font-bold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {result.profit > 0 ? '+' : ''}{formatCurrency(result.profit)}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium ${
+                                result.ratio >= 2 ? 'bg-emerald-100 text-emerald-700' :
+                                result.ratio >= 1.5 ? 'bg-blue-100 text-blue-700' :
+                                result.ratio >= 1 ? 'bg-amber-100 text-amber-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {result.ratio.toFixed(1)}x
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <span className="text-slate-600">{Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%</span>
+                            </td>
+                          </>
+                        ) : (
+                          <td colSpan={4} className="py-4 px-4 text-center">
+                            <span className="text-red-500 text-sm flex items-center justify-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {result.error || 'Analysis failed'}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
             
-            {/* Results */}
+            {/* ===== DETAILED CARDS (Expandable) ===== */}
             <div className="space-y-4">
-              {sortedBulkResults.map((result, idx) => (
+              <h4 className="text-lg font-semibold text-slate-900 mb-4">Detailed Breakdown</h4>
+              {sortedBulkResults.filter(r => r.status === 'success').slice(0, 5).map((result, idx) => (
                 <div 
                   key={result.id} 
-                  className={`bg-white border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 ${
-                    idx === 0 && result.status === 'success'
-                      ? 'border-emerald-500/50 ring-2 ring-emerald-500/20'
-                      : result.status === 'error'
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-slate-200'
+                  className={`bg-white border rounded-xl overflow-hidden transition-all duration-300 ${
+                    idx === 0
+                      ? 'border-emerald-200 shadow-md'
+                      : 'border-slate-200 hover:shadow-md'
                   }`}
                 >
                   <div className="p-5">
                     <div className="flex flex-col lg:flex-row gap-5">
-                      {/* Left: Rank + Image */}
-                      <div className="flex gap-4 items-start">
+                      {/* Left: Rank + Property Info */}
+                      <div className="flex gap-4 items-start flex-1 min-w-0">
                         {/* Rank Badge */}
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold flex-shrink-0 ${
-                          idx === 0 && result.status === 'success'
-                            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                            : idx === 1 && result.status === 'success'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                            : idx === 2 && result.status === 'success'
-                            ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-white'
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold flex-shrink-0 ${
+                          idx === 0
+                            ? 'bg-emerald-500 text-white'
+                            : idx === 1
+                            ? 'bg-blue-500 text-white'
+                            : idx === 2
+                            ? 'bg-amber-500 text-white'
                             : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {idx === 0 && result.status === 'success' ? (
-                            <Trophy className="w-6 h-6" />
-                          ) : (
-                            <span className="text-lg">#{idx + 1}</span>
-                          )}
+                          {idx === 0 ? <Trophy className="w-5 h-5" /> : `#${idx + 1}`}
                         </div>
                         
-                        {/* Property Image */}
-                        {result.imageUrl ? (
-                          <div className="w-28 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
-                            <img 
-                              src={result.imageUrl} 
-                              alt={result.address}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                target.parentElement!.classList.add('bg-gradient-to-br', 'from-slate-100', 'to-slate-200');
-                              }}
-                            />
-                            {result.propertyType && (
-                              <span className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/70 text-white text-xs rounded-full">
-                                {result.propertyType}
-                              </span>
-                            )}
+                        <div className="min-w-0">
+                          <h4 className="text-slate-900 font-semibold text-lg truncate">{result.address}</h4>
+                          <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <BedDouble className="w-4 h-4" />
+                              {result.bedrooms} bed
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Bath className="w-4 h-4" />
+                              {result.bathrooms} bath
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-4 h-4" />
+                              {formatCurrency(result.rent)}/mo
+                            </span>
                           </div>
-                        ) : (
-                          <div className="w-28 h-20 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
-                            <Home className="w-8 h-8 text-slate-400" />
-                          </div>
-                        )}
+                        </div>
                       </div>
                       
-                      {/* Middle: Property Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h4 className="text-slate-900 font-semibold text-lg truncate">{result.address}</h4>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-                              <span className="flex items-center gap-1">
-                                <BedDouble className="w-4 h-4" />
-                                {result.bedrooms} bed
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Bath className="w-4 h-4" />
-                                {result.bathrooms} bath
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="w-4 h-4" />
-                                {formatCurrency(result.rent)}/mo rent
-                              </span>
-                            </div>
-                            {result.status === 'success' && (result.rating || result.reviews) && (
-                              <div className="flex items-center gap-2 mt-2">
-                                {result.rating && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-600 text-xs font-medium rounded-full">
-                                    <Star className="w-3 h-3 fill-current" />
-                                    {result.rating.toFixed(1)}
-                                  </span>
-                                )}
-                                {result.reviews && (
-                                  <span className="text-xs text-slate-400">
-                                    {result.reviews} reviews
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                      {/* Right: Key Metrics */}
+                      <div className="grid grid-cols-4 gap-3 lg:w-auto">
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 mb-1">Profit</p>
+                          <p className={`text-lg font-bold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {formatCurrency(result.profit)}
+                          </p>
                         </div>
-                        
-                        {/* Financial Stats Grid */}
-                        {result.status === 'success' && (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                            {/* Monthly Profit */}
-                            <div className={`p-3 rounded-xl ${
-                              result.profit > 0 
-                                ? 'bg-emerald-500/10 border border-emerald-500/20' 
-                                : 'bg-red-500/10 border border-red-500/20'
-                            }`}>
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <TrendingUp className={`w-3.5 h-3.5 ${result.profit > 0 ? 'text-emerald-500' : 'text-red-500'}`} />
-                                <MetricLabel 
-                                  label="Profit" 
-                                  tooltip="Your monthly profit after paying rent. Revenue minus rent equals profit. Green means you're making money, red means you're losing money."
-                                  className="text-xs font-medium text-slate-500"
-                                />
-                              </div>
-                              <p className={`text-lg font-bold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {formatCurrency(result.profit)}
-                              </p>
-                              <p className="text-xs text-slate-400">per month</p>
-                            </div>
-                            
-                            {/* Revenue */}
-                            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <DollarSign className="w-3.5 h-3.5 text-blue-500" />
-                                <MetricLabel 
-                                  label="Revenue" 
-                                  tooltip="Estimated monthly income from bookings based on similar properties in the area. This is your gross income before subtracting rent."
-                                  className="text-xs font-medium text-slate-500"
-                                />
-                              </div>
-                              <p className="text-lg font-bold text-blue-600">
-                                {formatCurrency(result.revenue)}
-                              </p>
-                              <p className="text-xs text-slate-400">per month</p>
-                            </div>
-                            
-                            {/* Booking Rate */}
-                            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                                <MetricLabel 
-                                  label="Booking Rate" 
-                                  tooltip="Percentage of nights booked per month. Higher is better - 70%+ is considered strong performance for short-term rentals."
-                                  className="text-xs font-medium text-slate-500"
-                                />
-                              </div>
-                              <p className="text-lg font-bold text-amber-600">
-                                {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%
-                              </p>
-                              <p className="text-xs text-slate-400">booked nights</p>
-                            </div>
-                            
-                            {/* Profit Multiplier (formerly ROI Ratio) */}
-                            <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <Percent className="w-3.5 h-3.5 text-purple-500" />
-                                <MetricLabel 
-                                  label="Profit Multiplier" 
-                                  tooltip="How many times your rent you'll earn back. 2x means you earn double your rent. Higher is better - 1.5x+ is generally considered profitable."
-                                  className="text-xs font-medium text-slate-500"
-                                />
-                              </div>
-                              <p className="text-lg font-bold text-purple-600">
-                                {result.ratio.toFixed(1)}x
-                              </p>
-                              <p className="text-xs text-slate-400">${Math.round(result.adr)}/night rate</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {result.status === 'error' && (
-                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 text-sm flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4" />
-                              {result.error}
-                            </p>
-                          </div>
-                        )}
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 mb-1">Revenue</p>
+                          <p className="text-lg font-bold text-slate-900">{formatCurrency(result.revenue)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 mb-1">Multiplier</p>
+                          <p className="text-lg font-bold text-purple-600">{result.ratio.toFixed(1)}x</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-slate-500 mb-1">Booking</p>
+                          <p className="text-lg font-bold text-amber-600">{Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%</p>
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Winner Badge */}
-                    {idx === 0 && result.status === 'success' && (
-                      <div className="mt-4 pt-4 border-t border-emerald-500/20">
-                        <div className="flex items-center gap-2 text-emerald-600">
-                          <Trophy className="w-5 h-5" />
-                          <MetricLabel 
-                            label="Best Deal!" 
-                            tooltip="This property has the highest monthly profit among all properties you compared. It offers the best return on your rent investment."
-                            className="font-semibold"
-                          />
-                          <span className="text-sm text-emerald-500">Highest profitability based on your criteria</span>
-                        </div>
+                    {/* Additional Insights */}
+                    <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500">Annual Profit</p>
+                        <p className={`font-semibold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {formatCurrency(result.profit * 12)}/yr
+                        </p>
                       </div>
-                    )}
+                      <div>
+                        <p className="text-slate-500">Profit Margin</p>
+                        <p className="font-semibold text-slate-900">
+                          {Math.round((result.profit / result.revenue) * 100)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Nightly Rate</p>
+                        <p className="font-semibold text-slate-900">${Math.round(result.adr)}/night</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Break-Even</p>
+                        <p className="font-semibold text-slate-900">
+                          {Math.round((result.rent / result.revenue) * 100)}% occupancy
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
+              
+              {/* Show remaining properties if more than 5 */}
+              {sortedBulkResults.filter(r => r.status === 'success').length > 5 && (
+                <p className="text-center text-slate-500 text-sm py-4">
+                  + {sortedBulkResults.filter(r => r.status === 'success').length - 5} more properties in the table above
+                </p>
+              )}
             </div>
+            
+            {/* Error Results */}
+            {sortedBulkResults.filter(r => r.status === 'error').length > 0 && (
+              <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                <h4 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  {sortedBulkResults.filter(r => r.status === 'error').length} Properties Could Not Be Analyzed
+                </h4>
+                <ul className="space-y-1 text-sm text-red-700">
+                  {sortedBulkResults.filter(r => r.status === 'error').map(result => (
+                    <li key={result.id} className="flex items-center gap-2">
+                      <span className="truncate">{result.address}</span>
+                      <span className="text-red-500">— {result.error || 'Unknown error'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             
             {/* CTA */}
             <div className="mt-8 bg-white border border-slate-200 rounded-xl p-8">
