@@ -94,10 +94,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Rating & Superhost */}
         <div className="flex items-center gap-2">
           {superhost && (
-            <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full text-xs font-medium border border-amber-500/20">
-              <Star className="w-3 h-3 fill-amber-500" />
-              Top-Rated Host
-            </div>
+            <InfoTooltip
+              content="This host has excellent reviews, high response rates, and consistent 5-star service. Top-rated hosts often earn more because guests trust their properties."
+              side="top"
+            >
+              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full text-xs font-medium border border-amber-500/20">
+                <Star className="w-3 h-3 fill-amber-500" />
+                Top-Rated Host
+              </div>
+            </InfoTooltip>
           )}
           {rating !== null && (
             <InfoTooltip 
@@ -173,9 +178,15 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
             <p className="text-emerald-700 font-bold text-lg">{formatCurrency(annualRevenue)}</p>
             {daysAvailable !== undefined && daysAvailable > 0 && (
-              <p className="text-xs text-emerald-600/70 mt-1">
-                {daysAvailable >= 365 ? 'Full year' : `${daysAvailable} days`} of data
-              </p>
+              <InfoTooltip
+                content="Number of days this property has been tracked. More days = more accurate revenue estimate. 365 days = full year of data."
+                side="bottom"
+                iconClassName="text-emerald-500"
+              >
+                <p className="text-xs text-emerald-600/70 mt-1">
+                  {daysAvailable >= 365 ? 'Full year' : `${daysAvailable} days`} of data
+                </p>
+              </InfoTooltip>
             )}
           </div>
           

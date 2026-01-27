@@ -3568,10 +3568,15 @@ export default function LeadMagnet() {
             {/* Header with Market Info */}
             <div className="text-center mb-10">
               <div className="flex items-center justify-center gap-3 mb-4">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {marketListingsStats?.totalCount || marketListings.length} Properties Found
-                </div>
+                <InfoTooltip
+                  content="Total number of active Airbnb properties in this market that match your current filters. These are real listings you can study and learn from."
+                  side="bottom"
+                >
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {marketListingsStats?.totalCount || marketListings.length} Properties Found
+                  </div>
+                </InfoTooltip>
                 <ShareReportButton
                   reportType="market"
                   reportData={{
