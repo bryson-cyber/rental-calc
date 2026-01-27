@@ -4680,12 +4680,16 @@ superhostOnly: input.superhostOnly,
           const listings = result.listings || [];
           const revenues = listings.map(l => l.annual_revenue).filter(r => r > 0);
           const occupancies = listings.map(l => l.occupancy).filter(o => o > 0);
+          const adrs = listings.map(l => l.adr).filter(a => a > 0);
           
           const avgRevenue = revenues.length > 0 
             ? revenues.reduce((a, b) => a + b, 0) / revenues.length 
             : 0;
           const avgOccupancy = occupancies.length > 0 
             ? occupancies.reduce((a, b) => a + b, 0) / occupancies.length 
+            : 0;
+          const avgAdr = adrs.length > 0
+            ? adrs.reduce((a, b) => a + b, 0) / adrs.length
             : 0;
           const topRevenue = revenues.length > 0 ? Math.max(...revenues) : 0;
           const topOccupancy = occupancies.length > 0 ? Math.max(...occupancies) : 0;
@@ -4712,6 +4716,7 @@ superhostOnly: input.superhostOnly,
             summary: {
               avgRevenue: Math.round(avgRevenue),
               avgOccupancy: Math.round(avgOccupancy * 100) / 100,
+              avgAdr: Math.round(avgAdr),
               topRevenue: Math.round(topRevenue),
               topOccupancy: Math.round(topOccupancy * 100) / 100,
               topEarnerMultiple: avgRevenue > 0 ? Math.round((topRevenue / avgRevenue) * 10) / 10 : 0,
@@ -4725,6 +4730,7 @@ superhostOnly: input.superhostOnly,
             summary: {
               avgRevenue: 0,
               avgOccupancy: 0,
+              avgAdr: 0,
               topRevenue: 0,
               topOccupancy: 0,
               topEarnerMultiple: 0,

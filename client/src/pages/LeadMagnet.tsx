@@ -453,6 +453,11 @@ export default function LeadMagnet() {
     topRevenue: number;
     topOccupancy: number;
     totalCount: number;
+    avgAdr: number;
+    marketGrade: string;
+    marketVerdict: string;
+    gradeColor: string;
+    gradeBg: string;
   } | null>(null);
   
   // ============================================
@@ -1001,12 +1006,58 @@ export default function LeadMagnet() {
       
       if (listingsResult.listings) {
         setMarketListings(listingsResult.listings);
+        
+        // Calculate letter grade based on revenue and occupancy
+        const avgRev = listingsResult.summary.avgRevenue;
+        const avgOcc = listingsResult.summary.avgOccupancy;
+        const avgAdr = listingsResult.summary.avgAdr || (listingsResult.listings.length > 0 
+          ? listingsResult.listings.reduce((sum: number, l: any) => sum + (l.adr || 0), 0) / listingsResult.listings.length 
+          : 0);
+        
+        let marketGrade = 'C';
+        let marketVerdict = 'Average Market';
+        let gradeColor = 'text-amber-600';
+        let gradeBg = 'bg-amber-50 border-amber-200';
+        
+        // Grade based on combination of revenue and occupancy
+        if (avgOcc >= 65 && avgRev >= 60000) {
+          marketGrade = 'A';
+          marketVerdict = 'High-Performing Market';
+          gradeColor = 'text-emerald-600';
+          gradeBg = 'bg-emerald-50 border-emerald-200';
+        } else if (avgOcc >= 55 && avgRev >= 45000) {
+          marketGrade = 'B+';
+          marketVerdict = 'Strong Market';
+          gradeColor = 'text-blue-600';
+          gradeBg = 'bg-blue-50 border-blue-200';
+        } else if (avgOcc >= 50 && avgRev >= 35000) {
+          marketGrade = 'B';
+          marketVerdict = 'Good Market';
+          gradeColor = 'text-blue-500';
+          gradeBg = 'bg-blue-50 border-blue-200';
+        } else if (avgOcc >= 40 && avgRev >= 25000) {
+          marketGrade = 'C+';
+          marketVerdict = 'Moderate Market';
+          gradeColor = 'text-amber-500';
+          gradeBg = 'bg-amber-50 border-amber-200';
+        } else if (avgOcc < 35 || avgRev < 20000) {
+          marketGrade = 'C-';
+          marketVerdict = 'Challenging Market';
+          gradeColor = 'text-orange-600';
+          gradeBg = 'bg-orange-50 border-orange-200';
+        }
+        
         setMarketListingsStats({
-          avgRevenue: listingsResult.summary.avgRevenue,
-          avgOccupancy: listingsResult.summary.avgOccupancy,
+          avgRevenue: avgRev,
+          avgOccupancy: avgOcc,
           topRevenue: listingsResult.summary.topRevenue,
           topOccupancy: listingsResult.summary.topOccupancy,
           totalCount: listingsResult.totalCount,
+          avgAdr,
+          marketGrade,
+          marketVerdict,
+          gradeColor,
+          gradeBg,
         });
         toast.success(`Found ${listingsResult.totalCount} properties in ${market.name}!`);
       }
@@ -3567,6 +3618,35 @@ export default function LeadMagnet() {
               )}
             </div>
             
+            {/* Market Grade Card */}
+            {marketListingsStats && (
+              <div className={`${marketListingsStats.gradeBg} border rounded-xl p-6 mb-8`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-slate-600 font-medium mb-1">Market Performance Grade</p>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-4xl font-bold ${marketListingsStats.gradeColor}`}>
+                        {marketListingsStats.marketGrade}
+                      </span>
+                      <div>
+                        <p className={`font-semibold ${marketListingsStats.gradeColor}`}>
+                          {marketListingsStats.marketVerdict}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Based on {marketListingsStats.totalCount.toLocaleString()} active properties
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <InfoTooltip content="Market grades are based on average revenue and booking rates. A = High-performing ($60K+ avg revenue, 65%+ booking), B+ = Strong ($45K+, 55%+), B = Good ($35K+, 50%+), C+ = Moderate ($25K+, 40%+), C- = Challenging (below thresholds).">
+                    <div className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center cursor-help">
+                      <span className="text-slate-400">?</span>
+                    </div>
+                  </InfoTooltip>
+                </div>
+              </div>
+            )}
+            
             {/* Verdict Section - What This Data Shows */}
             {marketListingsStats && (
               <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-6 mb-8">
@@ -3726,8 +3806,23 @@ export default function LeadMagnet() {
                       });
                     }}
                     onAnalyze={() => {
-                      // Can't analyze without a specific address
-                      toast.info('To analyze a specific property, use Step 3 "Validate the Deal" with the exact address.');
+                      // Pre-fill Step 3 with property data and switch tabs
+                      // Cap bedrooms at 6 (max available in Step 3 select)
+                      const cappedBedrooms = Math.min(listing.bedrooms || 1, 6);
+                      const cappedBathrooms = Math.min(listing.bathrooms || 1, 6);
+                      setBedrooms(String(cappedBedrooms));
+                      setBathrooms(String(cappedBathrooms));
+                      // Set a helpful message about needing the exact address
+                      const bedroomNote = listing.bedrooms > 6 
+                        ? ` (Note: This ${listing.bedrooms}BR property exceeds our form limit, set to ${cappedBedrooms}BR)`
+                        : '';
+                      toast.info(
+                        `Property details pre-filled!${bedroomNote} Enter the exact address in Step 3 to validate.`,
+                        { duration: 5000 }
+                      );
+                      setActiveTab('validate');
+                      // Scroll to top of page
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                   />
                 ))}
@@ -3735,9 +3830,16 @@ export default function LeadMagnet() {
             </div>
             
             {/* Confidence Note */}
-            <p className="text-center text-sm text-slate-500 mb-8">
-              Based on {marketListingsStats?.totalCount || marketListings.length} active Airbnb properties in {selectedMarket.name}
-            </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-8">
+              <p className="text-center text-sm text-slate-600">
+                <span className="font-medium">Data confidence:</span> Based on{' '}
+                <span className="font-bold text-slate-900">{marketListingsStats?.totalCount.toLocaleString() || marketListings.length}</span>{' '}
+                active Airbnb properties in {selectedMarket.name}
+                {exploreBedroomFilter && (
+                  <span className="text-slate-500"> (filtered to {exploreBedroomFilter}BR only)</span>
+                )}
+              </p>
+            </div>
             
             {/* Next Step CTA */}
             <div className="text-center">

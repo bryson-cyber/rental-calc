@@ -5641,3 +5641,33 @@ All guiding questions display correctly across all three test markets:
 - [x] Browser tested Step 2 bedroom filter with St. Louis market
 - [x] Browser tested share button dialog and link creation
 - [x] Verified share link format: /report/{shareId}
+
+
+## Step 2 Quality Improvements (bnb-lead-magnet-dev benchmark) - Jan 27, 2026
+- [ ] Add tooltips to all Step 2 metrics (Revenue, Booking Rate, Nightly Rate)
+- [ ] Add guiding questions and section headers
+- [ ] Add letter grades and market verdict summary
+- [ ] Add confidence indicators ("Based on X active listings")
+- [ ] Add "Analyze This Property" button on cards → pre-fills Step 3
+- [ ] Test and verify all improvements in browser
+
+
+## Step 2 Quality Improvements (Jan 27, 2026) - COMPLETE
+
+### Per bnb-lead-magnet-dev Skill Quality Benchmark
+- [x] Add tooltips to all metrics (City, Bedrooms, Sort By, Revenue, Nightly Rate, Booking Rate, Avg Daily Earnings)
+- [x] Add guiding questions ("What does a successful Airbnb look like in my target area?")
+- [x] Add letter grades for market summary (A, B+, B, C+, C-)
+- [x] Add confidence indicators ("Based on X active properties")
+- [x] Add plain English verdicts ("High-Performing Market", "Strong Market", etc.)
+- [x] Add "Analyze This Property" button on cards → pre-fills Step 3
+- [x] Add Share Report button to results section
+- [x] Fix bedroom filter persistence after market selection
+
+### Verified Working Features
+- Bedroom filter shows "2 Bedrooms" and persists after market selection
+- Results filtered correctly (3,296 2BR properties in Denver vs 13,321 total)
+- Property cards show "2 bed" confirming filter is applied
+- Market Performance Grade displays with color coding
+- Share Report creates shareable links with 7-day expiration
+- Analyze button navigates to Step 3 with pre-filled property data
