@@ -972,8 +972,9 @@ export function HierarchicalLocationSelector({
   // Handle direct zip code search with geocoding fallback
   const geocodeZipCode = trpc.rental.geocodeZipCode.useQuery;
   
-  const handleDirectZipSearch = async () => {
-    const zip = directZipSearch.trim();
+  const handleDirectZipSearch = async (overrideZip?: string) => {
+    // Use override zip if provided (for auto-search), otherwise use state
+    const zip = (overrideZip || directZipSearch).trim();
     setDirectZipError(null); // Clear any previous error
     
     // Validation with specific error messages
@@ -1160,10 +1161,8 @@ export function HierarchicalLocationSelector({
       console.log('[HierarchicalLocationSelector] Auto-searching for zip code:', initialZipCode);
       setDirectZipSearch(initialZipCode);
       setHasAutoSearched(true);
-      // Trigger the search after a short delay to ensure state is updated
-      setTimeout(() => {
-        handleDirectZipSearch();
-      }, 100);
+      // Pass the zip directly to avoid race condition with state update
+      handleDirectZipSearch(initialZipCode);
     }
   }, [initialZipCode, autoSearch, hasAutoSearched]);
   
@@ -1316,10 +1315,8 @@ export function HierarchicalLocationSelector({
                     onClick={() => {
                       setDirectZipSearch(result.zip);
                       setShowZipResults(false);
-                      // Optionally auto-search after selection
-                      setTimeout(() => {
-                        handleDirectZipSearch();
-                      }, 100);
+                      // Pass the zip directly to avoid race condition with state update
+                      handleDirectZipSearch(result.zip);
                     }}
                   >
                     <Hash className="w-3 h-3 text-[oklch(0.50_0_0)]" />
@@ -1331,7 +1328,7 @@ export function HierarchicalLocationSelector({
             )}
           </div>
           <button
-            onClick={handleDirectZipSearch}
+            onClick={() => handleDirectZipSearch()}
             disabled={disabled || directZipSearching}
             className="px-4 py-2 bg-[oklch(0.30_0_0)] text-white rounded-lg hover:bg-[oklch(0.25_0_0)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
           >

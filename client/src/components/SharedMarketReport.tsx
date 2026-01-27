@@ -41,10 +41,20 @@ interface CompetitionData {
   avgRating?: number;
 }
 
+interface SeasonalityMonth {
+  month: string;
+  occupancy: number;
+  adr: number;
+  revenue: number;
+}
+
 interface Seasonality {
   peak_months?: string[];
   low_months?: string[];
   seasonal_variance?: number;
+  peakMonths?: string[];
+  lowMonths?: string[];
+  monthlyData?: SeasonalityMonth[];
 }
 
 interface SharedMarketReportProps {
@@ -59,7 +69,7 @@ interface SharedMarketReportProps {
     revenuePercentiles?: RevenuePercentiles;
     bookingPatterns?: BookingPatterns;
     competitionData?: CompetitionData;
-    seasonality?: Seasonality;
+    seasonality?: Seasonality | SeasonalityMonth[];
   };
   onBack: () => void;
 }
@@ -319,25 +329,101 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
         )}
 
         {/* Seasonality */}
-        {data.seasonality && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Busy vs Slow Months</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {data.seasonality.peak_months && data.seasonality.peak_months.length > 0 && (
-                <div className="bg-emerald-50 rounded-xl p-4">
-                  <p className="text-xs text-emerald-600 font-medium mb-2">Busiest Months</p>
-                  <p className="text-slate-900 font-semibold">{data.seasonality.peak_months.join(', ')}</p>
+        {data.seasonality && (() => {
+          // Handle both array format (from LeadMagnet) and object format (legacy)
+          let peakMonths: string[] = [];
+          let lowMonths: string[] = [];
+          let monthlyData: SeasonalityMonth[] = [];
+          
+          if (Array.isArray(data.seasonality)) {
+            // Array format: calculate peak/low from monthly data
+            monthlyData = data.seasonality;
+            if (monthlyData.length > 0) {
+              const sortedByRevenue = [...monthlyData].sort((a, b) => b.revenue - a.revenue);
+              peakMonths = sortedByRevenue.slice(0, 3).map(m => m.month);
+              lowMonths = sortedByRevenue.slice(-3).map(m => m.month);
+            }
+          } else {
+            // Object format: use existing properties
+            peakMonths = data.seasonality.peak_months || data.seasonality.peakMonths || [];
+            lowMonths = data.seasonality.low_months || data.seasonality.lowMonths || [];
+            monthlyData = data.seasonality.monthlyData || [];
+          }
+          
+          // Format month names for display
+          const formatMonthName = (month: string) => {
+            if (!month) return '';
+            // Handle various formats: "2024-01", "Jan", "January", etc.
+            if (month.includes('-')) {
+              const [year, monthNum] = month.split('-');
+              const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+              return date.toLocaleDateString('en-US', { month: 'short' });
+            }
+            return month.substring(0, 3);
+          };
+          
+          const formattedPeakMonths = peakMonths.map(formatMonthName).filter(Boolean);
+          const formattedLowMonths = lowMonths.map(formatMonthName).filter(Boolean);
+          
+          if (formattedPeakMonths.length === 0 && formattedLowMonths.length === 0 && monthlyData.length === 0) {
+            return null;
+          }
+          
+          return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Busy vs Slow Months</h2>
+              
+              {/* Monthly breakdown chart if we have monthly data with valid revenue */}
+              {monthlyData.length > 0 && monthlyData.some(m => m.revenue > 0 && !isNaN(m.revenue)) && (
+                <div className="mb-6">
+                  <p className="text-sm text-slate-500 mb-3">Monthly Revenue Pattern</p>
+                  <div className="space-y-2">
+                    {monthlyData.map((month, idx) => {
+                      const validRevenues = monthlyData.filter(m => m.revenue > 0 && !isNaN(m.revenue)).map(m => m.revenue);
+                      const maxRevenue = validRevenues.length > 0 ? Math.max(...validRevenues) : 1;
+                      const revenue = month.revenue > 0 && !isNaN(month.revenue) ? month.revenue : 0;
+                      const barWidth = maxRevenue > 0 ? (revenue / maxRevenue) * 100 : 0;
+                      const isPeak = peakMonths.includes(month.month);
+                      const isLow = lowMonths.includes(month.month);
+                      return (
+                        <div key={idx} className="flex items-center gap-3">
+                          <span className="text-xs text-slate-500 w-10">{formatMonthName(month.month)}</span>
+                          <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${
+                                isPeak ? 'bg-emerald-500' : isLow ? 'bg-amber-400' : 'bg-blue-400'
+                              }`}
+                              style={{ width: `${Math.max(barWidth, 5)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-slate-700 w-16 text-right">
+                            {revenue > 0 ? formatCurrency(revenue) : '-'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-              {data.seasonality.low_months && data.seasonality.low_months.length > 0 && (
-                <div className="bg-amber-50 rounded-xl p-4">
-                  <p className="text-xs text-amber-600 font-medium mb-2">Slowest Months</p>
-                  <p className="text-slate-900 font-semibold">{data.seasonality.low_months.join(', ')}</p>
-                </div>
-              )}
+              
+              {/* Peak and Low months summary */}
+              <div className="grid grid-cols-2 gap-4">
+                {formattedPeakMonths.length > 0 && (
+                  <div className="bg-emerald-50 rounded-xl p-4">
+                    <p className="text-xs text-emerald-600 font-medium mb-2">Busiest Months</p>
+                    <p className="text-slate-900 font-semibold">{formattedPeakMonths.join(', ')}</p>
+                  </div>
+                )}
+                {formattedLowMonths.length > 0 && (
+                  <div className="bg-amber-50 rounded-xl p-4">
+                    <p className="text-xs text-amber-600 font-medium mb-2">Slowest Months</p>
+                    <p className="text-slate-900 font-semibold">{formattedLowMonths.join(', ')}</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Footer */}
         <div className="text-center py-8 border-t border-slate-200 mt-8">
