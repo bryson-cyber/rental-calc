@@ -3672,17 +3672,18 @@ superhostOnly: input.superhostOnly,
           }
 
           // Transform to match frontend interface
-          const transformData = (dataPoints: any[]) => 
+          const transformData = (dataPoints: any[], multiplier: number = 1) => 
             (dataPoints || []).map((d: any) => ({
               month: d.month || d.date || '',
-              value: d.value || d.avg || 0,
+              value: (d.value || d.avg || 0) * multiplier,
             }));
 
           return {
             success: true,
             data: {
               occupancy: transformData(result.occupancy),
-              revenue: transformData(result.revenue),
+              // API returns monthly avg_revenue, multiply by 12 to get annual income
+              revenue: transformData(result.revenue, 12),
               adr: transformData(result.adr),
               listings: transformData(result.active_listings),
             },

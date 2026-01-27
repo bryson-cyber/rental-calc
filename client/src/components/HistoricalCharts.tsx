@@ -364,6 +364,79 @@ export function HistoricalCharts({
             );
           })}
         </Tabs>
+
+        {/* Market Trend Verdict */}
+        {(() => {
+          const occupancyYoY = calculateYoY(historicalData.occupancy || []);
+          const revenueYoY = calculateYoY(historicalData.revenue || []);
+          const listingsYoY = calculateYoY(historicalData.listings || []);
+          
+          // Determine market health based on trends
+          let trendStatus: 'growing' | 'stable' | 'declining' | 'unknown' = 'unknown';
+          let trendExplanation = '';
+          
+          if (occupancyYoY !== null && revenueYoY !== null) {
+            if (revenueYoY > 5 && occupancyYoY > -5) {
+              trendStatus = 'growing';
+              trendExplanation = `Revenue is up ${revenueYoY.toFixed(1)}% year-over-year${occupancyYoY > 0 ? ` and booking rates are also climbing (+${occupancyYoY.toFixed(1)}%)` : ''}.`;
+            } else if (revenueYoY < -5 && occupancyYoY < -5) {
+              trendStatus = 'declining';
+              trendExplanation = `Both revenue (${revenueYoY.toFixed(1)}%) and booking rates (${occupancyYoY.toFixed(1)}%) are trending down year-over-year.`;
+            } else {
+              trendStatus = 'stable';
+              trendExplanation = `Revenue is ${revenueYoY >= 0 ? 'up' : 'down'} ${Math.abs(revenueYoY).toFixed(1)}% and booking rates are ${occupancyYoY >= 0 ? 'up' : 'down'} ${Math.abs(occupancyYoY).toFixed(1)}% year-over-year.`;
+            }
+            
+            // Add competition context
+            if (listingsYoY !== null && listingsYoY > 10) {
+              trendExplanation += ` Competition has increased significantly (+${listingsYoY.toFixed(1)}% more listings).`;
+            } else if (listingsYoY !== null && listingsYoY < -5) {
+              trendExplanation += ` Competition has decreased (${listingsYoY.toFixed(1)}% fewer listings).`;
+            }
+          }
+          
+          if (trendStatus === 'unknown') return null;
+          
+          return (
+            <div className={`mt-6 p-4 rounded-lg border ${
+              trendStatus === 'growing' ? 'bg-green-50 border-green-200' :
+              trendStatus === 'declining' ? 'bg-red-50 border-red-200' :
+              'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-full ${
+                  trendStatus === 'growing' ? 'bg-green-100' :
+                  trendStatus === 'declining' ? 'bg-red-100' :
+                  'bg-blue-100'
+                }`}>
+                  {trendStatus === 'growing' ? (
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  ) : trendStatus === 'declining' ? (
+                    <TrendingDown className="w-5 h-5 text-red-600" />
+                  ) : (
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                  )}
+                </div>
+                <div>
+                  <h4 className={`font-semibold ${
+                    trendStatus === 'growing' ? 'text-green-800' :
+                    trendStatus === 'declining' ? 'text-red-800' :
+                    'text-blue-800'
+                  }`}>
+                    This market is {trendStatus === 'growing' ? 'Growing' : trendStatus === 'declining' ? 'Declining' : 'Stable'}
+                  </h4>
+                  <p className={`text-sm mt-1 ${
+                    trendStatus === 'growing' ? 'text-green-700' :
+                    trendStatus === 'declining' ? 'text-red-700' :
+                    'text-blue-700'
+                  }`}>
+                    {trendExplanation}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );

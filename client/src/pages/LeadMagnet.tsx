@@ -25,6 +25,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
 import { ShareReportButton } from '@/components/ShareReportButton';
+import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
 import { 
   MapPin,
@@ -2309,15 +2310,21 @@ export default function LeadMagnet() {
                       <div className="flex flex-wrap gap-3 justify-center md:justify-start text-sm">
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
                           <span className="font-medium">{researchResult.totalListings.toLocaleString()}</span>
-                          <span className="text-slate-500">active listings</span>
+                          <InfoTooltip content="Total number of Airbnb properties currently competing in this market">
+                            <span className="text-slate-500">active listings</span>
+                          </InfoTooltip>
                         </span>
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
                           <span className="font-medium">{researchResult.avgOccupancy}%</span>
-                          <span className="text-slate-500">avg occupancy</span>
+                          <InfoTooltip content={`How often properties are booked. ${researchResult.avgOccupancy}% means booked about ${Math.round(researchResult.avgOccupancy * 3.65)} nights per year`}>
+                            <span className="text-slate-500">avg booking rate</span>
+                          </InfoTooltip>
                         </span>
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
                           <span className="font-medium">{formatCurrency(researchResult.avgRevenue)}</span>
-                          <span className="text-slate-500">avg revenue</span>
+                          <InfoTooltip content="Average yearly earnings before expenses for properties in this market">
+                            <span className="text-slate-500">avg revenue</span>
+                          </InfoTooltip>
                         </span>
                       </div>
                     </div>
@@ -2375,32 +2382,40 @@ export default function LeadMagnet() {
                     <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-sm">
                       <div className="flex items-center gap-2 mb-2">
                         <Trophy className="w-4 h-4 text-amber-600" />
-                        <span className="text-sm text-slate-500" title="The bedroom type that generates the highest average annual revenue in this market">Top Earner</span>
+                        <InfoTooltip content="The bedroom type that earns the most money on average in this market">
+                          <span className="text-sm text-slate-500">Top Earner</span>
+                        </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-emerald-600">{bestPerformer?.type || 'N/A'}</p>
                       <p className="text-sm text-slate-500">{formatCurrency(bestPerformer?.avgRevenue || 0)}/year avg</p>
                     </div>
                     
-                    {/* Highest Occupancy */}
+                    {/* Highest Booking Rate */}
                     <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-sm">
                       <div className="flex items-center gap-2 mb-2">
                         <TrendingUp className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-slate-500" title="The bedroom type with the highest booking rate - how often the property is rented out">Most Booked</span>
+                        <InfoTooltip content="The bedroom type with the highest booking rate - how often the property is rented out (most nights booked per year)">
+                          <span className="text-sm text-slate-500">Most Booked</span>
+                        </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-blue-600">{highestOccupancy?.type || 'N/A'}</p>
-                      <p className="text-sm text-slate-500">{highestOccupancy?.occupancy || 0}% occupancy</p>
+                      <p className="text-sm text-slate-500">{highestOccupancy?.occupancy || 0}% booking rate</p>
                     </div>
                     
                     {/* Market Size */}
                     <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-sm">
                       <div className="flex items-center gap-2 mb-2">
                         <Home className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm text-slate-500" title="Total number of active short-term rental listings currently operating in this market">Market Size</span>
+                        <InfoTooltip content="Total number of active short-term rentals competing in this area">
+                          <span className="text-sm text-slate-500">Market Size</span>
+                        </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-purple-600">{researchResult.totalListings.toLocaleString()}</p>
                       <p className="text-sm text-slate-500">active listings</p>
                     </div>
                   </div>
+                  {/* Confidence Note */}
+                  <p className="text-xs text-slate-400 mt-4 text-center">Based on {researchResult.totalListings.toLocaleString()} active properties in this market</p>
                 </div>
               );
             })()}
@@ -2454,7 +2469,7 @@ export default function LeadMagnet() {
                           <th className="text-left py-2 px-3 font-medium text-slate-600">Neighborhood</th>
                           <th className="text-right py-2 px-3 font-medium text-slate-600">Listings</th>
                           <th className="text-right py-2 px-3 font-medium text-slate-600">Avg Revenue</th>
-                          <th className="text-right py-2 px-3 font-medium text-slate-600">Occupancy</th>
+                          <th className="text-right py-2 px-3 font-medium text-slate-600">Booking Rate</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2477,7 +2492,7 @@ export default function LeadMagnet() {
                   
                   <div className="mt-4 pt-4 border-t border-slate-200">
                     <p className="text-sm text-slate-500">
-                      <span className="font-medium">Pro tip:</span> Higher occupancy areas are often better for beginners - consistent bookings mean more predictable income.
+                      <span className="font-medium">Pro tip:</span> Higher booking rate areas are often better for beginners - consistent bookings mean more predictable income.
                     </p>
                   </div>
                 </div>
@@ -2867,12 +2882,12 @@ export default function LeadMagnet() {
                 <div className="inline-flex p-2 rounded-lg mb-2 bg-purple-500/10 text-purple-500 border border-purple-500/20">
                   <Percent className="w-5 h-5" />
                 </div>
-                <p className="text-slate-500 text-xs font-medium cursor-help border-b border-dotted border-slate-400 inline-block">Avg Occupancy</p>
+                <p className="text-slate-500 text-xs font-medium cursor-help border-b border-dotted border-slate-400 inline-block">Avg Booking Rate</p>
                 <p className="text-xl font-bold text-slate-900">{Math.round(displayOccupancy)}%</p>
                 <p className="text-slate-400 text-xs">{isFiltered ? `${bedroomFilter}BR avg` : 'Market average'}</p>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-56 pointer-events-none">
                   <div className="bg-slate-900 text-white text-xs p-3 rounded-lg shadow-lg">
-                    How often properties are booked. 60%+ is healthy, 70%+ is excellent. Low occupancy may indicate oversupply or seasonal market.
+                    How often properties are booked. 60%+ is healthy, 70%+ is excellent. Low booking rate may indicate oversupply or seasonal market.
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                   </div>
                 </div>
@@ -2886,7 +2901,7 @@ export default function LeadMagnet() {
                 <p className="text-slate-400 text-xs">{isFiltered ? `${bedroomFilter}BR in market` : 'All types in market'}</p>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-56 pointer-events-none">
                   <div className="bg-slate-900 text-white text-xs p-3 rounded-lg shadow-lg">
-                    Total number of active short-term rentals. More listings = more competition. Compare with occupancy to gauge market saturation.
+                    Total number of active short-term rentals. More listings = more competition. Compare with booking rate to gauge market saturation.
                     <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
                   </div>
                 </div>
@@ -2936,7 +2951,7 @@ export default function LeadMagnet() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h4 className="text-lg font-semibold text-slate-900">Which property types earn the most?</h4>
-                      <p className="text-slate-500 text-sm">Compare revenue and occupancy by bedroom count</p>
+                      <p className="text-slate-500 text-sm">Compare revenue and booking rate by bedroom count</p>
                     </div>
                     <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-medium">By Bedroom</span>
                   </div>
@@ -2975,7 +2990,7 @@ export default function LeadMagnet() {
                               </div>
                             </div>
                             <div className="flex items-center justify-between group relative">
-                              <p className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-400">Occupancy</p>
+                              <p className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-400">Booking Rate</p>
                               <p className="text-slate-900 font-semibold text-sm">{type.occupancy}%</p>
                               <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48">
                                 <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
@@ -3043,7 +3058,7 @@ export default function LeadMagnet() {
                                 <span className="font-medium text-emerald-700">Highest Revenue:</span> {highestRevenue.type} properties average <span className="font-bold text-emerald-600">{formatCurrency(highestRevenue.avgRevenue)}/year</span>
                               </p>
                               <p>
-                                <span className="font-medium text-blue-700">Highest Demand:</span> {highestOccupancy.type} properties have <span className="font-bold text-blue-600">{highestOccupancy.occupancy}% occupancy</span>
+                                <span className="font-medium text-blue-700">Highest Demand:</span> {highestOccupancy.type} properties have <span className="font-bold text-blue-600">{highestOccupancy.occupancy}% booking rate</span>
                               </p>
                               <p>
                                 <span className="font-medium text-purple-700">Most Common:</span> {mostCommon.type} has <span className="font-bold text-purple-600">{mostCommon.count} active listings</span> ({Math.round(mostCommon.count / totalListingsFromBreakdown * 100)}% of market)
@@ -3111,7 +3126,7 @@ export default function LeadMagnet() {
                     <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">12-month avg</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Occupancy Chart */}
+                    {/* Booking Rate Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-sm text-slate-500">How Often It's Booked Each Month</p>
@@ -3211,6 +3226,42 @@ export default function LeadMagnet() {
                       <p className="text-xs text-slate-400 mt-3">Blue = above average, Gray = below average</p>
                     </div>
                   </div>
+                  
+                  {/* Monthly Pattern Verdict */}
+                  {(() => {
+                    // Find best and worst months
+                    const sortedByOccupancy = [...researchResult.seasonality].sort((a, b) => b.occupancy - a.occupancy);
+                    const bestMonths = sortedByOccupancy.slice(0, 3).map(m => formatMonth(m.month));
+                    const slowestMonths = sortedByOccupancy.slice(-3).reverse().map(m => formatMonth(m.month));
+                    const seasonalVariation = Math.round(sortedByOccupancy[0].occupancy - sortedByOccupancy[sortedByOccupancy.length - 1].occupancy);
+                    const isHighlySeasonalMarket = seasonalVariation > 25;
+                    
+                    return (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h5 className="font-semibold text-slate-900 mb-2">When to Expect the Most Bookings</h5>
+                            <div className="space-y-2 text-sm text-slate-700">
+                              <p>
+                                <span className="font-medium text-emerald-700">Best Months:</span> <span className="font-bold text-emerald-600">{bestMonths.join(', ')}</span> - highest booking rates
+                              </p>
+                              <p>
+                                <span className="font-medium text-amber-700">Slowest Months:</span> <span className="font-bold text-amber-600">{slowestMonths.join(', ')}</span> - lower demand
+                              </p>
+                              {isHighlySeasonalMarket && (
+                                <p className="text-slate-600 mt-2 pt-2 border-t border-blue-200">
+                                  <span className="font-medium">Note:</span> This market has {seasonalVariation}% seasonal variation. Plan for slower months by building cash reserves during peak season.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -3223,7 +3274,7 @@ export default function LeadMagnet() {
               <div className="mt-8">
                 <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                   <p className="text-slate-600 text-sm">
-                    <span className="font-medium">Is this market growing or shrinking?</span> See how booking rates, income, and competition have changed over time. Look for upward trends in revenue and stable or growing occupancy.
+                    <span className="font-medium">Is this market growing or shrinking?</span> See how booking rates, income, and competition have changed over time. Look for upward trends in revenue and stable or growing booking rates.
                   </p>
                 </div>
                 {/* For submarkets with parent market info, show the charts with parent market data */}
@@ -3784,11 +3835,11 @@ export default function LeadMagnet() {
                               <p className="text-xs text-slate-400">per month</p>
                             </div>
                             
-                            {/* Occupancy */}
+                            {/* Booking Rate */}
                             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="text-xs font-medium text-slate-500">Occupancy</span>
+                                <span className="text-xs font-medium text-slate-500">Booking Rate</span>
                               </div>
                               <p className="text-lg font-bold text-amber-600">
                                 {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%

@@ -5385,3 +5385,45 @@ All guiding questions display correctly across all three test markets:
 - [x] Add Studio (0 bedrooms) option to bedroom filter dropdown
 - [x] Update MapFirstLayout.tsx
 - [x] Update MapViewContent.tsx
+
+
+## Step 1 Skill Compliance Fixes (Jan 27, 2026)
+
+### Task 1: Add Tooltips to All Metrics
+- [ ] active listings tooltip
+- [ ] avg occupancy tooltip
+- [ ] avg revenue tooltip
+- [ ] Top Earner tooltip
+- [ ] Most Booked tooltip
+- [ ] Market Size tooltip
+- [ ] Avg Nightly Rate tooltip
+- [ ] Revenue/yr tooltip
+- [ ] Occupancy tooltip
+- [ ] X listings tooltip
+- [ ] Booking Rate tooltip
+- [ ] Annual Income tooltip
+- [ ] Competition tooltip
+- [ ] Top Host badge tooltip
+- [ ] Rating (X) tooltip
+
+### Task 2: Fix Annual Income Bug
+- [ ] Fix "Annual Income $2,293" in Market Trends section
+
+### Task 3: Add Monthly Pattern Verdict
+- [ ] Add "Best months: [X], Slowest: [Y]" verdict
+
+### Task 4: Add Market Trends Verdict
+- [ ] Add "This market is [growing/stable/declining]" verdict
+
+### Task 5: Standardize Terminology
+- [ ] Replace all "Occupancy" with "Booking Rate" consistently
+
+### Task 6: Add Confidence Note
+- [ ] Add "Based on X properties" to Key Takeaways section
+
+### Task 7: Browser Test
+- [ ] Test with zip code 63104
+- [ ] Verify all tooltips appear on hover
+
+### Task 8: Save Checkpoint
+- [ ] Save checkpoint when all tasks complete
