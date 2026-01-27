@@ -5946,3 +5946,12 @@ All guiding questions display correctly across all three test markets:
 - [x] Change zip code from 63104 to 89134 (Las Vegas, NV) across all pages
 - [x] Update refund policy: 30 days for Affirm-financed purchases
 - [x] Update refund policy: 3 calendar days for all other purchases
+
+
+## Trustpilot Banner (Jan 27, 2026) - COMPLETE
+
+- [x] Check Trustpilot page for current rating and review count (4.5 stars, 57 reviews)
+- [x] Design Trustpilot banner with star rating and review count
+- [x] Add banner to homepage hero section below CTA buttons
+- [x] Link banner to https://www.trustpilot.com/review/coachinayah.com
+- [x] Verify banner displays correctly in browser

@@ -1361,6 +1361,34 @@ export default function LeadMagnet() {
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
+          
+          {/* Trustpilot Social Proof Banner */}
+          <a 
+            href="https://www.trustpilot.com/review/coachinayah.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 mt-8 px-5 py-3 bg-white border border-[oklch(0.9_0_0)] rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-1">
+              {/* Trustpilot Stars - 4.5 rating */}
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-5 h-5 bg-[#00b67a] flex items-center justify-center">
+                    <Star className="w-3.5 h-3.5 text-white fill-white" />
+                  </div>
+                ))}
+                {/* Half star for 4.5 */}
+                <div className="w-5 h-5 bg-gradient-to-r from-[#00b67a] from-50% to-[#dcdce6] to-50% flex items-center justify-center">
+                  <Star className="w-3.5 h-3.5 text-white fill-white" />
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-semibold text-[oklch(0.25_0_0)]">Excellent</span>
+              <span className="text-xs text-[oklch(0.5_0_0)]">57 reviews on <span className="font-medium">Trustpilot</span></span>
+            </div>
+            <ExternalLink className="w-4 h-4 text-[oklch(0.6_0_0)] group-hover:text-[oklch(0.4_0_0)] transition-colors" />
+          </a>
         </div>
       </section>
       
