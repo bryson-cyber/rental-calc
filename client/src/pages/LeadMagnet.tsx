@@ -86,6 +86,7 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
 import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
 import { NotificationBell } from '@/components/NotificationBell';
+import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -250,6 +251,11 @@ interface MarketResearchResult {
     singleHostPct: number;
     multiHostPct: number;
   };
+  // Data scope tracking
+  searchLevel?: 'zip' | 'submarket' | 'city' | 'metro';
+  searchedLocation?: string;
+  dataLevel?: 'zip' | 'submarket' | 'city' | 'metro';
+  dataLocationName?: string;
 }
 
 interface AreaListing {
@@ -971,6 +977,30 @@ export default function LeadMagnet() {
       console.log('[handleResearch] report.overview.avgAdr:', report.overview.avgAdr);
       console.log('[handleResearch] report.overview.totalListings:', report.overview.totalListings);
       
+      // Determine search level and data level
+      let searchLevel: 'zip' | 'submarket' | 'city' | 'metro' = 'metro';
+      let searchedLocation = researchMarket;
+      let dataLevel: 'zip' | 'submarket' | 'city' | 'metro' = 'metro';
+      let dataLocationName = report.market.name;
+      
+      if (selection?.zipcode) {
+        searchLevel = 'zip';
+        searchedLocation = selection.zipcode;
+        // Data comes from submarket level when searching by zip
+        dataLevel = 'submarket';
+        dataLocationName = selection.submarket?.name || report.market.name;
+      } else if (selection?.submarket?.id) {
+        searchLevel = 'submarket';
+        searchedLocation = selection.submarket.name;
+        dataLevel = 'submarket';
+        dataLocationName = selection.submarket.name;
+      } else if (selection?.market?.id) {
+        searchLevel = selection.market.isSubmarketAsMarket ? 'submarket' : 'city';
+        searchedLocation = selection.market.name;
+        dataLevel = selection.market.isSubmarketAsMarket ? 'submarket' : 'city';
+        dataLocationName = selection.market.name;
+      }
+      
       setResearchResult({
         marketName: displayMarketName,
         avgRevenue: report.overview.avgRevenue,
@@ -995,6 +1025,11 @@ export default function LeadMagnet() {
         competitionData: (report as any).competitionData,
         // Submarkets for large cities
         submarkets: (report as any).submarkets,
+        // Data scope tracking
+        searchLevel,
+        searchedLocation,
+        dataLevel,
+        dataLocationName,
       });
       
       toast.success('Market proven! See the real revenue data below.');
@@ -2285,6 +2320,18 @@ export default function LeadMagnet() {
                         <span className="font-semibold">💡 Pro Tip:</span> {encouragement}
                       </p>
                     )}
+                    
+                    {/* Data Scope Indicator */}
+                    {researchResult.searchLevel && researchResult.searchLevel !== researchResult.dataLevel && (
+                      <div className="mt-4">
+                        <DataScopeIndicator
+                          level={researchResult.dataLevel || 'metro'}
+                          locationName={researchResult.dataLocationName || researchResult.marketName}
+                          parentName={researchResult.dataLocationName}
+                          isFallback={researchResult.searchLevel === 'zip' && researchResult.dataLevel !== 'zip'}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -2448,7 +2495,12 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Is this market healthy for investors?</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-lg font-semibold text-slate-900">Is this market healthy for investors?</h4>
+                        {researchResult.searchLevel === 'zip' && researchResult.dataLevel !== 'zip' && (
+                          <DataScopeBadge level={researchResult.dataLevel || 'metro'} isFallback={true} />
+                        )}
+                      </div>
                       <p className="text-slate-500 text-sm">Overall investment potential across 5 key factors</p>
                     </div>
                     <div className="text-right">
@@ -2494,7 +2546,12 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">How much can I realistically expect to earn?</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-lg font-semibold text-slate-900">How much can I realistically expect to earn?</h4>
+                        {researchResult.searchLevel === 'zip' && researchResult.dataLevel !== 'zip' && (
+                          <DataScopeBadge level={researchResult.dataLevel || 'metro'} isFallback={true} />
+                        )}
+                      </div>
                       <p className="text-slate-500 text-sm">See the full range of what hosts actually earn here</p>
                     </div>
                     <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">Annual revenue</span>
@@ -2531,7 +2588,12 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">How do guests typically book here?</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-lg font-semibold text-slate-900">How do guests typically book here?</h4>
+                        {researchResult.searchLevel === 'zip' && researchResult.dataLevel !== 'zip' && (
+                          <DataScopeBadge level={researchResult.dataLevel || 'metro'} isFallback={true} />
+                        )}
+                      </div>
                       <p className="text-slate-500 text-sm">Understanding booking patterns helps you plan pricing and availability</p>
                     </div>
                   </div>
@@ -2606,7 +2668,12 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">How competitive is this market?</h4>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-lg font-semibold text-slate-900">How competitive is this market?</h4>
+                        {researchResult.searchLevel === 'zip' && researchResult.dataLevel !== 'zip' && (
+                          <DataScopeBadge level={researchResult.dataLevel || 'metro'} isFallback={true} />
+                        )}
+                      </div>
                       <p className="text-slate-500 text-sm">Know your competition before you enter</p>
                     </div>
                   </div>

@@ -5148,3 +5148,12 @@ All guiding questions display correctly across all three test markets:
 - [x] Card: "ADR" → "Nightly Rate"
 - [x] Card: "Occupancy" → "Booking Rate"
 - [x] Badge: "Superhost" → "Top Host"
+
+
+## City-Level Data Fallback Indicators (Jan 26, 2026)
+- [x] Create DataScopeIndicator component for showing data source (zip vs city level)
+- [x] Add fallback indicator to Market Health Score section
+- [x] Add fallback indicator to Revenue Distribution section
+- [x] Add fallback indicator to Guest Behavior section
+- [x] Add fallback indicator to Competition Landscape section
+- [x] Test with zip code searches to verify indicators appear correctly
