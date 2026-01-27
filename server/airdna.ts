@@ -550,16 +550,32 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
     console.log(`[searchMarketsAPI] Found ${results.length} results for "${searchTerm}"`);
     
     // STRICT USA-ONLY FILTER: AirDNA data only works reliably for US markets
+    // Also filter for relevance - result name must contain search term words
+    const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+    
     const processedResults = results
       .filter(r => {
+        // First check USA-only
         const country = r.location?.country?.toLowerCase();
-        // Only allow US results - no exceptions
+        let isUSA = false;
         if (!country) {
           // If no country specified, check if location_name contains US state abbreviations
           const usStatePattern = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/i;
-          return usStatePattern.test(r.location_name || r.name);
+          isUSA = usStatePattern.test(r.location_name || r.name);
+        } else {
+          isUSA = country === 'us' || country === 'united states' || country === 'usa';
         }
-        return country === 'us' || country === 'united states' || country === 'usa';
+        if (!isUSA) return false;
+        
+        // Then check relevance - at least one search word must be in the result name
+        const resultName = (r.name || '').toLowerCase();
+        const locationName = (r.location_name || '').toLowerCase();
+        const parentName = (r.parent_market?.name || '').toLowerCase();
+        const combinedText = `${resultName} ${locationName} ${parentName}`;
+        
+        // Check if ALL search words appear in the result (more strict matching)
+        // This prevents "St. Louis" from matching "Louisiana" (which only contains "louis")
+        return searchWords.every(word => combinedText.includes(word));
       })
       .sort((a, b) => {
         // Prioritize exact name matches

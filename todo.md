@@ -5496,3 +5496,108 @@ All guiding questions display correctly across all three test markets:
 - [x] Contextual comparisons with real numbers (2.5x the average, ~324 nights/year, $6,458/month)
 - [x] Color-coded metrics (emerald for revenue, amber for bookings, blue for averages, purple for rates)
 - [x] Clear visual hierarchy with icons and badges
+
+
+## Step 2 "See What's Working" - Complete Rebuild (Jan 26, 2026)
+
+### Backend Changes
+- [ ] Add `/market/search` endpoint for city/neighborhood autocomplete
+- [ ] Add `/market/{id}/listings` endpoint for real property listings with images
+- [ ] Add `/submarket/{id}/listings` endpoint for neighborhood-level listings
+- [ ] Add `/market/{id}` endpoint for market overview stats
+- [ ] Add `/market/{id}/submarkets` endpoint for neighborhood comparison
+
+### Frontend Changes - Input
+- [ ] Replace Google Places autocomplete with AirDNA market search
+- [ ] Add bedrooms filter to main search form (not hidden in filters)
+- [ ] Remove radius selector (markets have defined boundaries)
+- [ ] Remove map view (redundant with Step 5)
+- [ ] Remove "Analyze" button (that's Step 3's job)
+
+### Frontend Changes - Results UI
+- [ ] Add guiding question: "What properties are succeeding in [City]?"
+- [ ] Show property cards with IMAGES (critical - currently missing)
+- [ ] Add verdict section with letter grade for market quality
+- [ ] Add "What Success Looks Like" summary (top earner, typical earner, patterns)
+- [ ] Add neighborhood breakdown showing best submarkets
+- [ ] Add confidence note: "Based on X active properties in [City]"
+
+### Tooltip Audit (per skill guidelines)
+- [ ] Add tooltip to every metric on property cards
+- [ ] Add tooltip to market overview stats
+- [ ] Add tooltip to neighborhood comparison metrics
+- [ ] Add tooltip to verdict/letter grade
+- [ ] Verify no emojis anywhere in Step 2
+
+### Quality Checklist (per skill guidelines)
+- [ ] Each section has a guiding question
+- [ ] Technical jargon translated to plain English
+- [ ] Contextual comparisons (not just raw numbers)
+- [ ] Clear verdict/recommendation
+- [ ] Confidence indicators shown
+- [ ] Visual hierarchy clear (big numbers, grades, colors)
+- [ ] Beginner would understand what to do with this info
+
+
+## Step 2 "See What's Working" - Full Rebuild (Jan 26, 2026)
+
+### Backend
+- [ ] Create marketExplorer router with searchMarkets, getListings, getNeighborhoods endpoints
+- [ ] Include zip codes in market search response
+- [ ] Return property images from getMarketListings/getSubmarketListings
+
+### Frontend - Search
+- [ ] Replace AddressAutocomplete with MarketAutocomplete (city/neighborhood search)
+- [ ] Remove radius selector (markets have defined boundaries)
+- [ ] Show selected market with zip codes ("St. Louis, MO - Zip codes: 63101, 63102...")
+
+### Frontend - Results
+- [ ] Property cards with images (debug why images not showing)
+- [ ] Neighborhood comparison section ("Best Neighborhoods in St. Louis")
+- [ ] Remove map view (redundant with Step 5)
+- [ ] Remove "Analyze" button (that's Step 3's job)
+
+### Skill Compliance
+- [ ] Guiding question: "What does success look like in [City]?"
+- [ ] Verdict section with letter grade
+- [ ] Tooltips on all metrics (Annual Revenue, Booking Rate, Rating, etc.)
+- [ ] No emojis anywhere
+- [ ] Confidence note: "Based on X active properties in [Market]"
+- [ ] Contextual comparisons ("Top earner makes 2.5x the average")
+
+### Testing
+- [ ] Browser test on dev server
+- [ ] Tooltip audit - every metric has explanation
+- [ ] Verify property images load
+- [ ] Verify zip codes display
+- [ ] Deploy and test on live site
+
+
+## Step 2 Bedroom Filter Bug Fix (Jan 27, 2026) - COMPLETE
+
+### Bug Report:
+- User requested ability to filter by property size for apples-to-apples comparison
+- When selecting a bedroom filter (e.g., 2 Bedrooms), then selecting a market, the filter would reset to "Any"
+- This prevented users from seeing only 2BR properties when targeting 2BR investments
+
+### Root Cause:
+- The bedroom filter state was being reset during the market search flow
+- The ref value was being updated correctly, but the state was not persisting
+
+### Solution:
+- Updated the onChange handler to immediately update the ref value
+- Ensured the MarketAutocomplete's onSelect callback uses the ref value (exploreBedroomFilterRef.current)
+- The filter now persists correctly when selecting a market
+
+### Verification:
+- [x] Set bedroom filter to "2 Bedrooms"
+- [x] Search for "St. Louis" and select "St. Louis, Missouri"
+- [x] Bedroom filter remains at "2 Bedrooms" (not reset to "Any")
+- [x] Results show 1630 properties (filtered to 2BR only, not 5543 total)
+- [x] Average revenue shows $55,377 (specific to 2BR properties)
+
+### Additional Features Verified:
+- [x] Sort By filter works correctly (Highest Revenue, Highest Booking Rate, Best Rated)
+- [x] Zip codes display in dropdown for neighborhoods
+- [x] Zip codes display in selected market info box
+- [x] Zip codes display in results section header ("Includes zip codes: ...")

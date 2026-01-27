@@ -110,6 +110,22 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
       
+      {/* Property Image */}
+      {imageUrl && (
+        <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+          <img
+            src={imageUrl}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              // Hide broken images
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      
       {/* Card Body */}
       <div className="p-4">
         {/* Title */}

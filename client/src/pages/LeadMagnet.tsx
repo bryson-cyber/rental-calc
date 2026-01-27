@@ -78,6 +78,7 @@ import MapFirstLayout from '@/components/MapFirstLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { MarketAutocomplete } from '@/components/MarketAutocomplete';
 import { HierarchicalLocationSelector, type LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { toast } from 'sonner';
 import { useSavedItems } from '@/hooks/useSavedItems';
@@ -410,6 +411,19 @@ export default function LeadMagnet() {
   const [exploreBedroomFilter, setExploreBedroomFilter] = useState<number | null>(null);
   const [exploreMinRating, setExploreMinRating] = useState<number | null>(null);
   const [exploreSortBy, setExploreSortBy] = useState<'proximity' | 'revenue' | 'rating' | 'occupancy' | 'revpar'>('revenue');
+  
+  // Refs to track current filter values for callbacks (avoids stale closure issues)
+  const exploreBedroomFilterRef = useRef<number | null>(null);
+  const exploreSortByRef = useRef<'proximity' | 'revenue' | 'rating' | 'occupancy' | 'revpar'>('revenue');
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    exploreBedroomFilterRef.current = exploreBedroomFilter;
+  }, [exploreBedroomFilter]);
+  
+  useEffect(() => {
+    exploreSortByRef.current = exploreSortBy;
+  }, [exploreSortBy]);
   const [explorePropertyType, setExplorePropertyType] = useState<string | null>(null);
   const [exploreMinOccupancy, setExploreMinOccupancy] = useState<number | null>(null);
   const [exploreMinRevenue, setExploreMinRevenue] = useState<number | null>(null);
@@ -420,6 +434,26 @@ export default function LeadMagnet() {
   const [showMapView, setShowMapView] = useState(false);
   const [exploreCenter, setExploreCenter] = useState<{lat: number; lng: number} | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  
+  // NEW: Market-based Step 2 state
+  const [selectedMarket, setSelectedMarket] = useState<{
+    id: string;
+    name: string;
+    type: 'market' | 'submarket';
+    listingCount: number;
+    state?: string;
+    zipcodes: string[];
+  } | null>(null);
+  const [marketListings, setMarketListings] = useState<any[] | null>(null);
+  const [marketNeighborhoods, setMarketNeighborhoods] = useState<any[] | null>(null);
+  const [isLoadingMarketListings, setIsLoadingMarketListings] = useState(false);
+  const [marketListingsStats, setMarketListingsStats] = useState<{
+    avgRevenue: number;
+    avgOccupancy: number;
+    topRevenue: number;
+    topOccupancy: number;
+    totalCount: number;
+  } | null>(null);
   
   // ============================================
   // PROVE THE MARKET STATE (formerly Market Research)
@@ -908,6 +942,67 @@ export default function LeadMagnet() {
       toast.error('Could not explore this area. Please try again.');
     } finally {
       setIsExploring(false);
+    }
+  };
+  
+  // NEW: Market-based Step 2 search handler
+  // Using trpc.useUtils() to call queries imperatively
+  const trpcUtils = trpc.useUtils();
+  
+  const handleMarketSearch = async (market: {
+    id: string;
+    name: string;
+    type: 'market' | 'submarket';
+    listingCount: number;
+    state?: string;
+    zipcodes: string[];
+  }, overrides?: { bedrooms?: number | null; sortBy?: string }) => {
+    setSelectedMarket(market);
+    setIsLoadingMarketListings(true);
+    setMarketListings(null);
+    setMarketNeighborhoods(null);
+    setMarketListingsStats(null);
+    
+    // Use overrides if provided, otherwise use current state
+    const bedroomFilter = overrides?.bedrooms !== undefined ? overrides.bedrooms : exploreBedroomFilter;
+    const sortByFilter = overrides?.sortBy !== undefined ? overrides.sortBy : exploreSortBy;
+    
+    try {
+      // Fetch listings using trpc utils fetch
+      const listingsResult = await trpcUtils.marketExplorer.getListings.fetch({
+        marketId: market.id,
+        marketType: market.type,
+        bedrooms: bedroomFilter || undefined,
+        sortBy: sortByFilter === 'revpar' ? 'revenue' : (sortByFilter === 'proximity' ? 'revenue' : sortByFilter) as 'revenue' | 'occupancy' | 'adr' | 'rating',
+        limit: 50,
+      });
+      
+      // Fetch neighborhoods only for market-level searches
+      let neighborhoodsResult: any[] = [];
+      if (market.type === 'market') {
+        neighborhoodsResult = await trpcUtils.marketExplorer.getNeighborhoods.fetch({ marketId: market.id });
+      }
+      
+      if (listingsResult.listings) {
+        setMarketListings(listingsResult.listings);
+        setMarketListingsStats({
+          avgRevenue: listingsResult.summary.avgRevenue,
+          avgOccupancy: listingsResult.summary.avgOccupancy,
+          topRevenue: listingsResult.summary.topRevenue,
+          topOccupancy: listingsResult.summary.topOccupancy,
+          totalCount: listingsResult.totalCount,
+        });
+        toast.success(`Found ${listingsResult.totalCount} properties in ${market.name}!`);
+      }
+      
+      if (Array.isArray(neighborhoodsResult) && neighborhoodsResult.length > 0) {
+        setMarketNeighborhoods(neighborhoodsResult);
+      }
+    } catch (error) {
+      console.error('Market search error:', error);
+      toast.error('Could not load market data. Please try again.');
+    } finally {
+      setIsLoadingMarketListings(false);
     }
   };
   
@@ -1430,62 +1525,52 @@ export default function LeadMagnet() {
             )}
             
             {/* ============================================ */}
-            {/* FIND YOUR MARKET TAB */}
+            {/* FIND YOUR MARKET TAB - See What's Working */}
             {/* ============================================ */}
             {activeTab === 'find' && (
               <div className="space-y-8">
                 <HelpSection
                   title="What You'll Discover"
-                  description="See every successful Airbnb in your target area. Perfect for finding which neighborhoods and property types perform best before you start looking at specific deals."
-                  example="You've decided Nashville looks promising and now you want to see which specific neighborhoods have the highest-earning properties before you start searching Zillow."
+                  description="See real Airbnb properties that are actually making money in your target city or neighborhood. This helps you understand what success looks like before you invest."
+                  example="You've heard St. Louis has good Airbnb potential. Now you want to see actual properties making $50K+ per year so you know what to look for."
                   steps={[
-                    'Enter a city or neighborhood you want to explore',
-                    'Adjust the search radius (1-10 km)',
-                    'Filter by bedroom count if you have a preference',
-                    'Click "Find Opportunities" to search',
-                    'Browse all active listings ranked by annual revenue'
+                    'Type a city or neighborhood name (e.g., "St. Louis" or "Central West End")',
+                    'Select from the dropdown to see which zip codes are included',
+                    'Filter by bedroom count if you have a target property type',
+                    'Browse real listings sorted by annual revenue',
+                    'See which neighborhoods perform best within the city'
                   ]}
                   isOpen={showHelp === 'find'}
                   onToggle={() => setShowHelp(showHelp === 'find' ? null : 'find')}
                 />
                 
+                {/* Guiding Question */}
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-4">
+                  <p className="text-blue-800 font-medium flex items-center gap-2">
+                    <Search className="w-5 h-5" />
+                    What does a successful Airbnb look like in my target area?
+                  </p>
+                </div>
+                
+                {/* Market Search */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Location to Explore
+                    <InfoTooltip content="Search for a city or neighborhood. The dropdown shows how many active Airbnb properties are in each area and which zip codes are included.">
+                      <span>City or Neighborhood</span>
+                    </InfoTooltip>
                   </label>
-                  <AddressAutocomplete
-                    value={exploreAddress}
-                    onChange={setExploreAddress}
-                    placeholder="Enter a city or neighborhood..."
-                    className="input-apple h-12"
-                    variant="light"
+                  <MarketAutocomplete
+                    onSelect={(market) => handleMarketSearch(market, { bedrooms: exploreBedroomFilterRef.current, sortBy: exploreSortByRef.current })}
+                    placeholder="Type a city or neighborhood (e.g., St. Louis, Central West End)..."
                   />
                 </div>
                 
-                {/* Search Filters */}
+                {/* Optional Filters */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                      <InfoTooltip content="How far from your search location to look for properties. Larger radius = more properties to compare, but may include different neighborhoods.">
-                        <span>Radius</span>
-                      </InfoTooltip>
-                    </label>
-                    <select
-                      value={exploreRadius}
-                      onChange={(e) => setExploreRadius(parseInt(e.target.value))}
-                      className="input-apple h-12"
-                    >
-                      <option value={1000}>1 km (~0.6 mi)</option>
-                      <option value={3000}>3 km (~2 mi)</option>
-                      <option value={5000}>5 km (~3 mi)</option>
-                      <option value={10000}>10 km (~6 mi)</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
-                      <InfoTooltip content="Filter by bedroom count. Matching your target property's bedroom count gives you the most accurate comparison (apples-to-apples).">
-                        <span>Beds</span>
+                      <InfoTooltip content="Filter by bedroom count to see properties similar to what you're looking for. This gives you an apples-to-apples comparison.">
+                        <span>Bedrooms</span>
                       </InfoTooltip>
                       {hasProperty && exploreBedroomFilter === myProperty?.bedrooms && (
                         <span className="text-xs px-2 py-0.5 bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.55_0.14_75)] rounded-full">
@@ -1495,53 +1580,61 @@ export default function LeadMagnet() {
                     </label>
                     <select
                       value={exploreBedroomFilter ?? ''}
-                      onChange={(e) => setExploreBedroomFilter(e.target.value ? parseInt(e.target.value) : null)}
+                      onChange={(e) => {
+                        const newValue = e.target.value ? parseInt(e.target.value) : null;
+                        console.log('Bedroom filter changed to:', newValue, 'selectedMarket:', selectedMarket?.name);
+                        setExploreBedroomFilter(newValue);
+                        exploreBedroomFilterRef.current = newValue; // Update ref immediately
+                        // Re-search if market is already selected, passing new value directly
+                        if (selectedMarket) {
+                          console.log('Triggering market search with bedrooms:', newValue);
+                          handleMarketSearch(selectedMarket, { bedrooms: newValue });
+                        }
+                      }}
                       className="input-apple h-12"
                     >
                       <option value="">Any</option>
                       <option value="1">1 Bedroom</option>
                       <option value="2">2 Bedrooms</option>
                       <option value="3">3 Bedrooms</option>
-                      <option value="4">4+ Bedrooms</option>
+                      <option value="4">4 Bedrooms</option>
+                      <option value="5">5+ Bedrooms</option>
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                      <InfoTooltip content="Sort results by what matters most to you. 'Highest Revenue' shows top earners first.">
+                        <span>Sort By</span>
+                      </InfoTooltip>
+                    </label>
+                    <select
+                      value={exploreSortBy}
+                      onChange={(e) => {
+                        const newValue = e.target.value as typeof exploreSortBy;
+                        setExploreSortBy(newValue);
+                        exploreSortByRef.current = newValue; // Update ref immediately
+                        // Re-search if market is already selected, passing new value directly
+                        if (selectedMarket) {
+                          handleMarketSearch(selectedMarket, { sortBy: newValue });
+                        }
+                      }}
+                      className="input-apple h-12"
+                    >
+                      <option value="revenue">Highest Revenue</option>
+                      <option value="occupancy">Highest Booking Rate</option>
+                      <option value="rating">Best Rated</option>
                     </select>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    <InfoTooltip content="Choose how to order the results. 'Highest Revenue' shows top earners first. 'Highest Booking Rate' shows most in-demand properties.">
-                      <span>Sort</span>
-                    </InfoTooltip>
-                  </label>
-                  <select
-                    value={exploreSortBy}
-                    onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
-                    className="input-apple h-12"
-                  >
-                    <option value="revenue">Highest Revenue</option>
-                    <option value="proximity">Closest to Address</option>
-                    <option value="occupancy">Highest Booking Rate</option>
-                    <option value="rating">Best Rated</option>
-                  </select>
-                </div>
-                
-                <button
-                  onClick={handleExplore}
-                  disabled={isExploring || !exploreAddress}
-                  className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isExploring ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-[oklch(0.55_0.14_75)]/30 border-t-[oklch(0.55_0.14_75)] rounded-full animate-spin" />
-                      <span>Finding Opportunities...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Search className="w-5 h-5" />
-                      <span>Find Opportunities</span>
-                    </>
-                  )}
-                </button>
+                {/* Loading State */}
+                {isLoadingMarketListings && (
+                  <div className="flex items-center justify-center gap-3 py-8">
+                    <div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                    <span className="text-neutral-600">Loading properties...</span>
+                  </div>
+                )}
               </div>
             )}
             
@@ -3384,8 +3477,225 @@ export default function LeadMagnet() {
         );
       })()}
       
-      {/* Find Your Market Results */}
-      {activeTab === 'find' && areaListings && (
+      {/* NEW: Market-Based Step 2 Results - See What's Working */}
+      {activeTab === 'find' && selectedMarket && marketListings && (
+        <section className="py-12 bg-white">
+          <div className="container max-w-5xl mx-auto">
+            {/* Header with Market Info */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
+                <CheckCircle2 className="w-4 h-4" />
+                {marketListingsStats?.totalCount || marketListings.length} Properties Found
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+                What's Working in {selectedMarket.name}
+              </h3>
+              
+              {/* Zip Code Transparency */}
+              {selectedMarket.zipcodes && selectedMarket.zipcodes.length > 0 && (
+                <div className="mt-4">
+                  <InfoTooltip content="These are the zip codes included in this market's data. This helps you understand exactly where the data is coming from.">
+                    <p className="text-sm text-slate-500 inline-flex items-center gap-2 cursor-help">
+                      <MapPin className="w-4 h-4" />
+                      Includes zip codes: <span className="font-medium text-slate-700">
+                        {selectedMarket.zipcodes.slice(0, 5).join(', ')}
+                        {selectedMarket.zipcodes.length > 5 && ` +${selectedMarket.zipcodes.length - 5} more`}
+                      </span>
+                    </p>
+                  </InfoTooltip>
+                </div>
+              )}
+            </div>
+            
+            {/* Verdict Section - What This Data Shows */}
+            {marketListingsStats && (
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-6 mb-8">
+                {/* Guiding Question */}
+                <p className="text-sm text-slate-600 mb-4 font-medium">
+                  What can I learn from the top performers in {selectedMarket.name}?
+                </p>
+                
+                {/* Summary Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <InfoTooltip content="The highest annual revenue among all properties in this market. This shows what's possible if you optimize your listing.">
+                      <div className="cursor-help">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Top Earner</p>
+                        <p className="text-xl font-bold text-emerald-600">${marketListingsStats.topRevenue.toLocaleString()}</p>
+                        <p className="text-xs text-slate-400">per year</p>
+                      </div>
+                    </InfoTooltip>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <InfoTooltip content="The average annual revenue across all properties. This is a realistic expectation for a typical property in this market.">
+                      <div className="cursor-help">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Average Revenue</p>
+                        <p className="text-xl font-bold text-blue-600">${marketListingsStats.avgRevenue.toLocaleString()}</p>
+                        <p className="text-xs text-slate-400">per year</p>
+                      </div>
+                    </InfoTooltip>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <InfoTooltip content="The highest booking rate in this market. Higher booking rate means more consistent income throughout the year.">
+                      <div className="cursor-help">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Most Booked</p>
+                        <p className="text-xl font-bold text-purple-600">{Math.round(marketListingsStats.topOccupancy)}%</p>
+                        <p className="text-xs text-slate-400">booking rate</p>
+                      </div>
+                    </InfoTooltip>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <InfoTooltip content="The average booking rate across all properties. This tells you how often properties are typically booked in this market.">
+                      <div className="cursor-help">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Avg Booking Rate</p>
+                        <p className="text-xl font-bold text-amber-600">{Math.round(marketListingsStats.avgOccupancy)}%</p>
+                        <p className="text-xs text-slate-400">~{Math.round(marketListingsStats.avgOccupancy * 3.65)} nights/yr</p>
+                      </div>
+                    </InfoTooltip>
+                  </div>
+                </div>
+                
+                {/* Contextual Insight */}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>What this means:</strong> The top earner makes{' '}
+                    <span className="font-semibold">
+                      {marketListingsStats.avgRevenue > 0 
+                        ? `${(marketListingsStats.topRevenue / marketListingsStats.avgRevenue).toFixed(1)}x`
+                        : 'N/A'}
+                    </span>{' '}
+                    the average revenue. Properties here are booked about{' '}
+                    <span className="font-semibold">{Math.round(marketListingsStats.avgOccupancy * 3.65)} nights per year</span>{' '}
+                    on average.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Neighborhood Comparison (if available) */}
+            {marketNeighborhoods && marketNeighborhoods.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building className="w-5 h-5 text-slate-600" />
+                  <h4 className="font-semibold text-slate-900">Best Neighborhoods in {selectedMarket.name}</h4>
+                  <InfoTooltip content="These are the neighborhoods (submarkets) within this city, ranked by average revenue. Click on one to see properties in that specific area.">
+                    <span className="cursor-help" />
+                  </InfoTooltip>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-2 px-3 text-slate-500 font-medium">Neighborhood</th>
+                        <th className="text-right py-2 px-3 text-slate-500 font-medium">Properties</th>
+                        <th className="text-right py-2 px-3 text-slate-500 font-medium">Avg Revenue</th>
+                        <th className="text-right py-2 px-3 text-slate-500 font-medium">Avg Booking</th>
+                        <th className="text-right py-2 px-3 text-slate-500 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marketNeighborhoods.slice(0, 8).map((neighborhood: any, idx: number) => (
+                        <tr key={neighborhood.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="py-3 px-3">
+                            <span className="font-medium text-slate-900">{neighborhood.name}</span>
+                            {idx === 0 && <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Top</span>}
+                          </td>
+                          <td className="text-right py-3 px-3 text-slate-600">{neighborhood.listingCount}</td>
+                          <td className="text-right py-3 px-3 font-medium text-emerald-600">${Math.round(neighborhood.avgRevenue).toLocaleString()}</td>
+                          <td className="text-right py-3 px-3 text-slate-600">{Math.round(neighborhood.avgOccupancy)}%</td>
+                          <td className="text-right py-3 px-3">
+                            <button
+                              onClick={() => handleMarketSearch({
+                                id: neighborhood.id,
+                                name: neighborhood.name,
+                                type: 'submarket',
+                                listingCount: neighborhood.listingCount,
+                                zipcodes: [],
+                              })}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View Properties
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* Property Listings */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-slate-900">Properties Making Money</h4>
+                <p className="text-sm text-slate-500">Sorted by {exploreSortBy === 'revenue' ? 'highest revenue' : exploreSortBy === 'occupancy' ? 'highest booking rate' : 'best rated'}</p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {marketListings.slice(0, 20).map((listing: any, idx: number) => (
+                  <PropertyCard
+                    key={listing.id}
+                    id={listing.id}
+                    title={listing.title}
+                    imageUrl={listing.imageUrl || listing.images?.[0]}
+                    bedrooms={listing.bedrooms}
+                    bathrooms={listing.bathrooms}
+                    propertyType={listing.propertyType || 'Entire home'}
+                    rating={listing.rating}
+                    reviews={listing.reviewCount}
+                    annualRevenue={listing.annualRevenue}
+                    occupancy={listing.occupancyRate}
+                    adr={listing.adr}
+                    airbnbUrl={listing.airbnbUrl}
+                    superhost={listing.superhost}
+                    index={idx}
+                    isSaved={isPropertySaved(listing.title)}
+                    onSave={() => {
+                      promptSave('property', listing.title, () => {
+                        saveProperty({
+                          title: listing.title,
+                          address: selectedMarket.name,
+                          bedrooms: listing.bedrooms,
+                          bathrooms: listing.bathrooms,
+                          revenue: listing.annualRevenue,
+                          adr: listing.adr,
+                          occupancy: listing.occupancyRate,
+                          airbnbUrl: listing.airbnbUrl,
+                        });
+                        toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
+                      });
+                    }}
+                    onAnalyze={() => {
+                      // Can't analyze without a specific address
+                      toast.info('To analyze a specific property, use Step 3 "Validate the Deal" with the exact address.');
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            {/* Confidence Note */}
+            <p className="text-center text-sm text-slate-500 mb-8">
+              Based on {marketListingsStats?.totalCount || marketListings.length} active Airbnb properties in {selectedMarket.name}
+            </p>
+            
+            {/* Next Step CTA */}
+            <div className="text-center">
+              <p className="text-slate-500 mb-4">Found a neighborhood you like? Validate a specific property to see if it will make you money.</p>
+              <Button
+                onClick={() => setActiveTab('validate')}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                <Target className="w-4 h-4 mr-2" />
+                Validate a Specific Deal
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+      
+      {/* OLD: Find Your Market Results (keeping for backward compatibility with address-based search) */}
+      {activeTab === 'find' && !selectedMarket && areaListings && (
         <section className="py-12 bg-white">
           <div className="container max-w-5xl mx-auto">
             {/* Tesla Dashboard Style Header */}
