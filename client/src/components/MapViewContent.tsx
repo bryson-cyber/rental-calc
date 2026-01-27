@@ -1320,11 +1320,11 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(br => {
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(br => {
                           const count = listings.filter(l => l.bedrooms === br).length;
                           return (
                             <SelectItem key={br} value={String(br)}>
-                              {br} Bedroom{br !== 1 ? 's' : ''} ({count})
+                              {br === 0 ? 'Studio' : `${br} Bedroom${br !== 1 ? 's' : ''}`} ({count})
                             </SelectItem>
                           );
                         })}

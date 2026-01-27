@@ -1173,11 +1173,11 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                      {[1, 2, 3, 4, 5, 6].map(br => {
+                      {[0, 1, 2, 3, 4, 5, 6].map(br => {
                         const count = listings.filter(l => l.bedrooms === br).length;
                         return (
                           <SelectItem key={br} value={String(br)}>
-                            {br} Bedroom{br !== 1 ? 's' : ''} ({count})
+                            {br === 0 ? 'Studio' : `${br} Bedroom${br !== 1 ? 's' : ''}`} ({count})
                           </SelectItem>
                         );
                       })}

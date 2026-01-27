@@ -1027,7 +1027,8 @@ export default function LeadMagnet() {
         seasonality: report.seasonality.monthlyData.map(m => ({
           month: m.month,
           occupancy: m.occupancy,
-          adr: m.adr
+          adr: m.adr,
+          revenue: m.revenue || (m.adr * 30 * (m.occupancy / 100)) // Estimate monthly revenue if not provided
         })),
         // Step 1 Super Experience fields
         marketScores: (report as any).marketScores,
@@ -2329,7 +2330,7 @@ export default function LeadMagnet() {
                     </p>
                     {encouragement && (
                       <p className="text-sm text-amber-700 mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                        <span className="font-semibold">💡 Pro Tip:</span> {encouragement}
+                        <span className="font-semibold">Pro Tip:</span> {encouragement}
                       </p>
                     )}
                     
@@ -3009,7 +3010,7 @@ export default function LeadMagnet() {
                   {typesToShow.some(t => t.count === 0) && (
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-700">
-                        <span className="font-semibold">💡 Pro Tip:</span> Some bedroom types are uncommon in this area. This tells you what property types are most popular here. Focus on the bedroom counts with the most listings—that's where demand is proven!
+                        <span className="font-semibold">Pro Tip:</span> Some bedroom types are uncommon in this area. This tells you what property types are most popular here. Focus on the bedroom counts with the most listings—that's where demand is proven!
                       </p>
                     </div>
                   )}
@@ -3036,7 +3037,7 @@ export default function LeadMagnet() {
                             <TrendingUp className="w-4 h-4 text-emerald-600" />
                           </div>
                           <div className="flex-1">
-                            <h5 className="font-semibold text-slate-900 mb-2">📊 What This Data Shows</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">What This Data Shows</h5>
                             <div className="space-y-2 text-sm text-slate-700">
                               <p>
                                 <span className="font-medium text-emerald-700">Highest Revenue:</span> {highestRevenue.type} properties average <span className="font-bold text-emerald-600">{formatCurrency(highestRevenue.avgRevenue)}/year</span>
@@ -3147,7 +3148,7 @@ export default function LeadMagnet() {
                                   <p className={`${diffFromAvg >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                                     {diffFromAvg >= 0 ? '+' : ''}{Math.round(diffFromAvg)}% vs average
                                   </p>
-                                  <p className="text-slate-400 mt-1">✓ {seasonLabel}</p>
+                                  <p className="text-slate-400 mt-1">{seasonLabel}</p>
                                 </div>
                                 <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
                               </div>
@@ -3199,7 +3200,7 @@ export default function LeadMagnet() {
                                     {diffFromAvg >= 0 ? '+' : ''}{formatCurrency(diffFromAvg)} vs average
                                   </p>
                                   <p className="text-emerald-400 mt-1">Est. monthly: {formatCurrency(estimatedMonthlyRevenue)}</p>
-                                  <p className="text-slate-400">✓ {priceLabel}</p>
+                                  <p className="text-slate-400">{priceLabel}</p>
                                 </div>
                                 <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
                               </div>

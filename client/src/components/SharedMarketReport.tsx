@@ -1,9 +1,9 @@
 /**
  * SharedMarketReport Component
- * Displays shared Step 1 market analysis data
+ * Displays shared Step 1 market analysis data - Full report matching Step 1 experience
  */
 
-import { ArrowLeft, TrendingUp, DollarSign, Percent, Building, Star, Calendar } from 'lucide-react';
+import { ArrowLeft, TrendingUp, DollarSign, Percent, Building, Star, Calendar, Home, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PropertyType {
@@ -19,6 +19,7 @@ interface MarketScores {
   revenue_growth?: number;
   seasonality?: number;
   regulation_risk?: number;
+  overall?: number;
 }
 
 interface RevenuePercentiles {
@@ -88,7 +89,60 @@ const formatPercent = (value: number) => {
   return `${Math.round(percent)}%`;
 };
 
+const formatMonth = (dateStr: string) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('-')) {
+    const [year, month] = dateStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'short' });
+  }
+  return dateStr.substring(0, 3);
+};
+
 export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
+  // Process seasonality data
+  let monthlyData: SeasonalityMonth[] = [];
+  let peakMonths: string[] = [];
+  let lowMonths: string[] = [];
+  
+  if (data.seasonality) {
+    if (Array.isArray(data.seasonality)) {
+      monthlyData = data.seasonality;
+      if (monthlyData.length > 0) {
+        const sortedByOccupancy = [...monthlyData].sort((a, b) => b.occupancy - a.occupancy);
+        peakMonths = sortedByOccupancy.slice(0, 3).map(m => m.month);
+        lowMonths = sortedByOccupancy.slice(-3).map(m => m.month);
+      }
+    } else {
+      peakMonths = data.seasonality.peak_months || data.seasonality.peakMonths || [];
+      lowMonths = data.seasonality.low_months || data.seasonality.lowMonths || [];
+      monthlyData = data.seasonality.monthlyData || [];
+    }
+  }
+  
+  // Calculate averages for charts
+  const avgOccupancy = monthlyData.length > 0 
+    ? monthlyData.reduce((sum, m) => sum + m.occupancy, 0) / monthlyData.length 
+    : data.avgOccupancy;
+  const avgAdr = monthlyData.length > 0 
+    ? monthlyData.reduce((sum, m) => sum + m.adr, 0) / monthlyData.length 
+    : data.avgAdr;
+  const maxAdr = monthlyData.length > 0 ? Math.max(...monthlyData.map(m => m.adr)) : data.avgAdr;
+  const minAdr = monthlyData.length > 0 ? Math.min(...monthlyData.map(m => m.adr)) : data.avgAdr;
+  
+  // Property type insights
+  const typesWithData = data.propertyTypes?.filter(t => t.count > 0) || [];
+  const highestRevenue = typesWithData.length > 0 
+    ? typesWithData.reduce((max, t) => t.avgRevenue > max.avgRevenue ? t : max, typesWithData[0])
+    : null;
+  const highestOccupancy = typesWithData.length > 0 
+    ? typesWithData.reduce((max, t) => (t.occupancy || 0) > (max.occupancy || 0) ? t : max, typesWithData[0])
+    : null;
+  const mostCommon = typesWithData.length > 0 
+    ? typesWithData.reduce((max, t) => t.count > max.count ? t : max, typesWithData[0])
+    : null;
+  const totalListingsFromBreakdown = typesWithData.reduce((sum, t) => sum + t.count, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
       {/* Header */}
@@ -103,46 +157,67 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
               <h1 className="text-xl font-bold text-slate-900">{data.marketName}</h1>
               <p className="text-sm text-slate-500">Market Analysis Report</p>
             </div>
-            <div className="w-20" /> {/* Spacer for centering */}
+            <div className="w-20" />
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Market Overview */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-500" />
-            Market Overview
+        {/* Hero Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
+            <CheckCircle2 className="w-4 h-4" />
+            Market Validated
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+            {data.marketName} is Profitable
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-slate-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Avg Revenue/yr</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(data.avgRevenue)}</p>
+          <p className="text-slate-500">
+            Avg revenue data from active Airbnb hosts in this market
+          </p>
+        </div>
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+            <div className="inline-flex p-2 rounded-lg mb-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <DollarSign className="w-5 h-5" />
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Avg Nightly Rate</p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(data.avgAdr)}</p>
+            <p className="text-slate-500 text-xs font-medium">Avg Annual Revenue</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(data.avgRevenue)}</p>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+            <div className="inline-flex p-2 rounded-lg mb-2 bg-blue-500/10 text-blue-500 border border-blue-500/20">
+              <Calendar className="w-5 h-5" />
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Occupancy</p>
-              <p className="text-2xl font-bold text-slate-900">{formatPercent(data.avgOccupancy)}</p>
+            <p className="text-slate-500 text-xs font-medium">Avg Nightly Rate</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(data.avgAdr)}</p>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+            <div className="inline-flex p-2 rounded-lg mb-2 bg-purple-500/10 text-purple-500 border border-purple-500/20">
+              <Percent className="w-5 h-5" />
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Active Listings</p>
-              <p className="text-2xl font-bold text-slate-900">{data.totalListings.toLocaleString()}</p>
+            <p className="text-slate-500 text-xs font-medium">Avg Occupancy</p>
+            <p className="text-xl font-bold text-slate-900">{Math.round(data.avgOccupancy)}%</p>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+            <div className="inline-flex p-2 rounded-lg mb-2 bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <Home className="w-5 h-5" />
             </div>
+            <p className="text-slate-500 text-xs font-medium">Active Listings</p>
+            <p className="text-xl font-bold text-slate-900">{data.totalListings.toLocaleString()}</p>
           </div>
         </div>
 
         {/* Revenue by Property Type */}
         {data.propertyTypes && data.propertyTypes.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
               <Building className="w-5 h-5 text-blue-500" />
-              Revenue by Property Type
-            </h2>
+              Which Property Types Earn the Most?
+            </h3>
+            <p className="text-slate-500 text-sm mb-4">Compare revenue and occupancy by bedroom count</p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {data.propertyTypes.map((type, idx) => (
                 <div 
@@ -181,16 +256,138 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
                 </div>
               ))}
             </div>
+            
+            {/* Data-Driven Insight Summary */}
+            {highestRevenue && highestOccupancy && mostCommon && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-slate-900 mb-2">What This Data Shows</h5>
+                    <div className="space-y-2 text-sm text-slate-700">
+                      <p>
+                        <span className="font-medium text-emerald-700">Highest Revenue:</span> {highestRevenue.type} properties average <span className="font-bold text-emerald-600">{formatCurrency(highestRevenue.avgRevenue)}/year</span>
+                      </p>
+                      <p>
+                        <span className="font-medium text-blue-700">Highest Demand:</span> {highestOccupancy.type} properties have <span className="font-bold text-blue-600">{highestOccupancy.occupancy}% occupancy</span>
+                      </p>
+                      <p>
+                        <span className="font-medium text-purple-700">Most Common:</span> {mostCommon.type} has <span className="font-bold text-purple-600">{mostCommon.count} active listings</span> ({Math.round(mostCommon.count / totalListingsFromBreakdown * 100)}% of market)
+                      </p>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 italic">
+                      Based on {totalListingsFromBreakdown.toLocaleString()} active short-term rentals in this market
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Monthly Earnings Pattern */}
+        {monthlyData.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Monthly Earnings Pattern</h3>
+                <p className="text-slate-500 text-sm">See which months earn the most (and least) in this market</p>
+              </div>
+              <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">12-month avg</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Occupancy Chart */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-slate-500">How Often It's Booked Each Month</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-amber-500"></div>
+                    <span className="text-xs text-amber-600 font-medium">Avg: {Math.round(avgOccupancy)}%</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {monthlyData.map((month, idx) => {
+                    const isAboveAvg = month.occupancy >= avgOccupancy;
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
+                        <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden relative">
+                          <div 
+                            className="absolute top-0 bottom-0 w-0.5 bg-amber-500 z-10"
+                            style={{left: `${avgOccupancy}%`}}
+                          />
+                          <div 
+                            className={`h-full transition-all ${isAboveAvg ? 'bg-gradient-to-r from-emerald-400 to-teal-400' : 'bg-gradient-to-r from-amber-300 to-amber-400'}`}
+                            style={{width: `${month.occupancy}%`}}
+                          />
+                        </div>
+                        <span className={`text-xs font-semibold w-10 text-right ${isAboveAvg ? 'text-emerald-600' : 'text-amber-600'}`}>{Math.round(month.occupancy)}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Nightly Rate Chart */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-slate-500">Nightly Rate Each Month</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-0.5 bg-blue-500"></div>
+                    <span className="text-xs text-blue-600 font-medium">Avg: {formatCurrency(avgAdr)}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {monthlyData.map((month, idx) => {
+                    const isAboveAvg = month.adr >= avgAdr;
+                    const adrRange = maxAdr - minAdr || 1;
+                    const normalizedAdr = ((month.adr - minAdr) / adrRange) * 60 + 40;
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 w-12">{formatMonth(month.month)}</span>
+                        <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+                          <div 
+                            className={`h-full transition-all ${isAboveAvg ? 'bg-gradient-to-r from-blue-400 to-indigo-400' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}
+                            style={{width: `${normalizedAdr}%`}}
+                          />
+                        </div>
+                        <span className={`text-xs font-semibold w-14 text-right ${isAboveAvg ? 'text-blue-600' : 'text-slate-500'}`}>{formatCurrency(month.adr)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Peak and Low months summary */}
+            {(peakMonths.length > 0 || lowMonths.length > 0) && (
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                {peakMonths.length > 0 && (
+                  <div className="bg-emerald-50 rounded-xl p-4">
+                    <p className="text-xs text-emerald-600 font-medium mb-2">Busiest Months</p>
+                    <p className="text-slate-900 font-semibold">{peakMonths.map(formatMonth).join(', ')}</p>
+                  </div>
+                )}
+                {lowMonths.length > 0 && (
+                  <div className="bg-amber-50 rounded-xl p-4">
+                    <p className="text-xs text-amber-600 font-medium mb-2">Slowest Months</p>
+                    <p className="text-slate-900 font-semibold">{lowMonths.map(formatMonth).join(', ')}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* Market Scores */}
         {data.marketScores && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Star className="w-5 h-5 text-amber-500" />
               Market Scores
-            </h2>
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {data.marketScores.investability !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4">
@@ -229,10 +426,10 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
         {/* Revenue Percentiles */}
         {data.revenuePercentiles && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-emerald-500" />
               What Hosts Actually Earn
-            </h2>
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {data.revenuePercentiles.p25 !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
@@ -265,10 +462,10 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
         {/* Competition Data */}
         {data.competitionData && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Percent className="w-5 h-5 text-purple-500" />
               Your Competition
-            </h2>
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {data.competitionData.superhostPct !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
@@ -301,10 +498,10 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
         {/* Booking Patterns */}
         {data.bookingPatterns && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-blue-500" />
               Booking Patterns
-            </h2>
+            </h3>
             <div className="grid grid-cols-3 gap-4">
               {data.bookingPatterns.avgBookingWindow !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
@@ -327,103 +524,6 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
             </div>
           </div>
         )}
-
-        {/* Seasonality */}
-        {data.seasonality && (() => {
-          // Handle both array format (from LeadMagnet) and object format (legacy)
-          let peakMonths: string[] = [];
-          let lowMonths: string[] = [];
-          let monthlyData: SeasonalityMonth[] = [];
-          
-          if (Array.isArray(data.seasonality)) {
-            // Array format: calculate peak/low from monthly data
-            monthlyData = data.seasonality;
-            if (monthlyData.length > 0) {
-              const sortedByRevenue = [...monthlyData].sort((a, b) => b.revenue - a.revenue);
-              peakMonths = sortedByRevenue.slice(0, 3).map(m => m.month);
-              lowMonths = sortedByRevenue.slice(-3).map(m => m.month);
-            }
-          } else {
-            // Object format: use existing properties
-            peakMonths = data.seasonality.peak_months || data.seasonality.peakMonths || [];
-            lowMonths = data.seasonality.low_months || data.seasonality.lowMonths || [];
-            monthlyData = data.seasonality.monthlyData || [];
-          }
-          
-          // Format month names for display
-          const formatMonthName = (month: string) => {
-            if (!month) return '';
-            // Handle various formats: "2024-01", "Jan", "January", etc.
-            if (month.includes('-')) {
-              const [year, monthNum] = month.split('-');
-              const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-              return date.toLocaleDateString('en-US', { month: 'short' });
-            }
-            return month.substring(0, 3);
-          };
-          
-          const formattedPeakMonths = peakMonths.map(formatMonthName).filter(Boolean);
-          const formattedLowMonths = lowMonths.map(formatMonthName).filter(Boolean);
-          
-          if (formattedPeakMonths.length === 0 && formattedLowMonths.length === 0 && monthlyData.length === 0) {
-            return null;
-          }
-          
-          return (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Busy vs Slow Months</h2>
-              
-              {/* Monthly breakdown chart if we have monthly data with valid revenue */}
-              {monthlyData.length > 0 && monthlyData.some(m => m.revenue > 0 && !isNaN(m.revenue)) && (
-                <div className="mb-6">
-                  <p className="text-sm text-slate-500 mb-3">Monthly Revenue Pattern</p>
-                  <div className="space-y-2">
-                    {monthlyData.map((month, idx) => {
-                      const validRevenues = monthlyData.filter(m => m.revenue > 0 && !isNaN(m.revenue)).map(m => m.revenue);
-                      const maxRevenue = validRevenues.length > 0 ? Math.max(...validRevenues) : 1;
-                      const revenue = month.revenue > 0 && !isNaN(month.revenue) ? month.revenue : 0;
-                      const barWidth = maxRevenue > 0 ? (revenue / maxRevenue) * 100 : 0;
-                      const isPeak = peakMonths.includes(month.month);
-                      const isLow = lowMonths.includes(month.month);
-                      return (
-                        <div key={idx} className="flex items-center gap-3">
-                          <span className="text-xs text-slate-500 w-10">{formatMonthName(month.month)}</span>
-                          <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all ${
-                                isPeak ? 'bg-emerald-500' : isLow ? 'bg-amber-400' : 'bg-blue-400'
-                              }`}
-                              style={{ width: `${Math.max(barWidth, 5)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium text-slate-700 w-16 text-right">
-                            {revenue > 0 ? formatCurrency(revenue) : '-'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              {/* Peak and Low months summary */}
-              <div className="grid grid-cols-2 gap-4">
-                {formattedPeakMonths.length > 0 && (
-                  <div className="bg-emerald-50 rounded-xl p-4">
-                    <p className="text-xs text-emerald-600 font-medium mb-2">Busiest Months</p>
-                    <p className="text-slate-900 font-semibold">{formattedPeakMonths.join(', ')}</p>
-                  </div>
-                )}
-                {formattedLowMonths.length > 0 && (
-                  <div className="bg-amber-50 rounded-xl p-4">
-                    <p className="text-xs text-amber-600 font-medium mb-2">Slowest Months</p>
-                    <p className="text-slate-900 font-semibold">{formattedLowMonths.join(', ')}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()}
 
         {/* Footer */}
         <div className="text-center py-8 border-t border-slate-200 mt-8">
