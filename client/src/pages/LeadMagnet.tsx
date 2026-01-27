@@ -488,11 +488,16 @@ export default function LeadMagnet() {
   // ============================================
   // AUTO-POPULATE FROM PROPERTY CONTEXT
   // ============================================
+  // Track if user has manually set the bedroom filter
+  const userSetBedroomFilterRef = useRef(false);
+  
   useEffect(() => {
     // When property context changes, auto-populate bedroom filter for apples-to-apples comparison
-    if (hasProperty && myProperty?.bedrooms) {
+    // But only if user hasn't manually set a different value
+    if (hasProperty && myProperty?.bedrooms && !userSetBedroomFilterRef.current) {
       // Step 2: Explore Listings - set bedroom filter for apples-to-apples
       setExploreBedroomFilter(myProperty.bedrooms);
+      exploreBedroomFilterRef.current = myProperty.bedrooms;
       
       // Step 3: Validate the Deal - auto-populate form if not already set
       if (!address && myProperty.address) {
@@ -964,8 +969,19 @@ export default function LeadMagnet() {
     setMarketListingsStats(null);
     
     // Use overrides if provided, otherwise use current state
-    const bedroomFilter = overrides?.bedrooms !== undefined ? overrides.bedrooms : exploreBedroomFilter;
-    const sortByFilter = overrides?.sortBy !== undefined ? overrides.sortBy : exploreSortBy;
+    // IMPORTANT: Use ref values as fallback since state might be stale in callbacks
+    const bedroomFilter = overrides?.bedrooms !== undefined ? overrides.bedrooms : (exploreBedroomFilterRef.current ?? exploreBedroomFilter);
+    const sortByFilter = overrides?.sortBy !== undefined ? overrides.sortBy : (exploreSortByRef.current ?? exploreSortBy);
+    
+    console.log('[handleMarketSearch] Called with:', {
+      marketId: market.id,
+      marketName: market.name,
+      overrides,
+      bedroomFilter,
+      sortByFilter,
+      exploreBedroomFilter,
+      exploreBedroomFilterRef: exploreBedroomFilterRef.current,
+    });
     
     try {
       // Fetch listings using trpc utils fetch
@@ -1560,7 +1576,20 @@ export default function LeadMagnet() {
                     </InfoTooltip>
                   </label>
                   <MarketAutocomplete
-                    onSelect={(market) => handleMarketSearch(market, { bedrooms: exploreBedroomFilterRef.current, sortBy: exploreSortByRef.current })}
+                    onSelect={(market) => {
+                      // Log the current filter values for debugging
+                      console.log('[MarketAutocomplete onSelect] Current filter values:', {
+                        exploreBedroomFilter,
+                        exploreBedroomFilterRef: exploreBedroomFilterRef.current,
+                        exploreSortBy,
+                        exploreSortByRef: exploreSortByRef.current,
+                      });
+                      // Use ref values which are updated immediately on change
+                      handleMarketSearch(market, { 
+                        bedrooms: exploreBedroomFilterRef.current, 
+                        sortBy: exploreSortByRef.current 
+                      });
+                    }}
                     placeholder="Type a city or neighborhood (e.g., St. Louis, Central West End)..."
                   />
                 </div>
@@ -1585,6 +1614,7 @@ export default function LeadMagnet() {
                         console.log('Bedroom filter changed to:', newValue, 'selectedMarket:', selectedMarket?.name);
                         setExploreBedroomFilter(newValue);
                         exploreBedroomFilterRef.current = newValue; // Update ref immediately
+                        userSetBedroomFilterRef.current = true; // Mark that user manually set this filter
                         // Re-search if market is already selected, passing new value directly
                         if (selectedMarket) {
                           console.log('Triggering market search with bedrooms:', newValue);
@@ -3483,9 +3513,39 @@ export default function LeadMagnet() {
           <div className="container max-w-5xl mx-auto">
             {/* Header with Market Info */}
             <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
-                <CheckCircle2 className="w-4 h-4" />
-                {marketListingsStats?.totalCount || marketListings.length} Properties Found
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {marketListingsStats?.totalCount || marketListings.length} Properties Found
+                </div>
+                <ShareReportButton
+                  reportType="market"
+                  reportData={{
+                    marketName: selectedMarket.name,
+                    marketId: selectedMarket.id,
+                    marketType: selectedMarket.type,
+                    zipcodes: selectedMarket.zipcodes,
+                    totalCount: marketListingsStats?.totalCount || marketListings.length,
+                    avgRevenue: marketListingsStats?.avgRevenue || 0,
+                    avgOccupancy: marketListingsStats?.avgOccupancy || 0,
+                    topRevenue: marketListingsStats?.topRevenue || 0,
+                    topOccupancy: marketListingsStats?.topOccupancy || 0,
+                    bedroomFilter: exploreBedroomFilter,
+                    sortBy: exploreSortBy,
+                    topListings: marketListings.slice(0, 10).map((l: any) => ({
+                      title: l.title,
+                      bedrooms: l.bedrooms,
+                      bathrooms: l.bathrooms,
+                      annualRevenue: l.annualRevenue,
+                      occupancy: l.occupancy,
+                      rating: l.rating,
+                      reviewCount: l.reviewCount,
+                      listingUrl: l.listingUrl
+                    }))
+                  }}
+                  marketId={selectedMarket.id}
+                  marketName={selectedMarket.name}
+                />
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
                 What's Working in {selectedMarket.name}

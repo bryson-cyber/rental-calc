@@ -5601,3 +5601,43 @@ All guiding questions display correctly across all three test markets:
 - [x] Zip codes display in dropdown for neighborhoods
 - [x] Zip codes display in selected market info box
 - [x] Zip codes display in results section header ("Includes zip codes: ...")
+
+
+## Step 2 Audit and Share Button (Jan 27, 2026)
+
+### Investigation Tasks
+- [ ] Compare Step 2 and Step 5 API calls - are they using the same endpoints?
+- [ ] Test Step 2 per bnb-lead-magnet-dev skill guidelines
+- [ ] Run tooltip audit on Step 2
+- [ ] Identify any fixes needed
+
+### Share Button Implementation
+- [ ] Add share button to Step 2 for potential investors
+- [ ] Generate shareable link or export functionality
+
+
+## Step 2 Audit and Share Button (Jan 27, 2026) - COMPLETE
+
+### API Comparison: Step 2 vs Step 5
+- [x] Analyzed Step 2 (marketExplorer.getListings) vs Step 5 (compData.getListings)
+- [x] Documented that Step 2 searches by MARKET (city/neighborhood) while Step 5 searches by ADDRESS (lat/lng + radius)
+- [x] Confirmed different API endpoints: getMarketListings() vs getAreaListings()
+
+### Bedroom Filter Fix
+- [x] Fixed bedroom filter persistence when selecting market in Step 2
+- [x] Verified filter correctly passes to API and returns filtered results
+- [x] Confirmed 1630 properties (2BR) vs 5543 (all) for St. Louis
+
+### Share Button Implementation
+- [x] Added ShareReportButton to Step 2 "Explore Listings" results section
+- [x] Share button appears next to "Properties Found" badge
+- [x] Creates shareable link with configurable expiration (7 days default)
+- [x] Includes option for unlimited views or view limit
+- [x] Includes "Download as PDF" option
+- [x] Passes market data: name, ID, type, zipcodes, stats, top 10 listings
+- [x] Tested and verified share link creation works
+
+### Testing
+- [x] Browser tested Step 2 bedroom filter with St. Louis market
+- [x] Browser tested share button dialog and link creation
+- [x] Verified share link format: /report/{shareId}
