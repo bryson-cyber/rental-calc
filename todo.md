@@ -5453,3 +5453,46 @@ All guiding questions display correctly across all three test markets:
 - [x] Beginner-friendly explanations for all metrics
 - [x] Non-prescriptive data presentation
 - [x] Confidence notes showing data source count
+
+
+## Step 2 "Explore Listings" Optimization (Jan 26, 2026) - COMPLETE
+
+### Per /bnb-lead-magnet-dev Skill Guidelines:
+
+#### Tooltips Added:
+- [x] Letter grade (B+) has InfoTooltip explaining calculation methodology
+- [x] TOP EARNER card has InfoTooltip explaining what to learn from top performers
+- [x] MOST BOOKED card has InfoTooltip with nights/year context
+- [x] AVG REVENUE card has InfoTooltip explaining baseline expectations
+- [x] AVG BOOKING RATE card has InfoTooltip with demand level context
+- [x] Search form Radius has InfoTooltip explaining search scope
+- [x] Search form Beds has InfoTooltip explaining apples-to-apples comparison
+- [x] Search form Sort has InfoTooltip explaining ordering options
+- [x] Filter SORT BY has InfoTooltip
+- [x] Filter PROPERTY TYPE has InfoTooltip
+- [x] Filter MIN RATING has InfoTooltip
+- [x] Filter MIN BOOKING RATE has InfoTooltip
+- [x] Filter MIN REVENUE has InfoTooltip
+- [x] Filter HOST TYPE has InfoTooltip
+- [x] PropertyCard Annual Revenue has InfoTooltip
+- [x] PropertyCard Nightly Rate has InfoTooltip
+- [x] PropertyCard Booking Rate has InfoTooltip
+- [x] PropertyCard Avg Daily Earnings has InfoTooltip
+- [x] PropertyCard Rating has InfoTooltip
+
+#### Verdict Section:
+- [x] Letter grade displayed (A+, A, B+, B, C+, C, D)
+- [x] Grade verdict title (Excellent/Good/Moderate Opportunity)
+- [x] Contextual comparison: "Properties here are booked about X nights per year"
+- [x] Guiding question: "What can I learn from the top performers in this area?"
+- [x] Confidence note: "Based on X active Airbnb properties within your search area"
+
+#### Terminology:
+- [x] Uses "Booking Rate" instead of "Occupancy"
+- [x] Uses beginner-friendly language throughout
+- [x] No emojis used (verified)
+
+#### Quality Benchmark (Step 3 Patterns Applied):
+- [x] Contextual comparisons with real numbers (2.5x the average, ~324 nights/year, $6,458/month)
+- [x] Color-coded metrics (emerald for revenue, amber for bookings, blue for averages, purple for rates)
+- [x] Clear visual hierarchy with icons and badges

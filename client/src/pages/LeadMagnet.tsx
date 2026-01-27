@@ -1466,7 +1466,9 @@ export default function LeadMagnet() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                      Radius
+                      <InfoTooltip content="How far from your search location to look for properties. Larger radius = more properties to compare, but may include different neighborhoods.">
+                        <span>Radius</span>
+                      </InfoTooltip>
                     </label>
                     <select
                       value={exploreRadius}
@@ -1482,7 +1484,9 @@ export default function LeadMagnet() {
                   
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
-                      Beds
+                      <InfoTooltip content="Filter by bedroom count. Matching your target property's bedroom count gives you the most accurate comparison (apples-to-apples).">
+                        <span>Beds</span>
+                      </InfoTooltip>
                       {hasProperty && exploreBedroomFilter === myProperty?.bedrooms && (
                         <span className="text-xs px-2 py-0.5 bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.55_0.14_75)] rounded-full">
                           Apples-to-apples
@@ -1505,7 +1509,9 @@ export default function LeadMagnet() {
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Sort
+                    <InfoTooltip content="Choose how to order the results. 'Highest Revenue' shows top earners first. 'Highest Booking Rate' shows most in-demand properties.">
+                      <span>Sort</span>
+                    </InfoTooltip>
                   </label>
                   <select
                     value={exploreSortBy}
@@ -3411,13 +3417,65 @@ export default function LeadMagnet() {
                 ? filteredListings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / filteredListings.length
                 : 0;
               
+              // Calculate letter grade for market opportunity
+              // Based on avg booking rate and revenue potential
+              let opportunityGrade = 'C';
+              let gradeColor = 'text-amber-600';
+              let gradeBg = 'bg-amber-50 border-amber-200';
+              let gradeVerdict = 'Average Opportunity';
+              
+              if (avgBookingRate >= 65 && avgRevenue >= 60000) {
+                opportunityGrade = 'A';
+                gradeColor = 'text-emerald-600';
+                gradeBg = 'bg-emerald-50 border-emerald-200';
+                gradeVerdict = 'Strong Opportunity';
+              } else if (avgBookingRate >= 55 && avgRevenue >= 40000) {
+                opportunityGrade = 'B+';
+                gradeColor = 'text-emerald-500';
+                gradeBg = 'bg-emerald-50/70 border-emerald-200';
+                gradeVerdict = 'Good Opportunity';
+              } else if (avgBookingRate >= 50 && avgRevenue >= 30000) {
+                opportunityGrade = 'B';
+                gradeColor = 'text-blue-600';
+                gradeBg = 'bg-blue-50 border-blue-200';
+                gradeVerdict = 'Decent Opportunity';
+              } else if (avgBookingRate >= 40) {
+                opportunityGrade = 'C+';
+                gradeColor = 'text-amber-600';
+                gradeBg = 'bg-amber-50 border-amber-200';
+                gradeVerdict = 'Moderate Opportunity';
+              }
+              
+              // Calculate contextual comparisons
+              const nightsPerYear = Math.round(avgBookingRate * 3.65); // 365 * (rate/100)
+              const topEarnerMultiple = avgRevenue > 0 ? ((topEarner?.annual_revenue || 0) / avgRevenue).toFixed(1) : '0';
+              
               return (
                 <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-6 mb-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <Trophy className="w-4 h-4 text-amber-600" />
+                  {/* Guiding Question */}
+                  <p className="text-sm text-slate-600 mb-4 font-medium">
+                    What can I learn from the top performers in this area?
+                  </p>
+                  
+                  {/* Letter Grade + Title Row */}
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                    {/* Grade Circle */}
+                    <div className="flex-shrink-0">
+                      <InfoTooltip content={`This grade is based on the average booking rate (${Math.round(avgBookingRate)}%) and average revenue ($${Math.round(avgRevenue).toLocaleString()}/yr) of properties in this search. A higher grade means better earning potential.`}>
+                        <div className={`w-16 h-16 rounded-full ${gradeBg} flex items-center justify-center border-2 cursor-help`}>
+                          <span className={`text-2xl font-bold ${gradeColor}`}>{opportunityGrade}</span>
+                        </div>
+                      </InfoTooltip>
                     </div>
-                    <h4 className="font-semibold text-slate-900">What This Data Shows</h4>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-semibold text-slate-900 text-lg">{gradeVerdict}</h4>
+                      </div>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Properties here are booked about <span className="font-medium text-slate-700">{nightsPerYear} nights per year</span> on average
+                      </p>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -3430,38 +3488,38 @@ export default function LeadMagnet() {
                         </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-slate-900">${topEarner?.annual_revenue?.toLocaleString() || 0}/yr</p>
-                      <p className="text-xs text-slate-500 line-clamp-1">{topEarner?.title?.substring(0, 30) || 'N/A'}...</p>
+                      <p className="text-xs text-slate-500">{parseFloat(topEarnerMultiple) > 1 ? `${topEarnerMultiple}x the average` : 'At average level'}</p>
                     </div>
                     
                     {/* Most Booked */}
                     <div className="bg-white rounded-lg p-4 border border-amber-200">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Calendar className="w-4 h-4 text-amber-600" />
-                        <InfoTooltip content="The property with the highest booking rate. High booking rates indicate strong demand - guests want to stay here.">
+                        <InfoTooltip content={`The property with the highest booking rate. ${Math.round(mostBooked?.occupancy || 0)}% means it's booked about ${Math.round((mostBooked?.occupancy || 0) * 3.65)} nights per year.`}>
                           <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">Most Booked</span>
                         </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-slate-900">{Math.round(mostBooked?.occupancy || 0)}% booked</p>
-                      <p className="text-xs text-slate-500 line-clamp-1">{mostBooked?.title?.substring(0, 30) || 'N/A'}...</p>
+                      <p className="text-xs text-slate-500">~{Math.round((mostBooked?.occupancy || 0) * 3.65)} nights/year</p>
                     </div>
                     
                     {/* Market Average */}
                     <div className="bg-white rounded-lg p-4 border border-blue-200">
                       <div className="flex items-center gap-1.5 mb-2">
                         <BarChart3 className="w-4 h-4 text-blue-600" />
-                        <InfoTooltip content="Average annual revenue across all properties in this search. Use this as a baseline expectation for your property.">
+                        <InfoTooltip content="Average annual revenue across all properties in this search. This is your baseline expectation - aim to match or beat this number.">
                           <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Avg Revenue</span>
                         </InfoTooltip>
                       </div>
                       <p className="text-lg font-bold text-slate-900">${Math.round(avgRevenue).toLocaleString()}/yr</p>
-                      <p className="text-xs text-slate-500">across {filteredListings.length} properties</p>
+                      <p className="text-xs text-slate-500">${Math.round(avgRevenue / 12).toLocaleString()}/month</p>
                     </div>
                     
                     {/* Avg Booking Rate */}
                     <div className="bg-white rounded-lg p-4 border border-purple-200">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Percent className="w-4 h-4 text-purple-600" />
-                        <InfoTooltip content="Average booking rate in this market. Markets with 50%+ average booking rates typically have healthy demand.">
+                        <InfoTooltip content={`Average booking rate in this market. ${Math.round(avgBookingRate)}% means properties are booked about ${nightsPerYear} nights per year. 50%+ is considered healthy demand.`}>
                           <span className="text-xs font-medium text-purple-600 uppercase tracking-wider">Avg Booking Rate</span>
                         </InfoTooltip>
                       </div>
@@ -3491,7 +3549,11 @@ export default function LeadMagnet() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Sort By</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="Choose how to order the properties. 'Most Revenue' shows the highest earners first. 'Highest Booking Rate' shows the most in-demand properties.">
+                      <span>Sort By</span>
+                    </InfoTooltip>
+                  </label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreSortBy}
@@ -3504,7 +3566,11 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Property Type</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="'Entire Home' means guests get the whole place. 'Private Room' means guests rent a room in a shared home. Entire homes typically earn more but require more investment.">
+                      <span>Property Type</span>
+                    </InfoTooltip>
+                  </label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={explorePropertyType || ''}
@@ -3517,7 +3583,11 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Rating</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="Guest ratings from 1-5 stars. 4.5+ is good, 4.7+ is excellent, 4.9+ is exceptional. Higher-rated properties often charge more and get more bookings.">
+                      <span>Min Rating</span>
+                    </InfoTooltip>
+                  </label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinRating || ''}
@@ -3530,7 +3600,11 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Booking Rate</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="How often properties are booked. 50%+ means booked about 183 nights/year. 70%+ means booked about 256 nights/year. Higher booking rates indicate stronger demand.">
+                      <span>Min Booking Rate</span>
+                    </InfoTooltip>
+                  </label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinOccupancy || ''}
@@ -3546,7 +3620,11 @@ export default function LeadMagnet() {
               {/* Second row of filters */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-100">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Revenue</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="Filter by annual revenue. $30K/year = $2,500/month. $50K/year = $4,167/month. Use this to focus on higher-performing properties.">
+                      <span>Min Revenue</span>
+                    </InfoTooltip>
+                  </label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinRevenue || ''}
@@ -3560,7 +3638,11 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Host Type</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    <InfoTooltip content="Superhosts are top-rated hosts with excellent reviews and response rates. Filtering for Superhosts shows you the best-performing hosts to learn from.">
+                      <span>Host Type</span>
+                    </InfoTooltip>
+                  </label>
                   <button
                     onClick={() => setExploreSuperhostOnly(!exploreSuperhostOnly)}
                     className={`w-full h-11 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
