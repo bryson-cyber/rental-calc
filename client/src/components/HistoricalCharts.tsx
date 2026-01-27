@@ -82,22 +82,68 @@ export function HistoricalCharts({
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   };
 
-  // Chart options
-  const chartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
+  // Chart options with interactive tooltips
+  const getChartOptions = (metricKey: string) => {
+    const metric = metrics[metricKey as keyof typeof metrics];
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
       },
-      tooltip: {
-        backgroundColor: '#0F172A',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        padding: 12,
-        cornerRadius: 8,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: '#0F172A',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          padding: 16,
+          cornerRadius: 8,
+          displayColors: false,
+          titleFont: {
+            size: 14,
+            weight: 'bold' as const,
+          },
+          bodyFont: {
+            size: 13,
+          },
+          callbacks: {
+            title: (context: any) => {
+              return context[0]?.label || '';
+            },
+            label: (context: any) => {
+              const value = context.raw;
+              if (metricKey === 'occupancy') {
+                return `Booking Rate: ${Math.round(value)}%`;
+              } else if (metricKey === 'revenue') {
+                return `Annual Income: $${Math.round(value).toLocaleString()}`;
+              } else if (metricKey === 'adr') {
+                return `Nightly Rate: $${Math.round(value).toLocaleString()}`;
+              } else if (metricKey === 'listings') {
+                return `Active Listings: ${Math.round(value).toLocaleString()}`;
+              }
+              return `${metric?.label || 'Value'}: ${value}`;
+            },
+            afterLabel: (context: any) => {
+              // Add helpful context based on the metric
+              const value = context.raw;
+              if (metricKey === 'occupancy') {
+                if (value >= 70) return '✓ Excellent booking rate';
+                if (value >= 55) return '✓ Good booking rate';
+                return '⚠ Below average';
+              } else if (metricKey === 'revenue') {
+                const monthly = Math.round(value / 12);
+                return `≈ $${monthly.toLocaleString()}/month`;
+              }
+              return '';
+            },
+          },
+        },
       },
-    },
     scales: {
       x: {
         grid: {
@@ -124,16 +170,23 @@ export function HistoricalCharts({
         },
       },
     },
-    elements: {
-      line: {
-        tension: 0.4,
+      elements: {
+        line: {
+          tension: 0.4,
+        },
+        point: {
+          radius: 3,
+          hoverRadius: 8,
+          backgroundColor: metric?.color || '#3B82F6',
+          borderColor: '#fff',
+          borderWidth: 2,
+          hoverBackgroundColor: metric?.color || '#3B82F6',
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 3,
+        },
       },
-      point: {
-        radius: 0,
-        hoverRadius: 6,
-      },
-    },
-  }), []);
+    };
+  };
 
   // Create chart data for each metric
   const createChartData = (dataPoints: Array<{ month: string; value: number }>, color: string) => ({
@@ -299,7 +352,7 @@ export function HistoricalCharts({
                   {dataPoints.length > 0 ? (
                     <Line 
                       data={createChartData(dataPoints, metric.color)} 
-                      options={chartOptions}
+                      options={getChartOptions(key)}
                     />
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-500">

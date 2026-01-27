@@ -5194,3 +5194,11 @@ All guiding questions display correctly across all three test markets:
 - [x] Show "Login" for non-authenticated users with link to Manus Auth
 - [x] Show user name/avatar for authenticated users with logout option
 - [x] Test login button functionality
+
+
+## Historical Charts Interactive Tooltips (Jan 26, 2026)
+- [x] Add hover tooltips to Historical Charts showing actual numbers
+- [x] Display revenue, nightly rate, booking rate values on hover
+- [x] Format numbers with currency symbols and percentages
+- [x] Added helpful context (e.g., "Excellent booking rate" for 70%+, monthly breakdown for revenue)
+- [x] Test tooltips across different markets - Verified working on Phoenix/Scottsdale (shows "Dec 24, Booking Rate: 59%, ✓ Good booking rate")
