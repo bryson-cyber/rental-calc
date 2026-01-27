@@ -672,7 +672,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         )}
         {selectedMetrics.length < 4 && (
           <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Seasonality Swing</p>
+            <p className="text-slate-500 text-xs mb-1">Busy vs Slow Months</p>
             <p className="text-lg font-bold text-slate-900">
               {Math.round(((maxRevenue - minRevenue) / avgRevenue) * 100)}%
             </p>
@@ -1915,7 +1915,7 @@ function MarketHealthGrade({
     'Growth Trend': 'Year-over-year revenue change. Positive = growing market',
     'Competition': 'Professional host saturation. Lower = easier entry for new hosts',
     'Quality': 'Average guest ratings. Higher = better guest experiences',
-    'Seasonality': 'Revenue stability throughout the year. Higher = more consistent income',
+    'Income Stability': 'Is income steady all year? Higher = more consistent monthly earnings',
   };
   
   const factors = [
@@ -1924,7 +1924,7 @@ function MarketHealthGrade({
     { name: 'Growth Trend', score: growthScore, weight: weights.growth, definition: factorDefinitions['Growth Trend'] },
     { name: 'Competition', score: competitionScore, weight: weights.competition, definition: factorDefinitions['Competition'] },
     { name: 'Quality', score: qualityScore, weight: weights.quality, definition: factorDefinitions['Quality'] },
-    { name: 'Seasonality', score: seasonalityScore, weight: weights.seasonality, definition: factorDefinitions['Seasonality'] },
+    { name: 'Income Stability', score: seasonalityScore, weight: weights.seasonality, definition: factorDefinitions['Income Stability'] },
   ];
   
   return (

@@ -949,11 +949,11 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
                     { label: 'Market Score', value: marketData.scores.marketScore, description: 'Overall market health' },
-                    { label: 'Investability', value: marketData.scores.investabilityScore, description: 'Investment potential' },
-                    { label: 'Rental Demand', value: marketData.scores.rentalDemandScore, description: 'Guest demand level' },
-                    { label: 'Revenue Growth', value: marketData.scores.revenueGrowthScore, description: 'Revenue trend' },
-                    { label: 'Seasonality', value: marketData.scores.seasonalityScore, description: 'Revenue stability' },
-                    { label: 'Regulation', value: marketData.scores.regulationScore, description: 'Regulatory environment' },
+                    { label: 'Profit Potential', value: marketData.scores.investabilityScore, description: 'Can you make good money here?' },
+                    { label: 'Guest Interest', value: marketData.scores.rentalDemandScore, description: 'How many people want to stay here?' },
+                    { label: 'Earnings Trend', value: marketData.scores.revenueGrowthScore, description: 'Are hosts making more or less?' },
+                    { label: 'Income Stability', value: marketData.scores.seasonalityScore, description: 'Is income steady all year?' },
+                    { label: 'Local Rules', value: marketData.scores.regulationScore, description: 'How easy is it to rent here?' },
                   ].map((score) => {
                     // Handle decimal values - if value is less than 1, it's likely a decimal that should be a percentage
                     const displayValue = score.value < 1 && score.value > 0 ? Math.round(score.value * 100) : Math.round(score.value);

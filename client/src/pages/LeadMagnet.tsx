@@ -2458,11 +2458,11 @@ export default function LeadMagnet() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {[
-                      { label: 'Investability', value: scores.investability, tooltip: 'Measures the potential return on investment based on property prices vs rental income. Higher scores mean better profit potential.' },
-                      { label: 'Rental Demand', value: scores.rentalDemand, tooltip: 'How much guest interest exists in this market. Based on booking rates, search volume, and occupancy trends.' },
-                      { label: 'Revenue Growth', value: scores.revenueGrowth, tooltip: 'Year-over-year revenue trend. Shows if hosts are earning more or less compared to last year.' },
-                      { label: 'Seasonality', value: scores.seasonality, tooltip: 'How consistent income is throughout the year. Higher scores mean more stable, year-round demand.' },
-                      { label: 'Regulation', value: scores.regulation, tooltip: 'How friendly local laws are to short-term rentals. Higher scores mean fewer restrictions and easier licensing.' },
+                      { label: 'Profit Potential', value: scores.investability, tooltip: 'Can you make good money here? This compares property prices to rental income. Higher = better profit margins.' },
+                      { label: 'Guest Interest', value: scores.rentalDemand, tooltip: 'How many people want to stay here? Based on how often places get booked and searched. Higher = more guests looking.' },
+                      { label: 'Earnings Trend', value: scores.revenueGrowth, tooltip: 'Are hosts making more or less than last year? Higher = earnings are growing.' },
+                      { label: 'Income Stability', value: scores.seasonality, tooltip: 'Is income steady all year, or do some months earn way more? Higher = more consistent monthly income.' },
+                      { label: 'Local Rules', value: scores.regulation, tooltip: 'How easy is it to legally rent here? Higher = fewer restrictions and easier permits.' },
                     ].map((item, idx) => (
                       <div key={idx} className="bg-slate-50 rounded-lg p-3 group relative">
                         <div className="flex items-center gap-2 mb-2">
@@ -2622,7 +2622,7 @@ export default function LeadMagnet() {
                     <div className="bg-slate-50 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs text-slate-600 font-medium">Superhosts</span>
+                        <span className="text-xs text-slate-600 font-medium">Top-Rated Hosts</span>
                       </div>
                       <p className="text-2xl font-bold text-slate-900">{comp.superhostPct}%</p>
                       <p className="text-xs text-slate-500">Top-rated hosts</p>
@@ -2828,10 +2828,10 @@ export default function LeadMagnet() {
             {/* Seasonality Summary */}
             {isResearching && (
               <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4">Market Seasonality</h4>
+                <h4 className="text-lg font-semibold text-slate-900 mb-4">Monthly Earnings Pattern</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-slate-500 mb-3">Occupancy by Month</p>
+                    <p className="text-sm text-slate-500 mb-3">How Often It's Booked Each Month</p>
                     <div className="space-y-2">
                       {[...Array(12)].map((_, idx) => (
                         <div key={idx} className="flex items-center gap-3">
@@ -2843,7 +2843,7 @@ export default function LeadMagnet() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 mb-3">Average Daily Rate by Month</p>
+                    <p className="text-sm text-slate-500 mb-3">Nightly Rate Each Month</p>
                     <div className="space-y-2">
                       {[...Array(12)].map((_, idx) => (
                         <div key={idx} className="flex items-center justify-between">
@@ -2868,8 +2868,8 @@ export default function LeadMagnet() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900">Historical Seasonality</h4>
-                      <p className="text-slate-500 text-sm">Avg monthly performance based on historical data</p>
+                      <h4 className="text-lg font-semibold text-slate-900">Monthly Earnings Pattern</h4>
+                      <p className="text-slate-500 text-sm">See which months earn the most (and least) in this market</p>
                     </div>
                     <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">12-month avg</span>
                   </div>
@@ -2877,7 +2877,7 @@ export default function LeadMagnet() {
                     {/* Occupancy Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-slate-500">Avg Occupancy by Month</p>
+                        <p className="text-sm text-slate-500">How Often It's Booked Each Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-amber-500"></div>
                           <span className="text-xs text-amber-600 font-medium">Avg: {Math.round(avgOccupancy)}%</span>
@@ -2910,7 +2910,7 @@ export default function LeadMagnet() {
                     {/* ADR Chart */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-slate-500">Avg Nightly Rate by Month</p>
+                        <p className="text-sm text-slate-500">Nightly Rate Each Month</p>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-0.5 bg-blue-500"></div>
                           <span className="text-xs text-blue-600 font-medium">Avg: {formatCurrency(avgAdr)}</span>
@@ -3164,7 +3164,7 @@ export default function LeadMagnet() {
                     }`}
                   >
                     <Star className={`w-4 h-4 ${exploreSuperhostOnly ? 'fill-white' : ''}`} />
-                    {exploreSuperhostOnly ? 'Superhosts Only' : 'All Hosts'}
+                    {exploreSuperhostOnly ? 'Top-Rated Only' : 'All Hosts'}
                   </button>
                 </div>
               </div>

@@ -182,9 +182,9 @@ export function CompDataTable({
                   value={orderBy}
                   onChange={(e) => setOrderBy(e.target.value as typeof orderBy)}
                 >
-                  <option value="revenue">Revenue</option>
-                  <option value="adr">ADR</option>
-                  <option value="occupancy">Occupancy</option>
+                  <option value="revenue">Annual Income</option>
+                  <option value="adr">Nightly Rate</option>
+                  <option value="occupancy">Booking Rate</option>
                   <option value="rating">Rating</option>
                 </select>
               </div>
@@ -284,7 +284,7 @@ export function CompDataTable({
                     <div className="flex items-center gap-2">
                       {listing.is_superhost && (
                         <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                          Superhost
+                          Top Host
                         </Badge>
                       )}
                       <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
@@ -296,7 +296,7 @@ export function CompDataTable({
                   {/* Stats */}
                   <div className="grid grid-cols-4 gap-4 mt-3">
                     <div className="relative group">
-                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">Annual Revenue</div>
+                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">Yearly Income</div>
                       <div className="font-semibold text-green-600">{formatCurrency(listing.annual_revenue)}</div>
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48 pointer-events-none">
                         <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
@@ -306,21 +306,21 @@ export function CompDataTable({
                       </div>
                     </div>
                     <div className="relative group">
-                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">ADR</div>
+                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">Nightly Rate</div>
                       <div className="font-medium text-gray-900">{formatCurrency(listing.adr)}</div>
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48 pointer-events-none">
                         <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
-                          Average Daily Rate - the typical nightly price this property charges
+                          The typical price per night this property charges
                           <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900"></div>
                         </div>
                       </div>
                     </div>
                     <div className="relative group">
-                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">Occupancy</div>
+                      <div className="text-xs text-gray-500 cursor-help border-b border-dotted border-gray-400 inline-block">Booking Rate</div>
                       <div className="font-medium text-gray-900">{formatPercent(listing.occupancy)}</div>
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 w-48 pointer-events-none">
                         <div className="bg-slate-900 text-white text-xs p-2 rounded-lg shadow-lg">
-                          How often this property is booked. 70%+ is excellent for short-term rentals
+                          How often this property is booked. 70%+ is excellent
                           <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900"></div>
                         </div>
                       </div>

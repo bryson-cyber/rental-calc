@@ -202,13 +202,13 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
               )}
               {data.marketScores.seasonality !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs text-slate-500 mb-1">Seasonality</p>
+                  <p className="text-xs text-slate-500 mb-1">Income Stability</p>
                   <p className="text-xl font-bold text-slate-900">{data.marketScores.seasonality}/100</p>
                 </div>
               )}
               {data.marketScores.regulation_risk !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs text-slate-500 mb-1">Regulation Risk</p>
+                  <p className="text-xs text-slate-500 mb-1">Local Rules Risk</p>
                   <p className="text-xl font-bold text-slate-900">{data.marketScores.regulation_risk}/100</p>
                 </div>
               )}
@@ -221,30 +221,30 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-emerald-500" />
-              Revenue Distribution
+              What Hosts Actually Earn
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {data.revenuePercentiles.p25 !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">25th Percentile</p>
+                  <p className="text-xs text-slate-500 mb-1">Bottom 25%</p>
                   <p className="text-lg font-bold text-slate-900">{formatCurrency(data.revenuePercentiles.p25)}</p>
                 </div>
               )}
               {data.revenuePercentiles.p50 !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Median (50th)</p>
+                  <p className="text-xs text-slate-500 mb-1">Typical Host</p>
                   <p className="text-lg font-bold text-slate-900">{formatCurrency(data.revenuePercentiles.p50)}</p>
                 </div>
               )}
               {data.revenuePercentiles.p75 !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">75th Percentile</p>
+                  <p className="text-xs text-slate-500 mb-1">Top 25%</p>
                   <p className="text-lg font-bold text-slate-900">{formatCurrency(data.revenuePercentiles.p75)}</p>
                 </div>
               )}
               {data.revenuePercentiles.p90 !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Top 10% (90th)</p>
+                  <p className="text-xs text-slate-500 mb-1">Top 10%</p>
                   <p className="text-lg font-bold text-emerald-600">{formatCurrency(data.revenuePercentiles.p90)}</p>
                 </div>
               )}
@@ -257,18 +257,18 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Percent className="w-5 h-5 text-purple-500" />
-              Competition Insights
+              Your Competition
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {data.competitionData.superhostPct !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Superhosts</p>
+                  <p className="text-xs text-slate-500 mb-1">Top-Rated Hosts</p>
                   <p className="text-xl font-bold text-slate-900">{formatPercent(data.competitionData.superhostPct)}</p>
                 </div>
               )}
               {data.competitionData.professionalPct !== undefined && (
                 <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <p className="text-xs text-slate-500 mb-1">Professional Hosts</p>
+                  <p className="text-xs text-slate-500 mb-1">Property Managers</p>
                   <p className="text-xl font-bold text-slate-900">{formatPercent(data.competitionData.professionalPct)}</p>
                 </div>
               )}
@@ -321,17 +321,17 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
         {/* Seasonality */}
         {data.seasonality && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Seasonality</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Busy vs Slow Months</h2>
             <div className="grid grid-cols-2 gap-4">
               {data.seasonality.peak_months && data.seasonality.peak_months.length > 0 && (
                 <div className="bg-emerald-50 rounded-xl p-4">
-                  <p className="text-xs text-emerald-600 font-medium mb-2">Peak Months</p>
+                  <p className="text-xs text-emerald-600 font-medium mb-2">Busiest Months</p>
                   <p className="text-slate-900 font-semibold">{data.seasonality.peak_months.join(', ')}</p>
                 </div>
               )}
               {data.seasonality.low_months && data.seasonality.low_months.length > 0 && (
                 <div className="bg-amber-50 rounded-xl p-4">
-                  <p className="text-xs text-amber-600 font-medium mb-2">Low Months</p>
+                  <p className="text-xs text-amber-600 font-medium mb-2">Slowest Months</p>
                   <p className="text-slate-900 font-semibold">{data.seasonality.low_months.join(', ')}</p>
                 </div>
               )}

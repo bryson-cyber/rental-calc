@@ -266,7 +266,7 @@ export function HistoricalCharts({
                     ) : (
                       <TrendingDown className="w-3.5 h-3.5" />
                     )}
-                    {metric.yoyFormat(yoyChange)} YoY
+                    {metric.yoyFormat(yoyChange)} vs last year
                   </div>
                 )}
                 {/* Tooltip */}

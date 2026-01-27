@@ -5090,3 +5090,61 @@ All guiding questions display correctly across all three test markets:
 6. "Which property types earn the most?" - Revenue by Property Type
 7. "Is this market growing or shrinking?" - Historical Charts
 8. "What are successful properties doing?" - Comp Data Table
+
+
+## Jargon Simplification (Step 3 Quality)
+- [ ] Audit all technical terms in Step 1 interface
+- [ ] Create beginner-friendly term mapping
+- [ ] Simplify "Historical Seasonality" → "Monthly Earnings Pattern" or similar
+- [ ] Simplify "ADR" → "Nightly Rate" or "Price Per Night"
+- [ ] Simplify "Occupancy" → "Booking Rate" or "How Often It's Booked"
+- [ ] Simplify "Revenue Distribution" → "What Hosts Actually Earn"
+- [ ] Simplify "Competition Landscape" → "Your Competition"
+- [ ] Simplify "Investability" → "Profit Potential"
+- [ ] Simplify "Rental Demand" → "Guest Interest"
+- [ ] Simplify all chart labels and tooltips to 5th grade reading level
+
+
+## Jargon Simplification (Step 3 Quality) - COMPLETE
+
+### LeadMagnet.tsx
+- [x] "Historical Seasonality" → "Monthly Earnings Pattern"
+- [x] "Avg Occupancy by Month" → "How Often It's Booked Each Month"
+- [x] "Avg Nightly Rate by Month" → "Nightly Rate Each Month"
+- [x] Market Health Score labels simplified:
+  - [x] "Investability" → "Profit Potential"
+  - [x] "Rental Demand" → "Guest Interest"
+  - [x] "Revenue Growth" → "Earnings Trend"
+  - [x] "Seasonality" → "Income Stability"
+  - [x] "Regulation" → "Local Rules"
+
+### TeslaDashboard.tsx
+- [x] "Seasonality" → "Income Stability"
+- [x] "Seasonality Swing" → "Busy vs Slow Months"
+
+### StandaloneMarketAdvisor.tsx
+- [x] All score labels simplified to match LeadMagnet
+
+### SharedMarketReport.tsx
+- [x] "Seasonality" → "Income Stability"
+- [x] "Regulation Risk" → "Local Rules Risk"
+- [x] "Revenue Distribution" → "What Hosts Actually Earn"
+- [x] Percentile labels simplified (25th → Bottom 25%, 50th → Typical Host, etc.)
+- [x] "Competition Insights" → "Your Competition"
+- [x] "Superhosts" → "Top-Rated Hosts"
+- [x] "Professional Hosts" → "Property Managers"
+- [x] "Seasonality" section → "Busy vs Slow Months"
+- [x] "Peak Months" → "Busiest Months"
+- [x] "Low Months" → "Slowest Months"
+
+### HistoricalCharts.tsx
+- [x] "YoY" → "vs last year"
+
+### CompDataTable.tsx
+- [x] Dropdown: "Revenue" → "Annual Income"
+- [x] Dropdown: "ADR" → "Nightly Rate"
+- [x] Dropdown: "Occupancy" → "Booking Rate"
+- [x] Card: "Annual Revenue" → "Yearly Income"
+- [x] Card: "ADR" → "Nightly Rate"
+- [x] Card: "Occupancy" → "Booking Rate"
+- [x] Badge: "Superhost" → "Top Host"
