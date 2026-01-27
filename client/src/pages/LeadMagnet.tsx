@@ -3397,13 +3397,97 @@ export default function LeadMagnet() {
             </div>
             
             
+            {/* Step 2 Verdict Section - What This Data Shows */}
+            {(() => {
+              // Calculate insights from the listings
+              const filteredListings = areaListings
+                .filter(listing => listing.airbnb_url && listing.airbnb_url.includes('airbnb.com'));
+              const topEarner = filteredListings.reduce((max, l) => (l.annual_revenue || 0) > (max?.annual_revenue || 0) ? l : max, filteredListings[0]);
+              const mostBooked = filteredListings.reduce((max, l) => (l.occupancy || 0) > (max?.occupancy || 0) ? l : max, filteredListings[0]);
+              const avgRevenue = filteredListings.length > 0 
+                ? filteredListings.reduce((sum, l) => sum + (l.annual_revenue || 0), 0) / filteredListings.length 
+                : 0;
+              const avgBookingRate = filteredListings.length > 0
+                ? filteredListings.reduce((sum, l) => sum + (l.occupancy || 0), 0) / filteredListings.length
+                : 0;
+              
+              return (
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-6 mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900">What This Data Shows</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {/* Top Earner */}
+                    <div className="bg-white rounded-lg p-4 border border-emerald-200">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-600" />
+                        <InfoTooltip content="The highest-earning property in this search. Study what makes it successful - location, amenities, photos, and pricing.">
+                          <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Top Earner</span>
+                        </InfoTooltip>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">${topEarner?.annual_revenue?.toLocaleString() || 0}/yr</p>
+                      <p className="text-xs text-slate-500 line-clamp-1">{topEarner?.title?.substring(0, 30) || 'N/A'}...</p>
+                    </div>
+                    
+                    {/* Most Booked */}
+                    <div className="bg-white rounded-lg p-4 border border-amber-200">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Calendar className="w-4 h-4 text-amber-600" />
+                        <InfoTooltip content="The property with the highest booking rate. High booking rates indicate strong demand - guests want to stay here.">
+                          <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">Most Booked</span>
+                        </InfoTooltip>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">{Math.round(mostBooked?.occupancy || 0)}% booked</p>
+                      <p className="text-xs text-slate-500 line-clamp-1">{mostBooked?.title?.substring(0, 30) || 'N/A'}...</p>
+                    </div>
+                    
+                    {/* Market Average */}
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <BarChart3 className="w-4 h-4 text-blue-600" />
+                        <InfoTooltip content="Average annual revenue across all properties in this search. Use this as a baseline expectation for your property.">
+                          <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Avg Revenue</span>
+                        </InfoTooltip>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">${Math.round(avgRevenue).toLocaleString()}/yr</p>
+                      <p className="text-xs text-slate-500">across {filteredListings.length} properties</p>
+                    </div>
+                    
+                    {/* Avg Booking Rate */}
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Percent className="w-4 h-4 text-purple-600" />
+                        <InfoTooltip content="Average booking rate in this market. Markets with 50%+ average booking rates typically have healthy demand.">
+                          <span className="text-xs font-medium text-purple-600 uppercase tracking-wider">Avg Booking Rate</span>
+                        </InfoTooltip>
+                      </div>
+                      <p className="text-lg font-bold text-slate-900">{Math.round(avgBookingRate)}%</p>
+                      <p className="text-xs text-slate-500">{avgBookingRate >= 60 ? 'Strong demand' : avgBookingRate >= 45 ? 'Moderate demand' : 'Lower demand'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Confidence Note */}
+                  <p className="text-xs text-slate-500 text-center">
+                    Based on {filteredListings.length} active Airbnb properties within your search area
+                  </p>
+                </div>
+              );
+            })()}
+            
             {/* Tesla Dashboard Style Filters */}
             <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
                   <Filter className="w-4 h-4 text-slate-600" />
                 </div>
-                <h4 className="font-semibold text-slate-900">Filter & Sort</h4>
+                <div>
+                  <h4 className="font-semibold text-slate-900">Filter & Sort</h4>
+                  <p className="text-xs text-slate-500">How can I narrow down my search?</p>
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>

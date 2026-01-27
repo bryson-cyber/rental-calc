@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink, Star, Home, Bed, Bath, TrendingUp, Calendar, MapPin, Bookmark, BookmarkCheck, DollarSign, Percent, Target } from 'lucide-react';
+import { InfoTooltip } from '@/components/InfoTooltip';
 
 interface PropertyCardProps {
   id: string;
@@ -95,11 +96,16 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
           )}
           {rating !== null && (
-            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
-              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-              <span className="text-yellow-700 font-bold text-sm">{rating.toFixed(1)}</span>
-              <span className="text-slate-400 text-xs">({reviews})</span>
-            </div>
+            <InfoTooltip 
+              content="Guest satisfaction rating from 1-5 stars. Properties with 4.8+ ratings tend to get more bookings and can charge higher rates."
+              side="top"
+            >
+              <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="text-yellow-700 font-bold text-sm">{rating.toFixed(1)}</span>
+                <span className="text-slate-400 text-xs">({reviews})</span>
+              </div>
+            </InfoTooltip>
           )}
         </div>
       </div>
@@ -129,7 +135,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           )}
         </div>
         
-        {/* Financial Stats Grid - Tesla Dashboard Style */}
+        {/* Financial Stats Grid - Tesla Dashboard Style with Tooltips */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           {/* Annual Revenue */}
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
@@ -137,40 +143,64 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <div className="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center">
                 <TrendingUp className="w-3 h-3 text-emerald-600" />
               </div>
-              <span className="text-xs text-emerald-600 font-medium">Annual Revenue</span>
+              <InfoTooltip 
+                content="Total yearly earnings from this property before expenses. This is the gross income hosts report earning on Airbnb."
+                side="top"
+                iconClassName="text-emerald-500"
+              >
+                <span className="text-xs text-emerald-600 font-medium">Annual Revenue</span>
+              </InfoTooltip>
             </div>
             <p className="text-emerald-700 font-bold text-lg">{formatCurrency(annualRevenue)}</p>
           </div>
           
-          {/* ADR */}
+          {/* Nightly Rate (ADR) */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <div className="w-5 h-5 rounded bg-blue-500/20 flex items-center justify-center">
                 <DollarSign className="w-3 h-3 text-blue-600" />
               </div>
-              <span className="text-xs text-blue-600 font-medium">Daily Rate</span>
+              <InfoTooltip 
+                content="Average price per night this property charges guests. Also called 'Average Daily Rate' (ADR). Higher rates mean more income per booking."
+                side="top"
+                iconClassName="text-blue-500"
+              >
+                <span className="text-xs text-blue-600 font-medium">Nightly Rate</span>
+              </InfoTooltip>
             </div>
             <p className="text-blue-700 font-bold text-lg">{formatCurrency(adr)}</p>
           </div>
           
-          {/* Occupancy */}
+          {/* Booking Rate (Occupancy) */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <div className="w-5 h-5 rounded bg-amber-500/20 flex items-center justify-center">
                 <Calendar className="w-3 h-3 text-amber-600" />
               </div>
-              <span className="text-xs text-amber-600 font-medium">Booking Rate</span>
+              <InfoTooltip 
+                content={`How often this property is booked throughout the year. ${Math.round(occupancy)}% means guests stay about ${Math.round(occupancy * 3.65)} nights per year. 50-70% is typical for most markets.`}
+                side="top"
+                iconClassName="text-amber-500"
+              >
+                <span className="text-xs text-amber-600 font-medium">Booking Rate</span>
+              </InfoTooltip>
             </div>
             <p className="text-amber-700 font-bold text-lg">{Math.round(occupancy)}%</p>
           </div>
           
-          {/* RevPAR */}
+          {/* Avg Daily Earnings (RevPAR) */}
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <div className="w-5 h-5 rounded bg-purple-500/20 flex items-center justify-center">
                 <Percent className="w-3 h-3 text-purple-600" />
               </div>
-              <span className="text-xs text-purple-600 font-medium">Avg Daily Earnings</span>
+              <InfoTooltip 
+                content="Average earnings per day including vacant nights. Calculated as (Annual Revenue / 365). This shows true daily earning power - higher is better."
+                side="top"
+                iconClassName="text-purple-500"
+              >
+                <span className="text-xs text-purple-600 font-medium">Avg Daily Earnings</span>
+              </InfoTooltip>
             </div>
             <p className="text-purple-700 font-bold text-lg">{formatCurrency(calculateRevPAR())}</p>
           </div>

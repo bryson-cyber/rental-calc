@@ -5427,3 +5427,29 @@ All guiding questions display correctly across all three test markets:
 
 ### Task 8: Save Checkpoint
 - [ ] Save checkpoint when all tasks complete
+
+
+## Step 2 "Explore Listings" Optimizations (Jan 27, 2026) - COMPLETE
+
+### Verdict Section
+- [x] Add "What This Data Shows" verdict section above filters
+- [x] Display TOP EARNER with highest revenue property
+- [x] Display MOST BOOKED with highest booking rate property
+- [x] Display AVG REVENUE across all properties
+- [x] Display AVG BOOKING RATE with demand indicator
+- [x] Add confidence note "Based on X active Airbnb properties"
+
+### PropertyCard Tooltips
+- [x] Add InfoTooltip to Annual Revenue metric
+- [x] Add InfoTooltip to Nightly Rate metric
+- [x] Add InfoTooltip to Booking Rate metric
+- [x] Add InfoTooltip to Avg Daily Earnings metric
+- [x] Add InfoTooltip to Rating metric
+
+### Filter Section
+- [x] Add guiding question "How can I narrow down my search?"
+
+### Skill Guidelines Compliance
+- [x] Beginner-friendly explanations for all metrics
+- [x] Non-prescriptive data presentation
+- [x] Confidence notes showing data source count
