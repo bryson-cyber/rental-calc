@@ -5702,3 +5702,51 @@ All guiding questions display correctly across all three test markets:
 - [x] Remove "Analyze Property" button from Step 2 property cards (no address to analyze)
 - [x] Update tooltips with accurate, confidence-building data source information
 - [x] Fix tooltip text: Updated to "Estimated annual revenue calculated from actual booking data scraped daily from Airbnb and Vrbo. AirDNA's methodology is CBRE-verified at 96% accuracy across 10M+ properties."
+
+
+## Step 2 Compliance Test (bnb-lead-magnet-dev) - Jan 27, 2026
+
+### Phase 1: Document All Visible Elements
+- [ ] Navigate to Step 2 and load results
+- [ ] List all metrics, labels, and data points visible
+- [ ] Screenshot/document current state
+
+### Phase 2: Tooltip Audit (MANDATORY per skill)
+- [ ] Check: City/Neighborhood search field - has tooltip?
+- [ ] Check: Bedrooms filter - has tooltip?
+- [ ] Check: Sort By filter - has tooltip?
+- [ ] Check: Market Performance Grade (letter grade) - has tooltip?
+- [ ] Check: Property count badge - has tooltip?
+- [ ] Check: Top Earner stat - has tooltip?
+- [ ] Check: Average Revenue stat - has tooltip?
+- [ ] Check: Most Booked stat - has tooltip?
+- [ ] Check: Avg Booking Rate stat - has tooltip?
+- [ ] Check: Property Card - Annual Revenue - has tooltip?
+- [ ] Check: Property Card - Nightly Rate - has tooltip?
+- [ ] Check: Property Card - Booking Rate - has tooltip?
+- [ ] Check: Property Card - Avg Daily Earnings - has tooltip?
+- [ ] Check: Property Card - Rating - has tooltip?
+- [ ] Check: Property Card - Top-Rated Host badge - has tooltip?
+- [ ] Check: Confidence indicator - has tooltip?
+- [ ] Check: Share Report button - has tooltip?
+
+### Phase 3: Quality Checklist (per skill)
+- [ ] Does each section have a guiding question?
+- [ ] Is technical jargon translated to plain English?
+- [ ] Are there contextual comparisons (not just raw numbers)?
+- [ ] Is there a clear verdict/recommendation?
+- [ ] Are confidence indicators shown?
+- [ ] Is the visual hierarchy clear (big numbers, grades, colors)?
+- [ ] Would a complete beginner understand what to do with this info?
+- [ ] Are info bubbles added for complex metrics?
+- [ ] NO EMOJIS anywhere in the UI?
+
+### Phase 4: Fix Any Gaps Found
+- [ ] Add missing tooltips
+- [ ] Add missing guiding questions
+- [ ] Fix any jargon issues
+- [ ] Remove any emojis found
+
+### Phase 5: Re-test and Verify
+- [ ] Re-test all tooltips in browser
+- [ ] Verify all quality checklist items pass

@@ -541,7 +541,7 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
     }>('/market/search', 'POST', {
       search_term: searchTerm,
       pagination: {
-        page_size: limit,
+        page_size: Math.min(limit, 25), // AirDNA API max is 25
         offset: 0
       }
     });
