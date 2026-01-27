@@ -6084,3 +6084,31 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - Bulk endpoint returns: ADR, Revenue, Occupancy (no comps, no images)
 - Individual endpoint returns: Full details with up to 10 comps
 - Both endpoints return property-specific estimates, not generic market data
+
+
+## Step 4 Skill Audit (Jan 27, 2026) - COMPLETE
+
+### Quality Checklist (from BNB Lead Magnet Skill)
+- [x] Does each section have a guiding question? (Yes - "Which property should I choose?")
+- [x] Is technical jargon translated to plain English? (Yes - all tooltips use beginner-friendly language)
+- [x] Are there contextual comparisons (not just raw numbers)? (Yes - dynamic tooltips with context)
+- [x] Is there a clear verdict/recommendation? (Yes - "Your Best Deal" winner card)
+- [x] Are confidence indicators shown? (Removed fake comp count - bulk API doesn't return this)
+- [x] Is the visual hierarchy clear (big numbers, grades, colors)? (Yes - hero card, ranked table)
+- [x] Would a complete beginner understand what to do with this info? (Yes - tooltips explain everything)
+- [x] Are info bubbles added for complex metrics? (Yes - all metrics have tooltips)
+
+### Tooltip Audit (MANDATORY) - COMPLETE
+- [x] Audit all metrics displayed in Step 4 results
+- [x] Add tooltips for: ADR, Occupancy, Profit Multiplier, Break-Even, Profit Margin
+- [x] Ensure tooltips use plain English (no jargon)
+- [x] Tooltips explain "what it means for you"
+
+### Tooltips Added:
+- Form fields: Rent, Beds, Baths
+- Winner Hero: Annual Profit, Monthly Profit, Profit Multiplier, Monthly Revenue, Booking Rate, Profit Margin, Nightly Rate
+- Comparison Table Headers: Rent, Revenue, Profit, Multiplier, Booking
+- Detailed Cards: Annual Profit, Profit Margin, Nightly Rate, Break-Even
+
+### No Emojis Check
+- [x] Scan all Step 4 text for emojis and remove them (none found)

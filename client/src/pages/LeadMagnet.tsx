@@ -1995,7 +1995,9 @@ export default function LeadMagnet() {
                       
                       {/* Rent */}
                       <div className="space-y-2 mb-4">
-                        <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Rent</label>
+                        <InfoTooltip content="Your monthly rent or mortgage payment. This is used to calculate your profit - the difference between what you earn and what you pay.">
+                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Rent</span>
+                        </InfoTooltip>
                         <Input
                           type="number"
                           value={prop.rent || ''}
@@ -2008,7 +2010,9 @@ export default function LeadMagnet() {
                       {/* Beds & Baths */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Beds</label>
+                          <InfoTooltip content="Number of bedrooms. More bedrooms usually means higher revenue, but also higher rent. Match this to the property you're considering.">
+                            <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Beds</span>
+                          </InfoTooltip>
                           <select
                             value={prop.bedrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bedrooms', parseInt(e.target.value))}
@@ -2020,7 +2024,9 @@ export default function LeadMagnet() {
                           </select>
                         </div>
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Baths</label>
+                          <InfoTooltip content="Number of bathrooms. Properties with more bathrooms tend to earn more and get better reviews.">
+                            <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Baths</span>
+                          </InfoTooltip>
                           <select
                             value={prop.bathrooms}
                             onChange={(e) => updateBulkProperty(prop.id, 'bathrooms', parseFloat(e.target.value))}
@@ -4349,28 +4355,53 @@ export default function LeadMagnet() {
                         
                         {/* Annual Summary */}
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <p className="text-emerald-100 text-sm mb-1">Annual Profit Potential</p>
-                          <p className="text-3xl font-bold">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-emerald-100">/year</span></p>
+                          <InfoTooltip 
+                            content="Your estimated yearly profit after paying rent. This is what you could take home before other expenses like utilities and supplies."
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-sm">Annual Profit Potential</span>
+                          </InfoTooltip>
+                          <p className="text-3xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-emerald-100">/year</span></p>
                         </div>
                       </div>
                       
                       {/* Right: Key Metrics */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Monthly Profit</p>
-                          <p className="text-2xl font-bold">{formatCurrency(sortedBulkResults[0].profit)}</p>
+                          <InfoTooltip 
+                            content="Revenue minus rent. This is your monthly take-home before other expenses like cleaning and supplies."
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Monthly Profit</span>
+                          </InfoTooltip>
+                          <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit)}</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Profit Multiplier</p>
-                          <p className="text-2xl font-bold">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
+                          <InfoTooltip 
+                            content={`How many times your rent you could earn. ${sortedBulkResults[0].ratio.toFixed(1)}x means you earn ${sortedBulkResults[0].ratio.toFixed(1)} times what you pay in rent. 2x+ is good, 3x+ is excellent.`}
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Profit Multiplier</span>
+                          </InfoTooltip>
+                          <p className="text-2xl font-bold mt-1">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Monthly Revenue</p>
-                          <p className="text-2xl font-bold">{formatCurrency(sortedBulkResults[0].revenue)}</p>
+                          <InfoTooltip 
+                            content="Total income from guest bookings each month, before subtracting rent. This is your gross income."
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Monthly Revenue</span>
+                          </InfoTooltip>
+                          <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].revenue)}</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Booking Rate</p>
-                          <p className="text-2xl font-bold">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
+                          <InfoTooltip 
+                            content={`How often the property is booked. ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}% means guests about ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100) * 3.65)} nights per year.`}
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Booking Rate</span>
+                          </InfoTooltip>
+                          <p className="text-2xl font-bold mt-1">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
                         </div>
                       </div>
                     </div>
@@ -4379,13 +4410,23 @@ export default function LeadMagnet() {
                     <div className="mt-6 pt-6 border-t border-white/20">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-emerald-100 text-sm">Profit Margin</p>
+                          <InfoTooltip 
+                            content={`What percentage of your revenue becomes profit after paying rent. ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% is ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 60 ? 'excellent' : Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 40 ? 'good' : 'moderate'}. Higher is better.`}
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-sm">Profit Margin</span>
+                          </InfoTooltip>
                           <p className="text-lg font-semibold">
                             {Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% of revenue is profit
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-emerald-100 text-sm">Nightly Rate</p>
+                          <InfoTooltip 
+                            content="Average price per night that guests pay. Also called ADR (Average Daily Rate). This is based on similar properties in the area."
+                            iconClassName="text-emerald-200 hover:text-white"
+                          >
+                            <span className="text-emerald-100 text-sm">Nightly Rate</span>
+                          </InfoTooltip>
                           <p className="text-lg font-semibold">${Math.round(sortedBulkResults[0].adr)}/night</p>
                         </div>
                       </div>
@@ -4438,11 +4479,31 @@ export default function LeadMagnet() {
                     <tr>
                       <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Rank</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Property</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Rent</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Profit</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Multiplier</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Booking</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="Your monthly rent or mortgage payment for this property.">
+                          <span>Rent</span>
+                        </InfoTooltip>
+                      </th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="Estimated monthly income from guest bookings, before subtracting rent.">
+                          <span>Revenue</span>
+                        </InfoTooltip>
+                      </th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="Monthly revenue minus rent. This is your take-home before other expenses.">
+                          <span>Profit</span>
+                        </InfoTooltip>
+                      </th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="How many times your rent you could earn. 2x+ is good, 3x+ is excellent.">
+                          <span>Multiplier</span>
+                        </InfoTooltip>
+                      </th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                        <InfoTooltip content="How often the property is booked. 50%+ means booked about 183 nights/year.">
+                          <span>Booking</span>
+                        </InfoTooltip>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -4597,23 +4658,31 @@ export default function LeadMagnet() {
                     {/* Additional Insights */}
                     <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="text-slate-500">Annual Profit</p>
+                        <InfoTooltip content="Your total profit for the year after paying rent each month. This is what you could take home annually.">
+                          <span className="text-slate-500">Annual Profit</span>
+                        </InfoTooltip>
                         <p className={`font-semibold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                           {formatCurrency(result.profit * 12)}/yr
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Profit Margin</p>
+                        <InfoTooltip content={`What percentage of your revenue becomes profit. ${Math.round((result.profit / result.revenue) * 100)}% means ${Math.round((result.profit / result.revenue) * 100)}¢ of every dollar earned is profit.`}>
+                          <span className="text-slate-500">Profit Margin</span>
+                        </InfoTooltip>
                         <p className="font-semibold text-slate-900">
                           {Math.round((result.profit / result.revenue) * 100)}%
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Nightly Rate</p>
+                        <InfoTooltip content="Average price per night that guests pay. Also called ADR (Average Daily Rate).">
+                          <span className="text-slate-500">Nightly Rate</span>
+                        </InfoTooltip>
                         <p className="font-semibold text-slate-900">${Math.round(result.adr)}/night</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Break-Even</p>
+                        <InfoTooltip content={`The minimum booking rate needed to cover your rent. ${Math.round((result.rent / result.revenue) * 100)}% means you need guests ${Math.round((result.rent / result.revenue) * 100 * 3.65)} nights/year just to break even. Lower is safer.`}>
+                          <span className="text-slate-500">Break-Even</span>
+                        </InfoTooltip>
                         <p className="font-semibold text-slate-900">
                           {Math.round((result.rent / result.revenue) * 100)}% occupancy
                         </p>
