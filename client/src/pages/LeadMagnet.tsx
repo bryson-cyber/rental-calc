@@ -4288,7 +4288,11 @@ export default function LeadMagnet() {
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 text-sm font-medium mb-4">
                 <Trophy className="w-4 h-4" />
-                {sortedBulkResults.filter(r => r.status === 'success').length} Properties Compared
+                <MetricLabel 
+                  label={`${sortedBulkResults.filter(r => r.status === 'success').length} Properties Compared`}
+                  tooltip="The number of properties successfully analyzed and compared. Properties are ranked by profitability to help you identify the best investment opportunity."
+                  className=""
+                />
               </div>
               <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
                 Property Comparison Results
@@ -4320,7 +4324,7 @@ export default function LeadMagnet() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      {sortType === 'profit' ? 'Monthly Profit' : sortType === 'revenue' ? 'Revenue' : 'ROI Ratio'}
+                      {sortType === 'profit' ? 'Monthly Profit' : sortType === 'revenue' ? 'Revenue' : 'Profit Multiplier'}
                       {bulkSortBy === sortType && (
                         bulkSortDir === 'desc' ? <SortDesc className="w-4 h-4" /> : <SortAsc className="w-4 h-4" />
                       )}
@@ -4438,7 +4442,11 @@ export default function LeadMagnet() {
                             }`}>
                               <div className="flex items-center gap-1.5 mb-1">
                                 <TrendingUp className={`w-3.5 h-3.5 ${result.profit > 0 ? 'text-emerald-500' : 'text-red-500'}`} />
-                                <span className="text-xs font-medium text-slate-500">Profit</span>
+                                <MetricLabel 
+                                  label="Profit" 
+                                  tooltip="Your monthly profit after paying rent. Revenue minus rent equals profit. Green means you're making money, red means you're losing money."
+                                  className="text-xs font-medium text-slate-500"
+                                />
                               </div>
                               <p className={`text-lg font-bold ${result.profit > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {formatCurrency(result.profit)}
@@ -4450,7 +4458,11 @@ export default function LeadMagnet() {
                             <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <DollarSign className="w-3.5 h-3.5 text-blue-500" />
-                                <span className="text-xs font-medium text-slate-500">Revenue</span>
+                                <MetricLabel 
+                                  label="Revenue" 
+                                  tooltip="Estimated monthly income from bookings based on similar properties in the area. This is your gross income before subtracting rent."
+                                  className="text-xs font-medium text-slate-500"
+                                />
                               </div>
                               <p className="text-lg font-bold text-blue-600">
                                 {formatCurrency(result.revenue)}
@@ -4462,7 +4474,11 @@ export default function LeadMagnet() {
                             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                                <span className="text-xs font-medium text-slate-500">Booking Rate</span>
+                                <MetricLabel 
+                                  label="Booking Rate" 
+                                  tooltip="Percentage of nights booked per month. Higher is better - 70%+ is considered strong performance for short-term rentals."
+                                  className="text-xs font-medium text-slate-500"
+                                />
                               </div>
                               <p className="text-lg font-bold text-amber-600">
                                 {Math.round((result.occupancy > 1 ? result.occupancy : result.occupancy * 100))}%
@@ -4470,16 +4486,20 @@ export default function LeadMagnet() {
                               <p className="text-xs text-slate-400">booked nights</p>
                             </div>
                             
-                            {/* ROI Ratio */}
+                            {/* Profit Multiplier (formerly ROI Ratio) */}
                             <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <Percent className="w-3.5 h-3.5 text-purple-500" />
-                                <span className="text-xs font-medium text-slate-500">ROI Ratio</span>
+                                <MetricLabel 
+                                  label="Profit Multiplier" 
+                                  tooltip="How many times your rent you'll earn back. 2x means you earn double your rent. Higher is better - 1.5x+ is generally considered profitable."
+                                  className="text-xs font-medium text-slate-500"
+                                />
                               </div>
                               <p className="text-lg font-bold text-purple-600">
                                 {result.ratio.toFixed(1)}x
                               </p>
-                              <p className="text-xs text-slate-400">${Math.round(result.adr)}/night ADR</p>
+                              <p className="text-xs text-slate-400">${Math.round(result.adr)}/night rate</p>
                             </div>
                           </div>
                         )}
@@ -4500,7 +4520,11 @@ export default function LeadMagnet() {
                       <div className="mt-4 pt-4 border-t border-emerald-500/20">
                         <div className="flex items-center gap-2 text-emerald-600">
                           <Trophy className="w-5 h-5" />
-                          <span className="font-semibold">Best Deal!</span>
+                          <MetricLabel 
+                            label="Best Deal!" 
+                            tooltip="This property has the highest monthly profit among all properties you compared. It offers the best return on your rent investment."
+                            className="font-semibold"
+                          />
                           <span className="text-sm text-emerald-500">Highest profitability based on your criteria</span>
                         </div>
                       </div>

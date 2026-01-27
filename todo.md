@@ -5859,3 +5859,46 @@ All guiding questions display correctly across all three test markets:
 - [x] Re-test all tooltips in browser - PENDING
 - [x] Verify all quality checklist items pass - PASS
 
+
+
+## Step 4 Skill Compliance Test (Jan 27, 2026) - COMPLETE
+
+### Phase 1: Document All Visible Elements
+- [x] Navigate to Step 4 and load results
+- [x] List all metrics, labels, and data points visible
+- [x] Document current state - saved to step4_compliance_audit.md
+
+### Phase 2: Tooltip Audit (MANDATORY per skill)
+- [x] Properties Compared badge - ADDED tooltip
+- [x] Profit metric - ADDED tooltip
+- [x] Revenue metric - ADDED tooltip
+- [x] Booking Rate metric - ADDED tooltip
+- [x] Profit Multiplier metric (renamed from ROI Ratio) - ADDED tooltip
+- [x] Best Deal badge - ADDED tooltip
+- [x] Sort buttons - Labels updated (Profit Multiplier instead of ROI Ratio)
+
+### Phase 3: Quality Checklist (per skill)
+- [x] Does each section have a guiding question? - YES ("Which property should I choose?")
+- [x] Is technical jargon translated to plain English? - FIXED (ROI Ratio -> Profit Multiplier, ADR -> /night rate)
+- [x] Are there contextual comparisons (not just raw numbers)? - YES (ranked comparison)
+- [x] Is there a clear verdict/recommendation? - YES (Best Deal badge with trophy)
+- [x] Are confidence indicators shown? - YES (Properties Compared count)
+- [x] Is the visual hierarchy clear (big numbers, grades, colors)? - YES
+- [x] Would a complete beginner understand what to do with this info? - YES (with tooltips)
+- [x] Are info bubbles added for complex metrics? - YES (all metrics now have tooltips)
+- [x] NO EMOJIS anywhere in the UI? - PASS (no emojis found)
+
+### Phase 4: Fixes Applied
+- [x] Added tooltip to Properties Compared badge
+- [x] Added tooltip to Profit metric
+- [x] Added tooltip to Revenue metric
+- [x] Added tooltip to Booking Rate metric
+- [x] Added tooltip to Profit Multiplier metric
+- [x] Added tooltip to Best Deal badge
+- [x] Renamed "ROI Ratio" to "Profit Multiplier" (beginner-friendly)
+- [x] Changed "ADR" to "/night rate" (beginner-friendly)
+
+### Phase 5: Re-test and Verify
+- [x] TypeScript compilation successful
+- [x] All tooltips added to results section
+- [x] Quality checklist items pass
