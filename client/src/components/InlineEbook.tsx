@@ -210,10 +210,10 @@ export const InlineEbook: React.FC<InlineEbookProps> = ({ onStartTools }) => {
           </div>
           <div className="flex-1">
             <h2 className="text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)] mb-2">
-              Rental Riches: Your Guide to Success
+              Short-Term Rental Guide
             </h2>
             <p className="text-[oklch(0.50_0_0)] text-lg leading-relaxed">
-              Master the mindset, strategy, and execution of successful short-term rental hosts
+              Learn the research, analysis, and strategy behind informed rental decisions
             </p>
             <div className="flex items-center gap-4 mt-5">
               <div className="flex items-center gap-2 text-[oklch(0.50_0_0)] text-sm">

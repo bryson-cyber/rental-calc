@@ -1332,11 +1332,11 @@ export default function LeadMagnet() {
             Free Tools by Coach Inayah
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-[oklch(0.15_0_0)] mb-6 leading-tight">
-            Discover Your Path to{' '}
-            <span className="text-[oklch(0.55_0.14_75)]">Rental Riches</span>
+            Make Informed{' '}
+            <span className="text-[oklch(0.55_0.14_75)]">Rental Decisions</span>
           </h1>
           <p className="text-lg md:text-xl text-[oklch(0.45_0_0)] max-w-2xl mx-auto leading-relaxed mb-8">
-            Use these free tools to analyze any market, validate any property, and find profitable Airbnb opportunities—before you invest a single dollar.
+            Free research tools to analyze markets, compare properties, and understand the data—so you can decide with confidence.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
@@ -1396,13 +1396,13 @@ export default function LeadMagnet() {
               Free Tools That Do The Work For You
             </div>
             <h2 className="text-4xl md:text-5xl font-semibold text-[oklch(0.15_0_0)] mb-6">
-              Your Journey to{' '}
+              Your{' '}
               <span className="text-gradient-gold">
-                Rental Riches
+                Research Toolkit
               </span>
             </h2>
             <p className="text-[oklch(0.45_0_0)] text-xl max-w-xl mx-auto leading-relaxed">
-              Each tool answers a specific question on your path to profitable short-term rentals
+              Each tool answers a specific question to help you make informed decisions
             </p>
             
             {/* Saved Items Button */}
@@ -4606,6 +4606,55 @@ export default function LeadMagnet() {
           </div>
         </div>
       </section>
+      
+      {/* FOOTER - Business Info & Policy Links (Affirm Compliance) */}
+      <footer className="border-t border-[oklch(0.90_0_0)] bg-[oklch(0.98_0_0)] py-10">
+        <div className="container max-w-4xl mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            {/* Business Info */}
+            <div>
+              <h4 className="font-semibold text-[oklch(0.20_0_0)] mb-3">Coach Inayah LLC</h4>
+              <p className="text-[oklch(0.50_0_0)] text-sm leading-relaxed">
+                St. Louis, MO 63104<br />
+                United States
+              </p>
+            </div>
+            
+            {/* Support */}
+            <div>
+              <h4 className="font-semibold text-[oklch(0.20_0_0)] mb-3">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="mailto:support@coachinayah.com" className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    support@coachinayah.com
+                  </a>
+                </li>
+                <li>
+                  <a href="/contact" className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    Contact Us
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            {/* Policies */}
+            <div>
+              <h4 className="font-semibold text-[oklch(0.20_0_0)] mb-3">Policies</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a href="/refund-policy" className="text-[oklch(0.50_0_0)] hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    Refund Policy
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-[oklch(0.90_0_0)] pt-6 text-center text-[oklch(0.55_0_0)] text-sm">
+            <p>&copy; {new Date().getFullYear()} Coach Inayah LLC. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
       
       {/* Save Login Prompt Modal */}
       <SaveLoginPrompt

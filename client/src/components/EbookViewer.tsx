@@ -7,7 +7,7 @@ interface EbookViewerProps {
 }
 
 const TOTAL_PAGES = 48;
-const EBOOK_TITLE = "Rental Riches: Master Short-Term Rentals for Long-Term Wealth";
+const EBOOK_TITLE = "Short-Term Rental Guide: Research, Analysis & Strategy";
 
 export const EbookViewer: React.FC<EbookViewerProps> = ({ isOpen, onClose }) => {
   const [currentPage, setCurrentPage] = useState(1);

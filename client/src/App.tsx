@@ -19,6 +19,8 @@ import MarketAlertsPage from "./pages/MarketAlertsPage";
 import SharedReportPage from "./pages/SharedReportPage";
 import SavedItemsPage from "./pages/SavedItemsPage";
 import AccountPage from "./pages/AccountPage";
+import RefundPolicy from "./pages/RefundPolicy";
+import Contact from "./pages/Contact";
 
 function Router() {
   return (
@@ -49,6 +51,10 @@ function Router() {
       
       {/* My Account */}
       <Route path={"/account"} component={AccountPage} />
+      
+      {/* Policy Pages (Affirm Compliance) */}
+      <Route path={"/refund-policy"} component={RefundPolicy} />
+      <Route path={"/contact"} component={Contact} />
       
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />

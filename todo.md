@@ -5902,3 +5902,38 @@ All guiding questions display correctly across all three test markets:
 - [x] TypeScript compilation successful
 - [x] All tooltips added to results section
 - [x] Quality checklist items pass
+
+
+## Affirm Compliance Homepage Redesign (Jan 27, 2026) - COMPLETE
+
+### Phase 1: Identify Non-Compliant Elements
+- [x] Review current homepage for "get rich quick" language
+- [x] Identify "Rental Riches" and similar problematic phrases
+- [x] Check for income/ROI guarantees or promises
+- [x] Check for speculative future outcomes language
+
+### Phase 2: Propose Professional Alternatives
+- [x] Replace "Rental Riches" with "Rental Decisions" / "Research Toolkit"
+- [x] Rewrite hero section copy to be educational, not promotional
+- [x] Remove any outcome guarantees or promises
+- [x] Focus on data/research tools, not wealth promises
+
+### Phase 3: Implement Homepage Redesign
+- [x] Update hero headline: "Make Informed Rental Decisions"
+- [x] Update subheadline: "Free research tools to analyze markets, compare properties, and understand the data"
+- [x] Update tools section: "Your Research Toolkit"
+- [x] Updated EbookViewer title: "Short-Term Rental Guide: Research, Analysis & Strategy"
+- [x] Updated InlineEbook title: "Short-Term Rental Guide"
+
+### Phase 4: Add Required Affirm Pages
+- [x] Create Refund/Return Policy page (/refund-policy)
+- [x] Create Contact/Support page (/contact)
+- [x] Add footer links to policy pages
+- [x] Add business address to footer (Coach Inayah LLC, St. Louis, MO 63104)
+
+### Phase 5: Verify Compliance
+- [x] No income, performance, or outcome guarantees - REMOVED "Rental Riches"
+- [x] No investment, ROI, or 'risk-free' language - Copy is now educational
+- [x] Clear description of services being sold - "Free research tools"
+- [x] Visible customer support section - Footer with email and contact page
+- [x] Legal business name and address visible - Footer shows Coach Inayah LLC, St. Louis, MO
