@@ -91,7 +91,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           {superhost && (
             <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 px-2 py-1 rounded-full text-xs font-medium border border-amber-500/20">
               <Star className="w-3 h-3 fill-amber-500" />
-              Superhost
+              Top-Rated Host
             </div>
           )}
           {rating !== null && (
@@ -159,7 +159,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <div className="w-5 h-5 rounded bg-amber-500/20 flex items-center justify-center">
                 <Calendar className="w-3 h-3 text-amber-600" />
               </div>
-              <span className="text-xs text-amber-600 font-medium">Occupancy</span>
+              <span className="text-xs text-amber-600 font-medium">Booking Rate</span>
             </div>
             <p className="text-amber-700 font-bold text-lg">{Math.round(occupancy)}%</p>
           </div>
@@ -170,7 +170,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               <div className="w-5 h-5 rounded bg-purple-500/20 flex items-center justify-center">
                 <Percent className="w-3 h-3 text-purple-600" />
               </div>
-              <span className="text-xs text-purple-600 font-medium">RevPAR</span>
+              <span className="text-xs text-purple-600 font-medium">Avg Daily Earnings</span>
             </div>
             <p className="text-purple-700 font-bold text-lg">{formatCurrency(calculateRevPAR())}</p>
           </div>

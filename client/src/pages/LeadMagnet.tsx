@@ -87,6 +87,7 @@ import { TeslaDashboard } from '@/components/TeslaDashboard';
 import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
 import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
+import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -351,6 +352,15 @@ export default function LeadMagnet() {
     totalSaved,
   } = useSavedItems();
   const [showSavedPanel, setShowSavedPanel] = useState(false);
+  
+  // Save with login prompt
+  const {
+    showPrompt: showSavePrompt,
+    pendingSave,
+    promptSave,
+    handleContinueWithoutAccount,
+    handleClose: handleCloseSavePrompt,
+  } = useSaveWithPrompt();
   
   // ============================================
   // VALIDATE THE DEAL STATE (formerly Single Property)
@@ -1500,7 +1510,7 @@ export default function LeadMagnet() {
                   >
                     <option value="revenue">Highest Revenue</option>
                     <option value="proximity">Closest to Address</option>
-                    <option value="occupancy">Highest Occupancy</option>
+                    <option value="occupancy">Highest Booking Rate</option>
                     <option value="rating">Best Rated</option>
                   </select>
                 </div>
@@ -3191,13 +3201,17 @@ export default function LeadMagnet() {
                 onClick={() => {
                   const marketName = researchResult.marketName.split(',')[0].trim();
                   const state = researchResult.marketName.split(',')[1]?.trim() || '';
-                  saveMarket({
-                    name: marketName,
-                    state: state,
-                    avgRevenue: researchResult.avgRevenue,
-                    avgOccupancy: researchResult.avgOccupancy,
+                  
+                  // Use promptSave to show login prompt for non-authenticated users
+                  promptSave('market', researchResult.marketName, () => {
+                    saveMarket({
+                      name: marketName,
+                      state: state,
+                      avgRevenue: researchResult.avgRevenue,
+                      avgOccupancy: researchResult.avgOccupancy,
+                    });
+                    toast.success(`Saved ${marketName} to your list!`);
                   });
-                  toast.success(`Saved ${marketName} to your list!`);
                 }}
                 className={`ml-3 border-amber-500 text-amber-600 hover:bg-amber-50 ${isMarketSaved(researchResult.marketName.split(',')[0].trim(), researchResult.marketName.split(',')[1]?.trim() || '') ? 'bg-amber-50' : ''}`}
               >
@@ -3255,9 +3269,9 @@ export default function LeadMagnet() {
                     onChange={(e) => setExploreSortBy(e.target.value as typeof exploreSortBy)}
                   >
                     <option value="revenue">Most Revenue</option>
-                    <option value="occupancy">Highest Occupancy</option>
+                    <option value="occupancy">Highest Booking Rate</option>
                     <option value="rating">Best Rating</option>
-                    <option value="revpar">Highest RevPAR</option>
+                    <option value="revpar">Highest Avg Daily Earnings</option>
                   </select>
                 </div>
                 <div>
@@ -3287,13 +3301,13 @@ export default function LeadMagnet() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Occupancy</label>
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Min Booking Rate</label>
                   <select 
                     className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                     value={exploreMinOccupancy || ''}
                     onChange={(e) => setExploreMinOccupancy(e.target.value ? parseFloat(e.target.value) : null)}
                   >
-                    <option value="">Any Occupancy</option>
+                    <option value="">Any Booking Rate</option>
                     <option value="50">50%+ Booked</option>
                     <option value="70">70%+ Booked</option>
                     <option value="85">85%+ Booked</option>
@@ -3406,17 +3420,20 @@ export default function LeadMagnet() {
                     index={idx}
                     isSaved={isPropertySaved(listing.title)}
                     onSave={() => {
-                      saveProperty({
-                        title: listing.title,
-                        address: exploreAddress,
-                        bedrooms: listing.bedrooms,
-                        bathrooms: listing.bathrooms,
-                        revenue: listing.annual_revenue,
-                        adr: listing.adr,
-                        occupancy: listing.occupancy,
-                        airbnbUrl: listing.airbnb_url,
+                      // Use promptSave to show login prompt for non-authenticated users
+                      promptSave('property', listing.title, () => {
+                        saveProperty({
+                          title: listing.title,
+                          address: exploreAddress,
+                          bedrooms: listing.bedrooms,
+                          bathrooms: listing.bathrooms,
+                          revenue: listing.annual_revenue,
+                          adr: listing.adr,
+                          occupancy: listing.occupancy,
+                          airbnbUrl: listing.airbnb_url,
+                        });
+                        toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
                       });
-                      toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
                     }}
                     onAnalyze={() => {
                       // Pre-fill the validate form with this property's data
@@ -3797,6 +3814,15 @@ export default function LeadMagnet() {
           </div>
         </div>
       </section>
+      
+      {/* Save Login Prompt Modal */}
+      <SaveLoginPrompt
+        isOpen={showSavePrompt}
+        onClose={handleCloseSavePrompt}
+        onContinueWithoutAccount={handleContinueWithoutAccount}
+        itemType={pendingSave?.type || 'market'}
+        itemName={pendingSave?.name || ''}
+      />
     </div>
   );
 }

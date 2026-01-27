@@ -5165,3 +5165,25 @@ All guiding questions display correctly across all three test markets:
 - [x] Add verdict to Guest Behavior section with booking strategy recommendation
 - [x] Add verdict to Competition Landscape section with differentiation strategy
 - [x] Test verdicts across multiple markets to verify they display correctly
+
+
+## Open Access with Optional Account for Saving (Jan 26, 2026)
+- [x] Keep all tools freely accessible without login requirement
+- [x] Add "Save Market" button that prompts for account creation when clicked (if not logged in)
+- [x] Add "Save Property" button that prompts for account creation when clicked (if not logged in)
+- [x] Create account creation modal/flow for saving data
+- [ ] Store saved markets and properties in database for logged-in users (localStorage fallback implemented)
+
+## Step 2 (Explore Listings) Beginner-Friendliness Review (Jan 26, 2026)
+- [x] Audit Step 2 for technical jargon that needs simplification
+- [x] Simplified: Superhost → Top-Rated Host, Occupancy → Booking Rate, RevPAR → Avg Daily Earnings
+- [ ] Add guiding questions to section headers (Step 2 is listing-focused, less section-heavy)
+- [ ] Add section verdicts with clear takeaways
+- [ ] Test changes across multiple markets
+
+## Step 3 (Validate the Deal) Beginner-Friendliness Review (Jan 26, 2026)
+- [x] Audit Step 3 for technical jargon that needs simplification
+- [x] Simplified: Occupancy → Booking Rate, RevPAR → Avg Daily Earnings, YoY → vs Last Year, Seasonal Forecast → Monthly Earnings Forecast
+- [ ] Add guiding questions to section headers (TeslaDashboard already has good explanatory text)
+- [ ] Add section verdicts with clear takeaways
+- [ ] Test changes across multiple markets

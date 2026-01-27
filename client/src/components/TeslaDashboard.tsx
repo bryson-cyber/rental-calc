@@ -339,7 +339,7 @@ const METRIC_TOOLTIPS = {
   conservative: "This is the 'worst case' estimate - what you'd make if things go a bit slower than expected. Good for planning safely.",
   optimistic: "This is the 'best case' estimate - what you could make if everything goes great. Aim for this, plan for conservative!",
   revenue: "Estimated annual revenue based on similar properties in your area. This is an average projection - your actual results depend on your listing quality, pricing strategy, and guest reviews.",
-  revpar: "Revenue Per Available Room - combines your nightly rate and how often you're booked into one number. Higher = better performance!"
+  revpar: "Average Daily Earnings - combines your nightly rate and how often you're booked into one number. Higher = better performance!"
 };
 
 function KeyMetricsRow({ 
@@ -365,9 +365,9 @@ function KeyMetricsRow({
       />
       <MetricCard
         icon={<Percent className="w-5 h-5" />}
-        label="Occupancy"
+        label="Booking Rate"
         value={`${Math.round(occupancy)}%`}
-        sublabel="Booked nights"
+        sublabel="How often you're booked"
         color="purple"
         tooltip={METRIC_TOOLTIPS.occupancy}
       />
@@ -453,9 +453,9 @@ type MetricKey = 'revenue' | 'adr' | 'occupancy' | 'revpar';
 
 const METRIC_CONFIG: Record<MetricKey, { label: string; format: (val: number) => string; color: string }> = {
   revenue: { label: 'Revenue', format: (val) => formatCurrency(val), color: 'emerald' },
-  adr: { label: 'Nightly Rate (ADR)', format: (val) => formatCurrency(val), color: 'blue' },
-  occupancy: { label: 'Occupancy', format: (val) => `${Math.round(val)}%`, color: 'purple' },
-  revpar: { label: 'RevPAR', format: (val) => formatCurrency(val), color: 'amber' },
+  adr: { label: 'Nightly Rate', format: (val) => formatCurrency(val), color: 'blue' },
+  occupancy: { label: 'Booking Rate', format: (val) => `${Math.round(val)}%`, color: 'purple' },
+  revpar: { label: 'Avg Daily Earnings', format: (val) => formatCurrency(val), color: 'amber' },
 };
 
 function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForecast[]; historicalData?: { months: Array<{ date: string; revenue: number; occupancy: number; adr: number }> } }) {
@@ -559,7 +559,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
     <div className="bg-white border border-slate-200 rounded-xl p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">Seasonal Forecast</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Monthly Earnings Forecast</h3>
           <p className="text-slate-500 text-sm">12-month revenue projection</p>
         </div>
         <div className="flex items-center gap-2">
@@ -592,7 +592,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              YoY Compare
+              vs Last Year
             </button>
           </div>
         </div>
@@ -639,7 +639,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
               onChange={(e) => setShowYoY(e.target.checked)}
               className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
             />
-            Show YoY Change
+            Show vs Last Year
           </label>
         </div>
       </div>
@@ -654,7 +654,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         )}
         {selectedMetrics.includes('occupancy') && (
           <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg Occupancy</p>
+            <p className="text-slate-500 text-xs mb-1">Avg Booking Rate</p>
             <p className="text-lg font-bold text-slate-900">{Math.round(avgOccupancy)}%</p>
           </div>
         )}
@@ -666,7 +666,7 @@ function SeasonalForecast({ forecast, historicalData }: { forecast: MonthlyForec
         )}
         {selectedMetrics.includes('revpar') && (
           <div className="text-center">
-            <p className="text-slate-500 text-xs mb-1">Avg RevPAR</p>
+            <p className="text-slate-500 text-xs mb-1">Avg Daily Earnings</p>
             <p className="text-lg font-bold text-slate-900">{formatCurrency(avgRevpar)}</p>
           </div>
         )}
