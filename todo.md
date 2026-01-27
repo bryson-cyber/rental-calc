@@ -5694,3 +5694,11 @@ All guiding questions display correctly across all three test markets:
 - [x] Update placeholder text to mention zip codes
 - [x] Investigate if Deer Valley, AZ has multiple zip codes (7 zip codes: 85027, 85022, 85023, 85306, 85308, 85053, 85032)
 - [x] Display all zip codes for a submarket in the results
+
+
+## Step 2 Fixes and AirDNA Data Source Research (Jan 27, 2026)
+
+- [x] Research how AirDNA collects and sources their revenue data (CBRE-verified 96% accuracy, scraped daily from Airbnb/Vrbo)
+- [x] Remove "Analyze Property" button from Step 2 property cards (no address to analyze)
+- [x] Update tooltips with accurate, confidence-building data source information
+- [x] Fix tooltip text: Updated to "Estimated annual revenue calculated from actual booking data scraped daily from Airbnb and Vrbo. AirDNA's methodology is CBRE-verified at 96% accuracy across 10M+ properties."

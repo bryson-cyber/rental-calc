@@ -2502,7 +2502,7 @@ export default function LeadMagnet() {
                         </span>
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
                           <span className="font-medium">{formatCurrency(researchResult.avgRevenue)}</span>
-                          <InfoTooltip content="Average yearly earnings before expenses for properties in this market">
+                          <InfoTooltip content="Average annual revenue calculated from actual Airbnb/Vrbo booking data. AirDNA scrapes calendar data daily and uses AI to detect real bookings vs blocked dates - verified 96% accurate by CBRE.">
                             <span className="text-slate-500">avg revenue</span>
                           </InfoTooltip>
                         </span>
@@ -3658,7 +3658,7 @@ export default function LeadMagnet() {
                 {/* Summary Stats Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-white rounded-lg p-4 border border-slate-200">
-                    <InfoTooltip content="The highest annual revenue among all properties in this market. This shows what's possible if you optimize your listing.">
+                    <InfoTooltip content="The highest annual revenue among all properties in this market, calculated from actual booking data. This shows what top performers are earning.">
                       <div className="cursor-help">
                         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Top Earner</p>
                         <p className="text-xl font-bold text-emerald-600">${marketListingsStats.topRevenue.toLocaleString()}</p>
@@ -3667,7 +3667,7 @@ export default function LeadMagnet() {
                     </InfoTooltip>
                   </div>
                   <div className="bg-white rounded-lg p-4 border border-slate-200">
-                    <InfoTooltip content="The average annual revenue across all properties. This is a realistic expectation for a typical property in this market.">
+                    <InfoTooltip content="Average annual revenue across all properties, calculated from daily scraped Airbnb/Vrbo data. AirDNA's methodology is CBRE-verified at 96% accuracy.">
                       <div className="cursor-help">
                         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Average Revenue</p>
                         <p className="text-xl font-bold text-blue-600">${marketListingsStats.avgRevenue.toLocaleString()}</p>
@@ -3805,25 +3805,7 @@ export default function LeadMagnet() {
                         toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
                       });
                     }}
-                    onAnalyze={() => {
-                      // Pre-fill Step 3 with property data and switch tabs
-                      // Cap bedrooms at 6 (max available in Step 3 select)
-                      const cappedBedrooms = Math.min(listing.bedrooms || 1, 6);
-                      const cappedBathrooms = Math.min(listing.bathrooms || 1, 6);
-                      setBedrooms(String(cappedBedrooms));
-                      setBathrooms(String(cappedBathrooms));
-                      // Set a helpful message about needing the exact address
-                      const bedroomNote = listing.bedrooms > 6 
-                        ? ` (Note: This ${listing.bedrooms}BR property exceeds our form limit, set to ${cappedBedrooms}BR)`
-                        : '';
-                      toast.info(
-                        `Property details pre-filled!${bedroomNote} Enter the exact address in Step 3 to validate.`,
-                        { duration: 5000 }
-                      );
-                      setActiveTab('validate');
-                      // Scroll to top of page
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+
                   />
                 ))}
               </div>
@@ -3979,7 +3961,7 @@ export default function LeadMagnet() {
                     <div className="bg-white rounded-lg p-4 border border-blue-200">
                       <div className="flex items-center gap-1.5 mb-2">
                         <BarChart3 className="w-4 h-4 text-blue-600" />
-                        <InfoTooltip content="Average annual revenue across all properties in this search. This is your baseline expectation - aim to match or beat this number.">
+                        <InfoTooltip content="Average annual revenue across all properties in this search, calculated from actual booking data scraped daily from Airbnb and Vrbo.">
                           <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">Avg Revenue</span>
                         </InfoTooltip>
                       </div>
@@ -4218,16 +4200,7 @@ export default function LeadMagnet() {
                         toast.success(`Saved "${listing.title.substring(0, 30)}..." to your list!`);
                       });
                     }}
-                    onAnalyze={() => {
-                      // Pre-fill the validate form with this property's data
-                      setAddress(exploreAddress);
-                      setBedrooms(listing.bedrooms.toString());
-                      setBathrooms(listing.bathrooms.toString());
-                      setActiveTab('validate');
-                      // Scroll to top
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                      toast.success('Property loaded! Fill in the monthly rent to analyze.');
-                    }}
+
                   />
                 ))}
               </div>

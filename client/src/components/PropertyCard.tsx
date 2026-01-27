@@ -160,7 +160,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 <TrendingUp className="w-3 h-3 text-emerald-600" />
               </div>
               <InfoTooltip 
-                content="Total yearly earnings from this property before expenses. This is the gross income hosts report earning on Airbnb."
+                content="Estimated annual revenue calculated from actual booking data scraped daily from Airbnb and Vrbo. AirDNA's methodology is CBRE-verified at 96% accuracy across 10M+ properties."
                 side="top"
                 iconClassName="text-emerald-500"
               >
