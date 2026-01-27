@@ -4711,6 +4711,8 @@ superhostOnly: input.superhostOnly,
               superhost: l.superhost,
               professionallyManaged: l.professionally_managed,
               zipcode: l.zipcode || null,
+              daysAvailable: l.days_available || null,
+              daysReserved: l.days_reserved || null,
             })),
             totalCount: result.total_count || listings.length,
             summary: {

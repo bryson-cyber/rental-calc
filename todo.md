@@ -5750,3 +5750,41 @@ All guiding questions display correctly across all three test markets:
 ### Phase 5: Re-test and Verify
 - [ ] Re-test all tooltips in browser
 - [ ] Verify all quality checklist items pass
+
+
+## Step 2 Fixes - Jan 27 2026 (Batch 2)
+- [ ] Verify Debaliviere Place zip codes (is 63112 the only one?)
+- [ ] Add Studio/0 bedroom filter option to bedroom dropdown
+- [ ] Remove AirDNA mentions from all tooltips
+- [ ] Investigate AirDNA API for property availability duration
+- [ ] Add property availability duration context to annual revenue if API supports it
+
+
+## Step 2 Fixes (Jan 27, 2026) - COMPLETE
+
+### Issue 1: Debaliviere Place Zip Codes
+- [x] Verified via AirDNA API - Debaliviere Place only has 1 zip code (63112)
+- [x] This is accurate per the API's legacy_location.zipcodes array
+
+### Issue 2: Studio/0 Bedroom Filter
+- [x] Added "Studio" option to bedroom filter dropdown in MapFirstLayout.tsx
+- [x] Added "Studio" option to bedroom filter dropdown in MapViewContent.tsx
+- [x] Studio maps to 0 bedrooms in API calls
+
+### Issue 3: Remove AirDNA Mentions from Tooltips
+- [x] Updated all tooltips in MapFirstLayout.tsx to remove "AirDNA" references
+- [x] Updated all tooltips in MapViewContent.tsx to remove "AirDNA" references
+- [x] Tooltips now use generic language like "actual booking data" and "real performance data"
+
+### Issue 4: Property Availability Duration Context
+- [x] Investigated AirDNA API response - found days_available field on listings
+- [x] Added "X days of data" display under Annual Revenue on property cards
+- [x] This provides context for revenue figures (e.g., "$217,115 - 339 days of data")
+- [x] Helps users understand if revenue is from partial year or full year data
+
+### All Changes Verified
+- [x] Browser tested with St. Louis, Missouri market
+- [x] 5,543 properties loaded successfully
+- [x] Studio filter option visible in dropdown
+- [x] Days of data showing on property cards
+- [x] No AirDNA mentions in visible tooltips

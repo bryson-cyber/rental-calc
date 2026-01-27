@@ -24,6 +24,8 @@ interface PropertyCardProps {
   isSaved?: boolean;
   onSave?: () => void;
   onAnalyze?: () => void;
+  daysAvailable?: number;
+  daysReserved?: number;
 }
 
 const PropertyCard: React.FC<PropertyCardProps> = ({
@@ -48,6 +50,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   isSaved = false,
   onSave,
   onAnalyze,
+  daysAvailable,
+  daysReserved,
 }) => {
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -160,7 +164,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 <TrendingUp className="w-3 h-3 text-emerald-600" />
               </div>
               <InfoTooltip 
-                content="Estimated annual revenue calculated from actual booking data scraped daily from Airbnb and Vrbo. AirDNA's methodology is CBRE-verified at 96% accuracy across 10M+ properties."
+                content="Estimated annual revenue calculated from actual booking data scraped daily from Airbnb and Vrbo. This methodology is independently verified at 96% accuracy across 10M+ properties."
                 side="top"
                 iconClassName="text-emerald-500"
               >
@@ -168,6 +172,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               </InfoTooltip>
             </div>
             <p className="text-emerald-700 font-bold text-lg">{formatCurrency(annualRevenue)}</p>
+            {daysAvailable !== undefined && daysAvailable > 0 && (
+              <p className="text-xs text-emerald-600/70 mt-1">
+                {daysAvailable >= 365 ? 'Full year' : `${daysAvailable} days`} of data
+              </p>
+            )}
           </div>
           
           {/* Nightly Rate (ADR) */}

@@ -280,6 +280,8 @@ interface AreaListing {
   superhost?: boolean;
   latitude?: number;
   longitude?: number;
+  days_available?: number;
+  days_reserved?: number;
 }
 
 // ============================================
@@ -1675,6 +1677,7 @@ export default function LeadMagnet() {
                       className="input-apple h-12"
                     >
                       <option value="">Any</option>
+                      <option value="0">Studio</option>
                       <option value="1">1 Bedroom</option>
                       <option value="2">2 Bedrooms</option>
                       <option value="3">3 Bedrooms</option>
@@ -2502,7 +2505,7 @@ export default function LeadMagnet() {
                         </span>
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full border border-slate-200">
                           <span className="font-medium">{formatCurrency(researchResult.avgRevenue)}</span>
-                          <InfoTooltip content="Average annual revenue calculated from actual Airbnb/Vrbo booking data. AirDNA scrapes calendar data daily and uses AI to detect real bookings vs blocked dates - verified 96% accurate by CBRE.">
+                          <InfoTooltip content="Average annual revenue calculated from actual Airbnb/Vrbo booking data. Calendar data is scraped daily and AI detects real bookings vs blocked dates - independently verified at 96% accuracy.">
                             <span className="text-slate-500">avg revenue</span>
                           </InfoTooltip>
                         </span>
@@ -3667,7 +3670,7 @@ export default function LeadMagnet() {
                     </InfoTooltip>
                   </div>
                   <div className="bg-white rounded-lg p-4 border border-slate-200">
-                    <InfoTooltip content="Average annual revenue across all properties, calculated from daily scraped Airbnb/Vrbo data. AirDNA's methodology is CBRE-verified at 96% accuracy.">
+                    <InfoTooltip content="Average annual revenue across all properties, calculated from daily scraped Airbnb/Vrbo data. This methodology is independently verified at 96% accuracy.">
                       <div className="cursor-help">
                         <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Average Revenue</p>
                         <p className="text-xl font-bold text-blue-600">${marketListingsStats.avgRevenue.toLocaleString()}</p>
@@ -3789,6 +3792,8 @@ export default function LeadMagnet() {
                     airbnbUrl={listing.airbnbUrl}
                     superhost={listing.superhost}
                     index={idx}
+                    daysAvailable={listing.daysAvailable}
+                    daysReserved={listing.daysReserved}
                     isSaved={isPropertySaved(listing.title)}
                     onSave={() => {
                       promptSave('property', listing.title, () => {
@@ -4183,6 +4188,8 @@ export default function LeadMagnet() {
                     airbnbUrl={listing.airbnb_url}
                     superhost={listing.superhost}
                     index={idx}
+                    daysAvailable={listing.days_available}
+                    daysReserved={listing.days_reserved}
                     isSaved={isPropertySaved(listing.title)}
                     onSave={() => {
                       // Use promptSave to show login prompt for non-authenticated users

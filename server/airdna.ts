@@ -5746,6 +5746,8 @@ export interface AreaListing {
   superhost?: boolean;
   latitude?: number | null;
   longitude?: number | null;
+  days_available?: number;
+  days_reserved?: number;
 }
 
 export interface ListingsByAreaResponse {
@@ -5882,6 +5884,8 @@ export async function getListingsByArea(
           distance?: number;
           superhost?: boolean;
           location?: { lat?: number; lng?: number };
+          days_available_ltm?: number;
+          days_reserved_ltm?: number;
         }>;
         page_info?: {
           total_count?: number;
@@ -5916,6 +5920,8 @@ export async function getListingsByArea(
       superhost: listing.superhost,
       latitude: listing.location?.lat,
       longitude: listing.location?.lng,
+      days_available: listing.days_available_ltm || 0,
+      days_reserved: listing.days_reserved_ltm || 0,
     }));
 
     const result: ListingsByAreaResponse = {
