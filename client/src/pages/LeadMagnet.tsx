@@ -4319,7 +4319,7 @@ export default function LeadMagnet() {
             {/* ===== WINNER HERO SECTION ===== */}
             {sortedBulkResults.length > 0 && sortedBulkResults[0].status === 'success' && (
               <div className="mb-10">
-                <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 rounded-2xl p-8 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-[#0F172A] via-[#1e293b] to-[#334155] rounded-2xl p-8 text-white shadow-xl shadow-slate-900/30 relative overflow-hidden">
                   {/* Background decoration */}
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                   <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -4332,15 +4332,15 @@ export default function LeadMagnet() {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-2xl md:text-3xl font-bold">Your Best Deal</h3>
-                        <p className="text-emerald-100">Highest profit potential of {sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
+                        <p className="text-slate-300">Highest profit potential of {sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
                       </div>
                       {/* Letter Grade Badge */}
                       <InfoTooltip
                         content={`Grade based on profit multiplier. A+ = 3x+ (excellent), A = 2.5x+, B+ = 2x+, B = 1.75x+, C+ = 1.5x+, C = 1.25x+, D = 1x+, F = below 1x (losing money).`}
-                        iconClassName="text-emerald-200 hover:text-white"
+                        iconClassName="text-[#C9A962] hover:text-white"
                       >
                         <div className="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                          <span className="text-xs text-emerald-100 uppercase tracking-wide">Grade</span>
+                          <span className="text-xs text-[#C9A962] uppercase tracking-wide">Grade</span>
                           <span className="text-3xl font-bold">
                             {sortedBulkResults[0].ratio >= 3 ? 'A+' : 
                              sortedBulkResults[0].ratio >= 2.5 ? 'A' : 
@@ -4359,7 +4359,7 @@ export default function LeadMagnet() {
                       {/* Left: Property Info */}
                       <div>
                         <h4 className="text-xl font-semibold mb-2 truncate">{sortedBulkResults[0].address}</h4>
-                        <div className="flex flex-wrap items-center gap-3 text-emerald-100 text-sm mb-4">
+                        <div className="flex flex-wrap items-center gap-3 text-slate-300 text-sm mb-4">
                           <span className="flex items-center gap-1">
                             <BedDouble className="w-4 h-4" />
                             {sortedBulkResults[0].bedrooms} bed
@@ -4378,11 +4378,11 @@ export default function LeadMagnet() {
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                           <InfoTooltip 
                             content="Your estimated yearly profit after paying rent. This is what you could take home before other expenses like utilities and supplies."
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-sm">Annual Profit Potential</span>
+                            <span className="text-[#C9A962] text-sm">Annual Profit Potential</span>
                           </InfoTooltip>
-                          <p className="text-3xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-emerald-100">/year</span></p>
+                          <p className="text-3xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-slate-300">/year</span></p>
                         </div>
                       </div>
                       
@@ -4391,36 +4391,36 @@ export default function LeadMagnet() {
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                           <InfoTooltip 
                             content="Revenue minus rent. This is your monthly take-home before other expenses like cleaning and supplies."
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Monthly Profit</span>
+                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Monthly Profit</span>
                           </InfoTooltip>
                           <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit)}</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                           <InfoTooltip 
                             content={`How many times your rent you could earn. ${sortedBulkResults[0].ratio.toFixed(1)}x means you earn ${sortedBulkResults[0].ratio.toFixed(1)} times what you pay in rent. 2x+ is good, 3x+ is excellent.`}
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Profit Multiplier</span>
+                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Profit Multiplier</span>
                           </InfoTooltip>
                           <p className="text-2xl font-bold mt-1">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                           <InfoTooltip 
                             content="Total income from guest bookings each month, before subtracting rent. This is your gross income."
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Monthly Revenue</span>
+                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Monthly Revenue</span>
                           </InfoTooltip>
                           <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].revenue)}</p>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                           <InfoTooltip 
                             content={`How often the property is booked. ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}% means guests about ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100) * 3.65)} nights per year.`}
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-xs uppercase tracking-wide">Booking Rate</span>
+                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Booking Rate</span>
                           </InfoTooltip>
                           <p className="text-2xl font-bold mt-1">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
                         </div>
@@ -4433,9 +4433,9 @@ export default function LeadMagnet() {
                         <div>
                           <InfoTooltip 
                             content={`What percentage of your revenue becomes profit after paying rent. ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% is ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 60 ? 'excellent' : Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 40 ? 'good' : 'moderate'}. Higher is better.`}
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-sm">Profit Margin</span>
+                            <span className="text-[#C9A962] text-sm">Profit Margin</span>
                           </InfoTooltip>
                           <p className="text-lg font-semibold">
                             {Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% of revenue is profit
@@ -4444,9 +4444,9 @@ export default function LeadMagnet() {
                         <div className="text-right">
                           <InfoTooltip 
                             content="Average price per night that guests pay. Also called ADR (Average Daily Rate). This is based on similar properties in the area."
-                            iconClassName="text-emerald-200 hover:text-white"
+                            iconClassName="text-[#C9A962] hover:text-white"
                           >
-                            <span className="text-emerald-100 text-sm">Nightly Rate</span>
+                            <span className="text-[#C9A962] text-sm">Nightly Rate</span>
                           </InfoTooltip>
                           <p className="text-lg font-semibold">${Math.round(sortedBulkResults[0].adr)}/night</p>
                         </div>
