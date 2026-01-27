@@ -5187,3 +5187,10 @@ All guiding questions display correctly across all three test markets:
 - [ ] Add guiding questions to section headers (TeslaDashboard already has good explanatory text)
 - [ ] Add section verdicts with clear takeaways
 - [ ] Test changes across multiple markets
+
+
+## Visible Login/Account Button (Jan 26, 2026)
+- [x] Add Login/Account button to header showing authentication status
+- [x] Show "Login" for non-authenticated users with link to Manus Auth
+- [x] Show user name/avatar for authenticated users with logout option
+- [x] Test login button functionality
