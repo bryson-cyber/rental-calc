@@ -95,6 +95,8 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
 import { AuthButton } from '@/components/AuthButton';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { getLoginUrl } from '@/const';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -330,6 +332,9 @@ const getMonthAbbr = (dateStr: string): string => {
 type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market';
 
 export default function LeadMagnet() {
+  // Auth state for login requirement
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter, setMyProperty } = useProperty();
   
@@ -563,6 +568,13 @@ export default function LeadMagnet() {
   
   // Validate the Deal (Single Property)
   const handleAnalyze = async () => {
+    // Require login before running analysis
+    if (!isAuthenticated) {
+      toast.error('Please create a free account to run property analysis');
+      window.location.href = getLoginUrl();
+      return;
+    }
+    
     if (!address) {
       toast.error('Please enter a property address');
       return;
@@ -1952,52 +1964,35 @@ export default function LeadMagnet() {
                   <p className="text-xs text-slate-500 mt-2">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
                 </div>
                 
-                {/* Lead Capture Section */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-amber-700">
-                    <Sparkles className="w-5 h-5" />
-                    <span className="font-semibold">Get Your Free Report</span>
-                  </div>
-                  <p className="text-sm text-amber-800/80">Enter your contact info to receive your detailed property analysis report.</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-amber-800">Name</label>
-                      <Input
-                        type="text"
-                        value={leadName}
-                        onChange={(e) => setLeadName(e.target.value)}
-                        placeholder="Your name"
-                        className="input-apple h-10 bg-white"
-                      />
+                {/* Login Requirement Section */}
+                {!isAuthenticated ? (
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="font-semibold">Create Free Account to Continue</span>
                     </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-amber-800">Email <span className="text-red-500">*</span></label>
-                      <Input
-                        type="email"
-                        value={leadEmail}
-                        onChange={(e) => setLeadEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="input-apple h-10 bg-white"
-                        required
-                      />
+                    <p className="text-sm text-amber-800/80">Sign up for free to run unlimited property analyses and save your results.</p>
+                    
+                    <button
+                      onClick={() => window.location.href = getLoginUrl()}
+                      className="btn-gold w-full h-12 flex items-center justify-center gap-2"
+                    >
+                      <Users className="w-5 h-5" />
+                      <span>Create Free Account</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-green-700">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-medium">Logged in as {user?.name || user?.email || 'User'}</span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-amber-800">Phone (optional)</label>
-                    <Input
-                      type="tel"
-                      value={leadPhone}
-                      onChange={(e) => setLeadPhone(e.target.value)}
-                      placeholder="(555) 123-4567"
-                      className="input-apple h-10 bg-white"
-                    />
-                  </div>
-                </div>
+                )}
                 
                 <button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0 || !leadEmail}
+                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0 || !isAuthenticated}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAnalyzing ? (

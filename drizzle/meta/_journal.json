@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1769577059839,
-      "tag": "0000_previous_serpent_society",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1769577442365,
-      "tag": "0001_foamy_stingray",
+      "when": 1769578173679,
+      "tag": "0000_wise_spiral",
       "breakpoints": true
     }
   ]

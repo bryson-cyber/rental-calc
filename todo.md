@@ -6425,3 +6425,18 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Build admin dashboard to view leads and reports (updated AdminReports page)
 - [ ] Add export functionality for sales team
 
+
+
+## Login Requirement & Speed Fix (Jan 27, 2026)
+
+### Report Speed Issue:
+- [ ] Diagnose why reports are taking 2 minutes (was faster before)
+- [ ] Check server logs for API response times
+- [ ] Identify the bottleneck causing slow reports
+- [ ] Fix the performance issue
+
+### Login Requirement for Step 3:
+- [ ] Remove inline lead capture form from Step 3
+- [ ] Require user login before running Step 3 reports
+- [ ] Update user registration to require name, email, phone (all required)
+- [ ] Store lead data from user profile with each report

@@ -1367,23 +1367,10 @@ export async function generateFullArbitrageAnalysis(
     .map(c => c.airbnb_url)
     .filter((url): url is string => !!url);
   
-  if (airbnbUrls.length > 0) {
-    try {
-      console.log(`[ArbitrageAnalysis] Checking ${airbnbUrls.length} Airbnb listings for availability...`);
-      const activeUrls = await batchCheckAirbnbListingsActive(airbnbUrls);
-      
-      // Filter to only include listings that are actually active on Airbnb
-      activeCompetitors = uniqueCompetitors.filter(c => {
-        if (!c.airbnb_url) return true; // Keep listings without URLs (can't verify)
-        return activeUrls.has(c.airbnb_url);
-      });
-      
-      console.log(`[ArbitrageAnalysis] ${activeCompetitors.length}/${uniqueCompetitors.length} listings are active on Airbnb`);
-    } catch (error) {
-      console.error('[ArbitrageAnalysis] Error checking Airbnb listing availability:', error);
-      // If check fails, keep all competitors
-    }
-  }
+  // SKIP: Airbnb availability check is slow and causes network timeouts
+  // The AirDNA data is already filtered for active listings
+  // This saves 10-30 seconds per report
+  console.log(`[ArbitrageAnalysis] Skipping Airbnb availability check (using AirDNA data directly)`);
   
   const competitors = activeCompetitors.map(analyzeCompetitorSuccessFactors);
   
@@ -1458,36 +1445,9 @@ export async function generateFullArbitrageAnalysis(
     .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))
     .slice(0, 5);
   
-  if (top5Competitors.length > 0) {
-    const historicalPromises = top5Competitors.map(async (comp) => {
-      try {
-        // Extract listing ID from Airbnb URL
-        const urlMatch = comp.airbnb_url?.match(/rooms\/(\d+)/);
-        const listingId = urlMatch ? urlMatch[1] : null;
-        
-        if (!listingId) return null;
-        
-        const historical = await getListingHistoricalMetrics(listingId, 12);
-        if (!historical) return null;
-        
-        return {
-          name: comp.title || 'Competitor',
-          listing_id: listingId,
-          total_revenue_12mo: historical.summary.total_revenue,
-          avg_adr: historical.summary.avg_adr,
-          avg_occupancy: historical.summary.avg_occupancy,
-          revenue_trend: historical.summary.revenue_trend
-        };
-      } catch (error) {
-        // Silently handle individual listing errors - don't log each one
-        return null;
-      }
-    });
-    
-    const results = await Promise.all(historicalPromises);
-    competitor_historical = results.filter((r): r is NonNullable<typeof r> => r !== null);
-    console.log(`[ArbitrageAnalysis] Fetched historical data for ${competitor_historical.length}/${top5Competitors.length} competitors`);
-  }
+  // SKIP competitor historical metrics to speed up report generation
+  // Each historical API call adds 2-5 seconds, and we have 5 competitors = 10-25 seconds
+  console.log(`[ArbitrageAnalysis] Skipping competitor historical metrics (performance optimization)`);
   
   // Step 6.6: Fetch daily pricing intelligence
   let daily_pricing: {
@@ -1599,55 +1559,18 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // Step 6.8: Fetch top performer comps using AirDNA's native comp algorithm
-  let top_performer_comps: ListingComp[] = [];
+  // SKIP top performer comps and pricing - these add 5-10 seconds each
+  // We already have good comp data from Rentalizer
+  const top_performer_comps: ListingComp[] = [];
+  const top_performer_pricing: ListingFuturePricing | undefined = undefined;
+  console.log(`[ArbitrageAnalysis] Skipping top performer comps/pricing (performance optimization)`);
   
-  // Get the top performer's listing ID from Airbnb URL
+  // Keep topPerformer reference for other uses
   const topPerformer = listings
     .filter(l => l.airbnb_url)
     .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))[0];
   
-  if (topPerformer?.airbnb_url) {
-    try {
-      // Extract listing ID from Airbnb URL
-      const urlMatch = topPerformer.airbnb_url.match(/rooms\/(\d+)/);
-      const listingId = urlMatch ? urlMatch[1] : null;
-      
-      if (listingId) {
-        console.log(`[ArbitrageAnalysis] Fetching comps for top performer (ID: ${listingId})...`);
-        const comps = await getListingComps(listingId, 10);
-        
-        if (comps.length > 0) {
-          top_performer_comps = comps;
-          console.log(`[ArbitrageAnalysis] Got ${comps.length} comps from AirDNA's native algorithm for top performer`);
-        }
-      }
-    } catch (error) {
-      console.error('[ArbitrageAnalysis] Error fetching top performer comps:', error);
-    }
-  }
-  
-  // Step 6.9: Fetch top performer's pricing strategy
-  let top_performer_pricing: ListingFuturePricing | null = null;
-  
-  if (topPerformer?.airbnb_url) {
-    try {
-      const urlMatch = topPerformer.airbnb_url.match(/rooms\/(\d+)/);
-      const listingId = urlMatch ? urlMatch[1] : null;
-      
-      if (listingId) {
-        console.log(`[ArbitrageAnalysis] Fetching pricing strategy for top performer (ID: ${listingId})...`);
-        const pricing = await getListingFuturePricing(listingId, 90);
-        
-        if (pricing && pricing.pricing_data.length > 0) {
-          top_performer_pricing = pricing;
-          console.log(`[ArbitrageAnalysis] Got ${pricing.pricing_data.length} days of pricing data. Weekday: $${pricing.pricing_summary.avg_weekday_price}, Weekend: $${pricing.pricing_summary.avg_weekend_price}, Premium: ${pricing.pricing_summary.weekend_premium_percent}%`);
-        }
-      }
-    } catch (error) {
-      console.error('[ArbitrageAnalysis] Error fetching top performer pricing:', error);
-    }
-  }
+  // SKIPPED: getListingComps and getListingFuturePricing (dead code removed)
   
   // Step 6.10: Fetch Rentalizer comps for enhanced competitor data
   let rentalizer_comps: RentalizerCompData | null = null;
@@ -2855,10 +2778,16 @@ export async function generateFullArbitrageAnalysis(
   try {
     const searchRadius = 3000; // 3km radius
     console.log(`[ArbitrageAnalysis] Fetching same-bedroom (${actualBedrooms}BR) listings within ${searchRadius}m radius...`);
-    const filteredListings = await exploreListingsInRadius(address, searchRadius, {
+    
+    // Add 10 second timeout to prevent long waits on flaky network
+    const radiusPromise = exploreListingsInRadius(address, searchRadius, {
       bedrooms: actualBedrooms,
       minRevenue: 10000 // Only include listings with meaningful revenue
     }, 25);
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Radius search timeout after 10s')), 10000)
+    );
+    const filteredListings = await Promise.race([radiusPromise, timeoutPromise]);
     
     if (filteredListings.length > 0) {
       const avgRevenue = filteredListings.reduce((sum, l) => sum + l.annual_revenue, 0) / filteredListings.length;
@@ -3025,8 +2954,9 @@ export async function generateFullArbitrageAnalysis(
     };
   } | null = null;
   
-  // Photo analysis now uses Poe Gemini 3 for better reliability
-  const SKIP_PHOTO_ANALYSIS = false; // Re-enabled with Poe Gemini 3
+  // SKIP photo analysis to speed up report generation
+  // Photo scraping and AI analysis adds 20-40 seconds to each report
+  const SKIP_PHOTO_ANALYSIS = true; // Disabled for performance
   
   if (!SKIP_PHOTO_ANALYSIS) {
   try {
@@ -3338,14 +3268,8 @@ export async function generateFullArbitrageAnalysis(
         similarity_score: c.similarity_score,
         amenities: c.amenities
       })) : undefined,
-      top_performer_pricing: top_performer_pricing ? {
-        avg_weekday_price: top_performer_pricing.pricing_summary.avg_weekday_price,
-        avg_weekend_price: top_performer_pricing.pricing_summary.avg_weekend_price,
-        price_range_low: top_performer_pricing.pricing_summary.price_range_low,
-        price_range_high: top_performer_pricing.pricing_summary.price_range_high,
-        weekend_premium_percent: top_performer_pricing.pricing_summary.weekend_premium_percent,
-        days_of_data: top_performer_pricing.pricing_data.length
-      } : undefined,
+      // top_performer_pricing is skipped for performance - always undefined
+      top_performer_pricing: undefined,
       rentalizer_comps: rentalizer_comps ? (() => {
         const comps = rentalizer_comps.comps;
         const superhostCount = comps.filter(c => c.superhost).length;

@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "622c4415-80b8-41fe-a7e1-4534a74eea95",
-  "prevId": "11ff4217-b261-4e45-90ac-4c7ca1ab4fee",
+  "id": "4600bf63-62d4-413b-a493-003b0e1d50ae",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "activity_logs": {
       "name": "activity_logs",
@@ -2384,6 +2384,13 @@
         "email": {
           "name": "email",
           "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
