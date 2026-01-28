@@ -4320,173 +4320,126 @@ export default function LeadMagnet() {
             {/* ===== WINNER HERO SECTION ===== */}
             {sortedBulkResults.length > 0 && sortedBulkResults[0].status === 'success' && (
               <div className="mb-10">
-                <div className="bg-gradient-to-br from-[#0F172A] via-[#1e293b] to-[#334155] rounded-2xl p-8 text-white shadow-xl shadow-slate-900/30 relative overflow-hidden">
-                  {/* Background decoration */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-                  
-                  <div className="relative z-10">
-                    {/* Winner Badge with Grade */}
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                        <Trophy className="w-8 h-8 text-yellow-300" />
+                {/* Clean, light winner card */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                  {/* Header with trophy and grade */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#C9A962]/10 rounded-xl flex items-center justify-center">
+                        <Trophy className="w-6 h-6 text-[#C9A962]" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl md:text-3xl font-bold">Your Best Deal</h3>
-                        <p className="text-slate-300">Highest profit potential of {sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
-                      </div>
-                      {/* Letter Grade Badge */}
-                      <InfoTooltip
-                        content={`Grade based on profit multiplier. A+ = 3x+ (excellent), A = 2.5x+, B+ = 2x+, B = 1.75x+, C+ = 1.5x+, C = 1.25x+, D = 1x+, F = below 1x (losing money).`}
-                        iconClassName="text-[#C9A962] hover:text-white"
-                      >
-                        <div className="flex flex-col items-center bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                          <span className="text-xs text-[#C9A962] uppercase tracking-wide">Grade</span>
-                          <span className="text-3xl font-bold">
-                            {sortedBulkResults[0].ratio >= 3 ? 'A+' : 
-                             sortedBulkResults[0].ratio >= 2.5 ? 'A' : 
-                             sortedBulkResults[0].ratio >= 2 ? 'B+' : 
-                             sortedBulkResults[0].ratio >= 1.75 ? 'B' : 
-                             sortedBulkResults[0].ratio >= 1.5 ? 'C+' : 
-                             sortedBulkResults[0].ratio >= 1.25 ? 'C' : 
-                             sortedBulkResults[0].ratio >= 1 ? 'D' : 'F'}
-                          </span>
-                        </div>
-                      </InfoTooltip>
-                    </div>
-                    
-                    {/* Winner Property Details */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Left: Property Info */}
                       <div>
-                        <h4 className="text-xl font-semibold mb-2 truncate">{sortedBulkResults[0].address}</h4>
-                        <div className="flex flex-wrap items-center gap-3 text-slate-300 text-sm mb-4">
-                          <span className="flex items-center gap-1">
-                            <BedDouble className="w-4 h-4" />
-                            {sortedBulkResults[0].bedrooms} bed
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Bath className="w-4 h-4" />
-                            {sortedBulkResults[0].bathrooms} bath
-                          </span>
-                          <span className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full">
-                            <DollarSign className="w-4 h-4" />
-                            {formatCurrency(sortedBulkResults[0].rent)}/mo rent
-                          </span>
-                        </div>
-                        
-                        {/* Annual Summary */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <InfoTooltip 
-                            content="Your estimated yearly profit after paying rent. This is what you could take home before other expenses like utilities and supplies."
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-sm">Annual Profit Potential</span>
-                          </InfoTooltip>
-                          <p className="text-3xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-slate-300">/year</span></p>
-                        </div>
-                      </div>
-                      
-                      {/* Right: Key Metrics */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <InfoTooltip 
-                            content="Revenue minus rent. This is your monthly take-home before other expenses like cleaning and supplies."
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Monthly Profit</span>
-                          </InfoTooltip>
-                          <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].profit)}</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <InfoTooltip 
-                            content={`How many times your rent you could earn. ${sortedBulkResults[0].ratio.toFixed(1)}x means you earn ${sortedBulkResults[0].ratio.toFixed(1)} times what you pay in rent. 2x+ is good, 3x+ is excellent.`}
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Profit Multiplier</span>
-                          </InfoTooltip>
-                          <p className="text-2xl font-bold mt-1">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <InfoTooltip 
-                            content="Total income from guest bookings each month, before subtracting rent. This is your gross income."
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Monthly Revenue</span>
-                          </InfoTooltip>
-                          <p className="text-2xl font-bold mt-1">{formatCurrency(sortedBulkResults[0].revenue)}</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                          <InfoTooltip 
-                            content={`How often the property is booked. ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}% means guests about ${Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100) * 3.65)} nights per year.`}
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-xs uppercase tracking-wide">Booking Rate</span>
-                          </InfoTooltip>
-                          <p className="text-2xl font-bold mt-1">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
-                        </div>
+                        <h3 className="text-xl font-semibold text-slate-900">Your Best Deal</h3>
+                        <p className="text-slate-500 text-sm">{sortedBulkResults.filter(r => r.status === 'success').length} properties compared</p>
                       </div>
                     </div>
-                    
-                    {/* Profit Margin Indicator */}
-                    <div className="mt-6 pt-6 border-t border-white/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <InfoTooltip 
-                            content={`What percentage of your revenue becomes profit after paying rent. ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% is ${Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 60 ? 'excellent' : Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100) >= 40 ? 'good' : 'moderate'}. Higher is better.`}
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-sm">Profit Margin</span>
-                          </InfoTooltip>
-                          <p className="text-lg font-semibold">
-                            {Math.round((sortedBulkResults[0].profit / sortedBulkResults[0].revenue) * 100)}% of revenue is profit
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <InfoTooltip 
-                            content="Average price per night that guests pay. Also called ADR (Average Daily Rate). This is based on similar properties in the area."
-                            iconClassName="text-[#C9A962] hover:text-white"
-                          >
-                            <span className="text-[#C9A962] text-sm">Nightly Rate</span>
-                          </InfoTooltip>
-                          <p className="text-lg font-semibold">${Math.round(sortedBulkResults[0].adr)}/night</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Share Results Button */}
-                    <div className="mt-6 pt-6 border-t border-white/20">
-                      <button
-                        onClick={() => {
-                          // Create shareable data
-                          const shareData = {
-                            results: sortedBulkResults.filter(r => r.status === 'success').map(r => ({
-                              address: r.address,
-                              bedrooms: r.bedrooms,
-                              bathrooms: r.bathrooms,
-                              rent: r.rent,
-                              revenue: r.revenue,
-                              profit: r.profit,
-                              ratio: r.ratio,
-                              occupancy: r.occupancy,
-                              adr: r.adr
-                            })),
-                            createdAt: new Date().toISOString()
-                          };
-                          const encoded = btoa(JSON.stringify(shareData));
-                          const shareUrl = `${window.location.origin}/share/compare/${encoded}`;
-                          navigator.clipboard.writeText(shareUrl);
-                          toast.success('Share link copied to clipboard!', {
-                            description: 'Send this link to anyone to show them your comparison results.'
-                          });
-                        }}
-                        className="w-full flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white py-3 px-6 rounded-xl font-medium transition-all duration-200"
-                      >
-                        <Share2 className="w-5 h-5" />
-                        Share These Results
-                      </button>
+                    {/* Grade Badge */}
+                    <div className={`px-4 py-2 rounded-xl text-center ${
+                      sortedBulkResults[0].ratio >= 3 ? 'bg-emerald-50 border border-emerald-200' :
+                      sortedBulkResults[0].ratio >= 2 ? 'bg-blue-50 border border-blue-200' :
+                      sortedBulkResults[0].ratio >= 1.5 ? 'bg-amber-50 border border-amber-200' :
+                      'bg-slate-50 border border-slate-200'
+                    }`}>
+                      <span className="text-xs text-slate-500 uppercase tracking-wide block">Grade</span>
+                      <span className={`text-2xl font-bold ${
+                        sortedBulkResults[0].ratio >= 3 ? 'text-emerald-600' :
+                        sortedBulkResults[0].ratio >= 2 ? 'text-blue-600' :
+                        sortedBulkResults[0].ratio >= 1.5 ? 'text-amber-600' :
+                        'text-slate-600'
+                      }`}>
+                        {sortedBulkResults[0].ratio >= 3 ? 'A+' : 
+                         sortedBulkResults[0].ratio >= 2.5 ? 'A' : 
+                         sortedBulkResults[0].ratio >= 2 ? 'B+' : 
+                         sortedBulkResults[0].ratio >= 1.75 ? 'B' : 
+                         sortedBulkResults[0].ratio >= 1.5 ? 'C+' : 
+                         sortedBulkResults[0].ratio >= 1.25 ? 'C' : 
+                         sortedBulkResults[0].ratio >= 1 ? 'D' : 'F'}
+                      </span>
                     </div>
                   </div>
+                  
+                  {/* Property Address */}
+                  <div className="mb-6">
+                    <h4 className="text-lg font-medium text-slate-900 mb-2">{sortedBulkResults[0].address}</h4>
+                    <div className="flex flex-wrap items-center gap-4 text-slate-500 text-sm">
+                      <span className="flex items-center gap-1">
+                        <BedDouble className="w-4 h-4" />
+                        {sortedBulkResults[0].bedrooms} bed
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Bath className="w-4 h-4" />
+                        {sortedBulkResults[0].bathrooms} bath
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="w-4 h-4" />
+                        {formatCurrency(sortedBulkResults[0].rent)}/mo rent
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Key Numbers - Simplified */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className="text-2xl font-bold text-slate-900">{formatCurrency(sortedBulkResults[0].profit)}</p>
+                      <p className="text-xs text-slate-500 mt-1">Monthly Profit</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className="text-2xl font-bold text-slate-900">{sortedBulkResults[0].ratio.toFixed(1)}x</p>
+                      <p className="text-xs text-slate-500 mt-1">Profit Multiplier</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className="text-2xl font-bold text-slate-900">{formatCurrency(sortedBulkResults[0].revenue)}</p>
+                      <p className="text-xs text-slate-500 mt-1">Monthly Revenue</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className="text-2xl font-bold text-slate-900">{Math.round((sortedBulkResults[0].occupancy > 1 ? sortedBulkResults[0].occupancy : sortedBulkResults[0].occupancy * 100))}%</p>
+                      <p className="text-xs text-slate-500 mt-1">Booking Rate</p>
+                    </div>
+                  </div>
+                  
+                  {/* Annual Highlight */}
+                  <div className="bg-[#C9A962]/5 border border-[#C9A962]/20 rounded-xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-[#C9A962] font-medium">Annual Profit Potential</p>
+                        <p className="text-3xl font-bold text-slate-900">{formatCurrency(sortedBulkResults[0].profit * 12)}<span className="text-lg font-normal text-slate-500">/year</span></p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">Nightly Rate</p>
+                        <p className="text-xl font-semibold text-slate-900">${Math.round(sortedBulkResults[0].adr)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Share Button */}
+                  <button
+                    onClick={() => {
+                      const shareData = {
+                        results: sortedBulkResults.filter(r => r.status === 'success').map(r => ({
+                          address: r.address,
+                          bedrooms: r.bedrooms,
+                          bathrooms: r.bathrooms,
+                          rent: r.rent,
+                          revenue: r.revenue,
+                          profit: r.profit,
+                          ratio: r.ratio,
+                          occupancy: r.occupancy,
+                          adr: r.adr
+                        })),
+                        createdAt: new Date().toISOString()
+                      };
+                      const encoded = btoa(JSON.stringify(shareData));
+                      const shareUrl = `${window.location.origin}/share/compare/${encoded}`;
+                      navigator.clipboard.writeText(shareUrl);
+                      toast.success('Share link copied to clipboard!', {
+                        description: 'Send this link to anyone to show them your comparison results.'
+                      });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 px-6 rounded-xl font-medium transition-all duration-200"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    Share These Results
+                  </button>
                 </div>
               </div>
             )}
