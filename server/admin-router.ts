@@ -240,6 +240,10 @@ export const adminRouter = router({
             annualRevenueRealistic: analysisReports.annualRevenueRealistic,
             verdict: analysisReports.verdict,
             createdAt: analysisReports.createdAt,
+            // Lead capture fields
+            leadName: analysisReports.leadName,
+            leadEmail: analysisReports.leadEmail,
+            leadPhone: analysisReports.leadPhone,
           })
           .from(analysisReports)
           .where(whereClause)

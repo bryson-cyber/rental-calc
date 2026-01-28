@@ -6406,3 +6406,22 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix comparable properties distance filter not loading actual comps (hide distance when unavailable)
 - [x] Remove distance indicator from comps if data unavailable
 - [x] Remove Market Insights section from property analysis (framing unclear)
+
+
+## Lead Capture & Report Tracking (Jan 27, 2026)
+
+### Root Cause Analysis for Report Failures:
+- [ ] Investigate API chain to identify failure points
+- [ ] Check AirDNA API response times and error rates
+- [ ] Check Zillow/Redfin scraping reliability
+- [ ] Identify timeout bottlenecks
+- [ ] Fix identified issues
+
+### Lead Capture System:
+- [x] Design database schema for leads (email, phone, name) - ALREADY EXISTS in leads table
+- [x] Design database schema for report tracking (property, results, timestamp) - ALREADY EXISTS in analysisReports table
+- [x] Add lead capture form before report generation
+- [x] Store report data with user contact info
+- [x] Build admin dashboard to view leads and reports (updated AdminReports page)
+- [ ] Add export functionality for sales team
+

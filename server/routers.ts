@@ -84,6 +84,10 @@ const propertyReportInputSchema = z.object({
   bedrooms: z.number().int().min(1).max(20).optional(),
   bathrooms: z.number().min(0.5).max(20).optional(),
   accommodates: z.number().int().min(1).max(50).optional(),
+  // Lead capture fields
+  leadName: z.string().optional(),
+  leadEmail: z.string().email().optional(),
+  leadPhone: z.string().optional(),
 });
 
 // AI-enhanced property report schema (includes rent for arbitrage calculation)
@@ -1064,6 +1068,39 @@ export const appRouter = router({
               error: "Could not generate property report for this address",
               data: null,
             };
+          }
+          
+          // Save lead capture data if provided
+          if (input.leadEmail) {
+            try {
+              const db = await getDb();
+              if (db) {
+                const property = report.property as any;
+                await db.insert(analysisReports).values({
+                  address: input.address,
+                  city: property?.location?.city || null,
+                  state: property?.location?.state || null,
+                  zipCode: property?.location?.zipcode || null,
+                  latitude: property?.location?.latitude?.toString() || null,
+                  longitude: property?.location?.longitude?.toString() || null,
+                  bedrooms: input.bedrooms || null,
+                  bathrooms: input.bathrooms?.toString() || null,
+                  marketId: property?.location?.market_id || null,
+                  marketName: property?.location?.market_name || null,
+                  annualRevenueRealistic: property?.estimates?.annual_revenue || null,
+                  occupancyRate: property?.estimates?.occupancy_rate?.toString() || null,
+                  averageDailyRate: property?.estimates?.average_daily_rate || null,
+                  leadName: input.leadName || null,
+                  leadEmail: input.leadEmail || null,
+                  leadPhone: input.leadPhone || null,
+                  fullAnalysisData: report,
+                });
+                console.log('[Rental] Lead captured:', input.leadEmail);
+              }
+            } catch (dbError) {
+              console.error('[Rental] Error saving lead:', dbError);
+              // Don't fail the request if lead save fails
+            }
           }
 
           return {
@@ -2146,6 +2183,10 @@ export const appRouter = router({
         bedrooms: z.number().int().min(1).max(20),
         bathrooms: z.number().min(0.5).max(20),
         sessionId: z.string().optional(), // For progress tracking
+        // Lead capture fields
+        leadName: z.string().optional(),
+        leadEmail: z.string().email().optional(),
+        leadPhone: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         try {
@@ -2211,6 +2252,10 @@ export const appRouter = router({
                 bedrooms: input.bedrooms || null,
                 bathrooms: getDecimalStr(input.bathrooms),
                 monthlyRent: input.monthly_rent || null,
+                // Lead capture data
+                leadName: input.leadName || null,
+                leadEmail: input.leadEmail || null,
+                leadPhone: input.leadPhone || null,
                 marketId: propertyEstimate.market_id || null,
                 marketName: propertyEstimate.market_name || null,
                 annualRevenueConservative: getNumber(profitability.conservative?.annual_revenue),

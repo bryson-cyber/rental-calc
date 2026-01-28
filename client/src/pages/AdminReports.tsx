@@ -31,6 +31,10 @@ interface AnalysisReport {
   bathrooms: string | null;
   monthlyRent: number | null;
   marketName: string | null;
+  // Lead capture fields
+  leadName: string | null;
+  leadEmail: string | null;
+  leadPhone: string | null;
   annualRevenueConservative: number | null;
   annualRevenueRealistic: number | null;
   annualRevenueOptimistic: number | null;
@@ -350,6 +354,9 @@ export default function AdminReports() {
                       Verdict
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Lead Info
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -406,6 +413,25 @@ export default function AdminReports() {
                           <div className="text-xs text-gray-400 mt-1">
                             {report.confidenceScore}/10 confidence
                           </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        {report.leadEmail ? (
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {report.leadName || 'No name'}
+                            </div>
+                            <a href={`mailto:${report.leadEmail}`} className="text-xs text-blue-600 hover:underline">
+                              {report.leadEmail}
+                            </a>
+                            {report.leadPhone && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                <a href={`tel:${report.leadPhone}`} className="hover:underline">{report.leadPhone}</a>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">No lead info</span>
                         )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">

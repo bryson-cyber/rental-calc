@@ -209,6 +209,11 @@ export const analysisReports = mysqlTable("analysis_reports", {
   // Competitor data (JSON blob)
   competitorData: json("competitorData"),
   
+  // Lead capture information
+  leadName: varchar("leadName", { length: 255 }),
+  leadEmail: varchar("leadEmail", { length: 320 }),
+  leadPhone: varchar("leadPhone", { length: 50 }),
+  
   // User tracking (optional)
   userIp: varchar("userIp", { length: 45 }),
   userAgent: text("userAgent"),

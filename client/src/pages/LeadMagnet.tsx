@@ -381,6 +381,12 @@ export default function LeadMagnet() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisTimer, setAnalysisTimer] = useState(0);
   
+  // Lead capture state for Step 3
+  const [leadName, setLeadName] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [showLeadCapture, setShowLeadCapture] = useState(false);
+  
   // Rentometer state for rent validation
   const [rentometerData, setRentometerData] = useState<{
     median: number;
@@ -635,6 +641,9 @@ export default function LeadMagnet() {
           address,
           bedrooms: parseInt(bedrooms),
           bathrooms: parseFloat(bathrooms),
+          leadName: leadName || undefined,
+          leadEmail: leadEmail || undefined,
+          leadPhone: leadPhone || undefined,
         }),
         timeoutPromise
       ]);
@@ -1943,9 +1952,52 @@ export default function LeadMagnet() {
                   <p className="text-xs text-slate-500 mt-2">Covers cleaning, supplies, utilities, repairs, and platform fees</p>
                 </div>
                 
+                {/* Lead Capture Section */}
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-amber-700">
+                    <Sparkles className="w-5 h-5" />
+                    <span className="font-semibold">Get Your Free Report</span>
+                  </div>
+                  <p className="text-sm text-amber-800/80">Enter your contact info to receive your detailed property analysis report.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-amber-800">Name</label>
+                      <Input
+                        type="text"
+                        value={leadName}
+                        onChange={(e) => setLeadName(e.target.value)}
+                        placeholder="Your name"
+                        className="input-apple h-10 bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-amber-800">Email <span className="text-red-500">*</span></label>
+                      <Input
+                        type="email"
+                        value={leadEmail}
+                        onChange={(e) => setLeadEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="input-apple h-10 bg-white"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-amber-800">Phone (optional)</label>
+                    <Input
+                      type="tel"
+                      value={leadPhone}
+                      onChange={(e) => setLeadPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                      className="input-apple h-10 bg-white"
+                    />
+                  </div>
+                </div>
+                
                 <button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0}
+                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0 || !leadEmail}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isAnalyzing ? (
