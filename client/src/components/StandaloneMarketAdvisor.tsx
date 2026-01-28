@@ -23,8 +23,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  MessageSquare,
-  Zap,
   RefreshCw,
   WifiOff,
   ServerCrash
@@ -36,7 +34,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
-import { useProperty, useMarketAdvisorFilters, type AmenitiesFilter } from '@/contexts/PropertyContext';
+import { useProperty, useMarketAdvisorFilters } from '@/contexts/PropertyContext';
 
 interface MarketSearchResult {
   id: string;
@@ -58,30 +56,15 @@ interface StandaloneMarketAdvisorProps {
 }
 
 export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: StandaloneMarketAdvisorProps) {
-  // Use context for all filters to persist across component remounts
+  // Use context for bedroom filter to persist across component remounts
   const {
     filters,
     setBedroomFilter,
-    setAmenitiesFilter,
-    setPropertyTypeFilter,
-    setRatingFilter,
-    setReviewCountFilter,
-    setSuperhostOnly,
-    setProfessionalOnly,
-    setInstantBookOnly,
-    setListingTypeFilter,
   } = useMarketAdvisorFilters();
   
-  // Destructure filter values for easier access
+  // Bedroom filter is the only user-selectable filter
+  // Property type is fixed to "entire_home" for arbitrage analysis
   const bedroomFilter = filters.bedroomFilter;
-  const amenitiesFilter = filters.amenitiesFilter;
-  const propertyTypeFilter = filters.propertyTypeFilter;
-  const ratingFilter = filters.ratingFilter;
-  const reviewCountFilter = filters.reviewCountFilter;
-  const superhostOnly = filters.superhostOnly;
-  const professionalOnly = filters.professionalOnly;
-  const instantBookOnly = filters.instantBookOnly;
-  const listingTypeFilter = filters.listingTypeFilter;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
@@ -104,12 +87,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     revparChart: false,
   });
   
-  // Local UI state for dropdowns (these don't need to persist)
-  const [showAmenitiesDropdown, setShowAmenitiesDropdown] = useState(false);
-  const [showPropertyTypeDropdown, setShowPropertyTypeDropdown] = useState(false);
-  const [showRatingDropdown, setShowRatingDropdown] = useState(false);
-  const [showReviewCountDropdown, setShowReviewCountDropdown] = useState(false);
-  const [showListingTypeDropdown, setShowListingTypeDropdown] = useState(false);
+  // No dropdown state needed - filters simplified to bedroom only
   const [analysisProgress, setAnalysisProgress] = useState<{
     step: number;
     message: string;
@@ -251,14 +229,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
         marketId: selectedMarket.id,
         marketType: selectedMarket.type,
         bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
-        amenities: Object.values(amenitiesFilter).some(Boolean) ? amenitiesFilter : undefined,
-        propertyType: propertyTypeFilter !== 'all' ? propertyTypeFilter : undefined,
-        minRating: ratingFilter !== 'all' ? parseFloat(ratingFilter) : undefined,
-        minReviews: reviewCountFilter !== 'all' ? parseInt(reviewCountFilter) : undefined,
-        superhostOnly: superhostOnly || undefined,
-        professionalOnly: professionalOnly || undefined,
-        instantBookOnly: instantBookOnly || undefined,
-        listingType: listingTypeFilter !== 'all' ? listingTypeFilter : undefined,
+        // Fixed to entire_home for arbitrage analysis - no private rooms or shared spaces
+        listingType: 'entire_home',
       });
       
       clearInterval(progressInterval);
@@ -377,9 +349,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             </AnimatePresence>
           </div>
 
-          {/* Filters Row */}
+          {/* Filters Row - Simplified to Bedrooms Only */}
           <div className="flex flex-wrap items-center gap-4">
-            {/* Bedroom Filter */}
+            {/* Bedroom Filter with Studio Option */}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700">Bedrooms:</label>
               <select
@@ -390,282 +362,38 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 }}
                 className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="all">All</option>
+                <option value="all">All Bedrooms</option>
+                <option value="0">Studio</option>
                 <option value="1">1 BR</option>
                 <option value="2">2 BR</option>
                 <option value="3">3 BR</option>
                 <option value="4">4 BR</option>
-                <option value="5">5+ BR</option>
+                <option value="5">5 BR</option>
+                <option value="6">6+ BR</option>
               </select>
             </div>
 
-            {/* Amenities Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowAmenitiesDropdown(!showAmenitiesDropdown)}
-                className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm hover:bg-slate-50 transition-colors"
-              >
-                <span className="font-medium text-slate-700">Amenities</span>
-                {Object.values(amenitiesFilter).filter(Boolean).length > 0 && (
-                  <Badge className="bg-blue-100 text-blue-700 text-xs">
-                    {Object.values(amenitiesFilter).filter(Boolean).length}
-                  </Badge>
-                )}
-                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showAmenitiesDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showAmenitiesDropdown && (
-                <div className="absolute z-50 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 p-3">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Filter by Amenities</div>
-                  <div className="space-y-2">
-                    {[
-                      { key: 'pool', label: 'Pool' },
-                      { key: 'hotTub', label: 'Hot Tub' },
-                      { key: 'petFriendly', label: 'Pet Friendly' },
-                      { key: 'parking', label: 'Parking' },
-                      { key: 'kitchen', label: 'Kitchen' },
-                      { key: 'washerDryer', label: 'Washer/Dryer' },
-                    ].map(({ key, label }) => (
-                      <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
-                        <input
-                          type="checkbox"
-                          checked={amenitiesFilter[key as keyof typeof amenitiesFilter]}
-                          onChange={(e) => setAmenitiesFilter({ ...amenitiesFilter, [key as keyof AmenitiesFilter]: e.target.checked })}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm">{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between">
-                    <button
-                      onClick={() => setAmenitiesFilter({ pool: false, hotTub: false, petFriendly: false, parking: false, kitchen: false, washerDryer: false })}
-                      className="text-xs text-slate-500 hover:text-slate-700"
-                    >
-                      Clear All
-                    </button>
-                    <button
-                      onClick={() => setShowAmenitiesDropdown(false)}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Property Type Indicator - Fixed to Entire Home */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <Home className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-700">Entire Home/Apt Only</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-3.5 h-3.5 text-blue-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs max-w-xs">Analysis focuses on entire home rentals only, excluding private rooms and shared spaces for accurate arbitrage comparisons.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
-            {/* Property Type Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowPropertyTypeDropdown(!showPropertyTypeDropdown)}
-                className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm hover:bg-slate-50 transition-colors"
-              >
-                <Home className="w-4 h-4 text-slate-500" />
-                <span className="font-medium text-slate-700">
-                  {propertyTypeFilter === 'all' ? 'Property Type' : propertyTypeFilter}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showPropertyTypeDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showPropertyTypeDropdown && (
-                <div className="absolute z-50 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1">
-                  {[
-                    { value: 'all', label: 'All Types' },
-                    { value: 'house', label: 'House' },
-                    { value: 'apartment', label: 'Apartment' },
-                    { value: 'condo', label: 'Condo' },
-                    { value: 'townhouse', label: 'Townhouse' },
-                    { value: 'cabin', label: 'Cabin' },
-                    { value: 'cottage', label: 'Cottage' },
-                    { value: 'villa', label: 'Villa' },
-                    { value: 'loft', label: 'Loft' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setPropertyTypeFilter(value);
-                        setShowPropertyTypeDropdown(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
-                        propertyTypeFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Rating Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowRatingDropdown(!showRatingDropdown)}
-                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors bg-white"
-              >
-                <Star className="w-4 h-4 text-amber-500" />
-                <span className="text-sm text-slate-700">
-                  {ratingFilter === 'all' ? 'Any Rating' : `${ratingFilter}+ Stars`}
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </button>
-              {showRatingDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                  {[
-                    { value: 'all', label: 'Any Rating' },
-                    { value: '4.0', label: '4.0+ Stars' },
-                    { value: '4.5', label: '4.5+ Stars' },
-                    { value: '4.8', label: '4.8+ Stars' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setRatingFilter(value);
-                        setShowRatingDropdown(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
-                        ratingFilter === value ? 'bg-amber-50 text-amber-700 font-medium' : 'text-slate-700'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Review Count Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowReviewCountDropdown(!showReviewCountDropdown)}
-                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors bg-white"
-              >
-                <MessageSquare className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-slate-700">
-                  {reviewCountFilter === 'all' ? 'Any Reviews' : `${reviewCountFilter}+ Reviews`}
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </button>
-              {showReviewCountDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                  {[
-                    { value: 'all', label: 'Any Reviews' },
-                    { value: '10', label: '10+ Reviews' },
-                    { value: '25', label: '25+ Reviews' },
-                    { value: '50', label: '50+ Reviews' },
-                    { value: '100', label: '100+ Reviews' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setReviewCountFilter(value);
-                        setShowReviewCountDropdown(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
-                        reviewCountFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Host Type Toggles */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSuperhostOnly(!superhostOnly)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                  superhostOnly
-                    ? 'bg-amber-50 border-amber-300 text-amber-700'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <Star className={`w-4 h-4 ${superhostOnly ? 'fill-amber-400 text-amber-400' : ''}`} />
-                <span className="text-sm font-medium">Superhosts Only</span>
-              </button>
-              <button
-                onClick={() => setProfessionalOnly(!professionalOnly)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                  professionalOnly
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <Building2 className="w-4 h-4" />
-                <span className="text-sm font-medium">Pro Managed</span>
-              </button>
-              <button
-                onClick={() => setInstantBookOnly(!instantBookOnly)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                  instantBookOnly
-                    ? 'bg-green-50 border-green-300 text-green-700'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <Zap className={`w-4 h-4 ${instantBookOnly ? 'fill-green-400 text-green-400' : ''}`} />
-                <span className="text-sm font-medium">Instant Book</span>
-              </button>
-            </div>
-
-            {/* Listing Type Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowListingTypeDropdown(!showListingTypeDropdown)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-              >
-                <Home className="w-4 h-4 text-slate-500" />
-                <span className="text-sm text-slate-700">
-                  {listingTypeFilter === 'all' ? 'All Listing Types' : 
-                   listingTypeFilter === 'entire_home' ? 'Entire Home' :
-                   listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </button>
-              {showListingTypeDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                  {[
-                    { value: 'all', label: 'All Listing Types' },
-                    { value: 'entire_home', label: 'Entire Home/Apt' },
-                    { value: 'private_room', label: 'Private Room' },
-                    { value: 'shared_room', label: 'Shared Room' },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => {
-                        setListingTypeFilter(value);
-                        setShowListingTypeDropdown(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 transition-colors ${
-                        listingTypeFilter === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Active Filters Display */}
-            {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all' || superhostOnly || professionalOnly || instantBookOnly || listingTypeFilter !== 'all') && (
-              <div className="flex items-center gap-2 flex-wrap">
-                {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">Pool</Badge>}
-                {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">Hot Tub</Badge>}
-                {amenitiesFilter.petFriendly && <Badge variant="secondary" className="text-xs">Pet Friendly</Badge>}
-                {amenitiesFilter.parking && <Badge variant="secondary" className="text-xs">Parking</Badge>}
-                {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">Kitchen</Badge>}
-                {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">Washer/Dryer</Badge>}
-                {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">{propertyTypeFilter}</Badge>}
-                {ratingFilter !== 'all' && <Badge variant="secondary" className="text-xs">{ratingFilter}+ Stars</Badge>}
-                {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">{reviewCountFilter}+ Reviews</Badge>}
-                {superhostOnly && <Badge variant="secondary" className="text-xs">Superhosts Only</Badge>}
-                {professionalOnly && <Badge variant="secondary" className="text-xs">Pro Managed</Badge>}
-                {instantBookOnly && <Badge variant="secondary" className="text-xs">Instant Book</Badge>}
-                {listingTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">{listingTypeFilter === 'entire_home' ? 'Entire Home' : listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}</Badge>}
-              </div>
+            {/* Active Bedroom Filter Display */}
+            {bedroomFilter !== 'all' && (
+              <Badge variant="secondary" className="text-xs">
+                {bedroomFilter === '0' ? 'Studio' : `${bedroomFilter} BR`}
+              </Badge>
             )}
           </div>
 

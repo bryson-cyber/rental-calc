@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, address, bedrooms FROM ai_advisor_cache;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, address, bedrooms FROM ai_advisor_cache;",
+  "rows": [
+    {
+      "id": "1",
+      "address": "4662 W Kings Ave, Glendale, AZ 85306, USA",
+      "bedrooms": "3"
+    },
+    {
+      "id": "2",
+      "address": "4239 Delmar Blvd, St. Louis, MO 63108, USA",
+      "bedrooms": "2"
+    },
+    {
+      "id": "3",
+      "address": "1326 W Nassau St, Tampa, FL 33607, USA",
+      "bedrooms": "2"
+    },
+    {
+      "id": "4",
+      "address": "2922 W Chestnut St, Tampa, FL 33607, USA",
+      "bedrooms": "3"
+    },
+    {
+      "id": "5",
+      "address": "1738 West Saint Louis Street, Tampa, FL 33607, USA",
+      "bedrooms": "3"
+    },
+    {
+      "id": "30001",
+      "address": "448 Grandview Terrace, Lawrence, KS 66044, USA",
+      "bedrooms": "2"
+    },
+    {
+      "id": "60001",
+      "address": "18058 Villa Creek Dr, Tampa, FL 33647, USA",
+      "bedrooms": "3"
+    },
+    {
+      "id": "90001",
+      "address": "3319 freeman ave kansas city ks 66102",
+      "bedrooms": "3"
+    },
+    {
+      "id": "120001",
+      "address": "1738 W St Louis St, Tampa, FL 33607, USA",
+      "bedrooms": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\taddress\tbedrooms\n1\t4662 W Kings Ave, Glendale, AZ 85306, USA\t3\n2\t4239 Delmar Blvd, St. Louis, MO 63108, USA\t2\n3\t1326 W Nassau St, Tampa, FL 33607, USA\t2\n4\t2922 W Chestnut St, Tampa, FL 33607, USA\t3\n5\t1738 West Saint Louis Street, Tampa, FL 33607, USA\t3\n30001\t448 Grandview Terrace, Lawrence, KS 66044, USA\t2\n60001\t18058 Villa Creek Dr, Tampa, FL 33647, USA\t3\n90001\t3319 freeman ave kansas city ks 66102\t3\n120001\t1738 W St Louis St, Tampa, FL 33607, USA\t3\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

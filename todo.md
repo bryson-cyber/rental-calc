@@ -6853,3 +6853,27 @@ This makes the grading more optimistic - properties now get better grades at low
 ### Testing
 - [x] Test AI Advisor output for prescriptive language removal
 - [ ] Verify tooltips display correctly on hover
+
+
+## Filter Simplification & Rentometer Integration (Jan 28, 2026)
+
+### Simplify Market Advisor Filters
+- [x] Remove all filters except bedrooms
+- [x] Add Studio (0 BR) option to bedroom filter
+- [x] Default to "Entire Home" property type only (remove private rooms, shared rooms)
+- [x] Ensure bedroom filter strictly filters data (not just display)
+- [x] Remove amenities filter
+- [x] Remove property type filter dropdown
+- [x] Remove rating/review filters
+- [x] Remove superhost/professional filters
+
+### Rentometer API Integration for Step 7
+- [x] Add Rentometer API call to AI Advisor endpoint
+- [x] Include long-term rental comparison data in AI analysis
+- [x] Update AI prompt to synthesize Rentometer insights
+- [x] Show rental market context (median rent, percentile)
+
+### Testing
+- [x] Stress test with multiple property analyses
+- [x] Verify bedroom filtering works correctly
+- [x] Verify Rentometer data displays in AI output

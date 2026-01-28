@@ -763,6 +763,22 @@ export interface MaxPropertyAdvisorInput {
     totalListings: number;
     vsAverage: number;
   };
+  
+  // Rentometer Data (Long-Term Rental Market Comparison)
+  rentometerData?: {
+    median: number;
+    mean: number;
+    percentile25: number;
+    percentile75: number;
+    min: number;
+    max: number;
+    samples: number;
+    radiusMiles: number;
+    userRent?: number;
+    rentAdvantage?: number;
+    rentAdvantagePercent?: number;
+    percentilePosition?: string;
+  };
 }
 
 /**
@@ -774,7 +790,7 @@ export interface MaxPropertyAdvisorInput {
 export async function generateMaxPropertyAdvice(
   input: MaxPropertyAdvisorInput
 ): Promise<string> {
-  const { property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition } = input;
+  const { property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData } = input;
   
   // Calculate comprehensive metrics
   const avgCompRevenue = comparables.length > 0 
@@ -1128,28 +1144,42 @@ IMPORTANT: The user is RESEARCHING this opportunity - they haven't signed a leas
 - What insurance or reserves are needed
 - Exit strategy considerations
 
-# ACTION PLAN & RECOMMENDATIONS
+${rentometerData ? `
+# LONG-TERM RENTAL MARKET COMPARISON (RENTOMETER DATA)
 
-## Immediate Actions (First 30 Days)
-- Specific steps to take before listing
-- Setup and preparation checklist
-- Initial pricing strategy
+## Traditional Rental Market Data
+This section compares the property's potential monthly rent to the broader long-term rental market in the area.
 
-## Short-Term Goals (First 6 Months)
-- Review and rating targets
-- Occupancy and revenue milestones
-- Key performance indicators to track
+Market Statistics (${property.bedrooms}BR properties within ${rentometerData.radiusMiles} mile radius):
+- Median Rent: $${rentometerData.median.toLocaleString()}/month
+- Mean Rent: $${rentometerData.mean.toLocaleString()}/month
+- 25th Percentile: $${rentometerData.percentile25.toLocaleString()}/month
+- 75th Percentile: $${rentometerData.percentile75.toLocaleString()}/month
+- Rent Range: $${rentometerData.min.toLocaleString()} - $${rentometerData.max.toLocaleString()}/month
+- Sample Size: ${rentometerData.samples} comparable rentals
 
-## Long-Term Strategy (6-24 Months)
-- Path to Superhost status
-- Revenue optimization strategies
-- When to consider professional management
+${rentometerData.userRent ? `User's Proposed Rent: $${rentometerData.userRent.toLocaleString()}/month
+Rent Position: ${rentometerData.percentilePosition}
+Rent Advantage: ${rentometerData.rentAdvantage && rentometerData.rentAdvantage > 0 ? `$${rentometerData.rentAdvantage.toLocaleString()}/month below median (${rentometerData.rentAdvantagePercent}% savings)` : rentometerData.rentAdvantage && rentometerData.rentAdvantage < 0 ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/month above median (${Math.abs(rentometerData.rentAdvantagePercent || 0)}% premium)` : 'At market median'}` : ''}
 
-## Final Verdict
-- Clear YES, NO, or CONDITIONAL recommendation
-- Specific conditions for success
-- Who should pursue this opportunity
-- Who should avoid this opportunity
+## Arbitrage Opportunity Analysis
+- Compare the STR revenue potential to traditional rental market rates
+- Is the rent being asked reasonable for this market?
+- What's the spread between STR income and traditional rent?
+- How does this affect the arbitrage opportunity?
+
+` : ''}
+# ACTION PLAN & DATA SUMMARY
+
+## Key Metrics Summary
+- Summarize the most important data points
+- Highlight the key financial metrics
+- Note any data limitations or gaps
+
+## Market Context
+- How does this property compare to the market?
+- What are the key competitive factors?
+- What does the historical data suggest?
 
 Remember:
 - Be specific with numbers - cite actual figures from the data

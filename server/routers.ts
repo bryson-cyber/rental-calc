@@ -2698,7 +2698,61 @@ export const appRouter = router({
           }
           
           console.log('[AI Advisor Max] Cache MISS - Generating maximum capacity property advice for:', input.property.address);
-          const advice = await generateMaxPropertyAdvice(input as MaxPropertyAdvisorInput);
+          
+          // Fetch Rentometer data for long-term rental market comparison
+          let rentometerData: MaxPropertyAdvisorInput['rentometerData'] = undefined;
+          try {
+            console.log('[AI Advisor Max] Fetching Rentometer data for:', input.property.address);
+            const rentData = await getRentSummary({
+              address: input.property.address,
+              bedrooms: input.property.bedrooms,
+              buildingType: 'apartment', // Default to apartment for arbitrage
+            });
+            
+            rentometerData = {
+              median: rentData.median,
+              mean: rentData.mean,
+              percentile25: rentData.percentile_25,
+              percentile75: rentData.percentile_75,
+              min: rentData.min,
+              max: rentData.max,
+              samples: rentData.samples,
+              radiusMiles: rentData.radius_miles,
+            };
+            
+            // If user provided monthly rent, calculate comparison metrics
+            if (input.property.monthlyRent) {
+              const userRent = input.property.monthlyRent;
+              const rentAdvantage = rentData.median - userRent;
+              const rentAdvantagePercent = Math.round((rentAdvantage / rentData.median) * 100);
+              
+              let percentilePosition: string;
+              if (userRent <= rentData.percentile_25) {
+                percentilePosition = 'bottom 25% (excellent deal)';
+              } else if (userRent <= rentData.median) {
+                percentilePosition = 'below median (good deal)';
+              } else if (userRent <= rentData.percentile_75) {
+                percentilePosition = 'above median (fair)';
+              } else {
+                percentilePosition = 'top 25% (premium rent)';
+              }
+              
+              rentometerData.userRent = userRent;
+              rentometerData.rentAdvantage = rentAdvantage;
+              rentometerData.rentAdvantagePercent = rentAdvantagePercent;
+              rentometerData.percentilePosition = percentilePosition;
+            }
+            
+            console.log('[AI Advisor Max] Rentometer data fetched: median=$' + rentData.median + ', samples=' + rentData.samples);
+          } catch (rentError) {
+            console.warn('[AI Advisor Max] Could not fetch Rentometer data:', rentError);
+            // Continue without Rentometer data - it's optional
+          }
+          
+          const advice = await generateMaxPropertyAdvice({
+            ...input as MaxPropertyAdvisorInput,
+            rentometerData,
+          });
           
           // Store in cache (expires in 7 days) - only if db is available
           if (db) {
@@ -2913,44 +2967,27 @@ export const appRouter = router({
       }),
 
     // Standalone Market Advisor - Fetches all data and generates AI report
+    // Simplified Market Advisor - Only bedroom filter, fixed to entire_home property type
     standaloneMarketAdvisor: publicProcedure
       .input(z.object({
         marketId: z.string().min(1, "Market ID is required"),
         marketType: z.enum(['market', 'submarket', 'zipcode']).default('market'),
-        bedrooms: z.number().min(1).max(10).optional(),
-        amenities: z.object({
-          pool: z.boolean().optional(),
-          hotTub: z.boolean().optional(),
-          petFriendly: z.boolean().optional(),
-          parking: z.boolean().optional(),
-          kitchen: z.boolean().optional(),
-          washerDryer: z.boolean().optional(),
-        }).optional(),
-        propertyType: z.string().optional(),
-        minRating: z.number().min(0).max(5).optional(),
-        minReviews: z.number().min(0).optional(),
-        superhostOnly: z.boolean().optional(),
-        professionalOnly: z.boolean().optional(),
-        instantBookOnly: z.boolean().optional(),
-        listingType: z.string().optional(),
+        // Bedroom filter: 0 = Studio, 1-6 = specific bedrooms, undefined = all
+        bedrooms: z.number().min(0).max(10).optional(),
+        // Fixed to entire_home for arbitrage analysis - no private rooms or shared spaces
+        listingType: z.literal('entire_home').default('entire_home'),
       }))
       .mutation(async ({ input }) => {
         try {
           console.log('[Standalone Market Advisor] Starting analysis for:', input.marketId, 'type:', input.marketType);
-          if (input.bedrooms) console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms);
-          if (input.amenities) console.log('[Standalone Market Advisor] Amenities filter:', input.amenities);
+          if (input.bedrooms !== undefined) console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms === 0 ? 'Studio' : `${input.bedrooms} BR`);
+          console.log('[Standalone Market Advisor] Property type: entire_home (fixed)');
           
-          // Step 1: Fetch comprehensive market data (filters will be applied to top performers and comparables)
+          // Step 1: Fetch comprehensive market data with simplified filters
+          // Only bedroom filter is user-selectable; listingType is fixed to entire_home
           const marketData = await getStandaloneMarketAdvisorData(input.marketId, input.marketType, {
             bedrooms: input.bedrooms,
-            amenities: input.amenities,
-            propertyType: input.propertyType,
-            minRating: input.minRating,
-            minReviews: input.minReviews,
-            superhostOnly: input.superhostOnly,
-            professionalOnly: input.professionalOnly,
-            instantBookOnly: input.instantBookOnly,
-            listingType: input.listingType,
+            listingType: 'entire_home', // Fixed for arbitrage analysis
           });
           
           if (!marketData) {
@@ -2973,15 +3010,8 @@ export const appRouter = router({
             },
             appliedFilters: {
               bedrooms: input.bedrooms,
-              amenities: input.amenities,
-              propertyType: input.propertyType,
-              minRating: input.minRating,
-              minReviews: input.minReviews,
-superhostOnly: input.superhostOnly,
-            professionalOnly: input.professionalOnly,
-            instantBookOnly: input.instantBookOnly,
-            listingType: input.listingType,
-          },
+              listingType: 'entire_home', // Fixed for arbitrage analysis
+            },
           scores: marketData.scores,
             metrics: marketData.metrics,
             revenueByBedroom: marketData.revenueByBedroom,
