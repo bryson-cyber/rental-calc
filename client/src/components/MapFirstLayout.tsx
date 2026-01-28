@@ -528,7 +528,8 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   
   // Filter and sort listings
   const filteredListings = useMemo(() => {
-    let filtered = listings.filter(l => !excludedListingIds.has(l.id));
+    // First, filter out $0 revenue properties and excluded listings
+    let filtered = listings.filter(l => !excludedListingIds.has(l.id) && l.revenue > 0);
     
     if (bedroomFilter !== 'all') {
       filtered = filtered.filter(l => l.bedrooms === parseInt(bedroomFilter));
@@ -962,12 +963,40 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
       {/* Fullscreen Map Modal */}
       {isMapFullscreen && (
         <div className="fixed inset-0 z-50 bg-black">
-          <button
-            onClick={() => setIsMapFullscreen(false)}
-            className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white p-3 rounded-xl shadow-lg"
-          >
-            <Minimize2 className="w-6 h-6" />
-          </button>
+          {/* Fullscreen controls */}
+          <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+            {/* Home button - Go to My Property */}
+            {myProperty && (
+              <button
+                onClick={() => {
+                  // Pan to my property in fullscreen map
+                  const fullscreenMap = document.querySelector('.fixed.inset-0 [data-map]');
+                  if (myProperty.latitude && myProperty.longitude) {
+                    // We need to access the fullscreen map instance
+                    // For now, we'll close fullscreen and pan in main map
+                    setIsMapFullscreen(false);
+                    setTimeout(() => {
+                      if (mapRef.current) {
+                        mapRef.current.panTo({ lat: myProperty.latitude!, lng: myProperty.longitude! });
+                        mapRef.current.setZoom(14);
+                      }
+                    }, 100);
+                  }
+                }}
+                className="bg-amber-500 hover:bg-amber-600 p-3 rounded-xl shadow-lg"
+                title="Go to My Property"
+              >
+                <Home className="w-6 h-6 text-white" />
+              </button>
+            )}
+            {/* Close fullscreen button */}
+            <button
+              onClick={() => setIsMapFullscreen(false)}
+              className="bg-white/90 hover:bg-white p-3 rounded-xl shadow-lg"
+            >
+              <Minimize2 className="w-6 h-6" />
+            </button>
+          </div>
           <MapView
             className="w-full h-full"
             initialCenter={mapRef.current?.getCenter()?.toJSON() || { lat: 39.8283, lng: -98.5795 }}
@@ -1189,51 +1218,25 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
             </button>
           </div>
           
-          {/* Floating Filters Button - Bottom Right */}
-          <div className="absolute bottom-20 right-4 flex flex-col gap-2 z-20">
-            {/* Filters Panel Toggle */}
-            <button
-              onClick={() => {
-                setShowFiltersPanel(!showFiltersPanel);
-                setShowThresholdsPanel(false);
-                setShowMyPropertyPanel(false);
-              }}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl shadow-xl border-2 transition-all ${
-                showFiltersPanel ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-amber-50 text-slate-900 border-amber-400'
-              }`}
-            >
-              <Filter className="w-5 h-5" />
-              <span className="text-base font-semibold">Filters</span>
-              {(bedroomFilter !== 'all' || distanceFilter !== 'all') && (
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-              )}
-            </button>
-          </div>
-          
-          {/* Filters Panel */}
-          {showFiltersPanel && (
-            <div className="absolute bottom-20 right-4 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-20 max-h-[60vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-slate-900">Filters</h3>
-                <button onClick={() => setShowFiltersPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                  <X className="w-4 h-4 text-slate-500" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs text-slate-500 mb-1.5 block">Bedrooms</Label>
+          {/* Horizontal Filter Bar - Bottom of Map */}
+          <div className="absolute bottom-4 left-4 right-4 z-20">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-slate-200 px-4 py-3">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Bedrooms Filter */}
+                <div className="flex items-center gap-2">
+                  <BedDouble className="w-4 h-4 text-slate-500" />
                   <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="All Bedrooms" />
+                    <SelectTrigger className="h-8 w-[140px] bg-white border-slate-200">
+                      <SelectValue placeholder="All Beds" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
+                      <SelectItem value="all">All Beds ({listings.filter(l => l.revenue > 0).length})</SelectItem>
                       {[0, 1, 2, 3, 4, 5, 6].map(br => {
-                        const count = listings.filter(l => l.bedrooms === br).length;
+                        const count = listings.filter(l => l.bedrooms === br && l.revenue > 0).length;
+                        if (count === 0) return null;
                         return (
                           <SelectItem key={br} value={String(br)}>
-                            {br === 0 ? 'Studio' : `${br} Bedroom${br !== 1 ? 's' : ''}`} ({count})
+                            {br === 0 ? 'Studio' : `${br} BR`} ({count})
                           </SelectItem>
                         );
                       })}
@@ -1241,70 +1244,68 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </Select>
                 </div>
                 
-                {hasProperty && (
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Max Distance from My Property</Label>
-                    {myPropertyLocation ? (
-                      <Select value={distanceFilter} onValueChange={setDistanceFilter}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Any Distance" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any Distance</SelectItem>
-                          <SelectItem value="0.5">Within 0.5 miles</SelectItem>
-                          <SelectItem value="1">Within 1 mile</SelectItem>
-                          <SelectItem value="2">Within 2 miles</SelectItem>
-                          <SelectItem value="5">Within 5 miles</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="h-9 flex items-center text-sm text-slate-400">
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Locating your property...
-                      </div>
-                    )}
+                {/* Distance Filter - only show if property is set */}
+                {hasProperty && myPropertyLocation && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-blue-500" />
+                    <Select value={distanceFilter} onValueChange={setDistanceFilter}>
+                      <SelectTrigger className="h-8 w-[130px] bg-white border-slate-200">
+                        <SelectValue placeholder="Distance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Any Distance</SelectItem>
+                        <SelectItem value="0.5">≤ 0.5 mi</SelectItem>
+                        <SelectItem value="1">≤ 1 mi</SelectItem>
+                        <SelectItem value="2">≤ 2 mi</SelectItem>
+                        <SelectItem value="5">≤ 5 mi</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 
-                <div>
-                  <Label className="text-xs text-slate-500 mb-1.5 block">Sort By</Label>
+                {/* Sort By */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Sort:</span>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-8 w-[150px] bg-white border-slate-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="revenue-desc">Revenue (High to Low)</SelectItem>
-                      <SelectItem value="revenue-asc">Revenue (Low to High)</SelectItem>
-                      <SelectItem value="occupancy-desc">Occupancy (High to Low)</SelectItem>
-                      <SelectItem value="adr-desc">ADR (High to Low)</SelectItem>
-                      <SelectItem value="rating-desc">Rating (High to Low)</SelectItem>
+                      <SelectItem value="revenue-desc">Revenue ↓</SelectItem>
+                      <SelectItem value="revenue-asc">Revenue ↑</SelectItem>
+                      <SelectItem value="occupancy-desc">Occupancy ↓</SelectItem>
+                      <SelectItem value="adr-desc">ADR ↓</SelectItem>
+                      <SelectItem value="rating-desc">Rating ↓</SelectItem>
                       {myPropertyLocation && (
-                        <SelectItem value="distance-asc">Distance (Closest)</SelectItem>
+                        <SelectItem value="distance-asc">Closest</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
                 </div>
                 
-                {/* Reset All Filters */}
+                {/* Results count */}
+                <div className="flex-1 text-right">
+                  <span className="text-sm text-slate-600">
+                    <span className="font-semibold text-slate-900">{filteredListings.length}</span> properties
+                  </span>
+                </div>
+                
+                {/* Reset button - only show if filters active */}
                 {(bedroomFilter !== 'all' || distanceFilter !== 'all') && (
-                  <div className="pt-3 border-t border-slate-100">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setBedroomFilter('all');
-                        setDistanceFilter('all');
-                        setSortBy('revenue-desc');
-                      }}
-                      className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                    >
-                      Reset All Filters
-                    </Button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setBedroomFilter('all');
+                      setDistanceFilter('all');
+                      setSortBy('revenue-desc');
+                    }}
+                    className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                  >
+                    Reset
+                  </button>
                 )}
               </div>
             </div>
-          )}
+          </div>
           
           {/* My Property Panel */}
           {showMyPropertyPanel && (
@@ -1705,21 +1706,21 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   onExcludeListing={(id) => setExcludedListingIds(prev => new Set([...Array.from(prev), id]))}
                 />
               ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
-                <table className="w-full text-sm table-fixed">
+              <div className="rounded-xl border border-slate-200">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left p-3 font-semibold text-slate-700 w-[280px]">Property</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 w-[70px]">BR/BA</th>
+                      <th className="text-left p-3 font-semibold text-slate-700">Property</th>
+                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">BR/BA</th>
                       {hasProperty && (
-                        <th className="text-right p-3 font-semibold text-slate-700 w-[80px]">
+                        <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-blue-500" />
-                            Distance
+                            Dist
                           </span>
                         </th>
                       )}
-                      <th className="text-right p-3 font-semibold text-slate-700 w-[100px]">
+                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
                         <button 
                           onClick={() => setSortBy(sortBy === 'revenue-desc' ? 'revenue-asc' : 'revenue-desc')}
                           className="inline-flex items-center gap-1 hover:text-emerald-600"
@@ -1730,20 +1731,20 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                           )}
                         </button>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 w-[90px]">
+                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
                         <button 
                           onClick={() => setSortBy(sortBy === 'occupancy-desc' ? 'occupancy-asc' : 'occupancy-desc')}
                           className="inline-flex items-center gap-1 hover:text-amber-600"
                         >
-                          Occupancy
+                          Occ%
                           {sortBy.startsWith('occupancy') && (
                             sortBy === 'occupancy-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
                           )}
                         </button>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 w-[70px]">ADR</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 w-[70px]">Rating</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 w-[50px]">Link</th>
+                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">ADR</th>
+                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Rating</th>
+                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Link</th>
                       {showCompSetMode && <th className="w-10"></th>}
                     </tr>
                   </thead>

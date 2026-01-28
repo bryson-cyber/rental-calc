@@ -6492,3 +6492,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Add "What This Means" plain English explanations
 - [ ] Show confidence indicators ("Based on X nearby listings")
 - [ ] Add color-coded markers with legend explanation
+
+
+## Step 5 UI Fixes - Round 2 (Jan 28)
+- [x] Filter out $0 revenue properties from display
+- [x] Change filters from dropdown panel to horizontal bar
+- [x] Fix table to fit on desktop without horizontal scroll
+- [x] Add home button to fullscreen map view
