@@ -1070,7 +1070,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       </div>
       
       {/* Main Content - Two Column Layout */}
-      <div className="flex flex-col lg:flex-row min-h-[600px]">
+      <div className="flex flex-col lg:flex-row" style={{ height: 'calc(100vh - 180px)', minHeight: '600px' }}>
         {/* Left Column - Table (60%) */}
         <div className="w-full lg:w-[60%] overflow-auto border-r border-[#0F172A]/10">
           {(isLoading || marketsQuery.isFetching) ? (
@@ -1393,94 +1393,98 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 </div>
               )}
               
-              {/* Summary Stats - Premium styling */}
-              <div className="mt-6 grid grid-cols-3 gap-4">
-                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                    <span className="text-xs font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
-                  </div>
-                  <p className="text-xl font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
-                  <p className="text-xs text-green-600/70 mt-1">per year</p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-xl border border-[#C9A962]/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar className="w-4 h-4 text-[#C9A962]" />
-                    <span className="text-xs font-medium text-[#C9A962] uppercase tracking-wide">Avg Occupancy</span>
-                  </div>
-                  <p className="text-xl font-bold text-[#0F172A]">{avgOccupancy}%</p>
-                  <p className="text-xs text-[#0F172A]/50 mt-1">nights booked</p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Avg Nightly Rate</span>
-                  </div>
-                  <p className="text-xl font-bold text-blue-700">{formatCurrency(avgAdr)}</p>
-                  <p className="text-xs text-blue-600/70 mt-1">per night</p>
-                </div>
-              </div>
-              
-              {/* Revenue Tier Legend */}
-              <div className="mt-4 p-4 bg-[#0F172A]/5 rounded-xl">
-                <p className="text-xs font-medium text-[#0F172A]/60 uppercase tracking-wide mb-3">Revenue Tiers</p>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span className="text-sm text-[#0F172A]/70">Top 33% ({thresholds.topCount})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#C9A962]" />
-                    <span className="text-sm text-[#0F172A]/70">Middle 33% ({thresholds.middleCount})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-sm text-[#0F172A]/70">Bottom 33% ({thresholds.bottomCount})</span>
-                  </div>
-                </div>
-              </div>
+
             </div>
           )}
         </div>
         
         {/* Right Column - Map (40%) */}
-        <div className="w-full lg:w-[40%] relative min-h-[400px] lg:min-h-[600px]">
-          {/* Fullscreen toggle */}
-          <button
-            onClick={() => setIsMapFullscreen(true)}
-            className="absolute top-4 right-4 z-10 bg-white/95 hover:bg-white p-2.5 rounded-xl shadow-lg border border-[#0F172A]/10 transition-all"
-          >
-            <Maximize2 className="w-5 h-5 text-[#0F172A]" />
-          </button>
-          
-          {/* Home button */}
-          {myPropertyLocation && (
+        <div className="w-full lg:w-[40%] relative flex flex-col">
+          {/* Map Container - fills available space */}
+          <div className="flex-1 relative min-h-[400px]">
+            {/* Fullscreen toggle */}
             <button
-              onClick={() => {
-                if (mapRef.current) {
-                  mapRef.current.panTo({ lat: myPropertyLocation.lat, lng: myPropertyLocation.lng });
-                  mapRef.current.setZoom(14);
+              onClick={() => setIsMapFullscreen(true)}
+              className="absolute top-4 right-4 z-10 bg-white/95 hover:bg-white p-2.5 rounded-xl shadow-lg border border-[#0F172A]/10 transition-all"
+            >
+              <Maximize2 className="w-5 h-5 text-[#0F172A]" />
+            </button>
+            
+            {/* Home button */}
+            {myPropertyLocation && (
+              <button
+                onClick={() => {
+                  if (mapRef.current) {
+                    mapRef.current.panTo({ lat: myPropertyLocation.lat, lng: myPropertyLocation.lng });
+                    mapRef.current.setZoom(14);
+                  }
+                }}
+                className="absolute top-4 left-4 z-10 bg-[#C9A962] hover:bg-[#b8984f] p-2.5 rounded-xl shadow-lg transition-all"
+                title="Go to My Property"
+              >
+                <Home className="w-5 h-5 text-white" />
+              </button>
+            )}
+            
+            <MapView
+              className="w-full h-full"
+              initialCenter={{ lat: 39.8283, lng: -98.5795 }}
+              initialZoom={4}
+              onMapReady={(map) => {
+                mapRef.current = map;
+                // Signal that Google Maps is loaded so we can geocode
+                if (!isGoogleMapsLoaded) {
+                  setIsGoogleMapsLoaded(true);
                 }
               }}
-              className="absolute top-4 left-4 z-10 bg-[#C9A962] hover:bg-[#b8984f] p-2.5 rounded-xl shadow-lg transition-all"
-              title="Go to My Property"
-            >
-              <Home className="w-5 h-5 text-white" />
-            </button>
-          )}
+            />
+          </div>
           
-          <MapView
-            className="w-full h-full"
-            initialCenter={{ lat: 39.8283, lng: -98.5795 }}
-            initialZoom={4}
-            onMapReady={(map) => {
-              mapRef.current = map;
-              // Signal that Google Maps is loaded so we can geocode
-              if (!isGoogleMapsLoaded) {
-                setIsGoogleMapsLoaded(true);
-              }
-            }}
-          />
+          {/* Stats Panel - Fixed at bottom of right column */}
+          {filteredListings.length > 0 && (
+            <div className="bg-white border-t border-[#0F172A]/10 p-4">
+              {/* Compact Stats Row */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <DollarSign className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
+                  </div>
+                  <p className="text-lg font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-lg border border-[#C9A962]/20">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#C9A962]" />
+                    <span className="text-[10px] font-medium text-[#C9A962] uppercase tracking-wide">Occupancy</span>
+                  </div>
+                  <p className="text-lg font-bold text-[#0F172A]">{avgOccupancy}%</p>
+                </div>
+                <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Building className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Nightly Rate</span>
+                  </div>
+                  <p className="text-lg font-bold text-blue-700">{formatCurrency(avgAdr)}</p>
+                </div>
+              </div>
+              
+              {/* Revenue Tier Legend - Compact */}
+              <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                  <span className="text-[#0F172A]/60">Top 33% ({thresholds.topCount})</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#C9A962]" />
+                  <span className="text-[#0F172A]/60">Mid ({thresholds.middleCount})</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="text-[#0F172A]/60">Bottom ({thresholds.bottomCount})</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       

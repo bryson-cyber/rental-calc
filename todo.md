@@ -6708,3 +6708,5 @@ This makes the grading more optimistic - properties now get better grades at low
   - Updated filters.md with common mistake warning
 - [ ] Fix autofill not populating property details after address selection
 - [x] Fix Google Places autocomplete not filling in address when selecting from dropdown
+- [ ] Optimize map view layout - fill vertical space below stats cards
+- [x] Optimize map view layout to fill vertical space better
