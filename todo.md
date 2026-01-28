@@ -6753,3 +6753,18 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Create dedicated My Favorites page for saved properties (/saved-properties)
 - [x] Add "View All" link from map view to saved properties page
 - [x] Fix occupancy display bug in My Favorites page (was showing 8201% instead of 82%)
+
+
+## Stats & Tooltip Fixes (Jan 28, 2026)
+
+- [ ] Fix stats panel to dynamically recalculate based on active tier filter (Top/Mid/Bottom)
+- [ ] Fix tooltip styling - improve contrast and font readability (currently dark and hard to read)
+
+
+## Stats & Tooltip Fixes (Jan 28, 2026) - COMPLETE
+- [x] Fix stats panel to dynamically recalculate based on active tier filter (Top/Mid/Bottom)
+  - AVG REVENUE, OCCUPANCY, and NIGHTLY RATE now update when tier filter changes
+  - Stats show average of only the filtered properties
+- [x] Fix tooltip styling - improved contrast with white background and dark text
+  - Updated tooltip component to use bg-white and text-[#0F172A]
+  - Removed dark background overrides from MapFirstLayoutV2 tooltips

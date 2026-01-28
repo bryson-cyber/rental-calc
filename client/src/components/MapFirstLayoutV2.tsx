@@ -971,15 +971,24 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   const hasProperty = !!myPropertyLocation;
   
-  // Calculate average occupancy
-  const avgOccupancy = filteredListings.length > 0 
-    ? Math.round(filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length)
-    : 0;
+  // Calculate display stats from filteredListings (includes tier filter)
+  // These stats dynamically update based on which tier(s) are selected
+  const displayStats = useMemo(() => {
+    if (filteredListings.length === 0) {
+      return { avgRevenue: 0, avgOccupancy: 0, avgAdr: 0 };
+    }
+    
+    const avgRevenue = filteredListings.reduce((sum, l) => sum + l.revenue, 0) / filteredListings.length;
+    const avgOccupancy = Math.round(
+      filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length
+    );
+    const avgAdr = filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length;
+    
+    return { avgRevenue, avgOccupancy, avgAdr };
+  }, [filteredListings]);
   
-  // Calculate average ADR
-  const avgAdr = filteredListings.length > 0 
-    ? filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length
-    : 0;
+  // Destructure for easier access
+  const { avgRevenue, avgOccupancy, avgAdr } = displayStats;
   
   return (
     <div className={`${embedded ? 'h-full' : ''} bg-white ${className}`}>
@@ -1191,7 +1200,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-[#0F172A] text-white border-0">
+                  <TooltipContent>
                     <p>Filter by number of bedrooms to compare similar properties</p>
                   </TooltipContent>
                 </Tooltip>
@@ -1218,7 +1227,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-[#0F172A] text-white border-0">
+                  <TooltipContent>
                     <p>{hasProperty ? 'Showing properties near your location. Expand to see more.' : 'Set your property to filter by distance'}</p>
                   </TooltipContent>
                 </Tooltip>
@@ -1243,7 +1252,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-[#0F172A] text-white border-0">
+                  <TooltipContent>
                     <p>Sort properties to find the best performers</p>
                   </TooltipContent>
                 </Tooltip>
@@ -1355,7 +1364,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                               <TooltipTrigger className="inline-flex items-center gap-1">
                                 <MapPin className="w-3 h-3" /> Dist
                               </TooltipTrigger>
-                              <TooltipContent className="bg-[#0F172A] text-white border-0">
+                              <TooltipContent>
                                 <p>Distance from your property in miles</p>
                               </TooltipContent>
                             </Tooltip>
@@ -1376,7 +1385,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                                 )}
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                            <TooltipContent>
                               <p>Estimated annual revenue from short-term rentals</p>
                             </TooltipContent>
                           </Tooltip>
@@ -1396,7 +1405,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                                 )}
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                            <TooltipContent>
                               <p>Occupancy rate - percentage of nights booked per year</p>
                             </TooltipContent>
                           </Tooltip>
@@ -1406,7 +1415,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>ADR</TooltipTrigger>
-                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                            <TooltipContent>
                               <p>Average Daily Rate - typical nightly price</p>
                             </TooltipContent>
                           </Tooltip>
@@ -1418,7 +1427,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                             <TooltipTrigger>
                               <Star className="w-4 h-4 mx-auto text-[#C9A962]" />
                             </TooltipTrigger>
-                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                            <TooltipContent>
                               <p>Guest rating out of 5 stars</p>
                             </TooltipContent>
                           </Tooltip>
@@ -1658,7 +1667,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                           <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
                           <Info className="w-3 h-3 text-green-500/60" />
                         </div>
-                        <p className="text-lg font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
+                        <p className="text-lg font-bold text-green-700">{formatCurrency(avgRevenue)}</p>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[250px] text-center">
