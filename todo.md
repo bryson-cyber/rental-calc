@@ -6298,3 +6298,10 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 
 **Note:** Apartments.com support skipped - HasData only has no-code scraper, not API
 
+
+
+## Tooltip & Dropdown Fixes (Jan 28, 2026)
+- [x] Fix tooltip styling - dark navy background with white text for readability
+- [x] Auto-update Bedrooms dropdown when property details are loaded
+- [x] Auto-update Bathrooms dropdown when property details are loaded (with closest value matching)
+

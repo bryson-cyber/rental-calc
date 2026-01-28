@@ -72,6 +72,32 @@ export function StartWithProperty({
   };
   
   // Handle property detected from Zillow URL
+  // Helper to find the closest valid bathroom option
+  const findClosestBathroomOption = (value: number): string => {
+    const options = [1, 1.5, 2, 2.5, 3, 3.5, 4];
+    // For values >= 4, use 4+
+    if (value >= 4) return '4';
+    // Find the closest option
+    let closest = options[0];
+    let minDiff = Math.abs(value - closest);
+    for (const opt of options) {
+      const diff = Math.abs(value - opt);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = opt;
+      }
+    }
+    return closest.toString();
+  };
+  
+  // Helper to find the closest valid bedroom option
+  const findClosestBedroomOption = (value: number): string => {
+    // Options: 0 (Studio), 1, 2, 3, 4, 5+
+    if (value <= 0) return '0';
+    if (value >= 5) return '5';
+    return Math.round(value).toString();
+  };
+  
   const handleZillowPropertyDetected = (property: ZillowPropertyDetails) => {
     console.log('[StartWithProperty] Zillow property detected:', property);
     
@@ -79,11 +105,11 @@ export function StartWithProperty({
     setAddress(property.address);
     
     if (property.bedrooms !== null) {
-      setBedrooms(property.bedrooms.toString());
+      setBedrooms(findClosestBedroomOption(property.bedrooms));
     }
     
     if (property.bathrooms !== null) {
-      setBathrooms(property.bathrooms.toString());
+      setBathrooms(findClosestBathroomOption(property.bathrooms));
     }
     
     if (property.price !== null && property.priceType === 'rent') {
