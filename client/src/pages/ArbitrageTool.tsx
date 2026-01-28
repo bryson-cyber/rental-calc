@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SmartAddressInput, type PropertyDetails } from '@/components/SmartAddressInput';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -180,21 +182,25 @@ export default function ArbitrageTool() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Address */}
+              {/* Address - Smart Input accepts Zillow URLs */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-1">
-                  Property Address *
+                  Property Address or Zillow URL *
                 </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0F172A]/40" />
-                  <Input
-                    ref={inputRef}
-                    placeholder="Enter the property address..."
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+                <SmartAddressInput
+                  value={address}
+                  onChange={setAddress}
+                  onPropertyDetected={(details: PropertyDetails) => {
+                    if (details.bedrooms !== null) setBedrooms(String(details.bedrooms));
+                    if (details.bathrooms !== null) setBathrooms(String(details.bathrooms));
+                    if (details.price !== null && details.priceType === 'rent') {
+                      setMonthlyRent(String(details.price));
+                    }
+                    toast.success(`Property details loaded from Zillow!`);
+                  }}
+                  placeholder="Enter address or paste Zillow URL..."
+                  showPropertyCard={true}
+                />
               </div>
 
               {/* Monthly Rent */}

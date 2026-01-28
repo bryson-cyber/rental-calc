@@ -6212,3 +6212,45 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Matches the clean, minimal aesthetic of rest of site
 - [x] Grade badge (A+) displayed in top right corner
 - [x] Annual profit and nightly rate in clean summary bar
+
+
+## Zillow URL Paste Feature (Jan 28, 2026) - COMPLETE
+
+### HasData API Integration
+- [x] Add HASDATA_API_KEY to environment configuration
+- [x] Create hasdata-zillow.ts module with API integration
+- [x] Implement isZillowUrl() function for URL detection
+- [x] Implement extractZpid() function for ZPID extraction
+- [x] Implement getZillowPropertyDetails() function for API calls
+- [x] Parse HasData response to extract address, beds, baths, price
+- [x] Add zillow router to routers.ts with getPropertyDetails mutation
+- [x] Add validateUrl query endpoint
+
+### SmartAddressInput Component
+- [x] Create reusable SmartAddressInput component
+- [x] Auto-detect Zillow URLs vs regular addresses
+- [x] Show loading state while fetching property details
+- [x] Display success confirmation with property card
+- [x] Handle errors gracefully with user-friendly messages
+- [x] Add tooltip explaining Zillow URL paste feature
+
+### Integration Across Pages
+- [x] Homepage - Property Address input now accepts Zillow URLs
+- [x] Step 3 (Validate the Deal) - Address input accepts Zillow URLs
+- [x] Step 4 (Find the Best Deal) - Bulk property inputs accept Zillow URLs
+- [x] AI Advisor - Address input accepts Zillow URLs
+- [x] ArbitrageTool - Address input accepts Zillow URLs
+- [x] PropertyComparison - Address inputs accept Zillow URLs
+
+### Auto-Population Features
+- [x] Auto-fill address from Zillow listing
+- [x] Auto-fill bedrooms from Zillow listing
+- [x] Auto-fill bathrooms from Zillow listing
+- [x] Auto-fill rent/price from Zillow listing (when available)
+- [x] Show toast notification on successful property detection
+
+### Testing
+- [x] Unit tests for isZillowUrl() function
+- [x] Unit tests for extractZpid() function
+- [x] All 9 tests passing
+

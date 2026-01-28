@@ -81,6 +81,7 @@ import MapFirstLayout from '@/components/MapFirstLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { SmartAddressInput, isZillowUrl, type PropertyDetails } from '@/components/SmartAddressInput';
 import { MarketAutocomplete } from '@/components/MarketAutocomplete';
 import { HierarchicalLocationSelector, type LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { toast } from 'sonner';
@@ -1769,14 +1770,29 @@ export default function LeadMagnet() {
                 />
                 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Property Address
-                  </label>
-                  <AddressAutocomplete
+                  <InfoTooltip content="Paste a Zillow listing URL to auto-fill property details, or type an address manually. Zillow URLs automatically extract bedrooms, bathrooms, and rent/price.">
+                    <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                      Property Address or Zillow URL
+                    </span>
+                  </InfoTooltip>
+                  <SmartAddressInput
                     value={address}
                     onChange={setAddress}
-                    placeholder="Enter the property address..."
-                    variant="light"
+                    onPropertyDetected={(details) => {
+                      // Auto-fill property details from Zillow
+                      if (details.bedrooms !== null) {
+                        setBedrooms(String(details.bedrooms));
+                      }
+                      if (details.bathrooms !== null) {
+                        setBathrooms(String(details.bathrooms));
+                      }
+                      if (details.price !== null && details.priceType === 'rent') {
+                        setMonthlyRent(String(details.price));
+                      }
+                      toast.success(`Property details loaded from Zillow!`);
+                    }}
+                    placeholder="Enter address or paste Zillow URL..."
+                    showPropertyCard={true}
                   />
                 </div>
                 
@@ -1986,14 +2002,29 @@ export default function LeadMagnet() {
                         )}
                       </div>
                       
-                      {/* Address */}
+                      {/* Address - Smart Input accepts Zillow URLs or regular addresses */}
                       <div className="space-y-2 mb-4">
-                        <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Address</label>
-                        <AddressAutocomplete
+                        <InfoTooltip content="Paste a Zillow listing URL to auto-fill property details, or type an address manually. Zillow URLs automatically extract bedrooms, bathrooms, and rent/price.">
+                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Address or Zillow URL</span>
+                        </InfoTooltip>
+                        <SmartAddressInput
                           value={prop.address}
                           onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
-                          placeholder="Enter address..."
-                          className="input-apple h-12"
+                          onPropertyDetected={(details) => {
+                            // Auto-fill property details from Zillow
+                            if (details.bedrooms !== null) {
+                              updateBulkProperty(prop.id, 'bedrooms', details.bedrooms);
+                            }
+                            if (details.bathrooms !== null) {
+                              updateBulkProperty(prop.id, 'bathrooms', details.bathrooms);
+                            }
+                            if (details.price !== null && details.priceType === 'rent') {
+                              updateBulkProperty(prop.id, 'rent', details.price);
+                            }
+                            toast.success(`Property details loaded from Zillow!`);
+                          }}
+                          placeholder="Enter address or paste Zillow URL..."
+                          showPropertyCard={false}
                         />
                       </div>
                       
@@ -2189,14 +2220,20 @@ export default function LeadMagnet() {
                 {/* Standalone Address Input Form */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                   <div className="space-y-4">
-                    {/* Address Input */}
+                    {/* Address Input - Smart Input accepts Zillow URLs */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Property Address</label>
-                      <AddressAutocomplete
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Property Address or Zillow URL</label>
+                      <SmartAddressInput
                         value={address}
                         onChange={setAddress}
-                        placeholder="Enter property address..."
-                        required
+                        onPropertyDetected={(details) => {
+                          if (details.bedrooms !== null) setBedrooms(String(details.bedrooms));
+                          if (details.bathrooms !== null) setBathrooms(String(details.bathrooms));
+                          if (details.price !== null && details.priceType === 'rent') setMonthlyRent(String(details.price));
+                          toast.success(`Property details loaded from Zillow!`);
+                        }}
+                        placeholder="Enter address or paste Zillow URL..."
+                        showPropertyCard={true}
                       />
                     </div>
                     

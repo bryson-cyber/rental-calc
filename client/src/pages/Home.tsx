@@ -36,6 +36,8 @@ import {
   Heart
 } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { SmartAddressInput, type PropertyDetails } from '@/components/SmartAddressInput';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import { generateRentalReportPdf } from '@/lib/generatePdf';
@@ -603,17 +605,27 @@ export default function RentalEstimator() {
                 </div>
               )}
 
-              {/* Address Input with Autocomplete */}
+              {/* Address Input - Smart Input accepts Zillow URLs */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
-                  Property Address
+                  Property Address or Zillow URL
                 </label>
-                <AddressAutocomplete
+                <SmartAddressInput
                   value={formData.address}
                   onChange={(value) => setFormData({ ...formData, address: value })}
-                  onSelect={(address) => setFormData({ ...formData, address })}
-                  placeholder="Enter your property address..."
-                  inputClassName="border-2 border-[#0F172A]/10 rounded-xl text-lg focus:ring-2 focus:ring-[#D4A84B]/50 focus:border-[#D4A84B] outline-none transition-all duration-300 font-sans bg-white"
+                  onPropertyDetected={(details: PropertyDetails) => {
+                    // Auto-fill property details from Zillow
+                    const updates: Partial<typeof formData> = { address: details.address };
+                    if (details.bedrooms !== null) updates.bedrooms = details.bedrooms;
+                    if (details.bathrooms !== null) updates.bathrooms = details.bathrooms;
+                    if (details.price !== null && details.priceType === 'rent') {
+                      updates.monthlyRent = details.price;
+                    }
+                    setFormData(prev => ({ ...prev, ...updates }));
+                    toast.success(`Property details loaded from Zillow!`);
+                  }}
+                  placeholder="Enter address or paste Zillow URL..."
+                  showPropertyCard={true}
                 />
               </div>
               

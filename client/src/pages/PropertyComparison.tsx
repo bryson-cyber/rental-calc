@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { SmartAddressInput, type PropertyDetails } from '@/components/SmartAddressInput';
+import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 
 interface PropertyData {
@@ -248,16 +250,24 @@ export default function PropertyComparison() {
                 {/* Address Input */}
                 <div>
                   <label className="block text-xs font-medium text-[#0F172A]/60 uppercase tracking-wide mb-1">
-                    Property Address
+                    Property Address or Zillow URL
                   </label>
-                  <AddressAutocomplete
+                  <SmartAddressInput
                     value={prop.address}
                     onChange={(value) => updateProperty(index, { address: value })}
-                    onSelect={(value) => {
-                      updateProperty(index, { address: value });
+                    onPropertyDetected={(details: PropertyDetails) => {
+                      const updates: Partial<PropertyData> = { address: details.address };
+                      if (details.bedrooms !== null) updates.bedrooms = details.bedrooms;
+                      if (details.bathrooms !== null) updates.bathrooms = details.bathrooms;
+                      if (details.price !== null && details.priceType === 'rent') {
+                        updates.monthlyRent = details.price;
+                      }
+                      updateProperty(index, updates);
                       setActiveIndex(null);
+                      toast.success(`Property details loaded from Zillow!`);
                     }}
-                    placeholder="Enter address..."
+                    placeholder="Enter address or paste Zillow URL..."
+                    showPropertyCard={false}
                   />
                 </div>
 

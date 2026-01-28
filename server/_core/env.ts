@@ -13,4 +13,6 @@ export const ENV = {
   browserUseApiKey: process.env.BROWSER_USE_API_KEY ?? "",
   coachinayahEmail: process.env.COACHINAYAH_EMAIL ?? "",
   coachinayahPassword: process.env.COACHINAYAH_PASSWORD ?? "",
+  hasdataApiKey: process.env.HASDATA_API_KEY ?? "",
+  rentometerApiKey: process.env.RENTOMETER_API_KEY ?? "",
 };
