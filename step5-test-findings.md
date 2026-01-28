@@ -47,3 +47,22 @@
 2. Add distance column to the comparable properties table
 3. Show the Location Quality Score after a property is entered
 4. Add letter grade for location quality
+
+
+## Test Round 4 - Jan 28, 2026
+
+### What's Now Working:
+1. **"Set Your Property First" section** - Now visible at the top of the map when no property is set
+   - Shows amber-colored banner with home icon
+   - Has address autocomplete input field
+   - Shows helper text "Enter your address to compare with nearby properties"
+
+2. **Map is loading** - Google Maps is rendering correctly
+
+3. **Filter bar at bottom** - Shows "All Beds" dropdown and "Revenue ↓" sort
+
+### Still Need to Test:
+1. Enter a property address in the "Set Your Property First" field
+2. Verify the home button appears after setting property
+3. Verify the table layout is compact without horizontal scroll
+4. Verify favorites feature works

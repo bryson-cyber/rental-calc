@@ -171,7 +171,10 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   console.warn('[MapFirstLayout] RENDER - myProperty:', myProperty?.address, 'embedded:', embedded);
   
   // PropertyContext integration
-  const { myProperty: contextProperty, hasProperty: contextHasProperty } = useProperty();
+  const { myProperty: contextProperty, hasProperty: contextHasProperty, setMyProperty: setContextProperty } = useProperty();
+  
+  // State for property address input in Step 5
+  const [propertyAddressInput, setPropertyAddressInput] = useState('');
   console.warn('[MapFirstLayout] Context - contextProperty:', contextProperty?.address, 'contextHasProperty:', contextHasProperty);
   
   // Load property from localStorage as fallback (for initial render before context is ready)
@@ -1073,6 +1076,60 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
           
           {/* Floating Search Bar */}
           <div className="absolute top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-2xl z-10">
+            {/* Set Your Property Section - shown when no property is set */}
+            {!myProperty && (
+              <div className="bg-amber-50 border-2 border-amber-200 px-4 py-3 rounded-t-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Home className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-semibold text-amber-800">Set Your Property First</span>
+                </div>
+                <div className="flex gap-2">
+                  <AddressAutocomplete
+                    value={propertyAddressInput}
+                    onChange={setPropertyAddressInput}
+                    onSelect={(address, placeId, details) => {
+                      if (details) {
+                        // Set the property in context
+                        setContextProperty({
+                          address: details.address,
+                          formattedAddress: details.address,
+                          zipCode: details.zipCode,
+                          city: details.city,
+                          state: details.state,
+                          latitude: details.lat,
+                          longitude: details.lng,
+                          bedrooms: 2, // Default, user can change later
+                          bathrooms: 1, // Default, user can change later
+                        });
+                        // Also set the search query to the city for market search
+                        if (details.city) {
+                          setSearchQuery(`${details.city}, ${details.state || ''}`.trim());
+                        }
+                        // Set myPropertyLocation for home button
+                        if (details.lat && details.lng) {
+                          setMyPropertyLocation({
+                            address: details.address,
+                            lat: details.lat,
+                            lng: details.lng
+                          });
+                        }
+                        // Pan map to the property location
+                        if (mapRef.current && details.lat && details.lng) {
+                          mapRef.current.panTo({ lat: details.lat, lng: details.lng });
+                          mapRef.current.setZoom(14);
+                        }
+                        setPropertyAddressInput('');
+                      }
+                    }}
+                    placeholder="Enter your property address..."
+                    className="flex-1"
+                    inputClassName="bg-white border-amber-300 focus:border-amber-500"
+                    variant="light"
+                  />
+                </div>
+                <p className="text-xs text-amber-600 mt-2">Enter your address to compare with nearby properties</p>
+              </div>
+            )}
             {/* Property Address Banner */}
             {myProperty && (
               <div className="bg-blue-600 text-white px-4 py-2 rounded-t-2xl flex items-center justify-between">
@@ -1710,45 +1767,45 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                 />
               ) : (
               <div className="rounded-xl border border-slate-200 overflow-x-auto">
-                <table className="w-full text-sm min-w-[800px]">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left p-3 font-semibold text-slate-700">Property</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">BR/BA</th>
+                      <th className="text-left p-2 font-semibold text-slate-700 text-xs">Property</th>
+                      <th className="text-center p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">BR/BA</th>
                       {hasProperty && (
-                        <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
+                        <th className="text-right p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-blue-500" />
                             Dist
                           </span>
                         </th>
                       )}
-                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
+                      <th className="text-right p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">
                         <button 
                           onClick={() => setSortBy(sortBy === 'revenue-desc' ? 'revenue-asc' : 'revenue-desc')}
                           className="inline-flex items-center gap-1 hover:text-emerald-600"
                         >
-                          Revenue
+                          Rev
                           {sortBy.startsWith('revenue') && (
                             sortBy === 'revenue-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
                           )}
                         </button>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">
+                      <th className="text-right p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">
                         <button 
                           onClick={() => setSortBy(sortBy === 'occupancy-desc' ? 'occupancy-asc' : 'occupancy-desc')}
                           className="inline-flex items-center gap-1 hover:text-amber-600"
                         >
-                          Occ%
+                          Occ
                           {sortBy.startsWith('occupancy') && (
                             sortBy === 'occupancy-desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />
                           )}
                         </button>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">ADR</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Rating</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Link</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap w-12">
+                      <th className="text-right p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">ADR</th>
+                      <th className="text-center p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">★</th>
+                      <th className="text-center p-2 font-semibold text-slate-700 whitespace-nowrap text-xs">Link</th>
+                      <th className="text-center p-2 font-semibold text-slate-700 whitespace-nowrap w-10 text-xs">
                         <Heart className="w-4 h-4 mx-auto text-slate-400" />
                       </th>
                       {showCompSetMode && <th className="w-10"></th>}
@@ -1770,85 +1827,75 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                             }
                           }}
                         >
-                          <td className="p-3">
-                            <div className="flex items-center gap-3">
+                          <td className="p-2">
+                            <div className="flex items-center gap-2">
                               {listing.thumbnailUrl ? (
                                 <img 
                                   src={listing.thumbnailUrl} 
                                   alt={listing.title}
-                                  className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-slate-200"
+                                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-slate-200"
                                 />
                               ) : (
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-                                  <Home className="w-5 h-5 text-slate-400" />
+                                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                                  <Home className="w-4 h-4 text-slate-400" />
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <div className="font-semibold text-slate-900 truncate max-w-[200px]" title={listing.title}>
+                                <div className="font-medium text-slate-900 truncate max-w-[140px] text-xs" title={listing.title}>
                                   {listing.title}
                                 </div>
-                                <div className="text-xs text-slate-500">
-                                  {listing.propertyType || 'Entire home'}
+                                <div className="text-[10px] text-slate-500">
+                                  {listing.propertyType || 'home'}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">
-                              {listing.bedrooms}BR / {listing.bathrooms}BA
+                          <td className="p-2 text-center">
+                            <span className="text-xs font-medium text-slate-700">
+                              {listing.bedrooms}/{listing.bathrooms}
                             </span>
                           </td>
                           {hasProperty && (
-                            <td className="p-3 text-right">
-                              {myPropertyLocation ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">
-                                  <MapPin className="w-3 h-3 text-blue-500" />
-                                  <span className="font-semibold text-blue-600">
-                                    {listing.distanceToMyProperty !== undefined 
-                                      ? formatDistance(listing.distanceToMyProperty)
-                                      : '—'}
-                                  </span>
-                                </span>
-                              ) : (
-                                <span className="text-slate-400 text-xs">Locating...</span>
-                              )}
+                            <td className="p-2 text-right">
+                              <span className="text-xs font-medium text-blue-600">
+                                {listing.distanceToMyProperty !== undefined 
+                                  ? formatDistance(listing.distanceToMyProperty)
+                                  : '—'}
+                              </span>
                             </td>
                           )}
-                          <td className="p-3 text-right">
-                            <span className="font-semibold" style={{ color: markerColor }}>
+                          <td className="p-2 text-right">
+                            <span className="text-xs font-semibold" style={{ color: markerColor }}>
                               {formatCurrency(listing.revenue)}
                             </span>
                           </td>
-                          <td className="p-3 text-right">
-                            <span className={`font-semibold ${occupancyDisplay >= 70 ? 'text-green-600' : occupancyDisplay >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                          <td className="p-2 text-right">
+                            <span className={`text-xs font-semibold ${occupancyDisplay >= 70 ? 'text-green-600' : occupancyDisplay >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
                               {occupancyDisplay}%
                             </span>
                           </td>
-                          <td className="p-3 text-right font-medium text-slate-700">
-                            {formatCurrency(listing.adr)}/night
+                          <td className="p-2 text-right text-xs font-medium text-slate-700">
+                            {formatCurrency(listing.adr)}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-2 text-center">
                             {listing.rating ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg border border-amber-100">
-                                <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                <span className="font-semibold text-amber-700">{listing.rating.toFixed(1)}</span>
-                              </span>
+                              <span className="text-xs font-medium text-amber-700">{listing.rating.toFixed(1)}</span>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-slate-400 text-xs">—</span>
                             )}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-2 text-center">
                             <a 
                               href={listing.airbnbUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors"
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ExternalLink className="w-3 h-3" />
                             </a>
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-1 text-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1862,14 +1909,14 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                                   return newSet;
                                 });
                               }}
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-xl transition-colors ${
+                              className={`inline-flex items-center justify-center w-6 h-6 rounded-lg transition-colors ${
                                 favoriteListingIds.has(listing.id)
                                   ? 'bg-red-500 text-white'
                                   : 'bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500'
                               }`}
                               title={favoriteListingIds.has(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
                             >
-                              <Heart className={`w-4 h-4 ${favoriteListingIds.has(listing.id) ? 'fill-current' : ''}`} />
+                              <Heart className={`w-3 h-3 ${favoriteListingIds.has(listing.id) ? 'fill-current' : ''}`} />
                             </button>
                           </td>
                           {showCompSetMode && (

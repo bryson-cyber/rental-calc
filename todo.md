@@ -6507,3 +6507,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify walk score data source - check if using real Google Places API or placeholder data
 - [x] Add Save to Favorites feature for properties
 - [x] Ensure horizontal filter bar is visible at bottom of map
+
+
+## Step 5 UI Fixes - Round 4 (Jan 28)
+- [x] Add property address input directly in Step 5 ("Set Your Property First" section)
+- [x] Auto-center map on user's property when they set it in Step 5
+- [x] Fix table layout - made cells more compact with smaller padding
+- [x] Ensure home button works to return to property location (fixed setMyPropertyLocation)
+- [x] Show property marker on map when user sets their property
