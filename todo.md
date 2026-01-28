@@ -6254,3 +6254,10 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Unit tests for extractZpid() function
 - [x] All 9 tests passing
 
+
+### Bug Fix (Jan 28, 2026)
+- [x] Fix HasData API response parsing - API returns data in 'property' key not 'data' key
+- [x] Fix address parsing - address is nested object with street/city/state/zipcode fields
+- [x] Change API call from POST to GET with URL parameter
+- [x] Verified fix with user's Zillow URL: 4600 McPherson Ave, Saint Louis, MO 63108
+

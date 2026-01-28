@@ -89,18 +89,15 @@ export async function getZillowPropertyDetails(zillowUrl: string): Promise<HasDa
   try {
     console.log(`[HasData] Fetching property details for: ${zillowUrl}`);
     
-    // HasData Zillow Property API endpoint
-    const apiUrl = "https://api.hasdata.com/scrape/zillow/property";
+    // HasData Zillow Property API endpoint - uses GET with URL parameter
+    const apiUrl = `https://api.hasdata.com/scrape/zillow/property?url=${encodeURIComponent(zillowUrl)}`;
     
     const response = await fetch(apiUrl, {
-      method: "POST",
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
       },
-      body: JSON.stringify({
-        url: zillowUrl
-      }),
     });
     
     if (!response.ok) {
@@ -137,14 +134,29 @@ export async function getZillowPropertyDetails(zillowUrl: string): Promise<HasDa
  * Parses the HasData API response into our standardized format
  */
 function parseHasDataResponse(rawData: Record<string, unknown>): ZillowPropertyData {
-  // HasData returns the property data directly or nested
-  const data = (rawData.data || rawData) as Record<string, unknown>;
+  // HasData returns the property data in a 'property' key (not 'data')
+  const data = (rawData.property || rawData.data || rawData) as Record<string, unknown>;
   
-  // Build full address from components
-  const streetAddress = data.streetAddress as string || data.address as string || "";
-  const city = data.city as string || "";
-  const state = data.state as string || "";
-  const zipcode = data.zipcode as string || data.zip as string || "";
+  // Address can be nested in an 'address' object or flat
+  const addressObj = data.address as Record<string, unknown> | string | undefined;
+  let streetAddress = "";
+  let city = "";
+  let state = "";
+  let zipcode = "";
+  
+  if (typeof addressObj === 'object' && addressObj !== null) {
+    // Address is nested: { street: '...', city: '...', state: '...', zipcode: '...' }
+    streetAddress = (addressObj.street as string) || (addressObj.streetAddress as string) || "";
+    city = (addressObj.city as string) || "";
+    state = (addressObj.state as string) || "";
+    zipcode = (addressObj.zipcode as string) || (addressObj.zip as string) || "";
+  } else {
+    // Address is flat or a string
+    streetAddress = (data.streetAddress as string) || (addressObj as string) || (data.addressRaw as string) || "";
+    city = (data.city as string) || "";
+    state = (data.state as string) || "";
+    zipcode = (data.zipcode as string) || (data.zip as string) || "";
+  }
   
   let fullAddress = streetAddress;
   if (city) fullAddress += `, ${city}`;
@@ -152,13 +164,14 @@ function parseHasDataResponse(rawData: Record<string, unknown>): ZillowPropertyD
   if (zipcode) fullAddress += ` ${zipcode}`;
   
   // Determine price type (sale vs rent)
+  // HasData returns status like "FOR_RENT", "FOR_SALE", etc.
   const homeStatus = (data.homeStatus as string || data.status as string || "").toLowerCase();
   const listingType = (data.listingType as string || data.listing_type as string || "").toLowerCase();
   
   let priceType: 'sale' | 'rent' | 'unknown' = 'unknown';
-  if (homeStatus.includes('rent') || listingType.includes('rent')) {
+  if (homeStatus.includes('rent') || listingType.includes('rent') || homeStatus === 'for_rent') {
     priceType = 'rent';
-  } else if (homeStatus.includes('sale') || listingType.includes('sale') || homeStatus.includes('sold')) {
+  } else if (homeStatus.includes('sale') || listingType.includes('sale') || homeStatus.includes('sold') || homeStatus === 'for_sale') {
     priceType = 'sale';
   }
   
