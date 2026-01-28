@@ -6499,3 +6499,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Change filters from dropdown panel to horizontal bar
 - [x] Fix table to fit on desktop without horizontal scroll
 - [x] Add home button to fullscreen map view
+
+
+## Step 5 UI Fixes - Round 3 (Jan 28)
+- [x] Fix table layout - columns still getting cut off on right side (Revenue, ADR, Rating truncated)
+- [x] Fix home button - not saving property location, defaulting to city instead of specific address
+- [x] Verify walk score data source - check if using real Google Places API or placeholder data
+- [x] Add Save to Favorites feature for properties
+- [x] Ensure horizontal filter bar is visible at bottom of map

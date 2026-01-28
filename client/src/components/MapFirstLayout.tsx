@@ -58,6 +58,7 @@ import {
   WashingMachine,
   Check,
   Download,
+  Heart,
 } from 'lucide-react';
 import { LoadingProgress } from '@/components/LoadingProgress';
 import { ExportListings } from '@/components/ExportListings';
@@ -299,6 +300,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   const [excludedListingIds, setExcludedListingIds] = useState<Set<string>>(new Set());
   const [showCompSetMode, setShowCompSetMode] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [favoriteListingIds, setFavoriteListingIds] = useState<Set<string>>(new Set());
   
   // Loading progress state
   const [loadingProgress, setLoadingProgress] = useState({ current: 0, total: 0 });
@@ -966,22 +968,17 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
           {/* Fullscreen controls */}
           <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
             {/* Home button - Go to My Property */}
-            {myProperty && (
+            {myPropertyLocation && (
               <button
                 onClick={() => {
-                  // Pan to my property in fullscreen map
-                  const fullscreenMap = document.querySelector('.fixed.inset-0 [data-map]');
-                  if (myProperty.latitude && myProperty.longitude) {
-                    // We need to access the fullscreen map instance
-                    // For now, we'll close fullscreen and pan in main map
-                    setIsMapFullscreen(false);
-                    setTimeout(() => {
-                      if (mapRef.current) {
-                        mapRef.current.panTo({ lat: myProperty.latitude!, lng: myProperty.longitude! });
-                        mapRef.current.setZoom(14);
-                      }
-                    }, 100);
-                  }
+                  // Close fullscreen and pan to property in main map
+                  setIsMapFullscreen(false);
+                  setTimeout(() => {
+                    if (mapRef.current && myPropertyLocation) {
+                      mapRef.current.panTo({ lat: myPropertyLocation.lat, lng: myPropertyLocation.lng });
+                      mapRef.current.setZoom(15);
+                    }
+                  }, 100);
                 }}
                 className="bg-amber-500 hover:bg-amber-600 p-3 rounded-xl shadow-lg"
                 title="Go to My Property"
@@ -1195,12 +1192,12 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
           {/* Floating Control Buttons */}
           <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 hidden md:flex">
             {/* Home Button - Go to My Property */}
-            {myProperty && (
+            {myPropertyLocation && (
               <button
                 onClick={() => {
-                  if (mapRef.current && myProperty.latitude && myProperty.longitude) {
-                    mapRef.current.panTo({ lat: myProperty.latitude, lng: myProperty.longitude });
-                    mapRef.current.setZoom(14);
+                  if (mapRef.current && myPropertyLocation) {
+                    mapRef.current.panTo({ lat: myPropertyLocation.lat, lng: myPropertyLocation.lng });
+                    mapRef.current.setZoom(15);
                   }
                 }}
                 className="bg-amber-500 hover:bg-amber-600 p-2.5 rounded-xl shadow-lg border border-amber-600 transition-all"
@@ -1664,6 +1661,12 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                       <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">
                         {filteredListings.length}
                       </span>
+                      {favoriteListingIds.size > 0 && (
+                        <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-sm font-medium rounded-full inline-flex items-center gap-1">
+                          <Heart className="w-3 h-3 fill-current" />
+                          {favoriteListingIds.size}
+                        </span>
+                      )}
                     </h2>
                     <p className="text-sm text-slate-500">
                       {locationName ? `Properties in ${locationName}` : 'All properties shown on map'}
@@ -1706,8 +1709,8 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   onExcludeListing={(id) => setExcludedListingIds(prev => new Set([...Array.from(prev), id]))}
                 />
               ) : (
-              <div className="rounded-xl border border-slate-200">
-                <table className="w-full text-sm">
+              <div className="rounded-xl border border-slate-200 overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
                       <th className="text-left p-3 font-semibold text-slate-700">Property</th>
@@ -1745,6 +1748,9 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                       <th className="text-right p-3 font-semibold text-slate-700 whitespace-nowrap">ADR</th>
                       <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Rating</th>
                       <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap">Link</th>
+                      <th className="text-center p-3 font-semibold text-slate-700 whitespace-nowrap w-12">
+                        <Heart className="w-4 h-4 mx-auto text-slate-400" />
+                      </th>
                       {showCompSetMode && <th className="w-10"></th>}
                     </tr>
                   </thead>
@@ -1841,6 +1847,30 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFavoriteListingIds(prev => {
+                                  const newSet = new Set(prev);
+                                  if (newSet.has(listing.id)) {
+                                    newSet.delete(listing.id);
+                                  } else {
+                                    newSet.add(listing.id);
+                                  }
+                                  return newSet;
+                                });
+                              }}
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-xl transition-colors ${
+                                favoriteListingIds.has(listing.id)
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500'
+                              }`}
+                              title={favoriteListingIds.has(listing.id) ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <Heart className={`w-4 h-4 ${favoriteListingIds.has(listing.id) ? 'fill-current' : ''}`} />
+                            </button>
                           </td>
                           {showCompSetMode && (
                             <td className="p-3 text-center">
