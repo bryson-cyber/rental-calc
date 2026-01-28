@@ -15,6 +15,7 @@ import MarketAdvisor from "./pages/MarketAdvisor";
 import MarketComparisonPage from "./pages/MarketComparisonPage";
 import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
 import MyFavoritesPage from "./pages/MyFavoritesPage";
+import MyFavorites from "./pages/MyFavorites";
 import MarketAlertsPage from "./pages/MarketAlertsPage";
 import SharedReportPage from "./pages/SharedReportPage";
 import SharedComparisonPage from "./pages/SharedComparisonPage";
@@ -43,8 +44,11 @@ function Router() {
       {/* US Market Discovery */}
       <Route path={"/discover-markets"} component={MarketDiscoveryPage} />
       
-      {/* My Favorites */}
+      {/* My Favorites - Markets */}
       <Route path={"/my-favorites"} component={MyFavoritesPage} />
+      
+      {/* My Saved Properties - Listings from map view */}
+      <Route path={"/saved-properties"} component={MyFavorites} />
       
       {/* Market Alerts */}
       <Route path={"/market-alerts"} component={MarketAlertsPage} />

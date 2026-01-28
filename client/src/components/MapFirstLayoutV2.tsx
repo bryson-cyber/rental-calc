@@ -49,6 +49,7 @@ import {
   Building,
 } from 'lucide-react';
 import { ExportListings } from '@/components/ExportListings';
+import { Link } from 'wouter';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import {
   Tooltip,
@@ -506,6 +507,42 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     return R * c;
   };
   
+  // Calculate base thresholds from ALL listings (before tier filtering)
+  // This ensures consistent tier coloring regardless of which tiers are visible
+  const baseThresholds = useMemo(() => {
+    if (listings.length === 0) return { high: 0, low: 0 };
+    
+    // Apply bedroom and distance filters first (but not tier filter)
+    let baseListings = [...listings];
+    
+    if (bedroomFilter !== 'all') {
+      const targetBedrooms = parseInt(bedroomFilter);
+      if (bedroomFilter === '5+' || bedroomFilter === '5') {
+        baseListings = baseListings.filter(l => l.bedrooms >= 5);
+      } else if (bedroomFilter === '0') {
+        baseListings = baseListings.filter(l => l.bedrooms === 0);
+      } else {
+        baseListings = baseListings.filter(l => l.bedrooms === targetBedrooms);
+      }
+    }
+    
+    if (distanceFilter !== 'all' && myPropertyLocation) {
+      const maxDistance = parseInt(distanceFilter) * 1609.34;
+      baseListings = baseListings.filter(l => l.distanceToMyProperty !== undefined && l.distanceToMyProperty <= maxDistance);
+    }
+    
+    if (baseListings.length === 0) return { high: 0, low: 0 };
+    
+    const revenues = baseListings.map(l => l.revenue).sort((a, b) => b - a);
+    const highIdx = Math.floor(revenues.length * 0.33);
+    const lowIdx = Math.floor(revenues.length * 0.67);
+    
+    return {
+      high: revenues[highIdx] || 0,
+      low: revenues[lowIdx] || 0
+    };
+  }, [listings, bedroomFilter, distanceFilter, myPropertyLocation]);
+  
   // Filter and sort listings
   // Note: When using radius-based search, bedroom and distance filtering happens on the API side
   // This useMemo is mainly for sorting and fallback filtering when using market-wide search
@@ -533,18 +570,12 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       result = result.filter(l => l.distanceToMyProperty !== undefined && l.distanceToMyProperty <= maxDistance);
     }
     
-    // Tier filter - calculate thresholds first
-    if (tierFilter.size < 3 && result.length > 0) {
-      const revenues = result.map(l => l.revenue).sort((a, b) => b - a);
-      const highIdx = Math.floor(revenues.length * 0.33);
-      const lowIdx = Math.floor(revenues.length * 0.67);
-      const highThreshold = revenues[highIdx] || 0;
-      const lowThreshold = revenues[lowIdx] || 0;
-      
+    // Tier filter - use baseThresholds calculated from ALL listings
+    if (tierFilter.size < 3 && result.length > 0 && (baseThresholds.high > 0 || baseThresholds.low > 0)) {
       result = result.filter(l => {
-        if (l.revenue >= highThreshold && tierFilter.has('top')) return true;
-        if (l.revenue >= lowThreshold && l.revenue < highThreshold && tierFilter.has('mid')) return true;
-        if (l.revenue < lowThreshold && tierFilter.has('bottom')) return true;
+        if (l.revenue >= baseThresholds.high && tierFilter.has('top')) return true;
+        if (l.revenue >= baseThresholds.low && l.revenue < baseThresholds.high && tierFilter.has('mid')) return true;
+        if (l.revenue < baseThresholds.low && tierFilter.has('bottom')) return true;
         return false;
       });
     }
@@ -567,24 +598,53 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     });
     
     return result;
-  }, [listings, bedroomFilter, distanceFilter, sortBy, myPropertyLocation, tierFilter, showFavoritesOnly, favoriteListingIds]);
+  }, [listings, bedroomFilter, distanceFilter, sortBy, myPropertyLocation, tierFilter, showFavoritesOnly, favoriteListingIds, baseThresholds]);
   
-  // Calculate thresholds
+  // Calculate thresholds and tier counts using baseThresholds for consistency
   const thresholds = useMemo(() => {
-    if (filteredListings.length === 0) return { high: 0, low: 0, average: 0, middleCount: 0, topCount: 0, bottomCount: 0 };
-    const revenues = filteredListings.map(l => l.revenue).sort((a, b) => b - a);
+    if (listings.length === 0) return { high: 0, low: 0, average: 0, middleCount: 0, topCount: 0, bottomCount: 0 };
+    
+    // Apply bedroom and distance filters to get the base set for counting
+    let baseListings = [...listings];
+    
+    if (bedroomFilter !== 'all') {
+      const targetBedrooms = parseInt(bedroomFilter);
+      if (bedroomFilter === '5+' || bedroomFilter === '5') {
+        baseListings = baseListings.filter(l => l.bedrooms >= 5);
+      } else if (bedroomFilter === '0') {
+        baseListings = baseListings.filter(l => l.bedrooms === 0);
+      } else {
+        baseListings = baseListings.filter(l => l.bedrooms === targetBedrooms);
+      }
+    }
+    
+    if (distanceFilter !== 'all' && myPropertyLocation) {
+      const maxDistance = parseInt(distanceFilter) * 1609.34;
+      baseListings = baseListings.filter(l => l.distanceToMyProperty !== undefined && l.distanceToMyProperty <= maxDistance);
+    }
+    
+    if (baseListings.length === 0) return { high: 0, low: 0, average: 0, middleCount: 0, topCount: 0, bottomCount: 0 };
+    
+    const revenues = baseListings.map(l => l.revenue).sort((a, b) => b - a);
     const avg = revenues.reduce((a, b) => a + b, 0) / revenues.length;
-    const highIdx = Math.floor(revenues.length * 0.33);
-    const lowIdx = Math.floor(revenues.length * 0.67);
+    
+    // Count properties in each tier using baseThresholds
+    let topCount = 0, middleCount = 0, bottomCount = 0;
+    baseListings.forEach(l => {
+      if (l.revenue >= baseThresholds.high) topCount++;
+      else if (l.revenue >= baseThresholds.low) middleCount++;
+      else bottomCount++;
+    });
+    
     return {
-      high: revenues[highIdx] || avg,
-      low: revenues[lowIdx] || avg * 0.5,
+      high: baseThresholds.high,
+      low: baseThresholds.low,
       average: avg,
-      topCount: highIdx,
-      middleCount: lowIdx - highIdx,
-      bottomCount: revenues.length - lowIdx
+      topCount,
+      middleCount,
+      bottomCount
     };
-  }, [filteredListings]);
+  }, [listings, bedroomFilter, distanceFilter, myPropertyLocation, baseThresholds]);
   
   // Pagination
   const totalPages = Math.ceil(filteredListings.length / ITEMS_PER_PAGE);
@@ -668,24 +728,46 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       markers: markers,
       renderer: {
         render: ({ count, position }) => {
+          // Determine cluster size based on count
+          const size = count < 20 ? 'small' : count < 50 ? 'medium' : 'large';
+          const baseSize = size === 'small' ? 44 : size === 'medium' ? 52 : 60;
+          const fontSize = size === 'small' ? 13 : size === 'medium' ? 15 : 17;
+          
           const clusterElement = document.createElement('div');
           clusterElement.innerHTML = `
             <div style="
-              background: linear-gradient(135deg, #0F172A, #1e293b);
-              color: white;
-              width: ${Math.min(50 + count / 5, 70)}px;
-              height: ${Math.min(50 + count / 5, 70)}px;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 14px;
-              font-weight: 700;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-              border: 3px solid #C9A962;
-              font-family: system-ui, -apple-system, sans-serif;
-            ">
-              ${count}
+              position: relative;
+              cursor: pointer;
+            " title="${count} properties in this area - click to zoom in">
+              <div style="
+                background: linear-gradient(135deg, #0F172A 0%, #1e293b 50%, #334155 100%);
+                color: white;
+                width: ${baseSize}px;
+                height: ${baseSize}px;
+                border-radius: 50%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 16px rgba(15, 23, 42, 0.5), 0 2px 4px rgba(0,0,0,0.3);
+                border: 3px solid #C9A962;
+                font-family: system-ui, -apple-system, sans-serif;
+                transition: transform 0.2s ease;
+              ">
+                <span style="
+                  font-size: ${fontSize}px;
+                  font-weight: 700;
+                  line-height: 1;
+                ">${count}</span>
+                <span style="
+                  font-size: 8px;
+                  font-weight: 500;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  opacity: 0.9;
+                  margin-top: 2px;
+                ">listings</span>
+              </div>
             </div>
           `;
           return new google.maps.marker.AdvancedMarkerElement({
@@ -1244,10 +1326,12 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                     ) : null}
                   </h3>
                   {favoriteListingIds.size > 0 && (
-                    <span className="text-sm text-red-600 flex items-center gap-1 mt-1">
-                      <Heart className="w-3 h-3 fill-current" />
-                      {favoriteListingIds.size} saved
-                    </span>
+                    <Link href="/saved-properties">
+                      <span className="text-sm text-red-600 flex items-center gap-1 mt-1 hover:underline cursor-pointer">
+                        <Heart className="w-3 h-3 fill-current" />
+                        {favoriteListingIds.size} saved → View All
+                      </span>
+                    </Link>
                   )}
                 </div>
                 <ExportListings
@@ -1565,67 +1649,137 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
             <div className="bg-white border-t border-[#0F172A]/10 p-4">
               {/* Compact Stats Row */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <DollarSign className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
-                  </div>
-                  <p className="text-lg font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-lg border border-[#C9A962]/20">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#C9A962]" />
-                    <span className="text-[10px] font-medium text-[#C9A962] uppercase tracking-wide">Occupancy</span>
-                  </div>
-                  <p className="text-lg font-bold text-[#0F172A]">{avgOccupancy}%</p>
-                </div>
-                <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <Building className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Nightly Rate</span>
-                  </div>
-                  <p className="text-lg font-bold text-blue-700">{formatCurrency(avgAdr)}</p>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 cursor-help">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <DollarSign className="w-3.5 h-3.5 text-green-600" />
+                          <span className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
+                          <Info className="w-3 h-3 text-green-500/60" />
+                        </div>
+                        <p className="text-lg font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[250px] text-center">
+                      <p className="font-semibold">Average Annual Revenue</p>
+                      <p className="text-xs text-muted-foreground mt-1">The typical yearly income for Airbnb properties in this area. Higher = more earning potential.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-3 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-lg border border-[#C9A962]/20 cursor-help">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#C9A962]" />
+                          <span className="text-[10px] font-medium text-[#C9A962] uppercase tracking-wide">Occupancy</span>
+                          <Info className="w-3 h-3 text-[#C9A962]/60" />
+                        </div>
+                        <p className="text-lg font-bold text-[#0F172A]">{avgOccupancy}%</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[250px] text-center">
+                      <p className="font-semibold">Average Occupancy Rate</p>
+                      <p className="text-xs text-muted-foreground mt-1">How often properties are booked. 70%+ is excellent, 50-70% is good, below 50% may indicate low demand.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 cursor-help">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Building className="w-3.5 h-3.5 text-blue-600" />
+                          <span className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Nightly Rate</span>
+                          <Info className="w-3 h-3 text-blue-500/60" />
+                        </div>
+                        <p className="text-lg font-bold text-blue-700">{formatCurrency(avgAdr)}</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[250px] text-center">
+                      <p className="font-semibold">Average Daily Rate (ADR)</p>
+                      <p className="text-xs text-muted-foreground mt-1">The average price per night guests pay. This is what you can charge for your property.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {/* Revenue Tier Filter - Clickable */}
               <div className="mt-3 flex items-center justify-center gap-2 text-xs">
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(tierFilter);
-                    if (newFilter.has('top')) newFilter.delete('top');
-                    else newFilter.add('top');
-                    setTierFilter(newFilter);
-                  }}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('top') ? 'bg-green-100 border border-green-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  <span className={tierFilter.has('top') ? 'text-green-700' : 'text-gray-400'}>Top ({thresholds.topCount})</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(tierFilter);
-                    if (newFilter.has('mid')) newFilter.delete('mid');
-                    else newFilter.add('mid');
-                    setTierFilter(newFilter);
-                  }}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('mid') ? 'bg-[#C9A962]/20 border border-[#C9A962]/40' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#C9A962]" />
-                  <span className={tierFilter.has('mid') ? 'text-[#C9A962]' : 'text-gray-400'}>Mid ({thresholds.middleCount})</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const newFilter = new Set(tierFilter);
-                    if (newFilter.has('bottom')) newFilter.delete('bottom');
-                    else newFilter.add('bottom');
-                    setTierFilter(newFilter);
-                  }}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('bottom') ? 'bg-red-100 border border-red-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span className={tierFilter.has('bottom') ? 'text-red-700' : 'text-gray-400'}>Bottom ({thresholds.bottomCount})</span>
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          const newFilter = new Set(tierFilter);
+                          if (newFilter.has('top')) newFilter.delete('top');
+                          else newFilter.add('top');
+                          setTierFilter(newFilter);
+                        }}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('top') ? 'bg-green-100 border border-green-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        <span className={tierFilter.has('top') ? 'text-green-700' : 'text-gray-400'}>Top ({thresholds.topCount})</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-center">
+                      <p className="font-semibold text-green-700">Top Performers</p>
+                      <p className="text-xs text-muted-foreground mt-1">Top 33% of properties by revenue. These are the highest earners in your area.</p>
+                      {thresholds.high > 0 && <p className="text-xs font-medium mt-1">{formatCurrency(thresholds.high)}+ annually</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          const newFilter = new Set(tierFilter);
+                          if (newFilter.has('mid')) newFilter.delete('mid');
+                          else newFilter.add('mid');
+                          setTierFilter(newFilter);
+                        }}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('mid') ? 'bg-[#C9A962]/20 border border-[#C9A962]/40' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#C9A962]" />
+                        <span className={tierFilter.has('mid') ? 'text-[#C9A962]' : 'text-gray-400'}>Mid ({thresholds.middleCount})</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-center">
+                      <p className="font-semibold text-[#C9A962]">Middle Performers</p>
+                      <p className="text-xs text-muted-foreground mt-1">Middle 33% of properties by revenue. Solid performers with room to grow.</p>
+                      {thresholds.high > 0 && thresholds.low > 0 && <p className="text-xs font-medium mt-1">{formatCurrency(thresholds.low)} - {formatCurrency(thresholds.high)} annually</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => {
+                          const newFilter = new Set(tierFilter);
+                          if (newFilter.has('bottom')) newFilter.delete('bottom');
+                          else newFilter.add('bottom');
+                          setTierFilter(newFilter);
+                        }}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('bottom') ? 'bg-red-100 border border-red-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        <span className={tierFilter.has('bottom') ? 'text-red-700' : 'text-gray-400'}>Bottom ({thresholds.bottomCount})</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-center">
+                      <p className="font-semibold text-red-700">Lower Performers</p>
+                      <p className="text-xs text-muted-foreground mt-1">Bottom 33% of properties by revenue. May have issues with pricing, location, or listing quality.</p>
+                      {thresholds.low > 0 && <p className="text-xs font-medium mt-1">Under {formatCurrency(thresholds.low)} annually</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               
               {/* Favorites Filter Button */}

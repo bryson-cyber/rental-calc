@@ -6720,3 +6720,36 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix gap between map and stats panel (added h-full to right column)
 - [ ] Add map marker clustering for improved performance with 100+ markers
 - [x] Persist favorites to database for user accounts (fixed ADR/revenue integer validation)
+
+## Map & Favorites Improvements (Jan 28, 2026)
+
+### Bug Fixes
+- [ ] Fix bottom tier properties still showing on map when auto-filter is enabled
+- [ ] Ensure bottom tier is properly filtered out on initial map load
+
+### Tooltips & Explanations
+- [ ] Add tooltips to tier filter buttons (Top/Mid/Bottom) explaining what each tier means
+- [ ] Add tooltips to stats panel (Avg Revenue, Occupancy, Nightly Rate)
+- [ ] Add tooltips to map cluster numbers explaining they represent property counts
+
+### Map Cluster Improvements
+- [ ] Improve map cluster number appearance (better styling, colors)
+- [ ] Add visual distinction between cluster sizes
+
+### My Favorites Page
+- [ ] Create dedicated MyFavoritesPage component for saved properties
+- [ ] Display all favorited properties with key metrics
+- [ ] Add export functionality for favorites list
+- [ ] Add remove from favorites functionality
+- [ ] Add route to App.tsx
+
+
+## Map & Favorites Improvements (Jan 28, 2026) - COMPLETE
+
+- [x] Fix bottom tier properties still showing on map when auto-filtered (fixed threshold calculation)
+- [x] Add tooltips to Top/Mid/Bottom tier filter buttons
+- [x] Add tooltips to stats panel (Nightly Rate, Occupancy, Avg Revenue)
+- [x] Improve map cluster number appearance (now shows 'X LISTINGS' instead of just numbers)
+- [x] Create dedicated My Favorites page for saved properties (/saved-properties)
+- [x] Add "View All" link from map view to saved properties page
+- [x] Fix occupancy display bug in My Favorites page (was showing 8201% instead of 82%)
