@@ -44,6 +44,7 @@ export interface PropertyDetails {
   city?: string;
   state?: string;
   zipcode?: string;
+  source?: 'zillow' | 'redfin';
 }
 
 interface SmartAddressInputProps {
@@ -136,6 +137,7 @@ export function SmartAddressInput({
               city: result.data.city,
               state: result.data.state,
               zipcode: result.data.zipcode,
+              source: inputType as 'zillow' | 'redfin',
             };
 
             setDetectedProperty(property);
@@ -337,7 +339,7 @@ export function SmartAddressInput({
       {fetchStatus === 'loading' && (
         <div className="flex items-center gap-2 text-[#C9A962] text-sm">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Fetching property details from Zillow...</span>
+          <span>Fetching property details from {inputType === 'redfin' ? 'Redfin' : 'Zillow'}...</span>
         </div>
       )}
     </div>

@@ -99,7 +99,8 @@ export function StartWithProperty({
       } as PlaceDetails);
     }
     
-    toast.success('Property details loaded from Zillow!');
+    const platformName = property.source === 'redfin' ? 'Redfin' : 'Zillow';
+    toast.success(`Property details loaded from ${platformName}!`);
   };
   
   // Extract location details from address string
@@ -395,8 +396,8 @@ export function StartWithProperty({
           value={address}
           onChange={setAddress}
           onPropertyDetected={handleZillowPropertyDetected}
-          placeholder="Enter address or paste Zillow URL..."
-          label="Property Address or Zillow URL"
+          placeholder="Enter address or paste Zillow/Redfin URL..."
+          label="Property Address"
           required={true}
           showPropertyCard={true}
         />
