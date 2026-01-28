@@ -1614,7 +1614,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         {/* Right Column - Map (40%) */}
         <div className="w-full lg:w-[40%] h-full relative flex flex-col">
           {/* Map Container - fixed height to keep stats visible */}
-          <div className="relative h-[calc(100%-220px)] min-h-[350px]">
+          <div className="relative h-[calc(100%-600px)] min-h-[300px]">
             {/* Fullscreen toggle */}
             <button
               onClick={() => setIsMapFullscreen(true)}
@@ -1655,7 +1655,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
           
           {/* Stats Panel - Fixed at bottom of right column */}
           {filteredListings.length > 0 && (
-            <div className="bg-white border-t border-gray-200 p-5 shadow-lg">
+            <div className="bg-white border-t border-gray-200 p-5 shadow-lg h-[600px] overflow-y-auto">
               {/* Compact Stats Row */}
               <div className="grid grid-cols-3 gap-3">
                 <TooltipProvider>
