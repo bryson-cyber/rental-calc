@@ -6327,3 +6327,19 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Fix tooltip styling - now shows dark navy background with white text
 - [x] Verified consistent labeling across Homepage, Step 3, Step 4, and other locations
 
+
+
+## Step 3 UI Fixes (Jan 28, 2026)
+- [ ] Add Rentometer API tooltip to long-term tenant section explaining data source
+- [ ] Fix hidden Market Insights tooltip that doesn't load
+- [ ] Clarify Market Outlook percentages (what does "33% growing season" mean?)
+- [ ] Make percentage labels more descriptive (e.g., "Demand expected to increase 33%")
+
+
+
+## Step 3 UI Fixes (Jan 28, 2026)
+- [x] Add Rentometer tooltip to Long-Term Tenant section explaining data source
+- [x] Fix Market Insights tooltip - updated to dark background with white text
+- [x] Fix ForwardDemandCard tooltip - updated to dark background with white text
+- [x] Clarify Market Outlook percentages - added "Expected Occupancy" label to explain what the % means
+

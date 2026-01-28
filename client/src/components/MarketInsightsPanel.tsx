@@ -17,12 +17,12 @@ interface MarketInsightsPanelProps {
   bedrooms?: number;
 }
 
-// Simple tooltip component - LIGHT MODE for professional look
+// Simple tooltip component - DARK MODE for better visibility
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   return (
     <span className="relative group inline-flex">
       {children}
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg shadow-lg border border-[oklch(0.90_0_0)] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 max-w-xs text-center">
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#0F172A] text-white text-xs rounded-lg shadow-lg border-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 max-w-[200px] text-center whitespace-normal">
         {text}
       </span>
     </span>

@@ -35,12 +35,12 @@ interface ForwardDemandCardProps {
   isLoading?: boolean;
 }
 
-// Simple tooltip component - LIGHT MODE for professional look
+// Simple tooltip component - DARK MODE for better visibility
 function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   return (
     <span className="relative group inline-flex w-full">
       {children}
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-white text-[oklch(0.30_0_0)] text-xs rounded-lg shadow-lg border border-[oklch(0.90_0_0)] opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal pointer-events-none z-10 max-w-xs text-center">
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#0F172A] text-white text-xs rounded-lg shadow-lg border-0 opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal pointer-events-none z-50 max-w-[220px] text-center">
         {text}
       </span>
     </span>
@@ -152,6 +152,9 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
               <div className={`text-4xl font-bold mb-1 ${next30Colors.text}`}>
                 {Math.round(data.next30Days.avgOccupancy)}%
               </div>
+              <div className={`text-xs ${next30Colors.text} opacity-75 mb-1`}>
+                Expected Occupancy
+              </div>
               <div className={`text-sm font-semibold ${next30Colors.text}`}>
                 {next30Label.label}
               </div>
@@ -172,6 +175,9 @@ export function ForwardDemandCard({ data, isLoading }: ForwardDemandCardProps) {
               </div>
               <div className={`text-4xl font-bold mb-1 ${next180Colors.text}`}>
                 {Math.round(data.next180Days.avgOccupancy)}%
+              </div>
+              <div className={`text-xs ${next180Colors.text} opacity-75 mb-1`}>
+                Expected Occupancy
               </div>
               <div className={`text-sm font-semibold ${next180Colors.text}`}>
                 {next180Label.label}

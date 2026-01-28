@@ -1268,6 +1268,21 @@ function AirbnbVsLongTermComparison({
               <Home className="w-4 h-4 text-white" />
             </div>
             <span className="text-sm font-medium text-slate-700">Long-Term Tenant</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="p-0.5 hover:bg-blue-100 rounded-full transition-colors">
+                  <Info className="w-3 h-3 text-slate-400" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs p-3 bg-[#0F172A] text-white shadow-lg border-0">
+                <p className="text-sm leading-relaxed">
+                  {rentometerMedian 
+                    ? `Based on Rentometer data: The median rent for similar properties in this area is $${rentometerMedian.toLocaleString()}/month.`
+                    : `Using your entered rent amount. For more accurate data, we recommend checking Rentometer for median rents in this area.`
+                  }
+                </p>
+              </TooltipContent>
+            </Tooltip>
             {!isAirbnbBetter && (
               <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Winner</span>
             )}
