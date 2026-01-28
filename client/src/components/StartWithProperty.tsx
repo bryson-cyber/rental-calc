@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useProperty, PropertyDetails } from '@/contexts/PropertyContext';
 import { AddressAutocomplete, PlaceDetails } from '@/components/AddressAutocomplete';
+import { SmartAddressInput, PropertyDetails as ZillowPropertyDetails } from '@/components/SmartAddressInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -68,6 +69,37 @@ export function StartWithProperty({
       setSelectedPlaceDetails(details);
       console.log('[StartWithProperty] Received place details:', details);
     }
+  };
+  
+  // Handle property detected from Zillow URL
+  const handleZillowPropertyDetected = (property: ZillowPropertyDetails) => {
+    console.log('[StartWithProperty] Zillow property detected:', property);
+    
+    // Update form fields with Zillow data
+    setAddress(property.address);
+    
+    if (property.bedrooms !== null) {
+      setBedrooms(property.bedrooms.toString());
+    }
+    
+    if (property.bathrooms !== null) {
+      setBathrooms(property.bathrooms.toString());
+    }
+    
+    if (property.price !== null && property.priceType === 'rent') {
+      setMonthlyRent(property.price.toString());
+    }
+    
+    // Store location details for later use
+    if (property.city || property.state || property.zipcode) {
+      setSelectedPlaceDetails({
+        city: property.city,
+        state: property.state,
+        zipCode: property.zipcode,
+      } as PlaceDetails);
+    }
+    
+    toast.success('Property details loaded from Zillow!');
   };
   
   // Extract location details from address string
@@ -358,20 +390,16 @@ export function StartWithProperty({
       
       {/* Form */}
       <div className="space-y-4">
-        {/* Address */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Property Address
-          </label>
-          <AddressAutocomplete
-            value={address}
-            onChange={setAddress}
-            onSelect={handleAddressSelect}
-            placeholder="Enter your property address..."
-            variant="light"
-            required={true}
-          />
-        </div>
+        {/* Address - Now supports Zillow URLs */}
+        <SmartAddressInput
+          value={address}
+          onChange={setAddress}
+          onPropertyDetected={handleZillowPropertyDetected}
+          placeholder="Enter address or paste Zillow URL..."
+          label="Property Address or Zillow URL"
+          required={true}
+          showPropertyCard={true}
+        />
         
         {/* Bedrooms & Bathrooms */}
         <div className="grid grid-cols-2 gap-4">

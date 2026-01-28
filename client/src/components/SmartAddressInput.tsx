@@ -4,8 +4,9 @@
  * A smart input field that can accept either:
  * 1. A regular address (passed through as-is)
  * 2. A Zillow URL (auto-fetches property details)
+ * 3. A Redfin URL (auto-fetches property details)
  * 
- * When a Zillow URL is detected, it automatically calls the HasData API
+ * When a Zillow or Redfin URL is detected, it automatically calls the HasData API
  * to extract property details and populates the form fields.
  */
 
@@ -20,6 +21,13 @@ const ZILLOW_URL_PATTERNS = [
   /^https?:\/\/(www\.)?zillow\.com\/homes\//i,
   /^https?:\/\/(www\.)?zillow\.com\/b\//i,
   /^https?:\/\/(www\.)?zillow\.com\/[^/]+\/[^/]+_zpid/i,
+];
+
+// Redfin URL detection regex patterns
+const REDFIN_URL_PATTERNS = [
+  /^https?:\/\/(www\.)?redfin\.com\/[A-Z]{2}\/[^/]+\/[^/]+\/home\/\d+/i,
+  /^https?:\/\/(www\.)?redfin\.com\/[A-Z]{2}\/[^/]+\/[^/]+\/unit-[^/]+\/home\/\d+/i,
+  /^https?:\/\/(www\.)?redfin\.com\/[A-Z]{2}\/[^/]+\/[^/]+\/apartment-[^/]+\/home\/\d+/i,
 ];
 
 export interface PropertyDetails {
@@ -55,31 +63,44 @@ export function isZillowUrl(input: string): boolean {
   return ZILLOW_URL_PATTERNS.some(pattern => pattern.test(input.trim()));
 }
 
+export function isRedfinUrl(input: string): boolean {
+  if (!input) return false;
+  return REDFIN_URL_PATTERNS.some(pattern => pattern.test(input.trim()));
+}
+
+export function isPropertyUrl(input: string): 'zillow' | 'redfin' | null {
+  if (isZillowUrl(input)) return 'zillow';
+  if (isRedfinUrl(input)) return 'redfin';
+  return null;
+}
+
 export function SmartAddressInput({
   value,
   onChange,
   onPropertyDetected,
-  placeholder = "Enter address or paste Zillow URL...",
+  placeholder = "Enter address or paste Zillow/Redfin URL...",
   className = "",
   disabled = false,
   showPropertyCard = true,
   label,
   required = false,
 }: SmartAddressInputProps) {
-  const [inputType, setInputType] = useState<'address' | 'zillow'>('address');
+  const [inputType, setInputType] = useState<'address' | 'zillow' | 'redfin'>('address');
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [detectedProperty, setDetectedProperty] = useState<PropertyDetails | null>(null);
 
   const zillowMutation = trpc.zillow.getPropertyDetails.useMutation();
+  const redfinMutation = trpc.redfin.getPropertyDetails.useMutation();
 
-  // Detect input type and fetch Zillow data if needed
+  // Detect input type and fetch property data if URL is detected
   const handleInputChange = useCallback((newValue: string) => {
     onChange(newValue);
     setErrorMessage(null);
 
-    if (isZillowUrl(newValue)) {
-      setInputType('zillow');
+    const urlType = isPropertyUrl(newValue);
+    if (urlType) {
+      setInputType(urlType);
     } else {
       setInputType('address');
       setFetchStatus('idle');
@@ -87,15 +108,18 @@ export function SmartAddressInput({
     }
   }, [onChange]);
 
-  // Auto-fetch Zillow data when URL is detected
+  // Auto-fetch property data when URL is detected (Zillow or Redfin)
   useEffect(() => {
-    if (inputType === 'zillow' && value && fetchStatus === 'idle') {
-      const fetchZillowData = async () => {
+    if ((inputType === 'zillow' || inputType === 'redfin') && value && fetchStatus === 'idle') {
+      const fetchPropertyData = async () => {
         setFetchStatus('loading');
         setErrorMessage(null);
 
         try {
-          const result = await zillowMutation.mutateAsync({ url: value.trim() });
+          // Call the appropriate API based on URL type
+          const result = inputType === 'zillow' 
+            ? await zillowMutation.mutateAsync({ url: value.trim() })
+            : await redfinMutation.mutateAsync({ url: value.trim() });
 
           if (result.success && result.data) {
             const property: PropertyDetails = {
@@ -108,7 +132,7 @@ export function SmartAddressInput({
               yearBuilt: result.data.yearBuilt,
               propertyType: result.data.propertyType,
               imageUrl: result.data.imageUrl,
-              zpid: result.data.zpid,
+              zpid: inputType === 'zillow' ? (result.data as { zpid?: string }).zpid : undefined,
               city: result.data.city,
               state: result.data.state,
               zipcode: result.data.zipcode,
@@ -131,21 +155,21 @@ export function SmartAddressInput({
             setErrorMessage(result.error || 'Failed to fetch property details');
           }
         } catch (error) {
-          console.error('Error fetching Zillow data:', error);
+          console.error(`Error fetching ${inputType} data:`, error);
           setFetchStatus('error');
           setErrorMessage('Failed to connect to property lookup service');
         }
       };
 
       // Debounce the fetch
-      const timeoutId = setTimeout(fetchZillowData, 500);
+      const timeoutId = setTimeout(fetchPropertyData, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [inputType, value, fetchStatus, zillowMutation, onPropertyDetected, onChange]);
+  }, [inputType, value, fetchStatus, zillowMutation, redfinMutation, onPropertyDetected, onChange]);
 
   // Reset fetch status when input changes
   useEffect(() => {
-    if (inputType === 'zillow') {
+    if (inputType === 'zillow' || inputType === 'redfin') {
       setFetchStatus('idle');
     }
   }, [value, inputType]);
@@ -160,7 +184,7 @@ export function SmartAddressInput({
     if (fetchStatus === 'error') {
       return <AlertCircle className="w-5 h-5 text-red-500" />;
     }
-    if (inputType === 'zillow') {
+    if (inputType === 'zillow' || inputType === 'redfin') {
       return <Link2 className="w-5 h-5 text-[#C9A962]" />;
     }
     return <MapPin className="w-5 h-5 text-[#C9A962]" />;
@@ -216,10 +240,14 @@ export function SmartAddressInput({
                   ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
                 `}
               />
-              {inputType === 'zillow' && fetchStatus !== 'loading' && (
+              {(inputType === 'zillow' || inputType === 'redfin') && fetchStatus !== 'loading' && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                    Zillow URL
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    inputType === 'zillow' 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {inputType === 'zillow' ? 'Zillow URL' : 'Redfin URL'}
                   </span>
                 </div>
               )}
@@ -227,7 +255,7 @@ export function SmartAddressInput({
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
             <p className="text-sm">
-              <strong>Tip:</strong> Paste a Zillow listing URL to auto-fill property details, 
+              <strong>Tip:</strong> Paste a Zillow or Redfin listing URL to auto-fill property details, 
               or type an address manually.
             </p>
           </TooltipContent>

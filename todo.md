@@ -6266,3 +6266,18 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Fix validation error showing after successful Zillow URL auto-fill
 - [x] Fix bathroom count rounding (2.5 baths showing as 3 instead of 2.5)
 
+
+
+## Zillow URL Feature Expansion (Jan 28, 2026)
+
+### Start with Your Property Section
+- [x] Add SmartAddressInput to the "Start with Your Property" section on homepage
+- [x] Update label to "Property Address or Zillow/Redfin URL"
+- [x] Auto-fill bedrooms, bathrooms, and rent from Zillow/Redfin data
+
+### Redfin/Realtor.com Support
+- [x] Research HasData API support for Redfin - AVAILABLE
+- [x] Research HasData API support for Realtor.com - NOT AVAILABLE
+- [x] Implement Redfin URL detection and parsing (API working)
+- [ ] Implement Realtor.com URL support (requires alternative API - HasData doesn't support)
+
