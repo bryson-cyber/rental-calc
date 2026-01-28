@@ -7,8 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, Waves, Thermometer, PawPrint, Car, UtensilsCrossed, WashingMachine, Check, Filter } from 'lucide-react';
+import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, Waves, Thermometer, PawPrint, Car, UtensilsCrossed, WashingMachine, Check, Filter, TrendingUp, Calendar, Building, Star, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface PropertyListing {
   id: string;
@@ -85,11 +91,11 @@ function formatDistance(miles: number): string {
 
 function getMarkerColor(revenue: number, thresholds: RevenueThresholds, customThreshold: number | null): string {
   if (customThreshold !== null) {
-    return revenue >= customThreshold ? '#16a34a' : '#9ca3af'; // Green or gray
+    return revenue >= customThreshold ? '#22c55e' : '#9ca3af'; // Green or gray
   }
   
-  if (revenue >= thresholds.high) return '#16a34a'; // Green - top performers
-  if (revenue >= thresholds.low) return '#f59e0b';  // Amber - average
+  if (revenue >= thresholds.high) return '#22c55e'; // Green - top performers
+  if (revenue >= thresholds.low) return '#C9A962';  // Gold - average
   return '#ef4444'; // Red - below average
 }
 
@@ -102,7 +108,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Create improved marker element with better styling
+// Create improved marker element with premium styling
 function createMarkerElement(color: string, revenue: number): HTMLDivElement {
   const markerElement = document.createElement('div');
   markerElement.innerHTML = `
@@ -112,35 +118,16 @@ function createMarkerElement(color: string, revenue: number): HTMLDivElement {
       transition: transform 0.2s ease;
     " class="property-marker">
       <div style="
-        width: 36px;
-        height: 36px;
-        background: linear-gradient(135deg, ${color} 0%, ${adjustColor(color, -20)} 100%);
-        border: 3px solid white;
-        border-radius: 50%;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <span style="
-          color: white;
-          font-size: 10px;
-          font-weight: 700;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        ">${formatCompactCurrency(revenue)}</span>
-      </div>
-      <div style="
-        position: absolute;
-        bottom: -6px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 8px solid white;
-        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
-      "></div>
+        background: ${color};
+        color: white;
+        padding: 6px 10px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+        font-family: system-ui, -apple-system, sans-serif;
+      ">${formatCompactCurrency(revenue)}</div>
     </div>
   `;
   
@@ -158,7 +145,7 @@ function createMarkerElement(color: string, revenue: number): HTMLDivElement {
   return markerElement;
 }
 
-// Create "My Property" marker with distinct styling
+// Create "My Property" marker with premium gold styling
 function createMyPropertyMarker(): HTMLDivElement {
   const markerElement = document.createElement('div');
   markerElement.innerHTML = `
@@ -170,10 +157,10 @@ function createMyPropertyMarker(): HTMLDivElement {
       <div style="
         width: 48px;
         height: 48px;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, #C9A962 0%, #a08840 100%);
         border: 4px solid white;
         border-radius: 50%;
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5), 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 6px 20px rgba(201, 169, 98, 0.5), 0 4px 8px rgba(0,0,0,0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -200,7 +187,7 @@ function createMyPropertyMarker(): HTMLDivElement {
         top: -8px;
         left: 50%;
         transform: translateX(-50%);
-        background: #3b82f6;
+        background: #C9A962;
         color: white;
         font-size: 10px;
         font-weight: 700;
@@ -475,13 +462,13 @@ export default function MapViewPage() {
         const content = `
           <div style="max-width: 250px; font-family: system-ui, sans-serif; padding: 12px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #C9A962 0%, #a08840 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                   <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>
               </div>
-              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1d4ed8;">My Property</h3>
+              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #C9A962;">My Property</h3>
             </div>
             <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.4;">${myPropertyLocation.address}</p>
           </div>
@@ -508,9 +495,7 @@ export default function MapViewPage() {
       infoWindowRef.current = new google.maps.InfoWindow();
     }
     
-    console.log('[MapView] Creating', filteredListings.length, 'markers (filtered from', listings.length, 'total)');
-    
-    // Create new markers
+    // Add markers for each listing
     filteredListings.forEach(listing => {
       const color = getMarkerColor(
         listing.revenue,
@@ -518,11 +503,10 @@ export default function MapViewPage() {
         useCustomThreshold ? customThreshold : null
       );
       
-      // Create improved marker element
       const markerElement = createMarkerElement(color, listing.revenue);
       
       const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: mapRef.current,
+        map: mapRef.current!,
         position: { lat: listing.latitude, lng: listing.longitude },
         title: listing.title,
         content: markerElement,
@@ -532,52 +516,49 @@ export default function MapViewPage() {
       marker.addListener('click', () => {
         setSelectedProperty(listing);
         
-        const distanceHtml = listing.distanceToMyProperty !== undefined ? `
-          <div style="margin-top: 8px; padding: 8px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 6px; display: flex; align-items: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-            </svg>
-            <span style="font-size: 11px; color: #1d4ed8; font-weight: 600;">
-              ${formatDistance(listing.distanceToMyProperty)} from your property
-            </span>
-          </div>
-        ` : '';
+        const distanceInfo = listing.distanceToMyProperty !== undefined 
+          ? `<div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+              <span style="color: #666;">Distance from you:</span>
+              <span style="font-weight: 600; color: #C9A962;">${formatDistance(listing.distanceToMyProperty)}</span>
+            </div>`
+          : '';
         
         const content = `
-          <div style="max-width: 300px; font-family: system-ui, sans-serif;">
-            ${listing.thumbnailUrl ? `<img src="${listing.thumbnailUrl}" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px 8px 0 0;" />` : ''}
-            <div style="padding: 14px;">
-              <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600; line-height: 1.4; color: #1f2937;">${listing.title}</h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
-                <div style="background: #f0fdf4; padding: 8px; border-radius: 6px;">
-                  <div style="color: #166534; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Annual Revenue</div>
-                  <div style="font-weight: 700; color: #16a34a; font-size: 14px;">${formatCurrency(listing.revenue)}</div>
-                </div>
-                <div style="background: #fefce8; padding: 8px; border-radius: 6px;">
-                  <div style="color: #854d0e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Occupancy</div>
-                  <div style="font-weight: 700; color: #ca8a04; font-size: 14px;">${Math.round(listing.occupancy)}%</div>
-                </div>
-                <div style="background: #f8fafc; padding: 8px; border-radius: 6px;">
-                  <div style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Nightly Rate</div>
-                  <div style="font-weight: 700; color: #334155; font-size: 14px;">${formatCurrency(listing.adr)}</div>
-                </div>
-                <div style="background: #faf5ff; padding: 8px; border-radius: 6px;">
-                  <div style="color: #7c3aed; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Rating</div>
-                  <div style="font-weight: 700; color: #7c3aed; font-size: 14px;">${listing.rating ? `${listing.rating} ⭐` : 'N/A'}</div>
-                </div>
+          <div style="max-width: 300px; font-family: system-ui, sans-serif; padding: 12px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+              ${listing.thumbnailUrl 
+                ? `<img src="${listing.thumbnailUrl}" alt="${listing.title}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px;" />`
+                : `<div style="width: 80px; height: 60px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                  </div>`
+              }
+              <div>
+                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #0F172A;">${listing.title}</h3>
+                <p style="margin: 0; font-size: 12px; color: #666;">${listing.bedrooms} BR / ${listing.bathrooms} BA</p>
               </div>
-              <div style="margin-top: 10px; font-size: 11px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.bedrooms} BR</span>
-                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.bathrooms} BA</span>
-                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">${listing.accommodates} guests</span>
-              </div>
-              ${distanceHtml}
-              <a href="${listing.airbnbUrl}" target="_blank" rel="noopener noreferrer" 
-                 style="display: block; margin-top: 12px; padding: 10px 14px; background: linear-gradient(135deg, #C9A962 0%, #b8984f 100%); color: white; text-align: center; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 600; box-shadow: 0 2px 4px rgba(201, 169, 98, 0.3);">
-                View on Airbnb
-              </a>
             </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+              <div style="background: #f8f7f4; padding: 8px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 11px; color: #666; margin-bottom: 2px;">Revenue</div>
+                <div style="font-size: 14px; font-weight: 700; color: ${color};">${formatCurrency(listing.revenue)}</div>
+              </div>
+              <div style="background: #f8f7f4; padding: 8px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 11px; color: #666; margin-bottom: 2px;">Occupancy</div>
+                <div style="font-size: 14px; font-weight: 600; color: #0F172A;">${Math.round(listing.occupancy * 100)}%</div>
+              </div>
+              <div style="background: #f8f7f4; padding: 8px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 11px; color: #666; margin-bottom: 2px;">ADR</div>
+                <div style="font-size: 14px; font-weight: 600; color: #0F172A;">${formatCurrency(listing.adr)}</div>
+              </div>
+            </div>
+            ${distanceInfo}
+            <a href="${listing.airbnbUrl}" target="_blank" rel="noopener noreferrer" 
+               style="display: block; text-align: center; margin-top: 12px; padding: 8px; background: #0F172A; color: white; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500;">
+              View on Airbnb
+            </a>
           </div>
         `;
         
@@ -596,35 +577,50 @@ export default function MapViewPage() {
     return 'Select a location';
   };
   
+  // Calculate average occupancy
+  const avgOccupancy = filteredListings.length > 0 
+    ? Math.round(filteredListings.reduce((sum, l) => sum + l.occupancy * 100, 0) / filteredListings.length)
+    : 0;
+  
+  // Calculate average ADR
+  const avgAdr = filteredListings.length > 0 
+    ? filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length
+    : 0;
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-stone-50">
-      {/* Header - Tesla Dashboard Light Theme */}
-      <div className="bg-white border-b border-slate-200 py-8">
+    <div className="min-h-screen bg-white">
+      {/* Premium Header - Deep Navy with Gold Accents */}
+      <div className="bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#1e293b] text-white py-8 px-6">
         <div className="container">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-              <Map className="w-5 h-5 text-blue-500" />
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-14 h-14 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
+              <Map className="w-7 h-7 text-[#C9A962]" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-serif font-semibold text-slate-900">See the Map</h1>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-serif font-semibold text-white">See the Map</h1>
+              <p className="text-white/60 text-sm font-sans">
+                Visualize property performance across any market
+              </p>
+            </div>
           </div>
-          <p className="text-slate-500 max-w-2xl">
-            Visualize property performance across any market. See which neighborhoods have the highest-earning rentals at a glance.
+          <p className="text-white/50 max-w-2xl text-sm mt-2">
+            See which neighborhoods have the highest-earning rentals at a glance. Compare properties, analyze revenue tiers, and find the best opportunities.
           </p>
         </div>
       </div>
       
       <div className="container py-8">
-        {/* Location Selection */}
-        <Card className="mb-6 border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                <MapPin className="w-4 h-4 text-amber-500" />
+        {/* Location Selection - Premium Card */}
+        <Card className="mb-6 border-[#0F172A]/10 shadow-sm">
+          <CardHeader className="border-b border-[#0F172A]/5 bg-[#f8f7f4]">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="w-10 h-10 rounded-xl bg-[#C9A962]/10 flex items-center justify-center border border-[#C9A962]/20">
+                <MapPin className="w-5 h-5 text-[#C9A962]" />
               </div>
-              <span className="text-slate-900">Select Location</span>
+              <span className="text-[#0F172A] font-semibold">Select Location</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <HierarchicalLocationSelector
               onSelectionChange={setLocationSelection}
               onSearch={(selection) => {
@@ -637,7 +633,7 @@ export default function MapViewPage() {
               <Button
                 onClick={handleSearch}
                 disabled={!locationSelection || isLoading}
-                className="bg-[#C9A962] hover:bg-[#b8984f] text-white"
+                className="bg-[#0F172A] hover:bg-[#1e293b] text-white px-6 h-11"
               >
                 {isLoading ? (
                   <>
@@ -656,8 +652,11 @@ export default function MapViewPage() {
         </Card>
         
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Info className="w-4 h-4 text-red-600" />
+            </div>
+            <p className="text-sm">{error}</p>
           </div>
         )}
         
@@ -665,18 +664,18 @@ export default function MapViewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Legend and Controls */}
           <div className="lg:col-span-1 space-y-4">
-            {/* My Property Section */}
-            <Card className="border-slate-200 bg-white">
-              <CardHeader className="pb-3">
+            {/* My Property Section - Premium styling */}
+            <Card className="border-[#0F172A]/10 bg-white shadow-sm">
+              <CardHeader className="pb-3 border-b border-[#0F172A]/5">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                    <Home className="w-3.5 h-3.5 text-blue-500" />
+                  <div className="w-8 h-8 rounded-lg bg-[#C9A962]/10 flex items-center justify-center border border-[#C9A962]/20">
+                    <Home className="w-4 h-4 text-[#C9A962]" />
                   </div>
-                  <span className="text-slate-900">My Property</span>
+                  <span className="text-[#0F172A] font-semibold">My Property</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">
+              <CardContent className="space-y-3 pt-4">
+                <p className="text-xs text-[#0F172A]/50">
                   Enter your property address to see how far competitors are from your location.
                 </p>
                 <div className="flex gap-2">
@@ -685,7 +684,7 @@ export default function MapViewPage() {
                     value={myPropertyAddress}
                     onChange={(e) => setMyPropertyAddress(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
-                    className="text-sm"
+                    className="text-sm border-[#0F172A]/10"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -693,7 +692,7 @@ export default function MapViewPage() {
                     onClick={geocodeMyProperty}
                     disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
                     size="sm"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 bg-[#C9A962] hover:bg-[#b8984f] text-white"
                   >
                     {isGeocodingMyProperty ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -717,28 +716,38 @@ export default function MapViewPage() {
                   <p className="text-xs text-red-600">{myPropertyError}</p>
                 )}
                 {myPropertyLocation && (
-                  <div className="p-2 bg-blue-100 rounded-lg text-xs text-blue-800">
-                    <div className="font-medium">📍 Location Set</div>
-                    <div className="truncate">{myPropertyLocation.address}</div>
+                  <div className="p-3 bg-[#C9A962]/10 rounded-lg text-xs text-[#0F172A] border border-[#C9A962]/20">
+                    <div className="font-semibold text-[#C9A962] mb-1">Location Set</div>
+                    <div className="truncate text-[#0F172A]/70">{myPropertyLocation.address}</div>
                   </div>
                 )}
               </CardContent>
             </Card>
             
-            {/* Threshold Controls */}
-            <Card className="border-slate-200 bg-white">
-              <CardHeader className="pb-3">
+            {/* Threshold Controls - Premium styling */}
+            <Card className="border-[#0F172A]/10 bg-white shadow-sm">
+              <CardHeader className="pb-3 border-b border-[#0F172A]/5">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                    <DollarSign className="w-4 h-4 text-green-600" />
                   </div>
-                  <span className="text-slate-900">Revenue Thresholds</span>
+                  <span className="text-[#0F172A] font-semibold">Revenue Thresholds</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-3.5 h-3.5 text-[#0F172A]/40" />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-[#0F172A] text-white border-0 max-w-xs">
+                        <p>Properties are color-coded by annual revenue. Green = top performers, Gold = average, Red = below average.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-4">
                 {/* Toggle */}
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="custom-mode" className="text-sm">Custom Threshold</Label>
+                  <Label htmlFor="custom-mode" className="text-sm text-[#0F172A]/70">Custom Threshold</Label>
                   <Switch
                     id="custom-mode"
                     checked={useCustomThreshold}
@@ -748,48 +757,49 @@ export default function MapViewPage() {
                 
                 {useCustomThreshold ? (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Minimum Revenue</Label>
+                    <Label className="text-xs text-[#0F172A]/50">Minimum Revenue</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm">$</span>
+                      <span className="text-sm text-[#0F172A]/70">$</span>
                       <Input
                         type="number"
                         value={customThreshold}
                         onChange={(e) => setCustomThreshold(Number(e.target.value))}
-                        className="h-9"
+                        className="h-9 border-[#0F172A]/10"
                       />
                     </div>
                     <div className="mt-3 space-y-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-green-600" />
-                        <span>≥ {formatCurrency(customThreshold)}</span>
+                        <div className="w-4 h-4 rounded-full bg-green-500" />
+                        <span className="text-[#0F172A]/70">Above {formatCurrency(customThreshold)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full bg-gray-400" />
-                        <span>&lt; {formatCurrency(customThreshold)}</span>
+                        <span className="text-[#0F172A]/70">Below {formatCurrency(customThreshold)}</span>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="p-3 bg-stone-50 rounded-lg">
-                      <div className="text-xs text-muted-foreground mb-1">Market Average</div>
-                      <div className="text-lg font-semibold text-[#C9A962]">
+                    <div className="p-3 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-xl border border-[#C9A962]/20">
+                      <div className="text-xs text-[#0F172A]/50 mb-1">Market Average</div>
+                      <div className="text-xl font-bold text-[#C9A962]">
                         {listings.length > 0 ? formatCurrency(thresholds.average) : '—'}
                       </div>
+                      <div className="text-xs text-[#0F172A]/40 mt-1">per year</div>
                     </div>
                     
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-green-600" />
-                        <span>Top 33%: ≥ {listings.length > 0 ? formatCurrency(thresholds.high) : '—'}</span>
+                        <div className="w-4 h-4 rounded-full bg-green-500" />
+                        <span className="text-[#0F172A]/70">Top 33%: Above {listings.length > 0 ? formatCurrency(thresholds.high) : '—'}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-amber-500" />
-                        <span>Middle 33%: {listings.length > 0 ? `${formatCurrency(thresholds.low)} - ${formatCurrency(thresholds.high)}` : '—'}</span>
+                        <div className="w-4 h-4 rounded-full bg-[#C9A962]" />
+                        <span className="text-[#0F172A]/70">Middle 33%: {listings.length > 0 ? `${formatCurrency(thresholds.low)} - ${formatCurrency(thresholds.high)}` : '—'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full bg-red-500" />
-                        <span>Bottom 33%: &lt; {listings.length > 0 ? formatCurrency(thresholds.low) : '—'}</span>
+                        <span className="text-[#0F172A]/70">Bottom 33%: Below {listings.length > 0 ? formatCurrency(thresholds.low) : '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -799,18 +809,18 @@ export default function MapViewPage() {
             
             {/* Bedroom Filter */}
             {listings.length > 0 && (
-              <Card className="border-slate-200 bg-white">
-                <CardHeader className="pb-3">
+              <Card className="border-[#0F172A]/10 bg-white shadow-sm">
+                <CardHeader className="pb-3 border-b border-[#0F172A]/5">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                      <BedDouble className="w-3.5 h-3.5 text-purple-500" />
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                      <BedDouble className="w-4 h-4 text-purple-500" />
                     </div>
-                    <span className="text-slate-900">Filter by Bedrooms</span>
+                    <span className="text-[#0F172A] font-semibold">Filter by Bedrooms</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-[#0F172A]/10">
                       <SelectValue placeholder="All Bedrooms" />
                     </SelectTrigger>
                     <SelectContent>
@@ -826,7 +836,7 @@ export default function MapViewPage() {
                     </SelectContent>
                   </Select>
                   {bedroomFilter !== 'all' && (
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <p className="mt-2 text-xs text-[#0F172A]/50">
                       Showing {filteredListings.length} of {listings.length} properties
                     </p>
                   )}
@@ -834,122 +844,60 @@ export default function MapViewPage() {
               </Card>
             )}
             
-            {/* Amenities Filter */}
-            {listings.length > 0 && (
-              <Card className="border-slate-200 bg-white">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
-                        <Filter className="w-3.5 h-3.5 text-teal-500" />
-                      </div>
-                      <span className="text-slate-900">Amenities</span>
-                    </div>
-                    {Object.values(amenitiesFilter).some(v => v) && (
-                      <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">
-                        {Object.values(amenitiesFilter).filter(v => v).length} active
-                      </span>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2">
-                    {[
-                      { key: 'pool', label: 'Pool', icon: Waves },
-                      { key: 'hotTub', label: 'Hot Tub', icon: Thermometer },
-                      { key: 'petFriendly', label: 'Pet Friendly', icon: PawPrint },
-                      { key: 'parking', label: 'Parking', icon: Car },
-                      { key: 'kitchen', label: 'Kitchen', icon: UtensilsCrossed },
-                      { key: 'washerDryer', label: 'Washer/Dryer', icon: WashingMachine },
-                    ].map(({ key, label, icon: Icon }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setAmenitiesFilter(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                        className={`flex items-center gap-2 px-3 py-2.5 sm:py-2 rounded-lg text-sm sm:text-xs font-medium transition-all touch-manipulation ${
-                          amenitiesFilter[key as keyof typeof amenitiesFilter]
-                            ? 'bg-teal-100 text-teal-700 border border-teal-300 shadow-sm'
-                            : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 active:bg-slate-200'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                        <span className="truncate">{label}</span>
-                        {amenitiesFilter[key as keyof typeof amenitiesFilter] && (
-                          <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 ml-auto flex-shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {Object.values(amenitiesFilter).some(v => v) && (
-                    <button
-                      onClick={() => setAmenitiesFilter({
-                        pool: false,
-                        hotTub: false,
-                        petFriendly: false,
-                        parking: false,
-                        kitchen: false,
-                        washerDryer: false,
-                      })}
-                      className="mt-3 text-xs text-slate-500 hover:text-slate-700 underline"
-                    >
-                      Clear all filters
-                    </button>
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Note: Amenity filtering is visual only. API filtering coming soon.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Stats */}
+            {/* Stats - Premium styling */}
             {filteredListings.length > 0 && (
-              <Card className="border-slate-200 bg-white">
-                <CardHeader className="pb-3">
+              <Card className="border-[#0F172A]/10 bg-white shadow-sm">
+                <CardHeader className="pb-3 border-b border-[#0F172A]/5">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                      <Info className="w-3.5 h-3.5 text-cyan-500" />
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                      <TrendingUp className="w-4 h-4 text-blue-500" />
                     </div>
-                    <span className="text-slate-900">{getLocationName()}</span>
+                    <span className="text-[#0F172A] font-semibold">{getLocationName()}</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Properties Shown</span>
-                      <span className="font-medium">{filteredListings.length}</span>
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#0F172A]/50">Properties Shown</span>
+                      <span className="font-semibold text-[#0F172A]">{filteredListings.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Avg Revenue</span>
-                      <span className="font-medium">{formatCurrency(thresholds.average)}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#0F172A]/50">Avg Revenue</span>
+                      <span className="font-semibold text-[#C9A962]">{formatCurrency(thresholds.average)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Top Performer</span>
-                      <span className="font-medium text-green-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#0F172A]/50">Avg Occupancy</span>
+                      <span className="font-semibold text-[#0F172A]">{avgOccupancy}%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#0F172A]/50">Avg Nightly Rate</span>
+                      <span className="font-semibold text-[#0F172A]">{formatCurrency(avgAdr)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-[#0F172A]/50">Top Performer</span>
+                      <span className="font-semibold text-green-600">
                         {filteredListings.length > 0 ? formatCurrency(Math.max(...filteredListings.map(l => l.revenue))) : '—'}
                       </span>
                     </div>
                     {myPropertyLocation && (
-                      <>
-                        <div className="border-t pt-2 mt-2">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Closest Competitor</span>
-                            <span className="font-medium text-blue-600">
-                              {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
-                                ? formatDistance(Math.min(...filteredListings.map(l => l.distanceToMyProperty || Infinity)))
-                                : '—'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Avg Distance</span>
-                            <span className="font-medium text-blue-600">
-                              {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
-                                ? formatDistance(filteredListings.reduce((sum, l) => sum + (l.distanceToMyProperty || 0), 0) / filteredListings.length)
-                                : '—'}
-                            </span>
-                          </div>
+                      <div className="border-t border-[#0F172A]/10 pt-3 mt-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-[#0F172A]/50">Closest Competitor</span>
+                          <span className="font-semibold text-[#C9A962]">
+                            {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
+                              ? formatDistance(Math.min(...filteredListings.map(l => l.distanceToMyProperty || Infinity)))
+                              : '—'}
+                          </span>
                         </div>
-                      </>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-[#0F172A]/50">Avg Distance</span>
+                          <span className="font-semibold text-[#C9A962]">
+                            {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
+                              ? formatDistance(filteredListings.reduce((sum, l) => sum + (l.distanceToMyProperty || 0), 0) / filteredListings.length)
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -959,7 +907,7 @@ export default function MapViewPage() {
           
           {/* Map */}
           <div className="lg:col-span-3">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-[#0F172A]/10 shadow-sm">
               <MapView
                 className="h-[400px] sm:h-[500px] lg:h-[600px]"
                 initialCenter={{ lat: 36.1627, lng: -86.7816 }} // Nashville default
@@ -975,12 +923,17 @@ export default function MapViewPage() {
             </Card>
             
             {listings.length === 0 && !isLoading && (
-              <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <div className="flex items-center justify-center gap-3 text-slate-600">
-                  <Map className="w-5 h-5 text-slate-400" />
-                  <p className="text-sm">
-                    <span className="font-medium">Search for a location</span> — Enter a city, zip code, or market name above to see property performance data
-                  </p>
+              <div className="mt-4 p-6 bg-[#f8f7f4] rounded-xl border border-[#0F172A]/10">
+                <div className="flex items-center justify-center gap-4 text-[#0F172A]/60">
+                  <div className="w-12 h-12 rounded-xl bg-[#C9A962]/10 flex items-center justify-center">
+                    <Map className="w-6 h-6 text-[#C9A962]" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[#0F172A]">Search for a location</p>
+                    <p className="text-sm text-[#0F172A]/50">
+                      Enter a city, zip code, or market name above to see property performance data
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

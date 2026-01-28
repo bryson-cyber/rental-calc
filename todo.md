@@ -6536,3 +6536,28 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Use pagination instead of virtualized scroll
 - [ ] Remove emojis per skill guidelines
 - [ ] Run tooltip audit before completion
+
+
+## Step 5 Redesign - Premium Tesla Theme (Jan 28, 2026)
+
+### UI/Theme Fixes
+- [x] Redesign MapViewPage header to match premium Tesla theme (deep navy #0F172A, warm gold #C9A962)
+- [x] Update "My Property" section with premium gold styling
+- [x] Style search bar and filters with premium theme
+- [x] Update Revenue Thresholds panel with premium styling
+- [x] Add proper loading states and empty states with premium styling
+- [x] Ensure map section has consistent styling with gold accents
+
+### Functionality Fixes
+- [x] Fix search functionality - API call triggers properly via HierarchicalLocationSelector
+- [x] Properties load after search with color-coded markers
+- [ ] Add distance filter dropdown (0.5mi, 1mi, 2mi, 5mi)
+- [x] Add distinct gold/home marker for user's property on map
+- [x] Map markers display for all properties with revenue labels
+
+### Testing
+- [x] Test search with Nashville, TN - properties loaded successfully
+- [x] Verify properties load - 25 properties with revenue data
+- [x] Verify map markers appear - color-coded by revenue tier
+- [x] Distance calculation works when property is set
+- [x] Premium theme consistent with rest of site (deep navy header, gold accents)

@@ -1,13 +1,13 @@
 /**
- * MapFirstLayoutV2 - AirDNA-inspired two-column layout
+ * MapFirstLayoutV2 - Premium Tesla-inspired two-column layout
  * 
  * Features:
  * - Table on LEFT (60%), Map on RIGHT (40%)
- * - Table is the primary focus with horizontal columns
+ * - Premium deep navy (#0F172A) + warm gold (#C9A962) theme
  * - Distance filter from user's property
- * - Distinct property marker on map
+ * - Distinct gold property marker on map
  * - Guiding question at top
- * - Tooltips for all metrics
+ * - Tooltips for all metrics (beginner-friendly)
  */
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -43,6 +43,9 @@ import {
   Heart,
   Info,
   Download,
+  TrendingUp,
+  Calendar,
+  Building,
 } from 'lucide-react';
 import { ExportListings } from '@/components/ExportListings';
 import {
@@ -101,7 +104,7 @@ const getMarkerColor = (revenue: number, thresholds: { high: number; low: number
     return revenue >= customThreshold ? '#22c55e' : '#94a3b8';
   }
   if (revenue >= thresholds.high) return '#22c55e';
-  if (revenue >= thresholds.low) return '#f59e0b';
+  if (revenue >= thresholds.low) return '#C9A962';
   return '#ef4444';
 };
 
@@ -129,14 +132,12 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const myPropertyMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   
   // API - First search for markets to get the market ID
-  // Use marketExplorer.searchMarkets which has better fallback handling
   const marketsQuery = trpc.marketExplorer.searchMarkets.useQuery(
     { query: searchQuery, limit: 5 },
     { enabled: searchQuery.length >= 3 }
   );
   
   // Get the first market ID from search results
-  // marketExplorer.searchMarkets returns an array directly, not wrapped in success/data
   const marketId = marketsQuery.data?.[0]?.id;
   
   // Then fetch listings for that market using marketExplorer.getListings
@@ -172,6 +173,15 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       
       setListings(processedListings);
       setLocationName(searchQuery);
+      
+      // Center map on first listing if available
+      if (processedListings.length > 0 && mapRef.current) {
+        const firstListing = processedListings[0];
+        if (firstListing.latitude && firstListing.longitude) {
+          mapRef.current.panTo({ lat: firstListing.latitude, lng: firstListing.longitude });
+          mapRef.current.setZoom(11);
+        }
+      }
     }
   }, [listingsQuery.data, myPropertyLocation]);
   
@@ -190,6 +200,16 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   // Filter and sort listings
   const filteredListings = useMemo(() => {
     let result = [...listings];
+    
+    // Bedroom filter
+    if (bedroomFilter !== 'all') {
+      const targetBedrooms = parseInt(bedroomFilter);
+      if (bedroomFilter === '5') {
+        result = result.filter(l => l.bedrooms >= 5);
+      } else {
+        result = result.filter(l => l.bedrooms === targetBedrooms);
+      }
+    }
     
     // Distance filter
     if (distanceFilter !== 'all' && myPropertyLocation) {
@@ -210,11 +230,11 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     });
     
     return result;
-  }, [listings, distanceFilter, sortBy, myPropertyLocation]);
+  }, [listings, bedroomFilter, distanceFilter, sortBy, myPropertyLocation]);
   
   // Calculate thresholds
   const thresholds = useMemo(() => {
-    if (filteredListings.length === 0) return { high: 0, low: 0, average: 0 };
+    if (filteredListings.length === 0) return { high: 0, low: 0, average: 0, middleCount: 0, topCount: 0, bottomCount: 0 };
     const revenues = filteredListings.map(l => l.revenue).sort((a, b) => b - a);
     const avg = revenues.reduce((a, b) => a + b, 0) / revenues.length;
     const highIdx = Math.floor(revenues.length * 0.33);
@@ -222,7 +242,10 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     return {
       high: revenues[highIdx] || avg,
       low: revenues[lowIdx] || avg * 0.5,
-      average: avg
+      average: avg,
+      topCount: highIdx,
+      middleCount: lowIdx - highIdx,
+      bottomCount: revenues.length - lowIdx
     };
   }, [filteredListings]);
   
@@ -258,12 +281,13 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         <div style="
           background: ${color};
           color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 11px;
+          padding: 6px 10px;
+          border-radius: 16px;
+          font-size: 12px;
           font-weight: 600;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           white-space: nowrap;
+          font-family: system-ui, -apple-system, sans-serif;
         ">
           ${formatCurrency(listing.revenue)}
         </div>
@@ -284,17 +308,17 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       const myPropertyElement = document.createElement('div');
       myPropertyElement.innerHTML = `
         <div style="
-          width: 44px;
-          height: 44px;
-          background: linear-gradient(135deg, #F59E0B, #D97706);
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #C9A962, #a08840);
           border-radius: 50%;
           border: 4px solid white;
-          box-shadow: 0 4px 16px rgba(245, 158, 11, 0.6);
+          box-shadow: 0 4px 16px rgba(201, 169, 98, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
         ">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
@@ -327,35 +351,53 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   const handleSearch = () => {
     if (searchQuery.length > 2) {
-      listingsQuery.refetch();
+      // Trigger refetch by invalidating the query
+      marketsQuery.refetch();
     }
   };
   
   const hasProperty = !!myPropertyLocation;
   
+  // Calculate average occupancy
+  const avgOccupancy = filteredListings.length > 0 
+    ? Math.round(filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length)
+    : 0;
+  
+  // Calculate average ADR
+  const avgAdr = filteredListings.length > 0 
+    ? filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length
+    : 0;
+  
   return (
     <div className={`${embedded ? 'h-full' : ''} bg-white ${className}`}>
-      {/* Header with Guiding Question */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-6 px-6">
+      {/* Premium Header with Guiding Question */}
+      <div className="bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#1e293b] text-white py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-semibold mb-1">How does my property compare to nearby competition?</h2>
-          <p className="text-slate-300 text-sm">
-            See revenue, occupancy, and ADR for comparable properties in your market
-          </p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
+              <MapPin className="w-6 h-6 text-[#C9A962]" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-serif font-semibold text-white">How does my property compare to nearby competition?</h2>
+              <p className="text-white/60 text-sm font-sans">
+                See revenue, occupancy, and nightly rates for comparable properties in your market
+              </p>
+            </div>
+          </div>
         </div>
       </div>
       
-      {/* Set Your Property Section - shown when no property is set */}
+      {/* Set Your Property Section - Premium styling */}
       {!myPropertyLocation && (
-        <div className="bg-amber-50 border-b border-amber-200 py-4 px-6">
+        <div className="bg-gradient-to-r from-[#C9A962]/10 to-[#C9A962]/5 border-b border-[#C9A962]/20 py-5 px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center">
-                <Home className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-[#C9A962] flex items-center justify-center shadow-lg">
+                <Home className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-amber-900">Set Your Property First</h3>
-                <p className="text-sm text-amber-700">Enter your address to see distance-based comparisons</p>
+                <h3 className="font-semibold text-[#0F172A] text-lg">Set Your Property First</h3>
+                <p className="text-sm text-[#0F172A]/60">Enter your address to see distance-based comparisons and filter by proximity</p>
               </div>
             </div>
             <div className="flex gap-3 max-w-xl">
@@ -394,7 +436,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 }}
                 placeholder="Enter your property address..."
                 className="flex-1"
-                inputClassName="bg-white border-amber-300 focus:border-amber-500"
+                inputClassName="bg-white border-[#C9A962]/30 focus:border-[#C9A962] focus:ring-[#C9A962]/20"
                 variant="light"
               />
             </div>
@@ -402,17 +444,17 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         </div>
       )}
       
-      {/* Your Property Banner - shown when property is set */}
+      {/* Your Property Banner - Premium gold styling */}
       {myPropertyLocation && (
-        <div className="bg-blue-600 text-white py-3 px-6">
+        <div className="bg-gradient-to-r from-[#C9A962] to-[#b8984f] text-white py-3 px-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Home className="w-4 h-4" />
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <Home className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className="text-sm font-medium">Your Property:</span>
-                <span className="ml-2 text-sm">{myPropertyLocation.address}</span>
+                <span className="text-sm font-medium text-white/80">Your Property:</span>
+                <span className="ml-2 text-sm font-semibold">{myPropertyLocation.address}</span>
               </div>
             </div>
             <button
@@ -422,7 +464,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   mapRef.current.setZoom(14);
                 }
               }}
-              className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+              className="text-sm bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors font-medium backdrop-blur-sm"
             >
               Center on Map
             </button>
@@ -430,26 +472,37 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         </div>
       )}
       
-      {/* Search and Filters Bar */}
-      <div className="border-b border-slate-200 py-4 px-6 bg-slate-50">
+      {/* Search and Filters Bar - Premium styling */}
+      <div className="border-b border-[#0F172A]/10 py-4 px-6 bg-[#f8f7f4]">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
             <div className="flex-1 min-w-[200px] max-w-md">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#C9A962]" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Search city, zip, or market..."
-                  className="pl-10 pr-4"
+                  className="pl-12 pr-4 h-12 border-[#0F172A]/10 focus:border-[#C9A962] focus:ring-[#C9A962]/20 rounded-xl text-[#0F172A]"
                 />
               </div>
             </div>
             
-            <Button onClick={handleSearch} disabled={listingsQuery.isFetching}>
-              {listingsQuery.isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+            <Button 
+              onClick={handleSearch} 
+              disabled={listingsQuery.isFetching || marketsQuery.isFetching}
+              className="h-12 px-6 bg-[#0F172A] hover:bg-[#1e293b] text-white rounded-xl font-medium"
+            >
+              {(listingsQuery.isFetching || marketsQuery.isFetching) ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </>
+              )}
             </Button>
             
             {/* Filters */}
@@ -459,22 +512,22 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   <TooltipTrigger asChild>
                     <div>
                       <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <BedDouble className="w-4 h-4 mr-2" />
+                        <SelectTrigger className="w-[130px] h-10 border-[#0F172A]/10 rounded-lg">
+                          <BedDouble className="w-4 h-4 mr-2 text-[#C9A962]" />
                           <SelectValue placeholder="Bedrooms" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All BR</SelectItem>
-                          <SelectItem value="1">1 BR</SelectItem>
-                          <SelectItem value="2">2 BR</SelectItem>
-                          <SelectItem value="3">3 BR</SelectItem>
-                          <SelectItem value="4">4 BR</SelectItem>
-                          <SelectItem value="5">5+ BR</SelectItem>
+                          <SelectItem value="all">All Bedrooms</SelectItem>
+                          <SelectItem value="1">1 Bedroom</SelectItem>
+                          <SelectItem value="2">2 Bedrooms</SelectItem>
+                          <SelectItem value="3">3 Bedrooms</SelectItem>
+                          <SelectItem value="4">4 Bedrooms</SelectItem>
+                          <SelectItem value="5">5+ Bedrooms</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-slate-900 text-white">
+                  <TooltipContent className="bg-[#0F172A] text-white border-0">
                     <p>Filter by number of bedrooms to compare similar properties</p>
                   </TooltipContent>
                 </Tooltip>
@@ -486,22 +539,22 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                     <TooltipTrigger asChild>
                       <div>
                         <Select value={distanceFilter} onValueChange={setDistanceFilter}>
-                          <SelectTrigger className="w-[140px]">
-                            <MapPin className="w-4 h-4 mr-2" />
+                          <SelectTrigger className="w-[150px] h-10 border-[#0F172A]/10 rounded-lg">
+                            <MapPin className="w-4 h-4 mr-2 text-[#C9A962]" />
                             <SelectValue placeholder="Distance" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Any Distance</SelectItem>
-                            <SelectItem value="1">Within 1 mi</SelectItem>
-                            <SelectItem value="3">Within 3 mi</SelectItem>
-                            <SelectItem value="5">Within 5 mi</SelectItem>
-                            <SelectItem value="10">Within 10 mi</SelectItem>
-                            <SelectItem value="25">Within 25 mi</SelectItem>
+                            <SelectItem value="1">Within 1 mile</SelectItem>
+                            <SelectItem value="3">Within 3 miles</SelectItem>
+                            <SelectItem value="5">Within 5 miles</SelectItem>
+                            <SelectItem value="10">Within 10 miles</SelectItem>
+                            <SelectItem value="25">Within 25 miles</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-slate-900 text-white">
+                    <TooltipContent className="bg-[#0F172A] text-white border-0">
                       <p>Filter properties by distance from your property</p>
                     </TooltipContent>
                   </Tooltip>
@@ -513,7 +566,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   <TooltipTrigger asChild>
                     <div>
                       <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="w-[150px]">
+                        <SelectTrigger className="w-[170px] h-10 border-[#0F172A]/10 rounded-lg">
+                          <TrendingUp className="w-4 h-4 mr-2 text-[#C9A962]" />
                           <SelectValue placeholder="Sort by" />
                         </SelectTrigger>
                         <SelectContent>
@@ -526,7 +580,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       </Select>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-slate-900 text-white">
+                  <TooltipContent className="bg-[#0F172A] text-white border-0">
                     <p>Sort properties to find the best performers</p>
                   </TooltipContent>
                 </Tooltip>
@@ -539,34 +593,40 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       {/* Main Content - Two Column Layout */}
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Left Column - Table (60%) */}
-        <div className="w-full lg:w-[60%] overflow-auto border-r border-slate-200">
-          {listingsQuery.isFetching ? (
-            <div className="flex items-center justify-center h-full">
+        <div className="w-full lg:w-[60%] overflow-auto border-r border-[#0F172A]/10">
+          {(listingsQuery.isFetching || marketsQuery.isFetching) ? (
+            <div className="flex items-center justify-center h-full py-20">
               <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-                <p className="text-slate-600">Loading properties...</p>
+                <div className="w-16 h-16 rounded-2xl bg-[#C9A962]/10 flex items-center justify-center mx-auto mb-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
+                </div>
+                <p className="text-[#0F172A]/70 font-medium">Loading properties...</p>
+                <p className="text-[#0F172A]/50 text-sm mt-1">Fetching market data</p>
               </div>
             </div>
           ) : filteredListings.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center px-6">
-                <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">No Properties Found</h3>
-                <p className="text-slate-500 mb-4">Search for a city, zip code, or market to see comparable properties</p>
+            <div className="flex items-center justify-center h-full py-20">
+              <div className="text-center px-6 max-w-md">
+                <div className="w-16 h-16 rounded-2xl bg-[#0F172A]/5 flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="w-8 h-8 text-[#0F172A]/30" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#0F172A] mb-2">No Properties Found</h3>
+                <p className="text-[#0F172A]/60 mb-4">Search for a city, zip code, or market to see comparable properties in that area.</p>
+                <p className="text-sm text-[#C9A962]">Try searching for "Houston, TX" or "Miami, FL"</p>
               </div>
             </div>
           ) : (
-            <div className="p-4">
+            <div className="p-5">
               {/* Table Header */}
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-[#0F172A] text-lg">
                     {filteredListings.length} Properties
-                    {locationName && <span className="font-normal text-slate-500"> in {locationName}</span>}
+                    {locationName && <span className="font-normal text-[#0F172A]/50"> in {locationName}</span>}
                   </h3>
                   {favoriteListingIds.size > 0 && (
-                    <span className="text-sm text-red-600">
-                      <Heart className="w-3 h-3 inline mr-1 fill-current" />
+                    <span className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                      <Heart className="w-3 h-3 fill-current" />
                       {favoriteListingIds.size} saved
                     </span>
                   )}
@@ -578,34 +638,34 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 />
               </div>
               
-              {/* Table */}
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
+              {/* Premium Table */}
+              <div className="rounded-xl border border-[#0F172A]/10 overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="text-left p-3 font-semibold text-slate-700">Property</th>
-                      <th className="text-center p-3 font-semibold text-slate-700 w-16">BR/BA</th>
+                    <tr className="bg-[#0F172A] text-white">
+                      <th className="text-left p-4 font-semibold">Property</th>
+                      <th className="text-center p-4 font-semibold w-16">BR/BA</th>
                       {hasProperty && (
-                        <th className="text-right p-3 font-semibold text-slate-700 w-20">
+                        <th className="text-right p-4 font-semibold w-20">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger className="inline-flex items-center gap-1">
                                 <MapPin className="w-3 h-3" /> Dist
                               </TooltipTrigger>
-                              <TooltipContent className="bg-slate-900 text-white">
+                              <TooltipContent className="bg-[#0F172A] text-white border-0">
                                 <p>Distance from your property in miles</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </th>
                       )}
-                      <th className="text-right p-3 font-semibold text-slate-700 w-24">
+                      <th className="text-right p-4 font-semibold w-28">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button 
                                 onClick={() => setSortBy(sortBy === 'revenue-desc' ? 'revenue-asc' : 'revenue-desc')}
-                                className="inline-flex items-center gap-1 hover:text-emerald-600"
+                                className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
                               >
                                 Revenue
                                 {sortBy.startsWith('revenue') && (
@@ -613,19 +673,19 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                                 )}
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-slate-900 text-white">
+                            <TooltipContent className="bg-[#0F172A] text-white border-0">
                               <p>Estimated annual revenue from short-term rentals</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 w-20">
+                      <th className="text-right p-4 font-semibold w-20">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button 
                                 onClick={() => setSortBy(sortBy === 'occupancy-desc' ? 'occupancy-asc' : 'occupancy-desc')}
-                                className="inline-flex items-center gap-1 hover:text-amber-600"
+                                className="inline-flex items-center gap-1 hover:text-[#C9A962] transition-colors"
                               >
                                 Occ
                                 {sortBy.startsWith('occupancy') && (
@@ -633,31 +693,40 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                                 )}
                               </button>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-slate-900 text-white">
-                              <p>Occupancy rate - percentage of nights booked</p>
+                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                              <p>Occupancy rate - percentage of nights booked per year</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </th>
-                      <th className="text-right p-3 font-semibold text-slate-700 w-20">
+                      <th className="text-right p-4 font-semibold w-20">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>ADR</TooltipTrigger>
-                            <TooltipContent className="bg-slate-900 text-white">
+                            <TooltipContent className="bg-[#0F172A] text-white border-0">
                               <p>Average Daily Rate - typical nightly price</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </th>
-                      <th className="text-center p-3 font-semibold text-slate-700 w-14">
-                        <Star className="w-4 h-4 mx-auto" />
+                      <th className="text-center p-4 font-semibold w-14">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Star className="w-4 h-4 mx-auto text-[#C9A962]" />
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-[#0F172A] text-white border-0">
+                              <p>Guest rating out of 5 stars</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </th>
-                      <th className="text-center p-3 w-10"></th>
-                      <th className="text-center p-3 w-10"></th>
+                      <th className="text-center p-4 w-10"></th>
+                      <th className="text-center p-4 w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedListings.map((listing) => {
+                    {paginatedListings.map((listing, index) => {
                       const markerColor = getMarkerColor(listing.revenue, thresholds, null);
                       const occupancyDisplay = listing.occupancy > 1 ? Math.round(listing.occupancy) : Math.round(listing.occupancy * 100);
                       const isFavorite = favoriteListingIds.has(listing.id);
@@ -665,7 +734,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       return (
                         <tr 
                           key={listing.id} 
-                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                          className={`border-b border-[#0F172A]/5 hover:bg-[#C9A962]/5 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-[#f8f7f4]/50'}`}
                           onClick={() => {
                             if (mapRef.current) {
                               mapRef.current.panTo({ lat: listing.latitude, lng: listing.longitude });
@@ -673,36 +742,36 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                             }
                           }}
                         >
-                          <td className="p-3">
+                          <td className="p-4">
                             <div className="flex items-center gap-3">
                               {listing.thumbnailUrl ? (
                                 <img 
                                   src={listing.thumbnailUrl} 
                                   alt={listing.title}
-                                  className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-200"
+                                  className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-[#0F172A]/10"
                                 />
                               ) : (
-                                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                                  <Home className="w-5 h-5 text-slate-400" />
+                                <div className="w-14 h-14 rounded-lg bg-[#C9A962]/10 flex items-center justify-center flex-shrink-0">
+                                  <Home className="w-6 h-6 text-[#C9A962]" />
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <div className="font-medium text-slate-900 truncate max-w-[180px]" title={listing.title}>
+                                <div className="font-medium text-[#0F172A] truncate max-w-[200px]" title={listing.title}>
                                   {listing.title}
                                 </div>
-                                <div className="text-xs text-slate-500">
-                                  {listing.propertyType || 'home'}
+                                <div className="text-xs text-[#0F172A]/50">
+                                  {listing.propertyType || 'Home'}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="p-3 text-center">
-                            <span className="text-sm font-medium text-slate-700">
+                          <td className="p-4 text-center">
+                            <span className="text-sm font-medium text-[#0F172A]/70 bg-[#0F172A]/5 px-2 py-1 rounded">
                               {listing.bedrooms}/{listing.bathrooms}
                             </span>
                           </td>
                           {hasProperty && (
-                            <td className="p-3 text-right">
+                            <td className="p-4 text-right">
                               <span className="text-sm font-medium text-blue-600">
                                 {listing.distanceToMyProperty !== undefined 
                                   ? formatDistance(listing.distanceToMyProperty)
@@ -710,38 +779,41 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                               </span>
                             </td>
                           )}
-                          <td className="p-3 text-right">
+                          <td className="p-4 text-right">
                             <span className="text-sm font-bold" style={{ color: markerColor }}>
                               {formatCurrency(listing.revenue)}
                             </span>
                           </td>
-                          <td className="p-3 text-right">
-                            <span className={`text-sm font-semibold ${occupancyDisplay >= 70 ? 'text-green-600' : occupancyDisplay >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                          <td className="p-4 text-right">
+                            <span className={`text-sm font-semibold ${occupancyDisplay >= 70 ? 'text-green-600' : occupancyDisplay >= 50 ? 'text-[#C9A962]' : 'text-red-500'}`}>
                               {occupancyDisplay}%
                             </span>
                           </td>
-                          <td className="p-3 text-right text-sm font-medium text-slate-700">
+                          <td className="p-4 text-right text-sm font-medium text-[#0F172A]/70">
                             {formatCurrency(listing.adr)}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-4 text-center">
                             {listing.rating ? (
-                              <span className="text-sm font-medium text-amber-700">{listing.rating.toFixed(1)}</span>
+                              <span className="text-sm font-medium text-[#C9A962] flex items-center justify-center gap-1">
+                                <Star className="w-3 h-3 fill-[#C9A962]" />
+                                {listing.rating.toFixed(1)}
+                              </span>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-[#0F172A]/30">—</span>
                             )}
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-4 text-center">
                             <a 
                               href={listing.airbnbUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#0F172A]/5 hover:bg-[#0F172A]/10 text-[#0F172A]/60 hover:text-[#0F172A] transition-colors"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-4 text-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -758,7 +830,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                               className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
                                 isFavorite
                                   ? 'bg-red-500 text-white'
-                                  : 'bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500'
+                                  : 'bg-[#0F172A]/5 hover:bg-red-100 text-[#0F172A]/40 hover:text-red-500'
                               }`}
                             >
                               <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -774,7 +846,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-[#0F172A]/50">
                     Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredListings.length)} of {filteredListings.length}
                   </div>
                   <div className="flex items-center gap-2">
@@ -783,10 +855,11 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
+                      className="border-[#0F172A]/10"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-[#0F172A]/60 px-3">
                       Page {currentPage} of {totalPages}
                     </span>
                     <Button
@@ -794,6 +867,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
+                      className="border-[#0F172A]/10"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -801,27 +875,50 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 </div>
               )}
               
-              {/* Summary Stats */}
-              <div className="mt-4 flex flex-wrap gap-3">
-                <div className="px-3 py-2 bg-emerald-50 rounded-lg text-sm border border-emerald-100">
-                  <span className="text-slate-500">Avg Revenue:</span>
-                  <span className="font-bold text-emerald-600 ml-1">{formatCurrency(thresholds.average)}</span>
+              {/* Summary Stats - Premium styling */}
+              <div className="mt-6 grid grid-cols-3 gap-4">
+                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <span className="text-xs font-medium text-green-700 uppercase tracking-wide">Avg Revenue</span>
+                  </div>
+                  <p className="text-xl font-bold text-green-700">{formatCurrency(thresholds.average)}</p>
+                  <p className="text-xs text-green-600/70 mt-1">per year</p>
                 </div>
-                <div className="px-3 py-2 bg-amber-50 rounded-lg text-sm border border-amber-100">
-                  <span className="text-slate-500">Avg Occupancy:</span>
-                  <span className="font-bold text-amber-600 ml-1">
-                    {filteredListings.length > 0 
-                      ? Math.round(filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length)
-                      : 0}%
-                  </span>
+                <div className="p-4 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-xl border border-[#C9A962]/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="w-4 h-4 text-[#C9A962]" />
+                    <span className="text-xs font-medium text-[#C9A962] uppercase tracking-wide">Avg Occupancy</span>
+                  </div>
+                  <p className="text-xl font-bold text-[#0F172A]">{avgOccupancy}%</p>
+                  <p className="text-xs text-[#0F172A]/50 mt-1">nights booked</p>
                 </div>
-                <div className="px-3 py-2 bg-blue-50 rounded-lg text-sm border border-blue-100">
-                  <span className="text-slate-500">Avg ADR:</span>
-                  <span className="font-bold text-blue-600 ml-1">
-                    {filteredListings.length > 0 
-                      ? formatCurrency(filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length)
-                      : '$0'}
-                  </span>
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Avg Nightly Rate</span>
+                  </div>
+                  <p className="text-xl font-bold text-blue-700">{formatCurrency(avgAdr)}</p>
+                  <p className="text-xs text-blue-600/70 mt-1">per night</p>
+                </div>
+              </div>
+              
+              {/* Revenue Tier Legend */}
+              <div className="mt-4 p-4 bg-[#0F172A]/5 rounded-xl">
+                <p className="text-xs font-medium text-[#0F172A]/60 uppercase tracking-wide mb-3">Revenue Tiers</p>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-sm text-[#0F172A]/70">Top 33% ({thresholds.topCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#C9A962]" />
+                    <span className="text-sm text-[#0F172A]/70">Middle 33% ({thresholds.middleCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-sm text-[#0F172A]/70">Bottom 33% ({thresholds.bottomCount})</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -833,9 +930,9 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
           {/* Fullscreen toggle */}
           <button
             onClick={() => setIsMapFullscreen(true)}
-            className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white p-2 rounded-lg shadow-lg"
+            className="absolute top-4 right-4 z-10 bg-white/95 hover:bg-white p-2.5 rounded-xl shadow-lg border border-[#0F172A]/10 transition-all"
           >
-            <Maximize2 className="w-5 h-5" />
+            <Maximize2 className="w-5 h-5 text-[#0F172A]" />
           </button>
           
           {/* Home button */}
@@ -847,7 +944,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   mapRef.current.setZoom(14);
                 }
               }}
-              className="absolute top-4 left-4 z-10 bg-amber-500 hover:bg-amber-600 p-2 rounded-lg shadow-lg"
+              className="absolute top-4 left-4 z-10 bg-[#C9A962] hover:bg-[#b8984f] p-2.5 rounded-xl shadow-lg transition-all"
               title="Go to My Property"
             >
               <Home className="w-5 h-5 text-white" />
@@ -880,7 +977,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                     }
                   }, 100);
                 }}
-                className="bg-amber-500 hover:bg-amber-600 p-3 rounded-xl shadow-lg"
+                className="bg-[#C9A962] hover:bg-[#b8984f] p-3 rounded-xl shadow-lg"
                 title="Go to My Property"
               >
                 <Home className="w-6 h-6 text-white" />
@@ -911,12 +1008,13 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                     <div style="
                       background: ${color};
                       color: white;
-                      padding: 4px 8px;
-                      border-radius: 12px;
-                      font-size: 11px;
+                      padding: 6px 10px;
+                      border-radius: 16px;
+                      font-size: 12px;
                       font-weight: 600;
                       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                       white-space: nowrap;
+                      font-family: system-ui, -apple-system, sans-serif;
                     ">
                       ${formatCurrency(listing.revenue)}
                     </div>
@@ -933,17 +1031,17 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   const myPropertyElement = document.createElement('div');
                   myPropertyElement.innerHTML = `
                     <div style="
-                      width: 44px;
-                      height: 44px;
-                      background: linear-gradient(135deg, #F59E0B, #D97706);
+                      width: 48px;
+                      height: 48px;
+                      background: linear-gradient(135deg, #C9A962, #a08840);
                       border-radius: 50%;
                       border: 4px solid white;
-                      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.6);
+                      box-shadow: 0 4px 16px rgba(201, 169, 98, 0.6);
                       display: flex;
                       align-items: center;
                       justify-content: center;
                     ">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
                       </svg>
