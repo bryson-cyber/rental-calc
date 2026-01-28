@@ -6281,3 +6281,20 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Implement Redfin URL detection and parsing (API working)
 - [ ] Implement Realtor.com URL support (requires alternative API - HasData doesn't support)
 
+
+
+## Apartments.com Support & Platform Logos (Jan 28, 2026)
+
+### Apartments.com URL Support
+- [ ] Research HasData API support for Apartments.com
+- [ ] Implement Apartments.com URL detection and API integration
+- [ ] Test Apartments.com URL parsing
+
+### Platform Logos in Address Input
+- [x] Download Zillow and Redfin logos
+- [x] Add logo images to public folder
+- [x] Update SmartAddressInput to display logos instead of text
+- [x] Test visual appearance on desktop and mobile
+
+**Note:** Apartments.com support skipped - HasData only has no-code scraper, not API
+

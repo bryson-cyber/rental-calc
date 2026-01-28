@@ -207,9 +207,26 @@ export function SmartAddressInput({
   return (
     <div className={`space-y-2 ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-[#0F172A]/70 uppercase tracking-wider">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
+        <div className="flex items-center gap-3 mb-1">
+          <label className="block text-sm font-medium text-[#0F172A]/70 uppercase tracking-wider">
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="flex items-center gap-2 px-2 py-0.5 bg-gray-50 rounded-full border border-gray-200">
+            <img 
+              src="/zillow-logo.png" 
+              alt="Zillow" 
+              className="h-5 w-5 object-contain" 
+              title="Paste a Zillow URL"
+            />
+            <span className="text-gray-300">|</span>
+            <img 
+              src="/redfin-logo.png" 
+              alt="Redfin" 
+              className="h-5 w-5 object-contain" 
+              title="Paste a Redfin URL"
+            />
+          </div>
+        </div>
       )}
 
       <TooltipProvider>
@@ -242,13 +259,11 @@ export function SmartAddressInput({
               />
               {(inputType === 'zillow' || inputType === 'redfin') && fetchStatus !== 'loading' && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    inputType === 'zillow' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {inputType === 'zillow' ? 'Zillow URL' : 'Redfin URL'}
-                  </span>
+                  <img 
+                    src={inputType === 'zillow' ? '/zillow-logo.png' : '/redfin-logo.png'}
+                    alt={inputType === 'zillow' ? 'Zillow' : 'Redfin'}
+                    className="h-5 w-5 object-contain"
+                  />
                 </div>
               )}
             </div>
