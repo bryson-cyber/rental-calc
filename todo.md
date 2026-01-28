@@ -6440,3 +6440,55 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Require user login before running Step 3 reports
 - [ ] Update user registration to require name, email, phone (all required)
 - [ ] Store lead data from user profile with each report
+
+
+## Step 5 (See the Map) UI Optimization (Jan 28, 2026)
+
+### Quality Benchmark Checklist (from bnb-lead-magnet-dev skill):
+- [ ] Add guiding questions for each section
+- [ ] Translate technical jargon to plain English
+- [ ] Add contextual comparisons (not just raw numbers)
+- [ ] Add clear verdicts/recommendations
+- [ ] Show confidence indicators
+- [ ] Create clear visual hierarchy (big numbers, grades, colors)
+- [ ] Ensure a complete beginner would understand
+- [ ] Add info bubbles for complex metrics
+- [ ] Complete tooltip audit for all metrics
+- [ ] Remove any emojis
+
+### Step 5 Specific Improvements:
+- [ ] Answer the question: "How does my property compare to nearby competition?"
+- [ ] Add letter grades for competitive position
+- [ ] Show plain English verdicts about location quality
+- [ ] Add tooltips for all map metrics
+- [ ] Improve visual hierarchy and layout
+
+
+## Step 5 (See the Map) Full Redesign (Jan 28, 2026)
+
+### Property-Centric Workflow:
+- [ ] Redesign property input to accept Zillow/Redfin URLs prominently
+- [ ] Auto-search competitors when property is entered
+- [ ] Show distance from your property to each competitor
+- [ ] Add Location Score with letter grade (A+ to F)
+
+### Google API Location Quality Data:
+- [ ] Integrate Google Places API for nearby places
+- [ ] Calculate Walk Score (restaurants, cafes, shops within walking distance)
+- [ ] Calculate Transit Score (public transit stops nearby)
+- [ ] Show nearby attractions (tourist spots, entertainment, landmarks)
+- [ ] Show neighborhood amenities (parks, gyms, grocery stores)
+- [ ] Display location quality as part of Location Score
+
+### Summary Insights Panel:
+- [ ] Number of competitors within 1 mile
+- [ ] Closest competitor distance and revenue
+- [ ] Your competitive position
+- [ ] "Why guests would stay here" summary
+
+### Beginner-Friendly Design:
+- [ ] Add guiding questions for each section
+- [ ] Add tooltips for all metrics
+- [ ] Add "What This Means" plain English explanations
+- [ ] Show confidence indicators ("Based on X nearby listings")
+- [ ] Add color-coded markers with legend explanation

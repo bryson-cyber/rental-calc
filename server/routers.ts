@@ -51,6 +51,7 @@ import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
 import { geocodeZipCodeToMarket } from "./airdna-hierarchy";
+import { getLocationQuality, type LocationQualityResult } from "./location-quality";
 import { adminRouter } from "./admin-router";
 import { logActivity, ActionCategory, ActionType } from "./activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
@@ -137,6 +138,30 @@ export const appRouter = router({
 
   // Rental estimate router
   rental: router({
+    // Get location quality metrics (walk score, transit, attractions)
+    getLocationQuality: publicProcedure
+      .input(z.object({
+        lat: z.number(),
+        lng: z.number(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[Rental] Getting location quality for ${input.lat}, ${input.lng}`);
+          const quality = await getLocationQuality(input.lat, input.lng);
+          return {
+            success: true,
+            data: quality,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting location quality:", error);
+          return {
+            success: false,
+            error: "Failed to get location quality",
+            data: null,
+          };
+        }
+      }),
+
     // Search for markets (for autocomplete)
     searchMarkets: publicProcedure
       .input(marketSearchInputSchema)

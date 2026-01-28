@@ -63,7 +63,7 @@ interface SmartAddressInputProps {
   value: string;
   onChange: (value: string) => void;
   onPropertyDetected?: (property: PropertyDetails) => void;
-  onAddressSelect?: (address: string, placeId: string, details?: { zipCode?: string; city?: string; state?: string }) => void;
+  onAddressSelect?: (address: string, placeId: string, details?: { zipCode?: string; city?: string; state?: string; lat?: number; lng?: number }) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -235,8 +235,10 @@ export function SmartAddressInput({
 
       const place = await response.json();
       
-      const details: { address: string; zipCode?: string; city?: string; state?: string } = {
+      const details: { address: string; zipCode?: string; city?: string; state?: string; lat?: number; lng?: number } = {
         address: place.formattedAddress || '',
+        lat: place.location?.latitude,
+        lng: place.location?.longitude,
       };
 
       if (place.addressComponents) {

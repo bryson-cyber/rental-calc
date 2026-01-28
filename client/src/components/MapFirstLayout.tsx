@@ -62,6 +62,13 @@ import {
 import { LoadingProgress } from '@/components/LoadingProgress';
 import { ExportListings } from '@/components/ExportListings';
 import { VirtualizedTable } from '@/components/VirtualizedTable';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Types
 interface Listing {
@@ -430,6 +437,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
   useEffect(() => {
     // If we have a property from context with coordinates, use them directly
     if (hasProperty && effectiveProperty?.latitude && effectiveProperty?.longitude && !myPropertyLocation) {
+      console.log('[MapFirstLayout] Setting myPropertyLocation from context coordinates:', effectiveProperty.address);
       setMyPropertyLocation({
         address: effectiveProperty.address,
         lat: effectiveProperty.latitude,
@@ -440,8 +448,10 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
     }
     
     // If we have a property from context but no coordinates, geocode the address
-    if (hasProperty && effectiveProperty?.address && !myPropertyLocation && !hasAutoPopulated && googleMapsReady) {
-      setHasAutoPopulated(true);
+    // Note: Removed hasAutoPopulated check to allow re-geocoding when property changes
+    if (hasProperty && effectiveProperty?.address && !myPropertyLocation && googleMapsReady) {
+      console.log('[MapFirstLayout] Geocoding property address:', effectiveProperty.address);
+      setIsGeocodingMyProperty(true);
       
       const geocoder = geocoderRef.current || new google.maps.Geocoder();
       if (!geocoderRef.current) {
@@ -457,18 +467,29 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
               lat: location.lat(),
               lng: location.lng()
             };
+            console.log('[MapFirstLayout] Geocoded successfully:', newLocation);
             setMyPropertyLocation(newLocation);
             setMyPropertyAddress(effectiveProperty.address);
           }
         })
         .catch((error) => {
           console.error('[MapFirstLayout] Geocoding failed:', error);
+          setMyPropertyError('Could not locate this address on the map');
+        })
+        .finally(() => {
+          setIsGeocodingMyProperty(false);
         });
     }
-  }, [hasProperty, effectiveProperty, myPropertyLocation, hasAutoPopulated, googleMapsReady]);
+  }, [hasProperty, effectiveProperty?.address, effectiveProperty?.latitude, effectiveProperty?.longitude, myPropertyLocation, googleMapsReady]);
   
   // tRPC queries - using manual fetch pattern for dynamic queries
   const trpcUtils = trpc.useUtils();
+  
+  // Location quality query - fetches walk score, transit, attractions when property is set
+  const locationQualityQuery = trpc.rental.getLocationQuality.useQuery(
+    { lat: myPropertyLocation?.lat || 0, lng: myPropertyLocation?.lng || 0 },
+    { enabled: !!myPropertyLocation }
+  );
   
   // Helper function to search markets
   const searchMarketsAsync = async (searchTerm: string) => {
@@ -1551,6 +1572,147 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Location Quality Score - Shows when user has set their property */}
+        {myPropertyLocation && (
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-t border-b border-purple-100 py-4">
+            <div className="container">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <MapPin className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                      Your Property Location
+                      {locationQualityQuery.isLoading && (
+                        <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                      )}
+                    </h3>
+                    <p className="text-sm text-slate-600 truncate max-w-md">{myPropertyLocation.address}</p>
+                  </div>
+                </div>
+                
+                {/* Location Quality Scores */}
+                {locationQualityQuery.data?.success && locationQualityQuery.data.data && (
+                  <div className="flex items-center gap-6">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className="text-center">
+                            <div className={`px-4 py-2 rounded-lg text-xl font-bold ${
+                              locationQualityQuery.data.data.overallScore >= 80 ? 'bg-green-100 text-green-700' :
+                              locationQualityQuery.data.data.overallScore >= 60 ? 'bg-blue-100 text-blue-700' :
+                              locationQualityQuery.data.data.overallScore >= 40 ? 'bg-amber-100 text-amber-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {locationQualityQuery.data.data.overallGrade}
+                            </div>
+                            <div className="text-xs text-slate-500 mt-1">Location Score</div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">{locationQualityQuery.data.data.overallLabel}</p>
+                          <p className="text-xs mt-1">Based on walkability, transit access, nearby attractions, and amenities.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <div className="hidden md:flex items-center gap-4">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="text-center px-3 py-1 bg-white rounded-lg border border-slate-200">
+                              <div className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.walkScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.walkScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.walkScore.grade}</div>
+                              <div className="text-xs text-slate-500">Walk</div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold">Walk Score: {locationQualityQuery.data.data.walkScore.score}/100</p>
+                            <p className="text-xs mt-1">{locationQualityQuery.data.data.walkScore.nearbyPlaces} restaurants, cafes, and shops within walking distance.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="text-center px-3 py-1 bg-white rounded-lg border border-slate-200">
+                              <div className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.transitScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.transitScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.transitScore.grade}</div>
+                              <div className="text-xs text-slate-500">Transit</div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold">Transit Score: {locationQualityQuery.data.data.transitScore.score}/100</p>
+                            <p className="text-xs mt-1">{locationQualityQuery.data.data.transitScore.nearbyStops} transit stops within 1 mile.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="text-center px-3 py-1 bg-white rounded-lg border border-slate-200">
+                              <div className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.attractionScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.attractionScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.attractionScore.grade}</div>
+                              <div className="text-xs text-slate-500">Attractions</div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-semibold">Attraction Score: {locationQualityQuery.data.data.attractionScore.score}/100</p>
+                            <p className="text-xs mt-1">{locationQualityQuery.data.data.attractionScore.nearbyAttractions} attractions within 2 miles.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMyPropertyLocation(null);
+                        setMyPropertyAddress('');
+                      }}
+                      className="text-red-500 border-red-200 hover:bg-red-50"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Loading state */}
+                {locationQualityQuery.isLoading && (
+                  <div className="flex items-center gap-2 text-purple-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Analyzing location...</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Guest Appeal - Why guests would stay here */}
+              {locationQualityQuery.data?.success && locationQualityQuery.data.data?.guestAppeal && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-purple-100">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold text-purple-700">Why guests would stay here:</span>{' '}
+                    {locationQualityQuery.data.data.guestAppeal}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

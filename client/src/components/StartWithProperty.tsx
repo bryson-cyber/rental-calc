@@ -422,6 +422,19 @@ export function StartWithProperty({
           value={address}
           onChange={setAddress}
           onPropertyDetected={handleZillowPropertyDetected}
+          onAddressSelect={(addr, placeId, details) => {
+            console.log('[StartWithProperty] Address selected:', { addr, placeId, details });
+            setAddress(addr);
+            if (details) {
+              setSelectedPlaceDetails({
+                city: details.city,
+                state: details.state,
+                zipCode: details.zipCode,
+                lat: details.lat,
+                lng: details.lng,
+              } as PlaceDetails);
+            }
+          }}
           placeholder="Enter address or paste Zillow/Redfin URL..."
           label="Property Address"
           required={true}

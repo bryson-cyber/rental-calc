@@ -4,12 +4,14 @@ import { HierarchicalLocationSelector, LocationSelection } from '@/components/Hi
 import { AddressAutocomplete, PlaceDetails } from '@/components/AddressAutocomplete';
 import { Button } from '@/components/ui/button';
 import { useProperty } from '@/contexts/PropertyContext';
+import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, ArrowUpDown, Building2, ExternalLink, Star, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Table2, Maximize2, Minimize2, X, Download } from 'lucide-react';
 import { ExportListings } from '@/components/ExportListings';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PropertyListing {
@@ -295,6 +297,12 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   
   // Fullscreen map state
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  
+  // Location quality data
+  const locationQualityQuery = trpc.rental.getLocationQuality.useQuery(
+    { lat: myPropertyLocation?.lat || 0, lng: myPropertyLocation?.lng || 0 },
+    { enabled: !!myPropertyLocation }
+  );
   
   // Reset auto-populated state when property changes
   useEffect(() => {
@@ -1149,9 +1157,23 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 overflow-visible">
-                  <p className="text-xs text-slate-500">
-                    Enter your property address to see how far competitors are from your location.
-                  </p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-xs text-slate-500 cursor-help underline decoration-dotted">
+                          Enter your property address or paste a Zillow/Redfin URL to see competitors nearby.
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-semibold">How to use this feature:</p>
+                        <ul className="text-xs mt-1 space-y-1">
+                          <li>• Type your property address and select from suggestions</li>
+                          <li>• Or paste a Zillow/Redfin listing URL</li>
+                          <li>• We'll show all competitors within the area with distance from your property</li>
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <AddressAutocomplete
                     value={myPropertyAddress}
                     onChange={setMyPropertyAddress}
@@ -1222,6 +1244,17 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                     <DollarSign className="w-4 h-4 text-emerald-500" />
                   </div>
                   Revenue Thresholds
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-semibold">What are revenue thresholds?</p>
+                        <p className="text-xs mt-1">We color-code properties on the map based on their annual revenue. Green = top performers, Amber = middle tier, Red = lower performers. This helps you quickly identify high-earning areas.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1494,6 +1527,158 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                         </div>
                       </>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Location Quality Score */}
+            {myPropertyLocation && locationQualityQuery.data?.success && locationQualityQuery.data.data && (
+              <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center justify-between text-slate-900">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                        <Star className="w-4 h-4 text-purple-500" />
+                      </div>
+                      Location Score
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <div className={`px-3 py-1 rounded-full text-lg font-bold ${
+                            locationQualityQuery.data.data.overallScore >= 80 ? 'bg-green-100 text-green-700' :
+                            locationQualityQuery.data.data.overallScore >= 60 ? 'bg-blue-100 text-blue-700' :
+                            locationQualityQuery.data.data.overallScore >= 40 ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {locationQualityQuery.data.data.overallGrade}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">{locationQualityQuery.data.data.overallLabel}</p>
+                          <p className="text-xs mt-1">Based on walkability, transit access, nearby attractions, and amenities.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Guest Appeal Summary */}
+                  <div className="p-3 bg-white rounded-lg border border-purple-100">
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      <span className="font-semibold text-purple-700">Why guests would stay here:</span>{' '}
+                      {locationQualityQuery.data.data.guestAppeal}
+                    </p>
+                  </div>
+                  
+                  {/* Score Breakdown */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="p-2 bg-white rounded-lg border border-slate-100 cursor-help">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-500">Walk Score</span>
+                              <span className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.walkScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.walkScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.walkScore.grade}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">{locationQualityQuery.data.data.walkScore.label}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">Walk Score: {locationQualityQuery.data.data.walkScore.score}/100</p>
+                          <p className="text-xs mt-1">{locationQualityQuery.data.data.walkScore.nearbyPlaces} restaurants, cafes, and shops within walking distance.</p>
+                          {locationQualityQuery.data.data.walkScore.highlights.length > 0 && (
+                            <p className="text-xs mt-1">Highlights: {locationQualityQuery.data.data.walkScore.highlights.join(', ')}</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="p-2 bg-white rounded-lg border border-slate-100 cursor-help">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-500">Transit</span>
+                              <span className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.transitScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.transitScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.transitScore.grade}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">{locationQualityQuery.data.data.transitScore.label}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">Transit Score: {locationQualityQuery.data.data.transitScore.score}/100</p>
+                          <p className="text-xs mt-1">{locationQualityQuery.data.data.transitScore.nearbyStops} transit stops within 1 mile.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="p-2 bg-white rounded-lg border border-slate-100 cursor-help">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-500">Attractions</span>
+                              <span className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.attractionScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.attractionScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.attractionScore.grade}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">{locationQualityQuery.data.data.attractionScore.label}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">Attraction Score: {locationQualityQuery.data.data.attractionScore.score}/100</p>
+                          <p className="text-xs mt-1">{locationQualityQuery.data.data.attractionScore.nearbyAttractions} attractions within 2 miles.</p>
+                          {locationQualityQuery.data.data.attractionScore.highlights.length > 0 && (
+                            <p className="text-xs mt-1">Highlights: {locationQualityQuery.data.data.attractionScore.highlights.join(', ')}</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="p-2 bg-white rounded-lg border border-slate-100 cursor-help">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-500">Amenities</span>
+                              <span className={`text-sm font-bold ${
+                                locationQualityQuery.data.data.amenityScore.score >= 70 ? 'text-green-600' :
+                                locationQualityQuery.data.data.amenityScore.score >= 50 ? 'text-blue-600' :
+                                'text-amber-600'
+                              }`}>{locationQualityQuery.data.data.amenityScore.grade}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-0.5">{locationQualityQuery.data.data.amenityScore.label}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold">Amenity Score: {locationQualityQuery.data.data.amenityScore.score}/100</p>
+                          <p className="text-xs mt-1">{locationQualityQuery.data.data.amenityScore.nearbyAmenities} parks, gyms, and essential services within 1 mile.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Location Quality Loading */}
+            {myPropertyLocation && locationQualityQuery.isLoading && (
+              <Card className="border-purple-200">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-center gap-2 text-purple-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Analyzing location quality...</span>
                   </div>
                 </CardContent>
               </Card>
