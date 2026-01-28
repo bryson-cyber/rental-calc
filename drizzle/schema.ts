@@ -722,3 +722,42 @@ export const ownerNotificationLog = mysqlTable("owner_notification_log", {
 
 export type OwnerNotificationLog = typeof ownerNotificationLog.$inferSelect;
 export type InsertOwnerNotificationLog = typeof ownerNotificationLog.$inferInsert;
+
+
+/**
+ * Favorite Listings table for storing user's favorited listings from the map view
+ * This is a lightweight table that just stores the listing ID for quick lookup
+ */
+export const favoriteListings = mysqlTable("favorite_listings", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous saves via cookie)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Listing identifier from AirDNA (e.g., "abnb_24017637")
+  listingId: varchar("listingId", { length: 100 }).notNull(),
+  
+  // Basic listing info for display without re-fetching
+  title: varchar("title", { length: 500 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  revenue: int("revenue"),
+  occupancy: decimal("occupancy", { precision: 5, scale: 2 }),
+  adr: int("adr"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  airbnbUrl: text("airbnbUrl"),
+  thumbnailUrl: text("thumbnailUrl"),
+  
+  // Context - which property search this favorite is associated with
+  searchAddress: text("searchAddress"),
+  searchSubmarketId: varchar("searchSubmarketId", { length: 64 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FavoriteListing = typeof favoriteListings.$inferSelect;
+export type InsertFavoriteListing = typeof favoriteListings.$inferInsert;

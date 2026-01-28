@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `favorite_listings` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `userId` int,\n  `sessionId` varchar(64),\n  `listingId` varchar(100) NOT NULL,\n  `title` varchar(500),\n  `bedrooms` int,\n  `bathrooms` decimal(3, 1),\n  `revenue` int,\n  `occupancy` decimal(5, 2),\n  `adr` int,\n  `latitude` decimal(10, 7),\n  `longitude` decimal(10, 7),\n  `airbnbUrl` text,\n  `thumbnailUrl` text,\n  `searchAddress` text,\n  `searchSubmarketId` varchar(64),\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `favorite_listings_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE IF NOT EXISTS `favorite_listings` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `userId` int,\n  `sessionId` varchar(64),\n  `listingId` varchar(100) NOT NULL,\n  `title` varchar(500),\n  `bedrooms` int,\n  `bathrooms` decimal(3, 1),\n  `revenue` int,\n  `occupancy` decimal(5, 2),\n  `adr` int,\n  `latitude` decimal(10, 7),\n  `longitude` decimal(10, 7),\n  `airbnbUrl` text,\n  `thumbnailUrl` text,\n  `searchAddress` text,\n  `searchSubmarketId` varchar(64),\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `favorite_listings_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 223
+}

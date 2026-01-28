@@ -1,0 +1,30 @@
+{
+  "query": "SELECT * FROM favorite_listings LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM favorite_listings LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "sessionId": "NULL",
+      "listingId": "abnb_53541424",
+      "title": "6BR/4.5BA 4-Floor Home | Sleeping 17 / ABODEbucks",
+      "bedrooms": "6",
+      "bathrooms": "4.5",
+      "revenue": "131225",
+      "occupancy": "82.01",
+      "adr": "472",
+      "latitude": "38.6462000",
+      "longitude": "-90.2512000",
+      "airbnbUrl": "https://www.airbnb.com/rooms/53541424",
+      "thumbnailUrl": "https://a0.muscache.com/im/pictures/prohost-api/Hosting-53541424/original/5ffa2840-52e2-4296-9e09-b231613ab7f4.jpeg",
+      "searchAddress": "4600 McPherson Ave, St. Louis, MO",
+      "searchSubmarketId": "NULL",
+      "createdAt": "2026-01-28 21:28:32",
+      "updatedAt": "2026-01-28 21:28:32"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tsessionId\tlistingId\ttitle\tbedrooms\tbathrooms\trevenue\toccupancy\tadr\tlatitude\tlongitude\tairbnbUrl\tthumbnailUrl\tsearchAddress\tsearchSubmarketId\tcreatedAt\tupdatedAt\n1\t1\tNULL\tabnb_53541424\t6BR/4.5BA 4-Floor Home | Sleeping 17 / ABODEbucks\t6\t4.5\t131225\t82.01\t472\t38.6462000\t-90.2512000\thttps://www.airbnb.com/rooms/53541424\thttps://a0.muscache.com/im/pictures/prohost-api/Hosting-53541424/original/5ffa2840-52e2-4296-9e09-b231613ab7f4.jpeg\t4600 McPherson Ave, St. Louis, MO\tNULL\t2026-01-28 21:28:32\t2026-01-28 21:28:32\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

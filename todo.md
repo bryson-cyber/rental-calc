@@ -6718,3 +6718,5 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add tier filter buttons (Top/Mid/Bottom) to toggle visibility
 - [x] Add favorites filter button (shows when favorites exist)
 - [x] Fix gap between map and stats panel (added h-full to right column)
+- [ ] Add map marker clustering for improved performance with 100+ markers
+- [x] Persist favorites to database for user accounts (fixed ADR/revenue integer validation)

@@ -1,0 +1,21 @@
+CREATE TABLE `favorite_listings` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int,
+	`sessionId` varchar(64),
+	`listingId` varchar(100) NOT NULL,
+	`title` varchar(500),
+	`bedrooms` int,
+	`bathrooms` decimal(3,1),
+	`revenue` int,
+	`occupancy` decimal(5,2),
+	`adr` int,
+	`latitude` decimal(10,7),
+	`longitude` decimal(10,7),
+	`airbnbUrl` text,
+	`thumbnailUrl` text,
+	`searchAddress` text,
+	`searchSubmarketId` varchar(64),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `favorite_listings_id` PRIMARY KEY(`id`)
+);

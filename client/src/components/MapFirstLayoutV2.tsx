@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProperty } from '@/contexts/PropertyContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { MapView } from '@/components/Map';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ import {
   Building,
 } from 'lucide-react';
 import { ExportListings } from '@/components/ExportListings';
+import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import {
   Tooltip,
   TooltipContent,
@@ -111,6 +113,18 @@ const getMarkerColor = (revenue: number, thresholds: { high: number; low: number
 export function MapFirstLayoutV2({ className = '', embedded = false, initialLocation }: MapFirstLayoutV2Props) {
   // Context
   const { myProperty, setMyProperty } = useProperty();
+  const { user, isAuthenticated } = useAuth();
+  
+  // Generate or get sessionId for anonymous users
+  const getSessionId = useCallback(() => {
+    if (isAuthenticated) return undefined; // Don't use sessionId for logged-in users
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+      sessionId = `anon-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem('sessionId', sessionId);
+    }
+    return sessionId;
+  }, [isAuthenticated]);
   
   // State
   const [searchQuery, setSearchQuery] = useState(initialLocation || '');
@@ -153,12 +167,28 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const myPropertyMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const clustererRef = useRef<MarkerClusterer | null>(null);
   
   // API - First search for markets to get the market ID
   const [searchTrigger, setSearchTrigger] = useState(0);
   
   // Mutation to get submarket ID from Rentalizer API
   const getEstimateMutation = trpc.rental.getEstimate.useMutation();
+  
+  // Favorites API - persist to database
+  // For logged-in users, the backend uses ctx.user.id automatically
+  // For anonymous users, we use a generated sessionId
+  const sessionIdForQuery = useMemo(() => getSessionId(), [getSessionId]);
+  const favoritesQuery = trpc.favoriteListings.list.useQuery(
+    { sessionId: sessionIdForQuery },
+    { staleTime: 1000 * 60 * 5 } // Cache for 5 minutes
+  );
+  const toggleFavoriteMutation = trpc.favoriteListings.toggle.useMutation({
+    onSuccess: () => {
+      // Invalidate the favorites query to refetch
+      favoritesQuery.refetch();
+    }
+  });
   
   const marketsQuery = trpc.marketExplorer.searchMarkets.useQuery(
     { query: searchQuery, limit: 5 },
@@ -568,15 +598,29 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     setCurrentPage(1);
   }, [bedroomFilter, distanceFilter, sortBy, tierFilter, showFavoritesOnly]);
   
-  // Update map markers
+  // Load favorites from database on mount
+  useEffect(() => {
+    if (favoritesQuery.data?.success && favoritesQuery.data.data) {
+      const favoriteIds = new Set(favoritesQuery.data.data.map((f: { listingId: string }) => f.listingId));
+      setFavoriteListingIds(favoriteIds);
+    }
+  }, [favoritesQuery.data]);
+  
+  // Update map markers with clustering
   useEffect(() => {
     if (!mapRef.current || !window.google?.maps?.marker?.AdvancedMarkerElement) return;
     
-    // Clear existing markers
+    // Clear existing clusterer and markers
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+      clustererRef.current = null;
+    }
     markersRef.current.forEach(m => m.map = null);
     markersRef.current = [];
     
-    // Add listing markers
+    // Create listing markers (without adding to map - clusterer will handle that)
+    const markers: google.maps.marker.AdvancedMarkerElement[] = [];
+    
     filteredListings.forEach(listing => {
       // Skip listings with invalid coordinates
       if (!listing.latitude || !listing.longitude || isNaN(listing.latitude) || isNaN(listing.longitude)) {
@@ -601,7 +645,6 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       `;
       
       const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: mapRef.current!,
         position: { lat: listing.latitude, lng: listing.longitude },
         title: listing.title,
         content: markerElement.firstElementChild as HTMLElement,
@@ -615,10 +658,46 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         }
       });
       
+      markers.push(marker);
       markersRef.current.push(marker);
     });
     
-    // Add my property marker
+    // Create clusterer with custom renderer for styled clusters
+    clustererRef.current = new MarkerClusterer({
+      map: mapRef.current,
+      markers: markers,
+      renderer: {
+        render: ({ count, position }) => {
+          const clusterElement = document.createElement('div');
+          clusterElement.innerHTML = `
+            <div style="
+              background: linear-gradient(135deg, #0F172A, #1e293b);
+              color: white;
+              width: ${Math.min(50 + count / 5, 70)}px;
+              height: ${Math.min(50 + count / 5, 70)}px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 14px;
+              font-weight: 700;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+              border: 3px solid #C9A962;
+              font-family: system-ui, -apple-system, sans-serif;
+            ">
+              ${count}
+            </div>
+          `;
+          return new google.maps.marker.AdvancedMarkerElement({
+            position,
+            content: clusterElement.firstElementChild as HTMLElement,
+            zIndex: 100,
+          });
+        },
+      },
+    });
+    
+    // Add my property marker (not clustered - always visible)
     if (myPropertyLocation && !myPropertyMarkerRef.current) {
       const myPropertyElement = document.createElement('div');
       myPropertyElement.innerHTML = `
@@ -1358,6 +1437,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                // Optimistic update
                                 setFavoriteListingIds(prev => {
                                   const newSet = new Set(prev);
                                   if (newSet.has(listing.id)) {
@@ -1366,6 +1446,23 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                                     newSet.add(listing.id);
                                   }
                                   return newSet;
+                                });
+                                // Persist to database
+                                toggleFavoriteMutation.mutate({
+                                  sessionId: sessionIdForQuery,
+                                  listingId: listing.id,
+                                  title: listing.title,
+                                  bedrooms: listing.bedrooms,
+                                  bathrooms: listing.bathrooms,
+                                  revenue: Math.round(listing.revenue),
+                                  occupancy: listing.occupancy,
+                                  adr: Math.round(listing.adr),
+                                  latitude: listing.latitude,
+                                  longitude: listing.longitude,
+                                  airbnbUrl: listing.airbnbUrl,
+                                  thumbnailUrl: listing.thumbnailUrl,
+                                  searchAddress: myPropertyLocation?.address,
+                                  searchSubmarketId: activeSubmarketId || undefined,
                                 });
                               }}
                               className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
@@ -1686,6 +1783,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
               {/* Favorite button */}
               <button
                 onClick={() => {
+                  // Optimistic update
                   setFavoriteListingIds(prev => {
                     const newSet = new Set(prev);
                     if (newSet.has(selectedListing.id)) {
@@ -1694,6 +1792,23 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       newSet.add(selectedListing.id);
                     }
                     return newSet;
+                  });
+                  // Persist to database
+                  toggleFavoriteMutation.mutate({
+                    sessionId: sessionIdForQuery,
+                    listingId: selectedListing.id,
+                    title: selectedListing.title,
+                    bedrooms: selectedListing.bedrooms,
+                    bathrooms: selectedListing.bathrooms,
+                    revenue: Math.round(selectedListing.revenue),
+                    occupancy: selectedListing.occupancy,
+                    adr: Math.round(selectedListing.adr),
+                    latitude: selectedListing.latitude,
+                    longitude: selectedListing.longitude,
+                    airbnbUrl: selectedListing.airbnbUrl,
+                    thumbnailUrl: selectedListing.thumbnailUrl,
+                    searchAddress: myPropertyLocation?.address,
+                    searchSubmarketId: activeSubmarketId || undefined,
                   });
                 }}
                 className={`absolute top-4 left-4 p-2 rounded-full transition-colors ${
