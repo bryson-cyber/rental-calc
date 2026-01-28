@@ -1381,7 +1381,7 @@ Average Rating: ${metrics.avgRating.toFixed(2)} stars
 SECTION 2: REVENUE BY PROPERTY SIZE
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-🏠 REVENUE BY BEDROOM COUNT
+REVENUE BY BEDROOM COUNT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${revenueByBedroom.map(r => 
   `${r.bedrooms} Bedroom: $${r.avgRevenue.toLocaleString()}/yr avg | ${r.avgOccupancy}% occupancy | $${r.avgAdr} ADR | ${r.listingCount.toLocaleString()} listings`
@@ -1534,100 +1534,106 @@ Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '
 ` : ''}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET REPORT
+YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET DATA REPORT
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-Write an extremely comprehensive market analysis report with the following sections. Be thorough - this should be a complete market report that could stand alone as a professional document.
+Write an extremely comprehensive market analysis report presenting the data clearly. This report should help the reader understand the market data and make their own informed decision. DO NOT provide prescriptive advice, action plans, or tell the reader what to do.
 
 # EXECUTIVE SUMMARY
-Provide a clear, 3-5 sentence summary of this market opportunity. Include:
-- Overall market rating (Excellent / Good / Fair / Poor)
-- Key revenue potential
-- Main opportunity and main risk
-- Who this market is best suited for
+Provide a clear, 3-5 sentence summary of the key data findings. Include:
+- Overall market grade based on the scores (A+/A/B+/B/C+/C/D/F)
+- Key revenue figures from the data
+- Notable data points that stand out (both positive and concerning)
+- DO NOT tell the reader what to do - just summarize the data
+
 # MARKET HEALTH ANALYSIS
 ## Score Breakdown
-- Detailed analysis of each market score
-- What each score means for investors
-- Comparison to what would be considered "good" scores
-- Red flags and green flags in the scores
+- Present each market score with its value and what it measures
+- Explain what each score means in plain English (e.g., "A score of 70 means...")
+- Compare to benchmark scores: 80+ is excellent, 60-79 is good, 40-59 is moderate, below 40 is concerning
+- Highlight which scores are strong and which are weak
 
-## Market Maturity
-- Is this an emerging, mature, or saturated market?
-- What does the listing count trend suggest?
-- Is there room for new entrants?
+## Market Size & Maturity
+- Total number of active listings in this market
+- Listing count trend over the past 12 months (growing, stable, or declining)
+- How this compares to similar markets
 
-# REVENUE OPPORTUNITY
+# REVENUE DATA
 
-## Revenue Potential by Property Size
-- Which bedroom counts offer the best opportunity?
-- Revenue vs competition analysis
-- Optimal property configuration for this market
+## Revenue by Property Size
+- Present the revenue data for each bedroom count
+- Show which property sizes have the highest average revenue
+- Show which property sizes have the most competition (listing count)
+- Include occupancy and ADR data for each size
 
-## Earning Potential
-- Realistic revenue expectations for new entrants
-- What top performers are earning
-- Path from average to top performer
+## Revenue Distribution
+- What the average property earns
+- What top 25% performers earn
+- What bottom 25% performers earn
+- The range between top and bottom performers
 
-# SEASONALITY STRATEGY
+# SEASONALITY DATA
 
-## Seasonal Patterns
-- Detailed peak and slow season analysis
-- Revenue variance and what it means
-- Cash flow planning recommendations
+## Monthly Patterns
+- Present the revenue data by month
+- Identify peak months and their revenue figures
+- Identify slow months and their revenue figures
+- Calculate the variance between peak and slow seasons
 
-## Timing Strategy
-- Best time to enter this market
-- Pricing strategy by season
-- Occupancy optimization tips
+## Year-over-Year Trends
+- How revenue has changed compared to last year
+- Which months showed growth vs decline
+- Overall market trajectory
 
-# COMPETITIVE LANDSCAPE
+# COMPETITIVE LANDSCAPE DATA
 
-## Market Composition
-- Professional vs individual hosts
-- Superhost prevalence and importance
-- Quality standards in this market
+## Host Composition
+- Percentage of professionally managed properties
+- Percentage of Superhost properties
+- Average ratings and review counts
 
-## Success Factors
-- What top performers have in common
-- Minimum requirements to compete
-- Differentiation opportunities
+## Top Performer Profiles
+- Present data on the top 5-10 earning properties
+- Their revenue, occupancy, ADR, ratings
+- What amenities and features they have
+- Their property types and bedroom counts
 
-# RISKS & CHALLENGES
+# RISK FACTORS
 
-## Market Risks
-- Saturation concerns
-- Regulatory risks
-- Seasonal volatility
-- Competition from professionals
+## Data-Based Concerns
+- Present any concerning trends in the data (declining revenue, increasing supply, etc.)
+- Seasonal volatility percentage
+- Competition density
+- Any scores below benchmark thresholds
 
-## Mitigation Strategies
-- How to reduce each risk
-- Market entry timing
-- Positioning strategies
+## Market Stability Indicators
+- Year-over-year consistency
+- Supply growth rate
+- Occupancy stability
 
-# RECOMMENDATIONS
+# DATA SUMMARY
 
-## Market Entry Strategy
-- Recommended property type and size
-- Target revenue and occupancy
-- Initial pricing strategy
+## Key Metrics at a Glance
+Present a summary table of the most important metrics:
+- Market Score
+- Average Revenue
+- Average Occupancy
+- Average ADR
+- Total Listings
+- YoY Change
+- Seasonality Variance
 
-## Success Roadmap
-- First 90 days priorities
-- 6-month milestones
-- 12-month goals
+## Notable Observations
+List 3-5 key observations from the data without prescriptive conclusions.
 
-## Final Verdict
-- Clear recommendation on entering this market
-- Best suited investor profile
-- Key success factors
-
-Remember:
+CRITICAL RULES:
 - Be specific with numbers - cite actual figures from the data
 - Explain what metrics mean for someone new to investing
-- Be honest about risks - don't oversell
-- Provide actionable, specific recommendations`;
+- DO NOT provide recommendations, action plans, or tell the reader what to do
+- DO NOT use phrases like "you should", "I recommend", "the best strategy is"
+- Present the data objectively and let the reader draw their own conclusions
+- DO NOT use emojis anywhere in the report
+- Use professional language throughout`;
 
   try {
     const response = await callGeminiMax(prompt);

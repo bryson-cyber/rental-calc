@@ -32,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
@@ -418,13 +419,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Filter by Amenities</div>
                   <div className="space-y-2">
                     {[
-                      { key: 'pool', label: 'Pool', icon: '🏊' },
-                      { key: 'hotTub', label: 'Hot Tub', icon: '♨️' },
-                      { key: 'petFriendly', label: 'Pet Friendly', icon: '🐕' },
-                      { key: 'parking', label: 'Parking', icon: '🚗' },
-                      { key: 'kitchen', label: 'Kitchen', icon: '🍳' },
-                      { key: 'washerDryer', label: 'Washer/Dryer', icon: '🧺' },
-                    ].map(({ key, label, icon }) => (
+                      { key: 'pool', label: 'Pool' },
+                      { key: 'hotTub', label: 'Hot Tub' },
+                      { key: 'petFriendly', label: 'Pet Friendly' },
+                      { key: 'parking', label: 'Parking' },
+                      { key: 'kitchen', label: 'Kitchen' },
+                      { key: 'washerDryer', label: 'Washer/Dryer' },
+                    ].map(({ key, label }) => (
                       <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
                         <input
                           type="checkbox"
@@ -432,7 +433,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                           onChange={(e) => setAmenitiesFilter({ ...amenitiesFilter, [key as keyof AmenitiesFilter]: e.target.checked })}
                           className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                         />
-                        <span className="text-sm">{icon} {label}</span>
+                        <span className="text-sm">{label}</span>
                       </label>
                     ))}
                   </div>

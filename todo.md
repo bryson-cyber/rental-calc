@@ -6774,3 +6774,42 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Redesign map section header to match premium white aesthetic (remove dark bar)
 - [ ] Reposition stats panel directly under the map (eliminate empty gap)
 - [ ] Ensure consistent design language between top toolkit section and map section
+
+
+## Step 6 & Step 7 Optimization (Jan 28, 2026)
+
+### Step 6 (Market Advisor) - Quality Benchmark Review
+- [ ] Add guiding questions for each section
+- [ ] Translate technical terms to beginner-friendly language
+- [ ] Add tooltips for all metrics, percentages, and scores
+- [ ] Add contextual comparisons (not just raw numbers)
+- [ ] Add clear verdicts/recommendations
+- [ ] Add confidence indicators
+- [ ] Remove any emojis
+- [ ] Match Step 3's visual hierarchy and clarity
+
+### Step 7 (AI Advisor) - Quality Benchmark Review
+- [ ] Add guiding questions for each section
+- [ ] Ensure conversation memory is maintained
+- [ ] Add tooltips for all metrics referenced
+- [ ] Ensure AI uses only AirDNA data (no general knowledge)
+- [ ] Add clear verdicts/recommendations
+- [ ] Remove any emojis
+- [ ] Match Step 3's visual hierarchy and clarity
+
+### Browser Testing & Tooltip Audit
+- [ ] Test Step 6 in browser
+- [ ] Run tooltip audit on Step 6
+- [ ] Test Step 7 in browser
+- [ ] Run tooltip audit on Step 7
+
+
+## AI Advisor Consistency Fixes (Jan 28, 2026)
+
+### Critical: Fix Inconsistent AI Outputs
+- [ ] Investigate backend prompting for Market Advisor
+- [ ] Investigate backend prompting for AI Advisor (Step 7)
+- [ ] Ensure AI uses ONLY AirDNA data (no general knowledge)
+- [ ] Add structured prompt template with clear data interpretation rules
+- [ ] Add specific output format requirements to ensure consistency
+- [ ] Test multiple runs to verify consistent outputs
