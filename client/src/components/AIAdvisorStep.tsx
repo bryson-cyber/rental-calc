@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
 
@@ -363,24 +364,57 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
             <CardContent className="space-y-4">
               {/* Property Summary */}
               <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-amber-100">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-slate-900">
-                    {formatCurrency(props.revenue.projected)}
-                  </div>
-                  <div className="text-xs text-slate-600">Projected Revenue</div>
-                </div>
-                <div className="text-center border-x border-amber-100">
-                  <div className="text-lg font-bold text-slate-900">
-                    {(props.revenue.occupancy > 1 ? props.revenue.occupancy : props.revenue.occupancy * 100).toFixed(0)}%
-                  </div>
-                  <div className="text-xs text-slate-600">Occupancy</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-slate-900">
-                    {formatCurrency(props.revenue.adr)}
-                  </div>
-                  <div className="text-xs text-slate-600">Avg Daily Rate</div>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center cursor-help">
+                        <div className="text-lg font-bold text-slate-900">
+                          {formatCurrency(props.revenue.projected)}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          Projected Revenue <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">Estimated annual income this property could generate based on comparable properties in your area. This is calculated from actual performance data of similar listings.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center border-x border-amber-100 cursor-help">
+                        <div className="text-lg font-bold text-slate-900">
+                          {(props.revenue.occupancy > 1 ? props.revenue.occupancy : props.revenue.occupancy * 100).toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          Occupancy <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">The percentage of nights your property is expected to be booked throughout the year. Higher occupancy means more consistent bookings but may require competitive pricing.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center cursor-help">
+                        <div className="text-lg font-bold text-slate-900">
+                          {formatCurrency(props.revenue.adr)}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          Avg Daily Rate <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">The average nightly price guests pay to stay at similar properties. This is what you could charge per night based on market data.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Generate Button */}
@@ -526,24 +560,57 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
             <CardContent className="space-y-4">
               {/* Market Summary */}
               <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-blue-100">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-slate-900">
-                    {props.marketInsights.totalListings.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Total Listings</div>
-                </div>
-                <div className="text-center border-x border-blue-100">
-                  <div className="text-lg font-bold text-slate-900">
-                    {props.marketGrade.score}/100
-                  </div>
-                  <div className="text-xs text-slate-600">Market Score</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-lg font-bold ${props.historicalData.yoyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {props.historicalData.yoyChange >= 0 ? '+' : ''}{props.historicalData.yoyChange.toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-slate-600">YoY Change</div>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center cursor-help">
+                        <div className="text-lg font-bold text-slate-900">
+                          {props.marketInsights.totalListings.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          Total Listings <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">The total number of active short-term rental listings in this market. More listings can mean more competition, but also indicates proven demand.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center border-x border-blue-100 cursor-help">
+                        <div className="text-lg font-bold text-slate-900">
+                          {props.marketGrade.score}/100
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          Market Score <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">An overall score (0-100) measuring this market's attractiveness for short-term rentals. Higher scores indicate stronger rental demand, better revenue potential, and favorable market conditions.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-center cursor-help">
+                        <div className={`text-lg font-bold ${props.historicalData.yoyChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {props.historicalData.yoyChange >= 0 ? '+' : ''}{props.historicalData.yoyChange.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">
+                          YoY Change <Info className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">Year-over-Year revenue change comparing this year to last year. Green (positive) means the market is growing; Red (negative) means revenue is declining.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Generate Button */}

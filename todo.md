@@ -6813,3 +6813,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Add structured prompt template with clear data interpretation rules
 - [ ] Add specific output format requirements to ensure consistency
 - [ ] Test multiple runs to verify consistent outputs
+
+
+## Step 6 & Step 7 UI Improvements (Jan 28, 2026)
+- [ ] Step 6: Replace emojis in amenities filter with proper icons
+- [ ] Step 6: Add tooltips to Market Score, Avg Revenue, Occupancy, ADR
+- [ ] Step 6: Add tooltips to YoY Growth, Superhost %, Pro Managed %
+- [ ] Step 6: Add tooltips to all individual scores (Profit Potential, Guest Interest, etc.)
+- [ ] Step 6: Add tooltips to table headers (ADR, Occupancy, YoY Change)
+- [ ] Step 6: Add guiding question "Is this market worth investing in?"
+- [ ] Step 7: Ensure no emojis in AI output rendering
+- [ ] Step 7: Add tooltips to any metrics displayed in chat interface
+- [ ] Step 7: Run tooltip audit on all visible metrics
+- [ ] Browser test Step 6 with tooltip audit
+- [ ] Browser test Step 7 with tooltip audit

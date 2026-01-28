@@ -652,19 +652,19 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             {/* Active Filters Display */}
             {(Object.values(amenitiesFilter).filter(Boolean).length > 0 || propertyTypeFilter !== 'all' || ratingFilter !== 'all' || reviewCountFilter !== 'all' || superhostOnly || professionalOnly || instantBookOnly || listingTypeFilter !== 'all') && (
               <div className="flex items-center gap-2 flex-wrap">
-                {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">🏊 Pool</Badge>}
-                {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">♨️ Hot Tub</Badge>}
-                {amenitiesFilter.petFriendly && <Badge variant="secondary" className="text-xs">🐕 Pets</Badge>}
-                {amenitiesFilter.parking && <Badge variant="secondary" className="text-xs">🚗 Parking</Badge>}
-                {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">🍳 Kitchen</Badge>}
-                {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">🧺 W/D</Badge>}
-                {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {propertyTypeFilter}</Badge>}
-                {ratingFilter !== 'all' && <Badge variant="secondary" className="text-xs">⭐ {ratingFilter}+ Stars</Badge>}
-                {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">💬 {reviewCountFilter}+ Reviews</Badge>}
-                {superhostOnly && <Badge variant="secondary" className="text-xs">⭐ Superhosts</Badge>}
-                {professionalOnly && <Badge variant="secondary" className="text-xs">🏢 Pro Managed</Badge>}
-                {instantBookOnly && <Badge variant="secondary" className="text-xs">⚡ Instant Book</Badge>}
-                {listingTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">🏠 {listingTypeFilter === 'entire_home' ? 'Entire Home' : listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}</Badge>}
+                {amenitiesFilter.pool && <Badge variant="secondary" className="text-xs">Pool</Badge>}
+                {amenitiesFilter.hotTub && <Badge variant="secondary" className="text-xs">Hot Tub</Badge>}
+                {amenitiesFilter.petFriendly && <Badge variant="secondary" className="text-xs">Pet Friendly</Badge>}
+                {amenitiesFilter.parking && <Badge variant="secondary" className="text-xs">Parking</Badge>}
+                {amenitiesFilter.kitchen && <Badge variant="secondary" className="text-xs">Kitchen</Badge>}
+                {amenitiesFilter.washerDryer && <Badge variant="secondary" className="text-xs">Washer/Dryer</Badge>}
+                {propertyTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">{propertyTypeFilter}</Badge>}
+                {ratingFilter !== 'all' && <Badge variant="secondary" className="text-xs">{ratingFilter}+ Stars</Badge>}
+                {reviewCountFilter !== 'all' && <Badge variant="secondary" className="text-xs">{reviewCountFilter}+ Reviews</Badge>}
+                {superhostOnly && <Badge variant="secondary" className="text-xs">Superhosts Only</Badge>}
+                {professionalOnly && <Badge variant="secondary" className="text-xs">Pro Managed</Badge>}
+                {instantBookOnly && <Badge variant="secondary" className="text-xs">Instant Book</Badge>}
+                {listingTypeFilter !== 'all' && <Badge variant="secondary" className="text-xs">{listingTypeFilter === 'entire_home' ? 'Entire Home' : listingTypeFilter === 'private_room' ? 'Private Room' : 'Shared Room'}</Badge>}
               </div>
             )}
           </div>
@@ -882,50 +882,100 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             <CardContent>
               {/* Key Metrics Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                  <DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                  <div className="text-2xl font-bold text-slate-900">
-                    {formatCurrency(marketData.metrics.avgRevenue)}
-                  </div>
-                  <div className="text-xs text-slate-600">Avg Annual Revenue</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                  <Percent className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-                  <div className="text-2xl font-bold text-slate-900">
-                    {formatPercent(marketData.metrics.avgOccupancy)}
-                  </div>
-                  <div className="text-xs text-slate-600">Avg Occupancy</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                  <Calendar className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-                  <div className="text-2xl font-bold text-slate-900">
-                    {formatCurrency(marketData.metrics.avgAdr)}
-                  </div>
-                  <div className="text-xs text-slate-600">Avg Daily Rate</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-lg text-center">
-                  <Building2 className="w-5 h-5 mx-auto mb-1 text-amber-600" />
-                  <div className="text-2xl font-bold text-slate-900">
-                    {marketData.metrics.totalListings.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-600">Total Listings</div>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-4 bg-slate-50 rounded-lg text-center cursor-help">
+                        <DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                        <div className="text-2xl font-bold text-slate-900">
+                          {formatCurrency(marketData.metrics.avgRevenue)}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">Avg Annual Revenue <Info className="w-3 h-3" /></div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium">Average Annual Revenue</p>
+                      <p className="text-sm">The typical amount hosts earn per year in this market before expenses. Higher revenue means more earning potential, but also consider your costs.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-4 bg-slate-50 rounded-lg text-center cursor-help">
+                        <Percent className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+                        <div className="text-2xl font-bold text-slate-900">
+                          {formatPercent(marketData.metrics.avgOccupancy)}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">Avg Occupancy <Info className="w-3 h-3" /></div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium">Average Occupancy Rate</p>
+                      <p className="text-sm">How often properties are booked throughout the year. 70%+ is excellent, 50-70% is good, below 50% may indicate low demand or oversupply.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-4 bg-slate-50 rounded-lg text-center cursor-help">
+                        <Calendar className="w-5 h-5 mx-auto mb-1 text-purple-600" />
+                        <div className="text-2xl font-bold text-slate-900">
+                          {formatCurrency(marketData.metrics.avgAdr)}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">Avg Daily Rate <Info className="w-3 h-3" /></div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium">Average Daily Rate (ADR)</p>
+                      <p className="text-sm">The average price guests pay per night. This varies by season, property type, and amenities. Higher ADR with good occupancy = strong market.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="p-4 bg-slate-50 rounded-lg text-center cursor-help">
+                        <Building2 className="w-5 h-5 mx-auto mb-1 text-amber-600" />
+                        <div className="text-2xl font-bold text-slate-900">
+                          {marketData.metrics.totalListings.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-slate-600 flex items-center justify-center gap-1">Total Listings <Info className="w-3 h-3" /></div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium">Total Active Listings</p>
+                      <p className="text-sm">The number of short-term rentals currently active in this market. More listings means more competition, but also validates demand.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* YoY Trend */}
-              <div className="flex items-center justify-center gap-4 p-3 bg-slate-100 rounded-lg">
-                <span className="text-sm text-slate-600">Year-over-Year Revenue:</span>
-                <div className={`flex items-center gap-1 font-medium ${
-                  marketData.historicalData.yoyChange >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {getTrendIcon(marketData.historicalData.trend)}
-                  {marketData.historicalData.yoyChange >= 0 ? '+' : ''}
-                  {marketData.historicalData.yoyChange.toFixed(1)}%
-                </div>
-                <Badge variant="outline" className="capitalize">
-                  {marketData.historicalData.trend}
-                </Badge>
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center gap-4 p-3 bg-slate-100 rounded-lg cursor-help">
+                      <span className="text-sm text-slate-600 flex items-center gap-1">Year-over-Year Revenue <Info className="w-3 h-3" /></span>
+                      <div className={`flex items-center gap-1 font-medium ${
+                        marketData.historicalData.yoyChange >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {getTrendIcon(marketData.historicalData.trend)}
+                        {marketData.historicalData.yoyChange >= 0 ? '+' : ''}
+                        {marketData.historicalData.yoyChange.toFixed(1)}%
+                      </div>
+                      <Badge variant="outline" className="capitalize">
+                        {marketData.historicalData.trend}
+                      </Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-medium">Year-over-Year Revenue Change</p>
+                    <p className="text-sm">Compares this year's average revenue to last year. Positive growth means hosts are earning more, negative means the market may be cooling down.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardContent>
           </Card>
 
@@ -949,34 +999,44 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { label: 'Market Score', value: marketData.scores.marketScore, description: 'Overall market health' },
-                    { label: 'Profit Potential', value: marketData.scores.investabilityScore, description: 'Can you make good money here?' },
-                    { label: 'Guest Interest', value: marketData.scores.rentalDemandScore, description: 'How many people want to stay here?' },
-                    { label: 'Earnings Trend', value: marketData.scores.revenueGrowthScore, description: 'Are hosts making more or less?' },
-                    { label: 'Income Stability', value: marketData.scores.seasonalityScore, description: 'Is income steady all year?' },
-                    { label: 'Local Rules', value: marketData.scores.regulationScore, description: 'How easy is it to rent here?' },
+                    { label: 'Market Score', value: marketData.scores.marketScore, description: 'Overall market health', tooltip: 'A combined score (0-100) that weighs all factors below. 80+ is excellent, 60-79 is good, 40-59 is average, below 40 may be challenging.' },
+                    { label: 'Profit Potential', value: marketData.scores.investabilityScore, description: 'Can you make good money here?', tooltip: 'Measures how likely you are to earn a profit after expenses. Higher scores mean better revenue-to-cost ratios in this market.' },
+                    { label: 'Guest Interest', value: marketData.scores.rentalDemandScore, description: 'How many people want to stay here?', tooltip: 'Based on booking rates and search volume. High demand means more guests looking for places to stay in this area.' },
+                    { label: 'Earnings Trend', value: marketData.scores.revenueGrowthScore, description: 'Are hosts making more or less?', tooltip: 'Tracks whether host earnings are growing or declining. Positive trends suggest a healthy, expanding market.' },
+                    { label: 'Income Stability', value: marketData.scores.seasonalityScore, description: 'Is income steady all year?', tooltip: 'Measures how consistent bookings are throughout the year. Higher scores mean less seasonal ups and downs in your income.' },
+                    { label: 'Local Rules', value: marketData.scores.regulationScore, description: 'How easy is it to rent here?', tooltip: 'Reflects how friendly local regulations are for short-term rentals. Lower scores may indicate stricter rules or permit requirements.' },
                   ].map((score) => {
                     // Handle decimal values - if value is less than 1, it's likely a decimal that should be a percentage
                     const displayValue = score.value < 1 && score.value > 0 ? Math.round(score.value * 100) : Math.round(score.value);
                     const barWidth = Math.min(100, Math.max(0, displayValue));
                     return (
-                      <div key={score.label} className="p-3 border rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-slate-700">{score.label}</span>
-                          <Badge className={getScoreColor(displayValue)}>{displayValue}</Badge>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              displayValue >= 80 ? 'bg-green-500' :
-                              displayValue >= 60 ? 'bg-amber-500' :
-                              displayValue >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${barWidth}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">{score.description}</div>
-                      </div>
+                      <TooltipProvider key={score.label}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="p-3 border rounded-lg cursor-help">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium text-slate-700 flex items-center gap-1">{score.label} <Info className="w-3 h-3 text-slate-400" /></span>
+                                <Badge className={getScoreColor(displayValue)}>{displayValue}</Badge>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full ${
+                                    displayValue >= 80 ? 'bg-green-500' :
+                                    displayValue >= 60 ? 'bg-amber-500' :
+                                    displayValue >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1">{score.description}</div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium">{score.label}</p>
+                            <p className="text-sm">{score.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     );
                   })}
                 </div>
@@ -1013,10 +1073,54 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       <thead>
                         <tr className="border-b">
                           <th className="text-left py-2 px-3">Bedrooms</th>
-                          <th className="text-right py-2 px-3">Avg Revenue</th>
-                          <th className="text-right py-2 px-3">Occupancy</th>
-                          <th className="text-right py-2 px-3">ADR</th>
-                          <th className="text-right py-2 px-3">Listings</th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Avg Revenue <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average annual revenue for properties with this bedroom count in this market.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Occupancy <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Percentage of nights booked per year. Higher occupancy = more consistent bookings.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  ADR <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average Daily Rate - the average price per night guests pay for this property size.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Listings <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Number of active listings with this bedroom count. More listings = more competition.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1064,11 +1168,66 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       <thead>
                         <tr className="border-b">
                           <th className="text-left py-2 px-3">Year</th>
-                          <th className="text-right py-2 px-3">Avg Revenue</th>
-                          <th className="text-right py-2 px-3">YoY Change</th>
-                          <th className="text-right py-2 px-3">Occupancy</th>
-                          <th className="text-right py-2 px-3">ADR</th>
-                          <th className="text-right py-2 px-3">Listings</th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Avg Revenue <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average annual revenue for that year across all properties in this market.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  YoY Change <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Year-over-Year change in revenue compared to the previous year. Green = growth, Red = decline.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Occupancy <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average occupancy rate for that year. Shows how consistently properties were booked.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  ADR <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average Daily Rate for that year. Shows how nightly prices have changed over time.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
+                          <th className="text-right py-2 px-3">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
+                                  Listings <Info className="w-3 h-3 text-slate-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-sm">Average number of active listings that year. Shows market growth or contraction.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
