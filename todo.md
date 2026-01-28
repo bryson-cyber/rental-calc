@@ -6305,3 +6305,18 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Auto-update Bedrooms dropdown when property details are loaded
 - [x] Auto-update Bathrooms dropdown when property details are loaded (with closest value matching)
 
+
+
+## Google Address Autofill Bug Fix (Jan 28, 2026)
+- [ ] Fix Google Places autocomplete that broke after adding Zillow/Redfin URL feature
+- [ ] Ensure address autofill works on Step 3, Step 4, Homepage, and all other locations
+
+
+
+## Google Address Autofill Bug Fix (Jan 28, 2026) - COMPLETE
+- [x] Investigated why Google Places autocomplete stopped working after adding Zillow/Redfin URL feature
+- [x] Fixed SmartAddressInput component to support both Google Places autocomplete AND URL detection
+- [x] Tested across all address input locations (Homepage Start with Your Property, Step 3 Validate the Deal)
+- [x] Google Places suggestions now appear correctly when typing regular addresses
+- [x] Zillow/Redfin URL detection still works when pasting listing URLs
+
