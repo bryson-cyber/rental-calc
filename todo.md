@@ -6827,3 +6827,29 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Step 7: Run tooltip audit on all visible metrics
 - [ ] Browser test Step 6 with tooltip audit
 - [ ] Browser test Step 7 with tooltip audit
+
+
+## Step 6 & 7 Tooltip and Non-Prescriptive Output (Jan 28, 2026)
+
+### Non-Prescriptive AI Output
+- [x] Add stripPrescriptiveLanguage() post-processing function to gemini.ts
+- [x] Apply post-processing to generateMaxPropertyAdvice output
+- [x] Apply post-processing to generateMaxMarketAdvice output
+- [x] Remove "Recommendation:" and "RECOMMENDATION:" lines
+- [x] Remove verdict language (PASS, GO, CAUTION, HIGH RISK, etc.)
+- [x] Replace "Strategy:" with "Data Point:"
+- [x] Replace "Blueprint for Success" with "Top Performer Characteristics"
+- [x] Replace prescriptive verbs (you must, you should, you need to) with data statements
+- [x] Remove "not recommended for beginners" language
+- [x] Replace "Best Start Date:" with "Highest revenue months begin in"
+- [x] Replace "Worst Start Date:" with "Lowest revenue months begin in"
+
+### Tooltips - Already Implemented
+- [x] Step 6 (StandaloneMarketAdvisor) - All metrics have tooltips
+- [x] Step 7 (AIAdvisorStep) - All metrics have tooltips
+- [x] Tooltips use plain English, beginner-friendly explanations
+- [x] Tooltips explain what each metric means for the user
+
+### Testing
+- [x] Test AI Advisor output for prescriptive language removal
+- [ ] Verify tooltips display correctly on hover

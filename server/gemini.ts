@@ -7,6 +7,99 @@
 
 import { ENV } from './_core/env';
 
+/**
+ * Post-process AI output to remove prescriptive language
+ * This ensures the output is data-driven and non-advisory
+ */
+function stripPrescriptiveLanguage(text: string): string {
+  let result = text;
+  
+  // Remove recommendation lines
+  result = result.replace(/^.*Recommendation:.*$/gm, '');
+  result = result.replace(/^.*RECOMMENDATION:.*$/gm, '');
+  
+  // Remove verdict language
+  result = result.replace(/\b(PASS|GO|CAUTION|HIGH RISK|LOW RISK|MEDIUM RISK)\b/g, '');
+  
+  // Remove "Strategy:" sections - replace with "Data Point:"
+  result = result.replace(/Strategy:/g, 'Data Point:');
+  result = result.replace(/\*_Strategy:_\*/g, '*_Data Point:_*');
+  result = result.replace(/_Strategy:_/g, '_Data Point:_');
+  
+  // Remove "Blueprint" language
+  result = result.replace(/Your Blueprint for Success/g, 'Top Performer Characteristics');
+  result = result.replace(/Blueprint for Success/g, 'Top Performer Characteristics');
+  
+  // Replace prescriptive verbs with data statements
+  result = result.replace(/You must/g, 'Top performers');
+  result = result.replace(/you must/g, 'top performers');
+  result = result.replace(/You should/g, 'Top performers typically');
+  result = result.replace(/you should/g, 'top performers typically');
+  result = result.replace(/You will need to/g, 'Top performers');
+  result = result.replace(/you will need to/g, 'top performers');
+  result = result.replace(/You would need to/g, 'Top performers');
+  result = result.replace(/you would need to/g, 'top performers');
+  result = result.replace(/You need to/g, 'Top performers');
+  result = result.replace(/you need to/g, 'top performers');
+  
+  // Remove "not recommended" language
+  result = result.replace(/This opportunity is not recommended for beginners/g, 'This property shows metrics below market average');
+  result = result.replace(/not recommended for beginners/g, 'metrics below market average');
+  result = result.replace(/not recommended/g, 'shows challenging metrics');
+  
+  // Remove "Best/Worst" prescriptive timing
+  result = result.replace(/Best Start Date:/g, 'Highest revenue months begin in');
+  result = result.replace(/Worst Start Date:/g, 'Lowest revenue months begin in');
+  
+  // Remove "do not start" language
+  result = result.replace(/do not start in the winter/g, 'winter months show lowest revenue');
+  result = result.replace(/If you sign this lease,/g, '');
+  
+  // Remove "NOT for beginners" language
+  result = result.replace(/This is NOT for a beginner/gi, 'This property shows challenging metrics for new operators');
+  result = result.replace(/NOT for beginners/gi, 'challenging for new operators');
+  result = result.replace(/not for beginners/gi, 'challenging for new operators');
+  
+  // Remove "only viable for" language
+  result = result.replace(/This opportunity is only viable for an experienced operator/gi, 'Experienced operators in this market typically achieve higher returns');
+  result = result.replace(/only viable for/gi, 'typically performed by');
+  
+  // Replace "top performers" prescriptive phrases with data statements
+  result = result.replace(/top performers prove the algorithm wrong/gi, 'some properties outperform projections');
+  result = result.replace(/Top performers execute a strategy/gi, 'High-earning properties demonstrate');
+  result = result.replace(/top performers execute a strategy/gi, 'high-earning properties demonstrate');
+  result = result.replace(/To make this deal work, top performers/gi, 'High-earning properties in this market');
+  result = result.replace(/top performers mimic/gi, 'high earners share characteristics with');
+  result = result.replace(/Top performers mimic/gi, 'High earners share characteristics with');
+  result = result.replace(/top performers leverage/gi, 'high earners utilize');
+  result = result.replace(/Top performers leverage/gi, 'High earners utilize');
+  result = result.replace(/top performers book/gi, 'break-even requires');
+  result = result.replace(/Top performers book/gi, 'Break-even requires');
+  result = result.replace(/top performers generate/gi, 'profitable properties generate');
+  result = result.replace(/Top performers generate/gi, 'Profitable properties generate');
+  
+  // Remove "you cannot" prescriptive language
+  result = result.replace(/You cannot afford/gi, 'Early reviews significantly impact');
+  result = result.replace(/you cannot afford/gi, 'early reviews significantly impact');
+  result = result.replace(/You cannot/gi, 'Data shows');
+  result = result.replace(/you cannot/gi, 'data shows');
+  
+  // Remove "Who is this for?" prescriptive sections
+  result = result.replace(/Who is this for\?/gi, 'Market Context:');
+  
+  // Remove "The Lesson:" prescriptive language
+  result = result.replace(/The Lesson:/gi, 'Data Insight:');
+  
+  // Remove "Warning:" prescriptive language
+  result = result.replace(/Warning:/gi, 'Note:');
+  
+  // Clean up double spaces and empty lines
+  result = result.replace(/  +/g, ' ');
+  result = result.replace(/\n\n\n+/g, '\n\n');
+  
+  return result.trim();
+}
+
 // Use Gemini 3 Pro Preview - the most capable model
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
 
@@ -1067,7 +1160,8 @@ Remember:
 
   try {
     const response = await callGeminiMax(prompt);
-    return response.trim();
+    // Post-process to remove any prescriptive language that slipped through
+    return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
     console.error('Error generating max property advice:', error);
     return 'Unable to generate comprehensive property analysis at this time. Please try again.';
@@ -1637,7 +1731,8 @@ CRITICAL RULES:
 
   try {
     const response = await callGeminiMax(prompt);
-    return response.trim();
+    // Post-process to remove any prescriptive language that slipped through
+    return stripPrescriptiveLanguage(response.trim());
   } catch (error) {
     console.error('Error generating max market advice:', error);
     return 'Unable to generate comprehensive market analysis at this time. Please try again.';
