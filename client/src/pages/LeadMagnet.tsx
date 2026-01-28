@@ -72,7 +72,8 @@ import {
   HeartOff,
   Building,
   Calculator,
-  Award
+  Award,
+  Share2
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
@@ -4451,6 +4452,39 @@ export default function LeadMagnet() {
                           <p className="text-lg font-semibold">${Math.round(sortedBulkResults[0].adr)}/night</p>
                         </div>
                       </div>
+                    </div>
+                    
+                    {/* Share Results Button */}
+                    <div className="mt-6 pt-6 border-t border-white/20">
+                      <button
+                        onClick={() => {
+                          // Create shareable data
+                          const shareData = {
+                            results: sortedBulkResults.filter(r => r.status === 'success').map(r => ({
+                              address: r.address,
+                              bedrooms: r.bedrooms,
+                              bathrooms: r.bathrooms,
+                              rent: r.rent,
+                              revenue: r.revenue,
+                              profit: r.profit,
+                              ratio: r.ratio,
+                              occupancy: r.occupancy,
+                              adr: r.adr
+                            })),
+                            createdAt: new Date().toISOString()
+                          };
+                          const encoded = btoa(JSON.stringify(shareData));
+                          const shareUrl = `${window.location.origin}/share/compare/${encoded}`;
+                          navigator.clipboard.writeText(shareUrl);
+                          toast.success('Share link copied to clipboard!', {
+                            description: 'Send this link to anyone to show them your comparison results.'
+                          });
+                        }}
+                        className="w-full flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white py-3 px-6 rounded-xl font-medium transition-all duration-200"
+                      >
+                        <Share2 className="w-5 h-5" />
+                        Share These Results
+                      </button>
                     </div>
                   </div>
                 </div>

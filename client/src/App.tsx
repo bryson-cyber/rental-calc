@@ -17,6 +17,8 @@ import MarketDiscoveryPage from "./pages/MarketDiscoveryPage";
 import MyFavoritesPage from "./pages/MyFavoritesPage";
 import MarketAlertsPage from "./pages/MarketAlertsPage";
 import SharedReportPage from "./pages/SharedReportPage";
+import SharedComparisonPage from "./pages/SharedComparisonPage";
+import { TrustBanner } from "./components/TrustBanner";
 import SavedItemsPage from "./pages/SavedItemsPage";
 import AccountPage from "./pages/AccountPage";
 import RefundPolicy from "./pages/RefundPolicy";
@@ -60,6 +62,7 @@ function Router() {
       
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />
+      <Route path="/share/compare/:data" component={SharedComparisonPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
@@ -82,6 +85,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <TrustBanner />
           </TooltipProvider>
         </PropertyProvider>
       </ThemeProvider>
