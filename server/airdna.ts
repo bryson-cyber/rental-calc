@@ -4054,23 +4054,24 @@ export async function getListingsInRadius(
   }
 ): Promise<RadiusSearchResult> {
   try {
+    // API expects lat/lng at top level, not nested in location object
     const requestBody: Record<string, unknown> = {
-      location: {
-        lat: latitude,
-        lng: longitude,
-      },
+      lat: latitude,
+      lng: longitude,
       radius: radiusMeters,
       pagination: {
-        page_size: Math.min(options?.limit || 100, 100),
+        page_size: Math.min(options?.limit || 25, 25), // API max is 25
         offset: options?.offset || 0,
       },
     };
 
-    if (options?.bedrooms) {
+    if (options?.bedrooms !== undefined) {
+      // AirDNA API uses 'type' and 'field' format, not 'operator'
+      // Use 'select' for exact match
       requestBody.filters = [
         {
+          type: 'select',
           field: 'bedrooms',
-          operator: 'eq',
           value: options.bedrooms,
         }
       ];

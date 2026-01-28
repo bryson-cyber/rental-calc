@@ -107,6 +107,32 @@ async function startServer() {
       // Import the API functions dynamically
       const { getMarketListings, getSubmarketListings } = await import('../airdna');
       
+      // Helper function to construct image URL from Airbnb listing ID
+      const getImageUrl = (listing: any): string | null => {
+        // First check if image_url is already set
+        if (listing.image_url) return listing.image_url;
+        
+        // Try to extract Airbnb ID from the listing ID or URL
+        let airbnbId: string | null = null;
+        
+        // Check if ID starts with 'abnb_' prefix
+        if (listing.id?.startsWith('abnb_')) {
+          airbnbId = listing.id.replace('abnb_', '');
+        }
+        // Or extract from airbnb_url
+        else if (listing.airbnb_url) {
+          const match = listing.airbnb_url.match(/rooms\/(\d+)/);
+          if (match) airbnbId = match[1];
+        }
+        
+        if (airbnbId) {
+          // Use Airbnb's public image CDN
+          return `https://a0.muscache.com/im/pictures/miso/Hosting-${airbnbId}/original/listing-photo.jpg`;
+        }
+        
+        return null;
+      };
+      
       // First fetch to get total count
       const firstResult = marketType === 'submarket'
         ? await getSubmarketListings(marketId, { limit: pageSize, offset: 0, orderBy: sortBy as any, orderDirection: 'desc' })
@@ -131,7 +157,7 @@ async function startServer() {
           listings: firstResult.listings.map(l => ({
             id: l.id,
             title: l.title,
-            imageUrl: l.image_url || null,
+            imageUrl: getImageUrl(l),
             airbnbUrl: l.airbnb_url || null,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,
@@ -179,7 +205,7 @@ async function startServer() {
           listings: result.listings.map(l => ({
             id: l.id,
             title: l.title,
-            imageUrl: l.image_url || null,
+            imageUrl: getImageUrl(l),
             airbnbUrl: l.airbnb_url || null,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,
@@ -214,6 +240,200 @@ async function startServer() {
       res.end();
     } catch (error) {
       console.error('[Stream Listings] Error:', error);
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to fetch listings'
+      })}\n\n`);
+      res.end();
+    }
+  });
+  
+  // SSE endpoint for streaming listings by radius (more efficient than market-wide search)
+  app.get('/api/stream/listings-by-radius', async (req, res) => {
+    const { lat, lng, radius = '1609', bedrooms, sortBy = 'revenue' } = req.query;
+    
+    const latitude = parseFloat(lat as string);
+    const longitude = parseFloat(lng as string);
+    const radiusMeters = parseInt(radius as string, 10);
+    const bedroomFilter = bedrooms && bedrooms !== 'all' ? parseInt(bedrooms as string, 10) : undefined;
+    
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ error: 'Valid lat and lng are required' });
+    }
+    
+    console.log(`[SSE Radius] Starting stream for lat=${latitude}, lng=${longitude}, radius=${radiusMeters}m, bedrooms=${bedroomFilter || 'all'}`);
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    
+    const startTime = Date.now();
+    let isClientConnected = true;
+    
+    // Track client disconnect
+    req.on('close', () => {
+      isClientConnected = false;
+    });
+    
+    try {
+      // Import the API function dynamically
+      const { getListingsInRadius } = await import('../airdna');
+      
+      // Helper function to construct image URL from Airbnb listing ID
+      const getImageUrl = (listing: any): string | null => {
+        // First check if image_url is already set
+        if (listing.image_url) return listing.image_url;
+        
+        // Try to extract Airbnb ID from the listing ID or URL
+        let airbnbId: string | null = null;
+        
+        // Check if ID starts with 'abnb_' prefix
+        if (listing.id?.startsWith('abnb_')) {
+          airbnbId = listing.id.replace('abnb_', '');
+        }
+        // Or extract from airbnb_url
+        else if (listing.airbnb_url) {
+          const match = listing.airbnb_url.match(/rooms\/(\d+)/);
+          if (match) airbnbId = match[1];
+        }
+        
+        if (airbnbId) {
+          // Use Airbnb's public image CDN
+          return `https://a0.muscache.com/im/pictures/miso/Hosting-${airbnbId}/original/listing-photo.jpg`;
+        }
+        
+        return null;
+      };
+      
+      // Fetch listings within radius - API max is 25 per page
+      const pageSize = 25;
+      let offset = 0;
+      let totalCount = 0;
+      let fetchedCount = 0;
+      let allListings: any[] = [];
+      
+      // First fetch to get total count
+      const firstResult = await getListingsInRadius(latitude, longitude, radiusMeters, {
+        limit: pageSize,
+        offset: 0,
+        bedrooms: bedroomFilter,
+        sort_by: sortBy as any,
+        sort_direction: 'desc'
+      });
+      
+      totalCount = firstResult.total_count || 0;
+      
+      // Send initial progress
+      res.write(`data: ${JSON.stringify({
+        type: 'progress',
+        totalCount,
+        fetchedCount: firstResult.listings.length,
+        elapsedMs: Date.now() - startTime,
+        currentPage: 1,
+        totalPages: Math.ceil(totalCount / pageSize)
+      })}\n\n`);
+      
+      // Send first batch of listings
+      if (firstResult.listings.length > 0) {
+        res.write(`data: ${JSON.stringify({
+          type: 'listings',
+          listings: firstResult.listings.map(l => ({
+            id: l.id,
+            title: l.title,
+            imageUrl: getImageUrl(l),
+            airbnbUrl: l.airbnb_url || null,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            annualRevenue: l.annual_revenue,
+            occupancyRate: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviewCount: l.reviews,
+            latitude: l.latitude || null,
+            longitude: l.longitude || null,
+            zipcode: l.zipcode || null,
+            distanceMeters: l.distance_meters || null,
+          }))
+        })}\n\n`);
+      }
+      
+      fetchedCount = firstResult.listings.length;
+      allListings = [...firstResult.listings];
+      offset = pageSize;
+      
+      // Continue fetching remaining pages - limit to 500 listings max to prevent excessive API calls
+      const maxListings = 500;
+      while (offset < totalCount && offset < maxListings && isClientConnected) {
+        const currentPage = Math.floor(offset / pageSize) + 1;
+        const totalPages = Math.ceil(totalCount / pageSize);
+        
+        const result = await getListingsInRadius(latitude, longitude, radiusMeters, {
+          limit: pageSize,
+          offset,
+          bedrooms: bedroomFilter,
+          sort_by: sortBy as any,
+          sort_direction: 'desc'
+        });
+        
+        if (!result.listings || result.listings.length === 0) break;
+        
+        fetchedCount += result.listings.length;
+        allListings = [...allListings, ...result.listings];
+        
+        // Send progress update
+        res.write(`data: ${JSON.stringify({
+          type: 'progress',
+          totalCount,
+          fetchedCount,
+          elapsedMs: Date.now() - startTime,
+          currentPage,
+          totalPages
+        })}\n\n`);
+        
+        // Send listings batch
+        res.write(`data: ${JSON.stringify({
+          type: 'listings',
+          listings: result.listings.map(l => ({
+            id: l.id,
+            title: l.title,
+            imageUrl: getImageUrl(l),
+            airbnbUrl: l.airbnb_url || null,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            annualRevenue: l.annual_revenue,
+            occupancyRate: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviewCount: l.reviews,
+            latitude: l.latitude || null,
+            longitude: l.longitude || null,
+            zipcode: l.zipcode || null,
+            distanceMeters: l.distance_meters || null,
+          }))
+        })}\n\n`);
+        
+        offset += pageSize;
+        
+        // Small delay to prevent overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Send completion message
+      res.write(`data: ${JSON.stringify({
+        type: 'complete',
+        totalCount,
+        fetchedCount,
+        elapsedMs: Date.now() - startTime,
+        hasMore: false,
+        radiusMeters
+      })}\n\n`);
+      
+      res.end();
+    } catch (error) {
+      console.error('[Stream Listings Radius] Error:', error);
       res.write(`data: ${JSON.stringify({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to fetch listings'

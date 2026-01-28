@@ -181,7 +181,139 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   // State for selected neighborhood from dropdown
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
   
-  // Stream listings using SSE for progressive loading
+  // Convert distance filter value to meters
+  const distanceToMeters = (distanceValue: string): number => {
+    const milesMap: Record<string, number> = {
+      '1': 1609,      // 1 mile
+      '3': 4828,      // 3 miles
+      '5': 8047,      // 5 miles
+      '10': 16093,    // 10 miles
+      '25': 40234,    // 25 miles
+      'all': 80467,   // 50 miles (effectively all)
+    };
+    return milesMap[distanceValue] || 1609;
+  };
+  
+  // Stream listings using radius-based SSE endpoint (more efficient)
+  const startStreamingByRadius = useCallback((lat: number, lng: number, radiusMeters: number, bedrooms?: string) => {
+    // Create a cache key based on location, radius, and bedrooms
+    const cacheKey = `radius-${lat.toFixed(4)}-${lng.toFixed(4)}-${radiusMeters}-${bedrooms || 'all'}`;
+    
+    // Don't refetch if we already have this cached
+    if (cacheKey === cachedMarketId) {
+      console.log('[MapFirstLayoutV2] Using cached listings for:', cacheKey);
+      return;
+    }
+    
+    // Close any existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    
+    // Reset state
+    setListings([]);
+    setIsLoading(true);
+    setLoadingProgress({
+      totalCount: 0,
+      fetchedCount: 0,
+      elapsedMs: 0,
+      currentPage: 0,
+      totalPages: 0,
+      isComplete: false
+    });
+    
+    console.log(`[MapFirstLayoutV2] Starting radius-based streaming: lat=${lat}, lng=${lng}, radius=${radiusMeters}m, bedrooms=${bedrooms || 'all'}`);
+    
+    // Create SSE connection to radius-based endpoint
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      radius: radiusMeters.toString(),
+      sortBy: 'revenue'
+    });
+    if (bedrooms && bedrooms !== 'all') {
+      params.append('bedrooms', bedrooms === '5+' ? '5' : bedrooms);
+    }
+    
+    const url = `/api/stream/listings-by-radius?${params.toString()}`;
+    const eventSource = new EventSource(url);
+    eventSourceRef.current = eventSource;
+    
+    let allListings: Listing[] = [];
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'progress') {
+          setLoadingProgress({
+            totalCount: data.totalCount,
+            fetchedCount: data.fetchedCount,
+            elapsedMs: data.elapsedMs,
+            currentPage: data.currentPage,
+            totalPages: data.totalPages,
+            isComplete: false
+          });
+        } else if (data.type === 'listings') {
+          // Process and add new listings
+          const newListings = data.listings.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            thumbnailUrl: l.imageUrl,
+            latitude: l.latitude,
+            longitude: l.longitude,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            revenue: l.annualRevenue || 0,
+            occupancy: l.occupancyRate || 0,
+            adr: l.adr || 0,
+            rating: l.rating || null,
+            reviews: l.reviewCount || 0,
+            airbnbUrl: l.airbnbUrl || '',
+            zipcode: l.zipcode || null,
+            // Use distance from API if available, otherwise calculate
+            distanceToMyProperty: l.distanceMeters || (myPropertyLocation 
+              ? calculateDistance(myPropertyLocation.lat, myPropertyLocation.lng, l.latitude, l.longitude)
+              : undefined)
+          })).filter((l: Listing) => l.revenue > 0);
+          
+          allListings = [...allListings, ...newListings];
+          setListings([...allListings]);
+          setLocationName(searchQuery || 'Your Area');
+          
+          // Center map on first listing if this is the first batch
+          if (allListings.length === newListings.length && mapRef.current) {
+            const firstListing = newListings[0];
+            if (firstListing?.latitude && firstListing?.longitude) {
+              mapRef.current.panTo({ lat: firstListing.latitude, lng: firstListing.longitude });
+              mapRef.current.setZoom(12);
+            }
+          }
+        } else if (data.type === 'complete') {
+          setLoadingProgress(prev => prev ? { ...prev, isComplete: true, fetchedCount: data.fetchedCount, elapsedMs: data.elapsedMs, hasMore: false } : null);
+          setIsLoading(false);
+          setCachedMarketId(cacheKey);
+          setHasMoreListings(false);
+          eventSource.close();
+          console.log(`[MapFirstLayoutV2] Radius streaming complete: ${data.fetchedCount} listings in ${(data.elapsedMs / 1000).toFixed(1)}s`);
+        } else if (data.type === 'error') {
+          console.error('[MapFirstLayoutV2] Stream error:', data.message);
+          setIsLoading(false);
+          eventSource.close();
+        }
+      } catch (err) {
+        console.error('[MapFirstLayoutV2] Error parsing SSE data:', err);
+      }
+    };
+    
+    eventSource.onerror = (err) => {
+      console.error('[MapFirstLayoutV2] SSE connection error:', err);
+      setIsLoading(false);
+      eventSource.close();
+    };
+  }, [cachedMarketId, myPropertyLocation, searchQuery]);
+  
+  // Legacy: Stream listings using SSE for progressive loading (market-wide, less efficient)
   const startStreamingListings = useCallback((marketIdToFetch: string) => {
     // Don't refetch if we already have this market cached
     if (marketIdToFetch === cachedMarketId) {
@@ -289,15 +421,25 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     };
   }, [cachedMarketId, myPropertyLocation, searchQuery]);
   
-  // Start streaming when marketId or submarketId changes
-  // Priority: submarketId > marketId (submarket gives more focused, relevant results)
+  // Start streaming when user has property location - use radius-based search (more efficient)
+  // This is the PRIMARY method when user has entered their property
   useEffect(() => {
-    // If we have a submarket ID, use it (prefixed with 'submarket-' to indicate type)
-    if (activeSubmarketId && `submarket-${activeSubmarketId}` !== cachedMarketId) {
+    // If user has a property location, use radius-based search (most efficient)
+    if (myPropertyLocation) {
+      const radiusMeters = distanceToMeters(distanceFilter);
+      console.log(`[MapFirstLayoutV2] User has property location, using radius-based search: ${radiusMeters}m, bedrooms=${bedroomFilter}`);
+      startStreamingByRadius(
+        myPropertyLocation.lat,
+        myPropertyLocation.lng,
+        radiusMeters,
+        bedroomFilter
+      );
+    }
+    // Fallback to market-based search if no property location (less efficient)
+    else if (activeSubmarketId && `submarket-${activeSubmarketId}` !== cachedMarketId) {
       console.log('[MapFirstLayoutV2] Using submarket ID:', activeSubmarketId);
       startStreamingListings(`submarket-${activeSubmarketId}`);
     }
-    // Otherwise fall back to market ID from search
     else if (!activeSubmarketId && marketId && marketId !== cachedMarketId) {
       startStreamingListings(marketId);
     }
@@ -308,7 +450,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         eventSourceRef.current.close();
       }
     };
-  }, [marketId, activeSubmarketId, cachedMarketId, startStreamingListings]);
+  }, [myPropertyLocation, distanceFilter, bedroomFilter, marketId, activeSubmarketId, cachedMarketId, startStreamingByRadius, startStreamingListings]);
   
   // Recalculate distances when myPropertyLocation changes
   useEffect(() => {
@@ -333,20 +475,27 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   };
   
   // Filter and sort listings
+  // Note: When using radius-based search, bedroom and distance filtering happens on the API side
+  // This useMemo is mainly for sorting and fallback filtering when using market-wide search
   const filteredListings = useMemo(() => {
     let result = [...listings];
     
-    // Bedroom filter
+    // Bedroom filter (only needed for market-wide search fallback, API already filters for radius search)
+    // We still apply it client-side as a safety net
     if (bedroomFilter !== 'all') {
       const targetBedrooms = parseInt(bedroomFilter);
-      if (bedroomFilter === '5') {
+      if (bedroomFilter === '5+' || bedroomFilter === '5') {
         result = result.filter(l => l.bedrooms >= 5);
+      } else if (bedroomFilter === '0') {
+        // Studio
+        result = result.filter(l => l.bedrooms === 0);
       } else {
         result = result.filter(l => l.bedrooms === targetBedrooms);
       }
     }
     
-    // Distance filter
+    // Distance filter (only needed for market-wide search fallback, API already filters for radius search)
+    // We still apply it client-side as a safety net
     if (distanceFilter !== 'all' && myPropertyLocation) {
       const maxDistance = parseInt(distanceFilter) * 1609.34; // Convert miles to meters
       result = result.filter(l => l.distanceToMyProperty !== undefined && l.distanceToMyProperty <= maxDistance);
@@ -433,6 +582,14 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         position: { lat: listing.latitude, lng: listing.longitude },
         title: listing.title,
         content: markerElement.firstElementChild as HTMLElement,
+      });
+      
+      // Add click handler to show property card popup
+      marker.addListener('click', () => {
+        setSelectedListing(listing);
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat: listing.latitude, lng: listing.longitude });
+        }
       });
       
       markersRef.current.push(marker);
@@ -840,6 +997,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Bedrooms</SelectItem>
+                          <SelectItem value="0">Studio</SelectItem>
                           <SelectItem value="1">1 Bedroom</SelectItem>
                           <SelectItem value="2">2 Bedrooms</SelectItem>
                           <SelectItem value="3">3 Bedrooms</SelectItem>
@@ -1383,11 +1541,17 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                       ${formatCurrency(listing.revenue)}
                     </div>
                   `;
-                  new google.maps.marker.AdvancedMarkerElement({
+                  const marker = new google.maps.marker.AdvancedMarkerElement({
                     map: map,
                     position: { lat: listing.latitude, lng: listing.longitude },
                     title: listing.title,
                     content: markerElement.firstElementChild as HTMLElement,
+                  });
+                  
+                  // Add click handler to show property card popup
+                  marker.addListener('click', () => {
+                    setSelectedListing(listing);
+                    map.panTo({ lat: listing.latitude, lng: listing.longitude });
                   });
                 });
                 

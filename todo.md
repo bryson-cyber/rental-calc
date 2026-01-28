@@ -6656,3 +6656,30 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Allow user to expand distance (1mi -> 3mi -> 5mi -> 10mi -> 25mi -> All)
 - [x] Auto-filter shows only nearby competition without manual selection
 - [x] Tested: 44 properties shown within 1 mile of user's CWE property
+
+
+## Step 5 Bug Fixes (Jan 28, 2026)
+- [ ] Add Studio option to bedroom filter (currently starts at 1BR)
+- [ ] Fix 1BR filter showing no results within 5 miles (should have results)
+- [ ] Make map marker clicks show property card popup
+- [ ] Optimize API calls - don't load 5000 properties for St. Louis, only load within distance radius
+- [ ] Fix 25 mile filter centering map incorrectly (going to St. Charles)
+- [ ] Fix property thumbnail images not loading in map view listings
+
+## Map View Fixes (Jan 28, 2026) - COMPLETE
+
+### Bedroom Filter Fix
+- [x] Fix AirDNA API filter format from {field, operator, value} to {type: "select", field, value}
+- [x] Add Studio (0 bedrooms) option to bedroom filter dropdown
+
+### API Optimization
+- [x] Add maximum listing limit of 500 to prevent excessive API calls
+
+### Image Loading Fix
+- [x] Add getImageUrl helper function to construct Airbnb image URLs from listing IDs
+- [x] Use pattern: https://a0.muscache.com/im/pictures/miso/Hosting-{airbnbId}/original/listing-photo.jpg
+- [x] Apply to both SSE endpoints (market listings and radius-based listings)
+
+### Map Marker Click Handlers
+- [x] Add click handlers to map markers to show property card popup
+- [x] Add click handlers to fullscreen map markers
