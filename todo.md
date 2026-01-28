@@ -6398,3 +6398,11 @@ This makes the grading more optimistic - properties now get better grades at low
    - C: 10th percentile (was 20th)
 3. **Market Outlook Present**: Verified working - shows Next 30 Days, Next 6 Months, Peak Earning Window, Strategic Opportunity
 4. **Houston Property**: API working correctly, returns $39,575 annual revenue, 60% occupancy, $180 ADR
+
+
+## Bug Fixes (Jan 27, 2026) - Session 2
+
+### User Reported Issues:
+- [x] Fix comparable properties distance filter not loading actual comps (hide distance when unavailable)
+- [x] Remove distance indicator from comps if data unavailable
+- [x] Remove Market Insights section from property analysis (framing unclear)

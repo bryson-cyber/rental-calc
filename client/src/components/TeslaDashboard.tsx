@@ -41,7 +41,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
-import MarketInsightsPanel from './MarketInsightsPanel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================
@@ -2402,7 +2401,7 @@ function CompStrengthIndicator({ comparables }: { comparables: Comparable[] }) {
         <span className="text-sm text-slate-600">
           Based on <span className="font-medium">{compCount}</span> similar properties
         </span>
-        {avgDistanceMiles !== null && (
+        {avgDistanceMiles !== null && avgDistanceMiles > 0 && (
           <>
             <span className="text-slate-400">|</span>
             <span className="text-sm text-slate-600">
@@ -2557,16 +2556,15 @@ function ComparableProperties({
                       <span className="text-xs font-medium text-slate-700">{comp.rating.toFixed(1)}</span>
                     </div>
                   )}
-                  {/* Distance badge - always show, with N/A for missing data */}
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
-                    <MapPin className="w-3 h-3" />
-                    <span className="text-xs font-medium">
-                      {comp.distanceMeters !== undefined && comp.distanceMeters > 0
-                        ? `${(comp.distanceMeters / 1609.34).toFixed(1)} mi`
-                        : 'N/A'
-                      }
-                    </span>
-                  </div>
+                  {/* Distance badge - only show when data is available */}
+                  {comp.distanceMeters !== undefined && comp.distanceMeters > 0 && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/80 text-white rounded-full px-2 py-0.5 shadow-sm">
+                      <MapPin className="w-3 h-3" />
+                      <span className="text-xs font-medium">
+                        {(comp.distanceMeters / 1609.34).toFixed(1)} mi
+                      </span>
+                    </div>
+                  )}
                 </div>
             
             {/* Content */}
@@ -2690,11 +2688,6 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
       
       {/* SECTION 5: Seasonal Forecast - "When are the peak/slow months?" */}
       <SeasonalForecast forecast={result.forecast} historicalData={result.historicalData} />
-      
-      {/* SECTION 6: Market Context - "What's the market like?" */}
-      {marketId && (
-        <MarketInsightsPanel marketId={String(marketId)} bedrooms={bedrooms} />
-      )}
       
       <MarketHealthGrade
         occupancy={result.metrics.occupancy}
