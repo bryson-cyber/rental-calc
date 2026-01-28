@@ -6768,3 +6768,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix tooltip styling - improved contrast with white background and dark text
   - Updated tooltip component to use bg-white and text-[#0F172A]
   - Removed dark background overrides from MapFirstLayoutV2 tooltips
+
+
+## UI Consistency & Layout Fix (Jan 28, 2026)
+- [ ] Redesign map section header to match premium white aesthetic (remove dark bar)
+- [ ] Reposition stats panel directly under the map (eliminate empty gap)
+- [ ] Ensure consistent design language between top toolkit section and map section

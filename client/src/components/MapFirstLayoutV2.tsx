@@ -992,16 +992,16 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   return (
     <div className={`${embedded ? 'h-full' : ''} bg-white ${className}`}>
-      {/* Premium Header with Guiding Question */}
-      <div className="bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#1e293b] text-white py-8 px-6">
+      {/* Premium Header with Guiding Question - Clean White Design */}
+      <div className="bg-white border-b border-gray-100 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
-              <MapPin className="w-6 h-6 text-[#C9A962]" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#b8984f] flex items-center justify-center shadow-lg">
+              <MapPin className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-serif font-semibold text-white">How does my property compare to nearby competition?</h2>
-              <p className="text-white/60 text-sm font-sans">
+              <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#0F172A]">How does my property compare to nearby competition?</h2>
+              <p className="text-[#0F172A]/60 text-sm font-sans mt-1">
                 See revenue, occupancy, and nightly rates for comparable properties in your market
               </p>
             </div>
@@ -1108,23 +1108,23 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         </div>
       )}
       
-      {/* Your Property Banner - Premium gold styling */}
+      {/* Your Property Banner - Clean White Design */}
       {myPropertyLocation && (
-        <div className="bg-gradient-to-r from-[#C9A962] to-[#b8984f] text-white py-3 px-6">
+        <div className="bg-[#f8f7f4] border-b border-gray-200 py-3 px-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <div className="w-10 h-10 rounded-xl bg-[#C9A962] flex items-center justify-center shadow-sm">
                 <Home className="w-5 h-5 text-white" />
               </div>
               <div className="flex items-center gap-3">
                 <div>
-                  <span className="text-sm font-medium text-white/80">Your Property:</span>
-                  <span className="ml-2 text-sm font-semibold">{myPropertyLocation.address}</span>
+                  <span className="text-sm font-medium text-[#0F172A]/60">Your Property:</span>
+                  <span className="ml-2 text-sm font-semibold text-[#0F172A]">{myPropertyLocation.address}</span>
                 </div>
                 {activeSubmarketName && (
-                  <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                    <Building className="w-3.5 h-3.5" />
-                    <span className="text-xs font-medium">Submarket: {activeSubmarketName}</span>
+                  <div className="flex items-center gap-1.5 bg-[#C9A962]/10 px-3 py-1 rounded-full border border-[#C9A962]/20">
+                    <Building className="w-3.5 h-3.5 text-[#C9A962]" />
+                    <span className="text-xs font-medium text-[#0F172A]/70">Submarket: {activeSubmarketName}</span>
                   </div>
                 )}
               </div>
@@ -1136,7 +1136,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                   mapRef.current.setZoom(14);
                 }
               }}
-              className="text-sm bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors font-medium backdrop-blur-sm"
+              className="text-sm bg-[#0F172A] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg transition-colors font-medium"
             >
               Center on Map
             </button>
@@ -1613,8 +1613,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         
         {/* Right Column - Map (40%) */}
         <div className="w-full lg:w-[40%] h-full relative flex flex-col">
-          {/* Map Container - fills available space */}
-          <div className="flex-1 relative min-h-[400px]">
+          {/* Map Container - fixed height to keep stats visible */}
+          <div className="relative h-[calc(100%-220px)] min-h-[350px]">
             {/* Fullscreen toggle */}
             <button
               onClick={() => setIsMapFullscreen(true)}
@@ -1655,7 +1655,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
           
           {/* Stats Panel - Fixed at bottom of right column */}
           {filteredListings.length > 0 && (
-            <div className="bg-white border-t border-[#0F172A]/10 p-4">
+            <div className="bg-white border-t border-gray-200 p-5 shadow-lg">
               {/* Compact Stats Row */}
               <div className="grid grid-cols-3 gap-3">
                 <TooltipProvider>
