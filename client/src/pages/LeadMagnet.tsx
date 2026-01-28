@@ -1770,9 +1770,9 @@ export default function LeadMagnet() {
                 />
                 
                 <div className="space-y-2">
-                  <InfoTooltip content="Paste a Zillow listing URL to auto-fill property details, or type an address manually. Zillow URLs automatically extract bedrooms, bathrooms, and rent/price.">
+                  <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
                     <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                      Property Address or Zillow URL
+                      Property Address or Zillow/Redfin URL
                     </span>
                   </InfoTooltip>
                   <SmartAddressInput
@@ -1791,7 +1791,7 @@ export default function LeadMagnet() {
                       }
                       toast.success(`Property details loaded from Zillow!`);
                     }}
-                    placeholder="Enter address or paste Zillow URL..."
+                    placeholder="Enter address or paste Zillow/Redfin URL..."
                     showPropertyCard={true}
                   />
                 </div>
@@ -2004,8 +2004,8 @@ export default function LeadMagnet() {
                       
                       {/* Address - Smart Input accepts Zillow URLs or regular addresses */}
                       <div className="space-y-2 mb-4">
-                        <InfoTooltip content="Paste a Zillow listing URL to auto-fill property details, or type an address manually. Zillow URLs automatically extract bedrooms, bathrooms, and rent/price.">
-                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Address or Zillow URL</span>
+                        <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
+                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Address or Zillow/Redfin URL</span>
                         </InfoTooltip>
                         <SmartAddressInput
                           value={prop.address}
@@ -2023,7 +2023,7 @@ export default function LeadMagnet() {
                             }
                             toast.success(`Property details loaded from Zillow!`);
                           }}
-                          placeholder="Enter address or paste Zillow URL..."
+                          placeholder="Enter address or paste Zillow/Redfin URL..."
                           showPropertyCard={false}
                         />
                       </div>
@@ -2222,7 +2222,7 @@ export default function LeadMagnet() {
                   <div className="space-y-4">
                     {/* Address Input - Smart Input accepts Zillow URLs */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Property Address or Zillow URL</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Property Address or Zillow/Redfin URL</label>
                       <SmartAddressInput
                         value={address}
                         onChange={setAddress}
@@ -2232,7 +2232,7 @@ export default function LeadMagnet() {
                           if (details.price !== null && details.priceType === 'rent') setMonthlyRent(String(details.price));
                           toast.success(`Property details loaded from Zillow!`);
                         }}
-                        placeholder="Enter address or paste Zillow URL..."
+                        placeholder="Enter address or paste Zillow/Redfin URL..."
                         showPropertyCard={true}
                       />
                     </div>

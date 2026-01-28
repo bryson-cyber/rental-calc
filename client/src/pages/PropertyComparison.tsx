@@ -250,7 +250,7 @@ export default function PropertyComparison() {
                 {/* Address Input */}
                 <div>
                   <label className="block text-xs font-medium text-[#0F172A]/60 uppercase tracking-wide mb-1">
-                    Property Address or Zillow URL
+                    Property Address or Zillow/Redfin URL
                   </label>
                   <SmartAddressInput
                     value={prop.address}
@@ -266,7 +266,7 @@ export default function PropertyComparison() {
                       setActiveIndex(null);
                       toast.success(`Property details loaded from Zillow!`);
                     }}
-                    placeholder="Enter address or paste Zillow URL..."
+                    placeholder="Enter address or paste Zillow/Redfin URL..."
                     showPropertyCard={false}
                   />
                 </div>

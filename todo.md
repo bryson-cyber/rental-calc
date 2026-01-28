@@ -6320,3 +6320,10 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Google Places suggestions now appear correctly when typing regular addresses
 - [x] Zillow/Redfin URL detection still works when pasting listing URLs
 
+
+
+## Label & Tooltip Fixes (Jan 28, 2026)
+- [x] Update all labels from "Zillow URL" to "Zillow/Redfin URL" across all locations
+- [x] Fix tooltip styling - now shows dark navy background with white text
+- [x] Verified consistent labeling across Homepage, Step 3, Step 4, and other locations
+

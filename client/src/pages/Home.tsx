@@ -608,7 +608,7 @@ export default function RentalEstimator() {
               {/* Address Input - Smart Input accepts Zillow URLs */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 font-sans uppercase tracking-wider">
-                  Property Address or Zillow URL
+                  Property Address or Zillow/Redfin URL
                 </label>
                 <SmartAddressInput
                   value={formData.address}
@@ -624,7 +624,7 @@ export default function RentalEstimator() {
                     setFormData(prev => ({ ...prev, ...updates }));
                     toast.success(`Property details loaded from Zillow!`);
                   }}
-                  placeholder="Enter address or paste Zillow URL..."
+                  placeholder="Enter address or paste Zillow/Redfin URL..."
                   showPropertyCard={true}
                 />
               </div>

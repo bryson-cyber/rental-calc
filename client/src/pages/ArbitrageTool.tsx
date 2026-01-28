@@ -185,7 +185,7 @@ export default function ArbitrageTool() {
               {/* Address - Smart Input accepts Zillow URLs */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#0F172A]/70 mb-1">
-                  Property Address or Zillow URL *
+                  Property Address or Zillow/Redfin URL *
                 </label>
                 <SmartAddressInput
                   value={address}
@@ -198,7 +198,7 @@ export default function ArbitrageTool() {
                     }
                     toast.success(`Property details loaded from Zillow!`);
                   }}
-                  placeholder="Enter address or paste Zillow URL..."
+                  placeholder="Enter address or paste Zillow/Redfin URL..."
                   showPropertyCard={true}
                 />
               </div>
