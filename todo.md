@@ -6515,3 +6515,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix table layout - made cells more compact with smaller padding
 - [x] Ensure home button works to return to property location (fixed setMyPropertyLocation)
 - [x] Show property marker on map when user sets their property
+
+
+## Step 5 Layout Diagnosis & Fix (Jan 28)
+- [x] Diagnose root cause: Why is entire page stuck in vertical/narrow mode? (max-w-4xl container in LeadMagnet.tsx line 1430)
+- [x] Diagnose root cause: Why are table columns stacking/truncating? (nested container classes + truncate constraints)
+- [x] Fix container width constraints to allow Step 5 to use full width (moved Map tab outside container)
+- [x] Rewrite table component to display all columns correctly on desktop (replaced container with px-4 md:px-8)
+- [x] Add distinct property marker icon on map for user's property location (star icon marker already exists)

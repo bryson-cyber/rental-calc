@@ -1490,7 +1490,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         {/* Search Guidance - Below Map when no listings */}
         {!isLoading && listings.length === 0 && !error && (
           <div className="bg-slate-50 border-t border-slate-200 py-4">
-            <div className="container">
+            <div className="px-4 md:px-6 lg:px-8">
               <div className="flex items-center justify-center gap-3 text-slate-600">
                 <Map className="w-5 h-5 text-slate-400" />
                 <p className="text-sm">
@@ -1505,7 +1505,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         {/* Legend Bar - Below Map */}
         {listings.length > 0 && (
           <div className="bg-slate-50 border-t border-b border-slate-200 py-3">
-            <div className="container">
+            <div className="px-4 md:px-6 lg:px-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-6">
                   <span className="text-sm font-medium text-slate-600">Revenue Legend:</span>
@@ -1565,7 +1565,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         {/* Location Quality Score - Shows when user has set their property */}
         {myPropertyLocation && (
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-t border-b border-purple-100 py-4">
-            <div className="container">
+            <div className="px-4 md:px-6 lg:px-8">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -1706,7 +1706,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
         {/* Table Section - Below Map */}
         {filteredListings.length > 0 && !embedded && (
           <div className="flex-1 bg-white border-t border-slate-200">
-            <div className="container py-4">
+            <div className="px-4 md:px-6 lg:px-8 py-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -1841,7 +1841,7 @@ export default function MapFirstLayout({ embedded = false, className = '', myPro
                                 </div>
                               )}
                               <div className="min-w-0">
-                                <div className="font-medium text-slate-900 truncate max-w-[140px] text-xs" title={listing.title}>
+                                <div className="font-medium text-slate-900 truncate max-w-[200px] md:max-w-[300px] lg:max-w-[400px] text-xs" title={listing.title}>
                                   {listing.title}
                                 </div>
                                 <div className="text-[10px] text-slate-500">

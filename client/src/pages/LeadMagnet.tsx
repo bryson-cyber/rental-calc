@@ -2164,18 +2164,6 @@ export default function LeadMagnet() {
             )}
             
             {/* ============================================ */}
-            {/* MAP TAB */}
-            {/* ============================================ */}
-            {activeTab === 'map' && (
-              <MapFirstLayout 
-                key={`map-${myProperty?.address || 'no-property'}`}
-                myProperty={myProperty}
-                embedded={false} 
-                className="min-h-[600px]" 
-              />
-            )}
-
-            {/* ============================================ */}
             {/* AI ADVISOR TAB */}
             {/* ============================================ */}
             {activeTab === 'advisor' && result && (
@@ -2385,6 +2373,20 @@ export default function LeadMagnet() {
           </div>
         </div>
       </section>
+
+      {/* ============================================ */}
+      {/* MAP TAB - FULL WIDTH (outside container) */}
+      {/* ============================================ */}
+      {activeTab === 'map' && (
+        <section className="bg-slate-50">
+          <MapFirstLayout 
+            key={`map-${myProperty?.address || 'no-property'}`}
+            myProperty={myProperty}
+            embedded={false} 
+            className="min-h-[600px]" 
+          />
+        </section>
+      )}
 
       {/* ============================================ */}
       {/* RESULTS SECTIONS */}
