@@ -1,20 +1,28 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MapView } from '@/components/Map';
-import { HierarchicalLocationSelector, LocationSelection } from '@/components/HierarchicalLocationSelector';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Map, MapPin, DollarSign, Info, BedDouble, Home, Navigation, Waves, Thermometer, PawPrint, Car, UtensilsCrossed, WashingMachine, Check, Filter, TrendingUp, Calendar, Building, Star, ChevronRight } from 'lucide-react';
+import { Loader2, Map, MapPin, Home, Navigation, TrendingUp, Share2, List, ArrowUpDown, ExternalLink, Info, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useProperty } from '@/contexts/PropertyContext';
+import { SmartAddressInput, PropertyDetails as SmartPropertyDetails } from '@/components/SmartAddressInput';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface PropertyListing {
   id: string;
@@ -32,12 +40,12 @@ interface PropertyListing {
   propertyType: string;
   airbnbUrl: string;
   thumbnailUrl: string | null;
-  distanceToMyProperty?: number; // Distance in miles
+  distanceToMyProperty?: number;
 }
 
 interface RevenueThresholds {
-  high: number;  // Top 33%
-  low: number;   // Bottom 33%
+  high: number;
+  low: number;
   average: number;
 }
 
@@ -54,8 +62,6 @@ function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
   
   const revenues = listings.map(l => l.revenue).sort((a, b) => a - b);
   const average = revenues.reduce((sum, r) => sum + r, 0) / revenues.length;
-  
-  // Calculate percentiles
   const lowIndex = Math.floor(revenues.length * 0.33);
   const highIndex = Math.floor(revenues.length * 0.67);
   
@@ -66,9 +72,8 @@ function calculateThresholds(listings: PropertyListing[]): RevenueThresholds {
   };
 }
 
-// Calculate distance between two points in miles using Haversine formula
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3959; // Earth's radius in miles
+  const R = 3959;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = 
@@ -89,14 +94,10 @@ function formatDistance(miles: number): string {
   }
 }
 
-function getMarkerColor(revenue: number, thresholds: RevenueThresholds, customThreshold: number | null): string {
-  if (customThreshold !== null) {
-    return revenue >= customThreshold ? '#22c55e' : '#9ca3af'; // Green or gray
-  }
-  
-  if (revenue >= thresholds.high) return '#22c55e'; // Green - top performers
-  if (revenue >= thresholds.low) return '#C9A962';  // Gold - average
-  return '#ef4444'; // Red - below average
+function getMarkerColor(revenue: number, thresholds: RevenueThresholds): string {
+  if (revenue >= thresholds.high) return '#22c55e';
+  if (revenue >= thresholds.low) return '#C9A962';
+  return '#ef4444';
 }
 
 function formatCurrency(amount: number): string {
@@ -108,15 +109,20 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Create improved marker element with premium styling
-function createMarkerElement(color: string, revenue: number): HTMLDivElement {
+function formatCompactCurrency(amount: number): string {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M`;
+  } else if (amount >= 1000) {
+    return `$${Math.round(amount / 1000)}K`;
+  }
+  return `$${amount}`;
+}
+
+function createMarkerElement(color: string, revenue: number, distance?: number): HTMLDivElement {
   const markerElement = document.createElement('div');
+  const distanceLabel = distance !== undefined ? `<div style="font-size: 9px; opacity: 0.8; margin-top: 2px;">${formatDistance(distance)}</div>` : '';
   markerElement.innerHTML = `
-    <div style="
-      position: relative;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    " class="property-marker">
+    <div style="position: relative; cursor: pointer; transition: transform 0.2s ease;" class="property-marker">
       <div style="
         background: ${color};
         color: white;
@@ -127,137 +133,68 @@ function createMarkerElement(color: string, revenue: number): HTMLDivElement {
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         white-space: nowrap;
         font-family: system-ui, -apple-system, sans-serif;
-      ">${formatCompactCurrency(revenue)}</div>
+        text-align: center;
+      ">
+        ${formatCompactCurrency(revenue)}
+        ${distanceLabel}
+      </div>
     </div>
   `;
   
-  // Add hover effect
   const marker = markerElement.querySelector('.property-marker') as HTMLElement;
   if (marker) {
-    marker.addEventListener('mouseenter', () => {
-      marker.style.transform = 'scale(1.15)';
-    });
-    marker.addEventListener('mouseleave', () => {
-      marker.style.transform = 'scale(1)';
-    });
+    marker.addEventListener('mouseenter', () => { marker.style.transform = 'scale(1.15)'; });
+    marker.addEventListener('mouseleave', () => { marker.style.transform = 'scale(1)'; });
   }
   
   return markerElement;
 }
 
-// Create "My Property" marker with premium gold styling
 function createMyPropertyMarker(): HTMLDivElement {
   const markerElement = document.createElement('div');
   markerElement.innerHTML = `
-    <div style="
-      position: relative;
-      cursor: pointer;
-      animation: pulse 2s infinite;
-    " class="my-property-marker">
+    <div style="position: relative; cursor: pointer; animation: pulse 2s infinite;" class="my-property-marker">
       <div style="
-        width: 48px;
-        height: 48px;
+        width: 48px; height: 48px;
         background: linear-gradient(135deg, #C9A962 0%, #a08840 100%);
         border: 4px solid white;
         border-radius: 50%;
         box-shadow: 0 6px 20px rgba(201, 169, 98, 0.5), 0 4px 8px rgba(0,0,0,0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
       ">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
           <polyline points="9 22 9 12 15 12 15 22"></polyline>
         </svg>
       </div>
-      <div style="
-        position: absolute;
-        bottom: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-top: 10px solid white;
-        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
-      "></div>
-      <div style="
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #C9A962;
-        color: white;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 10px;
-        white-space: nowrap;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      ">MY PROPERTY</div>
+      <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: #C9A962; color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">YOUR PROPERTY</div>
     </div>
-    <style>
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-      }
-    </style>
+    <style>@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }</style>
   `;
-  
   return markerElement;
 }
 
-// Adjust color brightness
-function adjustColor(color: string, amount: number): string {
-  const hex = color.replace('#', '');
-  const r = Math.max(0, Math.min(255, parseInt(hex.slice(0, 2), 16) + amount));
-  const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
-  const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-}
-
-// Format currency in compact form for markers
-function formatCompactCurrency(amount: number): string {
-  if (amount >= 1000000) {
-    return `$${(amount / 1000000).toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    return `$${Math.round(amount / 1000)}K`;
-  }
-  return `$${amount}`;
-}
+type SortField = 'revenue' | 'distance' | 'occupancy' | 'adr';
+type SortDirection = 'asc' | 'desc';
 
 export default function MapViewPage() {
-  const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
+  const { myProperty, hasProperty } = useProperty();
+  
+  
+  // State
   const [listings, setListings] = useState<PropertyListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [useCustomThreshold, setUseCustomThreshold] = useState(false);
-  const [customThreshold, setCustomThreshold] = useState<number>(50000);
-  const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
-  const [bedroomFilter, setBedroomFilter] = useState<string>('all');
-  const [showAmenitiesFilter, setShowAmenitiesFilter] = useState(false);
-  const [amenitiesFilter, setAmenitiesFilter] = useState<{
-    pool: boolean;
-    hotTub: boolean;
-    petFriendly: boolean;
-    parking: boolean;
-    kitchen: boolean;
-    washerDryer: boolean;
-  }>({
-    pool: false,
-    hotTub: false,
-    petFriendly: false,
-    parking: false,
-    kitchen: false,
-    washerDryer: false,
-  });
-  
-  // My Property state
-  const [myPropertyAddress, setMyPropertyAddress] = useState<string>('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<MyPropertyLocation | null>(null);
-  const [isGeocodingMyProperty, setIsGeocodingMyProperty] = useState(false);
-  const [myPropertyError, setMyPropertyError] = useState<string | null>(null);
+  const [distanceFilter, setDistanceFilter] = useState<string>('all');
+  const [bedroomFilter, setBedroomFilter] = useState<string>('all');
+  const [showTable, setShowTable] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('distance');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [manualAddress, setManualAddress] = useState('');
+  const [isGeocodingManual, setIsGeocodingManual] = useState(false);
+  const [detectedProperty, setDetectedProperty] = useState<SmartPropertyDetails | null>(null);
+  const [hasAutoLoaded, setHasAutoLoaded] = useState(false);
   
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -265,123 +202,91 @@ export default function MapViewPage() {
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   
-  // Filter listings by bedroom count and add distance to my property
+  // Filter and sort listings
   const filteredListings = useMemo(() => {
-    let filtered = bedroomFilter === 'all' ? listings : listings.filter(l => l.bedrooms === parseInt(bedroomFilter));
+    let filtered = listings;
     
-    // Add distance to my property if set
+    // Add distance to each listing
     if (myPropertyLocation) {
       filtered = filtered.map(l => ({
         ...l,
-        distanceToMyProperty: calculateDistance(
-          myPropertyLocation.lat,
-          myPropertyLocation.lng,
-          l.latitude,
-          l.longitude
-        )
+        distanceToMyProperty: calculateDistance(myPropertyLocation.lat, myPropertyLocation.lng, l.latitude, l.longitude)
       }));
     }
     
+    // Filter by bedrooms
+    if (bedroomFilter !== 'all') {
+      filtered = filtered.filter(l => l.bedrooms === parseInt(bedroomFilter));
+    }
+    
+    // Filter by distance
+    if (distanceFilter !== 'all' && myPropertyLocation) {
+      const maxDistance = parseFloat(distanceFilter);
+      filtered = filtered.filter(l => (l.distanceToMyProperty || 0) <= maxDistance);
+    }
+    
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      let aVal: number, bVal: number;
+      switch (sortField) {
+        case 'revenue': aVal = a.revenue; bVal = b.revenue; break;
+        case 'distance': aVal = a.distanceToMyProperty || 999; bVal = b.distanceToMyProperty || 999; break;
+        case 'occupancy': aVal = a.occupancy; bVal = b.occupancy; break;
+        case 'adr': aVal = a.adr; bVal = b.adr; break;
+        default: aVal = 0; bVal = 0;
+      }
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+    
     return filtered;
-  }, [listings, bedroomFilter, myPropertyLocation]);
+  }, [listings, bedroomFilter, distanceFilter, myPropertyLocation, sortField, sortDirection]);
   
-  // Calculate thresholds based on filtered listings
   const thresholds = useMemo(() => calculateThresholds(filteredListings), [filteredListings]);
   
-  // Geocode my property address
-  const geocodeMyProperty = useCallback(async () => {
-    if (!myPropertyAddress.trim()) {
-      setMyPropertyError('Please enter an address');
-      return;
-    }
-    
-    if (!geocoderRef.current && window.google) {
-      geocoderRef.current = new google.maps.Geocoder();
-    }
-    
-    if (!geocoderRef.current) {
-      setMyPropertyError('Geocoder not available. Please try again.');
-      return;
-    }
-    
-    setIsGeocodingMyProperty(true);
-    setMyPropertyError(null);
-    
-    try {
-      const result = await geocoderRef.current.geocode({ address: myPropertyAddress });
-      
-      if (result.results && result.results.length > 0) {
-        const location = result.results[0].geometry.location;
-        const newLocation = {
-          address: result.results[0].formatted_address,
-          lat: location.lat(),
-          lng: location.lng()
-        };
-        setMyPropertyLocation(newLocation);
-        setMyPropertyAddress(result.results[0].formatted_address);
-        
-        // Center map on my property
-        if (mapRef.current) {
-          mapRef.current.panTo({ lat: newLocation.lat, lng: newLocation.lng });
-        }
-      } else {
-        setMyPropertyError('Address not found. Please try a different address.');
-      }
-    } catch (err) {
-      console.error('Geocoding error:', err);
-      setMyPropertyError('Failed to geocode address. Please try again.');
-    } finally {
-      setIsGeocodingMyProperty(false);
-    }
-  }, [myPropertyAddress]);
-  
-  // Clear my property
-  const clearMyProperty = useCallback(() => {
-    setMyPropertyLocation(null);
-    setMyPropertyAddress('');
-    setMyPropertyError(null);
-    
-    // Remove my property marker
-    if (myPropertyMarkerRef.current) {
-      myPropertyMarkerRef.current.map = null;
-      myPropertyMarkerRef.current = null;
-    }
-  }, []);
-  
-  // Handle location search - accepts selection directly to avoid state timing issues
-  const performSearch = useCallback(async (selection: LocationSelection) => {
+  // Fetch listings based on location
+  const fetchListingsForLocation = useCallback(async (lat: number, lng: number, city?: string, state?: string) => {
     setIsLoading(true);
     setError(null);
-    setListings([]);
     
     try {
-      // Determine which ID to use for fetching listings
-      let marketId: string | null = null;
+      // Build search term from city (AirDNA works better with just city name)
+      const searchTerm = city || state || '';
       
-      if (selection.submarket) {
-        marketId = selection.submarket.id;
-      } else if (selection.market) {
-        marketId = selection.market.id;
-      }
-      
-      if (!marketId) {
-        setError('Please select a city/metro or neighborhood to view listings.');
+      if (!searchTerm) {
+        setError('Could not determine location. Please try a different address.');
         setIsLoading(false);
         return;
       }
       
-      console.log('[MapView] Fetching listings for market:', marketId);
+      // Search for markets using the rental.searchMarkets endpoint
+      const marketsResponse = await fetch(`/api/trpc/rental.searchMarkets?input=${encodeURIComponent(JSON.stringify({ json: { searchTerm, limit: 10 } }))}`);
+      const marketsData = await marketsResponse.json();
       
-      // Fetch listings using tRPC - use GET request format for queries
-      const response = await fetch(`/api/trpc/compData.getListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId } }))}`);
-      const data = await response.json();
+      const markets = marketsData.result?.data?.json?.data || [];
       
-      if (data.result?.data?.json?.listings) {
-        const fetchedListings = data.result.data.json.listings;
-        console.log('[MapView] Received', fetchedListings.length, 'listings');
-        
-        // Filter listings with valid coordinates
-        const listingsWithCoords = fetchedListings
+      if (markets.length === 0) {
+        setError('No market data available for this location. Try a larger city nearby.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Use the first matching market
+      const matchedMarket = markets[0];
+      const marketId = matchedMarket.id || matchedMarket.market_id;
+      const isMarketLevel = matchedMarket.type === 'market' || matchedMarket.type === 'city';
+      
+      if (!marketId) {
+        setError('Could not identify market. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Fetch listings for this market using compData.getAllListings for more results
+      const listingsResponse = await fetch(`/api/trpc/compData.getAllListings?input=${encodeURIComponent(JSON.stringify({ json: { submarketId: marketId, isMarketLevel, maxListings: 100 } }))}`);
+      const listingsData = await listingsResponse.json();
+      
+      if (listingsData.result?.data?.json?.listings) {
+        const fetchedListings = listingsData.result.data.json.listings
           .filter((l: any) => l.latitude && l.longitude)
           .map((l: any) => ({
             id: l.id,
@@ -401,109 +306,108 @@ export default function MapViewPage() {
             thumbnailUrl: l.thumbnail_url || l.thumbnailUrl || null,
           }));
         
-        console.log('[MapView] Listings with coordinates:', listingsWithCoords.length);
-        setListings(listingsWithCoords);
+        setListings(fetchedListings);
         
-        // Center map on first listing
-        if (listingsWithCoords.length > 0 && mapRef.current) {
-          const bounds = new google.maps.LatLngBounds();
-          listingsWithCoords.forEach((l: PropertyListing) => {
-            bounds.extend({ lat: l.latitude, lng: l.longitude });
-          });
-          mapRef.current.fitBounds(bounds);
+        // Center map on property location
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat, lng });
+          mapRef.current.setZoom(13);
         }
       } else {
-        console.log('[MapView] No listings in response');
-        setError('No listings with coordinates found for this location. Try a different area.');
+        setError('No properties found in this area.');
       }
     } catch (err) {
       console.error('Error fetching listings:', err);
-      setError('Failed to fetch listings. Please try again.');
+      setError('Failed to load properties. Please try again.');
     } finally {
       setIsLoading(false);
     }
   }, []);
   
-  // Handle manual search button click
-  const handleSearch = useCallback(() => {
-    if (locationSelection) {
-      performSearch(locationSelection);
-    }
-  }, [locationSelection, performSearch]);
-  
-  // Update my property marker
-  useEffect(() => {
-    if (!mapRef.current || !window.google) return;
-    
-    // Remove existing my property marker
-    if (myPropertyMarkerRef.current) {
-      myPropertyMarkerRef.current.map = null;
-      myPropertyMarkerRef.current = null;
+  // Geocode address and fetch listings
+  const geocodeAndSearch = useCallback(async (address: string) => {
+    if (!geocoderRef.current && window.google) {
+      geocoderRef.current = new google.maps.Geocoder();
     }
     
-    // Create new my property marker if location is set
-    if (myPropertyLocation) {
-      const markerElement = createMyPropertyMarker();
+    if (!geocoderRef.current) {
+      setError('Map not ready. Please wait and try again.');
+      return;
+    }
+    
+    setIsGeocodingManual(true);
+    
+    try {
+      const result = await geocoderRef.current.geocode({ address });
       
-      myPropertyMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
-        map: mapRef.current,
-        position: { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng },
-        title: 'My Property',
-        content: markerElement,
-        zIndex: 1000, // Ensure it's on top
-      });
-      
-      // Add click listener
-      myPropertyMarkerRef.current.addListener('click', () => {
-        if (!infoWindowRef.current) {
-          infoWindowRef.current = new google.maps.InfoWindow();
+      if (result.results && result.results.length > 0) {
+        const location = result.results[0].geometry.location;
+        const formattedAddress = result.results[0].formatted_address;
+        
+        // Extract city and state from address components
+        let city = '', state = '';
+        for (const component of result.results[0].address_components) {
+          if (component.types.includes('locality')) city = component.long_name;
+          if (component.types.includes('administrative_area_level_1')) state = component.short_name;
         }
         
-        const content = `
-          <div style="max-width: 250px; font-family: system-ui, sans-serif; padding: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #C9A962 0%, #a08840 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-              </div>
-              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #C9A962;">My Property</h3>
-            </div>
-            <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.4;">${myPropertyLocation.address}</p>
-          </div>
-        `;
+        const newLocation = {
+          address: formattedAddress,
+          lat: location.lat(),
+          lng: location.lng()
+        };
         
-        infoWindowRef.current.setContent(content);
-        infoWindowRef.current.open(mapRef.current, myPropertyMarkerRef.current);
-      });
+        setMyPropertyLocation(newLocation);
+        await fetchListingsForLocation(newLocation.lat, newLocation.lng, city, state);
+      } else {
+        setError('Address not found. Please try a different address.');
+      }
+    } catch (err) {
+      console.error('Geocoding error:', err);
+      setError('Failed to find address. Please try again.');
+    } finally {
+      setIsGeocodingManual(false);
     }
-  }, [myPropertyLocation]);
+  }, [fetchListingsForLocation]);
   
-  // Update markers when listings or thresholds change
+  // Auto-load from PropertyContext when component mounts
+  useEffect(() => {
+    if (hasProperty && myProperty && !hasAutoLoaded && mapRef.current && window.google) {
+      setHasAutoLoaded(true);
+      
+      // If we have coordinates, use them directly
+      if (myProperty.latitude && myProperty.longitude) {
+        const location = {
+          address: myProperty.formattedAddress || myProperty.address,
+          lat: myProperty.latitude,
+          lng: myProperty.longitude
+        };
+        setMyPropertyLocation(location);
+        fetchListingsForLocation(location.lat, location.lng, myProperty.city, myProperty.state);
+      } else {
+        // Geocode the address
+        geocodeAndSearch(myProperty.address);
+      }
+    }
+  }, [hasProperty, myProperty, hasAutoLoaded, fetchListingsForLocation, geocodeAndSearch]);
+  
+  // Update markers when listings change
   useEffect(() => {
     if (!mapRef.current || !window.google) return;
     
     // Clear existing markers
-    markersRef.current.forEach(marker => {
-      marker.map = null;
-    });
+    markersRef.current.forEach(m => { m.map = null; });
     markersRef.current = [];
     
-    // Create info window if not exists
+    // Create info window if needed
     if (!infoWindowRef.current) {
       infoWindowRef.current = new google.maps.InfoWindow();
     }
     
     // Add markers for each listing
     filteredListings.forEach(listing => {
-      const color = getMarkerColor(
-        listing.revenue,
-        thresholds,
-        useCustomThreshold ? customThreshold : null
-      );
-      
-      const markerElement = createMarkerElement(color, listing.revenue);
+      const color = getMarkerColor(listing.revenue, thresholds);
+      const markerElement = createMarkerElement(color, listing.revenue, listing.distanceToMyProperty);
       
       const marker = new google.maps.marker.AdvancedMarkerElement({
         map: mapRef.current!,
@@ -512,10 +416,7 @@ export default function MapViewPage() {
         content: markerElement,
       });
       
-      // Add click listener
       marker.addListener('click', () => {
-        setSelectedProperty(listing);
-        
         const distanceInfo = listing.distanceToMyProperty !== undefined 
           ? `<div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
               <span style="color: #666;">Distance from you:</span>
@@ -547,10 +448,10 @@ export default function MapViewPage() {
               </div>
               <div style="background: #f8f7f4; padding: 8px; border-radius: 8px; text-align: center;">
                 <div style="font-size: 11px; color: #666; margin-bottom: 2px;">Occupancy</div>
-                <div style="font-size: 14px; font-weight: 600; color: #0F172A;">${Math.round(listing.occupancy * 100)}%</div>
+                <div style="font-size: 14px; font-weight: 600; color: #0F172A;">${Math.round(listing.occupancy > 1 ? listing.occupancy : listing.occupancy * 100)}%</div>
               </div>
               <div style="background: #f8f7f4; padding: 8px; border-radius: 8px; text-align: center;">
-                <div style="font-size: 11px; color: #666; margin-bottom: 2px;">ADR</div>
+                <div style="font-size: 11px; color: #666; margin-bottom: 2px;">Nightly Rate</div>
                 <div style="font-size: 14px; font-weight: 600; color: #0F172A;">${formatCurrency(listing.adr)}</div>
               </div>
             </div>
@@ -568,378 +469,461 @@ export default function MapViewPage() {
       
       markersRef.current.push(marker);
     });
-  }, [filteredListings, listings.length, thresholds, useCustomThreshold, customThreshold]);
+  }, [filteredListings, thresholds]);
   
-  const getLocationName = () => {
-    if (locationSelection?.zipcode) return locationSelection.zipcode;
-    if (locationSelection?.submarket) return locationSelection.submarket.name;
-    if (locationSelection?.market) return locationSelection.market.name;
-    return 'Select a location';
+  // Update my property marker
+  useEffect(() => {
+    if (!mapRef.current || !window.google) return;
+    
+    if (myPropertyMarkerRef.current) {
+      myPropertyMarkerRef.current.map = null;
+      myPropertyMarkerRef.current = null;
+    }
+    
+    if (myPropertyLocation) {
+      const markerElement = createMyPropertyMarker();
+      myPropertyMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
+        position: { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng },
+        title: 'Your Property',
+        content: markerElement,
+        zIndex: 1000,
+      });
+    }
+  }, [myPropertyLocation]);
+  
+  // Share link handler
+  const handleShare = useCallback(() => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Link copied! Share this link with your clients.');
+    }).catch(() => {
+      toast.error('Copy failed. Please copy the URL manually.');
+    });
+  }, [toast]);
+  
+  // Toggle sort
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'distance' ? 'asc' : 'desc');
+    }
   };
   
-  // Calculate average occupancy
+  // Stats
   const avgOccupancy = filteredListings.length > 0 
-    ? Math.round(filteredListings.reduce((sum, l) => sum + l.occupancy * 100, 0) / filteredListings.length)
+    ? Math.round(filteredListings.reduce((sum, l) => sum + (l.occupancy > 1 ? l.occupancy : l.occupancy * 100), 0) / filteredListings.length)
     : 0;
-  
-  // Calculate average ADR
   const avgAdr = filteredListings.length > 0 
     ? filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length
     : 0;
+  const closestDistance = filteredListings.length > 0 && myPropertyLocation
+    ? Math.min(...filteredListings.map(l => l.distanceToMyProperty || 999))
+    : null;
   
   return (
-    <div className="min-h-screen bg-white">
-      {/* Premium Header - Deep Navy with Gold Accents */}
-      <div className="bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#1e293b] text-white py-8 px-6">
-        <div className="container">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-14 h-14 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
-              <Map className="w-7 h-7 text-[#C9A962]" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-semibold text-white">See the Map</h1>
-              <p className="text-white/60 text-sm font-sans">
-                Visualize property performance across any market
-              </p>
-            </div>
-          </div>
-          <p className="text-white/50 max-w-2xl text-sm mt-2">
-            See which neighborhoods have the highest-earning rentals at a glance. Compare properties, analyze revenue tiers, and find the best opportunities.
-          </p>
-        </div>
-      </div>
-      
-      <div className="container py-8">
-        {/* Location Selection - Premium Card */}
-        <Card className="mb-6 border-[#0F172A]/10 shadow-sm">
-          <CardHeader className="border-b border-[#0F172A]/5 bg-[#f8f7f4]">
-            <CardTitle className="flex items-center gap-3 text-lg">
-              <div className="w-10 h-10 rounded-xl bg-[#C9A962]/10 flex items-center justify-center border border-[#C9A962]/20">
-                <MapPin className="w-5 h-5 text-[#C9A962]" />
+    <TooltipProvider>
+      <div className="min-h-screen bg-white">
+        {/* Premium Header */}
+        <div className="bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-[#1e293b] text-white py-8 px-6">
+          <div className="container">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
+                  <Map className="w-7 h-7 text-[#C9A962]" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-serif font-semibold text-white">See the Map</h1>
+                  <p className="text-white/60 text-sm font-sans">
+                    How does your property compare to nearby competition?
+                  </p>
+                </div>
               </div>
-              <span className="text-[#0F172A] font-semibold">Select Location</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <HierarchicalLocationSelector
-              onSelectionChange={setLocationSelection}
-              onSearch={(selection) => {
-                // Update state and immediately trigger search with the selection
-                setLocationSelection(selection);
-                performSearch(selection);
-              }}
-            />
-            <div className="mt-4 flex gap-3">
               <Button
-                onClick={handleSearch}
-                disabled={!locationSelection || isLoading}
-                className="bg-[#0F172A] hover:bg-[#1e293b] text-white px-6 h-11"
+                onClick={handleShare}
+                variant="outline"
+                className="bg-transparent border-white/20 text-white hover:bg-white/10"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Map className="w-4 h-4 mr-2" />
-                    Show on Map
-                  </>
-                )}
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
               </Button>
             </div>
-          </CardContent>
-        </Card>
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Info className="w-4 h-4 text-red-600" />
-            </div>
-            <p className="text-sm">{error}</p>
           </div>
-        )}
+        </div>
         
-        {/* Map and Controls */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Legend and Controls */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* My Property Section - Premium styling */}
-            <Card className="border-[#0F172A]/10 bg-white shadow-sm">
-              <CardHeader className="pb-3 border-b border-[#0F172A]/5">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#C9A962]/10 flex items-center justify-center border border-[#C9A962]/20">
-                    <Home className="w-4 h-4 text-[#C9A962]" />
+        <div className="container py-6">
+          {/* Property Input - Only show if no property is set */}
+          {!myPropertyLocation && (
+            <Card className="mb-6 border-[#C9A962]/30 bg-[#C9A962]/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30 flex-shrink-0">
+                    <Home className="w-6 h-6 text-[#C9A962]" />
                   </div>
-                  <span className="text-[#0F172A] font-semibold">My Property</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-4">
-                <p className="text-xs text-[#0F172A]/50">
-                  Enter your property address to see how far competitors are from your location.
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter your address..."
-                    value={myPropertyAddress}
-                    onChange={(e) => setMyPropertyAddress(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && geocodeMyProperty()}
-                    className="text-sm border-[#0F172A]/10"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={geocodeMyProperty}
-                    disabled={isGeocodingMyProperty || !myPropertyAddress.trim()}
-                    size="sm"
-                    className="flex-1 bg-[#C9A962] hover:bg-[#b8984f] text-white"
-                  >
-                    {isGeocodingMyProperty ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Navigation className="w-3 h-3 mr-1" />
-                    )}
-                    Set Location
-                  </Button>
-                  {myPropertyLocation && (
-                    <Button
-                      onClick={clearMyProperty}
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
-                {myPropertyError && (
-                  <p className="text-xs text-red-600">{myPropertyError}</p>
-                )}
-                {myPropertyLocation && (
-                  <div className="p-3 bg-[#C9A962]/10 rounded-lg text-xs text-[#0F172A] border border-[#C9A962]/20">
-                    <div className="font-semibold text-[#C9A962] mb-1">Location Set</div>
-                    <div className="truncate text-[#0F172A]/70">{myPropertyLocation.address}</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Threshold Controls - Premium styling */}
-            <Card className="border-[#0F172A]/10 bg-white shadow-sm">
-              <CardHeader className="pb-3 border-b border-[#0F172A]/5">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-[#0F172A] font-semibold">Revenue Thresholds</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-3.5 h-3.5 text-[#0F172A]/40" />
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-[#0F172A] text-white border-0 max-w-xs">
-                        <p>Properties are color-coded by annual revenue. Green = top performers, Gold = average, Red = below average.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-4">
-                {/* Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="custom-mode" className="text-sm text-[#0F172A]/70">Custom Threshold</Label>
-                  <Switch
-                    id="custom-mode"
-                    checked={useCustomThreshold}
-                    onCheckedChange={setUseCustomThreshold}
-                  />
-                </div>
-                
-                {useCustomThreshold ? (
-                  <div>
-                    <Label className="text-xs text-[#0F172A]/50">Minimum Revenue</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-[#0F172A]/70">$</span>
-                      <Input
-                        type="number"
-                        value={customThreshold}
-                        onChange={(e) => setCustomThreshold(Number(e.target.value))}
-                        className="h-9 border-[#0F172A]/10"
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-[#0F172A] mb-1">Enter Your Property Address</h3>
+                    <p className="text-sm text-[#0F172A]/60 mb-4">
+                      We'll show you all the competing rentals nearby so you can see how your property stacks up.
+                    </p>
+                    <div className="space-y-3">
+                      <SmartAddressInput
+                        value={manualAddress}
+                        onChange={setManualAddress}
+                        onPropertyDetected={(property) => {
+                          setDetectedProperty(property);
+                          // Auto-search when property is detected from Zillow/Redfin
+                          if (property.address) {
+                            geocodeAndSearch(property.address);
+                          }
+                        }}
+                        onAddressSelect={(address, placeId, details) => {
+                          setManualAddress(address);
+                          if (details?.lat && details?.lng) {
+                            const location = { address, lat: details.lat, lng: details.lng };
+                            setMyPropertyLocation(location);
+                            fetchListingsForLocation(details.lat, details.lng, details.city, details.state);
+                          } else {
+                            geocodeAndSearch(address);
+                          }
+                        }}
+                        placeholder="Enter address or paste Zillow/Redfin URL..."
+                        showPropertyCard={true}
                       />
+                      {manualAddress && !detectedProperty && (
+                        <Button
+                          onClick={() => geocodeAndSearch(manualAddress)}
+                          disabled={!manualAddress.trim() || isGeocodingManual || isLoading}
+                          className="bg-[#C9A962] hover:bg-[#b8984f] text-white px-6 w-full sm:w-auto"
+                        >
+                          {isGeocodingManual || isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Navigation className="w-4 h-4 mr-2" />
+                              Find Competitors
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                    <div className="mt-3 space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-green-500" />
-                        <span className="text-[#0F172A]/70">Above {formatCurrency(customThreshold)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-gray-400" />
-                        <span className="text-[#0F172A]/70">Below {formatCurrency(customThreshold)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-gradient-to-br from-[#C9A962]/10 to-[#C9A962]/5 rounded-xl border border-[#C9A962]/20">
-                      <div className="text-xs text-[#0F172A]/50 mb-1">Market Average</div>
-                      <div className="text-xl font-bold text-[#C9A962]">
-                        {listings.length > 0 ? formatCurrency(thresholds.average) : '—'}
-                      </div>
-                      <div className="text-xs text-[#0F172A]/40 mt-1">per year</div>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-green-500" />
-                        <span className="text-[#0F172A]/70">Top 33%: Above {listings.length > 0 ? formatCurrency(thresholds.high) : '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-[#C9A962]" />
-                        <span className="text-[#0F172A]/70">Middle 33%: {listings.length > 0 ? `${formatCurrency(thresholds.low)} - ${formatCurrency(thresholds.high)}` : '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full bg-red-500" />
-                        <span className="text-[#0F172A]/70">Bottom 33%: Below {listings.length > 0 ? formatCurrency(thresholds.low) : '—'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Bedroom Filter */}
-            {listings.length > 0 && (
-              <Card className="border-[#0F172A]/10 bg-white shadow-sm">
-                <CardHeader className="pb-3 border-b border-[#0F172A]/5">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                      <BedDouble className="w-4 h-4 text-purple-500" />
-                    </div>
-                    <span className="text-[#0F172A] font-semibold">Filter by Bedrooms</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
-                    <SelectTrigger className="border-[#0F172A]/10">
-                      <SelectValue placeholder="All Bedrooms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Bedrooms ({listings.length})</SelectItem>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map(br => {
-                        const count = listings.filter(l => l.bedrooms === br).length;
-                        return (
-                          <SelectItem key={br} value={String(br)}>
-                            {br} Bedroom{br !== 1 ? 's' : ''} ({count})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {bedroomFilter !== 'all' && (
-                    <p className="mt-2 text-xs text-[#0F172A]/50">
-                      Showing {filteredListings.length} of {listings.length} properties
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Stats - Premium styling */}
-            {filteredListings.length > 0 && (
-              <Card className="border-[#0F172A]/10 bg-white shadow-sm">
-                <CardHeader className="pb-3 border-b border-[#0F172A]/5">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                      <TrendingUp className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <span className="text-[#0F172A] font-semibold">{getLocationName()}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#0F172A]/50">Properties Shown</span>
-                      <span className="font-semibold text-[#0F172A]">{filteredListings.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#0F172A]/50">Avg Revenue</span>
-                      <span className="font-semibold text-[#C9A962]">{formatCurrency(thresholds.average)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#0F172A]/50">Avg Occupancy</span>
-                      <span className="font-semibold text-[#0F172A]">{avgOccupancy}%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#0F172A]/50">Avg Nightly Rate</span>
-                      <span className="font-semibold text-[#0F172A]">{formatCurrency(avgAdr)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[#0F172A]/50">Top Performer</span>
-                      <span className="font-semibold text-green-600">
-                        {filteredListings.length > 0 ? formatCurrency(Math.max(...filteredListings.map(l => l.revenue))) : '—'}
-                      </span>
-                    </div>
-                    {myPropertyLocation && (
-                      <div className="border-t border-[#0F172A]/10 pt-3 mt-3 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-[#0F172A]/50">Closest Competitor</span>
-                          <span className="font-semibold text-[#C9A962]">
-                            {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
-                              ? formatDistance(Math.min(...filteredListings.map(l => l.distanceToMyProperty || Infinity)))
-                              : '—'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-[#0F172A]/50">Avg Distance</span>
-                          <span className="font-semibold text-[#C9A962]">
-                            {filteredListings.length > 0 && filteredListings[0].distanceToMyProperty !== undefined
-                              ? formatDistance(filteredListings.reduce((sum, l) => sum + (l.distanceToMyProperty || 0), 0) / filteredListings.length)
-                              : '—'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-          
-          {/* Map */}
-          <div className="lg:col-span-3">
-            <Card className="overflow-hidden border-[#0F172A]/10 shadow-sm">
-              <MapView
-                className="h-[400px] sm:h-[500px] lg:h-[600px]"
-                initialCenter={{ lat: 36.1627, lng: -86.7816 }} // Nashville default
-                initialZoom={11}
-                onMapReady={(map) => {
-                  mapRef.current = map;
-                  // Initialize geocoder
-                  if (window.google) {
-                    geocoderRef.current = new google.maps.Geocoder();
-                  }
-                }}
-              />
-            </Card>
-            
-            {listings.length === 0 && !isLoading && (
-              <div className="mt-4 p-6 bg-[#f8f7f4] rounded-xl border border-[#0F172A]/10">
-                <div className="flex items-center justify-center gap-4 text-[#0F172A]/60">
-                  <div className="w-12 h-12 rounded-xl bg-[#C9A962]/10 flex items-center justify-center">
-                    <Map className="w-6 h-6 text-[#C9A962]" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-[#0F172A]">Search for a location</p>
-                    <p className="text-sm text-[#0F172A]/50">
-                      Enter a city, zip code, or market name above to see property performance data
-                    </p>
                   </div>
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3">
+              <Info className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Sidebar */}
+            <div className="lg:col-span-1 space-y-4">
+              {/* Your Property Card */}
+              {myPropertyLocation && (
+                <Card className="border-[#C9A962]/30 bg-[#C9A962]/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Home className="w-5 h-5 text-[#C9A962]" />
+                      <span className="text-[#0F172A]">Your Property</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-[#0F172A]/70 truncate">{myPropertyLocation.address}</p>
+                    <Button
+                      onClick={() => { setMyPropertyLocation(null); setListings([]); setHasAutoLoaded(false); }}
+                      variant="link"
+                      className="text-xs text-[#C9A962] p-0 h-auto mt-2"
+                    >
+                      Change property
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Filters */}
+              {listings.length > 0 && (
+                <>
+                  <Card className="border-[#0F172A]/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Filters</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Distance Filter */}
+                      <div>
+                        <label className="text-sm font-medium text-[#0F172A]/70 mb-2 block">
+                          Distance from You
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3 h-3 inline ml-1 text-[#0F172A]/40" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs max-w-48">Filter to see only properties within a certain distance of your property.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </label>
+                        <Select value={distanceFilter} onValueChange={setDistanceFilter}>
+                          <SelectTrigger className="border-[#0F172A]/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Distances</SelectItem>
+                            <SelectItem value="0.5">Within 0.5 mi</SelectItem>
+                            <SelectItem value="1">Within 1 mi</SelectItem>
+                            <SelectItem value="2">Within 2 mi</SelectItem>
+                            <SelectItem value="5">Within 5 mi</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Bedroom Filter */}
+                      <div>
+                        <label className="text-sm font-medium text-[#0F172A]/70 mb-2 block">Bedrooms</label>
+                        <Select value={bedroomFilter} onValueChange={setBedroomFilter}>
+                          <SelectTrigger className="border-[#0F172A]/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All ({listings.length})</SelectItem>
+                            {[1, 2, 3, 4, 5].map(n => {
+                              const count = listings.filter(l => l.bedrooms === n).length;
+                              if (count === 0) return null;
+                              return <SelectItem key={n} value={String(n)}>{n} BR ({count})</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Revenue Legend */}
+                  <Card className="border-[#0F172A]/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Revenue Tiers</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                          <span className="text-sm text-[#0F172A]/70">Top Performers</span>
+                        </div>
+                        <span className="text-sm font-medium text-green-600">{formatCurrency(thresholds.high)}+</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-[#C9A962]" />
+                          <span className="text-sm text-[#0F172A]/70">Average</span>
+                        </div>
+                        <span className="text-sm font-medium text-[#C9A962]">{formatCurrency(thresholds.low)} - {formatCurrency(thresholds.high)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span className="text-sm text-[#0F172A]/70">Below Average</span>
+                        </div>
+                        <span className="text-sm font-medium text-red-500">Under {formatCurrency(thresholds.low)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Stats */}
+                  <Card className="border-[#0F172A]/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-[#C9A962]" />
+                        Market Stats
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-[#0F172A]/60">Properties</span>
+                        <span className="font-semibold">{filteredListings.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-[#0F172A]/60">Avg Revenue</span>
+                        <span className="font-semibold text-[#C9A962]">{formatCurrency(thresholds.average)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-[#0F172A]/60">Avg Occupancy</span>
+                        <span className="font-semibold">{avgOccupancy}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-[#0F172A]/60">Avg Nightly Rate</span>
+                        <span className="font-semibold">{formatCurrency(avgAdr)}</span>
+                      </div>
+                      {closestDistance !== null && (
+                        <div className="flex justify-between border-t border-[#0F172A]/10 pt-3 mt-3">
+                          <span className="text-sm text-[#0F172A]/60">Closest Competitor</span>
+                          <span className="font-semibold text-[#C9A962]">{formatDistance(closestDistance)}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
+            
+            {/* Map */}
+            <div className="lg:col-span-3 space-y-4">
+              <Card className="overflow-hidden border-[#0F172A]/10 shadow-sm">
+                <MapView
+                  className="h-[400px] sm:h-[500px] lg:h-[550px]"
+                  initialCenter={myPropertyLocation ? { lat: myPropertyLocation.lat, lng: myPropertyLocation.lng } : { lat: 36.1627, lng: -86.7816 }}
+                  initialZoom={myPropertyLocation ? 13 : 5}
+                  onMapReady={(map) => {
+                    mapRef.current = map;
+                    if (window.google) {
+                      geocoderRef.current = new google.maps.Geocoder();
+                    }
+                    // Trigger auto-load if property exists
+                    if (hasProperty && myProperty && !hasAutoLoaded) {
+                      setHasAutoLoaded(true);
+                      if (myProperty.latitude && myProperty.longitude) {
+                        const location = { address: myProperty.formattedAddress || myProperty.address, lat: myProperty.latitude, lng: myProperty.longitude };
+                        setMyPropertyLocation(location);
+                        fetchListingsForLocation(location.lat, location.lng, myProperty.city, myProperty.state);
+                      } else {
+                        geocodeAndSearch(myProperty.address);
+                      }
+                    }
+                  }}
+                />
+              </Card>
+              
+              {/* Toggle Table View */}
+              {listings.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-[#0F172A]/60">
+                    Showing {filteredListings.length} of {listings.length} properties
+                  </p>
+                  <Button
+                    onClick={() => setShowTable(!showTable)}
+                    variant="outline"
+                    size="sm"
+                    className="border-[#0F172A]/20"
+                  >
+                    <List className="w-4 h-4 mr-2" />
+                    {showTable ? 'Hide Table' : 'Show Table'}
+                  </Button>
+                </div>
+              )}
+              
+              {/* Property Table */}
+              {showTable && filteredListings.length > 0 && (
+                <Card className="border-[#0F172A]/10">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[250px]">Property</TableHead>
+                          <TableHead className="cursor-pointer hover:bg-[#f8f7f4]" onClick={() => handleSort('distance')}>
+                            <div className="flex items-center gap-1">
+                              Distance
+                              <ArrowUpDown className="w-3 h-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-[#f8f7f4]" onClick={() => handleSort('revenue')}>
+                            <div className="flex items-center gap-1">
+                              Revenue
+                              <ArrowUpDown className="w-3 h-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-[#f8f7f4]" onClick={() => handleSort('occupancy')}>
+                            <div className="flex items-center gap-1">
+                              Occupancy
+                              <ArrowUpDown className="w-3 h-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:bg-[#f8f7f4]" onClick={() => handleSort('adr')}>
+                            <div className="flex items-center gap-1">
+                              Nightly Rate
+                              <ArrowUpDown className="w-3 h-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredListings.slice(0, 20).map((listing) => (
+                          <TableRow key={listing.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                {listing.thumbnailUrl ? (
+                                  <img src={listing.thumbnailUrl} alt="" className="w-12 h-9 rounded object-cover" />
+                                ) : (
+                                  <div className="w-12 h-9 rounded bg-[#f0f0f0] flex items-center justify-center">
+                                    <Home className="w-4 h-4 text-[#999]" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-sm text-[#0F172A] truncate max-w-[180px]">{listing.title}</p>
+                                  <p className="text-xs text-[#0F172A]/50">{listing.bedrooms} BR / {listing.bathrooms} BA</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-medium text-[#C9A962]">
+                                {listing.distanceToMyProperty !== undefined ? formatDistance(listing.distanceToMyProperty) : '—'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`text-sm font-semibold ${listing.revenue >= thresholds.high ? 'text-green-600' : listing.revenue >= thresholds.low ? 'text-[#C9A962]' : 'text-red-500'}`}>
+                                {formatCurrency(listing.revenue)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{Math.round(listing.occupancy > 1 ? listing.occupancy : listing.occupancy * 100)}%</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{formatCurrency(listing.adr)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <a href={listing.airbnbUrl} target="_blank" rel="noopener noreferrer" className="text-[#0F172A]/50 hover:text-[#0F172A]">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {filteredListings.length > 20 && (
+                    <div className="p-4 text-center text-sm text-[#0F172A]/50 border-t border-[#0F172A]/10">
+                      Showing top 20 of {filteredListings.length} properties
+                    </div>
+                  )}
+                </Card>
+              )}
+              
+              {/* Empty State */}
+              {!myPropertyLocation && !isLoading && (
+                <div className="p-8 bg-[#f8f7f4] rounded-xl border border-[#0F172A]/10 text-center">
+                  <div className="w-16 h-16 rounded-xl bg-[#C9A962]/10 flex items-center justify-center mx-auto mb-4">
+                    <Map className="w-8 h-8 text-[#C9A962]" />
+                  </div>
+                  <h3 className="font-semibold text-[#0F172A] mb-2">Enter Your Property to Get Started</h3>
+                  <p className="text-sm text-[#0F172A]/60 max-w-md mx-auto">
+                    Once you enter your property address, we'll show you all the competing short-term rentals nearby with their revenue, occupancy, and distance from you.
+                  </p>
+                </div>
+              )}
+              
+              {isLoading && (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#C9A962] mx-auto mb-4" />
+                  <p className="text-sm text-[#0F172A]/60">Loading nearby properties...</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

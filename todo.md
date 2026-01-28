@@ -6561,3 +6561,42 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify map markers appear - color-coded by revenue tier
 - [x] Distance calculation works when property is set
 - [x] Premium theme consistent with rest of site (deep navy header, gold accents)
+
+
+## Step 5, 6, 7 Comprehensive Improvements (Jan 28, 2026)
+
+### Step 5 - Critical Fixes
+- [x] Fix "See on Map" button not sending data from previous steps
+- [x] Add distance filter dropdown (0.5mi, 1mi, 2mi, 5mi) to filter properties by proximity
+- [x] Add Share Link button so users can share map view with clients
+- [x] Add property table view below map with sortable columns
+- [x] Show distance from "home property" on each map marker
+- [x] Change messaging from "Search for a city..." to property-focused language
+- [x] Update empty state to reflect property analysis use case
+- [x] Add SmartAddressInput to support Zillow/Redfin URL input
+- [x] Auto-load property from PropertyContext when navigating to Step 5
+- [x] Fix occupancy display format (was showing 6410% instead of 64%)
+
+### Step 6 - Market Advisor Optimization
+- [ ] Add guiding questions for each section per skill guidelines
+- [ ] Translate all technical jargon to plain English
+- [ ] Add tooltips for all metrics (RevPAR, ADR, Occupancy, etc.)
+- [ ] Add contextual comparisons (not just raw numbers)
+- [ ] Add clear verdicts/recommendations
+- [ ] Add confidence indicators
+- [ ] Remove any emojis
+- [ ] Run tooltip audit
+
+### Step 7 - AI Advisor Optimization
+- [ ] Add guiding questions for each section per skill guidelines
+- [ ] Ensure output matches Step 3 quality benchmark
+- [ ] Add tooltips for all metrics
+- [ ] Translate technical terms to beginner-friendly language
+- [ ] Add contextual comparisons
+- [ ] Remove any emojis
+- [ ] Run tooltip audit
+
+### Future Features (Noted)
+- [ ] Zillow scraping integration with "Validate" button
+- [ ] Hospitable API integration for portfolio tracking
+- [ ] HubSpot CRM integration
