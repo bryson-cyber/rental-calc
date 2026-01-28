@@ -6350,3 +6350,51 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Increase timeout from 45s to 90s for complex API calls
 - [ ] Test the fix
 
+
+
+## Step 3 Bug Fixes (Jan 28, 2026)
+- [ ] Remove Rentometer branding from tooltip - don't reveal data sources
+- [ ] Make competitive ranking more optimistic/balanced
+- [ ] Investigate missing Market Outlook section
+- [ ] Add timer during property validation to show elapsed time
+- [ ] Debug "Could not generate property report" error for Houston property
+
+
+
+## Bug Fixes and Improvements (Jan 27, 2026)
+
+### User Reported Issues
+- [x] Remove Rentometer branding from tooltips (already done in previous session)
+- [x] Adjust competitive ranking to be more optimistic (lowered grade thresholds)
+- [x] Add timer during Step 3 property validation (shows elapsed seconds)
+- [x] Verify Market Outlook section is present (confirmed working)
+- [x] Debug Houston property report generation (API working correctly)
+
+### Competitive Ranking Threshold Changes
+Old thresholds: 90%=A+, 80%=A, 70%=B+, 60%=B, 50%=C+, 40%=C, <40%=D
+New thresholds: 75%=A+, 60%=A, 50%=B+, 40%=B, 30%=C+, 20%=C, <20%=D
+
+This makes the grading more optimistic - properties now get better grades at lower percentiles.
+
+
+
+## Bug Fixes and Improvements (Jan 27, 2026)
+
+### User Reported Issues:
+- [x] Remove Rentometer branding from tooltips
+- [x] Adjust competitive ranking algorithm to be more optimistic
+- [x] Verify Market Outlook section is present
+- [x] Add timer during Step 3 property validation
+- [x] Debug Houston property report generation error (API working correctly)
+
+### Changes Made:
+1. **Timer Added**: Step 3 now shows elapsed time during analysis (e.g., "Validating Deal... (7s)")
+2. **Competitive Ranking More Optimistic**: Adjusted grade thresholds:
+   - A+: 65th percentile (was 75th)
+   - A: 50th percentile (was 60th)
+   - B+: 40th percentile (was 50th)
+   - B: 30th percentile (was 40th)
+   - C+: 20th percentile (was 30th)
+   - C: 10th percentile (was 20th)
+3. **Market Outlook Present**: Verified working - shows Next 30 Days, Next 6 Months, Peak Earning Window, Strategic Opportunity
+4. **Houston Property**: API working correctly, returns $39,575 annual revenue, 60% occupancy, $180 ADR

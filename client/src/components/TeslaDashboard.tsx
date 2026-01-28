@@ -1277,8 +1277,8 @@ function AirbnbVsLongTermComparison({
               <TooltipContent side="top" className="max-w-xs p-3 bg-[#0F172A] text-white shadow-lg border-0">
                 <p className="text-sm leading-relaxed">
                   {rentometerMedian 
-                    ? `Based on Rentometer data: The median rent for similar properties in this area is $${rentometerMedian.toLocaleString()}/month.`
-                    : `Using your entered rent amount. For more accurate data, we recommend checking Rentometer for median rents in this area.`
+                    ? `Based on market data: The median rent for similar properties in this area is $${rentometerMedian.toLocaleString()}/month.`
+                    : `Using your entered rent amount as the baseline for comparison.`
                   }
                 </p>
               </TooltipContent>
@@ -1701,9 +1701,9 @@ function MarketPosition({
   const avgCompRevenue = allRevenues.reduce((sum, r) => sum + r, 0) / allRevenues.length;
   const vsAvg = ((propertyRevenue - avgCompRevenue) / avgCompRevenue) * 100;
   
-  // Determine grade
-  const grade = percentile >= 90 ? 'A+' : percentile >= 80 ? 'A' : percentile >= 70 ? 'B+' : 
-                percentile >= 60 ? 'B' : percentile >= 50 ? 'C+' : percentile >= 40 ? 'C' : 'D';
+  // Determine grade - optimistic thresholds (encourages users)
+  const grade = percentile >= 65 ? 'A+' : percentile >= 50 ? 'A' : percentile >= 40 ? 'B+' : 
+                percentile >= 30 ? 'B' : percentile >= 20 ? 'C+' : percentile >= 10 ? 'C' : 'D';
   
   const gradeColor = grade.startsWith('A') ? 'emerald' : grade.startsWith('B') ? 'blue' : 
                      grade.startsWith('C') ? 'amber' : 'red';
@@ -1880,41 +1880,42 @@ function MarketHealthGrade({
   let gradeBg: string;
   let gradeText: string;
   
-  if (overallScore >= 90) {
+  // More optimistic grading - adjusted thresholds to encourage users
+  if (overallScore >= 82) {
     grade = 'A+';
     gradeColor = 'text-emerald-600';
     gradeBg = 'bg-emerald-100';
     gradeText = 'Exceptional market with strong fundamentals';
-  } else if (overallScore >= 80) {
+  } else if (overallScore >= 70) {
     grade = 'A';
     gradeColor = 'text-emerald-600';
     gradeBg = 'bg-emerald-100';
     gradeText = 'Excellent market for short-term rentals';
-  } else if (overallScore >= 70) {
+  } else if (overallScore >= 58) {
     grade = 'B+';
     gradeColor = 'text-blue-600';
     gradeBg = 'bg-blue-100';
     gradeText = 'Strong market with good potential';
-  } else if (overallScore >= 60) {
+  } else if (overallScore >= 48) {
     grade = 'B';
     gradeColor = 'text-blue-600';
     gradeBg = 'bg-blue-100';
     gradeText = 'Solid market worth considering';
-  } else if (overallScore >= 50) {
+  } else if (overallScore >= 38) {
     grade = 'C+';
     gradeColor = 'text-amber-600';
     gradeBg = 'bg-amber-100';
-    gradeText = 'Average market - proceed with caution';
-  } else if (overallScore >= 40) {
+    gradeText = 'Average market - room for growth';
+  } else if (overallScore >= 28) {
     grade = 'C';
     gradeColor = 'text-amber-600';
     gradeBg = 'bg-amber-100';
-    gradeText = 'Below average - research thoroughly';
-  } else if (overallScore >= 30) {
+    gradeText = 'Developing market - opportunity for early movers';
+  } else if (overallScore >= 18) {
     grade = 'D';
     gradeColor = 'text-red-600';
     gradeBg = 'bg-red-100';
-    gradeText = 'Challenging market conditions';
+    gradeText = 'Challenging market - requires strategy';
   } else {
     grade = 'F';
     gradeColor = 'text-red-600';

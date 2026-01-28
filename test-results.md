@@ -120,3 +120,53 @@
 ### 2. Tables Display as Text
 - AI returns markdown tables but they render as plain text
 - ReactMarkdown needs table plugin for proper rendering
+
+
+---
+
+# Houston Property Test Results - Jan 27, 2026
+
+## Property Tested
+- Address: 1038 Ashland St APT 2, Houston, TX 77008
+- Rent: $1,650/mo
+- Beds: 2 BR, Baths: 1 BA
+
+## Key Findings
+
+### 1. Timer Feature - WORKING ✅
+- The timer is now showing during validation (e.g., "Validating Deal... (7s)")
+- This was successfully implemented
+
+### 2. Market Outlook Section - PRESENT ✅
+- Market Outlook section is visible and showing:
+  - Next 30 Days: 31% Expected Occupancy (Growing Season)
+  - Next 6 Months: 17% Expected Occupancy (Strategic Window)
+  - Peak Earning Window: Mar 9 - Mar 15 (48% booking activity)
+  - Strategic Opportunity: May 25 - May 31 (4% booking activity)
+
+### 3. Competitive Ranking - Grade B
+- Current grade: B (40th percentile)
+- Rank: #19 of 31
+- vs Average: -16%
+- The property is at 40th percentile which gives it a B grade
+- **USER FEEDBACK: Wants more optimistic grading**
+
+### 4. Property Analysis - SUCCESSFUL ✅
+- Annual Revenue: $39,575 (2.9% vs last year)
+- Monthly Revenue: $3,298
+- Net Profit: $988/month after 20% expenses
+- Nightly Rate: $180
+- Booking Rate: 60%
+
+### 5. Market Score - Grade A (71/100) ✅
+- Excellent market for short-term rentals
+- Occupancy: 100/100
+- Competition: 90/100
+- Quality: 98/100
+- Growth Trend: 40/100
+- Income Stability: 59/100
+
+## Fixes Applied
+- [x] Timer added during Step 3 validation
+- [x] Market Outlook section is present
+- [ ] Need to make competitive ranking more optimistic (40th percentile currently = B, user wants better)

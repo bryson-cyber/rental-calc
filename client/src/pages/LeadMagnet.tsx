@@ -379,6 +379,7 @@ export default function LeadMagnet() {
   const [furnitureCost, setFurnitureCost] = useState('15000');
   const [expensePercent, setExpensePercent] = useState(20);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisTimer, setAnalysisTimer] = useState(0);
   
   // Rentometer state for rent validation
   const [rentometerData, setRentometerData] = useState<{
@@ -563,7 +564,14 @@ export default function LeadMagnet() {
     
     setIsAnalyzing(true);
     setLoadingStep(1);
+    setAnalysisTimer(0); // Reset timer
     setRentometerData(null); // Clear previous rentometer data
+    
+    // Start timer interval - defined outside try block for cleanup in finally
+    let timerInterval: ReturnType<typeof setInterval> | null = null;
+    timerInterval = setInterval(() => {
+      setAnalysisTimer(prev => prev + 1);
+    }, 1000);
     
     try {
       // Fetch Rentometer data in parallel if rent is provided
@@ -632,6 +640,7 @@ export default function LeadMagnet() {
       ]);
       
       clearInterval(loadingInterval);
+      clearInterval(timerInterval);
       
       if (!response.success || !response.data) {
         toast.error(response.error || 'Could not analyze this property');
@@ -794,6 +803,7 @@ export default function LeadMagnet() {
     } finally {
       setIsAnalyzing(false);
       setLoadingStep(0);
+      if (timerInterval) clearInterval(timerInterval);
     }
   };
   
@@ -1941,7 +1951,7 @@ export default function LeadMagnet() {
                   {isAnalyzing ? (
                     <>
                       <div className="w-5 h-5 border-2 border-[oklch(0.55_0.14_75)]/30 border-t-[oklch(0.55_0.14_75)] rounded-full animate-spin" />
-                      <span>Validating Deal...</span>
+                      <span>Validating Deal... ({analysisTimer}s)</span>
                     </>
                   ) : (
                     <>
