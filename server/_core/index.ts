@@ -107,29 +107,15 @@ async function startServer() {
       // Import the API functions dynamically
       const { getMarketListings, getSubmarketListings } = await import('../airdna');
       
-      // Helper function to construct image URL from Airbnb listing ID
+      // Helper function to get image URL - prioritize API-provided URLs
       const getImageUrl = (listing: any): string | null => {
-        // First check if image_url is already set
-        if (listing.image_url) return listing.image_url;
-        
-        // Try to extract Airbnb ID from the listing ID or URL
-        let airbnbId: string | null = null;
-        
-        // Check if ID starts with 'abnb_' prefix
-        if (listing.id?.startsWith('abnb_')) {
-          airbnbId = listing.id.replace('abnb_', '');
-        }
-        // Or extract from airbnb_url
-        else if (listing.airbnb_url) {
-          const match = listing.airbnb_url.match(/rooms\/(\d+)/);
-          if (match) airbnbId = match[1];
+        // First check if image_url is already set from the API (this is the real image URL)
+        if (listing.image_url && listing.image_url.length > 0) {
+          return listing.image_url;
         }
         
-        if (airbnbId) {
-          // Use Airbnb's public image CDN
-          return `https://a0.muscache.com/im/pictures/miso/Hosting-${airbnbId}/original/listing-photo.jpg`;
-        }
-        
+        // No fallback to constructed URLs - they don't work reliably
+        // Return null and let the frontend show a placeholder
         return null;
       };
       
@@ -279,32 +265,18 @@ async function startServer() {
     });
     
     try {
-      // Import the API function dynamically
-      const { getListingsInRadius } = await import('../airdna');
+      // Import the API functions dynamically
+      const { getListingsInRadius, enrichListingsWithImages } = await import('../airdna');
       
-      // Helper function to construct image URL from Airbnb listing ID
+      // Helper function to get image URL - prioritize API-provided URLs
       const getImageUrl = (listing: any): string | null => {
-        // First check if image_url is already set
-        if (listing.image_url) return listing.image_url;
-        
-        // Try to extract Airbnb ID from the listing ID or URL
-        let airbnbId: string | null = null;
-        
-        // Check if ID starts with 'abnb_' prefix
-        if (listing.id?.startsWith('abnb_')) {
-          airbnbId = listing.id.replace('abnb_', '');
-        }
-        // Or extract from airbnb_url
-        else if (listing.airbnb_url) {
-          const match = listing.airbnb_url.match(/rooms\/(\d+)/);
-          if (match) airbnbId = match[1];
+        // First check if image_url is already set from the API (this is the real image URL)
+        if (listing.image_url && listing.image_url.length > 0) {
+          return listing.image_url;
         }
         
-        if (airbnbId) {
-          // Use Airbnb's public image CDN
-          return `https://a0.muscache.com/im/pictures/miso/Hosting-${airbnbId}/original/listing-photo.jpg`;
-        }
-        
+        // No fallback to constructed URLs - they don't work reliably
+        // Return null and let the frontend show a placeholder
         return null;
       };
       
@@ -336,14 +308,17 @@ async function startServer() {
         totalPages: Math.ceil(totalCount / pageSize)
       })}\n\n`);
       
+      // Enrich first batch with images (limit to 20 to avoid too many API calls)
+      const enrichedFirstBatch = await enrichListingsWithImages(firstResult.listings, 20);
+      
       // Send first batch of listings
-      if (firstResult.listings.length > 0) {
+      if (enrichedFirstBatch.length > 0) {
         res.write(`data: ${JSON.stringify({
           type: 'listings',
-          listings: firstResult.listings.map(l => ({
+          listings: enrichedFirstBatch.map(l => ({
             id: l.id,
             title: l.title,
-            imageUrl: getImageUrl(l),
+            imageUrl: l.image_url || null,
             airbnbUrl: l.airbnb_url || null,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,
@@ -393,13 +368,16 @@ async function startServer() {
           totalPages
         })}\n\n`);
         
+        // Enrich batch with images (limit to 20 per batch)
+        const enrichedBatch = await enrichListingsWithImages(result.listings, 20);
+        
         // Send listings batch
         res.write(`data: ${JSON.stringify({
           type: 'listings',
-          listings: result.listings.map(l => ({
+          listings: enrichedBatch.map(l => ({
             id: l.id,
             title: l.title,
-            imageUrl: getImageUrl(l),
+            imageUrl: l.image_url || null,
             airbnbUrl: l.airbnb_url || null,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,

@@ -6683,3 +6683,26 @@ This makes the grading more optimistic - properties now get better grades at low
 ### Map Marker Click Handlers
 - [x] Add click handlers to map markers to show property card popup
 - [x] Add click handlers to fullscreen map markers
+
+## AirDNA API Skill Creation (Jan 28, 2026)
+
+### Image Loading Fix
+- [ ] Investigate why Airbnb CDN image URLs aren't loading in browser
+- [ ] Fix image URL construction or add fallback
+
+### Skill Creation
+- [ ] Create comprehensive AirDNA API skill with all formatting details
+- [ ] Document filter format requirements
+- [ ] Document pagination limits
+- [ ] Document image URL construction patterns
+- [ ] Document common pitfalls and solutions
+
+## Session: Jan 28, 2026 - AirDNA API Skill & Image Loading Fix
+- [x] Fixed bedroom filter format (type: select, not operator: eq)
+- [x] Fixed image loading by using enrichListingsWithImages from /listing/batch
+- [x] Added API call limit (500 max listings) to prevent excessive calls
+- [x] Created comprehensive AirDNA API skill documentation
+  - Added references/implementation_gotchas.md with all learnings
+  - Updated SKILL.md with Critical Implementation Notes section
+  - Updated str_listing_data.md with /listing/comps/area endpoint
+  - Updated filters.md with common mistake warning

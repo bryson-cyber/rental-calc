@@ -7519,3 +7519,4 @@ export async function getSubmarketBedroomCounts(
     totalListings,
   };
 }
+
