@@ -1367,10 +1367,28 @@ export async function generateFullArbitrageAnalysis(
     .map(c => c.airbnb_url)
     .filter((url): url is string => !!url);
   
-  // SKIP: Airbnb availability check is slow and causes network timeouts
-  // The AirDNA data is already filtered for active listings
-  // This saves 10-30 seconds per report
-  console.log(`[ArbitrageAnalysis] Skipping Airbnb availability check (using AirDNA data directly)`);
+  // Check Airbnb availability with timeout protection (15 seconds max)
+  if (airbnbUrls.length > 0) {
+    console.log(`[ArbitrageAnalysis] Checking ${airbnbUrls.length} Airbnb listings for availability...`);
+    try {
+      const availabilityPromise = batchCheckAirbnbListingsActive(airbnbUrls, 5);
+      const timeoutPromise = new Promise<Set<string>>((_, reject) => 
+        setTimeout(() => reject(new Error('Availability check timeout')), 15000)
+      );
+      
+      const activeUrls = await Promise.race([availabilityPromise, timeoutPromise]);
+      
+      // Filter to only active listings
+      const beforeCount = activeCompetitors.length;
+      activeCompetitors = uniqueCompetitors.filter(c => 
+        !c.airbnb_url || activeUrls.has(c.airbnb_url)
+      );
+      console.log(`[ArbitrageAnalysis] Filtered to ${activeCompetitors.length}/${beforeCount} active listings`);
+    } catch (error) {
+      console.log(`[ArbitrageAnalysis] Availability check timed out or failed, using all listings`);
+      // Keep all listings if check fails
+    }
+  }
   
   const competitors = activeCompetitors.map(analyzeCompetitorSuccessFactors);
   
@@ -1445,9 +1463,51 @@ export async function generateFullArbitrageAnalysis(
     .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))
     .slice(0, 5);
   
-  // SKIP competitor historical metrics to speed up report generation
-  // Each historical API call adds 2-5 seconds, and we have 5 competitors = 10-25 seconds
-  console.log(`[ArbitrageAnalysis] Skipping competitor historical metrics (performance optimization)`);
+  // Fetch competitor historical metrics in parallel for better performance
+  console.log(`[ArbitrageAnalysis] Fetching historical metrics for ${top5Competitors.length} competitors in parallel...`);
+  
+  const historicalPromises = top5Competitors.map(async (comp) => {
+    try {
+      // Extract listing ID from Airbnb URL
+      const match = comp.airbnb_url?.match(/rooms\/(\d+)/);
+      if (!match) return null;
+      const listingId = match[1];
+      
+      const historical = await getListingHistoricalMetrics(listingId);
+      if (!historical || !historical.monthly_data || historical.monthly_data.length === 0) return null;
+      
+      const monthlyData = historical.monthly_data;
+      
+      // Calculate 12-month totals and trends
+      const totalRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0);
+      const avgAdr = monthlyData.reduce((sum, m) => sum + m.adr, 0) / monthlyData.length;
+      const avgOccupancy = monthlyData.reduce((sum, m) => sum + m.occupancy, 0) / monthlyData.length;
+      
+      // Determine trend (compare first half vs second half)
+      const midpoint = Math.floor(monthlyData.length / 2);
+      const firstHalfRevenue = monthlyData.slice(0, midpoint).reduce((sum, m) => sum + m.revenue, 0);
+      const secondHalfRevenue = monthlyData.slice(midpoint).reduce((sum, m) => sum + m.revenue, 0);
+      const revenueTrend: 'growing' | 'stable' | 'declining' = 
+        secondHalfRevenue > firstHalfRevenue * 1.1 ? 'growing' :
+        secondHalfRevenue < firstHalfRevenue * 0.9 ? 'declining' : 'stable';
+      
+      return {
+        name: comp.title || 'Unknown',
+        listing_id: listingId,
+        total_revenue_12mo: Math.round(totalRevenue),
+        avg_adr: Math.round(avgAdr),
+        avg_occupancy: Math.round(avgOccupancy * 100) / 100,
+        revenue_trend: revenueTrend
+      };
+    } catch (error) {
+      console.error(`[ArbitrageAnalysis] Error fetching historical for ${comp.title}:`, error);
+      return null;
+    }
+  });
+  
+  const historicalResults = await Promise.all(historicalPromises);
+  competitor_historical = historicalResults.filter((r): r is NonNullable<typeof r> => r !== null);
+  console.log(`[ArbitrageAnalysis] Got historical data for ${competitor_historical.length}/${top5Competitors.length} competitors`);
   
   // Step 6.6: Fetch daily pricing intelligence
   let daily_pricing: {
@@ -1559,18 +1619,37 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // SKIP top performer comps and pricing - these add 5-10 seconds each
-  // We already have good comp data from Rentalizer
-  const top_performer_comps: ListingComp[] = [];
-  const top_performer_pricing: ListingFuturePricing | undefined = undefined;
-  console.log(`[ArbitrageAnalysis] Skipping top performer comps/pricing (performance optimization)`);
-  
-  // Keep topPerformer reference for other uses
+  // Fetch top performer comps and pricing in parallel
   const topPerformer = listings
     .filter(l => l.airbnb_url)
     .sort((a, b) => (b.annual_revenue || 0) - (a.annual_revenue || 0))[0];
   
-  // SKIPPED: getListingComps and getListingFuturePricing (dead code removed)
+  let top_performer_comps: ListingComp[] = [];
+  let top_performer_pricing: ListingFuturePricing | undefined = undefined;
+  
+  if (topPerformer?.airbnb_url) {
+    const topPerformerMatch = topPerformer.airbnb_url.match(/rooms\/(\d+)/);
+    if (topPerformerMatch) {
+      const topPerformerId = topPerformerMatch[1];
+      console.log(`[ArbitrageAnalysis] Fetching top performer (${topPerformer.title}) comps and pricing in parallel...`);
+      
+      // Run both API calls in parallel
+      const [compsResult, pricingResult] = await Promise.allSettled([
+        getListingComps(topPerformerId, 10),
+        getListingFuturePricing(topPerformerId, 6)
+      ]);
+      
+      if (compsResult.status === 'fulfilled' && compsResult.value) {
+        top_performer_comps = compsResult.value;
+        console.log(`[ArbitrageAnalysis] Got ${top_performer_comps.length} comps for top performer`);
+      }
+      
+      if (pricingResult.status === 'fulfilled' && pricingResult.value) {
+        top_performer_pricing = pricingResult.value;
+        console.log(`[ArbitrageAnalysis] Got future pricing for top performer`);
+      }
+    }
+  }
   
   // Step 6.10: Fetch Rentalizer comps for enhanced competitor data
   let rentalizer_comps: RentalizerCompData | null = null;
