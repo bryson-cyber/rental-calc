@@ -6710,3 +6710,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix Google Places autocomplete not filling in address when selecting from dropdown
 - [ ] Optimize map view layout - fill vertical space below stats cards
 - [x] Optimize map view layout to fill vertical space better
+- [ ] Fix gap between map and stats panel
+- [ ] Add revenue tier filter to hide bottom tier (red) properties
+- [ ] Add favorites filter button to show only favorited properties on map
+- [ ] Auto-filter bottom tier by default on map load
+- [x] Auto-filter bottom tier by default on map load
+- [x] Add tier filter buttons (Top/Mid/Bottom) to toggle visibility
+- [x] Add favorites filter button (shows when favorites exist)
+- [x] Fix gap between map and stats panel (added h-full to right column)

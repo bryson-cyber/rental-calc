@@ -137,6 +137,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteListingIds, setFavoriteListingIds] = useState<Set<string>>(new Set());
+  const [tierFilter, setTierFilter] = useState<Set<'top' | 'mid' | 'bottom'>>(() => new Set<'top' | 'mid' | 'bottom'>(['top', 'mid']));
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [propertyAddressInput, setPropertyAddressInput] = useState('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<{address: string; lat: number; lng: number} | null>(null);
@@ -501,6 +503,27 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       result = result.filter(l => l.distanceToMyProperty !== undefined && l.distanceToMyProperty <= maxDistance);
     }
     
+    // Tier filter - calculate thresholds first
+    if (tierFilter.size < 3 && result.length > 0) {
+      const revenues = result.map(l => l.revenue).sort((a, b) => b - a);
+      const highIdx = Math.floor(revenues.length * 0.33);
+      const lowIdx = Math.floor(revenues.length * 0.67);
+      const highThreshold = revenues[highIdx] || 0;
+      const lowThreshold = revenues[lowIdx] || 0;
+      
+      result = result.filter(l => {
+        if (l.revenue >= highThreshold && tierFilter.has('top')) return true;
+        if (l.revenue >= lowThreshold && l.revenue < highThreshold && tierFilter.has('mid')) return true;
+        if (l.revenue < lowThreshold && tierFilter.has('bottom')) return true;
+        return false;
+      });
+    }
+    
+    // Favorites filter
+    if (showFavoritesOnly) {
+      result = result.filter(l => favoriteListingIds.has(l.id));
+    }
+    
     // Sort
     result.sort((a, b) => {
       switch (sortBy) {
@@ -514,7 +537,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     });
     
     return result;
-  }, [listings, bedroomFilter, distanceFilter, sortBy, myPropertyLocation]);
+  }, [listings, bedroomFilter, distanceFilter, sortBy, myPropertyLocation, tierFilter, showFavoritesOnly, favoriteListingIds]);
   
   // Calculate thresholds
   const thresholds = useMemo(() => {
@@ -543,7 +566,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [bedroomFilter, distanceFilter, sortBy]);
+  }, [bedroomFilter, distanceFilter, sortBy, tierFilter, showFavoritesOnly]);
   
   // Update map markers
   useEffect(() => {
@@ -1399,7 +1422,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         </div>
         
         {/* Right Column - Map (40%) */}
-        <div className="w-full lg:w-[40%] relative flex flex-col">
+        <div className="w-full lg:w-[40%] h-full relative flex flex-col">
           {/* Map Container - fills available space */}
           <div className="flex-1 relative min-h-[400px]">
             {/* Fullscreen toggle */}
@@ -1468,21 +1491,58 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 </div>
               </div>
               
-              {/* Revenue Tier Legend - Compact */}
-              <div className="mt-3 flex items-center justify-center gap-4 text-xs">
-                <div className="flex items-center gap-1.5">
+              {/* Revenue Tier Filter - Clickable */}
+              <div className="mt-3 flex items-center justify-center gap-2 text-xs">
+                <button
+                  onClick={() => {
+                    const newFilter = new Set(tierFilter);
+                    if (newFilter.has('top')) newFilter.delete('top');
+                    else newFilter.add('top');
+                    setTierFilter(newFilter);
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('top') ? 'bg-green-100 border border-green-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                >
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  <span className="text-[#0F172A]/60">Top 33% ({thresholds.topCount})</span>
-                </div>
-                <div className="flex items-center gap-1.5">
+                  <span className={tierFilter.has('top') ? 'text-green-700' : 'text-gray-400'}>Top ({thresholds.topCount})</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const newFilter = new Set(tierFilter);
+                    if (newFilter.has('mid')) newFilter.delete('mid');
+                    else newFilter.add('mid');
+                    setTierFilter(newFilter);
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('mid') ? 'bg-[#C9A962]/20 border border-[#C9A962]/40' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                >
                   <div className="w-2.5 h-2.5 rounded-full bg-[#C9A962]" />
-                  <span className="text-[#0F172A]/60">Mid ({thresholds.middleCount})</span>
-                </div>
-                <div className="flex items-center gap-1.5">
+                  <span className={tierFilter.has('mid') ? 'text-[#C9A962]' : 'text-gray-400'}>Mid ({thresholds.middleCount})</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const newFilter = new Set(tierFilter);
+                    if (newFilter.has('bottom')) newFilter.delete('bottom');
+                    else newFilter.add('bottom');
+                    setTierFilter(newFilter);
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all cursor-pointer ${tierFilter.has('bottom') ? 'bg-red-100 border border-red-300' : 'bg-gray-100 border border-gray-200 opacity-50'}`}
+                >
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                  <span className="text-[#0F172A]/60">Bottom ({thresholds.bottomCount})</span>
-                </div>
+                  <span className={tierFilter.has('bottom') ? 'text-red-700' : 'text-gray-400'}>Bottom ({thresholds.bottomCount})</span>
+                </button>
               </div>
+              
+              {/* Favorites Filter Button */}
+              {favoriteListingIds.size > 0 && (
+                <div className="mt-2 flex justify-center">
+                  <button
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${showFavoritesOnly ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${showFavoritesOnly ? 'fill-white' : ''}`} />
+                    {showFavoritesOnly ? `Showing ${favoriteListingIds.size} Favorites` : `Show ${favoriteListingIds.size} Favorites Only`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
