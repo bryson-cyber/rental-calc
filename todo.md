@@ -6343,3 +6343,10 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Fix ForwardDemandCard tooltip - updated to dark background with white text
 - [x] Clarify Market Outlook percentages - added "Expected Occupancy" label to explain what the % means
 
+
+
+## Timeout Bug Fix (Jan 28, 2026)
+- [x] Investigate property analysis timeout error in LeadMagnet.tsx line 276
+- [x] Increase timeout from 45s to 90s for complex API calls
+- [ ] Test the fix
+

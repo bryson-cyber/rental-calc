@@ -617,9 +617,9 @@ export default function LeadMagnet() {
         setLoadingStep(prev => prev < 4 ? prev + 1 : prev);
       }, 1500);
       
-      // Add timeout handling - 45 second timeout
+      // Add timeout handling - 90 second timeout (increased from 45s for complex API calls)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out. The property analysis is taking longer than expected. Please try again.')), 45000);
+        setTimeout(() => reject(new Error('Request timed out. The property analysis is taking longer than expected. Please try again.')), 90000);
       });
       
       const response = await Promise.race([
