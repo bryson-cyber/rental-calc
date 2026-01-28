@@ -118,6 +118,7 @@ export function SmartAddressInput({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionTokenRef = useRef<string>(generateSessionToken());
 
@@ -338,7 +339,11 @@ export function SmartAddressInput({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isInsideInput = inputRef.current && inputRef.current.contains(target);
+      const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+      
+      if (!isInsideInput && !isInsideDropdown) {
         setIsDropdownOpen(false);
       }
     };
@@ -441,6 +446,7 @@ export function SmartAddressInput({
   // Dropdown portal
   const dropdown = isDropdownOpen && predictions.length > 0 && createPortal(
     <div
+      ref={dropdownRef}
       className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-[9999] max-h-60 overflow-auto"
       style={{
         top: dropdownPosition.top,

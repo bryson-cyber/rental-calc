@@ -6706,3 +6706,5 @@ This makes the grading more optimistic - properties now get better grades at low
   - Updated SKILL.md with Critical Implementation Notes section
   - Updated str_listing_data.md with /listing/comps/area endpoint
   - Updated filters.md with common mistake warning
+- [ ] Fix autofill not populating property details after address selection
+- [x] Fix Google Places autocomplete not filling in address when selecting from dropdown
