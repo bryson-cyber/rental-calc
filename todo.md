@@ -6523,3 +6523,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix container width constraints to allow Step 5 to use full width (moved Map tab outside container)
 - [x] Rewrite table component to display all columns correctly on desktop (replaced container with px-4 md:px-8)
 - [x] Add distinct property marker icon on map for user's property location (star icon marker already exists)
+
+
+## Step 5 AirDNA-Inspired Redesign (Jan 28)
+- [ ] Redesign layout: Two-column (table 60% left, map 40% right)
+- [ ] Make table the primary focus with horizontal columns: Property, Revenue, ADR, Occupancy, BR/BA, Distance
+- [ ] Add distance filter to filter properties by distance from user's property
+- [ ] Add distinct property marker on map for user's property (different color/icon)
+- [ ] Add guiding question at top: "How does my property compare to nearby competition?"
+- [ ] Add tooltips for all metrics per skill guidelines (Revenue, ADR, Occupancy, Distance)
+- [ ] Add property context header showing user's address and key metrics
+- [ ] Use pagination instead of virtualized scroll
+- [ ] Remove emojis per skill guidelines
+- [ ] Run tooltip audit before completion

@@ -77,7 +77,7 @@ import {
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
-import MapFirstLayout from '@/components/MapFirstLayout';
+import { MapFirstLayoutV2 } from '@/components/MapFirstLayoutV2';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -2379,9 +2379,8 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {activeTab === 'map' && (
         <section className="bg-slate-50">
-          <MapFirstLayout 
+          <MapFirstLayoutV2 
             key={`map-${myProperty?.address || 'no-property'}`}
-            myProperty={myProperty}
             embedded={false} 
             className="min-h-[600px]" 
           />
