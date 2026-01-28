@@ -6640,3 +6640,19 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Property card popup with image, revenue, occupancy, ADR, distance, Airbnb link
 - [x] Map markers update dynamically as filters change
 - [x] Distance calculation from user property to each listing
+
+
+## Sub-Market Filtering for Step 5 (Jan 28, 2026)
+- [ ] Detect user's sub-market from their property address (e.g., Soulard, CWE, Downtown)
+- [ ] Update SSE endpoint to filter listings by sub-market instead of entire city
+- [ ] Show sub-market name in the UI header
+- [ ] Only fetch relevant nearby competition (not 5,000+ properties across metro)
+- [ ] Faster loading and more relevant results
+
+
+## Auto-Distance Filtering for Step 5 (Jan 28, 2026) - COMPLETE
+- [x] Remove neighborhood dropdown (too manual, not user-friendly)
+- [x] Set default distance filter to "Within 1 mile" when user has property set
+- [x] Allow user to expand distance (1mi -> 3mi -> 5mi -> 10mi -> 25mi -> All)
+- [x] Auto-filter shows only nearby competition without manual selection
+- [x] Tested: 44 properties shown within 1 mile of user's CWE property

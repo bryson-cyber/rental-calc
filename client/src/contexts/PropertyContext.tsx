@@ -25,6 +25,11 @@ export interface PropertyDetails {
   state?: string;
   neighborhood?: string;
   
+  // Market/Submarket IDs from AirDNA (for filtering)
+  marketId?: string;
+  submarketId?: string;
+  submarketName?: string;
+  
   // Coordinates for map centering
   latitude?: number;
   longitude?: number;

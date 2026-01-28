@@ -132,7 +132,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const [hasMoreListings, setHasMoreListings] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const [bedroomFilter, setBedroomFilter] = useState('all');
-  const [distanceFilter, setDistanceFilter] = useState('all');
+  // Default to 1 mile when user has property set (auto-filter nearby competition)
+  const [distanceFilter, setDistanceFilter] = useState('1');
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [favoriteListingIds, setFavoriteListingIds] = useState<Set<string>>(new Set());
@@ -142,6 +143,10 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   
+  // Submarket state - when available, fetch only from user's submarket
+  const [activeSubmarketId, setActiveSubmarketId] = useState<string | null>(null);
+  const [activeSubmarketName, setActiveSubmarketName] = useState<string | null>(null);
+  
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -149,6 +154,10 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   // API - First search for markets to get the market ID
   const [searchTrigger, setSearchTrigger] = useState(0);
+  
+  // Mutation to get submarket ID from Rentalizer API
+  const getEstimateMutation = trpc.rental.getEstimate.useMutation();
+  
   const marketsQuery = trpc.marketExplorer.searchMarkets.useQuery(
     { query: searchQuery, limit: 5 },
     { 
@@ -159,6 +168,18 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   // Get the first market ID from search results
   const marketId = marketsQuery.data?.[0]?.id;
+  
+  // Fetch available neighborhoods/submarkets for the current market
+  const neighborhoodsQuery = trpc.marketExplorer.getNeighborhoods.useQuery(
+    { marketId: marketId || '' },
+    {
+      enabled: !!marketId && !activeSubmarketId, // Only fetch if we have a market and no submarket selected
+      staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    }
+  );
+  
+  // State for selected neighborhood from dropdown
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
   
   // Stream listings using SSE for progressive loading
   const startStreamingListings = useCallback((marketIdToFetch: string) => {
@@ -185,10 +206,13 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       isComplete: false
     });
     
-    console.log('[MapFirstLayoutV2] Starting streaming for market:', marketIdToFetch);
+    // Determine if this is a submarket or market
+    const isSubmarket = marketIdToFetch.startsWith('submarket-');
+    const marketType = isSubmarket ? 'submarket' : 'market';
+    console.log(`[MapFirstLayoutV2] Starting streaming for ${marketType}: ${marketIdToFetch}`);
     
     // Create SSE connection
-    const url = `/api/stream/listings?marketId=${encodeURIComponent(marketIdToFetch)}&marketType=market&sortBy=revenue`;
+    const url = `/api/stream/listings?marketId=${encodeURIComponent(marketIdToFetch)}&marketType=${marketType}&sortBy=revenue`;
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
     
@@ -265,9 +289,16 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     };
   }, [cachedMarketId, myPropertyLocation, searchQuery]);
   
-  // Start streaming when marketId changes
+  // Start streaming when marketId or submarketId changes
+  // Priority: submarketId > marketId (submarket gives more focused, relevant results)
   useEffect(() => {
-    if (marketId && marketId !== cachedMarketId) {
+    // If we have a submarket ID, use it (prefixed with 'submarket-' to indicate type)
+    if (activeSubmarketId && `submarket-${activeSubmarketId}` !== cachedMarketId) {
+      console.log('[MapFirstLayoutV2] Using submarket ID:', activeSubmarketId);
+      startStreamingListings(`submarket-${activeSubmarketId}`);
+    }
+    // Otherwise fall back to market ID from search
+    else if (!activeSubmarketId && marketId && marketId !== cachedMarketId) {
       startStreamingListings(marketId);
     }
     
@@ -277,7 +308,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
         eventSourceRef.current.close();
       }
     };
-  }, [marketId, cachedMarketId, startStreamingListings]);
+  }, [marketId, activeSubmarketId, cachedMarketId, startStreamingListings]);
   
   // Recalculate distances when myPropertyLocation changes
   useEffect(() => {
@@ -446,6 +477,13 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       
       console.log('[MapFirstLayoutV2] Initializing from property:', myProperty);
       
+      // Check if we have a submarket ID - if so, use it for more focused results
+      if (myProperty.submarketId) {
+        console.log('[MapFirstLayoutV2] Using submarket:', myProperty.submarketId, myProperty.submarketName);
+        setActiveSubmarketId(myProperty.submarketId);
+        setActiveSubmarketName(myProperty.submarketName || null);
+      }
+      
       // If we have coordinates, use them directly
       if (myProperty.latitude && myProperty.longitude) {
         console.log('[MapFirstLayoutV2] Using existing coordinates');
@@ -454,9 +492,36 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
           lat: myProperty.latitude,
           lng: myProperty.longitude
         });
-        if (myProperty.city) {
-          // Use just city name for search (API returns better results without state suffix)
-          setSearchQuery(myProperty.city);
+        
+        // If we don't have a submarket ID, fetch it from Rentalizer API
+        if (!myProperty.submarketId && myProperty.address) {
+          console.log('[MapFirstLayoutV2] Fetching submarket ID for existing property:', myProperty.address);
+          try {
+            const result = await getEstimateMutation.mutateAsync({
+              address: myProperty.address,
+              bedrooms: myProperty.bedrooms || 2,
+              bathrooms: myProperty.bathrooms || 1,
+            });
+            
+            if (result.success && result.data?.property?.submarket_id) {
+              const submarketId = result.data.property.submarket_id;
+              console.log('[MapFirstLayoutV2] Got submarket ID for existing property:', submarketId);
+              setActiveSubmarketId(submarketId);
+              setActiveSubmarketName(myProperty.city || null);
+            } else {
+              // Fallback to city search if no submarket found
+              console.log('[MapFirstLayoutV2] No submarket ID found, falling back to city search');
+              if (myProperty.city) {
+                setSearchQuery(myProperty.city);
+              }
+            }
+          } catch (error) {
+            console.error('[MapFirstLayoutV2] Error getting submarket for existing property:', error);
+            // Fallback to city search
+            if (myProperty.city) {
+              setSearchQuery(myProperty.city);
+            }
+          }
         }
         return;
       }
@@ -498,6 +563,55 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     
     initializeFromProperty();
   }, [myProperty, myPropertyLocation, isGoogleMapsLoaded]);
+  
+  // Separate effect to fetch submarket ID when we have coordinates but no submarket
+  // This runs even if myPropertyLocation is already set (e.g., from previous session)
+  // We use a ref to track if we've already attempted to fetch the submarket
+  const submarketFetchAttemptedRef = useRef(false);
+  
+  useEffect(() => {
+    const fetchSubmarketForExistingProperty = async () => {
+      // Only run if we have property location but no active submarket
+      // Skip if we've already attempted to fetch (prevents infinite loops)
+      if (!myPropertyLocation || activeSubmarketId || submarketFetchAttemptedRef.current) return;
+      if (!myProperty?.address) return;
+      
+      // Mark that we've attempted to fetch
+      submarketFetchAttemptedRef.current = true;
+      
+      console.log('[MapFirstLayoutV2] Fetching submarket ID for property:', myProperty.address);
+      try {
+        const result = await getEstimateMutation.mutateAsync({
+          address: myProperty.address,
+          bedrooms: myProperty.bedrooms || 2,
+          bathrooms: myProperty.bathrooms || 1,
+        });
+        
+        if (result.success && result.data?.property?.submarket_id) {
+          const submarketId = result.data.property.submarket_id;
+          console.log('[MapFirstLayoutV2] Got submarket ID:', submarketId);
+          setActiveSubmarketId(submarketId);
+          setActiveSubmarketName(myProperty.city || null);
+          // Clear the city search query since we're using submarket now
+          setSearchQuery('');
+        } else {
+          // Fallback to city search if no submarket found
+          console.log('[MapFirstLayoutV2] No submarket ID found, using city search');
+          if (myProperty.city && !searchQuery) {
+            setSearchQuery(myProperty.city);
+          }
+        }
+      } catch (error) {
+        console.error('[MapFirstLayoutV2] Error getting submarket:', error);
+        // Fallback to city search
+        if (myProperty?.city && !searchQuery) {
+          setSearchQuery(myProperty.city);
+        }
+      }
+    };
+    
+    fetchSubmarketForExistingProperty();
+  }, [myPropertyLocation, myProperty, activeSubmarketId]);
   
   // Auto-trigger search when searchQuery is set from property context
   useEffect(() => {
@@ -562,8 +676,9 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
               <AddressAutocomplete
                 value={propertyAddressInput}
                 onChange={setPropertyAddressInput}
-                onSelect={(address, placeId, details) => {
+                onSelect={async (address, placeId, details) => {
                   if (details) {
+                    // Set property location immediately for UI feedback
                     setMyProperty({
                       address: details.address,
                       formattedAddress: details.address,
@@ -582,14 +697,55 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                         lng: details.lng
                       });
                     }
-                    if (details.city) {
-                      setSearchQuery(`${details.city}, ${details.state || ''}`.trim());
-                    }
                     if (mapRef.current && details.lat && details.lng) {
                       mapRef.current.panTo({ lat: details.lat, lng: details.lng });
                       mapRef.current.setZoom(12);
                     }
                     setPropertyAddressInput('');
+                    
+                    // Call Rentalizer API to get submarket ID for more focused results
+                    console.log('[MapFirstLayoutV2] Fetching submarket ID for:', details.address);
+                    try {
+                      const result = await getEstimateMutation.mutateAsync({
+                        address: details.address,
+                        bedrooms: 2,
+                        bathrooms: 1,
+                      });
+                      
+                      if (result.success && result.data?.property?.submarket_id) {
+                        const submarketId = result.data.property.submarket_id;
+                        console.log('[MapFirstLayoutV2] Got submarket ID:', submarketId);
+                        setActiveSubmarketId(submarketId);
+                        // Try to get submarket name from market search
+                        setActiveSubmarketName(details.city || null);
+                        // Update property context with submarket info
+                        setMyProperty({
+                          address: details.address,
+                          formattedAddress: details.address,
+                          zipCode: details.zipCode,
+                          city: details.city,
+                          state: details.state,
+                          latitude: details.lat,
+                          longitude: details.lng,
+                          bedrooms: 2,
+                          bathrooms: 1,
+                          submarketId,
+                          submarketName: details.city || undefined,
+                        });
+                      } else {
+                        // Fallback to city search if no submarket found
+                        console.log('[MapFirstLayoutV2] No submarket ID, falling back to city search');
+                        if (details.city) {
+                          setSearchQuery(details.city);
+                        }
+                      }
+                    } catch (error) {
+                      console.error('[MapFirstLayoutV2] Error getting submarket:', error);
+                      // Fallback to city search
+                      if (details.city) {
+                        setSearchQuery(details.city);
+                      }
+                    }
                   }
                 }}
                 placeholder="Enter your property address..."
@@ -610,9 +766,17 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
                 <Home className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <span className="text-sm font-medium text-white/80">Your Property:</span>
-                <span className="ml-2 text-sm font-semibold">{myPropertyLocation.address}</span>
+              <div className="flex items-center gap-3">
+                <div>
+                  <span className="text-sm font-medium text-white/80">Your Property:</span>
+                  <span className="ml-2 text-sm font-semibold">{myPropertyLocation.address}</span>
+                </div>
+                {activeSubmarketName && (
+                  <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+                    <Building className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Submarket: {activeSubmarketName}</span>
+                  </div>
+                )}
               </div>
             </div>
             <button
@@ -691,33 +855,32 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 </Tooltip>
               </TooltipProvider>
               
-              {hasProperty && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Select value={distanceFilter} onValueChange={setDistanceFilter}>
-                          <SelectTrigger className="w-[150px] h-10 border-[#0F172A]/10 rounded-lg">
-                            <MapPin className="w-4 h-4 mr-2 text-[#C9A962]" />
-                            <SelectValue placeholder="Distance" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Any Distance</SelectItem>
-                            <SelectItem value="1">Within 1 mile</SelectItem>
-                            <SelectItem value="3">Within 3 miles</SelectItem>
-                            <SelectItem value="5">Within 5 miles</SelectItem>
-                            <SelectItem value="10">Within 10 miles</SelectItem>
-                            <SelectItem value="25">Within 25 miles</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-[#0F172A] text-white border-0">
-                      <p>Filter properties by distance from your property</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {/* Distance Filter - Always show, default to 1 mile for nearby competition */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Select value={distanceFilter} onValueChange={setDistanceFilter}>
+                        <SelectTrigger className={`w-[150px] h-10 rounded-lg ${hasProperty ? 'border-[#C9A962]/50 bg-[#C9A962]/5' : 'border-[#0F172A]/10'}`}>
+                          <MapPin className="w-4 h-4 mr-2 text-[#C9A962]" />
+                          <SelectValue placeholder="Distance" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Within 1 mile</SelectItem>
+                          <SelectItem value="3">Within 3 miles</SelectItem>
+                          <SelectItem value="5">Within 5 miles</SelectItem>
+                          <SelectItem value="10">Within 10 miles</SelectItem>
+                          <SelectItem value="25">Within 25 miles</SelectItem>
+                          <SelectItem value="all">All Properties</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-[#0F172A] text-white border-0">
+                    <p>{hasProperty ? 'Showing properties near your location. Expand to see more.' : 'Set your property to filter by distance'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
               <TooltipProvider>
                 <Tooltip>
@@ -814,7 +977,11 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 <div>
                   <h3 className="font-semibold text-[#0F172A] text-lg">
                     {filteredListings.length} Properties
-                    {locationName && <span className="font-normal text-[#0F172A]/50"> in {locationName}</span>}
+                    {activeSubmarketName ? (
+                      <span className="font-normal text-[#0F172A]/50"> in {activeSubmarketName} submarket</span>
+                    ) : locationName ? (
+                      <span className="font-normal text-[#0F172A]/50"> in {locationName}</span>
+                    ) : null}
                   </h3>
                   {favoriteListingIds.size > 0 && (
                     <span className="text-sm text-red-600 flex items-center gap-1 mt-1">
