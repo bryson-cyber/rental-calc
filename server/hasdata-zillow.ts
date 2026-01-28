@@ -196,12 +196,24 @@ function parseHasDataResponse(rawData: Record<string, unknown>): ZillowPropertyD
   }
   
   // Extract bathrooms
+  // Note: HasData API sometimes rounds half-baths (2.5 -> 3), so we check description for accurate count
   let bathrooms: number | null = null;
   const rawBathrooms = data.bathrooms || data.baths || data.bathroom;
   if (typeof rawBathrooms === 'number') {
     bathrooms = rawBathrooms;
   } else if (typeof rawBathrooms === 'string') {
     bathrooms = parseFloat(rawBathrooms) || null;
+  }
+  
+  // Try to extract more accurate bathroom count from description (e.g., "2.5 Bath" or "2.5 bathroom")
+  const description = (data.description as string) || "";
+  const bathDescMatch = description.match(/(\d+(?:\.5)?)\s*(?:bath|bathroom|ba)/i);
+  if (bathDescMatch) {
+    const descBaths = parseFloat(bathDescMatch[1]);
+    // Use description value if it has a half-bath (.5) and API value is rounded
+    if (!isNaN(descBaths) && descBaths % 1 === 0.5 && bathrooms !== null && Math.round(descBaths) === bathrooms) {
+      bathrooms = descBaths;
+    }
   }
   
   // Extract living area

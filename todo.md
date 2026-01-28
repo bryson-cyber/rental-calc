@@ -6261,3 +6261,8 @@ Make Step 4 a quick screening tool for comparing properties from Zillow to find 
 - [x] Change API call from POST to GET with URL parameter
 - [x] Verified fix with user's Zillow URL: 4600 McPherson Ave, Saint Louis, MO 63108
 
+
+### Zillow URL Bug Fixes (Jan 28, 2026)
+- [x] Fix validation error showing after successful Zillow URL auto-fill
+- [x] Fix bathroom count rounding (2.5 baths showing as 3 instead of 2.5)
+

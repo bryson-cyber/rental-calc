@@ -116,6 +116,8 @@ export function SmartAddressInput({
 
             setDetectedProperty(property);
             setFetchStatus('success');
+            // Reset inputType to 'address' since we're now showing the extracted address
+            setInputType('address');
 
             // Notify parent component
             if (onPropertyDetected) {
