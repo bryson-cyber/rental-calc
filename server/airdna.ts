@@ -1821,7 +1821,7 @@ export async function getSubmarketListings(
       };
     }>(`/submarket/${submarketId}/listings`, "POST", {
       pagination: {
-        page_size: Math.min(options?.limit || 25, 25),
+        page_size: Math.min(options?.limit || 100, 100),
         offset: options?.offset || 0,
       },
       order_by: {
@@ -3932,7 +3932,7 @@ export async function getCountryMarkets(
 
     const requestBody: Record<string, unknown> = {
       pagination: {
-        page_size: Math.min(options?.limit || 25, 25),
+        page_size: Math.min(options?.limit || 100, 100),
         offset: options?.offset || 0,
       },
     };
@@ -4061,7 +4061,7 @@ export async function getListingsInRadius(
       },
       radius: radiusMeters,
       pagination: {
-        page_size: Math.min(options?.limit || 25, 25),
+        page_size: Math.min(options?.limit || 100, 100),
         offset: options?.offset || 0,
       },
     };

@@ -1426,7 +1426,7 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {/* TOOLS SECTION - JOB-FOCUSED */}
       {/* ============================================ */}
-      <section id="tools-section" className="section-padding">
+      <section id="tools-section" className="pt-8 pb-20 md:pt-12 md:pb-24">
         <div className="container max-w-4xl mx-auto">
           
           {/* Start With Property - Property-Centric Entry Point */}

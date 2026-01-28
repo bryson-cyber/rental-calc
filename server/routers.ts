@@ -4723,30 +4723,61 @@ superhostOnly: input.superhostOnly,
         propertyType: z.string().optional(),
         minRating: z.number().optional(),
         sortBy: z.enum(['revenue', 'occupancy', 'adr', 'rating']).optional().default('revenue'),
-        limit: z.number().optional().default(20),
+        limit: z.number().optional().default(100),
       }))
       .query(async ({ input }) => {
         try {
+          console.log('[marketExplorer.getListings] Input:', JSON.stringify(input));
+          
           // Build filters
           const filters: any = {};
           if (input.bedrooms !== undefined && input.bedrooms !== null) filters.bedrooms = input.bedrooms;
           if (input.propertyType) filters.propertyType = input.propertyType;
           if (input.minRating) filters.minRating = input.minRating;
 
-          // Get listings based on market type
-          const result = input.marketType === 'submarket'
-            ? await getSubmarketListings(input.marketId, {
-                limit: input.limit,
-                orderBy: input.sortBy,
-                orderDirection: 'desc',
-                filters: Object.keys(filters).length > 0 ? filters : undefined,
-              })
-            : await getMarketListings(input.marketId, {
-                limit: input.limit,
-                orderBy: input.sortBy,
-                orderDirection: 'desc',
-                filters: Object.keys(filters).length > 0 ? filters : undefined,
-              });
+          console.log('[marketExplorer.getListings] Calling API with marketId:', input.marketId, 'filters:', filters);
+          
+          // Fetch multiple pages to get more listings (AirDNA API max is 25 per page)
+          const pageSize = 25;
+          const targetCount = Math.min(input.limit || 100, 100);
+          const pagesToFetch = Math.ceil(targetCount / pageSize);
+          
+          let allListings: any[] = [];
+          let totalCount = 0;
+          
+          for (let page = 0; page < pagesToFetch; page++) {
+            const offset = page * pageSize;
+            console.log(`[marketExplorer.getListings] Fetching page ${page + 1}/${pagesToFetch} (offset: ${offset})`);
+            
+            const result = input.marketType === 'submarket'
+              ? await getSubmarketListings(input.marketId, {
+                  limit: pageSize,
+                  offset,
+                  orderBy: input.sortBy,
+                  orderDirection: 'desc',
+                  filters: Object.keys(filters).length > 0 ? filters : undefined,
+                })
+              : await getMarketListings(input.marketId, {
+                  limit: pageSize,
+                  offset,
+                  orderBy: input.sortBy,
+                  orderDirection: 'desc',
+                  filters: Object.keys(filters).length > 0 ? filters : undefined,
+                });
+            
+            if (result.listings && result.listings.length > 0) {
+              allListings = [...allListings, ...result.listings];
+              totalCount = result.total_count || totalCount;
+            }
+            
+            // Stop if we've fetched all available listings
+            if (result.listings.length < pageSize) break;
+          }
+          
+          console.log(`[marketExplorer.getListings] Fetched ${allListings.length} total listings`);
+          
+          // Use the combined results
+          const result = { listings: allListings, total_count: totalCount };
 
           // Calculate summary stats
           const listings = result.listings || [];
@@ -4785,6 +4816,8 @@ superhostOnly: input.superhostOnly,
               zipcode: l.zipcode || null,
               daysAvailable: l.days_available || null,
               daysReserved: l.days_reserved || null,
+              latitude: l.latitude || null,
+              longitude: l.longitude || null,
             })),
             totalCount: result.total_count || listings.length,
             summary: {

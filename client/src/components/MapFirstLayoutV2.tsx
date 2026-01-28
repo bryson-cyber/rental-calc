@@ -10,7 +10,7 @@
  * - Tooltips for all metrics (beginner-friendly)
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useProperty } from '@/contexts/PropertyContext';
 import { trpc } from '@/lib/trpc';
 import { MapView } from '@/components/Map';
@@ -117,6 +117,20 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [locationName, setLocationName] = useState('');
+  
+  // Progressive loading state
+  const [loadingProgress, setLoadingProgress] = useState<{
+    totalCount: number;
+    fetchedCount: number;
+    elapsedMs: number;
+    currentPage: number;
+    totalPages: number;
+    isComplete: boolean;
+    hasMore?: boolean;
+  } | null>(null);
+  const [cachedMarketId, setCachedMarketId] = useState<string | null>(null);
+  const [hasMoreListings, setHasMoreListings] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const [bedroomFilter, setBedroomFilter] = useState('all');
   const [distanceFilter, setDistanceFilter] = useState('all');
   const [sortBy, setSortBy] = useState<string>('revenue-desc');
@@ -125,6 +139,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [propertyAddressInput, setPropertyAddressInput] = useState('');
   const [myPropertyLocation, setMyPropertyLocation] = useState<{address: string; lat: number; lng: number} | null>(null);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   
   // Refs
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -132,58 +148,146 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   const myPropertyMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   
   // API - First search for markets to get the market ID
+  const [searchTrigger, setSearchTrigger] = useState(0);
   const marketsQuery = trpc.marketExplorer.searchMarkets.useQuery(
     { query: searchQuery, limit: 5 },
-    { enabled: searchQuery.length >= 3 }
+    { 
+      enabled: searchQuery.length >= 3,
+      staleTime: 0, // Always refetch
+    }
   );
   
   // Get the first market ID from search results
   const marketId = marketsQuery.data?.[0]?.id;
   
-  // Then fetch listings for that market using marketExplorer.getListings
-  const listingsQuery = trpc.marketExplorer.getListings.useQuery(
-    { marketId: marketId || '', marketType: 'market', limit: 100 },
-    { enabled: !!marketId }
-  );
-  
-  // Update listings when query returns
-  useEffect(() => {
-    if (listingsQuery.data?.listings) {
-      let processedListings = listingsQuery.data.listings.map((l: any) => ({
-        id: l.id,
-        title: l.title,
-        thumbnailUrl: l.imageUrl,
-        latitude: l.latitude,
-        longitude: l.longitude,
-        bedrooms: l.bedrooms,
-        bathrooms: l.bathrooms,
-        revenue: l.annualRevenue || 0,
-        occupancy: l.occupancyRate || 0,
-        adr: l.adr || 0,
-        rating: l.rating || null,
-        reviews: l.reviewCount || 0,
-        airbnbUrl: l.airbnbUrl || '',
-        distanceToMyProperty: myPropertyLocation 
-          ? calculateDistance(myPropertyLocation.lat, myPropertyLocation.lng, l.latitude, l.longitude)
-          : undefined
-      }));
-      
-      // Filter out $0 revenue properties
-      processedListings = processedListings.filter((l: Listing) => l.revenue > 0);
-      
-      setListings(processedListings);
-      setLocationName(searchQuery);
-      
-      // Center map on first listing if available
-      if (processedListings.length > 0 && mapRef.current) {
-        const firstListing = processedListings[0];
-        if (firstListing.latitude && firstListing.longitude) {
-          mapRef.current.panTo({ lat: firstListing.latitude, lng: firstListing.longitude });
-          mapRef.current.setZoom(11);
-        }
-      }
+  // Stream listings using SSE for progressive loading
+  const startStreamingListings = useCallback((marketIdToFetch: string) => {
+    // Don't refetch if we already have this market cached
+    if (marketIdToFetch === cachedMarketId) {
+      console.log('[MapFirstLayoutV2] Using cached listings for market:', marketIdToFetch);
+      return;
     }
-  }, [listingsQuery.data, myPropertyLocation]);
+    
+    // Close any existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    
+    // Reset state
+    setListings([]);
+    setIsLoading(true);
+    setLoadingProgress({
+      totalCount: 0,
+      fetchedCount: 0,
+      elapsedMs: 0,
+      currentPage: 0,
+      totalPages: 0,
+      isComplete: false
+    });
+    
+    console.log('[MapFirstLayoutV2] Starting streaming for market:', marketIdToFetch);
+    
+    // Create SSE connection
+    const url = `/api/stream/listings?marketId=${encodeURIComponent(marketIdToFetch)}&marketType=market&sortBy=revenue`;
+    const eventSource = new EventSource(url);
+    eventSourceRef.current = eventSource;
+    
+    let allListings: Listing[] = [];
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'progress') {
+          setLoadingProgress({
+            totalCount: data.totalCount,
+            fetchedCount: data.fetchedCount,
+            elapsedMs: data.elapsedMs,
+            currentPage: data.currentPage,
+            totalPages: data.totalPages,
+            isComplete: false
+          });
+        } else if (data.type === 'listings') {
+          // Process and add new listings
+          const newListings = data.listings.map((l: any) => ({
+            id: l.id,
+            title: l.title,
+            thumbnailUrl: l.imageUrl,
+            latitude: l.latitude,
+            longitude: l.longitude,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            revenue: l.annualRevenue || 0,
+            occupancy: l.occupancyRate || 0,
+            adr: l.adr || 0,
+            rating: l.rating || null,
+            reviews: l.reviewCount || 0,
+            airbnbUrl: l.airbnbUrl || '',
+            zipcode: l.zipcode || null,
+            distanceToMyProperty: myPropertyLocation 
+              ? calculateDistance(myPropertyLocation.lat, myPropertyLocation.lng, l.latitude, l.longitude)
+              : undefined
+          })).filter((l: Listing) => l.revenue > 0);
+          
+          allListings = [...allListings, ...newListings];
+          setListings([...allListings]);
+          setLocationName(searchQuery);
+          
+          // Center map on first listing if this is the first batch
+          if (allListings.length === newListings.length && mapRef.current) {
+            const firstListing = newListings[0];
+            if (firstListing?.latitude && firstListing?.longitude) {
+              mapRef.current.panTo({ lat: firstListing.latitude, lng: firstListing.longitude });
+              mapRef.current.setZoom(11);
+            }
+          }
+        } else if (data.type === 'complete') {
+          setLoadingProgress(prev => prev ? { ...prev, isComplete: true, fetchedCount: data.fetchedCount, elapsedMs: data.elapsedMs, hasMore: data.hasMore } : null);
+          setIsLoading(false);
+          setCachedMarketId(marketIdToFetch);
+          setHasMoreListings(data.hasMore || false);
+          eventSource.close();
+          console.log(`[MapFirstLayoutV2] Streaming complete: ${data.fetchedCount} of ${data.totalCount} listings in ${(data.elapsedMs / 1000).toFixed(1)}s (hasMore: ${data.hasMore})`);
+        } else if (data.type === 'error') {
+          console.error('[MapFirstLayoutV2] Stream error:', data.message);
+          setIsLoading(false);
+          eventSource.close();
+        }
+      } catch (err) {
+        console.error('[MapFirstLayoutV2] Error parsing SSE data:', err);
+      }
+    };
+    
+    eventSource.onerror = (err) => {
+      console.error('[MapFirstLayoutV2] SSE connection error:', err);
+      setIsLoading(false);
+      eventSource.close();
+    };
+  }, [cachedMarketId, myPropertyLocation, searchQuery]);
+  
+  // Start streaming when marketId changes
+  useEffect(() => {
+    if (marketId && marketId !== cachedMarketId) {
+      startStreamingListings(marketId);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, [marketId, cachedMarketId, startStreamingListings]);
+  
+  // Recalculate distances when myPropertyLocation changes
+  useEffect(() => {
+    if (myPropertyLocation && listings.length > 0) {
+      setListings(prev => prev.map(l => ({
+        ...l,
+        distanceToMyProperty: calculateDistance(myPropertyLocation.lat, myPropertyLocation.lng, l.latitude, l.longitude)
+      })));
+    }
+  }, [myPropertyLocation]);
   
   // Calculate distance between two points
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -335,19 +439,73 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     }
   }, [filteredListings, thresholds, myPropertyLocation]);
   
-  // Initialize from context
+  // Initialize from context - geocode address if coordinates are missing
   useEffect(() => {
-    if (myProperty?.latitude && myProperty?.longitude && !myPropertyLocation) {
-      setMyPropertyLocation({
-        address: myProperty.address || '',
-        lat: myProperty.latitude,
-        lng: myProperty.longitude
-      });
-      if (myProperty.city) {
-        setSearchQuery(`${myProperty.city}, ${myProperty.state || ''}`);
+    const initializeFromProperty = async () => {
+      if (!myProperty || myPropertyLocation) return;
+      
+      console.log('[MapFirstLayoutV2] Initializing from property:', myProperty);
+      
+      // If we have coordinates, use them directly
+      if (myProperty.latitude && myProperty.longitude) {
+        console.log('[MapFirstLayoutV2] Using existing coordinates');
+        setMyPropertyLocation({
+          address: myProperty.address || '',
+          lat: myProperty.latitude,
+          lng: myProperty.longitude
+        });
+        if (myProperty.city) {
+          // Use just city name for search (API returns better results without state suffix)
+          setSearchQuery(myProperty.city);
+        }
+        return;
       }
+      
+      // If we have an address but no coordinates, geocode it
+      // Wait for Google Maps to be loaded
+      if (myProperty.address && isGoogleMapsLoaded && window.google?.maps?.Geocoder) {
+        console.log('[MapFirstLayoutV2] Geocoding address:', myProperty.address);
+        const geocoder = new google.maps.Geocoder();
+        try {
+          const result = await geocoder.geocode({ address: myProperty.address });
+          if (result.results?.[0]?.geometry?.location) {
+            const location = result.results[0].geometry.location;
+            console.log('[MapFirstLayoutV2] Geocoded location:', location.lat(), location.lng());
+            setMyPropertyLocation({
+              address: myProperty.address,
+              lat: location.lat(),
+              lng: location.lng()
+            });
+            // Also set the search query based on city/state
+            if (myProperty.city) {
+              // Use just city name for search (API returns better results without state suffix)
+              setSearchQuery(myProperty.city);
+            } else {
+              // Try to extract city from address
+              const addressParts = myProperty.address.split(',');
+              if (addressParts.length >= 2) {
+                setSearchQuery(addressParts.slice(1).join(',').trim());
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[MapFirstLayoutV2] Geocoding error:', error);
+        }
+      } else if (myProperty.address && !isGoogleMapsLoaded) {
+        console.log('[MapFirstLayoutV2] Waiting for Google Maps to load...');
+      }
+    };
+    
+    initializeFromProperty();
+  }, [myProperty, myPropertyLocation, isGoogleMapsLoaded]);
+  
+  // Auto-trigger search when searchQuery is set from property context
+  useEffect(() => {
+    if (searchQuery.length >= 3 && myPropertyLocation && !marketsQuery.data?.length) {
+      console.log('[MapFirstLayoutV2] Auto-triggering search for:', searchQuery);
+      marketsQuery.refetch();
     }
-  }, [myProperty]);
+  }, [searchQuery, myPropertyLocation]);
   
   const handleSearch = () => {
     if (searchQuery.length > 2) {
@@ -492,10 +650,10 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
             
             <Button 
               onClick={handleSearch} 
-              disabled={listingsQuery.isFetching || marketsQuery.isFetching}
+              disabled={isLoading || marketsQuery.isFetching}
               className="h-12 px-6 bg-[#0F172A] hover:bg-[#1e293b] text-white rounded-xl font-medium"
             >
-              {(listingsQuery.isFetching || marketsQuery.isFetching) ? (
+              {(isLoading || marketsQuery.isFetching) ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
@@ -594,14 +752,48 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Left Column - Table (60%) */}
         <div className="w-full lg:w-[60%] overflow-auto border-r border-[#0F172A]/10">
-          {(listingsQuery.isFetching || marketsQuery.isFetching) ? (
+          {(isLoading || marketsQuery.isFetching) ? (
             <div className="flex items-center justify-center h-full py-20">
-              <div className="text-center">
+              <div className="text-center w-full max-w-md px-6">
                 <div className="w-16 h-16 rounded-2xl bg-[#C9A962]/10 flex items-center justify-center mx-auto mb-4">
                   <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
                 </div>
-                <p className="text-[#0F172A]/70 font-medium">Loading properties...</p>
-                <p className="text-[#0F172A]/50 text-sm mt-1">Fetching market data</p>
+                <p className="text-[#0F172A]/70 font-medium text-lg mb-2">Loading properties...</p>
+                
+                {/* Progress indicator */}
+                {loadingProgress && (
+                  <div className="space-y-3">
+                    {/* Progress bar */}
+                    <div className="w-full bg-[#0F172A]/10 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-[#C9A962] to-[#b8984f] h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${loadingProgress.totalCount > 0 ? (loadingProgress.fetchedCount / loadingProgress.totalCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="flex items-center justify-center gap-4 text-sm">
+                      <span className="text-[#C9A962] font-semibold">
+                        {loadingProgress.fetchedCount.toLocaleString()} of {loadingProgress.totalCount.toLocaleString()}
+                      </span>
+                      <span className="text-[#0F172A]/50">•</span>
+                      <span className="text-[#0F172A]/60">
+                        {(loadingProgress.elapsedMs / 1000).toFixed(1)}s elapsed
+                      </span>
+                    </div>
+                    
+                    {/* Page info */}
+                    {loadingProgress.totalPages > 0 && (
+                      <p className="text-[#0F172A]/50 text-xs">
+                        Page {loadingProgress.currentPage} of {loadingProgress.totalPages}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {!loadingProgress && (
+                  <p className="text-[#0F172A]/50 text-sm">Searching for market...</p>
+                )}
               </div>
             </div>
           ) : filteredListings.length === 0 ? (
@@ -736,6 +928,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                           key={listing.id} 
                           className={`border-b border-[#0F172A]/5 hover:bg-[#C9A962]/5 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-[#f8f7f4]/50'}`}
                           onClick={() => {
+                            setSelectedListing(listing);
                             if (mapRef.current) {
                               mapRef.current.panTo({ lat: listing.latitude, lng: listing.longitude });
                               mapRef.current.setZoom(15);
@@ -957,6 +1150,10 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
             initialZoom={4}
             onMapReady={(map) => {
               mapRef.current = map;
+              // Signal that Google Maps is loaded so we can geocode
+              if (!isGoogleMapsLoaded) {
+                setIsGoogleMapsLoaded(true);
+              }
             }}
           />
         </div>
@@ -1058,6 +1255,159 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
               }
             }}
           />
+        </div>
+      )}
+      
+      {/* Property Card Modal */}
+      {selectedListing && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSelectedListing(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Image */}
+            <div className="relative h-56 bg-[#0F172A]/10">
+              {selectedListing.thumbnailUrl ? (
+                <img 
+                  src={selectedListing.thumbnailUrl} 
+                  alt={selectedListing.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#C9A962]/20 to-[#0F172A]/10">
+                  <Home className="w-20 h-20 text-[#C9A962]/50" />
+                </div>
+              )}
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedListing(null)}
+                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              {/* Favorite button */}
+              <button
+                onClick={() => {
+                  setFavoriteListingIds(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(selectedListing.id)) {
+                      newSet.delete(selectedListing.id);
+                    } else {
+                      newSet.add(selectedListing.id);
+                    }
+                    return newSet;
+                  });
+                }}
+                className={`absolute top-4 left-4 p-2 rounded-full transition-colors ${
+                  favoriteListingIds.has(selectedListing.id)
+                    ? 'bg-red-500 text-white'
+                    : 'bg-black/50 hover:bg-black/70 text-white'
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${favoriteListingIds.has(selectedListing.id) ? 'fill-current' : ''}`} />
+              </button>
+              {/* Revenue badge */}
+              <div className="absolute bottom-4 left-4 bg-gradient-to-r from-[#22c55e] to-[#16a34a] text-white px-4 py-2 rounded-xl shadow-lg">
+                <div className="text-xs opacity-90">Annual Revenue</div>
+                <div className="text-xl font-bold">{formatCurrency(selectedListing.revenue)}</div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              {/* Title */}
+              <h3 className="text-xl font-bold text-[#0F172A] mb-2 leading-tight">
+                {selectedListing.title}
+              </h3>
+              <div className="flex items-center gap-2 text-sm text-[#0F172A]/60 mb-4">
+                <span className="bg-[#0F172A]/5 px-2 py-1 rounded">
+                  {selectedListing.bedrooms} BR / {selectedListing.bathrooms} BA
+                </span>
+                <span>{selectedListing.propertyType || 'Home'}</span>
+                {selectedListing.rating && (
+                  <span className="flex items-center gap-1 text-[#C9A962]">
+                    <Star className="w-4 h-4 fill-[#C9A962]" />
+                    {selectedListing.rating.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-[#f8f7f4] rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-[#0F172A]/60 text-sm mb-1">
+                    <Calendar className="w-4 h-4" />
+                    Occupancy
+                  </div>
+                  <div className={`text-2xl font-bold ${
+                    (selectedListing.occupancy > 1 ? selectedListing.occupancy : selectedListing.occupancy * 100) >= 70 
+                      ? 'text-green-600' 
+                      : 'text-[#C9A962]'
+                  }`}>
+                    {selectedListing.occupancy > 1 ? Math.round(selectedListing.occupancy) : Math.round(selectedListing.occupancy * 100)}%
+                  </div>
+                </div>
+                <div className="bg-[#f8f7f4] rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-[#0F172A]/60 text-sm mb-1">
+                    <DollarSign className="w-4 h-4" />
+                    Avg Nightly Rate
+                  </div>
+                  <div className="text-2xl font-bold text-[#0F172A]">
+                    {formatCurrency(selectedListing.adr)}
+                  </div>
+                </div>
+                <div className="bg-[#f8f7f4] rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-[#0F172A]/60 text-sm mb-1">
+                    <TrendingUp className="w-4 h-4" />
+                    Monthly Revenue
+                  </div>
+                  <div className="text-2xl font-bold text-[#0F172A]">
+                    {formatCurrency(Math.round(selectedListing.revenue / 12))}
+                  </div>
+                </div>
+                {selectedListing.distanceToMyProperty !== undefined && (
+                  <div className="bg-[#f8f7f4] rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-[#0F172A]/60 text-sm mb-1">
+                      <MapPin className="w-4 h-4" />
+                      From Your Property
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {formatDistance(selectedListing.distanceToMyProperty)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <a
+                  href={selectedListing.airbnbUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-[#0F172A] hover:bg-[#1e293b] text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  View on Airbnb
+                </a>
+                <button
+                  onClick={() => {
+                    if (mapRef.current) {
+                      mapRef.current.panTo({ lat: selectedListing.latitude, lng: selectedListing.longitude });
+                      mapRef.current.setZoom(17);
+                    }
+                    setSelectedListing(null);
+                  }}
+                  className="bg-[#C9A962] hover:bg-[#b8984f] text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <MapPin className="w-5 h-5" />
+                  Show on Map
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

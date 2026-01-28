@@ -6600,3 +6600,43 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Zillow scraping integration with "Validate" button
 - [ ] Hospitable API integration for portfolio tracking
 - [ ] HubSpot CRM integration
+
+
+## Bug Fixes (Jan 28, 2026) - User Reported
+
+### Step 5 - Data Not Loading
+- [ ] Fix "See on Map" button not passing property data to Step 5
+- [ ] Step 5 shows "No properties found" when property is set from homepage
+- [ ] Diagnose data flow from PropertyContext to MapViewPage
+- [ ] Ensure auto-search triggers when property is loaded from context
+
+### Layout Spacing Issue
+- [ ] Fix weird empty space between Trustpilot badge and My Property card
+- [ ] Center and align the My Property card properly
+
+
+## Step 5 Fix - Monthly Rent Optional (Jan 28, 2026)
+- [ ] Make monthly rent optional in StartWithProperty component for Step 5
+- [ ] Step 5 only needs address + bedrooms/bathrooms to show map
+- [ ] Fix layout spacing between Trustpilot badge and My Property card
+
+
+## Step 5 Map View Improvements (Jan 28, 2026) - COMPLETE
+
+- [x] Fix bedroom filter bug (goes blank when selecting 2BR)
+- [x] Add progressive loading - show data as it loads incrementally
+- [x] Add caching for listings data so subsequent requests are instant
+- [x] Add property card popup when clicking a listing in the table
+- [x] Increase listings from 25 to 500 using SSE streaming
+
+
+## Progressive Loading & Full Dataset (Step 5) - Jan 28, 2026 - COMPLETE
+- [x] Create streaming API endpoint (SSE) that sends listings as they're fetched
+- [x] Update frontend to display listings progressively as they stream in
+- [x] Add progress indicator with timer and page count
+- [x] Fetch 500 listings (optimized limit for fast loading)
+- [x] Implement client-side caching so filter changes are instant after initial load
+- [x] Add loading bar/progress visualization with elapsed time
+- [x] Property card popup with image, revenue, occupancy, ADR, distance, Airbnb link
+- [x] Map markers update dynamically as filters change
+- [x] Distance calculation from user property to each listing

@@ -72,6 +72,156 @@ async function startServer() {
     });
   });
   
+  // SSE endpoint for streaming market listings with progressive loading
+  app.get('/api/stream/listings', async (req, res) => {
+    const { marketId, marketType = 'market', sortBy = 'revenue', maxListings = '500' } = req.query;
+    const maxLimit = parseInt(maxListings as string, 10) || 500;
+    
+    if (!marketId || typeof marketId !== 'string') {
+      return res.status(400).json({ error: 'marketId is required' });
+    }
+    
+    // Keep the full market ID (airdna-XXX format) - the API requires it
+    console.log(`[SSE] Starting stream for market: ${marketId}`);
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    
+    const startTime = Date.now();
+    const pageSize = 25;
+    let offset = 0;
+    let totalCount = 0;
+    let fetchedCount = 0;
+    let isClientConnected = true;
+    
+    // Track client disconnect
+    req.on('close', () => {
+      isClientConnected = false;
+    });
+    
+    try {
+      // Import the API functions dynamically
+      const { getMarketListings, getSubmarketListings } = await import('../airdna');
+      
+      // First fetch to get total count
+      const firstResult = marketType === 'submarket'
+        ? await getSubmarketListings(marketId, { limit: pageSize, offset: 0, orderBy: sortBy as any, orderDirection: 'desc' })
+        : await getMarketListings(marketId, { limit: pageSize, offset: 0, orderBy: sortBy as any, orderDirection: 'desc' });
+      
+      totalCount = firstResult.total_count || 0;
+      
+      // Send initial progress
+      res.write(`data: ${JSON.stringify({
+        type: 'progress',
+        totalCount,
+        fetchedCount: firstResult.listings.length,
+        elapsedMs: Date.now() - startTime,
+        currentPage: 1,
+        totalPages: Math.ceil(totalCount / pageSize)
+      })}\n\n`);
+      
+      // Send first batch of listings
+      if (firstResult.listings.length > 0) {
+        res.write(`data: ${JSON.stringify({
+          type: 'listings',
+          listings: firstResult.listings.map(l => ({
+            id: l.id,
+            title: l.title,
+            imageUrl: l.image_url || null,
+            airbnbUrl: l.airbnb_url || null,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            annualRevenue: l.annual_revenue,
+            occupancyRate: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviewCount: l.reviews,
+            latitude: l.latitude || null,
+            longitude: l.longitude || null,
+            zipcode: l.zipcode || null,
+          }))
+        })}\n\n`);
+      }
+      
+      fetchedCount = firstResult.listings.length;
+      offset = pageSize;
+      
+      // Continue fetching remaining pages (up to maxLimit)
+      while (offset < totalCount && offset < maxLimit && isClientConnected) {
+        const currentPage = Math.floor(offset / pageSize) + 1;
+        const totalPages = Math.ceil(totalCount / pageSize);
+        
+        const result = marketType === 'submarket'
+          ? await getSubmarketListings(marketId, { limit: pageSize, offset, orderBy: sortBy as any, orderDirection: 'desc' })
+          : await getMarketListings(marketId, { limit: pageSize, offset, orderBy: sortBy as any, orderDirection: 'desc' });
+        
+        if (!result.listings || result.listings.length === 0) break;
+        
+        fetchedCount += result.listings.length;
+        
+        // Send progress update
+        res.write(`data: ${JSON.stringify({
+          type: 'progress',
+          totalCount,
+          fetchedCount,
+          elapsedMs: Date.now() - startTime,
+          currentPage,
+          totalPages
+        })}\n\n`);
+        
+        // Send listings batch
+        res.write(`data: ${JSON.stringify({
+          type: 'listings',
+          listings: result.listings.map(l => ({
+            id: l.id,
+            title: l.title,
+            imageUrl: l.image_url || null,
+            airbnbUrl: l.airbnb_url || null,
+            bedrooms: l.bedrooms,
+            bathrooms: l.bathrooms,
+            annualRevenue: l.annual_revenue,
+            occupancyRate: l.occupancy,
+            adr: l.adr,
+            rating: l.rating,
+            reviewCount: l.reviews,
+            latitude: l.latitude || null,
+            longitude: l.longitude || null,
+            zipcode: l.zipcode || null,
+          }))
+        })}\n\n`);
+        
+        offset += pageSize;
+        
+        // Small delay to prevent overwhelming the API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Send completion message
+      const hasMore = fetchedCount < totalCount;
+      res.write(`data: ${JSON.stringify({
+        type: 'complete',
+        totalCount,
+        fetchedCount,
+        elapsedMs: Date.now() - startTime,
+        hasMore,
+        maxLimit
+      })}\n\n`);
+      
+      res.end();
+    } catch (error) {
+      console.error('[Stream Listings] Error:', error);
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to fetch listings'
+      })}\n\n`);
+      res.end();
+    }
+  });
+  
   // Admin API endpoints
   app.get('/api/admin/reports', async (req, res) => {
     try {
