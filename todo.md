@@ -6931,3 +6931,25 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Revenue clarity: Clarify if revenue is monthly or yearly (labeled as "Annual Revenue" with tooltip)
 - [x] Data credibility badge: Add badge at top showing "Based on X properties" and "Last 12 months of data"
 - [x] Revenue by property size: Show mid-tier (25-75th percentile) and top-tier (75th+) performers, excludes bottom 25%
+
+
+### Market Advisor Beginner-Friendly Overhaul (Jan 28, 2026 - Round 5)
+- [ ] Remove "Processing large amount of data" loading message
+- [ ] Add listing photos to Top Performers section
+- [ ] Replace technical jargon with 3rd-grade reading level language throughout
+- [ ] Add AI-generated plain English explanations to each section (like talking to a beginner)
+- [ ] Make 5-Year Historical Summary readable with words, not just numbers
+- [ ] Remove/explain: RevPAR, ADR, post-competition analysis, and other technical terms
+
+
+### Market Advisor Beginner-Friendly Overhaul (Jan 28, 2026 - Round 5)
+- [x] Remove "Processing large amount of data" loading message - removed the 30-second timeout warning
+- [x] Add listing photos to Top Performers section - added imageUrl from API
+- [x] Replace ALL technical jargon with beginner-friendly language - renamed sections throughout
+- [x] Add AI explanations in plain English throughout - completely rewrote AI prompt
+- [x] Make report readable by a third grader - AI now explains like talking to a friend
+- [x] Renamed "Market Scores" to "How's This Market?"
+- [x] Renamed "RevPAR Trend" to "Monthly Earnings Potential"
+- [x] Renamed "Submarkets" to "Best Neighborhoods to Invest"
+- [x] Renamed "Active Listings Trend" to "Competition Tracker"
+- [x] Updated AI prompt to use simple language, analogies, and explain the "so what?" for every number

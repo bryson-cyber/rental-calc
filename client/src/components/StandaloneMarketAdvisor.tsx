@@ -449,32 +449,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     </span>
                   </div>
                   
-                  {/* Taking Too Long Warning */}
-                  {analysisProgress.isTakingLong && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="mb-3 p-3 bg-amber-100 rounded-lg border border-amber-200"
-                    >
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-amber-800">This is taking longer than expected...</p>
-                          <p className="text-xs text-amber-700 mt-1">The AI is processing a large amount of market data. You can continue waiting or cancel and try again.</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          onClick={handleCancelAnalysis}
-                          size="sm"
-                          variant="outline"
-                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                        >
-                          Cancel Analysis
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
+
                   
                   <div className="space-y-2">
                     {analysisProgress.steps.map((step, index) => (
@@ -748,7 +723,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
 
           {/* Collapsible Sections */}
           
-          {/* Market Scores */}
+          {/* How's This Market? - Beginner-friendly scores */}
           <Card>
             <CardHeader 
               className="cursor-pointer hover:bg-slate-50 transition-colors"
@@ -757,21 +732,24 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-blue-600" />
-                  Market Scores
+                  How's This Market?
                 </CardTitle>
                 {expandedSections.scores ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </div>
+              <CardDescription className="text-sm text-slate-500 mt-1">
+                Simple scores to help you understand if this is a good place to invest. Higher numbers = better!
+              </CardDescription>
             </CardHeader>
             {expandedSections.scores && (
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { label: 'Market Score', value: marketData.scores.marketScore, description: 'Overall market health', tooltip: 'A combined score (0-100) that weighs all factors below. 80+ is excellent, 60-79 is good, 40-59 is average, below 40 may be challenging.' },
-                    { label: 'Profit Potential', value: marketData.scores.investabilityScore, description: 'Can you make good money here?', tooltip: 'Measures how likely you are to earn a profit after expenses. Higher scores mean better revenue-to-cost ratios in this market.' },
-                    { label: 'Guest Interest', value: marketData.scores.rentalDemandScore, description: 'How many people want to stay here?', tooltip: 'Based on booking rates and search volume. High demand means more guests looking for places to stay in this area.' },
-                    { label: 'Earnings Trend', value: marketData.scores.revenueGrowthScore, description: 'Are hosts making more or less?', tooltip: 'Tracks whether host earnings are growing or declining. Positive trends suggest a healthy, expanding market.' },
-                    { label: 'Income Stability', value: marketData.scores.seasonalityScore, description: 'Is income steady all year?', tooltip: 'Measures how consistent bookings are throughout the year. Higher scores mean less seasonal ups and downs in your income.' },
-                    { label: 'Local Rules', value: marketData.scores.regulationScore, description: 'How easy is it to rent here?', tooltip: 'Reflects how friendly local regulations are for short-term rentals. Lower scores may indicate stricter rules or permit requirements.' },
+                    { label: 'Overall Grade', value: marketData.scores.marketScore, description: 'How good is this market overall?', tooltip: 'Think of this like a report card grade for the market. 80+ is an A (excellent!), 60-79 is a B (pretty good), 40-59 is a C (okay), below 40 is a D (might be tough).' },
+                    { label: 'Money-Making Potential', value: marketData.scores.investabilityScore, description: 'Can you make good money here?', tooltip: 'This tells you if hosts in this area are actually making money after paying their bills. Higher score = more hosts are profitable here.' },
+                    { label: 'Guest Demand', value: marketData.scores.rentalDemandScore, description: 'Do people want to visit here?', tooltip: 'Are travelers searching for places to stay in this area? High score means lots of people want to visit - that\'s good for you!' },
+                    { label: 'Earnings Growing?', value: marketData.scores.revenueGrowthScore, description: 'Are hosts earning more each year?', tooltip: 'Is the market getting better or worse? High score means hosts are making MORE money than last year. Low score means earnings are dropping.' },
+                    { label: 'Steady Income', value: marketData.scores.seasonalityScore, description: 'Will you earn money all year?', tooltip: 'Some places are busy in summer but dead in winter. High score means you\'ll have steady bookings all year. Low score means big ups and downs.' },
+                    { label: 'Easy to Operate', value: marketData.scores.regulationScore, description: 'Are the local rules friendly?', tooltip: 'Some cities make it hard to run a short-term rental with lots of rules and permits. High score means it\'s easier to operate here legally.' },
                   ].map((score) => {
                     // Handle decimal values - if value is less than 1, it's likely a decimal that should be a percentage
                     const displayValue = score.value < 1 && score.value > 0 ? Math.round(score.value * 100) : Math.round(score.value);
@@ -1248,53 +1226,87 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       })
                       .slice(0, 10)
                       .map((performer: any, index: number) => (
-                      <div key={index} className="p-3 border rounded-lg hover:bg-slate-50">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-slate-900 line-clamp-1">
-                              {index + 1}. {performer.airbnbUrl ? (
-                                <a 
-                                  href={performer.airbnbUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {performer.title}
-                                  <ArrowUpRight className="w-3 h-3 inline ml-1" />
-                                </a>
-                              ) : performer.title}
+                      <div key={index} className="p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                        <div className="flex gap-4">
+                          {/* Listing Photo */}
+                          {performer.imageUrl ? (
+                            <a 
+                              href={performer.airbnbUrl || '#'} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex-shrink-0"
+                              onClick={(e) => !performer.airbnbUrl && e.preventDefault()}
+                            >
+                              <img 
+                                src={performer.imageUrl} 
+                                alt={performer.title}
+                                className="w-24 h-24 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            </a>
+                          ) : (
+                            <div className="w-24 h-24 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Home className="w-8 h-8 text-slate-300" />
                             </div>
-                            <div className="text-sm text-slate-500 mt-1">
-                              {performer.bedrooms} BR / {performer.bathrooms} BA
-                              {performer.propertyType && ` • ${performer.propertyType}`}
+                          )}
+                          
+                          {/* Listing Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-slate-900">
+                                  <span className="text-slate-400 mr-1">#{index + 1}</span>
+                                  {performer.airbnbUrl ? (
+                                    <a 
+                                      href={performer.airbnbUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {performer.title}
+                                      <ArrowUpRight className="w-3 h-3 inline ml-1" />
+                                    </a>
+                                  ) : (
+                                    <span className="line-clamp-1">{performer.title}</span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-slate-500 mt-1">
+                                  {performer.bedrooms === 0 ? 'Studio' : `${performer.bedrooms} Bedroom${performer.bedrooms > 1 ? 's' : ''}`} • {performer.bathrooms} Bath{performer.bathrooms > 1 ? 's' : ''}
+                                  {performer.propertyType && ` • ${performer.propertyType}`}
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-lg font-bold text-green-600">
+                                  {formatCurrency(performer.revenue)}
+                                </div>
+                                <div className="text-xs text-slate-500">per year</div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 mt-2">
+                            
+                            {/* Badges and Stats */}
+                            <div className="flex items-center flex-wrap gap-2 mt-2">
                               {performer.isSuperhost && (
                                 <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                                  Superhost
+                                  ⭐ Superhost
                                 </Badge>
                               )}
                               {performer.isProfessionallyManaged && (
                                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  Pro Managed
+                                  🏢 Pro Managed
                                 </Badge>
                               )}
                               {performer.rating > 0 && (
-                                <span className="text-xs text-slate-500 flex items-center gap-1">
+                                <span className="text-xs text-slate-600 flex items-center gap-1">
                                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                                   {performer.rating.toFixed(1)} ({performer.reviews} reviews)
                                 </span>
                               )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-green-600">
-                              {formatCurrency(performer.revenue)}
-                            </div>
-                            <div className="text-xs text-slate-500">per year</div>
-                            <div className="text-sm text-slate-600 mt-1">
-                              {formatPercent(performer.occupancy)} occ • {formatCurrency(performer.adr)}/night
+                              <span className="text-xs text-slate-500">
+                                {formatPercent(performer.occupancy)} booked • {formatCurrency(performer.adr)}/night
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1410,10 +1422,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-teal-500" />
-                    Neighborhoods & Submarkets ({marketData.submarkets.length})
+                    Best Areas to Invest ({marketData.submarkets.length} neighborhoods)
                   </CardTitle>
                   {expandedSections.submarkets ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                 </div>
+                <CardDescription>
+                  Which neighborhoods in this market make the most money?
+                </CardDescription>
               </CardHeader>
               {expandedSections.submarkets && (
                 <CardContent>
@@ -1422,11 +1437,11 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       <thead>
                         <tr className="border-b bg-slate-50">
                           <th className="text-left py-3 px-3 font-medium text-slate-600">Neighborhood</th>
-                          <th className="text-right py-3 px-3 font-medium text-slate-600">Listings</th>
-                          <th className="text-right py-3 px-3 font-medium text-slate-600">Avg Revenue</th>
-                          <th className="text-right py-3 px-3 font-medium text-slate-600">ADR</th>
-                          <th className="text-right py-3 px-3 font-medium text-slate-600">Occupancy</th>
-                          <th className="text-right py-3 px-3 font-medium text-slate-600">Score</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600"># of Rentals</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Yearly Income</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Nightly Rate</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">% Booked</th>
+                          <th className="text-right py-3 px-3 font-medium text-slate-600">Grade</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1463,7 +1478,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     </table>
                   </div>
                   <p className="text-xs text-slate-500 mt-3 text-center">
-                    Showing top 15 neighborhoods by revenue. Higher scores indicate better investment potential.
+                    💡 <strong>Tip:</strong> Look for neighborhoods with high yearly income AND high % booked. That means people want to stay there AND they're willing to pay good money!
                   </p>
                 </CardContent>
               )}
@@ -1480,14 +1495,17 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-cyan-500" />
-                    Active Listings Trend (12 Months)
+                    Competition Tracker (12 Months)
                   </CardTitle>
                   {expandedSections.supplyChart ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                 </div>
+                <CardDescription>
+                  How many other rentals are you competing with each month?
+                </CardDescription>
               </CardHeader>
               {expandedSections.supplyChart && (
                 <CardContent>
-                  {/* Simple bar chart visualization */}
+                  {/* Competition chart */}
                   <div className="space-y-2">
                     {(() => {
                       const data = marketData.supplyTrend.monthlyData.slice(0, 12);
@@ -1501,10 +1519,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                         const isPeak = month.activeListings === maxMonth.activeListings;
                         const isLow = month.activeListings === minMonth.activeListings;
                         const seasonalNote = isPeak 
-                          ? 'Peak supply month - more competition for guests' 
+                          ? '🚨 Most crowded month - lots of competition!' 
                           : isLow 
-                            ? 'Lowest supply month - less competition, potentially higher rates' 
-                            : 'Average supply level for this market';
+                            ? '✅ Least competition - easier to get bookings!' 
+                            : 'Normal competition level';
                         
                         return (
                           <TooltipProvider key={index}>
@@ -1555,7 +1573,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             </Card>
           )}
 
-          {/* RevPAR Trend Chart */}
+          {/* Monthly Earnings Potential - Beginner-friendly chart */}
           {marketData.historicalData?.months && marketData.historicalData.months.length > 0 && (
             <Card>
               <CardHeader 
@@ -1565,22 +1583,22 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5 text-emerald-500" />
-                    RevPAR Trend (Revenue Per Available Room)
+                    Monthly Earnings Potential
                   </CardTitle>
                   {expandedSections.revparChart ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                 </div>
                 <CardDescription>
-                  RevPAR = ADR × Occupancy Rate - measures market efficiency
+                  How much you could earn each month (per night your property is available)
                 </CardDescription>
               </CardHeader>
               {expandedSections.revparChart && (
                 <CardContent>
-                  {/* RevPAR bar chart visualization */}
+                  {/* Monthly earnings chart */}
                   <div className="space-y-2">
                     {(() => {
                       const data = marketData.historicalData.months.slice(0, 12).filter((m: any) => m.revpar);
                       if (data.length === 0) {
-                        return <p className="text-sm text-slate-500">RevPAR data not available for this market.</p>;
+                        return <p className="text-sm text-slate-500">Monthly earnings data not available for this market.</p>;
                       }
                       const maxRevpar = Math.max(...data.map((m: any) => m.revpar || 0));
                       const minRevpar = Math.min(...data.map((m: any) => m.revpar || 0));
@@ -1595,10 +1613,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                             const isPeak = month.revpar === maxRevpar;
                             const isLow = month.revpar === minRevpar;
                             const seasonalNote = isPeak 
-                              ? 'Peak earning month - highest revenue per available night' 
+                              ? '🌟 Best month! This is when you\'ll earn the most.' 
                               : isLow 
-                                ? 'Lowest earning month - consider adjusting pricing or marketing' 
-                                : 'Average RevPAR for this market';
+                                ? '📉 Slowest month - expect fewer bookings and lower prices.' 
+                                : 'Typical earnings for this time of year.';
                             
                             return (
                               <TooltipProvider key={index}>
@@ -1625,7 +1643,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
-                                    <p className="font-medium">${Math.round(month.revpar)} RevPAR</p>
+                                    <p className="font-medium">${Math.round(month.revpar)}/night potential</p>
                                     <p className="text-xs text-slate-400 mt-1">{seasonalNote}</p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1636,19 +1654,19 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                             <div className="grid grid-cols-3 gap-4 text-sm">
                               <div>
                                 <span className="text-slate-600">Average:</span>
-                                <span className="font-medium ml-2 text-emerald-700">${avgRevpar}</span>
+                                <span className="font-medium ml-2 text-emerald-700">${avgRevpar}/night</span>
                               </div>
                               <div>
-                                <span className="text-slate-600">Peak:</span>
-                                <span className="font-medium ml-2 text-emerald-700">${Math.round(maxRevpar)}</span>
+                                <span className="text-slate-600">Best Month:</span>
+                                <span className="font-medium ml-2 text-emerald-700">${Math.round(maxRevpar)}/night</span>
                               </div>
                               <div>
-                                <span className="text-slate-600">Low:</span>
-                                <span className="font-medium ml-2 text-emerald-700">${Math.round(minRevpar)}</span>
+                                <span className="text-slate-600">Slowest:</span>
+                                <span className="font-medium ml-2 text-emerald-700">${Math.round(minRevpar)}/night</span>
                               </div>
                             </div>
                             <p className="text-xs text-slate-600 mt-2">
-                              RevPAR measures how efficiently a market converts available nights into revenue. Higher RevPAR indicates strong pricing power combined with good occupancy.
+                              💡 <strong>What this means:</strong> This shows how much money you could earn per night your property is available. Multiply by 30 to estimate monthly income, then factor in your expected occupancy rate.
                             </p>
                           </div>
                         </>
@@ -1716,18 +1734,21 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
             </Card>
           )}
 
-          {/* AI Analysis Result */}
+          {/* AI Analysis Result - Plain English Summary */}
           {marketAdvice && (
             <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-white">
               <CardHeader>
                 <div className="flex items-center gap-2 text-green-600">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium">AI Analysis Complete</span>
+                  <span className="font-medium">Your Report is Ready!</span>
                 </div>
                 <CardTitle className="flex items-center gap-2 text-xl mt-2">
                   <Sparkles className="w-5 h-5 text-amber-500" />
-                  Comprehensive Market Analysis
+                  What You Need to Know About This Market
                 </CardTitle>
+                <CardDescription className="mt-2">
+                  Here's everything explained in plain English - no confusing jargon!
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-slate max-w-none">

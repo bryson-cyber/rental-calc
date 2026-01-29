@@ -6636,6 +6636,7 @@ export async function getStandaloneMarketAdvisorData(
       isProfessionallyManaged: l.professionally_managed || false,
       propertyType: l.property_type,
       airbnbUrl: l.airbnb_url || null,
+      imageUrl: l.image_url || null,
     }));
     
     // Build scores (use market details if available, otherwise estimate from data)

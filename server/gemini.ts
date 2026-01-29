@@ -1447,22 +1447,23 @@ export async function generateMaxMarketAdvice(
     : 0;
 
   const prompt = `<PERSONA>
-You are a world-class SHORT-TERM RENTAL MARKET ANALYST with 15+ years of experience analyzing Airbnb and VRBO markets. You specialize in helping new investors understand market opportunities. Your communication style is:
-- Clear and educational (explain jargon)
-- Data-driven (cite specific numbers)
-- Honest and balanced (acknowledge risks)
-- Actionable (provide specific next steps)
+You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart third grader - use simple words, real examples, and make everything crystal clear. Your communication style is:
+- Super simple language (if a word is confusing, explain it or use a simpler word)
+- Use real-life comparisons ("Think of it like..." or "Imagine if...")
+- Friendly and encouraging (like talking to a friend)
+- Always explain the "so what?" - why does this number matter?
 </PERSONA>
 
 <TASK>
-Analyze the market data below and produce a COMPREHENSIVE MARKET INVESTMENT REPORT. This report should help a beginner investor decide whether to enter this market.
+Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT. This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand - even if they've never invested in real estate before.
 </TASK>
 
 <TONE>
-- Professional but approachable
-- Educational without being condescending
-- Confident but not overselling
-- Use plain English, avoid industry jargon unless explained
+- Warm and conversational (like explaining to a friend over coffee)
+- Use everyday language - NO jargon or technical terms without explaining them
+- Use analogies and comparisons to make numbers meaningful
+- Be honest but encouraging
+- Use phrases like "Think of it this way..." or "In simple terms..." or "What this means for you..."
 </TONE>
 
 <CONSTRAINTS>
@@ -1665,109 +1666,87 @@ Avg Revenue (Individual): $${professionalStats.avgRevenueIndividual.toLocaleStri
 Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '+' : ''}${professionalStats.revenuePremiumPercent}%
 ` : ''}
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET DATA REPORT
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+YOUR TASK: Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
 
-Write an extremely comprehensive market analysis report presenting the data clearly. This report should help the reader understand the market data and make their own informed decision. DO NOT provide prescriptive advice, action plans, or tell the reader what to do.
+Write like you're explaining to a friend who's curious about Airbnb investing but has never done it before. Use simple words, real examples, and always explain WHY each number matters.
 
-# EXECUTIVE SUMMARY
-${filterContextParts.length > 0 ? `IMPORTANT: This is a FILTERED analysis. The title of this section MUST include the filter context. For example, if analyzing Studio properties, the title should be "Executive Summary: Studio Properties in [Market Name]" or "Studio Analysis for [Market Name]". Make it clear in the very first sentence what filter is applied.` : ''}
-Provide a clear, 3-5 sentence summary of the key data findings. Include:
-- If a bedroom filter is applied, explicitly state this in the first sentence (e.g., "This analysis focuses specifically on Studio apartments in...")
-- Overall market grade based on the scores (A+/A/B+/B/C+/C/D/F)
-- Key revenue figures from the data
-- Notable data points that stand out (both positive and concerning)
-- DO NOT tell the reader what to do - just summarize the data
+# THE QUICK ANSWER
+${filterContextParts.length > 0 ? `Start with: "Let me tell you about ${filterContextParts.join(' ')} in this market..."` : ''}
+In 2-3 sentences, give the "elevator pitch" answer to "How's this market?" Use a simple grade (A, B, C, D, F) and explain what it means. Example: "This market gets a B+ grade - that means it's pretty good but not amazing. Properties here make about $X per year on average."
 
-# MARKET HEALTH ANALYSIS
-## Score Breakdown
-- Present each market score with its value and what it measures
-- Explain what each score means in plain English (e.g., "A score of 70 means...")
-- Compare to benchmark scores: 80+ is excellent, 60-79 is good, 40-59 is moderate, below 40 is concerning
-- Highlight which scores are strong and which are weak
+# HOW MUCH MONEY CAN YOU MAKE HERE?
 
-## Market Size & Maturity
-- Total number of active listings in this market
-- Listing count trend over the past 12 months (growing, stable, or declining)
-- How this compares to similar markets
+## The Numbers (Explained Simply)
+Explain the revenue like this:
+- "The average Airbnb here makes $X per year. That's about $X per month."
+- "The best properties (top 25%) make $X per year - that's like earning $X every month!"
+- "The typical property is booked X% of the time. Think of it like: out of every 10 nights, your place would be rented X nights."
+- "Guests pay about $X per night on average."
 
-# REVENUE DATA
+Always add context: "Is $X good? Well, if your mortgage is $Y per month, you'd need to make at least that much to break even."
 
-## Revenue by Property Size
-- Present the revenue data for each bedroom count
-- Show which property sizes have the highest average revenue
-- Show which property sizes have the most competition (listing count)
-- Include occupancy and ADR data for each size
+## Which Property Sizes Make the Most?
+Explain each bedroom count simply:
+- "Studios (no separate bedroom) make about $X/year"
+- "1-bedrooms make about $X/year"
+- "2-bedrooms make about $X/year" etc.
+Then say which size seems to be the "sweet spot" and why.
 
-## Revenue Distribution
-- What the average property earns
-- What top 25% performers earn
-- What bottom 25% performers earn
-- The range between top and bottom performers
+# WHEN'S THE BEST TIME TO HAVE GUESTS?
 
-# SEASONALITY DATA
+## The Busy Season vs Slow Season
+Explain seasonality like this:
+- "The busiest months are [months] - this is when you'll make the most money (about $X/month)"
+- "The slowest months are [months] - expect to make less (about $X/month)"
+- "The difference between busy and slow season is about X%. Think of it like: in summer you might make $1000, but in winter only $600."
 
-## Monthly Patterns
-- Present the revenue data by month
-- Identify peak months and their revenue figures
-- Identify slow months and their revenue figures
-- Calculate the variance between peak and slow seasons
+Explain WHY: "This market is busy in [season] because [reason - tourism, events, weather, etc.]"
 
-## Year-over-Year Trends
-- How revenue has changed compared to last year
-- Which months showed growth vs decline
-- Overall market trajectory
+# HOW CROWDED IS THIS MARKET?
 
-# COMPETITIVE LANDSCAPE DATA
+## Your Competition
+Explain simply:
+- "There are X other Airbnbs in this area. That's [a lot/moderate/not many] for a market this size."
+- "X% are run by professional companies (like property management firms). The rest are regular people like you."
+- "X% of hosts have the 'Superhost' badge - that means they're really good at what they do."
 
-## Host Composition
-- Percentage of professionally managed properties
-- Percentage of Superhost properties
-- Average ratings and review counts
+## What the Top Earners Are Doing
+Look at the top performers and explain:
+- "The highest-earning property makes $X/year. Here's what makes it special: [features, location, etc.]"
+- "Most top earners have [X bedrooms, certain amenities, etc.]"
+- "They charge about $X per night and are booked X% of the time."
 
-## Top Performer Profiles
-- Present data on the top 5-10 earning properties
-- Their revenue, occupancy, ADR, ratings
-- What amenities and features they have
-- Their property types and bedroom counts
+# IS THIS MARKET GETTING BETTER OR WORSE?
 
-# RISK FACTORS
+## The Trend
+Explain year-over-year changes simply:
+- "Compared to last year, properties are making [more/less/about the same] money."
+- "The change is X% - that means if you made $10,000 last year, you'd make about $[calculated] this year."
+- "More/fewer Airbnbs are opening up here, which means [more competition/less competition]."
 
-## Data-Based Concerns
-- Present any concerning trends in the data (declining revenue, increasing supply, etc.)
-- Seasonal volatility percentage
-- Competition density
-- Any scores below benchmark thresholds
+# THINGS TO THINK ABOUT
 
-## Market Stability Indicators
-- Year-over-year consistency
-- Supply growth rate
-- Occupancy stability
+## The Good Stuff
+List 2-3 positive things about this market in simple terms.
 
-# DATA SUMMARY
+## The Not-So-Good Stuff  
+List 2-3 concerns or challenges, explained simply. Don't scare people, just be honest.
 
-## Key Metrics at a Glance
-Present a summary table of the most important metrics:
-- Market Score
-- Average Revenue
-- Average Occupancy
-- Average ADR
-- Total Listings
-- YoY Change
-- Seasonality Variance
+# THE BOTTOM LINE
 
-## Notable Observations
-List 3-5 key observations from the data without prescriptive conclusions.
+End with a simple summary:
+- "In plain English, this market [is great for beginners / has potential but needs work / might be challenging]."
+- "The average property makes $X/year, which is [above/below/about average] for markets like this."
+- "The market is [growing/stable/shrinking] based on the last 12 months of data."
 
 CRITICAL RULES:
-- Be specific with numbers - cite actual figures from the data
-- Explain what metrics mean for someone new to investing
-- DO NOT provide recommendations, action plans, or tell the reader what to do
-- DO NOT use phrases like "you should", "I recommend", "the best strategy is"
-- Present the data objectively and let the reader draw their own conclusions
-- DO NOT use emojis anywhere in the report
-- Use professional language throughout`;
+- Use simple words a third grader would understand
+- Always explain what numbers MEAN, not just what they ARE
+- Use comparisons like "That's like..." or "Think of it as..."
+- Be honest but friendly - don't scare people, but don't sugarcoat problems
+- DO NOT use jargon like "RevPAR", "ADR", "YoY" without explaining them
+- DO NOT use emojis
+- DO NOT give specific advice like "you should buy here" - just explain the data`;
 
   try {
     const response = await callGeminiMax(prompt);
