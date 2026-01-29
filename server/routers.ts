@@ -3074,18 +3074,19 @@ export const appRouter = router({
           console.log('[Standalone Market Advisor] AI advice generated, length:', advice.length);
           
           // Filter revenueByBedroom if bedroom filter is applied
-          let filteredRevenueByBedroom = input.bedrooms 
+          // Use explicit undefined check to handle Studio (bedrooms=0)
+          let filteredRevenueByBedroom = input.bedrooms !== undefined
             ? marketData.revenueByBedroom.filter(r => r.bedrooms === input.bedrooms)
             : marketData.revenueByBedroom;
           
           // Filter topPerformers if bedroom filter is applied
-          let filteredTopPerformers = input.bedrooms
+          let filteredTopPerformers = input.bedrooms !== undefined
             ? marketData.topPerformers.filter(p => p.bedrooms === input.bedrooms)
             : marketData.topPerformers;
           
           // If bedroom filter results in empty data, fall back to all data with a note
           let bedroomFilterNote = '';
-          if (input.bedrooms && filteredRevenueByBedroom.length === 0) {
+          if (input.bedrooms !== undefined && filteredRevenueByBedroom.length === 0) {
             console.log('[Standalone Market Advisor] No data for', input.bedrooms, 'BR, falling back to all data');
             filteredRevenueByBedroom = marketData.revenueByBedroom;
             filteredTopPerformers = marketData.topPerformers;

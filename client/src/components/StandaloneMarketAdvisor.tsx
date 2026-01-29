@@ -64,7 +64,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   
   // Bedroom filter is the only user-selectable filter
   // Property type is fixed to "entire_home" for arbitrage analysis
-  const bedroomFilter = filters.bedroomFilter;
+  const bedroomFilter = filters.bedroomFilter || 'all';
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
@@ -1326,27 +1326,52 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     {(() => {
                       const data = marketData.supplyTrend.monthlyData.slice(0, 12);
                       const maxListings = Math.max(...data.map((m: any) => m.activeListings));
-                      return data.map((month: any, index: number) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <div className="w-16 text-xs text-slate-600 text-right">
-                            {month.month}
-                          </div>
-                          <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full transition-all"
-                              style={{ width: `${(month.activeListings / maxListings) * 100}%` }}
-                            />
-                          </div>
-                          <div className="w-20 text-right">
-                            <span className="text-sm font-medium">{month.activeListings.toLocaleString()}</span>
-                            {month.changeFromPrevious !== 0 && (
-                              <span className={`text-xs ml-1 ${month.changeFromPrevious > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {month.changeFromPrevious > 0 ? '+' : ''}{month.changeFromPrevious}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ));
+                      // Determine peak and low months for seasonal insights
+                      const maxMonth = data.reduce((max: any, m: any) => m.activeListings > max.activeListings ? m : max, data[0]);
+                      const minMonth = data.reduce((min: any, m: any) => m.activeListings < min.activeListings ? m : min, data[0]);
+                      
+                      return data.map((month: any, index: number) => {
+                        // Determine if this is a peak, low, or average month
+                        const isPeak = month.activeListings === maxMonth.activeListings;
+                        const isLow = month.activeListings === minMonth.activeListings;
+                        const seasonalNote = isPeak 
+                          ? 'Peak supply month - more competition for guests' 
+                          : isLow 
+                            ? 'Lowest supply month - less competition, potentially higher rates' 
+                            : 'Average supply level for this market';
+                        
+                        return (
+                          <TooltipProvider key={index}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-3 cursor-help">
+                                  <div className="w-16 text-xs text-slate-600 text-right">
+                                    {month.month}
+                                  </div>
+                                  <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full transition-all ${isPeak ? 'bg-gradient-to-r from-amber-400 to-amber-600' : isLow ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-cyan-400 to-cyan-600'}`}
+                                      style={{ width: `${(month.activeListings / maxListings) * 100}%` }}
+                                    />
+                                  </div>
+                                  <div className="w-20 text-right">
+                                    <span className="text-sm font-medium">{month.activeListings.toLocaleString()}</span>
+                                    {month.changeFromPrevious !== 0 && (
+                                      <span className={`text-xs ml-1 ${month.changeFromPrevious > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {month.changeFromPrevious > 0 ? '+' : ''}{month.changeFromPrevious}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p className="font-medium">{month.activeListings.toLocaleString()} active listings</p>
+                                <p className="text-xs text-slate-400 mt-1">{seasonalNote}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      });
                     })()}
                   </div>
                   <div className="mt-4 p-3 bg-slate-50 rounded-lg">
@@ -1400,26 +1425,45 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                           {data.map((month: any, index: number) => {
                             const prevMonth = data[index + 1];
                             const change = prevMonth ? month.revpar - prevMonth.revpar : 0;
+                            // Determine if this is a peak, low, or average month
+                            const isPeak = month.revpar === maxRevpar;
+                            const isLow = month.revpar === minRevpar;
+                            const seasonalNote = isPeak 
+                              ? 'Peak earning month - highest revenue per available night' 
+                              : isLow 
+                                ? 'Lowest earning month - consider adjusting pricing or marketing' 
+                                : 'Average RevPAR for this market';
+                            
                             return (
-                              <div key={index} className="flex items-center gap-3">
-                                <div className="w-16 text-xs text-slate-600 text-right">
-                                  {month.date}
-                                </div>
-                                <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all"
-                                    style={{ width: `${(month.revpar / maxRevpar) * 100}%` }}
-                                  />
-                                </div>
-                                <div className="w-24 text-right">
-                                  <span className="text-sm font-medium">${Math.round(month.revpar).toLocaleString()}</span>
-                                  {change !== 0 && (
-                                    <span className={`text-xs ml-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                      {change > 0 ? '+' : ''}{Math.round(change)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+                              <TooltipProvider key={index}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-3 cursor-help">
+                                      <div className="w-16 text-xs text-slate-600 text-right">
+                                        {month.date}
+                                      </div>
+                                      <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
+                                        <div 
+                                          className={`h-full rounded-full transition-all ${isPeak ? 'bg-gradient-to-r from-amber-400 to-amber-600' : isLow ? 'bg-gradient-to-r from-red-400 to-red-600' : 'bg-gradient-to-r from-emerald-400 to-emerald-600'}`}
+                                          style={{ width: `${(month.revpar / maxRevpar) * 100}%` }}
+                                        />
+                                      </div>
+                                      <div className="w-24 text-right">
+                                        <span className="text-sm font-medium">${Math.round(month.revpar).toLocaleString()}</span>
+                                        {change !== 0 && (
+                                          <span className={`text-xs ml-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {change > 0 ? '+' : ''}{Math.round(change)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <p className="font-medium">${Math.round(month.revpar)} RevPAR</p>
+                                    <p className="text-xs text-slate-400 mt-1">{seasonalNote}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             );
                           })}
                           <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">

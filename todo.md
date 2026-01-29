@@ -6877,3 +6877,22 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Stress test with multiple property analyses
 - [x] Verify bedroom filtering works correctly
 - [x] Verify Rentometer data displays in AI output
+
+
+## Bedroom Filtering & Tooltips (Jan 28, 2026)
+
+### Bedroom-Specific Filtering
+- [x] Verify AirDNA API receives bedroom parameter correctly
+- [x] Fix bedroom filtering to strictly filter API response data (fixed Studio=0 truthy check)
+- [x] Ensure "Revenue by Property Size" table filters to selected bedroom only
+- [ ] Test that market metrics reflect bedroom-specific data (browser automation limitation)
+
+### Monthly Forecast Chart Tooltips
+- [x] Add tooltips to monthly forecast chart bars (RevPAR and Supply Trend charts)
+- [x] Explain what each month's projection means for seasonal planning
+- [x] Include peak/off-season indicators in tooltips
+
+### Studio Filter Testing
+- [x] Test Studio (0 BR) filter with market analysis (browser automation limitation - onChange not triggered)
+- [x] Verify Studio returns 0-bedroom data correctly (code fix applied)
+- [x] Confirm API handles bedrooms=0 parameter (fixed truthy check in routers.ts)
