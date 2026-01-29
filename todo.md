@@ -7339,3 +7339,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Handle already-favorited properties (show filled icon, allow unfavorite)
 - [x] Test favorites save/remove from property cards
 - [x] Verify favorites appear in Compare Favorites tab (2 properties showing)
+
+
+## Fix Property Count Display & HasData Limit (Jan 29, 2026) - COMPLETE
+- [x] Remove "469 properties" AirDNA count from location selection display
+- [x] Find HasData API call and increase results limit to maximum (multi-page fetch up to 5 pages)
+- [x] Test with Soulard, Missouri (zip 63104) - 32 properties returned (all available Zillow rentals)
+- [x] Verified: 469 was AirDNA active listings, 32 is actual Zillow rentals available for rent
+

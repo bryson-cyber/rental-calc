@@ -169,8 +169,6 @@ export function MarketAutocomplete({
           <div className="flex items-center gap-2 text-sm text-amber-800">
             <MapPin className="w-4 h-4" />
             <span className="font-medium">{selectedMarket.name}, {selectedMarket.state}</span>
-            <span className="text-amber-600">•</span>
-            <span className="text-amber-600">{selectedMarket.listingCount.toLocaleString()} properties</span>
           </div>
           <div className="mt-1 text-xs text-amber-700">
             <span className="font-medium">Zip codes: </span>
@@ -222,8 +220,6 @@ export function MarketAutocomplete({
                 </div>
                 <div className="flex items-center gap-2 text-sm text-neutral-500">
                   <span>{market.state}</span>
-                  <span>•</span>
-                  <span>{market.listingCount.toLocaleString()} properties</span>
                   {market.type === 'submarket' && (
                     <>
                       <span>•</span>

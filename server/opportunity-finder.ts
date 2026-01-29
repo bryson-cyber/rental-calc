@@ -379,6 +379,7 @@ export const opportunityFinderRouter = router({
   /**
    * Search Zillow rentals using HasData API
    * This is the fast, reliable alternative to browser scraping
+   * Fetches multiple pages to get more results (up to 5 pages = ~200 properties)
    */
   searchZillowRentals: publicProcedure
     .input(z.object({
@@ -391,12 +392,14 @@ export const opportunityFinderRouter = router({
       bathsMax: z.number().optional(),
       homeTypes: z.array(z.string()).optional(),
       page: z.number().optional(),
+      maxPages: z.number().optional().default(5), // Fetch up to 5 pages by default
     }))
     .mutation(async ({ input }) => {
       try {
         console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location}`);
         
-        const result = await searchZillowListings({
+        // Fetch first page to get total results
+        const firstResult = await searchZillowListings({
           keyword: input.location,
           type: 'forRent',
           priceMin: input.priceMin,
@@ -406,20 +409,64 @@ export const opportunityFinderRouter = router({
           bathsMin: input.bathsMin,
           bathsMax: input.bathsMax,
           homeTypes: input.homeTypes,
-          page: input.page,
+          page: input.page || 1,
         });
         
-        if (!result.success) {
+        if (!firstResult.success) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: result.error || 'Failed to search Zillow rentals',
+            message: firstResult.error || 'Failed to search Zillow rentals',
           });
         }
         
+        let allProperties = [...firstResult.properties];
+        const totalResults = firstResult.totalResults;
+        const maxPages = input.maxPages || 5;
+        
+        // Estimate ~40 properties per page, fetch additional pages
+        const estimatedPages = Math.ceil(totalResults / 40);
+        const pagesToFetch = Math.min(estimatedPages, maxPages);
+        
+        console.log(`[Opportunity Finder] Total results: ${totalResults}, fetching ${pagesToFetch} pages`);
+        
+        // Fetch additional pages in parallel (pages 2 through pagesToFetch)
+        if (pagesToFetch > 1 && !input.page) {
+          const pagePromises = [];
+          for (let page = 2; page <= pagesToFetch; page++) {
+            pagePromises.push(
+              searchZillowListings({
+                keyword: input.location,
+                type: 'forRent',
+                priceMin: input.priceMin,
+                priceMax: input.priceMax,
+                bedsMin: input.bedsMin,
+                bedsMax: input.bedsMax,
+                bathsMin: input.bathsMin,
+                bathsMax: input.bathsMax,
+                homeTypes: input.homeTypes,
+                page,
+              })
+            );
+          }
+          
+          const additionalResults = await Promise.all(pagePromises);
+          
+          for (const result of additionalResults) {
+            if (result.success && result.properties.length > 0) {
+              // Deduplicate by property ID
+              const existingIds = new Set(allProperties.map(p => p.id));
+              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
+              allProperties.push(...newProperties);
+            }
+          }
+        }
+        
+        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties`);
+        
         return {
           success: true,
-          totalResults: result.totalResults,
-          properties: result.properties,
+          totalResults: totalResults,
+          properties: allProperties,
           location: input.location,
         };
         
@@ -434,6 +481,7 @@ export const opportunityFinderRouter = router({
 
   /**
    * Search Zillow properties for sale using HasData API
+   * Fetches multiple pages to get more results (up to 5 pages = ~200 properties)
    */
   searchZillowForSale: publicProcedure
     .input(z.object({
@@ -446,12 +494,14 @@ export const opportunityFinderRouter = router({
       bathsMax: z.number().optional(),
       homeTypes: z.array(z.string()).optional(),
       page: z.number().optional(),
+      maxPages: z.number().optional().default(5), // Fetch up to 5 pages by default
     }))
     .mutation(async ({ input }) => {
       try {
         console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location}`);
         
-        const result = await searchZillowListings({
+        // Fetch first page to get total results
+        const firstResult = await searchZillowListings({
           keyword: input.location,
           type: 'forSale',
           priceMin: input.priceMin,
@@ -461,20 +511,64 @@ export const opportunityFinderRouter = router({
           bathsMin: input.bathsMin,
           bathsMax: input.bathsMax,
           homeTypes: input.homeTypes,
-          page: input.page,
+          page: input.page || 1,
         });
         
-        if (!result.success) {
+        if (!firstResult.success) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: result.error || 'Failed to search Zillow properties',
+            message: firstResult.error || 'Failed to search Zillow properties',
           });
         }
         
+        let allProperties = [...firstResult.properties];
+        const totalResults = firstResult.totalResults;
+        const maxPages = input.maxPages || 5;
+        
+        // Estimate ~40 properties per page, fetch additional pages
+        const estimatedPages = Math.ceil(totalResults / 40);
+        const pagesToFetch = Math.min(estimatedPages, maxPages);
+        
+        console.log(`[Opportunity Finder] Total results: ${totalResults}, fetching ${pagesToFetch} pages`);
+        
+        // Fetch additional pages in parallel (pages 2 through pagesToFetch)
+        if (pagesToFetch > 1 && !input.page) {
+          const pagePromises = [];
+          for (let page = 2; page <= pagesToFetch; page++) {
+            pagePromises.push(
+              searchZillowListings({
+                keyword: input.location,
+                type: 'forSale',
+                priceMin: input.priceMin,
+                priceMax: input.priceMax,
+                bedsMin: input.bedsMin,
+                bedsMax: input.bedsMax,
+                bathsMin: input.bathsMin,
+                bathsMax: input.bathsMax,
+                homeTypes: input.homeTypes,
+                page,
+              })
+            );
+          }
+          
+          const additionalResults = await Promise.all(pagePromises);
+          
+          for (const result of additionalResults) {
+            if (result.success && result.properties.length > 0) {
+              // Deduplicate by property ID
+              const existingIds = new Set(allProperties.map(p => p.id));
+              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
+              allProperties.push(...newProperties);
+            }
+          }
+        }
+        
+        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties for sale`);
+        
         return {
           success: true,
-          totalResults: result.totalResults,
-          properties: result.properties,
+          totalResults: totalResults,
+          properties: allProperties,
           location: input.location,
         };
         
