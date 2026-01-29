@@ -7433,3 +7433,25 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Implement caching for city search results - 30 min client-side cache, server-side cache already in place
 - [x] Add zillowUrl field to favoriteProperties schema for Zillow link in favorites
 
+
+
+## Additional Bug Fixes (Jan 29, 2026)
+
+### User-Reported Issues:
+- [ ] Filter out "Contact for Price" properties - still showing in search results
+- [ ] Use HasData Property Details API to fetch pricing for multi-unit listings
+- [ ] Implement Google Places autocomplete for city name variations (St. Louis vs Saint Louis)
+
+
+
+## Bug Fixes (Jan 29, 2026)
+
+### User-Reported Issues:
+- [x] Filter out "Contact for Price" properties (already filtering price > 0 at server level in hasdata.ts)
+- [x] Implement city name normalization for St. Louis / Saint Louis variations (St. -> Saint, Mt. -> Mount, Ft. -> Fort, etc.)
+- [ ] Use HasData Property Details API for multi-unit listings without price (deferred - adds API cost per property)
+
+### Implementation Details:
+- Added `normalizeCityName()` function to opportunity-finder.ts
+- Applied to both `searchZillowRentals` and `searchZillowForSale` mutations
+- Normalizes abbreviations: St. -> Saint, Mt. -> Mount, Ft. -> Fort, N. -> North, S. -> South, E. -> East, W. -> West

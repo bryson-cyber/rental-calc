@@ -147,13 +147,14 @@ export async function searchZillowListings(
       };
     });
 
-    // Show all properties - those without price will display "Contact for Price"
-    console.log(`[HasData] Found ${properties.length} properties`);
+    // Filter out properties without price - they're not useful for analysis
+    const propertiesWithPrice = properties.filter(p => p.price > 0);
+    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data`);
 
     return {
       success: true,
-      totalResults: data.totalResultCount || data.totalResults || properties.length,
-      properties: properties
+      totalResults: data.totalResultCount || data.totalResults || propertiesWithPrice.length,
+      properties: propertiesWithPrice
     };
 
   } catch (error) {
@@ -414,4 +415,115 @@ export async function getZillowPropertyWithContacts(propertyUrl: string): Promis
     console.error("[HasData] Error getting property with contacts:", error);
     return null;
   }
+}
+
+
+/**
+ * Enrich properties that have no price by fetching details from Zillow Property API
+ * This is useful for multi-unit listings that show "Contact for Price"
+ * 
+ * @param properties - Array of properties, some may have price = 0
+ * @param maxEnrichments - Maximum number of properties to enrich (to control API costs)
+ * @returns Array of properties with enriched price data where available
+ */
+export async function enrichPropertiesWithPrice(
+  properties: ZillowProperty[],
+  maxEnrichments: number = 5
+): Promise<ZillowProperty[]> {
+  const apiKey = ENV.hasdataApiKey;
+  
+  if (!apiKey) {
+    console.log("[HasData] No API key, skipping enrichment");
+    return properties;
+  }
+
+  // Separate properties with and without price
+  const withPrice = properties.filter(p => p.price > 0);
+  const withoutPrice = properties.filter(p => p.price <= 0);
+  
+  if (withoutPrice.length === 0) {
+    console.log("[HasData] All properties have prices, no enrichment needed");
+    return properties;
+  }
+
+  console.log(`[HasData] Enriching ${Math.min(withoutPrice.length, maxEnrichments)} of ${withoutPrice.length} properties without price`);
+  
+  // Enrich up to maxEnrichments properties
+  const toEnrich = withoutPrice.slice(0, maxEnrichments);
+  const enrichedProperties: ZillowProperty[] = [];
+  
+  for (const prop of toEnrich) {
+    if (!prop.url || !prop.url.includes('zillow.com')) {
+      console.log(`[HasData] Skipping property without valid Zillow URL: ${prop.address}`);
+      continue;
+    }
+    
+    try {
+      const enriched = await getZillowProperty(prop.url);
+      if (enriched && enriched.price > 0) {
+        console.log(`[HasData] Enriched ${prop.address}: $${enriched.price}`);
+        enrichedProperties.push({
+          ...prop,
+          price: enriched.price,
+          bedrooms: enriched.bedrooms || prop.bedrooms,
+          bathrooms: enriched.bathrooms || prop.bathrooms,
+          squareFeet: enriched.squareFeet || prop.squareFeet,
+          latitude: enriched.latitude || prop.latitude,
+          longitude: enriched.longitude || prop.longitude
+        });
+      } else {
+        console.log(`[HasData] Could not get price for ${prop.address}`);
+      }
+    } catch (error) {
+      console.error(`[HasData] Error enriching ${prop.address}:`, error);
+    }
+    
+    // Small delay between requests to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  
+  // Combine: properties with price + enriched properties (skip those still without price)
+  const result = [...withPrice, ...enrichedProperties];
+  console.log(`[HasData] Final result: ${result.length} properties with price data`);
+  
+  return result;
+}
+
+/**
+ * Search Zillow listings with automatic price enrichment
+ * This combines the listing search with property detail lookups for better data
+ */
+export async function searchZillowListingsWithEnrichment(
+  params: ZillowListingParams,
+  enrichmentOptions?: { maxEnrichments?: number; skipEnrichment?: boolean }
+): Promise<ZillowListingResponse> {
+  // First, get the listings
+  const response = await searchZillowListings(params);
+  
+  if (!response.success || response.properties.length === 0) {
+    return response;
+  }
+  
+  // If enrichment is disabled or all properties have prices, return as-is
+  if (enrichmentOptions?.skipEnrichment) {
+    return response;
+  }
+  
+  // Check if any properties need enrichment
+  const needsEnrichment = response.properties.some(p => p.price <= 0);
+  if (!needsEnrichment) {
+    return response;
+  }
+  
+  // Enrich properties without price
+  const enrichedProperties = await enrichPropertiesWithPrice(
+    response.properties,
+    enrichmentOptions?.maxEnrichments || 5
+  );
+  
+  return {
+    ...response,
+    properties: enrichedProperties,
+    totalResults: enrichedProperties.length
+  };
 }

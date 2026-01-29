@@ -21,6 +21,36 @@ import {
 import { searchZillowListings, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 
 // ============================================
+// CITY NAME NORMALIZATION
+// ============================================
+
+/**
+ * Normalize city name abbreviations to their full forms for better search results
+ * This helps with searching for cities like "St. Louis" vs "Saint Louis"
+ * Zillow/HasData API works better with full names
+ */
+function normalizeCityName(name: string): string {
+  let normalized = name;
+  
+  // Common abbreviation mappings - expand to full form for better API results
+  const abbreviations: [RegExp, string][] = [
+    [/\bst\.?\s+/gi, 'Saint '],      // St. Louis -> Saint Louis
+    [/\bmt\.?\s+/gi, 'Mount '],      // Mt. Vernon -> Mount Vernon
+    [/\bft\.?\s+/gi, 'Fort '],       // Ft. Worth -> Fort Worth
+    [/\bn\.\s+/gi, 'North '],        // N. Charleston -> North Charleston
+    [/\bs\.\s+/gi, 'South '],        // S. Bend -> South Bend
+    [/\be\.\s+/gi, 'East '],         // E. St. Louis -> East Saint Louis
+    [/\bw\.\s+/gi, 'West '],         // W. Palm Beach -> West Palm Beach
+  ];
+  
+  for (const [pattern, replacement] of abbreviations) {
+    normalized = normalized.replace(pattern, replacement);
+  }
+  
+  return normalized.trim();
+}
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -396,11 +426,13 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location}, page: ${input.page}`);
+        // Normalize city name variations (St. Louis -> Saint Louis, etc.)
+        const normalizedLocation = normalizeCityName(input.location);
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} (normalized: ${normalizedLocation}), page: ${input.page}`);
         
         // Fetch the requested page
         const result = await searchZillowListings({
-          keyword: input.location,
+          keyword: normalizedLocation,
           type: 'forRent',
           priceMin: input.priceMin,
           priceMax: input.priceMax,
@@ -464,11 +496,13 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location}`);
+        // Normalize city name variations (St. Louis -> Saint Louis, etc.)
+        const normalizedLocation = normalizeCityName(input.location);
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} (normalized: ${normalizedLocation})`);
         
         // Fetch first page to get total results
         const firstResult = await searchZillowListings({
-          keyword: input.location,
+          keyword: normalizedLocation,
           type: 'forSale',
           priceMin: input.priceMin,
           priceMax: input.priceMax,
