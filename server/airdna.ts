@@ -1836,12 +1836,15 @@ export async function getSubmarketListings(
           offset: number;
         };
       };
-    }>(`/listing/explore/submarket/${submarketId}`, "POST", {
+    }>(`/submarket/${submarketId}/listings`, "POST", {
       pagination: {
-        page_size: Math.min(options?.limit || 50, 50),  // AirDNA explore endpoint max is 50
+        page_size: Math.min(options?.limit || 25, 25),  // AirDNA submarket listings endpoint max is 25
         offset: options?.offset || 0,
       },
-      // Note: explore endpoint doesn't support order_by, results are sorted by relevance
+      order_by: {
+        field: options?.orderBy === 'revenue' ? 'revenue' : options?.orderBy === 'adr' ? 'adr' : options?.orderBy === 'occupancy' ? 'occupancy' : 'revenue',
+        method: options?.orderDirection === 'asc' ? 'asc' : 'desc',
+      },
       filters
     });
     

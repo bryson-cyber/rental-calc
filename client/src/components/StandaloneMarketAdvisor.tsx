@@ -1020,23 +1020,77 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Calendar className="w-4 h-4 text-blue-600" />
                       Booking Patterns
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>How guests typically book in this market - when they book, how long they stay, and booking preferences.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Avg Lead Time</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Avg Lead Time
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Average Lead Time</strong> is how far in advance guests typically book. A longer lead time (30+ days) means guests plan ahead, while shorter times (under 7 days) indicate more spontaneous bookings.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.bookingPatterns.avgLeadTimeDays} days</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Last-Minute Bookings</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Last-Minute Bookings
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Last-Minute Bookings</strong> shows what percentage of reservations are made within 7 days of check-in. High percentages (30%+) mean you can fill gaps with last-minute deals.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.bookingPatterns.lastMinutePercent}%</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Avg Stay Length</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Avg Stay Length
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Average Stay Length</strong> is how many nights guests typically stay. Longer stays (5+ nights) mean less turnover and cleaning costs. Shorter stays (2-3 nights) mean more bookings but more work.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.bookingPatterns.avgLengthOfStay} nights</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Weekend Stays</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Weekend Stays
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Weekend Stays</strong> shows what percentage of bookings are for weekends (Fri-Sun). High percentages (60%+) indicate a leisure market. Lower percentages suggest more business travelers or longer-term stays.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.bookingPatterns.weekendPercent}%</span>
                     </div>
                     {marketData.bookingPatterns.insights && marketData.bookingPatterns.insights.length > 0 && (
@@ -1056,25 +1110,79 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <TrendingUp className="w-4 h-4 text-green-600" />
                       Supply Trend
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>How the number of rental listings in this market is changing over time - are more hosts entering or leaving?</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Current Listings</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Current Listings
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Current Listings</strong> is the total number of active short-term rentals in this market right now. More listings means more competition.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.supplyTrend.currentListings.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">12 Months Ago</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              12 Months Ago
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>12 Months Ago</strong> shows how many listings existed a year ago. Compare this to current listings to see if the market is growing or shrinking.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium">{marketData.supplyTrend.listings12MonthsAgo.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Net Change</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Net Change
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Net Change</strong> is the difference in listing count over the past year. Positive (+) means more competition entering. Negative (-) means hosts are leaving the market.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <span className={`font-medium ${marketData.supplyTrend.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {marketData.supplyTrend.netChange >= 0 ? '+' : ''}{marketData.supplyTrend.netChange.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-600">Trend</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm text-slate-600 flex items-center gap-1 cursor-help border-b border-dotted border-slate-400">
+                              Trend
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p><strong>Trend</strong> summarizes the market direction: "Growing" means more listings, "Stable" means little change, "Declining" means fewer listings.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <Badge variant="outline" className="capitalize">
                         {getTrendIcon(marketData.supplyTrend.trend)}
                         <span className="ml-1">{marketData.supplyTrend.trend}</span>

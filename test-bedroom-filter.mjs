@@ -24,7 +24,7 @@ async function makeApiRequest(endpoint, method = 'GET', body = null) {
 
 async function testBedroomFilter() {
   // Test with submarket ID for St Louis 63108
-  const submarketId = 'airdna-3511'; // This is a submarket ID
+  const submarketId = 'airdna-3511';
   
   console.log('Testing bedroom filter on submarket:', submarketId);
   
@@ -62,13 +62,6 @@ async function testBedroomFilter() {
       bedroomDist[l.bedrooms] = (bedroomDist[l.bedrooms] || 0) + 1;
     });
     console.log('Bedroom distribution:', bedroomDist);
-    if (studioFilter.payload.listings.length > 0) {
-      console.log('Sample listing:', {
-        title: studioFilter.payload.listings[0].title,
-        bedrooms: studioFilter.payload.listings[0].bedrooms,
-        revenue: studioFilter.payload.listings[0].revenue_ltm
-      });
-    }
   }
   
   // Test 3: Filter for 1BR
@@ -86,26 +79,6 @@ async function testBedroomFilter() {
     console.log('Listings returned:', oneBrFilter.payload.listings.length);
     const bedroomDist = {};
     oneBrFilter.payload.listings.forEach(l => {
-      bedroomDist[l.bedrooms] = (bedroomDist[l.bedrooms] || 0) + 1;
-    });
-    console.log('Bedroom distribution:', bedroomDist);
-  }
-  
-  // Test 4: Filter for 2BR
-  console.log('\n=== Test 4: 2BR filter ===');
-  const twoBrFilter = await makeApiRequest(`/submarket/${submarketId}/listings`, 'POST', {
-    pagination: { page_size: 25, offset: 0 },
-    order_by: { field: 'revenue', method: 'desc' },
-    filters: [
-      { type: 'select', field: 'bedrooms', value: 2 }
-    ]
-  });
-  console.log('Status:', twoBrFilter.status?.type);
-  console.log('Total count:', twoBrFilter.payload?.page_info?.total_count);
-  if (twoBrFilter.payload?.listings) {
-    console.log('Listings returned:', twoBrFilter.payload.listings.length);
-    const bedroomDist = {};
-    twoBrFilter.payload.listings.forEach(l => {
       bedroomDist[l.bedrooms] = (bedroomDist[l.bedrooms] || 0) + 1;
     });
     console.log('Bedroom distribution:', bedroomDist);

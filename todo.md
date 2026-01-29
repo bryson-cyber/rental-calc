@@ -6917,3 +6917,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix revenue data not actually filtering by bedroom selection - bedroom filter now passed to API, returns only matching listings
 - [x] Add re-analyze button when bedroom filter changes (allow regenerating report) - added to market overview header
 - [x] Fix page_size limit from 100 to 25 (AirDNA API max)
+
+
+### Market Advisor UI Fixes (Jan 28, 2026 - Round 3)
+- [x] Fix Total Active Listings - reverted to correct /submarket/{id}/listings endpoint with bedroom filter
+- [x] Add beginner-friendly tooltips to Booking Patterns section (Average Lead Time, Last Minute Bookings, Avg Stay Length, Weekend Stays)
+- [x] Add beginner-friendly tooltips to Supply Trend section (Current Listings, 12 Months Ago, Net Change, Trend)
+- [x] All metrics now have clear explanations for beginners with hover tooltips
