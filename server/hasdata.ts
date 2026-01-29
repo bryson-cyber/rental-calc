@@ -89,9 +89,9 @@ export async function searchZillowListings(
     
     console.log(`[HasData] Searching Zillow: ${params.keyword} (${params.type})`);
     
-    // Add AbortController for timeout (60 seconds for scraping API)
+    // Add AbortController for timeout (120 seconds for scraping API - large markets take longer)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
     
     const response = await fetch(url, {
       method: "GET",

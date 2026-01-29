@@ -536,6 +536,7 @@ export const opportunityFinderRouter = router({
           totalResults: totalResults,
           properties: allProperties,
           location: input.location,
+          hasMore: false, // For sale fetches all pages upfront
         };
         
       } catch (error) {

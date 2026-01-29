@@ -257,6 +257,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   // Results state
   const [properties, setProperties] = useState<ZillowProperty[]>([]);
   const [totalResults, setTotalResults] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   
   // Validation state
@@ -436,6 +437,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
         setProperties(result.properties);
       }
       setTotalResults(result.totalResults);
+      setHasMore(result.hasMore || false);
       setCurrentPage(page);
     } catch (error) {
       console.error('Search error:', error);
@@ -1204,7 +1206,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               </div>
               
               {/* Load More Button */}
-              {sortedProperties.length < totalResults && (
+              {hasMore && (
                 <div className="flex justify-center pt-6">
                   <Button
                     onClick={handleLoadMore}

@@ -7384,3 +7384,39 @@ This makes the grading more optimistic - properties now get better grades at low
 - Properties without price show "Contact for Price" badge
 - Properties without bedroom data show "? bed ? bath"
 - All 41 properties now visible to users
+
+
+## Load More Pagination for Large Markets (Jan 29, 2026)
+
+### Backend Updates:
+- [ ] Update searchZillowRentals to accept page parameter
+- [ ] Return hasMore flag and totalResults from API
+- [ ] Each page should return ~40 properties (HasData API default)
+
+### Frontend Updates:
+- [ ] Add currentPage state to track pagination
+- [ ] Add Load More button that appears when hasMore is true
+- [ ] Append new properties to existing list (don't replace)
+- [ ] Show loading state while fetching next page
+- [ ] Display "Showing X of Y properties" count
+
+### Testing:
+- [ ] Test with a large market (e.g., Los Angeles, New York)
+- [ ] Verify Load More fetches next page correctly
+- [ ] Verify properties are appended, not replaced
+
+
+## Progressive Loading for Property Search (Jan 29, 2026)
+- [ ] Update backend to return first page quickly (single page fetch)
+- [ ] Update frontend to show properties immediately as first batch loads
+- [ ] Add "Loading more properties..." indicator for subsequent pages
+- [ ] Implement Load More button for manual pagination
+- [ ] Test with Atlanta search to verify progressive loading works
+
+
+## Load More Pagination - COMPLETE (Jan 29, 2026)
+- [x] Backend supports single-page fetching for Load More
+- [x] Load More button in frontend fetches next page on demand
+- [x] Shows "Showing X of Y properties" count
+- [x] Tested with Deer Valley, Arizona - 41 properties loaded successfully
+- [x] Load More button appears only when hasMore is true and more pages exist
