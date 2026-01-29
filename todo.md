@@ -7003,3 +7003,50 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add Re-analyze button next to search input
 - [x] Update AI prompt to note that lower market grades don't mean no opportunities
 - [x] Apply Coach Inayah brand colors throughout Market Advisor
+
+## Market Comparison Feature (Jan 28, 2026)
+
+- [ ] Create compareMarkets backend endpoint in routers.ts
+- [ ] Add MarketComparisonInput type with array of market IDs
+- [ ] Fetch key metrics for each market (revenue, occupancy, ADR, score)
+- [ ] Build MarketComparison UI component with side-by-side layout
+- [ ] Add market selector allowing 2-3 markets to compare
+- [ ] Display comparison table with key metrics
+- [ ] Add visual indicators (best/worst for each metric)
+- [ ] Integrate into Market Advisor page with "Compare Markets" button
+- [ ] Test with multiple market combinations
+
+## Step 6/7 Consolidation & Investment Comparison (Jan 28, 2026)
+
+- [ ] Remove "Market" tab from AI Advisor (Step 7) - keep only Property analysis
+- [ ] Step 7 should focus on property analysis only (Step 6 handles market)
+- [ ] Add investment vehicle comparison to property analysis showing STR ROI vs:
+  - S&P 500 (~10% annually)
+  - Real estate appreciation (~3-5%)
+  - Bonds/CDs (~4-5%)
+  - High-yield savings (~5%)
+- [ ] Update AI prompt to include investment comparison context
+- [ ] Create visual comparison chart/table for investment returns
+
+## Market Comparison Feature
+- [ ] Create backend endpoint for comparing multiple markets
+- [ ] Build MarketComparison UI component with side-by-side layout
+- [ ] Add "Add to Compare" button in Market Advisor
+- [ ] Display key metrics: Revenue, ADR, Occupancy, Market Score
+- [ ] Allow up to 3 markets to be compared at once
+
+## Rentometer Integration in Step 7
+- [ ] Add Rentometer API call to propertyAdvisorMax endpoint
+- [ ] Include rent analysis in AI prompt (median rent, percentile, range)
+- [ ] Show rent comparison in AI output (overpaying/underpaying/on par)
+
+## Market Comparison Feature (Completed 2026-01-28)
+- [x] Create MarketComparison component with side-by-side view
+- [x] Add "Add to Compare" button on market analysis results
+- [x] Create floating comparison bar at bottom of page
+- [x] Implement comparison view with Revenue & Pricing section
+- [x] Implement comparison view with Market Performance section
+- [x] Add Top Performer comparison section
+- [x] Add Quick Summary with winner highlights
+- [x] Support up to 3 markets for comparison
+- [x] Add crown icons to indicate winning metrics

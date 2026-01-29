@@ -1088,6 +1088,20 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What happens if occupancy drops 20% in slow season?
 - Safety margin analysis
 
+## Investment Return Comparison
+Compare this short-term rental investment to traditional investment vehicles:
+- S&P 500 Index: Historical average ~10% annual return
+- Real Estate Appreciation: Average ~3-5% annual return
+- High-Yield Savings: Current rates ~5% annual return
+- Treasury Bonds: 10-year yield ~4.5% annual return
+
+Calculate the ROI for this STR investment based on:
+- Initial Investment: 3 months rent + $5,000 setup costs
+- Annual Profit: The projected annual profit after rent and expenses
+- First-Year ROI: (Annual Profit / Initial Investment) × 100
+
+Explain how this STR investment compares to putting the same capital into traditional investments. Note that STR requires active management while traditional investments are passive, but the return potential is significantly higher for skilled operators.
+
 # COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
 
 ## Your Position Among ${property.bedrooms}BR Competitors
