@@ -89,13 +89,20 @@ export async function searchZillowListings(
     
     console.log(`[HasData] Searching Zillow: ${params.keyword} (${params.type})`);
     
+    // Add AbortController for timeout (60 seconds for scraping API)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey
-      }
+      },
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -126,7 +133,7 @@ export async function searchZillowListings(
         city: addressObj?.city || prop.city || extractCity(addressStr) || "",
         state: addressObj?.state || prop.state || extractState(addressStr) || "",
         zipCode: addressObj?.zipcode || prop.zipcode || prop.zipCode || extractZipCode(addressStr) || "",
-        price: prop.price || prop.unformattedPrice || prop.rentZestimate || 0,
+        price: prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0,
         bedrooms: prop.bedrooms || prop.beds || 0,
         bathrooms: prop.bathrooms || prop.baths || 0,
         squareFeet: prop.livingArea || prop.area || prop.sqft || undefined,
@@ -140,15 +147,13 @@ export async function searchZillowListings(
       };
     });
 
-    // Filter out properties without price data (apartment buildings with multiple units)
-    const filteredProperties = properties.filter(p => p.price > 0 && p.bedrooms > 0);
-    
-    console.log(`[HasData] Found ${properties.length} properties, ${filteredProperties.length} with price data`);
+    // Show all properties - those without price will display "Contact for Price"
+    console.log(`[HasData] Found ${properties.length} properties`);
 
     return {
       success: true,
-      totalResults: data.totalResultCount || data.totalResults || filteredProperties.length,
-      properties: filteredProperties
+      totalResults: data.totalResultCount || data.totalResults || properties.length,
+      properties: properties
     };
 
   } catch (error) {

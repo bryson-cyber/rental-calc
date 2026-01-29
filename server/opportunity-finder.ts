@@ -379,7 +379,7 @@ export const opportunityFinderRouter = router({
   /**
    * Search Zillow rentals using HasData API
    * This is the fast, reliable alternative to browser scraping
-   * Fetches multiple pages to get more results (up to 5 pages = ~200 properties)
+   * Supports pagination with Load More functionality
    */
   searchZillowRentals: publicProcedure
     .input(z.object({
@@ -391,15 +391,15 @@ export const opportunityFinderRouter = router({
       bathsMin: z.number().optional(),
       bathsMax: z.number().optional(),
       homeTypes: z.array(z.string()).optional(),
-      page: z.number().optional(),
-      maxPages: z.number().optional().default(5), // Fetch up to 5 pages by default
+      page: z.number().optional().default(1),
+      loadMore: z.boolean().optional().default(false), // If true, fetch only the specified page
     }))
     .mutation(async ({ input }) => {
       try {
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location}`);
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location}, page: ${input.page}`);
         
-        // Fetch first page to get total results
-        const firstResult = await searchZillowListings({
+        // Fetch the requested page
+        const result = await searchZillowListings({
           keyword: input.location,
           type: 'forRent',
           priceMin: input.priceMin,
@@ -409,65 +409,31 @@ export const opportunityFinderRouter = router({
           bathsMin: input.bathsMin,
           bathsMax: input.bathsMax,
           homeTypes: input.homeTypes,
-          page: input.page || 1,
+          page: input.page,
         });
         
-        if (!firstResult.success) {
+        if (!result.success) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: firstResult.error || 'Failed to search Zillow rentals',
+            message: result.error || 'Failed to search Zillow rentals',
           });
         }
         
-        let allProperties = [...firstResult.properties];
-        const totalResults = firstResult.totalResults;
-        const maxPages = input.maxPages || 5;
+        const totalResults = result.totalResults;
+        const propertiesPerPage = 40; // Zillow returns ~40 per page
+        const totalPages = Math.ceil(totalResults / propertiesPerPage);
+        const hasMore = input.page < totalPages;
         
-        // Estimate ~40 properties per page, fetch additional pages
-        const estimatedPages = Math.ceil(totalResults / 40);
-        const pagesToFetch = Math.min(estimatedPages, maxPages);
-        
-        console.log(`[Opportunity Finder] Total results: ${totalResults}, fetching ${pagesToFetch} pages`);
-        
-        // Fetch additional pages in parallel (pages 2 through pagesToFetch)
-        if (pagesToFetch > 1 && !input.page) {
-          const pagePromises = [];
-          for (let page = 2; page <= pagesToFetch; page++) {
-            pagePromises.push(
-              searchZillowListings({
-                keyword: input.location,
-                type: 'forRent',
-                priceMin: input.priceMin,
-                priceMax: input.priceMax,
-                bedsMin: input.bedsMin,
-                bedsMax: input.bedsMax,
-                bathsMin: input.bathsMin,
-                bathsMax: input.bathsMax,
-                homeTypes: input.homeTypes,
-                page,
-              })
-            );
-          }
-          
-          const additionalResults = await Promise.all(pagePromises);
-          
-          for (const result of additionalResults) {
-            if (result.success && result.properties.length > 0) {
-              // Deduplicate by property ID
-              const existingIds = new Set(allProperties.map(p => p.id));
-              const newProperties = result.properties.filter(p => !existingIds.has(p.id));
-              allProperties.push(...newProperties);
-            }
-          }
-        }
-        
-        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties`);
+        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, hasMore: ${hasMore}`);
         
         return {
           success: true,
           totalResults: totalResults,
-          properties: allProperties,
+          properties: result.properties,
           location: input.location,
+          currentPage: input.page,
+          totalPages: totalPages,
+          hasMore: hasMore,
         };
         
       } catch (error) {

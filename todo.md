@@ -7347,3 +7347,40 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test with Soulard, Missouri (zip 63104) - 32 properties returned (all available Zillow rentals)
 - [x] Verified: 469 was AirDNA active listings, 32 is actual Zillow rentals available for rent
 
+
+
+## Load More Button Implementation (Jan 29, 2026)
+- [ ] Update backend to return single page at a time (not multi-page fetch)
+- [ ] Add totalResults and currentPage to API response
+- [ ] Update frontend to show "Showing X of Y properties"
+- [ ] Add "Load More" button that fetches next page
+- [ ] Append new results to existing list (not replace)
+- [ ] Hide "Load More" when all results are loaded
+- [ ] Test with Soulard, Missouri to verify pagination works
+
+
+## Show All Properties Including Those Without Price (Jan 29, 2026)
+- [ ] Remove price/bedroom filter from hasdata.ts
+- [ ] Update frontend to display "Contact for Price" for missing prices
+- [ ] Test Load More button works with more properties
+- [ ] Verify all 41+ properties show for Atlanta search
+
+
+## Show All Properties Including Those Without Price (Jan 29, 2026) - COMPLETE
+
+### Issue:
+- HasData API was returning 41 properties for Atlanta but only 7 were being displayed
+- Properties without price or bedroom data were being filtered out
+- User wanted to see ALL available properties, even those with "Contact for Price"
+
+### Solution:
+- [x] Removed price/bedroom filter from hasdata.ts - now returns all properties
+- [x] Updated frontend to display "Contact for Price" for properties without price
+- [x] Updated photo gallery to handle zero price display
+- [x] Tested with Atlanta search - now showing 41 of 41 properties (up from 7!)
+
+### Results:
+- Properties with price show correctly (e.g., $975/mo, $1,195/mo)
+- Properties without price show "Contact for Price" badge
+- Properties without bedroom data show "? bed ? bath"
+- All 41 properties now visible to users

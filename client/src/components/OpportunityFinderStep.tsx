@@ -887,7 +887,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                               color: 'oklch(0.98 0 0)',
                             }}
                           >
-                            {formatCurrency(property.price)}{searchType === 'forRent' ? '/mo' : ''}
+                            {property.price > 0 ? (
+                              <>{formatCurrency(property.price)}{searchType === 'forRent' ? '/mo' : ''}</>
+                            ) : (
+                              'Contact for Price'
+                            )}
                           </div>
                           
                           {/* Deal Score Badge */}
@@ -1458,7 +1462,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 </p>
                 <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
                   <span className="font-semibold" style={{ color: 'oklch(0.55 0.14 75)' }}>
-                    {formatCurrency(photoGalleryProperty.price)}{searchType === 'forRent' ? '/mo' : ''}
+                    {photoGalleryProperty.price > 0 ? (
+                      <>{formatCurrency(photoGalleryProperty.price)}{searchType === 'forRent' ? '/mo' : ''}</>
+                    ) : (
+                      'Contact for Price'
+                    )}
                   </span>
                   <span>{photoGalleryProperty.bedrooms} bed</span>
                   <span>{photoGalleryProperty.bathrooms} bath</span>
