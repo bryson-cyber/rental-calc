@@ -7050,3 +7050,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add Quick Summary with winner highlights
 - [x] Support up to 3 markets for comparison
 - [x] Add crown icons to indicate winning metrics
+
+## Step 7 AI Advisor Fixes (2026-01-28)
+- [ ] Remove all charts from Step 7 AI Advisor - keep everything as narrative text
+- [ ] Move investment comparison to Executive Summary section
+- [ ] Add simple cash flow calculation: Revenue - Rent - 20% Operating Costs = Net Cash Flow
+- [ ] Compare net cash flow to stocks, bonds, savings in plain English
+
+## Step 7 Chart Removal & Investment Comparison (Completed Jan 28, 2026)
+- [x] Remove all charts from Step 7 AI Advisor
+- [x] Keep everything as narrative text only
+- [x] Move investment comparison to Executive Summary
+- [x] Use simple cash flow calculation: Revenue - Rent - 20% Operating Costs
+- [x] Compare STR returns to S&P 500, High-Yield Savings, Treasury Bonds

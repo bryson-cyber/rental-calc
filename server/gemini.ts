@@ -1060,11 +1060,26 @@ IMPORTANT CONTEXT:
 Write a comprehensive rental arbitrage analysis report. Be specific with numbers and provide actionable insights.
 
 # EXECUTIVE SUMMARY
-Provide a clear, 3-5 sentence summary of the arbitrage opportunity. Include:
-- Overall recommendation (GO / PROCEED WITH CAUTION / PASS)
-- Projected monthly profit (if rent provided) or break-even rent threshold
-- How this property compares to other ${property.bedrooms}BR properties in the area
-- Who this opportunity is best suited for (new vs experienced arbitrage investors)
+Provide a clear, comprehensive summary of the arbitrage opportunity. Include:
+
+1. **The Numbers That Matter**:
+   - Projected Monthly Revenue: $${Math.round(revenue.projected / 12).toLocaleString()}
+   ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent.toLocaleString()}
+   - Estimated Operating Costs (20%): $${Math.round((revenue.projected / 12) * 0.20).toLocaleString()}
+   - **Estimated Net Monthly Cash Flow**: $${Math.round((revenue.projected / 12) - property.monthlyRent - ((revenue.projected / 12) * 0.20)).toLocaleString()}` : `- Monthly Rent: Not provided
+   - Calculate the maximum rent this property could support while remaining profitable`}
+
+2. **How This Compares to Other Investments**:
+   Write a paragraph comparing this STR investment to traditional investment vehicles. If the user invested the same initial capital (3 months rent + $5,000 setup = approximately $${property.monthlyRent ? (property.monthlyRent * 3 + 5000).toLocaleString() : '15,000-25,000'}) in:
+   - S&P 500 Index (10% average annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.10).toLocaleString() : '1,500-2,500'} per year
+   - High-Yield Savings (5% annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.05).toLocaleString() : '750-1,250'} per year
+   - Treasury Bonds (4.5% annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.045).toLocaleString() : '675-1,125'} per year
+   
+   Compare these passive returns to the projected annual profit from this STR. Explain in plain English how much more (or less) this STR could generate, while noting that STR requires active management whereas traditional investments are passive.
+
+3. **How this property compares** to other ${property.bedrooms}BR properties in the area
+
+4. **Who this opportunity is best suited for** (new vs experienced arbitrage investors)
 
 # RENTAL ARBITRAGE FINANCIAL ANALYSIS
 
@@ -1088,19 +1103,8 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - What happens if occupancy drops 20% in slow season?
 - Safety margin analysis
 
-## Investment Return Comparison
-Compare this short-term rental investment to traditional investment vehicles:
-- S&P 500 Index: Historical average ~10% annual return
-- Real Estate Appreciation: Average ~3-5% annual return
-- High-Yield Savings: Current rates ~5% annual return
-- Treasury Bonds: 10-year yield ~4.5% annual return
-
-Calculate the ROI for this STR investment based on:
-- Initial Investment: 3 months rent + $5,000 setup costs
-- Annual Profit: The projected annual profit after rent and expenses
-- First-Year ROI: (Annual Profit / Initial Investment) × 100
-
-Explain how this STR investment compares to putting the same capital into traditional investments. Note that STR requires active management while traditional investments are passive, but the return potential is significantly higher for skilled operators.
+## Investment Return Summary
+Briefly reiterate the investment comparison from the Executive Summary. The key point: STR investments typically generate significantly higher returns than passive investments, but require active management. Skilled operators can achieve returns that far exceed what the stock market or savings accounts offer.
 
 # COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
 
