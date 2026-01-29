@@ -1396,7 +1396,7 @@ export default function LeadMagnet() {
     },
     opportunity: {
       title: "Find Opportunities",
-      subtitle: "Browse Zillow rentals and validate STR potential instantly",
+      subtitle: "Browse rentals and validate STR potential instantly",
       job: "Answer: Where can I find deals in my target market?",
       icon: Search,
       color: "from-rose-500 to-pink-500"

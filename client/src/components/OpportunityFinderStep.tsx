@@ -1,16 +1,17 @@
 /**
  * Opportunity Finder Step Component
  * 
- * A Zillow-like experience where users can browse rental listings,
- * see STR revenue analysis inline on each card, and take action.
+ * Browse rental listings, see STR revenue analysis inline on each card,
+ * and take action to find your next investment opportunity.
  * 
  * Features:
- * - Search by city/zip code
+ * - Search by city/zip code with autocomplete
  * - Pagination (Load More)
  * - Sorting by price, beds, days on market
- * - AirDNA inline analysis
+ * - Inline revenue analysis
  * - Contact Now with agent details
  * - Deal Score badges
+ * - Save to Favorites
  * 
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
@@ -74,6 +75,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { InfoTooltip } from '@/components/InfoTooltip';
+import { MarketAutocomplete } from '@/components/MarketAutocomplete';
 
 // Types
 interface ZillowProperty {
@@ -445,7 +447,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           Find Your Next Opportunity
         </h2>
         <p className="text-base max-w-xl mx-auto" style={{ color: 'oklch(0.45 0 0)' }}>
-          Browse rental listings and instantly see their STR profit potential. Click "Analyze" to get revenue projections right here.
+          Browse rentals and validate STR potential instantly. Click "Analyze" to get revenue projections right here.
         </p>
       </div>
       
@@ -478,19 +480,42 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             </button>
           </div>
           
-          {/* Location Search */}
+          {/* Location Search with Autocomplete */}
           <div className="flex gap-3 mb-4">
-            <div className="flex-1 relative">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'oklch(0.55 0.14 75)' }} />
-              <Input
-                placeholder="Enter city, state or zip code..."
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-12 h-12 text-base"
-                style={{
-                  borderRadius: '0.75rem',
-                  borderColor: 'oklch(0.88 0 0)',
+            <div className="flex-1">
+              <MarketAutocomplete
+                placeholder="Search city, neighborhood, or zip code..."
+                onSelect={(market) => {
+                  // Set location from selected market
+                  const locationStr = market.name;
+                  setLocation(locationStr);
+                  // Trigger search with the selected location directly
+                  // Use the location string directly since state update is async
+                  const params = {
+                    location: locationStr,
+                    priceMin: priceMin ? parseInt(priceMin) : undefined,
+                    priceMax: priceMax ? parseInt(priceMax) : undefined,
+                    bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
+                    bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
+                    bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
+                    homeTypes: homeType ? [homeType] : undefined,
+                    page: 1,
+                  };
+                  setHasSearched(true);
+                  setProperties([]);
+                  setValidationResults({});
+                  setCurrentPage(1);
+                  if (searchType === 'forRent') {
+                    searchRentals.mutateAsync(params).then(result => {
+                      setProperties(result.properties);
+                      setTotalResults(result.totalResults);
+                    });
+                  } else {
+                    searchForSale.mutateAsync(params).then(result => {
+                      setProperties(result.properties);
+                      setTotalResults(result.totalResults);
+                    });
+                  }
                 }}
               />
             </div>
@@ -726,7 +751,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                             </div>
                           )}
                           
-                          {/* Days on Zillow */}
+                          {/* Days on Market */}
                           {property.daysOnZillow !== undefined && (
                             <div 
                               className="absolute bottom-3 left-3 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"
@@ -756,7 +781,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                             <Heart className="w-4 h-4" fill={favorites.has(property.id) ? 'currentColor' : 'none'} />
                           </button>
                           
-                          {/* Zillow Link */}
+                          {/* View Listing */}
                           <button
                             onClick={() => window.open(property.url, '_blank')}
                             className="absolute bottom-3 right-3 p-2 rounded-full transition-all"
@@ -764,6 +789,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                               backgroundColor: 'oklch(0.98 0 0 / 0.9)',
                               color: 'oklch(0.35 0 0)',
                             }}
+                            title="View full listing"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>
@@ -1168,14 +1194,14 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 )}
               </div>
               
-              {/* View on Zillow fallback */}
+              {/* View Full Listing fallback */}
               <Button
                 onClick={() => contactProperty && window.open(contactProperty.url, '_blank')}
                 variant="outline"
                 className="w-full"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                View Full Listing on Zillow
+                View Full Listing
               </Button>
             </div>
           ) : (
@@ -1192,7 +1218,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 style={{ backgroundColor: 'oklch(0.55 0.14 75)' }}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Contact via Zillow
+                Contact via Listing
               </Button>
             </div>
           )}

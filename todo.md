@@ -7195,3 +7195,61 @@ This makes the grading more optimistic - properties now get better grades at low
 - Action buttons (Competition, Map, Market) navigate to correct tabs with data
 - "Learn About Turnkey" CTA
 
+
+
+## Step 8 Super App Enhancements (Jan 29, 2026)
+
+### Bug Fixes:
+- [ ] Fix autofill search input - not working, needs proper autocomplete
+- [ ] Remove "Zillow" branding - change to "Browse rentals and validate STR potential instantly"
+- [ ] White label all data sources - don't mention Zillow, HasData, etc.
+
+### Contact Info Feature:
+- [ ] Research HasData API for contact extraction workaround
+- [ ] Implement on-demand contact fetch when Contact button is clicked
+- [ ] Display agent name, phone, email if available
+
+### Pagination:
+- [ ] Add Load More button to load more properties
+- [ ] Load as many properties as possible per search
+- [ ] Show total count and loaded count
+
+### Super App Goal:
+- Position Coach Inayah as the expert
+- Make tool so powerful users want to hire for done-for-you service
+- Beginner-friendly but comprehensive data
+
+
+
+## Step 8 Super App Enhancements (Jan 29, 2026) - COMPLETE
+
+### Autofill & Search:
+- [x] Fix autofill search - implemented MarketAutocomplete with auto-search on selection
+- [x] Autocomplete shows AirDNA markets with property counts
+- [x] Auto-search triggers immediately when user selects a location
+
+### White Label Data:
+- [x] Remove Zillow branding - changed to "Browse rentals and validate STR potential instantly"
+- [x] Changed "Days on Zillow" to "Days on Market"
+- [x] Changed "Contact via Zillow" to "View Listing"
+- [x] Removed all Zillow references from UI
+
+### Contact Info:
+- [x] Research contact info extraction - HasData API doesn't return agent contacts for rentals
+- [x] Implemented "View Listing" button as fallback (opens original listing)
+
+### Pagination:
+- [x] Load More pagination already implemented
+- [x] Shows when more results available (e.g., "Showing 10 of 50 properties")
+
+### Super App Features:
+- [x] Inline AirDNA analysis with Deal Score badges (A+ to F)
+- [x] Estimated Monthly Profit calculation
+- [x] Revenue, Occupancy, ADR, ROI metrics
+- [x] Startup Costs breakdown (collapsible)
+- [x] Verdict badges (Good Opportunity, Marginal, Not Recommended)
+- [x] Action buttons: Competition, Map, Market (navigate to other steps with data)
+- [x] "Learn About Turnkey" CTA (correct text)
+- [x] Save to Favorites (heart icon, persisted in localStorage)
+- [x] For Rent / For Sale toggle
+
