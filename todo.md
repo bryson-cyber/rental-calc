@@ -7074,3 +7074,13 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Improve break-even calculation with clear formulas
 - [x] Restyle "Looking for Market Analysis" box with gold/amber brand colors
 - [x] Verify investment comparison appears in AI output (S&P 500, High-Yield Savings, Treasury Bonds vs STR)
+
+## Investment Comparison Bug Fix (January 28, 2026)
+- [ ] Debug why investment comparison section is not appearing in AI output
+- [ ] Fix the issue and verify it appears consistently
+
+## Investment Comparison Bug Fix - RESOLVED (January 28, 2026)
+- [x] Debug why investment comparison section is not appearing in AI output - CAUSE: Database caching
+- [x] Clear ai_advisor_cache table to force regeneration with new prompt
+- [x] Verify investment comparison appears in fresh AI output (S&P 500, High-Yield Savings, Treasury Bonds vs STR)
+- [x] Verified: 31x return comparison now showing correctly
