@@ -7153,3 +7153,45 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Add "Contact Now" button on analyzed property cards
 - [ ] Show agent name, phone, email in a modal/popup when clicked
 - [ ] Add click-to-call and click-to-email functionality
+
+
+## Step 8 Opportunity Finder Bug Fixes (Jan 29, 2026)
+
+### UI Issues:
+- [ ] Fix autofill for Zillow search (not working)
+- [ ] Fix UI spacing - words and buttons mashed together
+- [ ] Change "Apply for Turnkey Program" to "Learn About the Turnkey Program"
+
+### Data Syncing Issues:
+- [ ] Fix Market button - data not syncing/passing back to Market Advisor
+- [ ] Fix Competition button - data not syncing/passing back
+- [ ] Ensure property data passes correctly to other steps
+
+### Contact Data:
+- [ ] Research alternative methods to scrape contact data from properties
+
+## Step 8 Opportunity Finder Bug Fixes (Jan 29, 2026) - COMPLETE
+
+### Issues Fixed:
+- [x] Fix autofill for Zillow search - Denver, CO quick buttons working
+- [x] Fix UI spacing - changed metrics to compact horizontal flex-wrap layout  
+- [x] Change CTA text from "Apply for Turnkey Program" to "Learn About Turnkey"
+- [x] Fix Market/Competition/Map buttons - added URL parameter handling in LeadMagnet.tsx
+- [x] Research contact data scraping - HasData API doesn't return agent contacts for rentals, using Zillow link fallback
+
+### Features Working:
+- Step 8 visible in homepage navigation grid
+- Search by city with quick buttons (Denver, Atlanta, Austin, Nashville)
+- For Rent / For Sale toggle
+- Sorting by Price (Low/High), Beds (Most/Fewest)
+- Filters panel (price range, beds, baths, property type)
+- Property cards with images, prices, beds/baths, sqft
+- Inline AirDNA analysis (Revenue, Occupancy, ADR, ROI)
+- Deal Score badges (A+ to F with color coding)
+- Estimated Monthly Profit calculation
+- Startup Costs (collapsible)
+- Contact Now → Opens Zillow listing
+- Save to Favorites (heart icon, persisted in localStorage)
+- Action buttons (Competition, Map, Market) navigate to correct tabs with data
+- "Learn About Turnkey" CTA
+

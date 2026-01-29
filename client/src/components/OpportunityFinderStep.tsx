@@ -837,92 +837,31 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 </p>
                               </div>
                               
-                              {/* Key Metrics Grid */}
-                              <div className="grid grid-cols-2 gap-3 mb-3">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                          <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Revenue</span>
-                                        </div>
-                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                          {formatCurrency(validation.projection.monthlyRevenue)}/mo
-                                        </p>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-xs text-sm">
-                                        Projected monthly income from short-term rental bookings based on local market data.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                          <Calendar className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</span>
-                                        </div>
-                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                          {Math.round(validation.projection.occupancy)}%
-                                        </p>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-xs text-sm">
-                                        Expected percentage of nights booked per month. Higher is better - 60%+ is considered good.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                          <Target className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</span>
-                                        </div>
-                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                          {formatCurrency(validation.projection.adr)}
-                                        </p>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-xs text-sm">
-                                        Average Daily Rate - the average price guests pay per night for similar properties.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                                
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                        <div className="flex items-center justify-center gap-1 mb-1">
-                                          <Percent className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>ROI</span>
-                                        </div>
-                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                          {validation.projection.roi}%
-                                        </p>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-xs text-sm">
-                                        Return on Investment - annual profit divided by annual rent. 50%+ is excellent, 25%+ is good.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                              {/* Key Metrics - Compact Row */}
+                              <div className="flex flex-wrap gap-2 mb-3 text-xs">
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                  <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span style={{ color: 'oklch(0.55 0 0)' }}>Revenue:</span>
+                                  <span className="font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(validation.projection.monthlyRevenue)}/mo</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                  <Calendar className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span style={{ color: 'oklch(0.55 0 0)' }}>Occ:</span>
+                                  <span className="font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>{Math.round(validation.projection.occupancy)}%</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                  <Target className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span style={{ color: 'oklch(0.55 0 0)' }}>ADR:</span>
+                                  <span className="font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(validation.projection.adr)}</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-md" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                  <Percent className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span style={{ color: 'oklch(0.55 0 0)' }}>ROI:</span>
+                                  <span className="font-semibold" style={{ color: validation.projection.roi > 25 ? 'oklch(0.45 0.15 145)' : 'oklch(0.25 0 0)' }}>{validation.projection.roi}%</span>
+                                </div>
                               </div>
+                              
+                              
                               
                               {/* Startup Costs (collapsed by default) */}
                               <details className="text-xs mb-3">
@@ -1017,36 +956,36 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                               
                               {/* Deep Dive Buttons */}
                               <div className="grid grid-cols-3 gap-2">
-                                <Link href={buildPropertyUrl(property, '/')}>
+                                <Link href={`/?tab=compare&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full h-9 text-xs px-2"
+                                    className="w-full h-10 text-xs px-3"
                                     style={{ borderRadius: '0.5rem' }}
                                   >
-                                    <Users className="w-3 h-3 mr-1" />
+                                    <Users className="w-3.5 h-3.5 mr-1.5" />
                                     Competition
                                   </Button>
                                 </Link>
-                                <Link href={buildPropertyUrl(property, '/')}>
+                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full h-9 text-xs px-2"
+                                    className="w-full h-10 text-xs px-3"
                                     style={{ borderRadius: '0.5rem' }}
                                   >
-                                    <Map className="w-3 h-3 mr-1" />
+                                    <Map className="w-3.5 h-3.5 mr-1.5" />
                                     Map
                                   </Button>
                                 </Link>
-                                <Link href={`/market-advisor?location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                <Link href={`/?tab=market&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full h-9 text-xs px-2"
+                                    className="w-full h-10 text-xs px-3"
                                     style={{ borderRadius: '0.5rem' }}
                                   >
-                                    <BarChart3 className="w-3 h-3 mr-1" />
+                                    <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
                                     Market
                                   </Button>
                                 </Link>
@@ -1067,7 +1006,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                   }}
                                 >
                                   <Sparkles className="w-4 h-4 mr-2" />
-                                  Apply for Turnkey Program
+                                  Learn About Turnkey
                                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                                 </Button>
                               </a>

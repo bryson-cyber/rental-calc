@@ -15,7 +15,8 @@
  *   4. Find the Best Deal (Compare Many) - compares options
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
@@ -341,6 +342,61 @@ export default function LeadMagnet() {
   
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
+  
+  // Get URL search params
+  const searchString = useSearch();
+  
+  // Handle URL parameters for tab navigation and data passing
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const tab = params.get('tab');
+    const address = params.get('address');
+    const location = params.get('location');
+    const bedrooms = params.get('bedrooms');
+    const bathrooms = params.get('bathrooms');
+    const rent = params.get('rent');
+    
+    // Map URL tab param to internal tab names
+    const tabMapping: Record<string, TabType> = {
+      'compare': 'compare',
+      'competition': 'compare',
+      'map': 'map',
+      'market': 'market',
+      'validate': 'validate',
+      'prove': 'prove',
+      'find': 'find',
+      'advisor': 'advisor',
+      'opportunity': 'opportunity',
+      'ebook': 'ebook',
+    };
+    
+    if (tab && tabMapping[tab]) {
+      setActiveTab(tabMapping[tab]);
+      
+      // Pre-fill form data if provided
+      if (address) {
+        setAddress(address);
+      }
+      if (location) {
+        // For market tab, set the explore address
+        setExploreAddress(location);
+      }
+      if (bedrooms) {
+        setBedrooms(bedrooms);
+      }
+      if (bathrooms) {
+        setBathrooms(bathrooms);
+      }
+      if (rent) {
+        setMonthlyRent(rent);
+      }
+      
+      // Scroll to tools section after a short delay
+      setTimeout(() => {
+        document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [searchString]);
   
   // Ebook state
   const [isEbookExpanded, setIsEbookExpanded] = useState(true);
