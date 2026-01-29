@@ -6535,27 +6535,65 @@ export async function getStandaloneMarketAdvisorData(
       ? listings.filter(l => l.rating).reduce((sum, l) => sum + (l.rating || 0), 0) / listings.filter(l => l.rating).length
       : 4.5;
     
-    // Calculate revenue by bedroom
-    const bedroomMap = new Map<number, { count: number; totalRevenue: number; totalOccupancy: number; totalAdr: number }>();
+    // Calculate revenue by bedroom with mid and upper tier metrics (excluding bottom 25%)
+    const bedroomListingsMap = new Map<number, Array<{ revenue: number; occupancy: number; adr: number }>>();
     listings.forEach(l => {
       const br = l.bedrooms;
-      const existing = bedroomMap.get(br) || { count: 0, totalRevenue: 0, totalOccupancy: 0, totalAdr: 0 };
-      bedroomMap.set(br, {
-        count: existing.count + 1,
-        totalRevenue: existing.totalRevenue + l.annual_revenue,
-        totalOccupancy: existing.totalOccupancy + l.occupancy,
-        totalAdr: existing.totalAdr + l.adr,
-      });
+      const existing = bedroomListingsMap.get(br) || [];
+      existing.push({ revenue: l.annual_revenue, occupancy: l.occupancy, adr: l.adr });
+      bedroomListingsMap.set(br, existing);
     });
     
-    const revenueByBedroom = Array.from(bedroomMap.entries())
-      .map(([bedrooms, data]) => ({
-        bedrooms,
-        avgRevenue: Math.round(data.totalRevenue / data.count),
-        avgOccupancy: Math.round(data.totalOccupancy / data.count),
-        avgAdr: Math.round(data.totalAdr / data.count),
-        listingCount: data.count,
-      }))
+    const revenueByBedroom = Array.from(bedroomListingsMap.entries())
+      .map(([bedrooms, bedroomListings]) => {
+        // Sort by revenue to calculate percentiles
+        const sorted = [...bedroomListings].sort((a, b) => a.revenue - b.revenue);
+        const count = sorted.length;
+        
+        // Calculate percentile indices (exclude bottom 25%)
+        const p25Index = Math.floor(count * 0.25);
+        const p50Index = Math.floor(count * 0.5);
+        const p75Index = Math.floor(count * 0.75);
+        
+        // Get mid tier (25th-75th percentile) and upper tier (75th+)
+        const midTier = sorted.slice(p25Index, p75Index);
+        const upperTier = sorted.slice(p75Index);
+        
+        // Calculate mid tier averages (what typical performers earn)
+        const midAvgRevenue = midTier.length > 0 
+          ? Math.round(midTier.reduce((sum, l) => sum + l.revenue, 0) / midTier.length)
+          : Math.round(sorted.reduce((sum, l) => sum + l.revenue, 0) / count);
+        const midAvgOccupancy = midTier.length > 0
+          ? Math.round(midTier.reduce((sum, l) => sum + l.occupancy, 0) / midTier.length)
+          : Math.round(sorted.reduce((sum, l) => sum + l.occupancy, 0) / count);
+        const midAvgAdr = midTier.length > 0
+          ? Math.round(midTier.reduce((sum, l) => sum + l.adr, 0) / midTier.length)
+          : Math.round(sorted.reduce((sum, l) => sum + l.adr, 0) / count);
+        
+        // Calculate upper tier averages (what top performers earn)
+        const upperAvgRevenue = upperTier.length > 0
+          ? Math.round(upperTier.reduce((sum, l) => sum + l.revenue, 0) / upperTier.length)
+          : midAvgRevenue;
+        const upperAvgOccupancy = upperTier.length > 0
+          ? Math.round(upperTier.reduce((sum, l) => sum + l.occupancy, 0) / upperTier.length)
+          : midAvgOccupancy;
+        const upperAvgAdr = upperTier.length > 0
+          ? Math.round(upperTier.reduce((sum, l) => sum + l.adr, 0) / upperTier.length)
+          : midAvgAdr;
+        
+        return {
+          bedrooms,
+          // Use mid-tier as the "average" (excludes underperformers)
+          avgRevenue: midAvgRevenue,
+          avgOccupancy: midAvgOccupancy,
+          avgAdr: midAvgAdr,
+          // Also include upper tier for comparison
+          upperRevenue: upperAvgRevenue,
+          upperOccupancy: upperAvgOccupancy,
+          upperAdr: upperAvgAdr,
+          listingCount: count,
+        };
+      })
       .sort((a, b) => a.bedrooms - b.bedrooms);
     
     // Calculate property type distribution
@@ -6597,6 +6635,7 @@ export async function getStandaloneMarketAdvisorData(
       isSuperhost: l.superhost || false,
       isProfessionallyManaged: l.professionally_managed || false,
       propertyType: l.property_type,
+      airbnbUrl: l.airbnb_url || null,
     }));
     
     // Build scores (use market details if available, otherwise estimate from data)

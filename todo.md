@@ -6924,3 +6924,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add beginner-friendly tooltips to Booking Patterns section (Average Lead Time, Last Minute Bookings, Avg Stay Length, Weekend Stays)
 - [x] Add beginner-friendly tooltips to Supply Trend section (Current Listings, 12 Months Ago, Net Change, Trend)
 - [x] All metrics now have clear explanations for beginners with hover tooltips
+
+
+### Market Advisor Improvements (Jan 28, 2026 - Round 4)
+- [x] Top Performers: Add clickable links to go directly to Airbnb listings (uses airbnb_url from API)
+- [x] Revenue clarity: Clarify if revenue is monthly or yearly (labeled as "Annual Revenue" with tooltip)
+- [x] Data credibility badge: Add badge at top showing "Based on X properties" and "Last 12 months of data"
+- [x] Revenue by property size: Show mid-tier (25-75th percentile) and top-tier (75th+) performers, excludes bottom 25%

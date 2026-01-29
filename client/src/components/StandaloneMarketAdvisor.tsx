@@ -598,6 +598,23 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                       </Badge>
                     )}
                   </CardDescription>
+                  {/* Data Credibility Badge */}
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Based on {marketData.metrics.totalListings?.toLocaleString() || marketData.topPerformers?.length || 0} active properties
+                    </Badge>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Last 12 months of data
+                    </Badge>
+                    {bedroomFilter !== 'all' && (
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
+                        <Home className="w-3 h-3 mr-1" />
+                        {bedroomFilter === '0' ? 'Studios' : bedroomFilter === '5' ? '5+ BR' : `${bedroomFilter} BR`} only
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <TooltipProvider>
@@ -819,42 +836,35 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     </div>
                   )}
                   <div className="overflow-x-auto">
+                    {/* Note about data filtering */}
+                    <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-xs">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      Revenue figures show <strong>mid-tier performers</strong> (25th-75th percentile) and <strong>top performers</strong> (75th+ percentile). Bottom performers are excluded to show realistic earning potential.
+                    </div>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b">
+                        <tr className="border-b bg-slate-50">
                           <th className="text-left py-2 px-3">Bedrooms</th>
-                          <th className="text-right py-2 px-3">
+                          <th className="text-right py-2 px-3" colSpan={2}>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
-                                  Avg Revenue <Info className="w-3 h-3 text-slate-400" />
+                                  Mid-Tier Annual Revenue <Info className="w-3 h-3 text-slate-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
-                                  <p className="text-sm">Average annual revenue for properties with this bedroom count in this market.</p>
+                                  <p className="text-sm">What <strong>typical performers</strong> earn per year (25th-75th percentile). This is a realistic target for well-managed properties.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </th>
-                          <th className="text-right py-2 px-3">
+                          <th className="text-right py-2 px-3" colSpan={2}>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
-                                  Occupancy <Info className="w-3 h-3 text-slate-400" />
+                                  Top-Tier Annual Revenue <Info className="w-3 h-3 text-slate-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
-                                  <p className="text-sm">Percentage of nights booked per year. Higher occupancy = more consistent bookings.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </th>
-                          <th className="text-right py-2 px-3">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger className="flex items-center gap-1 justify-end cursor-help">
-                                  ADR <Info className="w-3 h-3 text-slate-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                  <p className="text-sm">Average Daily Rate - the average price per night guests pay for this property size.</p>
+                                  <p className="text-sm">What <strong>top performers</strong> earn per year (75th+ percentile). Achievable with premium amenities, great reviews, and optimal pricing.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -872,17 +882,32 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                             </TooltipProvider>
                           </th>
                         </tr>
+                        <tr className="border-b text-xs text-slate-500">
+                          <th></th>
+                          <th className="text-right py-1 px-3">Revenue</th>
+                          <th className="text-right py-1 px-3">Occ %</th>
+                          <th className="text-right py-1 px-3">Revenue</th>
+                          <th className="text-right py-1 px-3">Occ %</th>
+                          <th></th>
+                        </tr>
                       </thead>
                       <tbody>
-                        {/* Data is already filtered on backend, just display it */}
+                        {/* Data shows mid and upper tier performers */}
                         {marketData.revenueByBedroom.map((br: any) => (
                           <tr key={br.bedrooms} className="border-b hover:bg-slate-50">
-                            <td className="py-2 px-3 font-medium">{br.bedrooms} BR</td>
+                            <td className="py-2 px-3 font-medium">{br.bedrooms === 0 ? 'Studio' : `${br.bedrooms} BR`}</td>
                             <td className="text-right py-2 px-3 text-green-600 font-medium">
                               {formatCurrency(br.avgRevenue)}
                             </td>
-                            <td className="text-right py-2 px-3">{formatPercent(br.avgOccupancy)}</td>
-                            <td className="text-right py-2 px-3">{formatCurrency(br.avgAdr)}</td>
+                            <td className="text-right py-2 px-3 text-slate-600">
+                              {formatPercent(br.avgOccupancy)}
+                            </td>
+                            <td className="text-right py-2 px-3 text-emerald-600 font-bold">
+                              {formatCurrency(br.upperRevenue || br.avgRevenue)}
+                            </td>
+                            <td className="text-right py-2 px-3 text-slate-600">
+                              {formatPercent(br.upperOccupancy || br.avgOccupancy)}
+                            </td>
                             <td className="text-right py-2 px-3 text-slate-500">
                               {br.listingCount.toLocaleString()}
                             </td>
@@ -1227,7 +1252,18 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="font-medium text-slate-900 line-clamp-1">
-                              {index + 1}. {performer.title}
+                              {index + 1}. {performer.airbnbUrl ? (
+                                <a 
+                                  href={performer.airbnbUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {performer.title}
+                                  <ArrowUpRight className="w-3 h-3 inline ml-1" />
+                                </a>
+                              ) : performer.title}
                             </div>
                             <div className="text-sm text-slate-500 mt-1">
                               {performer.bedrooms} BR / {performer.bathrooms} BA
