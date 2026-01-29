@@ -419,12 +419,14 @@ export async function getZillowPropertyWithContacts(propertyUrl: string): Promis
 
 
 /**
- * Enrich properties that have no price by fetching details from Zillow Property API
- * This is useful for multi-unit listings that show "Contact for Price"
+ * Enrich properties that have no price OR no coordinates by fetching details from Zillow Property API
+ * This is useful for:
+ * - Multi-unit listings that show "Contact for Price"
+ * - Properties missing lat/lng coordinates (needed for Map tab)
  * 
- * @param properties - Array of properties, some may have price = 0
+ * @param properties - Array of properties, some may have price = 0 or missing coordinates
  * @param maxEnrichments - Maximum number of properties to enrich (to control API costs)
- * @returns Array of properties with enriched price data where available
+ * @returns Array of properties with enriched price and coordinate data where available
  */
 export async function enrichPropertiesWithPrice(
   properties: ZillowProperty[],
@@ -437,20 +439,33 @@ export async function enrichPropertiesWithPrice(
     return properties;
   }
 
-  // Separate properties with and without price
-  const withPrice = properties.filter(p => p.price > 0);
-  const withoutPrice = properties.filter(p => p.price <= 0);
+  // Identify properties that need enrichment:
+  // 1. No price (price <= 0)
+  // 2. No coordinates (missing lat/lng)
+  const needsEnrichment = (p: ZillowProperty) => p.price <= 0 || !p.latitude || !p.longitude;
   
-  if (withoutPrice.length === 0) {
-    console.log("[HasData] All properties have prices, no enrichment needed");
+  const complete = properties.filter(p => !needsEnrichment(p));
+  const incomplete = properties.filter(needsEnrichment);
+  
+  if (incomplete.length === 0) {
+    console.log("[HasData] All properties have prices and coordinates, no enrichment needed");
     return properties;
   }
 
-  console.log(`[HasData] Enriching ${Math.min(withoutPrice.length, maxEnrichments)} of ${withoutPrice.length} properties without price`);
+  // Prioritize properties without price, then those without coordinates
+  const withoutPrice = incomplete.filter(p => p.price <= 0);
+  const withoutCoords = incomplete.filter(p => p.price > 0 && (!p.latitude || !p.longitude));
+  const toEnrichPrioritized = [...withoutPrice, ...withoutCoords];
   
-  // Enrich up to maxEnrichments properties
-  const toEnrich = withoutPrice.slice(0, maxEnrichments);
+  console.log(`[HasData] Enriching ${Math.min(toEnrichPrioritized.length, maxEnrichments)} of ${incomplete.length} incomplete properties (${withoutPrice.length} without price, ${withoutCoords.length} without coordinates)`);
+  
+  // Legacy variable names for compatibility
+  const withPrice = complete;
+  
+  // Enrich up to maxEnrichments properties from the prioritized list
+  const toEnrich = toEnrichPrioritized.slice(0, maxEnrichments);
   const enrichedProperties: ZillowProperty[] = [];
+  const enrichedIds = new Set<string>();
   
   for (const prop of toEnrich) {
     if (!prop.url || !prop.url.includes('zillow.com')) {
@@ -460,19 +475,28 @@ export async function enrichPropertiesWithPrice(
     
     try {
       const enriched = await getZillowProperty(prop.url);
-      if (enriched && enriched.price > 0) {
-        console.log(`[HasData] Enriched ${prop.address}: $${enriched.price}`);
-        enrichedProperties.push({
-          ...prop,
-          price: enriched.price,
-          bedrooms: enriched.bedrooms || prop.bedrooms,
-          bathrooms: enriched.bathrooms || prop.bathrooms,
-          squareFeet: enriched.squareFeet || prop.squareFeet,
-          latitude: enriched.latitude || prop.latitude,
-          longitude: enriched.longitude || prop.longitude
-        });
+      if (enriched) {
+        // Check if we got useful data (price or coordinates)
+        const hasNewPrice = enriched.price > 0 && prop.price <= 0;
+        const hasNewCoords = (enriched.latitude && enriched.longitude) && (!prop.latitude || !prop.longitude);
+        
+        if (hasNewPrice || hasNewCoords || enriched.price > 0) {
+          console.log(`[HasData] Enriched ${prop.address}: price=$${enriched.price || prop.price}, coords=${enriched.latitude},${enriched.longitude}`);
+          enrichedProperties.push({
+            ...prop,
+            price: enriched.price > 0 ? enriched.price : prop.price,
+            bedrooms: enriched.bedrooms || prop.bedrooms,
+            bathrooms: enriched.bathrooms || prop.bathrooms,
+            squareFeet: enriched.squareFeet || prop.squareFeet,
+            latitude: enriched.latitude || prop.latitude,
+            longitude: enriched.longitude || prop.longitude
+          });
+          enrichedIds.add(prop.id);
+        } else {
+          console.log(`[HasData] No useful data for ${prop.address}`);
+        }
       } else {
-        console.log(`[HasData] Could not get price for ${prop.address}`);
+        console.log(`[HasData] Could not get data for ${prop.address}`);
       }
     } catch (error) {
       console.error(`[HasData] Error enriching ${prop.address}:`, error);
@@ -482,9 +506,12 @@ export async function enrichPropertiesWithPrice(
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   
-  // Combine: properties with price + enriched properties (skip those still without price)
-  const result = [...withPrice, ...enrichedProperties];
-  console.log(`[HasData] Final result: ${result.length} properties with price data`);
+  // Include properties that weren't enriched but still have price (even if missing coords)
+  const notEnrichedButHasPrice = incomplete.filter(p => !enrichedIds.has(p.id) && p.price > 0);
+  
+  // Combine: complete properties + enriched properties + non-enriched with price
+  const result = [...withPrice, ...enrichedProperties, ...notEnrichedButHasPrice];
+  console.log(`[HasData] Final result: ${result.length} properties (${withPrice.length} complete, ${enrichedProperties.length} enriched, ${notEnrichedButHasPrice.length} partial)`);
   
   return result;
 }

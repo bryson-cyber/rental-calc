@@ -231,13 +231,50 @@ function getSessionId(): string {
   return sessionId;
 }
 
+// LocalStorage keys for state persistence
+const OPPORTUNITY_FINDER_STATE_KEY = 'opportunityFinder_state';
+
+// Load saved state from localStorage
+function loadSavedState(): { location: string; searchType: 'forRent' | 'forSale'; properties: ZillowProperty[]; totalResults: number; hasMore: boolean; hasSearched: boolean } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem(OPPORTUNITY_FINDER_STATE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Only restore if saved within last 30 minutes
+      if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('[OpportunityFinder] Error loading saved state:', e);
+  }
+  return null;
+}
+
+// Save state to localStorage
+function saveState(state: { location: string; searchType: 'forRent' | 'forSale'; properties: ZillowProperty[]; totalResults: number; hasMore: boolean; hasSearched: boolean }): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(OPPORTUNITY_FINDER_STATE_KEY, JSON.stringify({
+      ...state,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('[OpportunityFinder] Error saving state:', e);
+  }
+}
+
 export default function OpportunityFinderStep({ onSelectProperty }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
   
-  // Search state
-  const [location, setLocation] = useState('');
-  const [searchType, setSearchType] = useState<'forRent' | 'forSale'>('forRent');
+  // Load saved state on mount
+  const savedState = loadSavedState();
+  
+  // Search state - restore from localStorage if available
+  const [location, setLocation] = useState(savedState?.location || '');
+  const [searchType, setSearchType] = useState<'forRent' | 'forSale'>(savedState?.searchType || 'forRent');
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter state
@@ -256,11 +293,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('price_asc');
   
-  // Results state
-  const [properties, setProperties] = useState<ZillowProperty[]>([]);
-  const [totalResults, setTotalResults] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Results state - restore from localStorage if available
+  const [properties, setProperties] = useState<ZillowProperty[]>(savedState?.properties || []);
+  const [totalResults, setTotalResults] = useState(savedState?.totalResults || 0);
+  const [hasMore, setHasMore] = useState(savedState?.hasMore || false);
+  const [hasSearched, setHasSearched] = useState(savedState?.hasSearched || false);
   
   // Validation state
   const [validatingId, setValidatingId] = useState<string | null>(null);
@@ -433,6 +470,10 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
         ? await searchRentals.mutateAsync(params)
         : await searchForSale.mutateAsync(params);
       
+      const newProperties = append 
+        ? [...properties, ...result.properties]
+        : result.properties;
+      
       if (append) {
         setProperties(prev => [...prev, ...result.properties]);
       } else {
@@ -441,6 +482,16 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       setTotalResults(result.totalResults);
       setHasMore(result.hasMore || false);
       setCurrentPage(page);
+      
+      // Save state to localStorage for persistence when switching tabs
+      saveState({
+        location: location.trim(),
+        searchType,
+        properties: newProperties,
+        totalResults: result.totalResults,
+        hasMore: result.hasMore || false,
+        hasSearched: true
+      });
     } catch (error) {
       console.error('Search error:', error);
     } finally {

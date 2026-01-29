@@ -445,7 +445,7 @@ export const opportunityFinderRouter = router({
             homeTypes: input.homeTypes,
             page: input.page,
           },
-          { maxEnrichments: 5 } // Limit to 5 enrichments per page to control API costs
+          { maxEnrichments: 15 } // Enrich up to 15 properties per page for better coverage
         );
         
         if (!result.success) {
@@ -518,7 +518,7 @@ export const opportunityFinderRouter = router({
             homeTypes: input.homeTypes,
             page: input.page || 1,
           },
-          { maxEnrichments: 5 }
+          { maxEnrichments: 15 } // Enrich up to 15 properties per page for better coverage
         );
         
         if (!firstResult.success) {

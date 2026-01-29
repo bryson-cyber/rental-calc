@@ -7460,3 +7460,9 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Find a Property Improvements (Jan 29, 2026)
 - [x] Replace AirDNA market autocomplete with Google Places Autocomplete for location search
 - [x] Add HasData Property Details API for multi-unit listings without price (enriches up to 5 properties per page)
+
+
+## User Requests (Jan 29, 2026)
+- [x] Increase property enrichment limit from 5 to 15 per page
+- [x] Fix Map button not loading data from property analysis (enrichment now includes coordinates)
+- [x] Implement tab state persistence for Find a Property (saves location, search type, and results for 30 min)
