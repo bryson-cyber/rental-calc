@@ -6708,18 +6708,27 @@ export async function getStandaloneMarketAdvisorData(
     const listings = listingsResult.listings || [];
     
     // Calculate market metrics from listings
+    // IMPORTANT: Exclude bottom 25% performers to avoid skewing averages with underperformers
     const totalListings = listingsResult.total_count || listings.length;
-    const avgRevenue = listings.length > 0 
-      ? Math.round(listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length)
+    
+    // Sort listings by revenue to filter out bottom 25%
+    const sortedByRevenue = [...listings].sort((a, b) => a.annual_revenue - b.annual_revenue);
+    const bottom25Index = Math.floor(sortedByRevenue.length * 0.25);
+    const filteredListings = sortedByRevenue.slice(bottom25Index); // Exclude bottom 25%
+    
+    console.log(`[StandaloneMarketAdvisor] Filtered ${bottom25Index} bottom performers from ${listings.length} total listings`);
+    
+    const avgRevenue = filteredListings.length > 0 
+      ? Math.round(filteredListings.reduce((sum, l) => sum + l.annual_revenue, 0) / filteredListings.length)
       : marketDetails.metrics?.revenue || 0;
-    const avgOccupancy = listings.length > 0
-      ? Math.round(listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length)
+    const avgOccupancy = filteredListings.length > 0
+      ? Math.round(filteredListings.reduce((sum, l) => sum + l.occupancy, 0) / filteredListings.length)
       : Math.round((marketDetails.metrics?.booked || 0) * 100);
-    const avgAdr = listings.length > 0
-      ? Math.round(listings.reduce((sum, l) => sum + l.adr, 0) / listings.length)
+    const avgAdr = filteredListings.length > 0
+      ? Math.round(filteredListings.reduce((sum, l) => sum + l.adr, 0) / filteredListings.length)
       : marketDetails.metrics?.daily_rate || 0;
-    const avgRevpar = listings.length > 0
-      ? Math.round(listings.reduce((sum, l) => sum + (l.adr * l.occupancy / 100), 0) / listings.length)
+    const avgRevpar = filteredListings.length > 0
+      ? Math.round(filteredListings.reduce((sum, l) => sum + (l.adr * l.occupancy / 100), 0) / filteredListings.length)
       : marketDetails.metrics?.revpar || 0;
     
     const superhostCount = listings.filter(l => l.superhost).length;

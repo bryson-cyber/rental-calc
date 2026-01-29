@@ -202,9 +202,9 @@ export async function getInvestmentAdvice(
     ? `\n\nConversation History:\n${conversationHistory.map(m => `${m.role === 'user' ? 'User' : 'Advisor'}: ${m.content}`).join('\n')}`
     : '';
 
-  const prompt = `You are a short-term rental investment advisor. Your ONLY source of information is the AirDNA market data provided below.
+  const prompt = `You are a short-term rental investment advisor. Your ONLY source of information is the verified market data provided below.
 
-CRITICAL RULE: You MUST ONLY use the AirDNA data provided. Do NOT use general knowledge, assumptions, or external information.
+CRITICAL RULE: You MUST ONLY use the market data provided. Do NOT use general knowledge, assumptions, or external information.
 
 If a user asks about markets or data NOT in the provided dataset:
 - Say "I don't have data on that market yet" or "That information isn't in my current dataset"
@@ -229,7 +229,7 @@ ${marketContext}${historyText}
 
 User Question: ${question}
 
-Respond based ONLY on the AirDNA data above. If the data doesn't cover the question, say so clearly.`;
+Respond based ONLY on the market data above. If the data doesn't cover the question, say so clearly.`;
 
   try {
     const response = await callGemini(prompt);

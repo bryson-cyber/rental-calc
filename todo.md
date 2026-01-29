@@ -6976,3 +6976,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Upgrade Gemini AI prompt to fully utilize all available data
 - [ ] Pass all 5 years of data to Gemini for comprehensive analysis
 - [ ] Ensure AI explains data in plain English like talking to a friend
+
+
+### Market Advisor White Label & Data Quality (Jan 28, 2026)
+- [x] Remove all AirDNA branding from UI - white labeled as "Verified Real Market Data"
+- [x] Filter out bottom 25% performers from data pool to improve average projections
+- [x] Update data credibility badge to remove AirDNA mention - now shows "Verified" with Shield icon
+- [x] Ensure AI prompt doesn't mention AirDNA in output - updated to "verified market data"

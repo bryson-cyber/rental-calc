@@ -471,10 +471,10 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="w-px h-12 bg-white/30" />
                 <div className="text-center">
                   <div className="flex items-center gap-2 text-white">
-                    <Award className="w-5 h-5" />
-                    <span className="text-3xl font-bold">AirDNA</span>
+                    <Shield className="w-5 h-5" />
+                    <span className="text-3xl font-bold">Verified</span>
                   </div>
-                  <div className="text-emerald-100 text-sm font-medium">Data Source</div>
+                  <div className="text-emerald-100 text-sm font-medium">Real Market Data</div>
                 </div>
               </div>
             </div>
