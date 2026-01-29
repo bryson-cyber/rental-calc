@@ -332,6 +332,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
       bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
       bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
+      bathsMax: bathsMax ? parseFloat(bathsMax) : undefined,
       homeTypes: homeType ? [homeType] : undefined,
       page,
     };
@@ -507,6 +508,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                     bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
                     bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
                     bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
+                    bathsMax: bathsMax ? parseFloat(bathsMax) : undefined,
                     homeTypes: homeType ? [homeType] : undefined,
                     page: 1,
                   };
@@ -1046,7 +1048,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                               
                               {/* Deep Dive Buttons - Switch tabs with property data */}
                               <div className="grid grid-cols-3 gap-2">
-                                <Link href={`/?tab=compare&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
+                                <Link href={`/?tab=find&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1057,7 +1059,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     Competition
                                   </Button>
                                 </Link>
-                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}`}>
+                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1068,7 +1070,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     Map
                                   </Button>
                                 </Link>
-                                <Link href={`/?tab=market&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
                                   <Button
                                     variant="outline"
                                     size="sm"

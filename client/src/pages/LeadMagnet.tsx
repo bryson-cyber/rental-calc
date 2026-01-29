@@ -97,6 +97,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
 import { AuthButton } from '@/components/AuthButton';
+import { CompareFavoritesSection } from '@/components/CompareFavoritesSection';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 
@@ -346,15 +347,19 @@ export default function LeadMagnet() {
   // Get URL search params
   const searchString = useSearch();
   
+  // Track if we should auto-trigger analysis from URL params
+  const autoTriggerRef = useRef<{ tab: string; address: string } | null>(null);
+  
   // Handle URL parameters for tab navigation and data passing
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const tab = params.get('tab');
-    const address = params.get('address');
+    const urlAddress = params.get('address');
     const location = params.get('location');
-    const bedrooms = params.get('bedrooms');
-    const bathrooms = params.get('bathrooms');
+    const urlBedrooms = params.get('bedrooms');
+    const urlBathrooms = params.get('bathrooms');
     const rent = params.get('rent');
+    const autoAnalyze = params.get('autoAnalyze');
     
     // Map URL tab param to internal tab names
     const tabMapping: Record<string, TabType> = {
@@ -374,21 +379,26 @@ export default function LeadMagnet() {
       setActiveTab(tabMapping[tab]);
       
       // Pre-fill form data if provided
-      if (address) {
-        setAddress(address);
+      if (urlAddress) {
+        setAddress(urlAddress);
       }
       if (location) {
         // For market tab, set the explore address
         setExploreAddress(location);
       }
-      if (bedrooms) {
-        setBedrooms(bedrooms);
+      if (urlBedrooms) {
+        setBedrooms(urlBedrooms);
       }
-      if (bathrooms) {
-        setBathrooms(bathrooms);
+      if (urlBathrooms) {
+        setBathrooms(urlBathrooms);
       }
       if (rent) {
         setMonthlyRent(rent);
+      }
+      
+      // Mark for auto-trigger if autoAnalyze flag is set
+      if (autoAnalyze === 'true' && urlAddress) {
+        autoTriggerRef.current = { tab: tabMapping[tab], address: urlAddress };
       }
       
       // Scroll to tools section after a short delay
@@ -397,6 +407,29 @@ export default function LeadMagnet() {
       }, 100);
     }
   }, [searchString]);
+  
+  // Auto-trigger analysis when URL params indicate it
+  useEffect(() => {
+    if (autoTriggerRef.current && isAuthenticated) {
+      const { tab, address: triggerAddress } = autoTriggerRef.current;
+      autoTriggerRef.current = null; // Clear to prevent re-triggering
+      
+      // Small delay to ensure form is populated
+      setTimeout(() => {
+        if (tab === 'validate' && triggerAddress) {
+          // Trigger the validate analysis
+          const analyzeButton = document.querySelector('[data-analyze-button]') as HTMLButtonElement;
+          if (analyzeButton && !analyzeButton.disabled) {
+            analyzeButton.click();
+          }
+        } else if (tab === 'map' && triggerAddress) {
+          // For map tab, the MapFirstLayoutV2 component handles its own auto-search
+          // We just need to ensure the address is set in the explore field
+          setExploreAddress(triggerAddress);
+        }
+      }, 500);
+    }
+  }, [isAuthenticated]);
   
   // Ebook state
   const [isEbookExpanded, setIsEbookExpanded] = useState(true);
@@ -2058,6 +2091,7 @@ export default function LeadMagnet() {
                   onClick={handleAnalyze}
                   disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0 || !isAuthenticated}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  data-analyze-button
                 >
                   {isAnalyzing ? (
                     <>
@@ -2075,155 +2109,28 @@ export default function LeadMagnet() {
             )}
             
             {/* ============================================ */}
-            {/* FIND THE BEST DEAL TAB */}
+            {/* COMPARE FAVORITES TAB */}
             {/* ============================================ */}
             {activeTab === 'compare' && (
               <div className="space-y-8">
                 <HelpSection
                   title="How This Tool Helps You"
-                  description="Compare up to 25 properties side-by-side to find which one will make you the most money"
-                  example="You've found 3 different apartments in Nashville and can't decide which one to pursue. Add all 3 and instantly see which one has the highest profit potential."
+                  description="Compare your saved favorites from the Map view side-by-side to find which one will make you the most money"
+                  example="You've saved 5 properties from the Map view and want to see which one has the best profit potential. Select the ones you want to compare and see them ranked."
                   steps={[
-                    'Add multiple property addresses',
-                    'Enter rent and details for each',
-                    'Click "Find the Winner"',
-                    'See all properties ranked by profit',
-                    'Choose the best deal with confidence'
+                    'Save properties from the Map view by clicking the heart icon',
+                    'Come here to see all your favorites',
+                    'Enter estimated rent for each property',
+                    'Select properties to compare',
+                    'See them ranked by profit potential'
                   ]}
                   isOpen={showHelp === 'compare'}
                   onToggle={() => setShowHelp(showHelp === 'compare' ? null : 'compare')}
                 />
                 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)]">Compare Up to 25 Properties</h3>
-                    <p className="text-sm text-[oklch(0.55_0.02_265)]">Add properties to find which one makes the most money</p>
-                  </div>
-                  <span className="text-sm text-[oklch(0.50_0.02_265)]">{bulkProperties.length}/25 properties</span>
-                </div>
-                
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                  {bulkProperties.map((prop, index) => (
-                    <div key={prop.id} className="bg-[oklch(0.98_0_0)] border border-[oklch(0.90_0_0)] rounded-xl p-6 shadow-sm">
-                      {/* Property Header */}
-                      <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 rounded-lg bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)] text-sm font-bold flex items-center justify-center">
-                            {index + 1}
-                          </span>
-                          <span className="font-medium text-[oklch(0.25_0.02_265)]">Property {index + 1}</span>
-                        </div>
-                        {bulkProperties.length > 1 && (
-                          <button
-                            onClick={() => removeBulkProperty(prop.id)}
-                            className="text-[oklch(0.50_0.02_265)] hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Address - Smart Input accepts Zillow URLs or regular addresses */}
-                      <div className="space-y-2 mb-4">
-                        <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
-                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Address or Zillow/Redfin URL</span>
-                        </InfoTooltip>
-                        <SmartAddressInput
-                          value={prop.address}
-                          onChange={(val) => updateBulkProperty(prop.id, 'address', val)}
-                          onPropertyDetected={(details) => {
-                            // Auto-fill property details from Zillow
-                            if (details.bedrooms !== null) {
-                              updateBulkProperty(prop.id, 'bedrooms', details.bedrooms);
-                            }
-                            if (details.bathrooms !== null) {
-                              updateBulkProperty(prop.id, 'bathrooms', details.bathrooms);
-                            }
-                            if (details.price !== null && details.priceType === 'rent') {
-                              updateBulkProperty(prop.id, 'rent', details.price);
-                            }
-                            toast.success(`Property details loaded from Zillow!`);
-                          }}
-                          placeholder="Enter address or paste Zillow/Redfin URL..."
-                          showPropertyCard={false}
-                        />
-                      </div>
-                      
-                      {/* Rent */}
-                      <div className="space-y-2 mb-4">
-                        <InfoTooltip content="Your monthly rent or mortgage payment. This is used to calculate your profit - the difference between what you earn and what you pay.">
-                          <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Rent</span>
-                        </InfoTooltip>
-                        <Input
-                          type="number"
-                          value={prop.rent || ''}
-                          onChange={(e) => updateBulkProperty(prop.id, 'rent', parseFloat(e.target.value) || 0)}
-                          placeholder="2000"
-                          className="input-apple h-12"
-                        />
-                      </div>
-                      
-                      {/* Beds & Baths */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <InfoTooltip content="Number of bedrooms. More bedrooms usually means higher revenue, but also higher rent. Match this to the property you're considering.">
-                            <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Beds</span>
-                          </InfoTooltip>
-                          <select
-                            value={prop.bedrooms}
-                            onChange={(e) => updateBulkProperty(prop.id, 'bedrooms', parseInt(e.target.value))}
-                            className="input-apple w-full h-12"
-                          >
-                            {[1, 2, 3, 4, 5, 6].map(num => (
-                              <option key={num} value={num}>{num}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <InfoTooltip content="Number of bathrooms. Properties with more bathrooms tend to earn more and get better reviews.">
-                            <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">Baths</span>
-                          </InfoTooltip>
-                          <select
-                            value={prop.bathrooms}
-                            onChange={(e) => updateBulkProperty(prop.id, 'bathrooms', parseFloat(e.target.value))}
-                            className="input-apple w-full h-12"
-                          >
-                            {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(num => (
-                              <option key={num} value={num}>{num}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <button
-                  onClick={addBulkProperty}
-                  disabled={bulkProperties.length >= 25}
-                  className="w-full py-4 border-2 border-dashed border-[oklch(0.85_0_0)] rounded-xl text-[oklch(0.50_0_0)] hover:text-[oklch(0.25_0_0)] hover:border-[oklch(0.70_0_0)] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Another Property
-                </button>
-                
-                <button
-                  onClick={handleBulkAnalyze}
-                  disabled={isBulkAnalyzing || bulkProperties.every(p => !p.address.trim())}
-                  className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isBulkAnalyzing ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-[oklch(0.55_0.14_75)]/30 border-t-[oklch(0.55_0.14_75)] rounded-full animate-spin" />
-                      <span>Finding the Winner...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trophy className="w-5 h-5" />
-                      <span>Find the Winner</span>
-                    </>
-                  )}
-                </button>
+                <CompareFavoritesSection 
+                  onNavigateToMap={() => setActiveTab('map')}
+                />
               </div>
             )}
             
