@@ -6964,3 +6964,15 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Remove technical metrics display - all charts, graphs, tables removed
 - [ ] Redesign to match Step 3 patterns: guiding questions, verdicts, letter grades - AI prompt needs update
 - [ ] Test against Step 3 quality checklist
+
+
+### Market Advisor API Audit & Prompt Upgrade (Jan 28, 2026)
+- [x] Audit current AirDNA API endpoints being used
+- [x] Read all AirDNA API reference files to identify available data
+- [ ] Fix booking patterns/supply trend to use submarket endpoints when analyzing submarket
+- [ ] Add /listing/{id}/historical for 5-year history on top performers
+- [ ] Add /listing/batch to get images for top performers
+- [ ] Add /market/{id}/future_pricing for 90-day pricing forecast
+- [ ] Upgrade Gemini AI prompt to fully utilize all available data
+- [ ] Pass all 5 years of data to Gemini for comprehensive analysis
+- [ ] Ensure AI explains data in plain English like talking to a friend

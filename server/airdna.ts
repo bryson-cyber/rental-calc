@@ -5738,6 +5738,190 @@ export async function getMarketSupplyTrend(
 }
 
 
+/**
+ * Get booking patterns for a SUBMARKET (uses /submarket/{id}/metrics endpoints)
+ */
+export async function getSubmarketBookingPatterns(
+  submarketId: string,
+  bedrooms?: number
+): Promise<BookingPatterns | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    // Fetch booking lead time using SUBMARKET endpoint
+    const leadTimeResponse = await makeApiRequest(
+      `/submarket/${submarketId}/metrics/booking_lead_time`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    // Fetch length of stay using SUBMARKET endpoint
+    const losResponse = await makeApiRequest(
+      `/submarket/${submarketId}/metrics/avg_length_of_stay`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    // Parse booking lead time data
+    const leadTimeMetrics = (leadTimeResponse as any)?.payload?.metrics || [];
+    const losMetrics = (losResponse as any)?.payload?.metrics || [];
+
+    let totalReservations = 0;
+    let weightedLeadTime = 0;
+    let lastMinuteCount = 0;
+    let advanceBookingCount = 0;
+
+    for (const month of leadTimeMetrics) {
+      for (const bucket of month.reservation_counts || []) {
+        const [minDays, maxDays] = bucket.lead_time_day_range;
+        const count = bucket.num_reservations || 0;
+        totalReservations += count;
+        const midpoint = maxDays !== null ? (minDays + maxDays) / 2 : minDays + 45;
+        weightedLeadTime += midpoint * count;
+        if (minDays === 0 && maxDays === 6) lastMinuteCount += count;
+        if (minDays >= 31) advanceBookingCount += count;
+      }
+    }
+
+    const avgLeadTime = totalReservations > 0 ? weightedLeadTime / totalReservations : 14;
+    const lastMinutePercent = totalReservations > 0 ? Math.round((lastMinuteCount / totalReservations) * 100) : 25;
+    const advanceBookingPercent = totalReservations > 0 ? Math.round((advanceBookingCount / totalReservations) * 100) : 20;
+
+    let totalStays = 0;
+    let weightedLOS = 0;
+    let weekendCount = 0;
+    let weekPlusCount = 0;
+
+    for (const month of losMetrics) {
+      for (const bucket of month.stay_length_counts || []) {
+        const [minNights, maxNights] = bucket.stay_length_night_range || [0, 0];
+        const count = bucket.num_reservations || 0;
+        totalStays += count;
+        const midpoint = maxNights !== null ? (minNights + maxNights) / 2 : minNights + 7;
+        weightedLOS += midpoint * count;
+        if (minNights <= 3 && (maxNights === null || maxNights <= 3)) weekendCount += count;
+        if (minNights >= 7 || (maxNights !== null && maxNights >= 7)) weekPlusCount += count;
+      }
+    }
+
+    const avgLOS = totalStays > 0 ? weightedLOS / totalStays : 3;
+    const weekendPercent = totalStays > 0 ? Math.round((weekendCount / totalStays) * 100) : 30;
+    const weekPercent = totalStays > 0 ? Math.round((weekPlusCount / totalStays) * 100) : 10;
+
+    const insights: string[] = [];
+    if (avgLeadTime < 7) {
+      insights.push("This is a last-minute booking market - guests book within a week of arrival.");
+    } else if (avgLeadTime > 30) {
+      insights.push("Guests plan ahead in this market - expect bookings 1+ months in advance.");
+    } else {
+      insights.push("Moderate booking lead time - guests typically book 2-4 weeks ahead.");
+    }
+
+    if (avgLOS < 2.5) {
+      insights.push("Short stays dominate - focus on quick turnovers and weekend pricing.");
+    } else if (avgLOS > 5) {
+      insights.push("Longer stays are common - consider weekly discounts and extended stay amenities.");
+    } else {
+      insights.push("Mix of short and medium stays - flexible pricing strategy recommended.");
+    }
+
+    return {
+      lead_time: {
+        avg_days: Math.round(avgLeadTime),
+        last_minute_percent: lastMinutePercent,
+        advance_booking_percent: advanceBookingPercent,
+      },
+      length_of_stay: {
+        avg_nights: Math.round(avgLOS * 10) / 10,
+        weekend_percent: weekendPercent,
+        week_percent: weekPercent,
+      },
+      insights,
+    };
+  } catch (error) {
+    console.error("Error fetching submarket booking patterns:", error);
+    return null;
+  }
+}
+
+/**
+ * Get supply trend data for a SUBMARKET (uses /submarket/{id}/metrics endpoints)
+ */
+export async function getSubmarketSupplyTrend(
+  submarketId: string,
+  bedrooms?: number
+): Promise<SupplyTrend | null> {
+  try {
+    const filters: any[] = [];
+    if (bedrooms !== undefined) {
+      filters.push({ type: "select", field: "bedrooms", value: bedrooms });
+    }
+
+    const response = await makeApiRequest(
+      `/submarket/${submarketId}/metrics/active_listings_count`,
+      "POST",
+      { num_months: 12, filters }
+    );
+
+    const responseData = (response as any)?.payload?.metrics;
+    if (!responseData || !Array.isArray(responseData) || responseData.length === 0) {
+      return null;
+    }
+
+    const data = responseData;
+    const sortedData = [...data].sort((a: any, b: any) => 
+      new Date(a.date || a.month).getTime() - new Date(b.date || b.month).getTime()
+    );
+
+    const getListingCount = (item: any): number => {
+      return item?.active_listings ?? item?.active_listings_count ?? item?.listing_count ?? item?.value ?? item?.count ?? 0;
+    };
+    
+    const current = getListingCount(sortedData[sortedData.length - 1]);
+    const yearAgo = getListingCount(sortedData[0]) || current;
+    const netChange = current - yearAgo;
+    const percentChange = yearAgo > 0 ? Math.round((netChange / yearAgo) * 100) : 0;
+
+    let trend: "growing" | "stable" | "declining" = "stable";
+    if (percentChange > 10) trend = "growing";
+    else if (percentChange < -10) trend = "declining";
+
+    let insight = "";
+    if (trend === "growing") {
+      insight = `Competition is increasing - ${netChange} new listings entered the market (+${percentChange}%). Focus on differentiation.`;
+    } else if (trend === "declining") {
+      insight = `Supply is shrinking - ${Math.abs(netChange)} listings left the market (${percentChange}%). Less competition, but investigate why.`;
+    } else {
+      insight = `Market supply is stable. Focus on outperforming existing competition.`;
+    }
+
+    const monthlyData = sortedData.map((d: any, i: number) => ({
+      month: d.date || d.month,
+      active_listings: getListingCount(d),
+      change_from_previous: i > 0 
+        ? getListingCount(d) - getListingCount(sortedData[i-1])
+        : 0,
+    }));
+
+    return {
+      current_listings: current,
+      listings_12_months_ago: yearAgo,
+      net_change: netChange,
+      percent_change: percentChange,
+      monthly_data: monthlyData,
+      trend,
+      insight,
+    };
+  } catch (error) {
+    console.error("Error fetching submarket supply trend:", error);
+    return null;
+  }
+}
+
+
 // ============================================
 // LISTINGS BY AREA (fetchListingsByArea)
 // ============================================
@@ -6466,10 +6650,19 @@ export async function getStandaloneMarketAdvisorData(
       ? getSubmarketSeasonality(marketId)
       : getMarketSeasonality(marketId);
     
+    // Use appropriate endpoint based on market type (submarket endpoints for submarkets/zipcodes)
+    const bookingPatternsFn = marketType === 'submarket' || marketType === 'zipcode'
+      ? getSubmarketBookingPatterns(marketId)
+      : getMarketBookingPatterns(marketId);
+    
+    const supplyTrendFn = marketType === 'submarket' || marketType === 'zipcode'
+      ? getSubmarketSupplyTrend(marketId)
+      : getMarketSupplyTrend(marketId);
+    
     const [seasonalityData, bookingPatterns, supplyTrendData, listingsResult, submarkets] = await Promise.all([
       seasonalityFn,
-      getMarketBookingPatterns(marketId),
-      getMarketSupplyTrend(marketId),
+      bookingPatternsFn,
+      supplyTrendFn,
       listingsFn,
       marketType === 'market' ? getSubmarketsInMarket(marketId) : Promise.resolve([]),
     ]);
@@ -6676,7 +6869,7 @@ export async function getStandaloneMarketAdvisorData(
       historicalData: {
         yoyChange: Math.round(yoyChange * 10) / 10,
         trend,
-        months: monthlyData.slice(0, 24), // Last 24 months for display
+        months: monthlyData.slice(0, 60), // Last 60 months (5 years) for display
         yearlySummary,
       },
       seasonality,
