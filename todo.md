@@ -6953,3 +6953,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Renamed "Submarkets" to "Best Neighborhoods to Invest"
 - [x] Renamed "Active Listings Trend" to "Competition Tracker"
 - [x] Updated AI prompt to use simple language, analogies, and explain the "so what?" for every number
+
+
+### Market Advisor Complete Redesign - Match Step 3 Quality (Jan 28, 2026)
+- [x] Remove ALL graphs and charts from Market Advisor UI - completely rewritten component
+- [x] Update data badge from "12 months" to "5 years of data" - prominent badge now shows 5 years
+- [x] Add BIG, BOLD, AUTHORITATIVE data credibility badge - green gradient banner with property count, 5 years, AirDNA source
+- [x] Keep ONLY Top Performers section with photos and Airbnb links
+- [x] Make AI narrative the primary content - now front and center with "Here's What You Need to Know" header
+- [x] Remove technical metrics display - all charts, graphs, tables removed
+- [ ] Redesign to match Step 3 patterns: guiding questions, verdicts, letter grades - AI prompt needs update
+- [ ] Test against Step 3 quality checklist
