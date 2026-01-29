@@ -23,7 +23,10 @@ import {
   ExternalLink,
   Loader2,
   RefreshCw,
-  Search
+  Search,
+  Map,
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -377,17 +380,50 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                 )}
               </div>
               
-              {/* Remove button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemove(fav.id);
-                }}
-                className="absolute bottom-3 right-3 p-2 rounded-full hover:bg-red-50 text-[oklch(0.55_0_0)] hover:text-red-500 transition-colors"
-                title="Remove from favorites"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[oklch(0.92_0_0)]">
+                <Link 
+                  href={`/?tab=map&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&autoAnalyze=true`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant="outline" size="sm" className="h-8 text-xs px-2">
+                    <Map className="w-3.5 h-3.5 mr-1" />
+                    Map
+                  </Button>
+                </Link>
+                <Link 
+                  href={`/?tab=compare&location=${encodeURIComponent((fav.city || '') + ', ' + (fav.state || ''))}&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&autoAnalyze=true`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant="outline" size="sm" className="h-8 text-xs px-2">
+                    <Users className="w-3.5 h-3.5 mr-1" />
+                    Comps
+                  </Button>
+                </Link>
+                {fav.zillowUrl && (
+                  <a 
+                    href={fav.zillowUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="sm" className="h-8 text-xs px-2">
+                      <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                      Zillow
+                    </Button>
+                  </a>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(fav.id);
+                  }}
+                  className="ml-auto p-1.5 rounded-full hover:bg-red-50 text-[oklch(0.55_0_0)] hover:text-red-500 transition-colors"
+                  title="Remove from favorites"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           );
         })}

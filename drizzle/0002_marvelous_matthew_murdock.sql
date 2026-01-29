@@ -1,0 +1,1 @@
+ALTER TABLE `favorite_properties` ADD `zillowUrl` text;

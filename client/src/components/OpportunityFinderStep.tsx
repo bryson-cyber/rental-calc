@@ -98,6 +98,8 @@ interface ZillowProperty {
   photos: string[]; // All property photos
   status: string;
   daysOnZillow?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface ValidationResult {
@@ -1153,7 +1155,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     Competition
                                   </Button>
                                 </Link>
-                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
+                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1401,31 +1403,31 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           </DialogHeader>
           
           {photoGalleryProperty && photoGalleryProperty.photos && photoGalleryProperty.photos.length > 0 ? (
-            <div className="relative">
+            <div className="relative overflow-hidden">
               {/* Main Image */}
-              <div className="relative h-[60vh] bg-black flex items-center justify-center">
+              <div className="relative h-[60vh] bg-black flex items-center justify-center overflow-hidden">
                 <img
                   src={photoGalleryProperty.photos[currentPhotoIndex]}
                   alt={`${photoGalleryProperty.address} - Photo ${currentPhotoIndex + 1}`}
                   className="max-w-full max-h-full object-contain"
                 />
                 
-                {/* Navigation Arrows */}
+                {/* Navigation Arrows - Fixed z-index and larger buttons for visibility */}
                 {photoGalleryProperty.photos.length > 1 && (
                   <>
                     <button
                       onClick={() => setCurrentPhotoIndex(prev => prev === 0 ? photoGalleryProperty.photos.length - 1 : prev - 1)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.9)' }}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 z-50 shadow-lg"
+                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.95)' }}
                     >
-                      <ChevronLeft className="w-6 h-6" style={{ color: 'oklch(0.25 0 0)' }} />
+                      <ChevronLeft className="w-7 h-7" style={{ color: 'oklch(0.25 0 0)' }} />
                     </button>
                     <button
                       onClick={() => setCurrentPhotoIndex(prev => prev === photoGalleryProperty.photos.length - 1 ? 0 : prev + 1)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.9)' }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-110 z-50 shadow-lg"
+                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.95)' }}
                     >
-                      <ChevronRight className="w-6 h-6" style={{ color: 'oklch(0.25 0 0)' }} />
+                      <ChevronRight className="w-7 h-7" style={{ color: 'oklch(0.25 0 0)' }} />
                     </button>
                   </>
                 )}

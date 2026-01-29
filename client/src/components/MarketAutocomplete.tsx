@@ -37,13 +37,13 @@ export function MarketAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debounced search query
+  // Debounced search query - reduced to 150ms for faster response
   const [debouncedQuery, setDebouncedQuery] = useState('');
   
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
-    }, 300);
+    }, 150); // Faster debounce for better UX
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -51,15 +51,24 @@ export function MarketAutocomplete({
   const queryIsZipCode = isZipCode(debouncedQuery);
 
   // Search markets using tRPC (for city/neighborhood search)
+  // Cache results for 30 minutes client-side since markets don't change often
   const { data: results, isLoading: isSearchLoading } = trpc.marketExplorer.searchMarkets.useQuery(
     { query: debouncedQuery, limit: 10 },
-    { enabled: debouncedQuery.length >= 2 && !queryIsZipCode }
+    { 
+      enabled: debouncedQuery.length >= 2 && !queryIsZipCode,
+      staleTime: 30 * 60 * 1000, // 30 minutes client-side cache
+      gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    }
   );
 
-  // Zip code lookup using tRPC
+  // Zip code lookup using tRPC - also cached since zip codes don't change
   const { data: zipResult, isLoading: isZipLoading } = trpc.rental.geocodeZipCode.useQuery(
     { zipcode: debouncedQuery.trim() },
-    { enabled: queryIsZipCode }
+    { 
+      enabled: queryIsZipCode,
+      staleTime: 30 * 60 * 1000, // 30 minutes client-side cache
+      gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    }
   );
 
   // Process zip code result into MarketResult format

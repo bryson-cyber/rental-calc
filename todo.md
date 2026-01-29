@@ -7420,3 +7420,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Shows "Showing X of Y properties" count
 - [x] Tested with Deer Valley, Arizona - 41 properties loaded successfully
 - [x] Load More button appears only when hasMore is true and more pages exist
+
+
+## Bug Fixes (Jan 29, 2026)
+
+### User-Reported Issues:
+- [x] Filter out properties without prices from search results (already implemented at server level in hasdata.ts)
+- [x] Fix photo gallery arrows - added z-index z-50, larger buttons (w-12 h-12), and shadow for visibility
+- [x] Fix Map button data loading - added lat/lng URL parameters and setMyProperty context in LeadMagnet
+- [x] Add action buttons to Favorites tab - added Map, Comps, and Zillow buttons to each favorite card
+- [x] Improve location autofill - reduced debounce to 150ms for faster response
+- [x] Implement caching for city search results - 30 min client-side cache, server-side cache already in place
+- [x] Add zillowUrl field to favoriteProperties schema for Zillow link in favorites
+

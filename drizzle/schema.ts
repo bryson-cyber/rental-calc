@@ -125,6 +125,7 @@ export const favoriteProperties = mysqlTable("favorite_properties", {
   zipCode: varchar("zipCode", { length: 20 }),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  zillowUrl: text("zillowUrl"), // URL to the Zillow listing
   
   // Property details
   bedrooms: int("bedrooms"),

@@ -360,6 +360,8 @@ export default function LeadMagnet() {
     const urlBathrooms = params.get('bathrooms');
     const rent = params.get('rent');
     const autoAnalyze = params.get('autoAnalyze');
+    const lat = params.get('lat');
+    const lng = params.get('lng');
     
     // Map URL tab param to internal tab names
     const tabMapping: Record<string, TabType> = {
@@ -396,6 +398,21 @@ export default function LeadMagnet() {
         setMonthlyRent(rent);
       }
       
+      // For map tab, set myProperty context if we have address and coordinates
+      if (tabMapping[tab] === 'map' && urlAddress && lat && lng) {
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lng);
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+          setMyProperty({
+            address: urlAddress,
+            bedrooms: urlBedrooms ? parseInt(urlBedrooms) : 2,
+            bathrooms: urlBathrooms ? parseFloat(urlBathrooms) : 1,
+            latitude,
+            longitude,
+          });
+        }
+      }
+      
       // Mark for auto-trigger if autoAnalyze flag is set
       if (autoAnalyze === 'true' && urlAddress) {
         autoTriggerRef.current = { tab: tabMapping[tab], address: urlAddress };
@@ -406,7 +423,7 @@ export default function LeadMagnet() {
         document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
-  }, [searchString]);
+  }, [searchString, setMyProperty]);
   
   // Auto-trigger analysis when URL params indicate it
   useEffect(() => {
