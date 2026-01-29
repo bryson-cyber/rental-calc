@@ -261,3 +261,148 @@ function normalizeHomeType(homeType: string): string {
   };
   return typeMap[homeType.toUpperCase()] || homeType || "Unknown";
 }
+
+// ============================================
+// CONTACT INFORMATION TYPES
+// ============================================
+
+export interface ZillowAgentContact {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  brokerage: string | null;
+}
+
+export interface ZillowPropertyWithContacts extends ZillowProperty {
+  agent: ZillowAgentContact | null;
+  listingAgent: ZillowAgentContact | null;
+  buildingName?: string;
+  description?: string;
+  yearBuilt?: number;
+  amenities?: string[];
+}
+
+/**
+ * Get detailed property information including agent contact details
+ * Uses the HasData Property API with extractAgentEmails=true
+ * Cost: 5 credits per request
+ */
+export async function getZillowPropertyWithContacts(propertyUrl: string): Promise<ZillowPropertyWithContacts | null> {
+  const apiKey = ENV.hasdataApiKey;
+  
+  if (!apiKey) {
+    console.error("[HasData] API key not configured");
+    return null;
+  }
+
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.set("url", propertyUrl);
+    queryParams.set("extractAgentEmails", "true"); // Enable agent email extraction
+
+    const url = `https://api.hasdata.com/scrape/zillow/property?${queryParams.toString()}`;
+    
+    console.log(`[HasData] Getting property with contacts: ${propertyUrl}`);
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[HasData] Property API error: ${response.status} - ${errorText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[HasData] Property response keys:`, Object.keys(data));
+    
+    // Extract agent contact information
+    // HasData returns agent info in various fields depending on listing type
+    let agent: ZillowAgentContact | null = null;
+    let listingAgent: ZillowAgentContact | null = null;
+    
+    // Check for listing agent (rental listings)
+    if (data.listingAgent || data.agent) {
+      const agentData = data.listingAgent || data.agent;
+      agent = {
+        name: agentData.name || agentData.displayName || "",
+        phone: agentData.phone || agentData.phoneNumber || null,
+        email: agentData.email || null,
+        brokerage: agentData.brokerageName || agentData.brokerage || null
+      };
+    }
+    
+    // Check for building/property manager (apartments)
+    if (data.buildingPhoneNumber || data.propertyPhoneNumber || data.contactPhone) {
+      listingAgent = {
+        name: data.buildingName || data.propertyName || "Property Manager",
+        phone: data.buildingPhoneNumber || data.propertyPhoneNumber || data.contactPhone || null,
+        email: data.contactEmail || data.buildingEmail || null,
+        brokerage: data.managementCompany || null
+      };
+    }
+    
+    // Check for attributionInfo (common in Zillow responses)
+    if (data.attributionInfo) {
+      const attr = data.attributionInfo;
+      if (attr.agentName || attr.agentPhoneNumber || attr.agentEmail) {
+        agent = {
+          name: attr.agentName || "",
+          phone: attr.agentPhoneNumber || null,
+          email: attr.agentEmail || null,
+          brokerage: attr.brokerName || null
+        };
+      }
+    }
+    
+    // Extract amenities if available
+    const amenities: string[] = [];
+    if (data.amenities && Array.isArray(data.amenities)) {
+      amenities.push(...data.amenities);
+    }
+    if (data.homeFactsAndFeatures) {
+      Object.values(data.homeFactsAndFeatures).forEach((section: any) => {
+        if (Array.isArray(section)) {
+          section.forEach((item: any) => {
+            if (typeof item === 'string') amenities.push(item);
+            else if (item.factLabel) amenities.push(item.factLabel);
+          });
+        }
+      });
+    }
+
+    return {
+      id: data.zpid || data.id || "",
+      url: propertyUrl,
+      address: data.streetAddress || data.address || "",
+      city: data.city || "",
+      state: data.state || "",
+      zipCode: data.zipcode || "",
+      price: data.price || data.rentZestimate || 0,
+      bedrooms: data.bedrooms || 0,
+      bathrooms: data.bathrooms || 0,
+      squareFeet: data.livingArea || undefined,
+      homeType: normalizeHomeType(data.homeType || ""),
+      image: data.imgSrc || data.image || "",
+      status: data.homeStatus || "",
+      daysOnZillow: data.daysOnZillow || undefined,
+      latitude: data.latitude || undefined,
+      longitude: data.longitude || undefined,
+      agent,
+      listingAgent,
+      buildingName: data.buildingName || undefined,
+      description: data.description || undefined,
+      yearBuilt: data.yearBuilt || undefined,
+      amenities: amenities.length > 0 ? amenities : undefined
+    };
+
+  } catch (error) {
+    console.error("[HasData] Error getting property with contacts:", error);
+    return null;
+  }
+}

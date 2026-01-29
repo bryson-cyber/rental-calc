@@ -91,6 +91,7 @@ import { StartWithProperty } from '@/components/StartWithProperty';
 import { useProperty } from '@/contexts/PropertyContext';
 import { TeslaDashboard } from '@/components/TeslaDashboard';
 import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
+import OpportunityFinderStep from '@/components/OpportunityFinderStep';
 import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
@@ -329,7 +330,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market';
+type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity';
 
 export default function LeadMagnet() {
   // Auth state for login requirement
@@ -1336,6 +1337,13 @@ export default function LeadMagnet() {
       job: "Answer: Is this market worth investing in?",
       icon: TrendingUp,
       color: "from-blue-500 to-indigo-500"
+    },
+    opportunity: {
+      title: "Find Opportunities",
+      subtitle: "Browse Zillow rentals and validate STR potential instantly",
+      job: "Answer: Where can I find deals in my target market?",
+      icon: Search,
+      color: "from-rose-500 to-pink-500"
     }
   };
 
@@ -1527,7 +1535,7 @@ export default function LeadMagnet() {
           
           {/* Job-Focused Tab Navigation */}
           <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'opportunity'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1551,7 +1559,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
-                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : tab === 'opportunity' ? 'Step 8' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -2370,6 +2378,39 @@ export default function LeadMagnet() {
             <div className={activeTab === 'market' ? '' : 'hidden'}>
               <StandaloneMarketAdvisor key="market-advisor-stable" myProperty={myProperty || undefined} />
             </div>
+
+            {/* ============================================ */}
+            {/* OPPORTUNITY FINDER TAB (Step 8) */}
+            {/* ============================================ */}
+            {activeTab === 'opportunity' && (
+              <div className="space-y-8">
+                <HelpSection
+                  title="How This Tool Helps You"
+                  description="Browse available rentals on Zillow and instantly validate their STR profit potential without leaving this page."
+                  example="You've identified a promising market and want to find actual rental listings you could lease for arbitrage. Search by city or zip code, then click 'Analyze' on any property to see projected revenue."
+                  steps={[
+                    'Enter a city name or zip code in the search box',
+                    'Optionally filter by price range, bedrooms, or property type',
+                    'Browse the available rental listings',
+                    'Click "Analyze Property" on any listing to see STR revenue projections',
+                    'Use "Contact Now" to reach out to landlords directly',
+                    'Compare deals and apply for the Turnkey Program when ready'
+                  ]}
+                  isOpen={showHelp === 'opportunity'}
+                  onToggle={() => setShowHelp(showHelp === 'opportunity' ? null : 'opportunity')}
+                />
+                <OpportunityFinderStep
+                  onSelectProperty={(property) => {
+                    // Pre-fill the validate tab with this property
+                    setAddress(property.address);
+                    setBedrooms(String(property.bedrooms));
+                    setBathrooms(String(property.bathrooms));
+                    setMonthlyRent(String(property.monthlyRent));
+                    setActiveTab('validate');
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>

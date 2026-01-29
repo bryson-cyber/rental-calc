@@ -7120,3 +7120,36 @@ This makes the grading more optimistic - properties now get better grades at low
   - Fixed: Updated getAirDNAEstimate to extract from data.payload.stats.future.summary path
 - [x] Fix HasData Zillow price parsing - some properties showing $0 rent
   - Fixed: Added filter to exclude properties with price < 100 (apartment buildings without unit pricing)
+
+
+## Opportunity Finder Enhancements (Jan 28, 2026)
+
+### Visibility & Navigation
+- [ ] Add Step 8 to homepage step navigation (currently not visible)
+- [ ] Make Opportunity Finder accessible from main flow
+- [ ] Add clear "Step 8: Find Opportunities" label
+
+### Pagination & Sorting
+- [ ] Add "Load More" pagination for larger result sets
+- [ ] Add sorting options: Price (low to high, high to low)
+- [ ] Add sorting options: Bed count
+- [ ] Add sorting by potential ROI (after analysis)
+
+### Investor-Focused Features
+- [ ] Add "Deal Score" badge on each property (based on ROI potential)
+- [ ] Add estimated startup costs (first month rent + deposit + furnishing)
+- [ ] Add cash-on-cash return calculation
+- [ ] Add "Save to Favorites" functionality for properties
+- [ ] Add comparison view for analyzed properties
+- [ ] Add export to PDF/email for property reports
+- [ ] Add neighborhood safety/walkability scores
+- [ ] Add distance to major attractions/employers
+- [ ] Add historical rent trends for the area
+- [ ] Add "Similar Properties" suggestions after analysis
+
+### Contact Now Feature
+- [ ] Add getZillowPropertyDetails endpoint to fetch contact info from HasData Property API
+- [ ] Add extractAgentEmails=true parameter to get agent contact details
+- [ ] Add "Contact Now" button on analyzed property cards
+- [ ] Show agent name, phone, email in a modal/popup when clicked
+- [ ] Add click-to-call and click-to-email functionality

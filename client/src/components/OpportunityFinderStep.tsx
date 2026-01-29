@@ -4,6 +4,14 @@
  * A Zillow-like experience where users can browse rental listings,
  * see STR revenue analysis inline on each card, and take action.
  * 
+ * Features:
+ * - Search by city/zip code
+ * - Pagination (Load More)
+ * - Sorting by price, beds, days on market
+ * - AirDNA inline analysis
+ * - Contact Now with agent details
+ * - Deal Score badges
+ * 
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
@@ -26,6 +34,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Search, 
   Home, 
@@ -48,10 +62,18 @@ import {
   ArrowRight,
   Calendar,
   Percent,
-  Target
+  Target,
+  Phone,
+  Mail,
+  ArrowUpDown,
+  ChevronRight,
+  Award,
+  Clock,
+  Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
+import { InfoTooltip } from '@/components/InfoTooltip';
 
 // Types
 interface ZillowProperty {
@@ -94,6 +116,24 @@ interface ValidationResult {
   error?: string;
 }
 
+interface AgentContact {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  brokerage: string | null;
+}
+
+interface ContactResult {
+  success: boolean;
+  contacts?: {
+    agent: AgentContact | null;
+    listingAgent: AgentContact | null;
+    primaryContact: AgentContact | null;
+    buildingName?: string;
+  };
+  error?: string;
+}
+
 interface OpportunityFinderStepProps {
   onSelectProperty?: (property: {
     address: string;
@@ -112,6 +152,66 @@ const HOME_TYPES = [
   { value: 'MULTI_FAMILY', label: 'Multi-Family' },
 ];
 
+// Sorting options
+const SORT_OPTIONS = [
+  { value: 'price_asc', label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'beds_desc', label: 'Bedrooms: Most First' },
+  { value: 'beds_asc', label: 'Bedrooms: Least First' },
+  { value: 'days_asc', label: 'Newest Listings' },
+  { value: 'days_desc', label: 'Oldest Listings' },
+];
+
+// Calculate Deal Score based on ROI and profit
+function calculateDealScore(roi: number, monthlyProfit: number, occupancy: number): { grade: string; color: string; label: string } {
+  // Score based on ROI, profit, and occupancy
+  let score = 0;
+  
+  // ROI scoring (max 40 points)
+  if (roi >= 100) score += 40;
+  else if (roi >= 75) score += 35;
+  else if (roi >= 50) score += 30;
+  else if (roi >= 25) score += 20;
+  else if (roi >= 0) score += 10;
+  
+  // Monthly profit scoring (max 40 points)
+  if (monthlyProfit >= 2000) score += 40;
+  else if (monthlyProfit >= 1500) score += 35;
+  else if (monthlyProfit >= 1000) score += 30;
+  else if (monthlyProfit >= 500) score += 20;
+  else if (monthlyProfit >= 0) score += 10;
+  
+  // Occupancy scoring (max 20 points)
+  if (occupancy >= 70) score += 20;
+  else if (occupancy >= 60) score += 15;
+  else if (occupancy >= 50) score += 10;
+  else score += 5;
+  
+  // Convert score to grade
+  if (score >= 90) return { grade: 'A+', color: 'oklch(0.45 0.15 145)', label: 'Excellent Deal' };
+  if (score >= 80) return { grade: 'A', color: 'oklch(0.50 0.15 145)', label: 'Great Deal' };
+  if (score >= 70) return { grade: 'B+', color: 'oklch(0.55 0.12 85)', label: 'Good Deal' };
+  if (score >= 60) return { grade: 'B', color: 'oklch(0.60 0.10 85)', label: 'Decent Deal' };
+  if (score >= 50) return { grade: 'C', color: 'oklch(0.60 0.12 60)', label: 'Marginal' };
+  if (score >= 30) return { grade: 'D', color: 'oklch(0.55 0.15 30)', label: 'Poor Deal' };
+  return { grade: 'F', color: 'oklch(0.50 0.18 25)', label: 'Not Recommended' };
+}
+
+// Calculate startup costs
+function calculateStartupCosts(monthlyRent: number, bedrooms: number): {
+  firstMonth: number;
+  deposit: number;
+  furnishing: number;
+  total: number;
+} {
+  const firstMonth = monthlyRent;
+  const deposit = monthlyRent * 1.5; // 1.5x rent typical
+  const furnishing = 8000 + (bedrooms * 4000); // Base + per bedroom
+  const total = firstMonth + deposit + furnishing;
+  
+  return { firstMonth, deposit, furnishing, total };
+}
+
 export default function OpportunityFinderStep({ onSelectProperty }: OpportunityFinderStepProps) {
   // Search state
   const [location, setLocation] = useState('');
@@ -126,6 +226,13 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   const [bathsMin, setBathsMin] = useState<string>('');
   const [homeType, setHomeType] = useState<string>('');
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('price_asc');
+  
   // Results state
   const [properties, setProperties] = useState<ZillowProperty[]>([]);
   const [totalResults, setTotalResults] = useState(0);
@@ -135,20 +242,77 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [validationResults, setValidationResults] = useState<Record<string, ValidationResult>>({});
   
+  // Contact modal state
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [contactProperty, setContactProperty] = useState<ZillowProperty | null>(null);
+  const [contactResult, setContactResult] = useState<ContactResult | null>(null);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  
+  // Favorites state (stored in localStorage)
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('opportunityFinder_favorites');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set();
+  });
+  
+  // Toggle favorite
+  const toggleFavorite = (propertyId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(propertyId)) {
+        newFavorites.delete(propertyId);
+      } else {
+        newFavorites.add(propertyId);
+      }
+      // Save to localStorage
+      localStorage.setItem('opportunityFinder_favorites', JSON.stringify(Array.from(newFavorites)));
+      return newFavorites;
+    });
+  };
+  
   // Mutations
   const searchRentals = trpc.opportunityFinder.searchZillowRentals.useMutation();
   const searchForSale = trpc.opportunityFinder.searchZillowForSale.useMutation();
   const validateProperty = trpc.opportunityFinder.validateProperty.useMutation();
+  const getContacts = trpc.opportunityFinder.getPropertyContacts.useMutation();
   
   const isSearching = searchRentals.isPending || searchForSale.isPending;
   
+  // Sort properties client-side
+  const sortProperties = (props: ZillowProperty[]): ZillowProperty[] => {
+    const sorted = [...props];
+    switch (sortBy) {
+      case 'price_asc':
+        return sorted.sort((a, b) => a.price - b.price);
+      case 'price_desc':
+        return sorted.sort((a, b) => b.price - a.price);
+      case 'beds_desc':
+        return sorted.sort((a, b) => b.bedrooms - a.bedrooms);
+      case 'beds_asc':
+        return sorted.sort((a, b) => a.bedrooms - b.bedrooms);
+      case 'days_asc':
+        return sorted.sort((a, b) => (a.daysOnZillow || 999) - (b.daysOnZillow || 999));
+      case 'days_desc':
+        return sorted.sort((a, b) => (b.daysOnZillow || 0) - (a.daysOnZillow || 0));
+      default:
+        return sorted;
+    }
+  };
+  
   // Handle search
-  const handleSearch = async () => {
+  const handleSearch = async (page: number = 1, append: boolean = false) => {
     if (!location.trim()) return;
     
-    setHasSearched(true);
-    setProperties([]);
-    setValidationResults({});
+    if (!append) {
+      setHasSearched(true);
+      setProperties([]);
+      setValidationResults({});
+      setCurrentPage(1);
+    } else {
+      setIsLoadingMore(true);
+    }
     
     const params = {
       location: location.trim(),
@@ -158,6 +322,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
       bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
       homeTypes: homeType ? [homeType] : undefined,
+      page,
     };
     
     try {
@@ -165,11 +330,23 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
         ? await searchRentals.mutateAsync(params)
         : await searchForSale.mutateAsync(params);
       
-      setProperties(result.properties);
+      if (append) {
+        setProperties(prev => [...prev, ...result.properties]);
+      } else {
+        setProperties(result.properties);
+      }
       setTotalResults(result.totalResults);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Search error:', error);
+    } finally {
+      setIsLoadingMore(false);
     }
+  };
+  
+  // Load more results
+  const handleLoadMore = () => {
+    handleSearch(currentPage + 1, true);
   };
   
   // Handle validation (Analyze button)
@@ -210,6 +387,29 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     }
   };
   
+  // Handle contact fetch
+  const handleGetContacts = async (property: ZillowProperty) => {
+    setContactProperty(property);
+    setContactModalOpen(true);
+    setIsLoadingContacts(true);
+    setContactResult(null);
+    
+    try {
+      const result = await getContacts.mutateAsync({
+        zillowUrl: property.url,
+      });
+      setContactResult(result as ContactResult);
+    } catch (error) {
+      console.error('Contact fetch error:', error);
+      setContactResult({
+        success: false,
+        error: 'Could not retrieve contact information',
+      });
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+  
   // Build URL for navigation to other tools
   const buildPropertyUrl = (property: ZillowProperty, path: string = '/') => {
     const params = new URLSearchParams({
@@ -230,6 +430,9 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       maximumFractionDigits: 0,
     }).format(amount);
   };
+  
+  // Get sorted properties
+  const sortedProperties = sortProperties(properties);
   
   return (
     <div className="space-y-6">
@@ -292,7 +495,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               />
             </div>
             <Button
-              onClick={handleSearch}
+              onClick={() => handleSearch()}
               disabled={!location.trim() || isSearching}
               className="h-12 px-6"
               style={{
@@ -318,11 +521,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             style={{ color: 'oklch(0.45 0 0)' }}
           >
             <Filter className="w-4 h-4" />
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            {showFilters ? 'Hide' : 'Show'} Filters
             {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           
-          {/* Filters */}
+          {/* Filters Panel */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -332,7 +535,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 mt-4 border-t" style={{ borderColor: 'oklch(0.90 0 0)' }}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 mt-4" style={{ borderTop: '1px solid oklch(0.92 0 0)' }}>
                   {/* Price Range */}
                   <div>
                     <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Price</Label>
@@ -348,7 +551,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                     <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Price</Label>
                     <Input
                       type="number"
-                      placeholder="Any"
+                      placeholder="No max"
                       value={priceMax}
                       onChange={(e) => setPriceMax(e.target.value)}
                       className="h-10"
@@ -364,20 +567,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                       </SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5].map(n => (
-                          <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Beds</Label>
-                    <Select value={bedsMax} onValueChange={setBedsMax}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Any" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(n => (
-                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                          <SelectItem key={n} value={String(n)}>{n}+ beds</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -391,15 +581,15 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(n => (
-                          <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
+                        {[1, 1.5, 2, 2.5, 3].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}+ baths</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   
                   {/* Home Type */}
-                  <div>
+                  <div className="col-span-2">
                     <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Property Type</Label>
                     <Select value={homeType} onValueChange={setHomeType}>
                       <SelectTrigger className="h-10">
@@ -422,29 +612,34 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       {/* Results */}
       {hasSearched && (
         <div className="space-y-4">
-          {/* Results Header */}
-          <div className="flex items-center justify-between">
+          {/* Results Header with Sorting */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
               {isSearching ? (
                 'Searching...'
               ) : (
                 <>
-                  Found <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{totalResults}</span> properties in <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{location}</span>
+                  Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{totalResults}</span> properties
                 </>
               )}
             </p>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="max-w-xs text-sm">
-                    Click "Analyze" on any property to see projected STR revenue and profit potential.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            
+            {/* Sorting Dropdown */}
+            {sortedProperties.length > 0 && (
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px] h-9 text-sm">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           {/* Property Grid */}
@@ -452,7 +647,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'oklch(0.55 0.14 75)' }} />
             </div>
-          ) : properties.length === 0 ? (
+          ) : sortedProperties.length === 0 ? (
             <Card className="p-8 text-center" style={{ borderRadius: '1.25rem' }}>
               <Home className="w-12 h-12 mx-auto mb-4" style={{ color: 'oklch(0.55 0 0)' }} />
               <h3 className="text-lg font-semibold mb-2" style={{ color: 'oklch(0.15 0 0)' }}>
@@ -463,285 +658,453 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               </p>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {properties.map((property) => {
-                const validation = validationResults[property.id];
-                const isValidating = validatingId === property.id;
-                const hasAnalysis = validation?.success && validation?.projection;
-                
-                return (
-                  <motion.div
-                    key={property.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card 
-                      className="overflow-hidden transition-all duration-300 hover:shadow-lg"
-                      style={{ 
-                        borderRadius: '1rem',
-                        border: validation?.isGoodDeal ? '2px solid oklch(0.55 0.15 145)' : '1px solid oklch(0.90 0 0)',
-                      }}
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedProperties.map((property) => {
+                  const validation = validationResults[property.id];
+                  const isValidating = validatingId === property.id;
+                  const hasAnalysis = validation?.success && validation?.projection;
+                  
+                  // Calculate deal score if we have analysis
+                  const dealScore = hasAnalysis && validation.projection
+                    ? calculateDealScore(validation.projection.roi, validation.projection.monthlyProfit, validation.projection.occupancy)
+                    : null;
+                  
+                  // Calculate startup costs
+                  const startupCosts = calculateStartupCosts(property.price, property.bedrooms || 2);
+                  
+                  return (
+                    <motion.div
+                      key={property.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      {/* Property Image */}
-                      <div className="relative h-44 bg-gray-100">
-                        {property.image ? (
-                          <img
-                            src={property.image}
-                            alt={property.address}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Home className="w-12 h-12" style={{ color: 'oklch(0.70 0 0)' }} />
-                          </div>
-                        )}
-                        {/* Price Badge */}
-                        <div 
-                          className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-sm font-semibold"
-                          style={{ 
-                            backgroundColor: 'oklch(0.15 0 0 / 0.85)',
-                            color: 'oklch(0.98 0 0)',
-                          }}
-                        >
-                          {formatCurrency(property.price)}{searchType === 'forRent' ? '/mo' : ''}
-                        </div>
-                        {/* Good Deal Badge */}
-                        {validation?.isGoodDeal && (
+                      <Card 
+                        className="overflow-hidden transition-all duration-300 hover:shadow-lg"
+                        style={{ 
+                          borderRadius: '1rem',
+                          border: validation?.isGoodDeal ? '2px solid oklch(0.55 0.15 145)' : '1px solid oklch(0.90 0 0)',
+                        }}
+                      >
+                        {/* Property Image */}
+                        <div className="relative h-44 bg-gray-100">
+                          {property.image ? (
+                            <img
+                              src={property.image}
+                              alt={property.address}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Home className="w-12 h-12" style={{ color: 'oklch(0.70 0 0)' }} />
+                            </div>
+                          )}
+                          {/* Price Badge */}
                           <div 
-                            className="absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1"
+                            className="absolute top-3 left-3 px-3 py-1.5 rounded-full text-sm font-semibold"
                             style={{ 
-                              backgroundColor: 'oklch(0.55 0.15 145)',
+                              backgroundColor: 'oklch(0.15 0 0 / 0.85)',
                               color: 'oklch(0.98 0 0)',
                             }}
                           >
-                            <Sparkles className="w-3 h-3" />
-                            Good Deal
+                            {formatCurrency(property.price)}{searchType === 'forRent' ? '/mo' : ''}
                           </div>
-                        )}
-                        {/* Zillow Link */}
-                        <button
-                          onClick={() => window.open(property.url, '_blank')}
-                          className="absolute bottom-3 right-3 p-2 rounded-full transition-all"
-                          style={{ 
-                            backgroundColor: 'oklch(0.98 0 0 / 0.9)',
-                            color: 'oklch(0.35 0 0)',
-                          }}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                      </div>
-                      
-                      {/* Property Details */}
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold text-sm mb-1 truncate" style={{ color: 'oklch(0.15 0 0)' }}>
-                          {property.address}
-                        </h3>
-                        <p className="text-xs mb-3" style={{ color: 'oklch(0.55 0 0)' }}>
-                          {property.city}, {property.state} {property.zipCode}
-                        </p>
-                        
-                        {/* Property Stats */}
-                        <div className="flex items-center gap-4 text-xs mb-4" style={{ color: 'oklch(0.45 0 0)' }}>
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-3.5 h-3.5" />
-                            {property.bedrooms || '?'} bed
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Bath className="w-3.5 h-3.5" />
-                            {property.bathrooms || '?'} bath
-                          </span>
-                          {property.squareFeet && (
-                            <span>{property.squareFeet.toLocaleString()} sqft</span>
-                          )}
-                        </div>
-                        
-                        {/* INLINE ANALYSIS RESULTS */}
-                        {hasAnalysis && validation.projection && (
-                          <div 
-                            className="rounded-xl p-4 mb-4"
-                            style={{ 
-                              backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.08)' : 'oklch(0.96 0 0)',
-                              border: validation.isGoodDeal ? '1px solid oklch(0.55 0.15 145 / 0.2)' : '1px solid oklch(0.90 0 0)',
-                            }}
-                          >
-                            {/* Monthly Profit - Hero Metric */}
-                            <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
-                              <p className="text-xs font-medium mb-1" style={{ color: 'oklch(0.50 0 0)' }}>
-                                Estimated Monthly Profit
-                              </p>
-                              <p 
-                                className="text-2xl font-bold"
-                                style={{ 
-                                  color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
-                                }}
-                              >
-                                {formatCurrency(validation.projection.monthlyProfit)}
-                              </p>
-                              <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
-                                {formatCurrency(validation.projection.annualProfit)}/year
-                              </p>
-                            </div>
-                            
-                            {/* Key Metrics Grid */}
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Revenue</span>
-                                </div>
-                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                  {formatCurrency(validation.projection.monthlyRevenue)}/mo
-                                </p>
-                              </div>
-                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Calendar className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</span>
-                                </div>
-                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                  {validation.projection.occupancy}%
-                                </p>
-                              </div>
-                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Target className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</span>
-                                </div>
-                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                  {formatCurrency(validation.projection.adr)}
-                                </p>
-                              </div>
-                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Percent className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
-                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>ROI</span>
-                                </div>
-                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
-                                  {validation.projection.roi}%
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Verdict */}
-                            <p 
-                              className="text-xs font-medium text-center py-2 rounded-lg"
+                          
+                          {/* Deal Score Badge */}
+                          {dealScore && (
+                            <div 
+                              className="absolute top-3 right-3 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
                               style={{ 
-                                backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.1)' : 'oklch(0.55 0.20 25 / 0.1)',
-                                color: validation.isGoodDeal ? 'oklch(0.40 0.15 145)' : 'oklch(0.50 0.15 25)',
+                                backgroundColor: 'oklch(0.98 0 0 / 0.95)',
+                                color: dealScore.color,
+                                border: `2px solid ${dealScore.color}`,
                               }}
                             >
-                              {validation.verdict}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Error State */}
-                        {validation && !validation.success && (
-                          <div 
-                            className="p-3 rounded-lg mb-4 text-center"
-                            style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.1)' }}
+                              <Award className="w-3 h-3" />
+                              {dealScore.grade}
+                            </div>
+                          )}
+                          
+                          {/* Days on Zillow */}
+                          {property.daysOnZillow !== undefined && (
+                            <div 
+                              className="absolute bottom-3 left-3 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"
+                              style={{ 
+                                backgroundColor: 'oklch(0.98 0 0 / 0.9)',
+                                color: 'oklch(0.35 0 0)',
+                              }}
+                            >
+                              <Clock className="w-3 h-3" />
+                              {property.daysOnZillow} days
+                            </div>
+                          )}
+                          
+                          {/* Favorite Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(property.id);
+                            }}
+                            className="absolute bottom-3 right-12 p-2 rounded-full transition-all hover:scale-110"
+                            style={{ 
+                              backgroundColor: favorites.has(property.id) ? 'oklch(0.65 0.25 15 / 0.95)' : 'oklch(0.98 0 0 / 0.9)',
+                              color: favorites.has(property.id) ? 'oklch(0.98 0 0)' : 'oklch(0.35 0 0)',
+                            }}
+                            title={favorites.has(property.id) ? 'Remove from favorites' : 'Add to favorites'}
                           >
-                            <p className="text-xs" style={{ color: 'oklch(0.45 0 0)' }}>
-                              {validation.error || 'Could not get revenue estimate'}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
-                              Try the full analysis for more options
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* ACTION BUTTONS */}
-                        {!validation ? (
-                          // Before analysis - show Analyze button
-                          <Button
-                            onClick={() => handleValidate(property)}
-                            disabled={isValidating}
-                            className="w-full h-10 text-sm"
-                            style={{
-                              backgroundColor: 'oklch(0.55 0.14 75)',
-                              borderRadius: '980px',
+                            <Heart className="w-4 h-4" fill={favorites.has(property.id) ? 'currentColor' : 'none'} />
+                          </button>
+                          
+                          {/* Zillow Link */}
+                          <button
+                            onClick={() => window.open(property.url, '_blank')}
+                            className="absolute bottom-3 right-3 p-2 rounded-full transition-all"
+                            style={{ 
+                              backgroundColor: 'oklch(0.98 0 0 / 0.9)',
+                              color: 'oklch(0.35 0 0)',
                             }}
                           >
-                            {isValidating ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                Analyzing...
-                              </>
-                            ) : (
-                              <>
-                                <TrendingUp className="w-4 h-4 mr-2" />
-                                Analyze Property
-                              </>
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Property Details */}
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold text-sm mb-1 truncate" style={{ color: 'oklch(0.15 0 0)' }}>
+                            {property.address}
+                          </h3>
+                          <p className="text-xs mb-3" style={{ color: 'oklch(0.55 0 0)' }}>
+                            {property.city}, {property.state} {property.zipCode}
+                          </p>
+                          
+                          {/* Property Stats */}
+                          <div className="flex items-center gap-4 text-xs mb-4" style={{ color: 'oklch(0.45 0 0)' }}>
+                            <span className="flex items-center gap-1">
+                              <Bed className="w-3.5 h-3.5" />
+                              {property.bedrooms || '?'} bed
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Bath className="w-3.5 h-3.5" />
+                              {property.bathrooms || '?'} bath
+                            </span>
+                            {property.squareFeet && (
+                              <span>{property.squareFeet.toLocaleString()} sqft</span>
                             )}
-                          </Button>
-                        ) : (
-                          // After analysis - show action buttons
-                          <div className="space-y-3">
-                            {/* Deep Dive Buttons */}
-                            <div className="grid grid-cols-3 gap-2">
-                              <Link href={buildPropertyUrl(property, '/')}>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full h-9 text-xs px-2"
-                                  style={{ borderRadius: '0.5rem' }}
-                                >
-                                  <Users className="w-3 h-3 mr-1" />
-                                  Competition
-                                </Button>
-                              </Link>
-                              <Link href={buildPropertyUrl(property, '/')}>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full h-9 text-xs px-2"
-                                  style={{ borderRadius: '0.5rem' }}
-                                >
-                                  <Map className="w-3 h-3 mr-1" />
-                                  Map
-                                </Button>
-                              </Link>
-                              <Link href={`/market-advisor?location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full h-9 text-xs px-2"
-                                  style={{ borderRadius: '0.5rem' }}
-                                >
-                                  <BarChart3 className="w-3 h-3 mr-1" />
-                                  Market
-                                </Button>
-                              </Link>
-                            </div>
-                            
-                            {/* Turnkey CTA */}
-                            <a 
-                              href="https://coachinayah.com/turnkey"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block"
+                          </div>
+                          
+                          {/* INLINE ANALYSIS RESULTS */}
+                          {hasAnalysis && validation.projection && (
+                            <div 
+                              className="rounded-xl p-4 mb-4"
+                              style={{ 
+                                backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.08)' : 'oklch(0.96 0 0)',
+                                border: validation.isGoodDeal ? '1px solid oklch(0.55 0.15 145 / 0.2)' : '1px solid oklch(0.90 0 0)',
+                              }}
                             >
-                              <Button
-                                className="w-full h-10 text-sm group"
-                                style={{
-                                  backgroundColor: 'oklch(0.55 0.14 75)',
-                                  borderRadius: '980px',
+                              {/* Deal Score Header */}
+                              {dealScore && (
+                                <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm"
+                                      style={{ backgroundColor: dealScore.color, color: 'white' }}
+                                    >
+                                      {dealScore.grade}
+                                    </div>
+                                    <span className="text-xs font-medium" style={{ color: dealScore.color }}>
+                                      {dealScore.label}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Monthly Profit - Hero Metric */}
+                              <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                                <p className="text-xs font-medium mb-1" style={{ color: 'oklch(0.50 0 0)' }}>
+                                  Estimated Monthly Profit
+                                </p>
+                                <p 
+                                  className="text-2xl font-bold"
+                                  style={{ 
+                                    color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
+                                  }}
+                                >
+                                  {formatCurrency(validation.projection.monthlyProfit)}
+                                </p>
+                                <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                                  {formatCurrency(validation.projection.annualProfit)}/year
+                                </p>
+                              </div>
+                              
+                              {/* Key Metrics Grid */}
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <div className="flex items-center justify-center gap-1 mb-1">
+                                          <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Revenue</span>
+                                        </div>
+                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                          {formatCurrency(validation.projection.monthlyRevenue)}/mo
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-sm">
+                                        Projected monthly income from short-term rental bookings based on local market data.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <div className="flex items-center justify-center gap-1 mb-1">
+                                          <Calendar className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</span>
+                                        </div>
+                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                          {Math.round(validation.projection.occupancy)}%
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-sm">
+                                        Expected percentage of nights booked per month. Higher is better - 60%+ is considered good.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <div className="flex items-center justify-center gap-1 mb-1">
+                                          <Target className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</span>
+                                        </div>
+                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                          {formatCurrency(validation.projection.adr)}
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-sm">
+                                        Average Daily Rate - the average price guests pay per night for similar properties.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-center p-2 rounded-lg cursor-help" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                        <div className="flex items-center justify-center gap-1 mb-1">
+                                          <Percent className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                          <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>ROI</span>
+                                        </div>
+                                        <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                          {validation.projection.roi}%
+                                        </p>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-sm">
+                                        Return on Investment - annual profit divided by annual rent. 50%+ is excellent, 25%+ is good.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              
+                              {/* Startup Costs (collapsed by default) */}
+                              <details className="text-xs mb-3">
+                                <summary className="cursor-pointer font-medium py-1" style={{ color: 'oklch(0.45 0 0)' }}>
+                                  View Startup Costs
+                                </summary>
+                                <div className="mt-2 p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                  <div className="flex justify-between mb-1">
+                                    <span style={{ color: 'oklch(0.55 0 0)' }}>First Month Rent</span>
+                                    <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.firstMonth)}</span>
+                                  </div>
+                                  <div className="flex justify-between mb-1">
+                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Security Deposit</span>
+                                    <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.deposit)}</span>
+                                  </div>
+                                  <div className="flex justify-between mb-1">
+                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Furnishing Est.</span>
+                                    <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.furnishing)}</span>
+                                  </div>
+                                  <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
+                                    <span style={{ color: 'oklch(0.35 0 0)' }}>Total Startup</span>
+                                    <span style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(startupCosts.total)}</span>
+                                  </div>
+                                </div>
+                              </details>
+                              
+                              {/* Verdict */}
+                              <p 
+                                className="text-xs font-medium text-center py-2 rounded-lg"
+                                style={{ 
+                                  backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.1)' : 'oklch(0.55 0.20 25 / 0.1)',
+                                  color: validation.isGoodDeal ? 'oklch(0.40 0.15 145)' : 'oklch(0.50 0.15 25)',
                                 }}
                               >
-                                <Sparkles className="w-4 h-4 mr-2" />
-                                Apply for Turnkey Program
-                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                {validation.verdict}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Error State */}
+                          {validation && !validation.success && (
+                            <div 
+                              className="p-3 rounded-lg mb-4 text-center"
+                              style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.1)' }}
+                            >
+                              <p className="text-xs" style={{ color: 'oklch(0.45 0 0)' }}>
+                                {validation.error || 'Could not get revenue estimate'}
+                              </p>
+                              <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                                Try the full analysis for more options
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* ACTION BUTTONS */}
+                          {!validation ? (
+                            // Before analysis - show Analyze button
+                            <Button
+                              onClick={() => handleValidate(property)}
+                              disabled={isValidating}
+                              className="w-full h-10 text-sm"
+                              style={{
+                                backgroundColor: 'oklch(0.55 0.14 75)',
+                                borderRadius: '980px',
+                              }}
+                            >
+                              {isValidating ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUp className="w-4 h-4 mr-2" />
+                                  Analyze Property
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            // After analysis - show action buttons
+                            <div className="space-y-3">
+                              {/* Contact Now Button */}
+                              <Button
+                                onClick={() => handleGetContacts(property)}
+                                variant="outline"
+                                className="w-full h-10 text-sm"
+                                style={{ borderRadius: '980px' }}
+                              >
+                                <Phone className="w-4 h-4 mr-2" />
+                                Contact Now
                               </Button>
-                            </a>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+                              
+                              {/* Deep Dive Buttons */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <Link href={buildPropertyUrl(property, '/')}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-9 text-xs px-2"
+                                    style={{ borderRadius: '0.5rem' }}
+                                  >
+                                    <Users className="w-3 h-3 mr-1" />
+                                    Competition
+                                  </Button>
+                                </Link>
+                                <Link href={buildPropertyUrl(property, '/')}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-9 text-xs px-2"
+                                    style={{ borderRadius: '0.5rem' }}
+                                  >
+                                    <Map className="w-3 h-3 mr-1" />
+                                    Map
+                                  </Button>
+                                </Link>
+                                <Link href={`/market-advisor?location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-9 text-xs px-2"
+                                    style={{ borderRadius: '0.5rem' }}
+                                  >
+                                    <BarChart3 className="w-3 h-3 mr-1" />
+                                    Market
+                                  </Button>
+                                </Link>
+                              </div>
+                              
+                              {/* Turnkey CTA */}
+                              <a 
+                                href="https://coachinayah.com/turnkey"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <Button
+                                  className="w-full h-10 text-sm group"
+                                  style={{
+                                    backgroundColor: 'oklch(0.55 0.14 75)',
+                                    borderRadius: '980px',
+                                  }}
+                                >
+                                  <Sparkles className="w-4 h-4 mr-2" />
+                                  Apply for Turnkey Program
+                                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                </Button>
+                              </a>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              
+              {/* Load More Button */}
+              {sortedProperties.length < totalResults && (
+                <div className="flex justify-center pt-6">
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    variant="outline"
+                    className="px-8"
+                    style={{ borderRadius: '980px' }}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Load More Properties
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -767,7 +1130,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 key={city}
                 onClick={() => {
                   setLocation(city);
-                  setTimeout(handleSearch, 100);
+                  setTimeout(() => handleSearch(), 100);
                 }}
                 className="px-4 py-2 text-sm rounded-full transition-all duration-300 hover:scale-105"
                 style={{
@@ -782,6 +1145,120 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           </div>
         </Card>
       )}
+      
+      {/* Contact Modal */}
+      <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="w-5 h-5" style={{ color: 'oklch(0.55 0.14 75)' }} />
+              Contact Information
+            </DialogTitle>
+          </DialogHeader>
+          
+          {isLoadingContacts ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'oklch(0.55 0.14 75)' }} />
+            </div>
+          ) : contactResult?.success && contactResult.contacts?.primaryContact ? (
+            <div className="space-y-4">
+              {/* Property Info */}
+              {contactProperty && (
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.96 0 0)' }}>
+                  <p className="font-medium text-sm" style={{ color: 'oklch(0.25 0 0)' }}>
+                    {contactProperty.address}
+                  </p>
+                  <p className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>
+                    {contactProperty.city}, {contactProperty.state} {contactProperty.zipCode}
+                  </p>
+                </div>
+              )}
+              
+              {/* Contact Details */}
+              <div className="space-y-3">
+                {contactResult.contacts.primaryContact.name && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.15)' }}>
+                      <Users className="w-5 h-5" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                    </div>
+                    <div>
+                      <p className="font-medium" style={{ color: 'oklch(0.25 0 0)' }}>
+                        {contactResult.contacts.primaryContact.name}
+                      </p>
+                      {contactResult.contacts.primaryContact.brokerage && (
+                        <p className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>
+                          {contactResult.contacts.primaryContact.brokerage}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {contactResult.contacts.primaryContact.phone && (
+                  <a 
+                    href={`tel:${contactResult.contacts.primaryContact.phone}`}
+                    className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[oklch(0.96_0_0)]"
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'oklch(0.45 0.15 145 / 0.15)' }}>
+                      <Phone className="w-5 h-5" style={{ color: 'oklch(0.45 0.15 145)' }} />
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Phone</p>
+                      <p className="font-medium" style={{ color: 'oklch(0.45 0.15 145)' }}>
+                        {contactResult.contacts.primaryContact.phone}
+                      </p>
+                    </div>
+                  </a>
+                )}
+                
+                {contactResult.contacts.primaryContact.email && (
+                  <a 
+                    href={`mailto:${contactResult.contacts.primaryContact.email}`}
+                    className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[oklch(0.96_0_0)]"
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.15)' }}>
+                      <Mail className="w-5 h-5" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Email</p>
+                      <p className="font-medium" style={{ color: 'oklch(0.55 0.14 75)' }}>
+                        {contactResult.contacts.primaryContact.email}
+                      </p>
+                    </div>
+                  </a>
+                )}
+              </div>
+              
+              {/* View on Zillow fallback */}
+              <Button
+                onClick={() => contactProperty && window.open(contactProperty.url, '_blank')}
+                variant="outline"
+                className="w-full"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View Full Listing on Zillow
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: 'oklch(0.96 0 0)' }}>
+                <Info className="w-6 h-6" style={{ color: 'oklch(0.55 0 0)' }} />
+              </div>
+              <p className="text-sm mb-4" style={{ color: 'oklch(0.45 0 0)' }}>
+                {contactResult?.error || 'Contact information not available for this listing.'}
+              </p>
+              <Button
+                onClick={() => contactProperty && window.open(contactProperty.url, '_blank')}
+                className="w-full"
+                style={{ backgroundColor: 'oklch(0.55 0.14 75)' }}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Contact via Zillow
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

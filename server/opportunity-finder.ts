@@ -18,7 +18,7 @@ import {
   getTask, 
   stopSession,
 } from './browser-use';
-import { searchZillowListings, type ZillowProperty, type ZillowListingResponse } from './hasdata';
+import { searchZillowListings, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 
 // ============================================
 // TYPES
@@ -491,6 +491,59 @@ export const opportunityFinderRouter = router({
    * Validate a Zillow property with AirDNA revenue projection
    * Returns the property with projected STR revenue and profit calculation
    */
+  /**
+   * Get property contact information (agent/landlord details)
+   * Uses HasData Property API with extractAgentEmails=true
+   * Cost: 5 credits per request
+   */
+  getPropertyContacts: publicProcedure
+    .input(z.object({
+      zillowUrl: z.string().min(1, 'Zillow URL is required'),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        console.log(`[Opportunity Finder] Getting contacts for: ${input.zillowUrl}`);
+        
+        const propertyData = await getZillowPropertyWithContacts(input.zillowUrl);
+        
+        if (!propertyData) {
+          return {
+            success: false,
+            error: 'Could not retrieve property contact information',
+            contacts: null,
+          };
+        }
+        
+        // Determine the best contact to show
+        const primaryContact = propertyData.agent || propertyData.listingAgent;
+        
+        return {
+          success: true,
+          contacts: {
+            agent: propertyData.agent,
+            listingAgent: propertyData.listingAgent,
+            primaryContact,
+            buildingName: propertyData.buildingName,
+          },
+          property: {
+            address: propertyData.address,
+            price: propertyData.price,
+            bedrooms: propertyData.bedrooms,
+            bathrooms: propertyData.bathrooms,
+            description: propertyData.description,
+            amenities: propertyData.amenities,
+          },
+        };
+        
+      } catch (error) {
+        console.error('[Opportunity Finder] Contact fetch error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to get property contacts',
+        });
+      }
+    }),
+
   validateProperty: publicProcedure
     .input(z.object({
       address: z.string().min(1, 'Address is required'),
