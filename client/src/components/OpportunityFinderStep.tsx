@@ -58,7 +58,7 @@ import {
   ChevronUp,
   Sparkles,
   Users,
-  Map,
+  Map as MapIcon,
   BarChart3,
   ArrowRight,
   Calendar,
@@ -78,6 +78,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { InfoTooltip } from '@/components/InfoTooltip';
 import { MarketAutocomplete } from '@/components/MarketAutocomplete';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { toast } from 'sonner';
 
 // Types
 interface ZillowProperty {
@@ -217,7 +219,20 @@ function calculateStartupCosts(monthlyRent: number, bedrooms: number): {
   return { firstMonth, deposit, furnishing, total };
 }
 
+// Generate or retrieve session ID for anonymous users
+function getSessionId(): string {
+  let sessionId = localStorage.getItem("rental_session_id");
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem("rental_session_id", sessionId);
+  }
+  return sessionId;
+}
+
 export default function OpportunityFinderStep({ onSelectProperty }: OpportunityFinderStepProps) {
+  // Auth state
+  const { user } = useAuth();
+  
   // Search state
   const [location, setLocation] = useState('');
   const [searchType, setSearchType] = useState<'forRent' | 'forSale'>('forRent');
@@ -263,16 +278,22 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     return new Set();
   });
   
+  // Map of property IDs to database IDs for removal
+  const [favoritesDbIds, setFavoritesDbIds] = useState<Map<string, number>>(new Map());
+  
   // Photo gallery state
   const [photoGalleryOpen, setPhotoGalleryOpen] = useState(false);
   const [photoGalleryProperty, setPhotoGalleryProperty] = useState<ZillowProperty | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
-  // Toggle favorite
-  const toggleFavorite = (propertyId: string) => {
+  // Toggle favorite - saves to both localStorage and database
+  const toggleFavorite = async (propertyId: string, property?: ZillowProperty) => {
+    const isCurrentlyFavorite = favorites.has(propertyId);
+    
+    // Optimistically update UI
     setFavorites(prev => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(propertyId)) {
+      if (isCurrentlyFavorite) {
         newFavorites.delete(propertyId);
       } else {
         newFavorites.add(propertyId);
@@ -281,6 +302,71 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       localStorage.setItem('opportunityFinder_favorites', JSON.stringify(Array.from(newFavorites)));
       return newFavorites;
     });
+    
+    // Save to database
+    if (isCurrentlyFavorite) {
+      // Get the database ID from favoritesDbIds map
+      const dbId = favoritesDbIds.get(propertyId);
+      if (dbId) {
+        try {
+          await removeFavorite.mutateAsync({
+            id: dbId,
+            sessionId: getSessionId(),
+          });
+          setFavoritesDbIds(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(propertyId);
+            return newMap;
+          });
+          toast.success('Removed from favorites');
+        } catch (error) {
+          console.error('Error removing favorite:', error);
+          // Revert optimistic update on error
+          setFavorites(prev => new Set(Array.from(prev).concat(propertyId)));
+        }
+      }
+    } else if (property) {
+      // Get validation result if available
+      const validation = validationResults[propertyId];
+      
+      try {
+        const result = await addFavorite.mutateAsync({
+          sessionId: getSessionId(),
+          address: property.address,
+          city: property.city,
+          state: property.state,
+          zipCode: property.zipCode,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          propertyType: property.homeType,
+          monthlyRent: property.price,
+          // Include analysis data if available
+          annualRevenue: validation?.projection?.annualRevenue,
+          monthlyRevenue: validation?.projection?.monthlyRevenue,
+          occupancyRate: validation?.projection?.occupancy,
+          averageDailyRate: validation?.projection?.adr,
+          estimatedProfit: validation?.projection?.annualProfit,
+        });
+        
+        if (result.success && result.data?.id) {
+          setFavoritesDbIds(prev => {
+            const newMap = new Map(prev);
+            newMap.set(propertyId, result.data!.id);
+            return newMap;
+          });
+          toast.success('Added to favorites!');
+        }
+      } catch (error) {
+        console.error('Error adding favorite:', error);
+        // Revert optimistic update on error
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.delete(propertyId);
+          return newFavorites;
+        });
+        toast.error('Failed to save favorite');
+      }
+    }
   };
   
   // Mutations
@@ -288,6 +374,8 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   const searchForSale = trpc.opportunityFinder.searchZillowForSale.useMutation();
   const validateProperty = trpc.opportunityFinder.validateProperty.useMutation();
   const getContacts = trpc.opportunityFinder.getPropertyContacts.useMutation();
+  const addFavorite = trpc.favorites.add.useMutation();
+  const removeFavorite = trpc.favorites.remove.useMutation();
   
   const isSearching = searchRentals.isPending || searchForSale.isPending;
   
@@ -835,7 +923,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleFavorite(property.id);
+                              toggleFavorite(property.id, property);
                             }}
                             className="absolute bottom-3 right-12 p-2 rounded-full transition-all hover:scale-110"
                             style={{ 
@@ -1066,7 +1154,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     className="w-full h-10 text-xs px-3"
                                     style={{ borderRadius: '0.5rem' }}
                                   >
-                                    <Map className="w-3.5 h-3.5 mr-1.5" />
+                                    <MapIcon className="w-3.5 h-3.5 mr-1.5" />
                                     Map
                                   </Button>
                                 </Link>

@@ -7329,3 +7329,13 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test photo gallery - Navigation working correctly
 - [x] Test filters - Bedroom/bathroom filters working
 - [x] Test Compare Favorites - Side-by-side view working
+
+
+## Add to Favorites Button on Property Cards (Jan 29, 2026) - COMPLETE
+- [x] Analyze current favorites system (database schema, tRPC endpoints)
+- [x] Add heart/star icon button to property cards in OpportunityFinderStep
+- [x] Implement save to favorites functionality using existing tRPC mutation (favorites.add)
+- [x] Show visual feedback when property is saved (filled heart, toast notification)
+- [x] Handle already-favorited properties (show filled icon, allow unfavorite)
+- [x] Test favorites save/remove from property cards
+- [x] Verify favorites appear in Compare Favorites tab (2 properties showing)
