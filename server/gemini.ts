@@ -1069,13 +1069,18 @@ Provide a clear, comprehensive summary of the arbitrage opportunity. Include:
    - **Estimated Net Monthly Cash Flow**: $${Math.round((revenue.projected / 12) - property.monthlyRent - ((revenue.projected / 12) * 0.20)).toLocaleString()}` : `- Monthly Rent: Not provided
    - Calculate the maximum rent this property could support while remaining profitable`}
 
-2. **How This Compares to Other Investments**:
-   Write a paragraph comparing this STR investment to traditional investment vehicles. If the user invested the same initial capital (3 months rent + $5,000 setup = approximately $${property.monthlyRent ? (property.monthlyRent * 3 + 5000).toLocaleString() : '15,000-25,000'}) in:
-   - S&P 500 Index (10% average annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.10).toLocaleString() : '1,500-2,500'} per year
-   - High-Yield Savings (5% annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.05).toLocaleString() : '750-1,250'} per year
-   - Treasury Bonds (4.5% annual return): They would earn approximately $${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.045).toLocaleString() : '675-1,125'} per year
+2. **How This Compares to Other Investments** (REQUIRED - MUST INCLUDE THIS SECTION):
+   This section is MANDATORY. Write a clear comparison showing how this STR investment stacks up against traditional investment vehicles.
    
-   Compare these passive returns to the projected annual profit from this STR. Explain in plain English how much more (or less) this STR could generate, while noting that STR requires active management whereas traditional investments are passive.
+   Initial Capital Required: 3 months rent + $5,000 setup = approximately $${property.monthlyRent ? (property.monthlyRent * 3 + 5000).toLocaleString() : '15,000-25,000'}
+   
+   If that same capital was invested in:
+   - **S&P 500 Index** (10% average annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.10).toLocaleString() : '1,500-2,500'}/year profit
+   - **High-Yield Savings** (5% annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.05).toLocaleString() : '750-1,250'}/year profit
+   - **Treasury Bonds** (4.5% annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.045).toLocaleString() : '675-1,125'}/year profit
+   - **This STR Arbitrage**: Calculate the projected annual profit and show the ROI percentage
+   
+   Write a clear paragraph explaining: "If you put $X into the stock market, you'd make $Y. If you put that same $X into this rental arbitrage deal, you could make $Z - that's [X times] more than traditional investments." Make this comparison crystal clear and compelling.
 
 3. **How this property compares** to other ${property.bedrooms}BR properties in the area
 
@@ -1098,10 +1103,22 @@ ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
 - Break-even rent range (revenue - 25% expenses): $${Math.round((revenue.low * 0.75) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.75) / 12 / 100) * 100}/month
 - Recommended max rent range for healthy profit margin: $${Math.round((revenue.low * 0.60) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.60) / 12 / 100) * 100}/month`}
 
-## Break-Even & Risk Scenarios
-- What occupancy rate is needed to break even?
-- What happens if occupancy drops 20% in slow season?
-- Safety margin analysis
+## Break-Even & Risk Scenarios (REQUIRED - MUST CALCULATE THESE)
+This section is MANDATORY. Calculate and explain:
+
+1. **Break-Even Occupancy**: 
+   - Formula: (Monthly Rent + Monthly Operating Costs) / (ADR × 30 days)
+   - Current projected occupancy: ${Math.round(revenue.occupancy * 100)}%
+   - Is the break-even occupancy achievable? Compare to projected occupancy.
+
+2. **Slow Season Risk**:
+   - What happens if occupancy drops 20% during winter months?
+   - Will the property still be profitable or will it lose money?
+   - How many months of the year might be unprofitable?
+
+3. **Safety Margin**:
+   - How much buffer exists between projected revenue and break-even?
+   - What's the "danger zone" rent level where this deal becomes risky?
 
 ## Investment Return Summary
 Briefly reiterate the investment comparison from the Executive Summary. The key point: STR investments typically generate significantly higher returns than passive investments, but require active management. Skilled operators can achieve returns that far exceed what the stock market or savings accounts offer.

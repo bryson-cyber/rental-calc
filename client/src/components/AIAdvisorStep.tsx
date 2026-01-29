@@ -385,13 +385,13 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
         </CardContent>
       </Card>
 
-      {/* Note about Market Analysis */}
-      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+      {/* Note about Market Analysis - styled with brand colors */}
+      <div className="p-4 rounded-xl border" style={{ backgroundColor: 'oklch(0.98 0.02 75)', borderColor: 'oklch(0.85 0.08 75)' }}>
         <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'oklch(0.50 0.12 75)' }} />
           <div>
-            <div className="font-medium text-blue-900">Looking for Market Analysis?</div>
-            <p className="text-sm text-blue-700 mt-1">
+            <div className="font-medium" style={{ color: 'oklch(0.35 0.08 75)' }}>Looking for Market Analysis?</div>
+            <p className="text-sm mt-1" style={{ color: 'oklch(0.45 0.06 75)' }}>
               For comprehensive market-level analysis (not specific to a property), use <strong>Step 6: Market Advisor</strong>. 
               It provides deep insights into market trends, competition, and investment potential for any area.
             </p>

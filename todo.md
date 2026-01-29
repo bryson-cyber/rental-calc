@@ -7063,3 +7063,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Move investment comparison to Executive Summary
 - [x] Use simple cash flow calculation: Revenue - Rent - 20% Operating Costs
 - [x] Compare STR returns to S&P 500, High-Yield Savings, Treasury Bonds
+
+## Step 7 AI Advisor Fixes (Jan 28, 2026)
+- [ ] Ensure investment comparison section appears in AI output
+- [ ] Verify break-even calculation is correct
+- [ ] Restyle blue "Looking for Market Analysis" box to match brand (gold/amber instead of blue)
+
+## Step 7 AI Advisor Fixes (January 28, 2026)
+- [x] Make investment comparison section REQUIRED in AI prompt
+- [x] Improve break-even calculation with clear formulas
+- [x] Restyle "Looking for Market Analysis" box with gold/amber brand colors
+- [x] Verify investment comparison appears in AI output (S&P 500, High-Yield Savings, Treasury Bonds vs STR)
