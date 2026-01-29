@@ -6983,3 +6983,23 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Filter out bottom 25% performers from data pool to improve average projections
 - [x] Update data credibility badge to remove AirDNA mention - now shows "Verified" with Shield icon
 - [x] Ensure AI prompt doesn't mention AirDNA in output - updated to "verified market data"
+
+
+### Market Advisor Data Badge & Testing (Jan 29, 2026)
+- [x] Update data badge to show dynamic property count - already shows totalListings from API, updated label to "Verified Properties"
+- [ ] Test bedroom filter - verify different bedroom selections show different revenue figures
+
+### Market Advisor Brand Consistency Fix (Jan 28, 2026)
+- [ ] Fix green background - use brand light theme (near-white) with gold accents
+- [ ] Remove redundant intro text ("Here's what you need to know" and explanation paragraph)
+- [ ] Add re-analyze button next to zip code search input
+- [ ] Update AI prompt: lower market grade doesn't mean no opportunities - many hosts underperform
+- [ ] Apply Coach Inayah brand design system to entire Market Advisor UI
+
+## Market Advisor UI Fixes (Jan 28, 2026) - COMPLETE
+
+- [x] Fix Market Advisor green background - apply brand light theme
+- [x] Remove redundant intro text ("Here's what you need to know" and explanation paragraph)
+- [x] Add Re-analyze button next to search input
+- [x] Update AI prompt to note that lower market grades don't mean no opportunities
+- [x] Apply Coach Inayah brand colors throughout Market Advisor

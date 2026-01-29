@@ -1739,6 +1739,8 @@ End with a simple summary:
 - "The average property makes $X/year, which is [above/below/about average] for markets like this."
 - "The market is [growing/stable/shrinking] based on the last 12 months of data."
 
+IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (C, D, or F), that does NOT mean there are no good opportunities there. Market averages include many hosts who are doing a poor job - bad photos, wrong pricing, poor guest communication, etc. A skilled operator who does things right can often significantly outperform the market average. The top performers in ANY market prove this - look at how much more they earn than the average. So a "C grade" market might still be great for someone who's willing to put in the work to stand out from the crowd.
+
 CRITICAL RULES:
 - Use simple words a third grader would understand
 - Always explain what numbers MEAN, not just what they ARE
