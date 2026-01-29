@@ -113,17 +113,33 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
     const apiKey = ENV.airdnaApiKey;
     if (!apiKey) return null;
 
+    // Strip unit numbers from address - AirDNA works better with street addresses only
+    // Removes patterns like "#7", "Unit 2525", "Apt 101", "# H1464B", etc.
+    let cleanAddress = address
+      .replace(/\s*#\s*[A-Za-z0-9-]+/gi, '') // #7, # H1464B
+      .replace(/\s*Unit\s*[A-Za-z0-9-]+/gi, '') // Unit 2525
+      .replace(/\s*Apt\.?\s*[A-Za-z0-9-]+/gi, '') // Apt 101, Apt. 101
+      .replace(/\s*Suite\s*[A-Za-z0-9-]+/gi, '') // Suite 200
+      .replace(/\s+/g, ' ') // Clean up extra spaces
+      .trim();
+    
+    console.log(`[AirDNA] Original: ${address} -> Clean: ${cleanAddress}`);
+
     const response = await fetch(
-      `https://api.airdna.co/v2/rentalizer/estimate?` +
-      `address=${encodeURIComponent(address)}&` +
-      `bedrooms=${bedrooms}&` +
-      `bathrooms=${bathrooms}&` +
-      `currency=USD`,
+      `https://api.airdna.co/api/enterprise/v2/rentalizer/estimate`,
       {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          address: cleanAddress,
+          bedrooms: bedrooms,
+          bathrooms: bathrooms,
+          accommodates: Math.max(bedrooms * 2, 2), // Estimate accommodates
+          currency: 'usd'
+        })
       }
     );
 
@@ -133,11 +149,23 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
     }
 
     const data = await response.json();
+    console.log(`[AirDNA] Response status: ${data.status?.type}`);
     
+    // Handle enterprise API response format - data is in payload.stats.future.summary
+    const stats = data.payload?.stats;
+    if (!stats?.future?.summary) {
+      console.log(`[AirDNA] No stats data found for ${cleanAddress}`);
+      console.log(`[AirDNA] Response payload keys:`, Object.keys(data.payload || {}));
+      return null;
+    }
+    
+    const summary = stats.future.summary;
+    
+    // Occupancy is returned as decimal (0.84), convert to percentage for display
     return {
-      revenue: data.revenue?.ltm || data.revenue?.projected || 0,
-      occupancy: data.occupancy?.ltm || data.occupancy?.projected || 0,
-      adr: data.adr?.ltm || data.adr?.projected || 0,
+      revenue: summary.revenue || 0,
+      occupancy: (summary.occupancy || 0) * 100, // Convert to percentage
+      adr: summary.adr || 0,
     };
   } catch (error) {
     console.error('[AirDNA] Error getting estimate:', error);

@@ -1,18 +1,18 @@
 /**
  * Opportunity Finder Step Component
  * 
- * Allows users to browse Zillow rental listings and validate them
- * for STR arbitrage potential using AirDNA data.
+ * A Zillow-like experience where users can browse rental listings,
+ * see STR revenue analysis inline on each card, and take action.
  * 
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Select,
   SelectContent,
@@ -35,17 +35,23 @@ import {
   DollarSign, 
   Loader2,
   ExternalLink,
-  CheckCircle,
-  XCircle,
   TrendingUp,
   Info,
   Filter,
   Building,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
+  Users,
+  Map,
+  BarChart3,
+  ArrowRight,
+  Calendar,
+  Percent,
+  Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'wouter';
 
 // Types
 interface ZillowProperty {
@@ -166,7 +172,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     }
   };
   
-  // Handle validation
+  // Handle validation (Analyze button)
   const handleValidate = async (property: ZillowProperty) => {
     setValidatingId(property.id);
     
@@ -196,7 +202,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             bedrooms: property.bedrooms,
             bathrooms: property.bathrooms,
           },
-          error: 'Failed to validate property',
+          error: 'Could not get revenue estimate for this property',
         },
       }));
     } finally {
@@ -204,16 +210,15 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     }
   };
   
-  // Handle select for full analysis
-  const handleSelectForAnalysis = (property: ZillowProperty) => {
-    if (onSelectProperty) {
-      onSelectProperty({
-        address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
-        bedrooms: property.bedrooms || 2,
-        bathrooms: property.bathrooms || 1,
-        monthlyRent: property.price,
-      });
-    }
+  // Build URL for navigation to other tools
+  const buildPropertyUrl = (property: ZillowProperty, path: string = '/') => {
+    const params = new URLSearchParams({
+      address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+      bedrooms: String(property.bedrooms || 2),
+      bathrooms: String(property.bathrooms || 1),
+      rent: String(property.price),
+    });
+    return `${path}?${params.toString()}`;
   };
   
   // Format currency
@@ -237,7 +242,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           Find Your Next Opportunity
         </h2>
         <p className="text-base max-w-xl mx-auto" style={{ color: 'oklch(0.45 0 0)' }}>
-          Browse rental listings and instantly see their STR profit potential. Click "Validate" to get revenue projections.
+          Browse rental listings and instantly see their STR profit potential. Click "Analyze" to get revenue projections right here.
         </p>
       </div>
       
@@ -324,14 +329,13 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 pt-4" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 mt-4 border-t" style={{ borderColor: 'oklch(0.90 0 0)' }}>
+                  {/* Price Range */}
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>
-                      Min {searchType === 'forRent' ? 'Rent' : 'Price'}
-                    </Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Price</Label>
                     <Input
                       type="number"
                       placeholder="$0"
@@ -341,9 +345,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                     />
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>
-                      Max {searchType === 'forRent' ? 'Rent' : 'Price'}
-                    </Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Price</Label>
                     <Input
                       type="number"
                       placeholder="Any"
@@ -352,51 +354,53 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                       className="h-10"
                     />
                   </div>
+                  
+                  {/* Bedrooms */}
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Beds</Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Beds</Label>
                     <Select value={bedsMin} onValueChange={setBedsMin}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1+</SelectItem>
-                        <SelectItem value="2">2+</SelectItem>
-                        <SelectItem value="3">3+</SelectItem>
-                        <SelectItem value="4">4+</SelectItem>
-                        <SelectItem value="5">5+</SelectItem>
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Beds</Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Beds</Label>
                     <Select value={bedsMax} onValueChange={setBedsMax}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
-                        <SelectItem value="4">4</SelectItem>
-                        <SelectItem value="5">5+</SelectItem>
+                        {[1, 2, 3, 4, 5, 6].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* Bathrooms */}
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Baths</Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Baths</Label>
                     <Select value={bathsMin} onValueChange={setBathsMin}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1+</SelectItem>
-                        <SelectItem value="2">2+</SelectItem>
-                        <SelectItem value="3">3+</SelectItem>
+                        {[1, 1.5, 2, 2.5, 3, 3.5, 4].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}+</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* Home Type */}
                   <div>
-                    <Label className="text-xs mb-1 block" style={{ color: 'oklch(0.45 0 0)' }}>Home Type</Label>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Property Type</Label>
                     <Select value={homeType} onValueChange={setHomeType}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Any" />
@@ -436,7 +440,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="max-w-xs text-sm">
-                    Click "Validate" on any property to see projected STR revenue and profit potential.
+                    Click "Analyze" on any property to see projected STR revenue and profit potential.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -463,6 +467,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               {properties.map((property) => {
                 const validation = validationResults[property.id];
                 const isValidating = validatingId === property.id;
+                const hasAnalysis = validation?.success && validation?.projection;
                 
                 return (
                   <motion.div
@@ -479,7 +484,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                       }}
                     >
                       {/* Property Image */}
-                      <div className="relative h-40 bg-gray-100">
+                      <div className="relative h-44 bg-gray-100">
                         {property.image ? (
                           <img
                             src={property.image}
@@ -514,6 +519,17 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                             Good Deal
                           </div>
                         )}
+                        {/* Zillow Link */}
+                        <button
+                          onClick={() => window.open(property.url, '_blank')}
+                          className="absolute bottom-3 right-3 p-2 rounded-full transition-all"
+                          style={{ 
+                            backgroundColor: 'oklch(0.98 0 0 / 0.9)',
+                            color: 'oklch(0.35 0 0)',
+                          }}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
                       </div>
                       
                       {/* Property Details */}
@@ -540,50 +556,79 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                           )}
                         </div>
                         
-                        {/* Validation Results */}
-                        {validation && validation.success && validation.projection && (
+                        {/* INLINE ANALYSIS RESULTS */}
+                        {hasAnalysis && validation.projection && (
                           <div 
-                            className="p-3 rounded-lg mb-4"
+                            className="rounded-xl p-4 mb-4"
                             style={{ 
-                              backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.1)' : 'oklch(0.96 0 0)',
+                              backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.08)' : 'oklch(0.96 0 0)',
+                              border: validation.isGoodDeal ? '1px solid oklch(0.55 0.15 145 / 0.2)' : '1px solid oklch(0.90 0 0)',
                             }}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium" style={{ color: 'oklch(0.45 0 0)' }}>
-                                Projected Monthly Profit
-                              </span>
-                              <span 
-                                className="text-sm font-bold"
+                            {/* Monthly Profit - Hero Metric */}
+                            <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                              <p className="text-xs font-medium mb-1" style={{ color: 'oklch(0.50 0 0)' }}>
+                                Estimated Monthly Profit
+                              </p>
+                              <p 
+                                className="text-2xl font-bold"
                                 style={{ 
                                   color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
                                 }}
                               >
                                 {formatCurrency(validation.projection.monthlyProfit)}
-                              </span>
+                              </p>
+                              <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                                {formatCurrency(validation.projection.annualProfit)}/year
+                              </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span style={{ color: 'oklch(0.55 0 0)' }}>Revenue: </span>
-                                <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(validation.projection.monthlyRevenue)}/mo</span>
+                            
+                            {/* Key Metrics Grid */}
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Revenue</span>
+                                </div>
+                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                  {formatCurrency(validation.projection.monthlyRevenue)}/mo
+                                </p>
                               </div>
-                              <div>
-                                <span style={{ color: 'oklch(0.55 0 0)' }}>Occupancy: </span>
-                                <span style={{ color: 'oklch(0.25 0 0)' }}>{validation.projection.occupancy}%</span>
+                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Calendar className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</span>
+                                </div>
+                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                  {validation.projection.occupancy}%
+                                </p>
                               </div>
-                              <div>
-                                <span style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate: </span>
-                                <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(validation.projection.adr)}</span>
+                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Target className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</span>
+                                </div>
+                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                  {formatCurrency(validation.projection.adr)}
+                                </p>
                               </div>
-                              <div>
-                                <span style={{ color: 'oklch(0.55 0 0)' }}>ROI: </span>
-                                <span style={{ color: 'oklch(0.25 0 0)' }}>{validation.projection.roi}%</span>
+                              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Percent className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
+                                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>ROI</span>
+                                </div>
+                                <p className="text-sm font-semibold" style={{ color: 'oklch(0.25 0 0)' }}>
+                                  {validation.projection.roi}%
+                                </p>
                               </div>
                             </div>
+                            
+                            {/* Verdict */}
                             <p 
-                              className="text-xs font-medium mt-2 pt-2"
+                              className="text-xs font-medium text-center py-2 rounded-lg"
                               style={{ 
-                                borderTop: '1px solid oklch(0.90 0 0)',
-                                color: validation.isGoodDeal ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
+                                backgroundColor: validation.isGoodDeal ? 'oklch(0.55 0.15 145 / 0.1)' : 'oklch(0.55 0.20 25 / 0.1)',
+                                color: validation.isGoodDeal ? 'oklch(0.40 0.15 145)' : 'oklch(0.50 0.15 25)',
                               }}
                             >
                               {validation.verdict}
@@ -591,60 +636,106 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                           </div>
                         )}
                         
+                        {/* Error State */}
                         {validation && !validation.success && (
                           <div 
-                            className="p-3 rounded-lg mb-4 flex items-center gap-2"
-                            style={{ backgroundColor: 'oklch(0.55 0.20 25 / 0.1)' }}
+                            className="p-3 rounded-lg mb-4 text-center"
+                            style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.1)' }}
                           >
-                            <XCircle className="w-4 h-4" style={{ color: 'oklch(0.55 0.20 25)' }} />
-                            <span className="text-xs" style={{ color: 'oklch(0.55 0.20 25)' }}>
-                              {validation.error || 'Could not validate property'}
-                            </span>
+                            <p className="text-xs" style={{ color: 'oklch(0.45 0 0)' }}>
+                              {validation.error || 'Could not get revenue estimate'}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                              Try the full analysis for more options
+                            </p>
                           </div>
                         )}
                         
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          {!validation ? (
-                            <Button
-                              onClick={() => handleValidate(property)}
-                              disabled={isValidating}
-                              className="flex-1 h-9 text-sm"
-                              style={{
-                                backgroundColor: 'oklch(0.55 0.14 75)',
-                                borderRadius: '980px',
-                              }}
-                            >
-                              {isValidating ? (
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              ) : (
-                                <TrendingUp className="w-4 h-4 mr-2" />
-                              )}
-                              {isValidating ? 'Validating...' : 'Validate'}
-                            </Button>
-                          ) : (
-                            <Button
-                              onClick={() => handleSelectForAnalysis(property)}
-                              className="flex-1 h-9 text-sm"
-                              style={{
-                                backgroundColor: 'oklch(0.55 0.14 75)',
-                                borderRadius: '980px',
-                              }}
-                            >
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              Full Analysis
-                            </Button>
-                          )}
+                        {/* ACTION BUTTONS */}
+                        {!validation ? (
+                          // Before analysis - show Analyze button
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9"
-                            onClick={() => window.open(property.url, '_blank')}
-                            style={{ borderRadius: '980px' }}
+                            onClick={() => handleValidate(property)}
+                            disabled={isValidating}
+                            className="w-full h-10 text-sm"
+                            style={{
+                              backgroundColor: 'oklch(0.55 0.14 75)',
+                              borderRadius: '980px',
+                            }}
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            {isValidating ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <TrendingUp className="w-4 h-4 mr-2" />
+                                Analyze Property
+                              </>
+                            )}
                           </Button>
-                        </div>
+                        ) : (
+                          // After analysis - show action buttons
+                          <div className="space-y-3">
+                            {/* Deep Dive Buttons */}
+                            <div className="grid grid-cols-3 gap-2">
+                              <Link href={buildPropertyUrl(property, '/')}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-9 text-xs px-2"
+                                  style={{ borderRadius: '0.5rem' }}
+                                >
+                                  <Users className="w-3 h-3 mr-1" />
+                                  Competition
+                                </Button>
+                              </Link>
+                              <Link href={buildPropertyUrl(property, '/')}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-9 text-xs px-2"
+                                  style={{ borderRadius: '0.5rem' }}
+                                >
+                                  <Map className="w-3 h-3 mr-1" />
+                                  Map
+                                </Button>
+                              </Link>
+                              <Link href={`/market-advisor?location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-9 text-xs px-2"
+                                  style={{ borderRadius: '0.5rem' }}
+                                >
+                                  <BarChart3 className="w-3 h-3 mr-1" />
+                                  Market
+                                </Button>
+                              </Link>
+                            </div>
+                            
+                            {/* Turnkey CTA */}
+                            <a 
+                              href="https://coachinayah.com/turnkey"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
+                              <Button
+                                className="w-full h-10 text-sm group"
+                                style={{
+                                  backgroundColor: 'oklch(0.55 0.14 75)',
+                                  borderRadius: '980px',
+                                }}
+                              >
+                                <Sparkles className="w-4 h-4 mr-2" />
+                                Apply for Turnkey Program
+                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                              </Button>
+                            </a>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -668,7 +759,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             Search for Rental Opportunities
           </h3>
           <p className="max-w-md mx-auto mb-6" style={{ color: 'oklch(0.45 0 0)' }}>
-            Enter a city or zip code above to browse available rentals. Click "Validate" on any property to see its STR profit potential.
+            Enter a city or zip code above to browse available rentals. Click "Analyze" on any property to see its STR profit potential instantly.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {['Atlanta, GA', 'Denver, CO', 'Austin, TX', 'Nashville, TN'].map(city => (
@@ -678,7 +769,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                   setLocation(city);
                   setTimeout(handleSearch, 100);
                 }}
-                className="px-4 py-2 text-sm rounded-full transition-all duration-300"
+                className="px-4 py-2 text-sm rounded-full transition-all duration-300 hover:scale-105"
                 style={{
                   backgroundColor: 'oklch(0.96 0 0)',
                   color: 'oklch(0.35 0 0)',

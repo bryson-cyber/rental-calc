@@ -138,12 +138,15 @@ export async function searchZillowListings(
       };
     });
 
-    console.log(`[HasData] Found ${properties.length} properties`);
+    // Filter out properties without price data (apartment buildings with multiple units)
+    const filteredProperties = properties.filter(p => p.price > 0 && p.bedrooms > 0);
+    
+    console.log(`[HasData] Found ${properties.length} properties, ${filteredProperties.length} with price data`);
 
     return {
       success: true,
-      totalResults: data.totalResultCount || data.totalResults || properties.length,
-      properties
+      totalResults: data.totalResultCount || data.totalResults || filteredProperties.length,
+      properties: filteredProperties
     };
 
   } catch (error) {

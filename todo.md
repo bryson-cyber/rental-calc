@@ -7107,3 +7107,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Pass property data via URL parameters to main calculator
 - [x] Update PropertyContext to read URL parameters
 - [x] Test full flow: Search → Validate → Full Analysis
+
+## Opportunity Finder Inline Analysis Update (Completed Jan 28, 2026)
+- [x] Show revenue estimate, occupancy, ADR directly on card after clicking Analyze
+- [x] Add action buttons: Analyze Competition, See on Map, Analyze Market
+- [x] Add Turnkey Program CTA on each analyzed card
+- [x] Keep analysis results visible on card (no navigation away)
+- [x] Test inline analysis flow
+
+## Opportunity Finder Bug Fixes (Completed Jan 28, 2026)
+- [x] Fix AirDNA API response parsing - inline analysis not showing
+  - Fixed: Updated getAirDNAEstimate to extract from data.payload.stats.future.summary path
+- [x] Fix HasData Zillow price parsing - some properties showing $0 rent
+  - Fixed: Added filter to exclude properties with price < 100 (apartment buildings without unit pricing)
