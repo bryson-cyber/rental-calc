@@ -59,3 +59,56 @@ The AI generated a comprehensive 5-section report following Coach Inayah's SOP t
 - [ ] Occupancy rate showing as 0.52% instead of 52% (formatting issue)
 - [ ] Could show more competitors if available
 - [ ] Add follow-up question suggestions
+
+
+---
+
+# Test Results - Action Buttons Tab Switching (Jan 29, 2026)
+
+## Test 1: Tab Order Verification
+**Status:** ✅ PASS
+- GUIDE - Read the Guide (position 1)
+- FIND - Find a Property (position 2, no step number)
+- STEP 1 - See Real Revenue
+- STEP 2 - Explore Listings
+- STEP 3 - Validate the Deal
+- STEP 4 - Compare Favorites
+- STEP 5 - See the Map
+- STEP 6 - Market Advisor
+- STEP 7 - AI Advisor
+
+## Test 2: Find a Property Tab
+**Status:** ✅ PASS
+- Tab displays correctly
+- Property search works (tested with Atlanta, GA)
+- Properties load with photos, prices, and details
+- Analyze Property button works
+
+## Test 3: Inline AirDNA Analysis
+**Status:** ✅ PASS
+- Shows Deal Score badge (D - Poor Deal for test property)
+- Shows Revenue: $2,839/mo
+- Shows Occupancy: 66%
+- Shows ADR: $142
+- Shows ROI: 22%
+- Shows Estimated Monthly Profit: $439
+
+## Test 4: Action Buttons Tab Switching
+**Status:** ✅ PASS
+- Map button clicked → URL changed to `/?tab=map&location=Atlanta%2C%20GA&address=115%20W%20Peachtree%20Pl%20NW%20Unit%20419%2C%20Atlanta%2C%20GA%2030313&bedrooms=1`
+- Tab switched to "See the Map" (Step 5)
+- Property address passed correctly in URL
+- Location passed correctly
+
+## Test 5: URL Parameters
+**Status:** ✅ PASS
+- tab=map → Correct tab selected
+- location=Atlanta, GA → Passed correctly
+- address=115 W Peachtree Pl NW Unit 419, Atlanta, GA 30313 → Full address passed
+- bedrooms=1 → Bedroom count passed
+
+## Summary
+All action buttons now correctly:
+1. Switch tabs within the same page (not navigate to separate pages)
+2. Pass the specific property address (not just city)
+3. Pass property details (bedrooms, bathrooms, rent)

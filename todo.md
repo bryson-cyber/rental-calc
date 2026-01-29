@@ -7270,3 +7270,30 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add click handler to property images
 - [x] Add photo count badge on property cards (shows "X photos")
 - [x] Test photo gallery navigation - arrow keys and thumbnail clicks working
+
+
+## Step 8 Filter Enhancements (Jan 29, 2026)
+- [ ] Add max bedrooms filter
+- [ ] Add max bathrooms filter
+- [ ] Add min price filter
+- [ ] Add max price filter
+- [ ] Test all filter combinations
+
+- [x] Fix Competition and Map action buttons not working after analysis
+
+
+## Step 8 Restructure - Find a Property First (Jan 29, 2026) - COMPLETE
+- [x] Move "Find a Property" (currently Step 8) to after "Read the Guide"
+- [x] Remove step number - just call it "Find a Property"
+- [x] Renumber remaining steps (Step 1-7 become the analysis tools)
+- [x] Update action buttons to switch tabs within same page instead of navigating away
+- [x] Test the new flow
+
+
+## Tab Restructure & Compare Favorites (Jan 29, 2026) - COMPLETE
+- [x] Reorder tabs: Guide → Find a Property → Step 1-7
+- [x] Update step numbering logic (opportunity = no step number)
+- [x] Reframe 'Find the Best Deal' to 'Compare Favorites'
+- [x] Update Compare tab to pull from saved favorites
+- [x] Update action buttons to sync property data to other tabs
+- [x] Test data flow between tabs

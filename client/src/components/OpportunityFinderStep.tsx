@@ -229,6 +229,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   const [bedsMin, setBedsMin] = useState<string>('');
   const [bedsMax, setBedsMax] = useState<string>('');
   const [bathsMin, setBathsMin] = useState<string>('');
+  const [bathsMax, setBathsMax] = useState<string>('');
   const [homeType, setHomeType] = useState<string>('');
   
   // Pagination state
@@ -591,7 +592,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                     />
                   </div>
                   
-                  {/* Bedrooms */}
+                  {/* Min Bedrooms */}
                   <div>
                     <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Beds</Label>
                     <Select value={bedsMin} onValueChange={setBedsMin}>
@@ -599,6 +600,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
                         {[1, 2, 3, 4, 5].map(n => (
                           <SelectItem key={n} value={String(n)}>{n}+ beds</SelectItem>
                         ))}
@@ -606,7 +608,23 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                     </Select>
                   </div>
                   
-                  {/* Bathrooms */}
+                  {/* Max Bedrooms */}
+                  <div>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Beds</Label>
+                    <Select value={bedsMax} onValueChange={setBedsMax}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Any" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
+                        {[1, 2, 3, 4, 5, 6].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n} beds max</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Min Bathrooms */}
                   <div>
                     <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Min Baths</Label>
                     <Select value={bathsMin} onValueChange={setBathsMin}>
@@ -614,8 +632,25 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
                         {[1, 1.5, 2, 2.5, 3].map(n => (
                           <SelectItem key={n} value={String(n)}>{n}+ baths</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Max Bathrooms */}
+                  <div>
+                    <Label className="text-xs mb-1.5 block" style={{ color: 'oklch(0.45 0 0)' }}>Max Baths</Label>
+                    <Select value={bathsMax} onValueChange={setBathsMax}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Any" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
+                        {[1, 1.5, 2, 2.5, 3, 4].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n} baths max</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -1009,9 +1044,9 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 Contact Now
                               </Button>
                               
-                              {/* Deep Dive Buttons */}
+                              {/* Deep Dive Buttons - Switch tabs with property data */}
                               <div className="grid grid-cols-3 gap-2">
-                                <Link href={`/?tab=compare&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                <Link href={`/?tab=compare&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1022,7 +1057,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     Competition
                                   </Button>
                                 </Link>
-                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}`}>
+                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}`}>
                                   <Button
                                     variant="outline"
                                     size="sm"

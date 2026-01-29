@@ -1367,9 +1367,9 @@ export default function LeadMagnet() {
       color: "from-purple-500 to-pink-500"
     },
     compare: {
-      title: "Find the Best Deal",
-      subtitle: "Compare multiple properties to find the winner",
-      job: "Answer: Which property should I choose?",
+      title: "Compare Favorites",
+      subtitle: "Compare your saved properties side-by-side",
+      job: "Answer: Which of my saved properties is the best deal?",
       icon: Trophy,
       color: "from-amber-500 to-orange-500"
     },
@@ -1395,9 +1395,9 @@ export default function LeadMagnet() {
       color: "from-blue-500 to-indigo-500"
     },
     opportunity: {
-      title: "Find Opportunities",
+      title: "Find a Property",
       subtitle: "Browse rentals and validate STR potential instantly",
-      job: "Answer: Where can I find deals in my target market?",
+      job: "Answer: What properties are available in my target market?",
       icon: Search,
       color: "from-rose-500 to-pink-500"
     }
@@ -1591,7 +1591,7 @@ export default function LeadMagnet() {
           
           {/* Job-Focused Tab Navigation */}
           <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {(['ebook', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor', 'opportunity'] as TabType[]).map((tab, index) => {
+            {(['ebook', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1615,7 +1615,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
-                      {tab === 'ebook' ? 'Guide' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : tab === 'opportunity' ? 'Step 8' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'opportunity' ? 'Find' : tab === 'prove' ? 'Step 1' : tab === 'find' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
