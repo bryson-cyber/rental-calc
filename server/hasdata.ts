@@ -34,6 +34,7 @@ export interface ZillowProperty {
   squareFeet?: number;
   homeType: string;
   image: string;
+  photos: string[]; // All property photos from the listing
   status: string;
   daysOnZillow?: number;
   latitude?: number;
@@ -131,6 +132,7 @@ export async function searchZillowListings(
         squareFeet: prop.livingArea || prop.area || prop.sqft || undefined,
         homeType: normalizeHomeType(prop.homeType || prop.propertyType || ""),
         image: prop.imgSrc || prop.image || (prop.photos && prop.photos[0]) || prop.thumbnail || "",
+        photos: Array.isArray(prop.photos) ? prop.photos : (prop.imgSrc ? [prop.imgSrc] : []),
         status: prop.homeStatus || prop.status || params.type,
         daysOnZillow: prop.daysOnZillow || undefined,
         latitude: prop.latitude || prop.lat || undefined,
@@ -207,6 +209,7 @@ export async function getZillowProperty(propertyUrl: string): Promise<ZillowProp
       squareFeet: data.livingArea || undefined,
       homeType: normalizeHomeType(data.homeType || ""),
       image: data.imgSrc || data.image || "",
+      photos: Array.isArray(data.photos) ? data.photos : (data.imgSrc ? [data.imgSrc] : []),
       status: data.homeStatus || "",
       daysOnZillow: data.daysOnZillow || undefined,
       latitude: data.latitude || undefined,
@@ -389,6 +392,7 @@ export async function getZillowPropertyWithContacts(propertyUrl: string): Promis
       squareFeet: data.livingArea || undefined,
       homeType: normalizeHomeType(data.homeType || ""),
       image: data.imgSrc || data.image || "",
+      photos: Array.isArray(data.photos) ? data.photos : (data.imgSrc ? [data.imgSrc] : []),
       status: data.homeStatus || "",
       daysOnZillow: data.daysOnZillow || undefined,
       latitude: data.latitude || undefined,

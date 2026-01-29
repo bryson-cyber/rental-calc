@@ -68,9 +68,11 @@ import {
   Mail,
   ArrowUpDown,
   ChevronRight,
+  ChevronLeft,
   Award,
   Clock,
-  Heart
+  Heart,
+  Image
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -91,6 +93,7 @@ interface ZillowProperty {
   squareFeet?: number;
   homeType: string;
   image: string;
+  photos: string[]; // All property photos
   status: string;
   daysOnZillow?: number;
 }
@@ -258,6 +261,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     }
     return new Set();
   });
+  
+  // Photo gallery state
+  const [photoGalleryOpen, setPhotoGalleryOpen] = useState(false);
+  const [photoGalleryProperty, setPhotoGalleryProperty] = useState<ZillowProperty | null>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
   // Toggle favorite
   const toggleFavorite = (propertyId: string) => {
@@ -712,17 +720,38 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                           border: validation?.isGoodDeal ? '2px solid oklch(0.55 0.15 145)' : '1px solid oklch(0.90 0 0)',
                         }}
                       >
-                        {/* Property Image */}
-                        <div className="relative h-44 bg-gray-100">
+                        {/* Property Image - Click to open gallery */}
+                        <div 
+                          className="relative h-44 bg-gray-100 cursor-pointer group"
+                          onClick={() => {
+                            setPhotoGalleryProperty(property);
+                            setCurrentPhotoIndex(0);
+                            setPhotoGalleryOpen(true);
+                          }}
+                        >
                           {property.image ? (
                             <img
                               src={property.image}
                               alt={property.address}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Home className="w-12 h-12" style={{ color: 'oklch(0.70 0 0)' }} />
+                            </div>
+                          )}
+                          
+                          {/* Photo Count Badge */}
+                          {property.photos && property.photos.length > 1 && (
+                            <div 
+                              className="absolute top-3 left-1/2 -translate-x-1/2 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ 
+                                backgroundColor: 'oklch(0.15 0 0 / 0.85)',
+                                color: 'oklch(0.98 0 0)',
+                              }}
+                            >
+                              <Image className="w-3 h-3" />
+                              {property.photos.length} photos
                             </div>
                           )}
                           {/* Price Badge */}
@@ -1220,6 +1249,102 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Contact via Listing
               </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Photo Gallery Modal */}
+      <Dialog open={photoGalleryOpen} onOpenChange={setPhotoGalleryOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" style={{ color: 'oklch(0.55 0.14 75)' }} />
+              Property Photos
+              {photoGalleryProperty?.photos && photoGalleryProperty.photos.length > 0 && (
+                <span className="text-sm font-normal" style={{ color: 'oklch(0.55 0 0)' }}>
+                  ({currentPhotoIndex + 1} of {photoGalleryProperty.photos.length})
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {photoGalleryProperty && photoGalleryProperty.photos && photoGalleryProperty.photos.length > 0 ? (
+            <div className="relative">
+              {/* Main Image */}
+              <div className="relative h-[60vh] bg-black flex items-center justify-center">
+                <img
+                  src={photoGalleryProperty.photos[currentPhotoIndex]}
+                  alt={`${photoGalleryProperty.address} - Photo ${currentPhotoIndex + 1}`}
+                  className="max-w-full max-h-full object-contain"
+                />
+                
+                {/* Navigation Arrows */}
+                {photoGalleryProperty.photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setCurrentPhotoIndex(prev => prev === 0 ? photoGalleryProperty.photos.length - 1 : prev - 1)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.9)' }}
+                    >
+                      <ChevronLeft className="w-6 h-6" style={{ color: 'oklch(0.25 0 0)' }} />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPhotoIndex(prev => prev === photoGalleryProperty.photos.length - 1 ? 0 : prev + 1)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'oklch(0.98 0 0 / 0.9)' }}
+                    >
+                      <ChevronRight className="w-6 h-6" style={{ color: 'oklch(0.25 0 0)' }} />
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              {/* Thumbnail Strip */}
+              {photoGalleryProperty.photos.length > 1 && (
+                <div className="p-3 bg-black/90 overflow-x-auto">
+                  <div className="flex gap-2 min-w-max">
+                    {photoGalleryProperty.photos.map((photo, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPhotoIndex(index)}
+                        className={`w-16 h-12 rounded overflow-hidden flex-shrink-0 transition-all ${
+                          index === currentPhotoIndex ? 'ring-2 ring-white scale-105' : 'opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={photo}
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Property Info */}
+              <div className="p-4" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                <h3 className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>
+                  {photoGalleryProperty.address}
+                </h3>
+                <p className="text-sm" style={{ color: 'oklch(0.55 0 0)' }}>
+                  {photoGalleryProperty.city}, {photoGalleryProperty.state} {photoGalleryProperty.zipCode}
+                </p>
+                <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
+                  <span className="font-semibold" style={{ color: 'oklch(0.55 0.14 75)' }}>
+                    {formatCurrency(photoGalleryProperty.price)}{searchType === 'forRent' ? '/mo' : ''}
+                  </span>
+                  <span>{photoGalleryProperty.bedrooms} bed</span>
+                  <span>{photoGalleryProperty.bathrooms} bath</span>
+                  {photoGalleryProperty.squareFeet && <span>{photoGalleryProperty.squareFeet.toLocaleString()} sqft</span>}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <Home className="w-12 h-12 mx-auto mb-3" style={{ color: 'oklch(0.70 0 0)' }} />
+              <p style={{ color: 'oklch(0.55 0 0)' }}>No photos available for this property</p>
             </div>
           )}
         </DialogContent>

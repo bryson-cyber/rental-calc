@@ -7253,3 +7253,20 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Save to Favorites (heart icon, persisted in localStorage)
 - [x] For Rent / For Sale toggle
 
+
+
+## Step 8 Photo Gallery (Jan 29, 2026)
+- [ ] Check HasData API response for available image URLs
+- [ ] Find/implement photo gallery component for property cards
+- [ ] Display all property images in a carousel/lightbox
+- [ ] Test gallery on desktop and mobile
+
+
+
+## Step 8 Photo Gallery (Jan 29, 2026) - COMPLETED
+- [x] Check HasData API for available image data - returns photos[] array with 30+ images per property
+- [x] Update backend to capture all photos from API response
+- [x] Create photo gallery modal component with thumbnail strip
+- [x] Add click handler to property images
+- [x] Add photo count badge on property cards (shows "X photos")
+- [x] Test photo gallery navigation - arrow keys and thumbnail clicks working
