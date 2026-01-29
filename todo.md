@@ -7455,3 +7455,8 @@ This makes the grading more optimistic - properties now get better grades at low
 - Added `normalizeCityName()` function to opportunity-finder.ts
 - Applied to both `searchZillowRentals` and `searchZillowForSale` mutations
 - Normalizes abbreviations: St. -> Saint, Mt. -> Mount, Ft. -> Fort, N. -> North, S. -> South, E. -> East, W. -> West
+
+
+## Find a Property Improvements (Jan 29, 2026)
+- [x] Replace AirDNA market autocomplete with Google Places Autocomplete for location search
+- [x] Add HasData Property Details API for multi-unit listings without price (enriches up to 5 properties per page)

@@ -18,7 +18,7 @@ import {
   getTask, 
   stopSession,
 } from './browser-use';
-import { searchZillowListings, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
+import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 
 // ============================================
 // CITY NAME NORMALIZATION
@@ -430,19 +430,23 @@ export const opportunityFinderRouter = router({
         const normalizedLocation = normalizeCityName(input.location);
         console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} (normalized: ${normalizedLocation}), page: ${input.page}`);
         
-        // Fetch the requested page
-        const result = await searchZillowListings({
-          keyword: normalizedLocation,
-          type: 'forRent',
-          priceMin: input.priceMin,
-          priceMax: input.priceMax,
-          bedsMin: input.bedsMin,
-          bedsMax: input.bedsMax,
-          bathsMin: input.bathsMin,
-          bathsMax: input.bathsMax,
-          homeTypes: input.homeTypes,
-          page: input.page,
-        });
+        // Fetch the requested page with automatic price enrichment for multi-unit listings
+        // This calls the Property Details API for listings without price ("Contact for Price")
+        const result = await searchZillowListingsWithEnrichment(
+          {
+            keyword: normalizedLocation,
+            type: 'forRent',
+            priceMin: input.priceMin,
+            priceMax: input.priceMax,
+            bedsMin: input.bedsMin,
+            bedsMax: input.bedsMax,
+            bathsMin: input.bathsMin,
+            bathsMax: input.bathsMax,
+            homeTypes: input.homeTypes,
+            page: input.page,
+          },
+          { maxEnrichments: 5 } // Limit to 5 enrichments per page to control API costs
+        );
         
         if (!result.success) {
           throw new TRPCError({
@@ -500,19 +504,22 @@ export const opportunityFinderRouter = router({
         const normalizedLocation = normalizeCityName(input.location);
         console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} (normalized: ${normalizedLocation})`);
         
-        // Fetch first page to get total results
-        const firstResult = await searchZillowListings({
-          keyword: normalizedLocation,
-          type: 'forSale',
-          priceMin: input.priceMin,
-          priceMax: input.priceMax,
-          bedsMin: input.bedsMin,
-          bedsMax: input.bedsMax,
-          bathsMin: input.bathsMin,
-          bathsMax: input.bathsMax,
-          homeTypes: input.homeTypes,
-          page: input.page || 1,
-        });
+        // Fetch first page to get total results with automatic price enrichment
+        const firstResult = await searchZillowListingsWithEnrichment(
+          {
+            keyword: normalizedLocation,
+            type: 'forSale',
+            priceMin: input.priceMin,
+            priceMax: input.priceMax,
+            bedsMin: input.bedsMin,
+            bedsMax: input.bedsMax,
+            bathsMin: input.bathsMin,
+            bathsMax: input.bathsMax,
+            homeTypes: input.homeTypes,
+            page: input.page || 1,
+          },
+          { maxEnrichments: 5 }
+        );
         
         if (!firstResult.success) {
           throw new TRPCError({

@@ -77,7 +77,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { InfoTooltip } from '@/components/InfoTooltip';
-import { MarketAutocomplete } from '@/components/MarketAutocomplete';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -585,11 +585,13 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           {/* Location Search with Autocomplete */}
           <div className="flex gap-3 mb-4">
             <div className="flex-1">
-              <MarketAutocomplete
+              <GooglePlacesAutocomplete
                 placeholder="Search city, neighborhood, or zip code..."
-                onSelect={(market) => {
-                  // Set location from selected market
-                  const locationStr = market.name;
+                types={['(regions)']} // Cities, neighborhoods, zip codes
+                countryRestriction="us"
+                onSelect={(place) => {
+                  // Set location from selected place
+                  const locationStr = place.name;
                   setLocation(locationStr);
                   // Trigger search with the selected location directly
                   // Use the location string directly since state update is async
