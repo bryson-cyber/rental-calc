@@ -553,6 +553,10 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
     // Also filter for relevance - result name must contain search term words
     const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 1);
     
+    // Check if search term is a zip code (5 digits)
+    const isZipCodeSearch = /^\d{5}$/.test(searchTerm.trim());
+    console.log(`[searchMarketsAPI] Is zip code search: ${isZipCodeSearch}`);
+    
     const processedResults = results
       .filter(r => {
         // First check USA-only
@@ -566,6 +570,19 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
           isUSA = country === 'us' || country === 'united states' || country === 'usa';
         }
         if (!isUSA) return false;
+        
+        // For zip code searches, skip the word-matching filter
+        // The AirDNA API already returns relevant results for zip codes
+        if (isZipCodeSearch) {
+          // Check if the zip code is in the result's zipcodes array
+          const resultZipcodes = r.legacy_location?.zipcodes || [];
+          if (resultZipcodes.includes(searchTerm.trim())) {
+            console.log(`[searchMarketsAPI] Zip code ${searchTerm} found in ${r.name}'s zipcodes`);
+            return true;
+          }
+          // Also accept if it's a direct match from AirDNA (they know the zip code)
+          return true;
+        }
         
         // Then check relevance - at least one search word must be in the result name
         const resultName = (r.name || '').toLowerCase();

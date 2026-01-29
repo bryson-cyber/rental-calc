@@ -6896,3 +6896,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test Studio (0 BR) filter with market analysis (browser automation limitation - onChange not triggered)
 - [x] Verify Studio returns 0-bedroom data correctly (code fix applied)
 - [x] Confirm API handles bedrooms=0 parameter (fixed truthy check in routers.ts)
+
+
+## Bug Fixes (Jan 28, 2026)
+
+### Step 6 Market Advisor
+- [x] Fix missing Generate button in Market Advisor (appears after selecting a market)
+- [x] Fix zip code search not returning results (fixed relevance filter to skip word-matching for zip codes)
