@@ -6903,3 +6903,10 @@ This makes the grading more optimistic - properties now get better grades at low
 ### Step 6 Market Advisor
 - [x] Fix missing Generate button in Market Advisor (appears after selecting a market)
 - [x] Fix zip code search not returning results (fixed relevance filter to skip word-matching for zip codes)
+
+
+### Market Advisor Report Fixes (Jan 28, 2026)
+- [x] Remove extra line under "COMPREHENSIVE MARKET INVESTMENT ANALYSIS" header (added stripPrescriptiveLanguage to remove decorative lines)
+- [x] Add bedroom filter context to executive summary (e.g., "Studio Analysis for 63108") - updated AI prompt
+- [x] Fix bedroom filter handling for Studio (bedrooms=0) - fixed truthy check in filter context builder
+- [ ] Verify bedroom filter is actually applied to AirDNA API calls (revenue seems too high for Studios) - needs testing

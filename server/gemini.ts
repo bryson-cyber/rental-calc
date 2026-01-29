@@ -93,6 +93,12 @@ function stripPrescriptiveLanguage(text: string): string {
   // Remove "Warning:" prescriptive language
   result = result.replace(/Warning:/gi, 'Note:');
   
+  // Remove decorative lines (═══, ━━━, ───) that appear in AI output
+  result = result.replace(/^[═━─]+$/gm, '');
+  result = result.replace(/^═+$/gm, '');
+  result = result.replace(/^━+$/gm, '');
+  result = result.replace(/^─+$/gm, '');
+  
   // Clean up double spaces and empty lines
   result = result.replace(/  +/g, ' ');
   result = result.replace(/\n\n\n+/g, '\n\n');
@@ -1385,8 +1391,10 @@ export async function generateMaxMarketAdvice(
   
   // Build filter context string for the prompt
   const filterContextParts: string[] = [];
-  if (appliedFilters?.bedrooms) {
-    filterContextParts.push(`${appliedFilters.bedrooms}-bedroom properties only`);
+  // Use explicit undefined check to handle Studio (bedrooms=0)
+  if (appliedFilters?.bedrooms !== undefined && appliedFilters?.bedrooms !== null) {
+    const bedroomLabel = appliedFilters.bedrooms === 0 ? 'Studio' : `${appliedFilters.bedrooms}-bedroom`;
+    filterContextParts.push(`${bedroomLabel} properties only`);
   }
   if (appliedFilters?.amenities) {
     const amenityLabels: string[] = [];
@@ -1664,7 +1672,9 @@ YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE MARKET DATA REPORT
 Write an extremely comprehensive market analysis report presenting the data clearly. This report should help the reader understand the market data and make their own informed decision. DO NOT provide prescriptive advice, action plans, or tell the reader what to do.
 
 # EXECUTIVE SUMMARY
+${filterContextParts.length > 0 ? `IMPORTANT: This is a FILTERED analysis. The title of this section MUST include the filter context. For example, if analyzing Studio properties, the title should be "Executive Summary: Studio Properties in [Market Name]" or "Studio Analysis for [Market Name]". Make it clear in the very first sentence what filter is applied.` : ''}
 Provide a clear, 3-5 sentence summary of the key data findings. Include:
+- If a bedroom filter is applied, explicitly state this in the first sentence (e.g., "This analysis focuses specifically on Studio apartments in...")
 - Overall market grade based on the scores (A+/A/B+/B/C+/C/D/F)
 - Key revenue figures from the data
 - Notable data points that stand out (both positive and concerning)
