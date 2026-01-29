@@ -1836,16 +1836,13 @@ export async function getSubmarketListings(
           offset: number;
         };
       };
-    }>(`/submarket/${submarketId}/listings`, "POST", {
+    }>(`/listing/explore/submarket/${submarketId}`, "POST", {
       pagination: {
-        page_size: Math.min(options?.limit || 100, 100),
+        page_size: Math.min(options?.limit || 50, 50),  // AirDNA explore endpoint max is 50
         offset: options?.offset || 0,
       },
-      order_by: {
-        field: options?.orderBy || "revenue",
-        method: options?.orderDirection || "desc",
-      },
-      ...(filters.length > 0 && { filters })
+      // Note: explore endpoint doesn't support order_by, results are sorted by relevance
+      filters
     });
     
     // Debug: log location data availability
@@ -1903,19 +1900,18 @@ export async function getAllSubmarketListings(
     minFilteredCount?: number;
   }
 ): Promise<ListingData[]> {
-  // Check cache first - cache the full listing set for 7 days
+  // Check cache first - include bedroom filter in cache key for proper separation
+  // When bedroom filter is applied, we cache the filtered results separately
   const cacheKey = apiCache.generateKey('all_submarket_listings', { 
     submarketId, 
-    maxListings: options?.maxListings || 500 
+    maxListings: options?.maxListings || 500,
+    bedrooms: options?.bedrooms // Include bedroom in cache key
   });
   const cached = apiCache.get<ListingData[]>(cacheKey);
   if (cached) {
-    console.log(`[getAllSubmarketListings] CACHE HIT for ${submarketId}, ${cached.length} listings`);
-    // Apply filters to cached data
+    console.log(`[getAllSubmarketListings] CACHE HIT for ${submarketId}, bedrooms: ${options?.bedrooms}, ${cached.length} listings`);
+    // Apply only minRevenue filter (bedroom already filtered via API)
     let filtered = cached;
-    if (options?.bedrooms !== undefined) {
-      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
-    }
     if (options?.minRevenue !== undefined) {
       filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
     }
@@ -1946,11 +1942,13 @@ export async function getAllSubmarketListings(
   
   try {
     // First request to get total count
+    // Pass bedroom filter to API if specified - API will filter server-side
     const firstResult = await getSubmarketListings(submarketId, {
       limit: pageSize,
       offset: 0,
       orderBy: "revenue",
       orderDirection: "desc",
+      filters: options?.bedrooms !== undefined ? { bedrooms: options.bedrooms } : undefined,
     });
     
     totalCount = firstResult.total_count;
@@ -1974,6 +1972,7 @@ export async function getAllSubmarketListings(
         offset,
         orderBy: "revenue",
         orderDirection: "desc",
+        filters: options?.bedrooms !== undefined ? { bedrooms: options.bedrooms } : undefined,
       });
       
       if (result.listings.length === 0) break;
@@ -1987,18 +1986,13 @@ export async function getAllSubmarketListings(
     
     console.log(`[getAllSubmarketListings] Fetched ${allListings.length} total listings, ${countFiltered(allListings)} match filters`);
     
-    // Cache the UNFILTERED results (so we can apply different filters from cache)
+    // Cache the filtered results (bedroom filter is applied at API level)
     apiCache.set(cacheKey, allListings, 'market_listings');
-    console.log(`[getAllSubmarketListings] Cached ${allListings.length} listings for ${submarketId}`);
+    console.log(`[getAllSubmarketListings] Cached ${allListings.length} listings for ${submarketId}, bedrooms: ${options?.bedrooms}`);
     
-    // Filter by bedroom count if specified
+    // Bedroom filtering is now done at API level, no need to filter again
+    // Only apply minRevenue filter client-side if specified
     let filtered = allListings;
-    if (options?.bedrooms !== undefined) {
-      filtered = filtered.filter(l => l.bedrooms === options.bedrooms);
-      console.log(`[getAllSubmarketListings] After bedroom filter (${options.bedrooms}BR): ${filtered.length} listings`);
-    }
-    
-    // Filter by minimum revenue if specified
     if (options?.minRevenue !== undefined) {
       filtered = filtered.filter(l => l.annual_revenue >= options.minRevenue!);
       console.log(`[getAllSubmarketListings] After revenue filter (>=$${options.minRevenue}): ${filtered.length} listings`);
@@ -3949,7 +3943,7 @@ export async function getCountryMarkets(
 
     const requestBody: Record<string, unknown> = {
       pagination: {
-        page_size: Math.min(options?.limit || 100, 100),
+        page_size: Math.min(options?.limit || 25, 25),  // AirDNA API max is 25
         offset: options?.offset || 0,
       },
     };
@@ -6449,9 +6443,21 @@ export async function getStandaloneMarketAdvisorData(
     const hasFilters = Object.keys(listingFilters).length > 0;
     console.log(`[StandaloneMarketAdvisor] Fetching listings with filters:`, hasFilters ? listingFilters : 'none');
     
-    const listingsFn = marketType === 'submarket' || marketType === 'zipcode'
-      ? getSubmarketListings(marketId, { limit: 5000, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined })
-      : getMarketListings(marketId, { limit: 5000, orderBy: 'revenue', orderDirection: 'desc', filters: hasFilters ? listingFilters : undefined });
+    // Use getAllSubmarketListings for proper pagination (API max is 25 per page)
+    // This function handles pagination internally and returns all matching listings
+    // Use getAllSubmarketListings/getAllMarketListings which handle pagination internally
+    // These functions return ListingData[] directly, already filtered by bedroom
+    const listingsFn: Promise<{ listings: ListingData[]; total_count: number }> = marketType === 'submarket' || marketType === 'zipcode'
+      ? getAllSubmarketListings(marketId, { 
+          bedrooms: listingFilters.bedrooms,
+          maxListings: 500,  // Get enough for good analysis
+          minFilteredCount: 20  // Ensure we have enough filtered results
+        }).then((listings: ListingData[]) => ({ listings, total_count: listings.length }))
+      : getAllMarketListings(marketId, { 
+          bedrooms: listingFilters.bedrooms,
+          maxListings: 500,
+          minFilteredCount: 20
+        }).then((result) => ({ listings: result.listings, total_count: result.total_count }));
     
     const seasonalityFn = marketType === 'submarket' || marketType === 'zipcode'
       ? getSubmarketSeasonality(marketId)
@@ -6466,7 +6472,7 @@ export async function getStandaloneMarketAdvisorData(
     ]);
     
     // Process seasonality
-    const seasonality = (seasonalityData || []).map(s => ({
+    const seasonality = (seasonalityData || []).map((s: any) => ({
       month: s.month,
       monthName: s.month_name,
       revenue: s.revenue,
@@ -6495,7 +6501,7 @@ export async function getStandaloneMarketAdvisorData(
       percentChange: supplyTrendData.percent_change,
       trend: supplyTrendData.trend,
       insight: supplyTrendData.insight,
-      monthlyData: supplyTrendData.monthly_data.map(m => ({
+      monthlyData: supplyTrendData.monthly_data.map((m: any) => ({
         month: m.month,
         activeListings: m.active_listings,
         changeFromPrevious: m.change_from_previous,
@@ -6609,7 +6615,7 @@ export async function getStandaloneMarketAdvisorData(
         rentalDemandScore: Math.round(avgOccupancy * 1.2), // Based on occupancy
         revenueGrowthScore: Math.max(0, Math.min(100, 50 + yoyChange * 2)), // Based on YoY
         seasonalityScore: Math.round(100 - (seasonality.length > 0 
-          ? ((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 50)
+          ? ((Math.max(...seasonality.map((s: { revenue: number }) => s.revenue)) - Math.min(...seasonality.map((s: { revenue: number }) => s.revenue))) / (seasonality.reduce((sum: number, s: { revenue: number }) => sum + s.revenue, 0) / seasonality.length) * 50)
           : 30)), // Lower variance = higher score
         regulationScore: 70, // Default - would need separate API
       },
@@ -6634,7 +6640,7 @@ export async function getStandaloneMarketAdvisorData(
       bookingPatterns: bookingPatternsProcessed,
       supplyTrend,
       topPerformers,
-      submarkets: submarkets.map(s => ({
+      submarkets: submarkets.map((s: any) => ({
         id: s.id,
         name: s.name,
         listingCount: s.listing_count,

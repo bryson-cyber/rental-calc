@@ -6910,3 +6910,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add bedroom filter context to executive summary (e.g., "Studio Analysis for 63108") - updated AI prompt
 - [x] Fix bedroom filter handling for Studio (bedrooms=0) - fixed truthy check in filter context builder
 - [ ] Verify bedroom filter is actually applied to AirDNA API calls (revenue seems too high for Studios) - needs testing
+
+
+### Market Advisor Critical Fixes (Jan 28, 2026 - Round 2)
+- [x] Fix Total Listings showing 0 when bedroom filter is applied - now uses API-level filtering with /listing/explore/submarket endpoint
+- [x] Fix revenue data not actually filtering by bedroom selection - bedroom filter now passed to API, returns only matching listings
+- [x] Add re-analyze button when bedroom filter changes (allow regenerating report) - added to market overview header
+- [x] Fix page_size limit from 100 to 25 (AirDNA API max)

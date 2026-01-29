@@ -599,7 +599,29 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     )}
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => {
+                            setMarketAdvice(null);
+                            setMarketData(null);
+                            // Keep the selected market so user can re-analyze with different filters
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Re-analyze
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Run analysis again with different bedroom filter</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <div className={`text-2xl font-bold px-4 py-2 rounded-lg ${getScoreColor(marketData.scores.marketScore)}`}>
                     {Math.round(marketData.scores.marketScore)}
                     <span className="text-sm font-normal ml-1">/100</span>
