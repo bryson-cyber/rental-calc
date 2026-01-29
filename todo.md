@@ -7084,3 +7084,26 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Clear ai_advisor_cache table to force regeneration with new prompt
 - [x] Verify investment comparison appears in fresh AI output (S&P 500, High-Yield Savings, Treasury Bonds vs STR)
 - [x] Verified: 31x return comparison now showing correctly
+
+## Opportunity Finder Feature (Step 8)
+- [ ] Add HasData API key to environment secrets
+- [ ] Create backend endpoint for Zillow listings search
+- [ ] Build Opportunity Finder UI with Zillow-style filters (location, beds, baths, price range, property type)
+- [ ] Create property grid with cards showing image, price, beds/baths, address
+- [ ] Add "Validate" button on each property that connects to Step 3 analysis
+- [ ] Add Step 8 to homepage step navigation
+- [ ] Create standalone /opportunity-finder page
+- [ ] Test full flow with real listings
+
+## Opportunity Finder Feature (Completed)
+- [x] Create HasData Zillow API integration (server/hasdata.ts)
+- [x] Add searchZillowRentals endpoint to opportunity-finder.ts
+- [x] Build OpportunityFinderStep component with Zillow-style UI
+- [x] Add For Rent / For Sale toggle
+- [x] Add filters (bedrooms, bathrooms, price range)
+- [x] Create standalone /opportunity-finder page
+- [x] Add Step 8 to ChapterPropertyReport
+- [x] Connect Validate button to AirDNA revenue estimate
+- [x] Pass property data via URL parameters to main calculator
+- [x] Update PropertyContext to read URL parameters
+- [x] Test full flow: Search → Validate → Full Analysis

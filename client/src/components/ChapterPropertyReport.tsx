@@ -37,7 +37,8 @@ import {
   TrendingDown as TrendDown,
   Bed,
   Bath,
-  Maximize
+  Maximize,
+  Search
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart, CompetitorDistributionChart } from './RevenueCharts';
@@ -45,6 +46,8 @@ import MarketInsightsPanel from './MarketInsightsPanel';
 import BreakEvenCalculator from './BreakEvenCalculator';
 import { CompsMapView } from './CompsMapView';
 import { ShareReportButton } from './ShareReportButton';
+import { StandaloneMarketAdvisor } from './StandaloneMarketAdvisor';
+import OpportunityFinderStep from './OpportunityFinderStep';
 
 // Helper function to extract Airbnb listing ID and construct image URL
 const getAirbnbImageUrl = (airbnbUrl?: string): string | null => {
@@ -346,7 +349,10 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
     { id: 2, title: 'Local Market Analysis' },
     { id: 3, title: 'Study the Competition' },
     { id: 4, title: 'Project the Profit' },
-    { id: 5, title: 'Setting Up for Success' }
+    { id: 5, title: 'Setting Up for Success' },
+    { id: 6, title: 'Market Advisor' },
+    { id: 7, title: 'AI Property Advisor' },
+    { id: 8, title: 'Opportunity Finder' }
   ];
 
   const scrollToChapter = (id: number) => {
@@ -1533,6 +1539,57 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                 management quality, and market conditions.
               </p>
             </div>
+          </ChapterSection>
+
+          {/* Chapter 6: Market Advisor */}
+          <ChapterSection id="chapter-6" title="6. Is This Market Worth Investing In?">
+            <p className="text-lg text-[#1A1A1A]/80 mb-8 leading-relaxed">
+              Before committing to a property, it's important to understand the <strong>overall health of the market</strong>. 
+              This analysis looks at market-wide trends, seasonality, and competition to help you decide if this is the right area to invest in.
+            </p>
+            <StandaloneMarketAdvisor 
+              myProperty={{
+                address: property.address,
+                zipCode: property.zipCode,
+                city: property.city
+              }}
+            />
+          </ChapterSection>
+
+          {/* Chapter 7: AI Property Advisor */}
+          <ChapterSection id="chapter-7" title="7. What Does All This Data Mean For You?">
+            <p className="text-lg text-[#1A1A1A]/80 mb-8 leading-relaxed">
+              Now let's put all the pieces together. Our AI advisor analyzes your specific property against the market data 
+              to give you a <strong>personalized assessment</strong> of the opportunity.
+            </p>
+            <div className="bg-[#D4A84B]/10 border border-[#D4A84B]/30 rounded-xl p-6 text-center">
+              <Sparkles className="w-8 h-8 text-[#D4A84B] mx-auto mb-3" />
+              <h4 className="font-semibold text-[#1A1A1A] mb-2">AI Property Analysis</h4>
+              <p className="text-[#1A1A1A]/70 mb-4">
+                Get a personalized AI analysis of this property with investment comparison, break-even calculations, and actionable insights.
+              </p>
+              <Link
+                href={`/ai-advisor?address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.monthlyRent || ''}`}
+                className="inline-flex items-center gap-2 bg-[#D4A84B] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#c49a3d] transition-colors"
+              >
+                <Sparkles className="w-5 h-5" />
+                Get AI Analysis
+              </Link>
+            </div>
+          </ChapterSection>
+
+          {/* Chapter 8: Opportunity Finder */}
+          <ChapterSection id="chapter-8" title="8. Find More Opportunities">
+            <p className="text-lg text-[#1A1A1A]/80 mb-8 leading-relaxed">
+              Ready to explore more properties? Use our <strong>Opportunity Finder</strong> to browse available rentals 
+              in any market and validate them with one click.
+            </p>
+            <OpportunityFinderStep
+              onSelectProperty={(selectedProperty) => {
+                // This would navigate to analyze the selected property
+                console.log('Selected property:', selectedProperty);
+              }}
+            />
           </ChapterSection>
         </div>
       </div>

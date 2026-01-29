@@ -288,14 +288,39 @@ export default function RentalEstimator() {
   const [error, setError] = useState<string | null>(null);
   const [inputType, setInputType] = useState<'address' | 'zillow'>('address');
   const [zillowUrl, setZillowUrl] = useState('');
-  const [formData, setFormData] = useState({
-    address: '',
-    bedrooms: 2,
-    bathrooms: 1,
-    accommodates: 4, // Auto-calculated as 2 per bedroom
-    monthlyRent: 0,
-    propertyType: 'House'
-  });
+  
+  // Parse URL parameters for pre-filling from Opportunity Finder
+  const getInitialFormData = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const address = params.get('address');
+      const bedrooms = params.get('bedrooms');
+      const bathrooms = params.get('bathrooms');
+      const rent = params.get('rent');
+      
+      if (address) {
+        const beds = bedrooms ? parseInt(bedrooms) : 2;
+        return {
+          address: address,
+          bedrooms: beds,
+          bathrooms: bathrooms ? parseFloat(bathrooms) : 1,
+          accommodates: beds * 2,
+          monthlyRent: rent ? parseInt(rent) : 0,
+          propertyType: 'House'
+        };
+      }
+    }
+    return {
+      address: '',
+      bedrooms: 2,
+      bathrooms: 1,
+      accommodates: 4,
+      monthlyRent: 0,
+      propertyType: 'House'
+    };
+  };
+  
+  const [formData, setFormData] = useState(getInitialFormData);
 
   // Auto-calculate guests as 2 per bedroom when bedrooms change
   const updateBedrooms = (bedrooms: number) => {

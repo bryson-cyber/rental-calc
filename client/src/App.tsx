@@ -19,6 +19,7 @@ import MyFavorites from "./pages/MyFavorites";
 import MarketAlertsPage from "./pages/MarketAlertsPage";
 import SharedReportPage from "./pages/SharedReportPage";
 import SharedComparisonPage from "./pages/SharedComparisonPage";
+import OpportunityFinder from "./pages/OpportunityFinder";
 import { TrustBanner } from "./components/TrustBanner";
 import SavedItemsPage from "./pages/SavedItemsPage";
 import AccountPage from "./pages/AccountPage";
@@ -67,6 +68,9 @@ function Router() {
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />
       <Route path="/share/compare/:data" component={SharedComparisonPage} />
+      
+      {/* Opportunity Finder - Browse Zillow listings */}
+      <Route path="/opportunity-finder" component={OpportunityFinder} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

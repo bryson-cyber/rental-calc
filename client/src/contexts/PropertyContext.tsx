@@ -98,9 +98,65 @@ const defaultMarketAdvisorFilters: MarketAdvisorFilters = {
 const MARKET_ADVISOR_FILTERS_KEY = 'marketAdvisorFilters';
 const MY_PROPERTY_KEY = 'myProperty';
 
+// Helper to load property from URL parameters (for Opportunity Finder integration)
+function loadPropertyFromUrlParams(): PropertyDetails | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const address = params.get('address');
+    const bedrooms = params.get('bedrooms');
+    const bathrooms = params.get('bathrooms');
+    const rent = params.get('rent');
+    
+    if (address) {
+      // Extract city and state from address if possible
+      const addressParts = address.split(',').map(s => s.trim());
+      let city = '';
+      let state = '';
+      let zipCode = '';
+      
+      if (addressParts.length >= 2) {
+        city = addressParts[addressParts.length - 2] || '';
+        const stateZip = addressParts[addressParts.length - 1] || '';
+        const stateZipMatch = stateZip.match(/([A-Z]{2})\s*(\d{5})?/);
+        if (stateZipMatch) {
+          state = stateZipMatch[1];
+          zipCode = stateZipMatch[2] || '';
+        }
+      }
+      
+      return {
+        address: address,
+        bedrooms: bedrooms ? parseInt(bedrooms) : 2,
+        bathrooms: bathrooms ? parseFloat(bathrooms) : 1,
+        monthlyRent: rent ? parseInt(rent) : undefined,
+        city,
+        state,
+        zipCode,
+      };
+    }
+  } catch (e) {
+    console.error('[PropertyContext] Error loading property from URL params:', e);
+  }
+  return null;
+}
+
 // Helper to load property from localStorage
 function loadPropertyFromStorage(): PropertyDetails | null {
   if (typeof window === 'undefined') return null;
+  
+  // Check URL parameters first (takes priority for Opportunity Finder flow)
+  const urlProperty = loadPropertyFromUrlParams();
+  if (urlProperty) {
+    // Save to localStorage so it persists
+    savePropertyToStorage(urlProperty);
+    // Clear URL params after loading to prevent stale data
+    if (typeof window !== 'undefined' && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    return urlProperty;
+  }
+  
   try {
     const saved = localStorage.getItem(MY_PROPERTY_KEY);
     if (saved) {

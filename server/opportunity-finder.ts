@@ -18,6 +18,7 @@ import {
   getTask, 
   stopSession,
 } from './browser-use';
+import { searchZillowListings, type ZillowProperty, type ZillowListingResponse } from './hasdata';
 
 // ============================================
 // TYPES
@@ -340,6 +341,200 @@ export const opportunityFinderRouter = router({
         return { success: true };
       } catch (error) {
         return { success: false };
+      }
+    }),
+
+  // ============================================
+  // HASDATA ZILLOW API ENDPOINTS (Fast & Reliable)
+  // ============================================
+
+  /**
+   * Search Zillow rentals using HasData API
+   * This is the fast, reliable alternative to browser scraping
+   */
+  searchZillowRentals: publicProcedure
+    .input(z.object({
+      location: z.string().min(1, 'Location is required'),
+      priceMin: z.number().optional(),
+      priceMax: z.number().optional(),
+      bedsMin: z.number().optional(),
+      bedsMax: z.number().optional(),
+      bathsMin: z.number().optional(),
+      bathsMax: z.number().optional(),
+      homeTypes: z.array(z.string()).optional(),
+      page: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location}`);
+        
+        const result = await searchZillowListings({
+          keyword: input.location,
+          type: 'forRent',
+          priceMin: input.priceMin,
+          priceMax: input.priceMax,
+          bedsMin: input.bedsMin,
+          bedsMax: input.bedsMax,
+          bathsMin: input.bathsMin,
+          bathsMax: input.bathsMax,
+          homeTypes: input.homeTypes,
+          page: input.page,
+        });
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: result.error || 'Failed to search Zillow rentals',
+          });
+        }
+        
+        return {
+          success: true,
+          totalResults: result.totalResults,
+          properties: result.properties,
+          location: input.location,
+        };
+        
+      } catch (error) {
+        console.error('[Opportunity Finder] Zillow search error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to search Zillow rentals',
+        });
+      }
+    }),
+
+  /**
+   * Search Zillow properties for sale using HasData API
+   */
+  searchZillowForSale: publicProcedure
+    .input(z.object({
+      location: z.string().min(1, 'Location is required'),
+      priceMin: z.number().optional(),
+      priceMax: z.number().optional(),
+      bedsMin: z.number().optional(),
+      bedsMax: z.number().optional(),
+      bathsMin: z.number().optional(),
+      bathsMax: z.number().optional(),
+      homeTypes: z.array(z.string()).optional(),
+      page: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location}`);
+        
+        const result = await searchZillowListings({
+          keyword: input.location,
+          type: 'forSale',
+          priceMin: input.priceMin,
+          priceMax: input.priceMax,
+          bedsMin: input.bedsMin,
+          bedsMax: input.bedsMax,
+          bathsMin: input.bathsMin,
+          bathsMax: input.bathsMax,
+          homeTypes: input.homeTypes,
+          page: input.page,
+        });
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: result.error || 'Failed to search Zillow properties',
+          });
+        }
+        
+        return {
+          success: true,
+          totalResults: result.totalResults,
+          properties: result.properties,
+          location: input.location,
+        };
+        
+      } catch (error) {
+        console.error('[Opportunity Finder] Zillow for sale search error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to search Zillow properties',
+        });
+      }
+    }),
+
+  /**
+   * Validate a Zillow property with AirDNA revenue projection
+   * Returns the property with projected STR revenue and profit calculation
+   */
+  validateProperty: publicProcedure
+    .input(z.object({
+      address: z.string().min(1, 'Address is required'),
+      rent: z.number().min(0, 'Rent is required'),
+      bedrooms: z.number().min(1),
+      bathrooms: z.number().min(0.5),
+      zillowUrl: z.string().optional(),
+      image: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        console.log(`[Opportunity Finder] Validating property: ${input.address}`);
+        
+        // Get AirDNA estimate
+        const estimate = await getAirDNAEstimate(
+          input.address,
+          input.bedrooms,
+          input.bathrooms
+        );
+        
+        if (!estimate || estimate.revenue === 0) {
+          return {
+            success: false,
+            error: 'Could not get revenue estimate for this property. Try a different address.',
+            property: input,
+          };
+        }
+        
+        // Calculate profitability
+        const monthlyRevenue = estimate.revenue / 12;
+        const operatingCosts = input.rent * 0.20; // 20% for utilities, supplies, cleaning, etc.
+        const monthlyProfit = monthlyRevenue - input.rent - operatingCosts;
+        const annualProfit = monthlyProfit * 12;
+        const roi = (annualProfit / (input.rent * 12)) * 100;
+        
+        // Determine if it's a good deal
+        const isGoodDeal = monthlyProfit > 500 && estimate.occupancy > 50;
+        const verdict = monthlyProfit > 1000 ? 'Excellent Opportunity' :
+                        monthlyProfit > 500 ? 'Good Opportunity' :
+                        monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :
+                        'Not Recommended';
+        
+        return {
+          success: true,
+          property: {
+            address: input.address,
+            rent: input.rent,
+            bedrooms: input.bedrooms,
+            bathrooms: input.bathrooms,
+            zillowUrl: input.zillowUrl,
+            image: input.image,
+          },
+          projection: {
+            annualRevenue: Math.round(estimate.revenue),
+            monthlyRevenue: Math.round(monthlyRevenue),
+            occupancy: estimate.occupancy,
+            adr: estimate.adr,
+            operatingCosts: Math.round(operatingCosts),
+            monthlyProfit: Math.round(monthlyProfit),
+            annualProfit: Math.round(annualProfit),
+            roi: Math.round(roi),
+          },
+          verdict,
+          isGoodDeal,
+        };
+        
+      } catch (error) {
+        console.error('[Opportunity Finder] Validation error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to validate property',
+        });
       }
     }),
 });
