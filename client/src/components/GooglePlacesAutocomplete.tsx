@@ -138,6 +138,7 @@ interface GooglePlacesAutocompleteProps {
   countryRestriction?: string; // e.g., 'us'
   allowDirectSearch?: boolean; // Allow searching with unrecognized locations
   showSearchHistory?: boolean; // Show recent searches dropdown
+  initialValue?: string; // Pre-fill the input with this value (for HubSpot email deep links)
 }
 
 export function GooglePlacesAutocomplete({
@@ -149,8 +150,9 @@ export function GooglePlacesAutocomplete({
   countryRestriction = 'us',
   allowDirectSearch = false,
   showSearchHistory = true, // Default to showing search history
+  initialValue = '', // For pre-filling from URL params (HubSpot emails)
 }: GooglePlacesAutocompleteProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialValue);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<PlaceResult[]>([]);
@@ -163,6 +165,18 @@ export function GooglePlacesAutocomplete({
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const sessionToken = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync query when initialValue prop changes (for HubSpot email deep links)
+  useEffect(() => {
+    if (initialValue && initialValue !== query) {
+      console.log('[GooglePlacesAutocomplete] Syncing initialValue:', initialValue);
+      setQuery(initialValue);
+      // Also notify parent of the query change
+      if (onQueryChange) {
+        onQueryChange(initialValue);
+      }
+    }
+  }, [initialValue]);
 
   // Initialize Google Places services
   useEffect(() => {

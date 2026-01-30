@@ -483,6 +483,7 @@ export default function LeadMagnet() {
     const params = new URLSearchParams(effectiveSearch);
     console.log('[URLParams] effectiveSearch:', effectiveSearch, 'searchString:', searchString, 'initialSearchRef:', initialSearchRef.current);
     const tab = params.get('tab');
+    const step = params.get('step'); // Support ?step=3 format for HubSpot emails
     const urlAddress = params.get('address');
     const location = params.get('location');
     const urlBedrooms = params.get('bedrooms');
@@ -512,10 +513,27 @@ export default function LeadMagnet() {
       'regulations': 'regulations',
     };
     
-    console.log('[URLParams] tab:', tab, 'mapped to:', tab ? tabMapping[tab] : null, 'autoAnalyze:', autoAnalyze);
-    if (tab && tabMapping[tab]) {
-      console.log('[URLParams] Setting activeTab to:', tabMapping[tab]);
-      setActiveTab(tabMapping[tab]);
+    // Map step numbers to internal tab names (for HubSpot email deep links)
+    // Step 1: Check Regulations, Step 2: Find a Property, Step 3: See Real Revenue, etc.
+    const stepMapping: Record<string, TabType> = {
+      '1': 'regulations',    // Check Regulations
+      '2': 'opportunity',    // Find a Property
+      '3': 'prove',          // See Real Revenue
+      '4': 'find',           // Explore Listings
+      '5': 'validate',       // Validate the Deal
+      '6': 'compare',        // Compare Favorites
+      '7': 'map',            // See the Map
+      '8': 'market',         // Market Advisor
+      '9': 'advisor',        // AI Advisor
+    };
+    
+    // Determine target tab from either ?tab= or ?step= parameter
+    const targetTab = (tab && tabMapping[tab]) ? tabMapping[tab] : (step && stepMapping[step]) ? stepMapping[step] : null;
+    
+    console.log('[URLParams] tab:', tab, 'step:', step, 'targetTab:', targetTab, 'autoAnalyze:', autoAnalyze);
+    if (targetTab) {
+      console.log('[URLParams] Setting activeTab to:', targetTab);
+      setActiveTab(targetTab);
       
       // Pre-fill form data if provided
       if (urlAddress) {
@@ -559,24 +577,29 @@ export default function LeadMagnet() {
         });
         
         // For prove tab with zip code, set initial zip for auto-search
-        if (tabMapping[tab] === 'prove' && urlZip) {
+        if (targetTab === 'prove' && urlZip) {
           setProveInitialZipCode(urlZip);
         }
         
         // For prove tab with city/state (HubSpot personalization), set initial city/state
-        if (tabMapping[tab] === 'prove' && urlCity && urlState) {
+        if (targetTab === 'prove' && urlCity && urlState) {
           setProveInitialCity(urlCity);
           setProveInitialState(urlState);
         }
         
+        // For opportunity tab (Find a Property), set initial city/state for auto-search
+        if (targetTab === 'opportunity' && urlCity && urlState) {
+          setExploreAddress(hubspotLocation);
+        }
+        
         // Auto-trigger analysis for HubSpot personalized links
         if (!autoAnalyze) {
-          autoTriggerRef.current = { tab: tabMapping[tab], address: hubspotLocation };
+          autoTriggerRef.current = { tab: targetTab, address: hubspotLocation };
         }
       }
       
       // For map tab, set myProperty context - coordinates are optional, MapFirstLayoutV2 will geocode if missing
-      if (tabMapping[tab] === 'map' && urlAddress) {
+      if (targetTab === 'map' && urlAddress) {
         const latitude = lat ? parseFloat(lat) : undefined;
         const longitude = lng ? parseFloat(lng) : undefined;
         const hasValidCoords = latitude && longitude && !isNaN(latitude) && !isNaN(longitude);
@@ -598,7 +621,7 @@ export default function LeadMagnet() {
       
       // Mark for auto-trigger if autoAnalyze flag is set
       if (autoAnalyze === 'true' && urlAddress) {
-        autoTriggerRef.current = { tab: tabMapping[tab], address: urlAddress };
+        autoTriggerRef.current = { tab: targetTab, address: urlAddress };
       }
       
       // Scroll to the active tool panel after a short delay
@@ -664,6 +687,24 @@ export default function LeadMagnet() {
             // For map tab, the MapFirstLayoutV2 component handles its own auto-search
             // We just need to ensure the address is set in the explore field
             setExploreAddress(triggerAddress);
+          } else if (tab === 'opportunity' && triggerAddress) {
+            // For opportunity tab (Find a Property), auto-trigger the property search
+            console.log('[AutoTrigger] Setting up opportunity tab with:', triggerAddress);
+            // Try to click the search button in the opportunity tab
+            const opportunityButton = document.querySelector('[data-opportunity-button]') as HTMLButtonElement;
+            if (opportunityButton && !opportunityButton.disabled) {
+              console.log('[AutoTrigger] Clicking opportunity button');
+              opportunityButton.click();
+            } else {
+              // Retry after delay
+              setTimeout(() => {
+                const retryButton = document.querySelector('[data-opportunity-button]') as HTMLButtonElement;
+                if (retryButton && !retryButton.disabled) {
+                  console.log('[AutoTrigger] Retry: Clicking opportunity button');
+                  retryButton.click();
+                }
+              }, 1500);
+            }
           } else if (tab === 'prove' && triggerAddress) {
             // For prove tab (Revenue), auto-trigger the market analysis
             console.log('[AutoTrigger] Setting up prove tab with:', triggerAddress);
@@ -2143,6 +2184,7 @@ export default function LeadMagnet() {
                       });
                     }}
                     placeholder="Type a zip code, city, or neighborhood (e.g., 63101, St. Louis)..."
+                    initialValue={exploreAddress} // Pre-fill from URL params (HubSpot emails)
                   />
                 </div>
                 
@@ -2836,6 +2878,7 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'opportunity' ? null : 'opportunity')}
                 />
                 <OpportunityFinderStep
+                  initialLocation={exploreAddress} // Pass location from URL params (HubSpot emails)
                   onSelectProperty={(property) => {
                     // Pre-fill the validate tab with this property (but don't switch tabs)
                     // This allows action buttons to appear on the card after analysis

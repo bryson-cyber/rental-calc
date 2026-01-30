@@ -23,22 +23,33 @@ interface MarketAutocompleteProps {
   onSelect: (market: MarketResult) => void;
   placeholder?: string;
   className?: string;
+  initialValue?: string; // Pre-fill the input with this value (for HubSpot email deep links)
 }
 
 export function MarketAutocomplete({ 
   onSelect, 
   placeholder = "Search city, neighborhood, or zip code...",
-  className 
+  className,
+  initialValue = '' // For pre-filling from URL params (HubSpot emails)
 }: MarketAutocompleteProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialValue);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<MarketResult | null>(null);
   const [zipLookupResult, setZipLookupResult] = useState<MarketResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Sync query when initialValue prop changes (for HubSpot email deep links)
+  useEffect(() => {
+    if (initialValue && initialValue !== query) {
+      console.log('[MarketAutocomplete] Syncing initialValue:', initialValue);
+      setQuery(initialValue);
+      setIsOpen(true); // Open dropdown to show matching results
+    }
+  }, [initialValue]);
+
   // Debounced search query - reduced to 150ms for faster response
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState(initialValue);
   
   useEffect(() => {
     const timer = setTimeout(() => {

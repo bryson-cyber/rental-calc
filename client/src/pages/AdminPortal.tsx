@@ -535,19 +535,19 @@ export default function AdminPortal() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-3">HubSpot Property Names (Update These)</h3>
+                  <h3 className="font-semibold mb-3">Verified HubSpot Property Names ✓</h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    You mentioned these aren't the correct property names. Please get the exact internal names from HubSpot Settings → Properties and update them here.
+                    These are the correct internal property names from your HubSpot account (Data Perfection / LeadFi fields):
                   </p>
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Action Required:</strong> Log into HubSpot → Settings → Properties → Click on each property to find the "Internal name" field. Common patterns:
-                    </p>
-                    <ul className="text-sm text-yellow-700 mt-2 list-disc list-inside">
-                      <li>data_perfection__city or dp_city</li>
-                      <li>data_perfection__state or dp_state</li>
-                      <li>data_perfection__postal_code or dp_postal_code</li>
-                    </ul>
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><strong>City:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__city</code></div>
+                      <div><strong>State:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__state</code></div>
+                      <div><strong>Postal Code:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__postal_code</code></div>
+                      <div><strong>Address:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__address</code></div>
+                      <div><strong>Phone:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__phones</code></div>
+                      <div><strong>Age:</strong> <code className="bg-white px-2 py-0.5 rounded">data_perfection__age</code></div>
+                    </div>
                   </div>
                 </div>
               </CardContent>

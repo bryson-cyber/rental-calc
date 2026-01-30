@@ -8050,3 +8050,53 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Set up Zapier workflows to connect tool → HubSpot
 - [ ] Integrate EmailOptinModal into tool completion flows
 - [ ] Test personalized links on production domain after publish
+
+
+## Masterclass Engagement Flow (CRITICAL - Jan 30, 2026)
+- [ ] Create custom HubSpot properties for tool tracking:
+  - tool_last_city
+  - tool_last_state
+  - tool_properties_available
+  - tool_last_revenue_estimate
+  - tool_last_used_date
+- [ ] Configure Zapier to update these properties when leads use tools
+- [ ] Set up masterclass opt-in trigger:
+  - When lead opts in → immediately send personalized email with properties in their city
+  - Include personalized link to tool pre-filled with their city
+- [ ] Prevent 7-day disengagement by keeping leads engaged with city-specific content
+
+## URL Parameter Deep Linking for Email Automation (Jan 30, 2026)
+- [ ] Add URL parameter reading for city, state, step
+- [ ] Auto-populate search field from URL params
+- [ ] Auto-navigate to specified step from URL
+- [ ] Auto-trigger search when params present
+- [ ] Test all 9 tool deep links
+- [ ] Build HubSpot email automation for Data Perfection City trigger
+- [ ] Create personalized email templates for each tool step
+
+
+---
+
+## URL Parameter Deep Linking for HubSpot Emails (Jan 30, 2026)
+
+### URL Parameter Support
+- [x] Add step parameter mapping (step=1 through step=9)
+- [x] Add city/state URL parameters for pre-filling location
+- [x] Update GooglePlacesAutocomplete with initialValue prop
+- [x] Update MarketAutocomplete with initialValue prop  
+- [x] Update OpportunityFinderStep to pass initialValue
+- [x] Update LeadMagnet to pass exploreAddress to MarketAutocomplete
+- [x] Test Step 2 (Find a Property) deep linking
+- [x] Test Step 3 (See Real Revenue) deep linking
+- [x] Test Step 4 (Explore Listings) deep linking
+
+### URL Format
+- `?step=2&city=Loma+Linda&state=CA` → Find a Property (127 results)
+- `?step=3&city=Loma+Linda&state=CA` → See Real Revenue
+- `?step=4&city=Loma+Linda&state=CA` → Explore Listings
+
+### HubSpot Email Automation (In Progress)
+- [x] Create webhook Zap to update HubSpot contacts with tool usage data
+- [ ] Create trigger Zap for when Data Perfection: City is populated
+- [ ] Build email sequence with personalized deep links
+- [ ] Test full automation flow

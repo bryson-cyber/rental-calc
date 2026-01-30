@@ -155,6 +155,7 @@ interface OpportunityFinderStepProps {
     bathrooms: number;
     monthlyRent: number;
   }) => void;
+  initialLocation?: string; // For pre-filling from URL params (HubSpot emails)
 }
 
 // Home type options
@@ -273,13 +274,19 @@ function saveState(state: { location: string; searchType: 'forRent' | 'forSale';
   }
 }
 
-export default function OpportunityFinderStep({ onSelectProperty }: OpportunityFinderStepProps) {
+export default function OpportunityFinderStep({ onSelectProperty, initialLocation }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
   
   // Search state - restore from localStorage if available using initializer function
   // This ensures state is loaded fresh on each mount (when switching tabs)
+  // Priority: initialLocation (from URL params) > saved state > empty
   const [location, setLocation] = useState(() => {
+    // If initialLocation is provided (from HubSpot email deep link), use it
+    if (initialLocation) {
+      console.log('[OpportunityFinder] Using initialLocation from URL:', initialLocation);
+      return initialLocation;
+    }
     const saved = loadSavedState();
     console.log('[OpportunityFinder] Loading saved location:', saved?.location);
     return saved?.location || '';
@@ -289,6 +296,14 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     return saved?.searchType || 'forRent';
   });
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Update location when initialLocation prop changes (for HubSpot email deep links)
+  useEffect(() => {
+    if (initialLocation && initialLocation !== location) {
+      console.log('[OpportunityFinder] Updating location from initialLocation prop:', initialLocation);
+      setLocation(initialLocation);
+    }
+  }, [initialLocation]);
   
   // Filter state
   const [priceMin, setPriceMin] = useState<string>('');
@@ -780,6 +795,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 types={[]} // Empty = all types (cities, neighborhoods, zip codes, addresses)
                 countryRestriction="us"
                 allowDirectSearch={true} // Allow searching even if Google doesn't recognize the location
+                initialValue={initialLocation || location} // Pre-fill from URL params (HubSpot emails)
                 onQueryChange={(query) => {
                   // Track query changes for manual search button
                   setLocation(query);
@@ -796,6 +812,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               onClick={() => handleSearch()}
               disabled={!location.trim() || isSearching}
               className="h-12 px-6"
+              data-opportunity-button
               style={{
                 backgroundColor: 'oklch(0.55 0.14 75)',
                 borderRadius: '980px',
