@@ -75,7 +75,9 @@ import {
   Image,
   Bot,
   Brain,
-  Microscope
+  Microscope,
+  X,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -547,6 +549,35 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     }
   };
   
+  // Clear search and reset all state
+  const handleClearSearch = () => {
+    // Clear location and results
+    setLocation('');
+    setProperties([]);
+    setTotalResults(0);
+    setHasMore(false);
+    setHasSearched(false);
+    setCurrentPage(1);
+    setValidationResults({});
+    
+    // Clear all filters
+    setPriceMin('');
+    setPriceMax('');
+    setBedsMin('');
+    setBedsMax('');
+    setBathsMin('');
+    setBathsMax('');
+    setHomeType('');
+    setSortBy('price_asc');
+    
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(OPPORTUNITY_FINDER_STATE_KEY);
+    }
+    
+    toast.success('Search cleared');
+  };
+  
   // Handle validation (Analyze button)
   const handleValidate = async (property: ZillowProperty) => {
     setValidatingId(property.id);
@@ -724,6 +755,24 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 </>
               )}
             </Button>
+            
+            {/* Clear Search Button - only show when there are results or filters */}
+            {(hasSearched || location.trim()) && (
+              <Button
+                onClick={handleClearSearch}
+                variant="outline"
+                className="h-12 px-4"
+                style={{
+                  borderRadius: '980px',
+                  borderColor: 'oklch(0.85 0 0)',
+                  color: 'oklch(0.45 0 0)',
+                }}
+                title="Clear search and reset filters"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
           </div>
           
           {/* Filter Toggle */}

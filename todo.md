@@ -7813,3 +7813,8 @@ This makes the grading more optimistic - properties now get better grades at low
   - "Back to Start" button exists and resets to page 1
   - Page indicator shows current page number
   - Load More button advances to next page
+
+
+### Citywide Search Testing & Clear Search Button (Jan 30, 2026)
+- [x] Test citywide search with St. Louis to verify maximum results (3,157 properties found)
+- [x] Add "Clear Search" button to reset search and start fresh
