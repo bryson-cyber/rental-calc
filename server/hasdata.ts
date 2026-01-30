@@ -45,6 +45,8 @@ export interface ZillowProperty {
 export interface ZillowListingResponse {
   success: boolean;
   totalResults: number;
+  totalPages: number;
+  currentPage: number;
   properties: ZillowProperty[];
   error?: string;
 }
@@ -61,6 +63,8 @@ export async function searchZillowListings(
     return {
       success: false,
       totalResults: 0,
+      totalPages: 0,
+      currentPage: params.page || 1,
       properties: [],
       error: "HasData API key not configured"
     };
@@ -111,6 +115,8 @@ export async function searchZillowListings(
       return {
         success: false,
         totalResults: 0,
+        totalPages: 0,
+        currentPage: params.page || 1,
         properties: [],
         error: `API error: ${response.status}`
       };
@@ -150,11 +156,33 @@ export async function searchZillowListings(
 
     // Filter out properties without price - they're not useful for analysis
     const propertiesWithPrice = properties.filter(p => p.price > 0);
-    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data`);
+    
+    // Extract pagination info from the correct API response structure
+    // HasData API returns:
+    // - searchInformation.totalResults (the total count of all results)
+    // - pagination.currentPage, pagination.nextPage, pagination.otherPages (for navigation)
+    const totalResults = data.searchInformation?.totalResults || 
+                         data.searchInformation?.totalResultsCount || 
+                         data.totalResultCount || 
+                         data.totalResults || 
+                         properties.length;
+    
+    // Calculate total pages from total results (Zillow returns ~40 per page)
+    // Also check if pagination.otherPages exists to determine page count
+    const pagesFromOtherPages = data.pagination?.otherPages ? Object.keys(data.pagination.otherPages).length + 1 : 0;
+    const totalPages = data.pagination?.totalPages || 
+                       pagesFromOtherPages ||
+                       Math.ceil(totalResults / 40) || 
+                       1;
+    const currentPage = params.page || 1;
+    
+    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}`);
 
     return {
       success: true,
-      totalResults: data.totalResultCount || data.totalResults || propertiesWithPrice.length,
+      totalResults: totalResults,
+      totalPages: totalPages,
+      currentPage: currentPage,
       properties: propertiesWithPrice
     };
 
@@ -163,6 +191,8 @@ export async function searchZillowListings(
     return {
       success: false,
       totalResults: 0,
+      totalPages: 0,
+      currentPage: params.page || 1,
       properties: [],
       error: error instanceof Error ? error.message : "Unknown error"
     };
@@ -559,10 +589,12 @@ export async function searchZillowListingsWithEnrichment(
     enrichmentOptions?.maxEnrichments || 20 // Increased default to enrich more properties
   );
   
+  // Preserve the original pagination info, don't override totalResults
+  // The totalResults should reflect the total available in the market, not just what we have
   return {
     ...response,
     properties: enrichedProperties,
-    totalResults: enrichedProperties.length
+    // Keep original totalResults for pagination calculation
   };
 }
 

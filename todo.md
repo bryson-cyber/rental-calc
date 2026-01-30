@@ -7588,3 +7588,32 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Broken Google Logo
 - [x] Fixed broken "Powered by Google" image - replaced with colored text logo (Google colors)
+
+
+## Critical Bugs - Find a Property (Jan 30, 2026)
+
+### St. Louis → St. Petersburg Location Bug
+- [ ] Investigate why selecting "St. Louis, Missouri" returns St. Petersburg, Florida results
+- [ ] Fix the location mapping/geocoding issue
+- [ ] Ensure the correct city is being passed to the Zillow API
+
+### Limited Properties Bug
+- [ ] Investigate why the API returns fewer properties than Zillow.com shows
+- [ ] Check if there's a pagination issue or API parameter problem
+- [ ] Compare API response with actual Zillow.com results
+
+### Load More Button Not Appearing
+- [ ] Debug why Load More button never appears even for large cities
+- [ ] Check the hasMore calculation and totalResults value
+- [ ] Fix pagination to properly load additional results
+
+
+## Bug Fixes (Jan 29, 2026)
+
+### HasData API Pagination Fix
+- [x] Investigate why St. Louis search only showed 22 of 41 properties instead of 3,155
+- [x] Fix pagination field names in hasdata.ts:
+  - Changed from `searchInformation.totalResultsCount` to `searchInformation.totalResults`
+  - Added fallback to calculate totalPages from totalResults when pagination.totalPages is undefined
+- [x] Verify Load More button now works correctly
+- [x] Test shows "Showing 49 of 3155 properties" after loading more (was "22 of 41")

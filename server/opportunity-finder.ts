@@ -455,12 +455,12 @@ export const opportunityFinderRouter = router({
           });
         }
         
+        // Use pagination info directly from the API response
         const totalResults = result.totalResults;
-        const propertiesPerPage = 40; // Zillow returns ~40 per page
-        const totalPages = Math.ceil(totalResults / propertiesPerPage);
+        const totalPages = result.totalPages || Math.ceil(totalResults / 40);
         const hasMore = input.page < totalPages;
         
-        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, hasMore: ${hasMore}`);
+        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, totalPages: ${totalPages}, hasMore: ${hasMore}`);
         
         return {
           success: true,
