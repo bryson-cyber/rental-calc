@@ -7511,3 +7511,20 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] VERIFIED: Google Places IS recognizing "Central West End" as a neighborhood in St. Louis
 - [x] Added "Search anyway" fallback button for cases when Google doesn't recognize a location
 - [x] Users can now search even if autocomplete doesn't find a match
+
+## New Feature Requests (Jan 29, 2026)
+
+### Autocomplete Filter - Geographic Locations Only
+- [x] Filter Google Places autocomplete to only show neighborhoods, cities, and geographic areas
+- [x] Remove businesses, restaurants, barbershops, and other non-geographic results
+- [x] User should only see location results when typing "Soulard", not "Soulard Barbershop"
+
+### Coordinates Enrichment
+- [x] Add lat/lng enrichment for all properties returned from Zillow search
+- [x] Use coordinates for better AirDNA revenue estimates
+- [x] Geocode addresses that don't have coordinates (Google Geocoding API fallback added)
+
+### Search History
+- [x] Save recent searches to localStorage
+- [x] Display recent searches dropdown for quick re-access
+- [x] Allow users to click on a recent search to re-run it

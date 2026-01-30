@@ -6,6 +6,7 @@
  */
 
 import { ENV } from "./_core/env";
+import { makeRequest, GeocodingResult } from "./_core/map";
 
 // Types for Zillow Listing API
 export interface ZillowListingParams {
@@ -510,9 +511,17 @@ export async function enrichPropertiesWithPrice(
   const notEnrichedButHasPrice = incomplete.filter(p => !enrichedIds.has(p.id) && p.price > 0);
   
   // Combine: complete properties + enriched properties + non-enriched with price
-  const result = [...withPrice, ...enrichedProperties, ...notEnrichedButHasPrice];
-  console.log(`[HasData] Final result: ${result.length} properties (${withPrice.length} complete, ${enrichedProperties.length} enriched, ${notEnrichedButHasPrice.length} partial)`);
+  let result = [...withPrice, ...enrichedProperties, ...notEnrichedButHasPrice];
+  console.log(`[HasData] After Zillow enrichment: ${result.length} properties (${withPrice.length} complete, ${enrichedProperties.length} enriched, ${notEnrichedButHasPrice.length} partial)`);
   
+  // GEOCODING FALLBACK: For properties still missing coordinates, use Google Geocoding API
+  const stillMissingCoords = result.filter(p => !p.latitude || !p.longitude);
+  if (stillMissingCoords.length > 0) {
+    console.log(`[HasData] Geocoding ${stillMissingCoords.length} properties still missing coordinates`);
+    result = await geocodePropertiesMissingCoords(result);
+  }
+  
+  console.log(`[HasData] Final result: ${result.length} properties`);
   return result;
 }
 
@@ -555,4 +564,69 @@ export async function searchZillowListingsWithEnrichment(
     properties: enrichedProperties,
     totalResults: enrichedProperties.length
   };
+}
+
+
+/**
+ * Geocode properties that are missing lat/lng coordinates using Google Geocoding API
+ * This is a fallback for when Zillow doesn't provide coordinates
+ * 
+ * @param properties - Array of properties, some may be missing coordinates
+ * @returns Array of properties with coordinates filled in where possible
+ */
+async function geocodePropertiesMissingCoords(
+  properties: ZillowProperty[]
+): Promise<ZillowProperty[]> {
+  const result: ZillowProperty[] = [];
+  
+  for (const prop of properties) {
+    // Skip if already has coordinates
+    if (prop.latitude && prop.longitude) {
+      result.push(prop);
+      continue;
+    }
+    
+    // Build full address for geocoding
+    const fullAddress = prop.address || `${prop.city}, ${prop.state} ${prop.zipCode}`;
+    
+    if (!fullAddress || fullAddress.trim() === ', ') {
+      console.log(`[Geocoding] Skipping property with no address: ${prop.id}`);
+      result.push(prop);
+      continue;
+    }
+    
+    try {
+      console.log(`[Geocoding] Geocoding address: ${fullAddress}`);
+      
+      const geocodeResult = await makeRequest<GeocodingResult>(
+        '/maps/api/geocode/json',
+        { address: fullAddress }
+      );
+      
+      if (geocodeResult.status === 'OK' && geocodeResult.results.length > 0) {
+        const location = geocodeResult.results[0].geometry.location;
+        console.log(`[Geocoding] Found coordinates for ${fullAddress}: ${location.lat}, ${location.lng}`);
+        
+        result.push({
+          ...prop,
+          latitude: location.lat,
+          longitude: location.lng
+        });
+      } else {
+        console.log(`[Geocoding] No results for ${fullAddress}: ${geocodeResult.status}`);
+        result.push(prop);
+      }
+    } catch (error) {
+      console.error(`[Geocoding] Error geocoding ${fullAddress}:`, error);
+      result.push(prop);
+    }
+    
+    // Small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  const geocodedCount = result.filter(p => p.latitude && p.longitude).length;
+  console.log(`[Geocoding] Geocoded ${geocodedCount}/${result.length} properties have coordinates`);
+  
+  return result;
 }

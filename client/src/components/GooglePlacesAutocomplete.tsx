@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, Building2, Loader2, Navigation } from 'lucide-react';
+import { Search, MapPin, Building2, Loader2, Navigation, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Google Maps API configuration
@@ -99,6 +99,36 @@ interface PlaceResult {
   types: string[];
 }
 
+// Search history storage key
+const SEARCH_HISTORY_KEY = 'googlePlaces_searchHistory';
+const MAX_SEARCH_HISTORY = 5;
+
+// Load search history from localStorage
+function loadSearchHistory(): { name: string; placeId: string }[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Save search to history
+function saveToSearchHistory(place: { name: string; placeId: string }): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const history = loadSearchHistory();
+    // Remove duplicates
+    const filtered = history.filter(h => h.name !== place.name);
+    // Add to beginning
+    const updated = [place, ...filtered].slice(0, MAX_SEARCH_HISTORY);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error('[SearchHistory] Error saving:', e);
+  }
+}
+
 interface GooglePlacesAutocompleteProps {
   onSelect: (place: { name: string; placeId: string; lat?: number; lng?: number }) => void;
   onQueryChange?: (query: string) => void; // Callback when query changes (for fallback search)
@@ -107,6 +137,7 @@ interface GooglePlacesAutocompleteProps {
   types?: string[]; // e.g., ['(cities)', '(regions)', 'address']
   countryRestriction?: string; // e.g., 'us'
   allowDirectSearch?: boolean; // Allow searching with unrecognized locations
+  showSearchHistory?: boolean; // Show recent searches dropdown
 }
 
 export function GooglePlacesAutocomplete({
@@ -117,12 +148,14 @@ export function GooglePlacesAutocomplete({
   types = [], // Empty array = all types (cities, neighborhoods, zip codes, addresses)
   countryRestriction = 'us',
   allowDirectSearch = false,
+  showSearchHistory = true, // Default to showing search history
 }: GooglePlacesAutocompleteProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<{ name: string; placeId: string }[]>(() => loadSearchHistory());
   
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -175,7 +208,54 @@ export function GooglePlacesAutocomplete({
       setIsLoading(false);
       
       if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-        const placeResults: PlaceResult[] = predictions.map((prediction) => ({
+        // Filter to only show geographic locations (cities, neighborhoods, postal codes, etc.)
+        // Exclude businesses, restaurants, stores, etc.
+        const geographicTypes = [
+          'locality', // cities
+          'sublocality', // neighborhoods/districts
+          'sublocality_level_1',
+          'sublocality_level_2',
+          'sublocality_level_3',
+          'neighborhood', // neighborhoods
+          'postal_code', // zip codes
+          'administrative_area_level_1', // states
+          'administrative_area_level_2', // counties
+          'administrative_area_level_3', // smaller admin areas
+          'colloquial_area', // informal areas like "Silicon Valley"
+          'route', // streets (for address searches)
+          'street_address', // full addresses
+          'premise', // buildings/addresses
+        ];
+        
+        const filteredPredictions = predictions.filter((prediction) => {
+          const types = prediction.types || [];
+          const description = prediction.description.toLowerCase();
+          
+          // Include if it has any geographic type
+          const hasGeographicType = types.some(type => geographicTypes.includes(type));
+          
+          // Exclude if it's clearly a business/establishment
+          const isEstablishment = types.includes('establishment') || types.includes('point_of_interest');
+          
+          // Exclude apartment complexes, businesses, restaurants, etc.
+          const businessKeywords = ['apartments', 'apartment', 'loft', 'lofts', 'complex', 'suites', 
+                                     'restaurant', 'cafe', 'bar', 'shop', 'store', 'market', 
+                                     'barbershop', 'salon', 'gym', 'fitness', 'hotel', 'motel',
+                                     'church', 'school', 'hospital', 'clinic', 'office'];
+          const hasBusinessKeyword = businessKeywords.some(keyword => description.includes(keyword));
+          
+          // Only include if:
+          // 1. Has a geographic type AND
+          // 2. Is NOT an establishment OR has a primary geographic type (like neighborhood)
+          // 3. Does NOT have business keywords in the name
+          const isPrimaryGeographic = types.includes('locality') || types.includes('neighborhood') || 
+                                       types.includes('sublocality') || types.includes('postal_code') ||
+                                       types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2');
+          
+          return hasGeographicType && !hasBusinessKeyword && (!isEstablishment || isPrimaryGeographic);
+        });
+        
+        const placeResults: PlaceResult[] = filteredPredictions.map((prediction) => ({
           placeId: prediction.place_id,
           description: prediction.description,
           mainText: prediction.structured_formatting.main_text,
@@ -231,6 +311,10 @@ export function GooglePlacesAutocomplete({
     setQuery(place.description);
     setIsOpen(false);
     
+    // Save to search history
+    saveToSearchHistory({ name: place.description, placeId: place.placeId });
+    setSearchHistory(loadSearchHistory());
+    
     // Get place details for coordinates
     if (placesService.current) {
       placesService.current.getDetails(
@@ -268,6 +352,13 @@ export function GooglePlacesAutocomplete({
         placeId: place.placeId,
       });
     }
+  };
+  
+  // Handle search history selection
+  const handleHistorySelect = (item: { name: string; placeId: string }) => {
+    setQuery(item.name);
+    setIsOpen(false);
+    onSelect(item);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,7 +400,7 @@ export function GooglePlacesAutocomplete({
           type="text"
           value={query}
           onChange={handleInputChange}
-          onFocus={() => query.length >= 2 && setIsOpen(true)}
+          onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
           className="w-full pl-12 pr-10 py-4 bg-white border border-neutral-200 rounded-xl text-base focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all"
         />
@@ -368,6 +459,34 @@ export function GooglePlacesAutocomplete({
               className="h-3"
             />
           </div>
+        </div>
+      )}
+
+      {/* Search History - show when input is empty and focused */}
+      {isOpen && showSearchHistory && query.length < 2 && searchHistory.length > 0 && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-50 w-full mt-2 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-80 overflow-y-auto"
+        >
+          <div className="px-4 py-2 text-xs font-medium text-neutral-500 border-b border-neutral-100">
+            Recent Searches
+          </div>
+          {searchHistory.map((item, index) => (
+            <button
+              key={`${item.placeId}-${index}`}
+              onClick={() => handleHistorySelect(item)}
+              className="w-full px-4 py-3 flex items-start gap-3 hover:bg-neutral-50 transition-colors text-left border-b border-neutral-100 last:border-b-0"
+            >
+              <div className="mt-0.5">
+                <Clock className="w-5 h-5 text-neutral-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-neutral-900 truncate block">
+                  {item.name}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       )}
 
