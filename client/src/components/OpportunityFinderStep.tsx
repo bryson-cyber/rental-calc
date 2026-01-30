@@ -16,7 +16,7 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -302,6 +302,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(20); // 20, 50, or 100 per page
   
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('price_asc');
@@ -558,6 +559,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     setHasMore(false);
     setHasSearched(false);
     setCurrentPage(1);
+    setDisplayPage(1);
     setValidationResults({});
     
     // Clear all filters
@@ -672,6 +674,59 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   
   // Get sorted properties
   const sortedProperties = sortProperties(properties);
+  
+  // Client-side pagination state for viewing loaded results
+  const [displayPage, setDisplayPage] = useState(1);
+  
+  // Calculate pagination values
+  const totalPages = Math.ceil(sortedProperties.length / pageSize);
+  const startIndex = (displayPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const displayedProperties = sortedProperties.slice(startIndex, endIndex);
+  
+  // Reset display page when properties change significantly
+  useEffect(() => {
+    if (displayPage > totalPages && totalPages > 0) {
+      setDisplayPage(totalPages);
+    }
+  }, [sortedProperties.length, pageSize, displayPage, totalPages]);
+  
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages + 2) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      if (displayPage > 3) {
+        pages.push('ellipsis');
+      }
+      
+      // Show pages around current page
+      const start = Math.max(2, displayPage - 1);
+      const end = Math.min(totalPages - 1, displayPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (displayPage < totalPages - 2) {
+        pages.push('ellipsis');
+      }
+      
+      // Always show last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
   
   return (
     <div className="space-y-6">
@@ -907,32 +962,53 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       {/* Results */}
       {hasSearched && (
         <div className="space-y-4">
-          {/* Results Header with Sorting */}
+          {/* Results Header with Sorting and Per-Page Selector */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
               {isSearching ? (
                 'Searching...'
               ) : (
                 <>
-                  Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{totalResults}</span> properties
+                  Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> loaded
+                  {totalResults > sortedProperties.length && (
+                    <span className="text-xs ml-1">({totalResults} total available)</span>
+                  )}
                 </>
               )}
             </p>
             
-            {/* Sorting Dropdown */}
+            {/* Controls Row */}
             {sortedProperties.length > 0 && (
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px] h-9 text-sm">
-                    <SelectValue placeholder="Sort by..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Per-Page Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Show:</span>
+                  <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setDisplayPage(1); }}>
+                    <SelectTrigger className="w-[80px] h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Sorting Dropdown */}
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-[180px] h-9 text-sm">
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SORT_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
           </div>
@@ -955,7 +1031,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           ) : (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedProperties.map((property) => {
+                {displayedProperties.map((property) => {
                   const validation = validationResults[property.id];
                   const isValidating = validatingId === property.id;
                   const hasAnalysis = validation?.success && validation?.projection;
@@ -1543,30 +1619,61 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
               </div>
               
               {/* Pagination Controls */}
-              {(hasMore || currentPage > 1) && (
-                <div className="flex justify-center items-center gap-4 pt-6">
-                  {/* Back to Start Button */}
-                  {currentPage > 1 && (
-                    <Button
-                      onClick={handlePreviousPage}
-                      disabled={isLoadingMore}
-                      variant="outline"
-                      className="px-6"
-                      style={{ borderRadius: '980px' }}
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-2" />
-                      Back to Start
-                    </Button>
+              {sortedProperties.length > 0 && (
+                <div className="flex flex-col items-center gap-4 pt-6">
+                  {/* Page Navigation */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      {/* Previous Button */}
+                      <Button
+                        onClick={() => setDisplayPage(Math.max(1, displayPage - 1))}
+                        disabled={displayPage === 1}
+                        variant="outline"
+                        size="sm"
+                        className="px-3"
+                        style={{ borderRadius: '8px' }}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, index) => (
+                          page === 'ellipsis' ? (
+                            <span key={`ellipsis-${index}`} className="px-2 text-sm" style={{ color: 'oklch(0.55 0 0)' }}>...</span>
+                          ) : (
+                            <Button
+                              key={page}
+                              onClick={() => setDisplayPage(page)}
+                              variant={displayPage === page ? 'default' : 'outline'}
+                              size="sm"
+                              className="w-9 h-9 p-0"
+                              style={{ 
+                                borderRadius: '8px',
+                                backgroundColor: displayPage === page ? 'oklch(0.55 0.14 75)' : undefined,
+                              }}
+                            >
+                              {page}
+                            </Button>
+                          )
+                        ))}
+                      </div>
+                      
+                      {/* Next Button */}
+                      <Button
+                        onClick={() => setDisplayPage(Math.min(totalPages, displayPage + 1))}
+                        disabled={displayPage === totalPages}
+                        variant="outline"
+                        size="sm"
+                        className="px-3"
+                        style={{ borderRadius: '8px' }}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                   
-                  {/* Page Indicator */}
-                  {currentPage > 1 && (
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage}
-                    </span>
-                  )}
-                  
-                  {/* Load More Button */}
+                  {/* Load More from API */}
                   {hasMore && (
                     <Button
                       onClick={handleLoadMore}
@@ -1578,11 +1685,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                       {isLoadingMore ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Loading...
+                          Loading more from Zillow...
                         </>
                       ) : (
                         <>
-                          Load More Properties
+                          Load More Properties ({totalResults - sortedProperties.length} more available)
                           <ChevronRight className="w-4 h-4 ml-2" />
                         </>
                       )}
