@@ -1283,82 +1283,75 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                             </Button>
                           ) : (
                             // After analysis - show action buttons with clean layout
-                            <div className="space-y-4">
-                              {/* Primary Actions Row */}
-                              <div className="flex gap-2">
+                            <div className="space-y-2">
+                              {/* Primary Action - Deep Analysis (full width) */}
+                              <Link 
+                                href={`/?tab=validate&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}
+                                className="block"
+                              >
                                 <Button
-                                  onClick={() => handleGetContacts(property)}
-                                  className="flex-1 h-11 text-sm font-medium"
-                                  style={{ 
-                                    backgroundColor: 'oklch(0.45 0.12 145)',
+                                  className="w-full h-10 text-sm font-semibold"
+                                  style={{
+                                    backgroundColor: 'oklch(0.55 0.14 75)',
                                     borderRadius: '0.75rem',
                                   }}
                                 >
-                                  <Phone className="w-4 h-4 mr-2" />
-                                  Contact
+                                  <Microscope className="w-4 h-4 mr-2" />
+                                  Deep Property Analysis
                                 </Button>
-                                <Link 
-                                  href={`/?tab=validate&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}
-                                  className="flex-1"
-                                >
-                                  <Button
-                                    className="w-full h-11 text-sm font-medium"
-                                    style={{
-                                      backgroundColor: 'oklch(0.55 0.14 75)',
-                                      borderRadius: '0.75rem',
-                                    }}
-                                  >
-                                    <Microscope className="w-4 h-4 mr-2" />
-                                    Deep Analysis
-                                  </Button>
-                                </Link>
-                              </div>
+                              </Link>
                               
-                              {/* Research Tools - Clean horizontal layout */}
-                              <div className="bg-slate-50 rounded-xl p-3">
-                                <p className="text-xs text-slate-500 font-medium mb-2 text-center">Research Tools</p>
-                                <div className="flex justify-center gap-4 flex-wrap">
-                                  <Link href={`/?tab=find&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
-                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <Users className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] font-medium">Comps</span>
-                                    </button>
-                                  </Link>
-                                  <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
-                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <MapIcon className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] font-medium">Map</span>
-                                    </button>
-                                  </Link>
-                                  <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
-                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <BarChart3 className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] font-medium">Market</span>
-                                    </button>
-                                  </Link>
-                                  <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
-                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <Bot className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] font-medium">AI Advisor</span>
-                                    </button>
-                                  </Link>
-                                  <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
-                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <Brain className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] font-medium">Market AI</span>
-                                    </button>
-                                  </Link>
-                                </div>
+                              {/* Secondary Action - View Listing */}
+                              <a 
+                                href={property.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <Button
+                                  variant="outline"
+                                  className="w-full h-9 text-xs font-medium border-slate-200 hover:bg-slate-50"
+                                  style={{ 
+                                    borderRadius: '0.75rem',
+                                  }}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                  View on Zillow
+                                </Button>
+                              </a>
+                              
+                              {/* Research Tools - Compact grid layout */}
+                              <div className="grid grid-cols-5 gap-0.5 pt-2 border-t border-slate-100">
+                                <Link href={`/?tab=explore&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
+                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                    <Users className="w-4 h-4 mb-0.5" />
+                                    <span className="text-[9px] font-medium">Comps</span>
+                                  </button>
+                                </Link>
+                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
+                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                    <MapIcon className="w-4 h-4 mb-0.5" />
+                                    <span className="text-[9px] font-medium">Map</span>
+                                  </button>
+                                </Link>
+                                <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
+                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                    <BarChart3 className="w-4 h-4 mb-0.5" />
+                                    <span className="text-[9px] font-medium">Revenue</span>
+                                  </button>
+                                </Link>
+                                <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
+                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                    <Bot className="w-4 h-4 mb-0.5" />
+                                    <span className="text-[9px] font-medium">AI</span>
+                                  </button>
+                                </Link>
+                                <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
+                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                    <Brain className="w-4 h-4 mb-0.5" />
+                                    <span className="text-[9px] font-medium">Market</span>
+                                  </button>
+                                </Link>
                               </div>
                             </div>
                           )}

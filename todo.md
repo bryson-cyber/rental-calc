@@ -7659,3 +7659,31 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add AI Advisor to Research Tools section
 - [x] Add Market Advisor to Research Tools section
 - [x] Research Tools now: Comps, Map, Market, AI Advisor, Market AI
+
+
+### Property Card Button Fixes (Jan 30, 2026)
+- [ ] Contact button → Go directly to Zillow listing URL (no popup)
+- [ ] Deep Analysis button → Pre-fill Step 3 with property address, bedrooms, bathrooms, rent
+- [ ] Market button → Pre-fill with property's city/zip code
+- [ ] Map button → Pre-fill with property location coordinates
+- [ ] See Real Revenue → Pre-fill with property location
+- [ ] Clean up jumbled Research Tools layout - make it look cleaner and less cramped
+
+
+## Property Card Button Fixes (Jan 29, 2026)
+
+### Completed:
+- [x] Remove Turnkey button from property cards
+- [x] Add "Deep Property Analysis" button (gold, full width) - goes to Step 3 with pre-filled data
+- [x] Change Contact button to "View on Zillow" - opens listing directly
+- [x] Clean up button layout - stack vertically instead of side-by-side
+- [x] Research Tools row now shows: Comps, Map, Revenue, AI, Market
+- [x] Deep Analysis pre-fills: address, bedrooms, bathrooms, rent
+- [x] URL includes autoAnalyze=true parameter
+
+### Still Needed:
+- [ ] Implement autoAnalyze feature in Step 3 to auto-run analysis when URL has autoAnalyze=true
+- [ ] Pre-fill Map button with property coordinates
+- [ ] Pre-fill Revenue button with property location
+- [ ] Pre-fill Market button with property city/state
+- [ ] Fix Google Map not loading markers on Map step
