@@ -458,9 +458,17 @@ export const opportunityFinderRouter = router({
         // Use pagination info directly from the API response
         const totalResults = result.totalResults;
         const totalPages = result.totalPages || Math.ceil(totalResults / 40);
-        const hasMore = input.page < totalPages;
         
-        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, totalPages: ${totalPages}, hasMore: ${hasMore}`);
+        // Calculate properties shown so far (current page * ~40 properties per page)
+        // But we need to account for the actual properties returned
+        const propertiesShownSoFar = (input.page - 1) * 40 + result.properties.length;
+        
+        // hasMore should be true if:
+        // 1. We're not on the last page (page < totalPages), OR
+        // 2. Total results is greater than what we've shown so far
+        const hasMore = input.page < totalPages || propertiesShownSoFar < totalResults;
+        
+        console.log(`[Opportunity Finder] Page ${input.page}: ${result.properties.length} properties, total: ${totalResults}, totalPages: ${totalPages}, propertiesShown: ${propertiesShownSoFar}, hasMore: ${hasMore}`);
         
         return {
           success: true,

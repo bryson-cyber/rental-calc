@@ -7776,3 +7776,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Load More button exists and works correctly (loads 29 more properties per click)
 - [x] Property cards display with all relevant details (address, price, beds, baths, sqft, photos)
 - [x] Pagination works correctly (tested: 22 → 51 of 3157 properties)
+
+
+## Bug Fix: Load More Button Not Visible (Jan 30, 2026) - COMPLETE
+- [x] Investigated why Load More button was not showing - hasMore calculation was incorrect
+- [x] Fixed hasMore flag logic in opportunity-finder.ts and hasdata.ts
+- [x] Added more robust totalPages calculation with nextPage fallback
+- [x] Added detailed logging for debugging pagination issues
+- [x] Tested - button now shows correctly at bottom of property listings

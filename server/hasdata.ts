@@ -167,16 +167,35 @@ export async function searchZillowListings(
                          data.totalResults || 
                          properties.length;
     
+    // Log raw pagination data for debugging
+    console.log(`[HasData] Raw pagination data:`, JSON.stringify({
+      searchInformation: data.searchInformation,
+      pagination: data.pagination,
+      totalResultCount: data.totalResultCount,
+      totalResults: data.totalResults
+    }));
+    
     // Calculate total pages from total results (Zillow returns ~40 per page)
     // Also check if pagination.otherPages exists to determine page count
     const pagesFromOtherPages = data.pagination?.otherPages ? Object.keys(data.pagination.otherPages).length + 1 : 0;
-    const totalPages = data.pagination?.totalPages || 
-                       pagesFromOtherPages ||
-                       Math.ceil(totalResults / 40) || 
-                       1;
-    const currentPage = params.page || 1;
     
-    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}`);
+    // More robust totalPages calculation:
+    // 1. Use pagination.totalPages if available
+    // 2. Use otherPages count + 1 if available
+    // 3. Calculate from totalResults (40 per page)
+    // 4. If we have a nextPage, we know there's at least one more page
+    let totalPages = data.pagination?.totalPages || 
+                     pagesFromOtherPages ||
+                     Math.ceil(totalResults / 40) || 
+                     1;
+    
+    // If pagination.nextPage exists, ensure totalPages is at least currentPage + 1
+    const currentPage = params.page || 1;
+    if (data.pagination?.nextPage && totalPages <= currentPage) {
+      totalPages = currentPage + 1;
+    }
+    
+    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}, hasNextPage: ${!!data.pagination?.nextPage}`);
 
     return {
       success: true,
