@@ -813,3 +813,66 @@ export const regulationCache = mysqlTable("regulation_cache", {
 
 export type RegulationCache = typeof regulationCache.$inferSelect;
 export type InsertRegulationCache = typeof regulationCache.$inferInsert;
+
+
+/**
+ * Saved Regulations table for storing user's saved regulation searches
+ * Allows users to quickly access regulations for cities they're interested in
+ */
+export const savedRegulations = mysqlTable("saved_regulations", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (required - must be logged in to save)
+  userId: int("userId").notNull(),
+  
+  // Location information
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  locationKey: varchar("locationKey", { length: 255 }).notNull(), // normalized city + state
+  
+  // Cached regulation summary for quick display
+  status: varchar("status", { length: 50 }).notNull(), // allowed, allowed_with_permit, restricted, etc.
+  permitRequired: int("permitRequired").default(0), // 0 = false, 1 = true
+  primaryResidenceOnly: int("primaryResidenceOnly").default(0),
+  registrationFee: varchar("registrationFee", { length: 100 }),
+  
+  // User notes
+  notes: text("notes"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SavedRegulation = typeof savedRegulations.$inferSelect;
+export type InsertSavedRegulation = typeof savedRegulations.$inferInsert;
+
+
+/**
+ * Regulation Comments table for community discussion on regulation pages
+ * Allows users to share insights and tips about specific city regulations
+ */
+export const regulationComments = mysqlTable("regulation_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (required - must be logged in to comment)
+  userId: int("userId").notNull(),
+  
+  // Location reference
+  locationKey: varchar("locationKey", { length: 255 }).notNull(), // normalized city + state
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  
+  // Comment content
+  content: text("content").notNull(),
+  
+  // Moderation
+  isApproved: int("isApproved").default(1).notNull(), // 1 = approved, 0 = hidden
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RegulationComment = typeof regulationComments.$inferSelect;
+export type InsertRegulationComment = typeof regulationComments.$inferInsert;

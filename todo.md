@@ -7906,3 +7906,27 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Remove fluff from simple explanation (rejected proposals, historical context, pending legislation)
 - [ ] Focus only on actionable information: Can I operate? What do I need? What are the restrictions?
 - [ ] Test with San Diego to verify cleaner output
+
+
+## Regulation Tracker - New Features (Jan 30, 2026)
+
+### Redfin URL Support
+- [x] Add parseRedfinUrl function to regulation-tracker.ts (already implemented)
+- [x] Handle Redfin URL formats: /city/address-zip/home/id (already implemented)
+- [x] Add unit tests for Redfin URL parsing (2 tests passing)
+- [x] Test with real Redfin URLs (verified working)
+
+### Save Regulation Search Feature
+- [x] Add saved_regulations table to database schema
+- [x] Create saveRegulation and getSavedRegulations endpoints
+- [x] Add "Save" button to RegulationTrackerStep UI
+- [x] Add "My Saved Regulations" section to view saved searches
+- [x] Allow users to delete saved regulations
+
+### Comment Section for Regulation Pages
+- [x] Add regulation_comments table to database schema
+- [x] Create addComment, getComments, deleteComment endpoints
+- [x] Add comment section UI to RegulationTrackerStep
+- [x] Display comments with user name, date, and content
+- [x] Allow users to delete their own comments
+- [x] Add comment count badge

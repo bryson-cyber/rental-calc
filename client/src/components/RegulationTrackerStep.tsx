@@ -11,6 +11,8 @@
  * - Simple explanation (3rd-grade level) and full details
  * - Links to official government sources
  * - Less scary status messaging (permit required ≠ banned)
+ * - Save regulations to favorites
+ * - Community comments section
  */
 
 import { useState } from 'react';
@@ -35,13 +37,21 @@ import {
   PauseCircle,
   FileCheck,
   Scale,
-  Building2
+  Building2,
+  Bookmark,
+  BookmarkCheck,
+  MessageSquare,
+  Send,
+  Trash2,
+  User
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { getLoginUrl } from '@/const';
 
 // Updated status configuration - less scary, more accurate
 const statusConfig = {
@@ -136,10 +146,21 @@ interface RegulationResult {
   governingJurisdiction?: string;
 }
 
+interface Comment {
+  id: number;
+  content: string;
+  createdAt: Date | string;
+  userId: number;
+  userName: string | null;
+}
+
 export function RegulationTrackerStep() {
+  const { user, isAuthenticated } = useAuth();
   const [selectedPlace, setSelectedPlace] = useState<{ name: string; placeId: string; lat?: number; lng?: number } | null>(null);
   const [result, setResult] = useState<RegulationResult | null>(null);
   const [showSimplified, setShowSimplified] = useState(true);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
   
   // Helper to process regulation result
   const processRegulationResult = (data: any) => {
@@ -175,6 +196,58 @@ export function RegulationTrackerStep() {
     },
     onError: (error) => {
       toast.error('Failed to look up regulations: ' + error.message);
+    }
+  });
+  
+  // Save regulation mutation
+  const saveRegulationMutation = trpc.regulationTracker.saveRegulation.useMutation({
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success('Regulation saved to favorites!');
+        isRegulationSavedQuery.refetch();
+      } else if (response.alreadySaved) {
+        toast.info('Already saved to favorites');
+      } else {
+        toast.error(response.error || 'Failed to save');
+      }
+    },
+    onError: (error) => {
+      toast.error('Failed to save: ' + error.message);
+    }
+  });
+  
+  // Check if regulation is saved
+  const isRegulationSavedQuery = trpc.regulationTracker.isRegulationSaved.useQuery(
+    { city: result?.city || '', state: result?.state || '' },
+    { enabled: !!result && isAuthenticated }
+  );
+  
+  // Get comments for this regulation
+  const commentsQuery = trpc.regulationTracker.getComments.useQuery(
+    { city: result?.city || '', state: result?.state || '' },
+    { enabled: !!result }
+  );
+  
+  // Add comment mutation
+  const addCommentMutation = trpc.regulationTracker.addComment.useMutation({
+    onSuccess: () => {
+      toast.success('Comment added!');
+      setNewComment('');
+      commentsQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error('Failed to add comment: ' + error.message);
+    }
+  });
+  
+  // Delete comment mutation
+  const deleteCommentMutation = trpc.regulationTracker.deleteComment.useMutation({
+    onSuccess: () => {
+      toast.success('Comment deleted');
+      commentsQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error('Failed to delete: ' + error.message);
     }
   });
   
@@ -226,7 +299,46 @@ export function RegulationTrackerStep() {
     getRegulationsMutation.mutate({ city, state });
   };
   
+  const handleSaveRegulation = () => {
+    if (!result) return;
+    if (!isAuthenticated) {
+      toast.error('Please log in to save regulations');
+      window.location.href = getLoginUrl();
+      return;
+    }
+    
+    saveRegulationMutation.mutate({
+      city: result.city,
+      state: result.state,
+      status: result.status,
+      permitRequired: result.permitRequired,
+      primaryResidenceOnly: result.primaryResidenceOnly,
+      registrationFee: result.registrationFee,
+    });
+  };
+  
+  const handleAddComment = () => {
+    if (!result) return;
+    if (!isAuthenticated) {
+      toast.error('Please log in to comment');
+      window.location.href = getLoginUrl();
+      return;
+    }
+    if (!newComment.trim()) {
+      toast.error('Please enter a comment');
+      return;
+    }
+    
+    addCommentMutation.mutate({
+      city: result.city,
+      state: result.state,
+      content: newComment.trim(),
+    });
+  };
+  
   const isLoading = getRegulationsMutation.isPending || getRegulationsFromInputMutation.isPending;
+  const isSaved = isRegulationSavedQuery.data?.saved || false;
+  const comments = (commentsQuery.data?.data || []) as Comment[];
   
   // Get the status config, falling back to 'restricted' for new status types
   const getStatusConfig = (status: string) => {
@@ -345,19 +457,42 @@ export function RegulationTrackerStep() {
                   </p>
                 </div>
                 
-                {/* Status Badge - Now with improved labels */}
-                <div 
-                  className="flex items-center gap-2 px-4 py-2 rounded-full"
-                  style={{ 
-                    backgroundColor: getStatusConfig(result.status).bgColor,
-                    color: getStatusConfig(result.status).color
-                  }}
-                >
-                  {(() => {
-                    const StatusIcon = getStatusConfig(result.status).icon;
-                    return <StatusIcon className="w-5 h-5" />;
-                  })()}
-                  <span className="font-semibold">{getStatusConfig(result.status).label}</span>
+                <div className="flex items-center gap-2">
+                  {/* Save Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveRegulation}
+                    disabled={saveRegulationMutation.isPending || isSaved}
+                    className="flex items-center gap-1"
+                  >
+                    {isSaved ? (
+                      <>
+                        <BookmarkCheck className="w-4 h-4" style={{ color: 'oklch(0.55 0.15 145)' }} />
+                        <span className="hidden sm:inline">Saved</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4" />
+                        <span className="hidden sm:inline">Save</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  {/* Status Badge - Now with improved labels */}
+                  <div 
+                    className="flex items-center gap-2 px-4 py-2 rounded-full"
+                    style={{ 
+                      backgroundColor: getStatusConfig(result.status).bgColor,
+                      color: getStatusConfig(result.status).color
+                    }}
+                  >
+                    {(() => {
+                      const StatusIcon = getStatusConfig(result.status).icon;
+                      return <StatusIcon className="w-5 h-5" />;
+                    })()}
+                    <span className="font-semibold">{getStatusConfig(result.status).label}</span>
+                  </div>
                 </div>
               </div>
               
@@ -404,22 +539,91 @@ export function RegulationTrackerStep() {
                 </p>
               </div>
               
-              {/* Confidence indicator */}
+              {/* Key Info Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="w-4 h-4 text-[#0F172A]/40" />
+                    <span className="text-xs text-[#0F172A]/50">Permit Required</span>
+                  </div>
+                  <p className="font-semibold text-[#0F172A]">
+                    {result.permitRequired ? 'Yes' : 'No'}
+                  </p>
+                </div>
+                
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Home className="w-4 h-4 text-[#0F172A]/40" />
+                    <span className="text-xs text-[#0F172A]/50">Primary Residence Only</span>
+                  </div>
+                  <p className="font-semibold text-[#0F172A]">
+                    {result.primaryResidenceOnly ? 'Yes' : 'No'}
+                  </p>
+                </div>
+                
+                {result.registrationFee && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="w-4 h-4 text-[#0F172A]/40" />
+                      <span className="text-xs text-[#0F172A]/50">Registration Fee</span>
+                    </div>
+                    <p className="font-semibold text-[#0F172A] text-sm">
+                      {result.registrationFee}
+                    </p>
+                  </div>
+                )}
+                
+                {result.occupancyTax && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="w-4 h-4 text-[#0F172A]/40" />
+                      <span className="text-xs text-[#0F172A]/50">Occupancy Tax</span>
+                    </div>
+                    <p className="font-semibold text-[#0F172A] text-sm">
+                      {result.occupancyTax}
+                    </p>
+                  </div>
+                )}
+                
+                {result.maxNightsPerYear && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4 text-[#0F172A]/40" />
+                      <span className="text-xs text-[#0F172A]/50">Max Nights/Year</span>
+                    </div>
+                    <p className="font-semibold text-[#0F172A]">
+                      {result.maxNightsPerYear}
+                    </p>
+                  </div>
+                )}
+                
+                {result.zoningRestrictions && (
+                  <div className="p-3 rounded-lg col-span-2" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <MapPin className="w-4 h-4 text-[#0F172A]/40" />
+                      <span className="text-xs text-[#0F172A]/50">Zoning</span>
+                    </div>
+                    <p className="font-semibold text-[#0F172A] text-sm">
+                      {result.zoningRestrictions}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Confidence Indicator */}
               <div className="flex items-center gap-2 text-sm">
                 <Info className="w-4 h-4 text-[#0F172A]/40" />
                 <span className="text-[#0F172A]/50">
-                  Confidence: 
-                  <span 
-                    className="ml-1 font-medium"
-                    style={{ 
-                      color: result.confidence === 'high' ? 'oklch(0.55 0.15 145)' : 
-                             result.confidence === 'medium' ? 'oklch(0.65 0.15 85)' : 
-                             'oklch(0.55 0.2 25)'
-                    }}
-                  >
-                    {result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1)}
-                  </span>
+                  Confidence: <span className={`font-medium ${
+                    result.confidence === 'high' ? 'text-green-600' :
+                    result.confidence === 'medium' ? 'text-yellow-600' : 'text-red-600'
+                  }`}>{result.confidence}</span>
                 </span>
+                {result.ordinanceNumber && (
+                  <span className="text-[#0F172A]/40">
+                    • Ordinance: {result.ordinanceNumber}
+                  </span>
+                )}
               </div>
             </Card>
             
@@ -428,126 +632,32 @@ export function RegulationTrackerStep() {
               <Card className="p-6" style={{ borderRadius: '1rem' }}>
                 <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                  Key Requirements
+                  Key Requirements ({result.keyRequirements.length})
                 </h4>
                 <ul className="space-y-3">
                   {result.keyRequirements.map((req, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <span 
-                        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium text-white"
-                        style={{ backgroundColor: 'oklch(0.55 0.15 250)' }}
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium"
+                        style={{ backgroundColor: 'oklch(0.55 0.15 250 / 0.1)', color: 'oklch(0.55 0.15 250)' }}
                       >
                         {index + 1}
                       </span>
-                      <span className="text-[#0F172A]/70">{req}</span>
+                      <span className="text-[#0F172A]/80">{req}</span>
                     </li>
                   ))}
                 </ul>
               </Card>
             )}
             
-            {/* Quick Facts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Permit Required */}
-              <Card className="p-4" style={{ borderRadius: '0.75rem' }}>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: 'oklch(0.55 0.15 250 / 0.1)' }}
-                  >
-                    <FileText className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#0F172A]/50">Permit Required</p>
-                    <p className="font-semibold text-[#0F172A]">
-                      {result.permitRequired ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-              
-              {/* Primary Residence */}
-              <Card className="p-4" style={{ borderRadius: '0.75rem' }}>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.1)' }}
-                  >
-                    <Home className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 145)' }} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#0F172A]/50">Primary Residence Only</p>
-                    <p className="font-semibold text-[#0F172A]">
-                      {result.primaryResidenceOnly ? 'Yes' : 'No'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-              
-              {/* Registration Fee */}
-              <Card className="p-4" style={{ borderRadius: '0.75rem' }}>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: 'oklch(0.65 0.15 85 / 0.1)' }}
-                  >
-                    <DollarSign className="w-5 h-5" style={{ color: 'oklch(0.65 0.15 85)' }} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#0F172A]/50">Registration Fee</p>
-                    <p className="font-semibold text-[#0F172A]">
-                      {result.registrationFee || 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-            
-            {/* Additional Details */}
-            {(result.occupancyTax || result.maxNightsPerYear || result.zoningRestrictions) && (
-              <Card className="p-4" style={{ borderRadius: '0.75rem' }}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {result.occupancyTax && (
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                      <div>
-                        <p className="text-sm text-[#0F172A]/50">Occupancy Tax</p>
-                        <p className="font-medium text-[#0F172A]">{result.occupancyTax}</p>
-                      </div>
-                    </div>
-                  )}
-                  {result.maxNightsPerYear && (
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                      <div>
-                        <p className="text-sm text-[#0F172A]/50">Max Nights/Year</p>
-                        <p className="font-medium text-[#0F172A]">{result.maxNightsPerYear}</p>
-                      </div>
-                    </div>
-                  )}
-                  {result.zoningRestrictions && result.zoningRestrictions !== 'Unknown' && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                      <div>
-                        <p className="text-sm text-[#0F172A]/50">Zoning</p>
-                        <p className="font-medium text-[#0F172A]">{result.zoningRestrictions}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )}
-            
-            {/* Sources Section - ONLY show official government sources */}
+            {/* Official Sources */}
             {(() => {
-              // Filter to only show official government sources
               const officialSources = result.sources.filter(s => s.type === 'official');
-              
               if (officialSources.length > 0) {
                 return (
                   <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.55 0.15 145 / 0.3)', borderWidth: '2px' }}>
-                    <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
-                      <Building2 className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 145)' }} />
+                    <h4 className="font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
+                      <Building2 className="w-5 h-5" style={{ color: 'oklch(0.45 0.15 145)' }} />
                       Official Government Sources
                     </h4>
                     <p className="text-sm text-[#0F172A]/60 mb-4">
@@ -623,6 +733,96 @@ export function RegulationTrackerStep() {
                 </ul>
               </Card>
             )}
+            
+            {/* Community Comments Section */}
+            <Card className="p-6" style={{ borderRadius: '1rem' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-[#0F172A] flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
+                  Community Insights ({comments.length})
+                </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowComments(!showComments)}
+                >
+                  {showComments ? 'Hide' : 'Show'} Comments
+                </Button>
+              </div>
+              
+              <AnimatePresence>
+                {showComments && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4"
+                  >
+                    {/* Add Comment Form */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder={isAuthenticated ? "Share your experience or tips..." : "Log in to comment"}
+                        disabled={!isAuthenticated}
+                        className="flex-1 px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F172A]/20"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                      />
+                      <Button
+                        onClick={handleAddComment}
+                        disabled={addCommentMutation.isPending || !newComment.trim() || !isAuthenticated}
+                        size="sm"
+                      >
+                        {addCommentMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Comments List */}
+                    {comments.length === 0 ? (
+                      <p className="text-sm text-[#0F172A]/50 text-center py-4">
+                        No comments yet. Be the first to share your insights!
+                      </p>
+                    ) : (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {comments.map((comment) => (
+                          <div key={comment.id} className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 rounded-full bg-[#0F172A]/10 flex items-center justify-center">
+                                  <User className="w-3 h-3 text-[#0F172A]/50" />
+                                </div>
+                                <span className="text-sm font-medium text-[#0F172A]">
+                                  {comment.userName || 'Anonymous'}
+                                </span>
+                                <span className="text-xs text-[#0F172A]/40">
+                                  {new Date(comment.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {user?.id === comment.userId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteCommentMutation.mutate({ id: comment.id })}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Trash2 className="w-3 h-3 text-[#0F172A]/40 hover:text-red-500" />
+                                </Button>
+                              )}
+                            </div>
+                            <p className="text-sm text-[#0F172A]/70">{comment.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
             
             {/* Disclaimer */}
             <p className="text-center text-sm text-[#0F172A]/40 px-4">

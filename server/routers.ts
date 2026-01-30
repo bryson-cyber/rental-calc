@@ -2,9 +2,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings, savedRegulations, regulationComments, users } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -3892,6 +3892,178 @@ export const appRouter = router({
           data: result,
           parsedLocation: parsed,
         };
+      }),
+
+    // Save a regulation search to favorites
+    saveRegulation: protectedProcedure
+      .input(z.object({
+        city: z.string().min(1),
+        state: z.string().min(1),
+        status: z.string(),
+        permitRequired: z.boolean(),
+        primaryResidenceOnly: z.boolean(),
+        registrationFee: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        
+        // Check if already saved
+        const existing = await db.select()
+          .from(savedRegulations)
+          .where(and(
+            eq(savedRegulations.userId, ctx.user.id),
+            eq(savedRegulations.locationKey, locationKey)
+          ))
+          .limit(1);
+        
+        if (existing.length > 0) {
+          return {
+            success: false,
+            error: 'Regulation already saved',
+            alreadySaved: true,
+          };
+        }
+        
+        await db.insert(savedRegulations).values({
+          userId: ctx.user.id,
+          city: input.city,
+          state: input.state,
+          locationKey,
+          status: input.status,
+          permitRequired: input.permitRequired ? 1 : 0,
+          primaryResidenceOnly: input.primaryResidenceOnly ? 1 : 0,
+          registrationFee: input.registrationFee,
+          notes: input.notes,
+        });
+        
+        return { success: true };
+      }),
+
+    // Get user's saved regulations
+    getSavedRegulations: protectedProcedure
+      .query(async ({ ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const saved = await db.select()
+          .from(savedRegulations)
+          .where(eq(savedRegulations.userId, ctx.user.id))
+          .orderBy(desc(savedRegulations.createdAt));
+        
+        return {
+          success: true,
+          data: saved.map(r => ({
+            ...r,
+            permitRequired: r.permitRequired === 1,
+            primaryResidenceOnly: r.primaryResidenceOnly === 1,
+          })),
+        };
+      }),
+
+    // Delete a saved regulation
+    deleteSavedRegulation: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.delete(savedRegulations)
+          .where(and(
+            eq(savedRegulations.id, input.id),
+            eq(savedRegulations.userId, ctx.user.id)
+          ));
+        return { success: true };
+      }),
+
+    // Check if a regulation is saved
+    isRegulationSaved: protectedProcedure
+      .input(z.object({
+        city: z.string(),
+        state: z.string(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        const existing = await db.select()
+          .from(savedRegulations)
+          .where(and(
+            eq(savedRegulations.userId, ctx.user.id),
+            eq(savedRegulations.locationKey, locationKey)
+          ))
+          .limit(1);
+        return { saved: existing.length > 0 };
+      }),
+
+    // Add a comment to a regulation page
+    addComment: protectedProcedure
+      .input(z.object({
+        city: z.string().min(1),
+        state: z.string().min(1),
+        content: z.string().min(1).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        
+        const [result] = await db.insert(regulationComments).values({
+          userId: ctx.user.id,
+          locationKey,
+          city: input.city,
+          state: input.state,
+          content: input.content,
+        });
+        
+        return { success: true, commentId: result.insertId };
+      }),
+
+    // Get comments for a regulation page
+    getComments: publicProcedure
+      .input(z.object({
+        city: z.string(),
+        state: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        
+        const comments = await db.select({
+          id: regulationComments.id,
+          content: regulationComments.content,
+          createdAt: regulationComments.createdAt,
+          userId: regulationComments.userId,
+          userName: users.name,
+        })
+          .from(regulationComments)
+          .leftJoin(users, eq(regulationComments.userId, users.id))
+          .where(and(
+            eq(regulationComments.locationKey, locationKey),
+            eq(regulationComments.isApproved, 1)
+          ))
+          .orderBy(desc(regulationComments.createdAt));
+        
+        return {
+          success: true,
+          data: comments,
+          count: comments.length,
+        };
+      }),
+
+    // Delete own comment
+    deleteComment: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.delete(regulationComments)
+          .where(and(
+            eq(regulationComments.id, input.id),
+            eq(regulationComments.userId, ctx.user.id)
+          ));
+        return { success: true };
       }),
   }),
 
