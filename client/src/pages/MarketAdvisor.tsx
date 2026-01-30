@@ -12,7 +12,7 @@
  * - Subtle shadows and refined borders
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearch } from 'wouter';
 import { 
   ArrowLeft,
@@ -192,7 +192,7 @@ export default function MarketAdvisor() {
             <StandaloneMarketAdvisorWithCompare 
               onAddToCompare={handleAddToCompare}
               comparisonMarkets={comparisonMarkets}
-              onMarketChange={(market) => setCurrentMarket(market)}
+              onMarketChange={useCallback((market: { id: string; name: string } | null) => setCurrentMarket(market), [])}
               initialMarketName={initialMarket}
             />
           </div>

@@ -8145,3 +8145,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Update generateMaxPropertyAdvice with optimized prompt
 - [x] Update generateMaxMarketAdvice with optimized prompt
 - [x] Update generateMarketTrendNarrative with new input interface
+
+
+### Bug Fixes (Jan 30, 2026)
+- [x] Fix infinite loop in MarketAdvisor share button (useCallback for onMarketChange)
+- [x] Fix infinite loop in OpportunityFinder share button (useCallback for onLocationChange)
+- [x] Test share links work correctly with URL parameters

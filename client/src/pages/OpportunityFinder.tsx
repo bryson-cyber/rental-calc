@@ -7,7 +7,7 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearch } from 'wouter';
 import { ArrowLeft, Search, Home, Sparkles } from 'lucide-react';
 import OpportunityFinderStep from '@/components/OpportunityFinderStep';
@@ -97,7 +97,7 @@ export default function OpportunityFinder() {
               // Navigate to analyze the selected property
               window.location.href = `/?address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.monthlyRent}`;
             }}
-            onLocationChange={(location) => setCurrentLocation(location)}
+            onLocationChange={useCallback((location: { city?: string; state?: string } | null) => setCurrentLocation(location), [])}
             initialLocation={initialLocation}
           />
         </div>
