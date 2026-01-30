@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { exportFavoritesPDF } from '@/lib/pdfExport';
+import { SharePageButton } from '@/components/SharePageButton';
 import { Link } from 'wouter';
 
 const marketTypeIcons: Record<string, React.ReactNode> = {
@@ -152,6 +153,13 @@ export default function MyFavoritesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <SharePageButton
+                pagePath="/my-favorites"
+                params={{}}
+                shareDescription="my favorite markets"
+                variant="outline"
+                size="sm"
+              />
               {favoritesQuery.data && favoritesQuery.data.length > 0 && (
                 <>
                   <Button

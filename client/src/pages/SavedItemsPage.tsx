@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,9 +23,9 @@ import {
   ArrowLeft,
   LogIn
 } from 'lucide-react';
+import { SharePageButton } from '@/components/SharePageButton';
 import { Link, useLocation } from 'wouter';
 import { getLoginUrl } from '@/const';
-
 export default function SavedItemsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -163,6 +163,13 @@ export default function SavedItemsPage() {
                 </p>
               </div>
             </div>
+            <SharePageButton
+              pagePath="/saved-items"
+              params={{}}
+              shareDescription="my saved items"
+              variant="outline"
+              size="sm"
+            />
           </div>
         </div>
       </div>

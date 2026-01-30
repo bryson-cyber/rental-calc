@@ -30,6 +30,7 @@ import {
   Building,
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
+import { SharePageButton } from '@/components/SharePageButton';
 import {
   Tooltip,
   TooltipContent,
@@ -206,16 +207,26 @@ export default function MyFavorites() {
               </div>
             </div>
             
-            {favorites.length > 0 && (
-              <Button
-                onClick={handleExport}
+            <div className="flex items-center gap-2">
+              <SharePageButton
+                pagePath="/saved-properties"
+                params={{}}
+                shareDescription="my saved properties"
                 variant="outline"
+                size="default"
                 className="border-[#C9A962]/50 text-[#C9A962] hover:bg-[#C9A962]/10"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            )}
+              />
+              {favorites.length > 0 && (
+                <Button
+                  onClick={handleExport}
+                  variant="outline"
+                  className="border-[#C9A962]/50 text-[#C9A962] hover:bg-[#C9A962]/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

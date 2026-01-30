@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { Link } from 'wouter';
+import { SharePageButton } from '@/components/SharePageButton';
 
 interface RegulationSource {
   title: string;
@@ -196,8 +197,15 @@ export default function SavedRegulations() {
               </p>
             </div>
             
-            {/* Filters and Sort */}
+            {/* Share and Filters */}
             <div className="flex items-center gap-3 flex-wrap">
+              <SharePageButton
+                pagePath="/saved-regulations"
+                params={{}}
+                shareDescription="my saved regulations"
+                variant="outline"
+                size="sm"
+              />
               {/* Status Filter */}
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-[#0F172A]/40" />

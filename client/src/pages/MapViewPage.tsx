@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MapView } from '@/components/Map';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, Map, MapPin, Home, Navigation, TrendingUp, Share2, List, ArrowUpDown, ExternalLink, Info, Check } from 'lucide-react';
+import { Loader2, Map, MapPin, Home, Navigation, TrendingUp, List, ArrowUpDown, ExternalLink, Info, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProperty } from '@/contexts/PropertyContext';
 import { SmartAddressInput, PropertyDetails as SmartPropertyDetails } from '@/components/SmartAddressInput';
+import { SharePageButton } from '@/components/SharePageButton';
 import { toast } from 'sonner';
+import { useSearch } from 'wouter';
 import {
   Tooltip,
   TooltipContent,
@@ -492,15 +494,22 @@ export default function MapViewPage() {
     }
   }, [myPropertyLocation]);
   
-  // Share link handler
-  const handleShare = useCallback(() => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
-      toast.success('Link copied! Share this link with your clients.');
-    }).catch(() => {
-      toast.error('Copy failed. Please copy the URL manually.');
-    });
-  }, [toast]);
+  // Parse URL parameters for sharing
+  const searchString = useSearch();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(searchString || window.location.search);
+    const address = params.get('address');
+    const lat = params.get('lat');
+    const lng = params.get('lng');
+    if (address && lat && lng) {
+      setMyPropertyLocation({
+        address: decodeURIComponent(address),
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+      });
+    }
+  }, [searchString]);
   
   // Toggle sort
   const handleSort = (field: SortField) => {
@@ -541,14 +550,18 @@ export default function MapViewPage() {
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={handleShare}
+              <SharePageButton
+                pagePath="/map"
+                params={{
+                  address: myPropertyLocation?.address,
+                  lat: myPropertyLocation?.lat,
+                  lng: myPropertyLocation?.lng,
+                }}
+                shareDescription={myPropertyLocation ? `map view for ${myPropertyLocation.address}` : 'Map View'}
                 variant="outline"
+                size="default"
                 className="bg-transparent border-white/20 text-white hover:bg-white/10"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
+              />
             </div>
           </div>
         </div>

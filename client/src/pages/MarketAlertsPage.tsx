@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
   Percent,
   Building2
 } from 'lucide-react';
+import { SharePageButton } from '@/components/SharePageButton';
 import { Link } from 'wouter';
 import { toast } from 'sonner';
 
@@ -146,13 +147,22 @@ export default function MarketAlertsPage() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              className="gap-2 bg-amber-600 hover:bg-amber-700"
-            >
-              <Plus className="w-4 h-4" />
-              New Alert
-            </Button>
+            <div className="flex items-center gap-2">
+              <SharePageButton
+                pagePath="/market-alerts"
+                params={{}}
+                shareDescription="market alerts"
+                variant="outline"
+                size="sm"
+              />
+              <Button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="gap-2 bg-amber-600 hover:bg-amber-700"
+              >
+                <Plus className="w-4 h-4" />
+                New Alert
+              </Button>
+            </div>
           </div>
         </div>
       </div>
