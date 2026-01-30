@@ -35,6 +35,12 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { Link } from 'wouter';
 
+interface RegulationSource {
+  title: string;
+  url: string;
+  type: 'official' | 'news' | 'third_party';
+}
+
 interface SavedRegulation {
   id: number;
   city: string;
@@ -43,6 +49,7 @@ interface SavedRegulation {
   permitRequired: boolean | null;
   primaryResidenceOnly: boolean | null;
   registrationFee: string | null;
+  sources: RegulationSource[] | null;
   createdAt: Date | string;
 }
 
@@ -343,6 +350,38 @@ export default function SavedRegulations() {
                             <span className="font-medium text-[#0F172A]">
                               {regulation.registrationFee}
                             </span>
+                          </div>
+                        )}
+                        
+                        {/* Official Sources */}
+                        {regulation.sources && regulation.sources.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-[#0F172A]/10">
+                            <p className="text-xs text-[#0F172A]/50 mb-2 flex items-center gap-1">
+                              <Shield className="w-3 h-3" />
+                              Official Sources:
+                            </p>
+                            <div className="space-y-1">
+                              {regulation.sources
+                                .filter(s => s.type === 'official')
+                                .slice(0, 2)
+                                .map((source, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-xs hover:underline truncate"
+                                    style={{ color: 'oklch(0.45 0.15 250)' }}
+                                    title={source.title}
+                                  >
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{source.title}</span>
+                                  </a>
+                                ))}
+                              {regulation.sources.filter(s => s.type === 'official').length === 0 && (
+                                <span className="text-xs text-[#0F172A]/40 italic">No official sources saved</span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

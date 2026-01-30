@@ -43,6 +43,13 @@
       "when": 1769764445347,
       "tag": "0005_luxuriant_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769764722366,
+      "tag": "0006_eager_husk",
+      "breakpoints": true
     }
   ]
 }

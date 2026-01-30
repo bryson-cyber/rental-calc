@@ -1,0 +1,1 @@
+ALTER TABLE `saved_regulations` ADD `sources` json;

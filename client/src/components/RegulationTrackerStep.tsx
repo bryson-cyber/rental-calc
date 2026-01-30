@@ -375,6 +375,11 @@ export function RegulationTrackerStep() {
       permitRequired: result.permitRequired,
       primaryResidenceOnly: result.primaryResidenceOnly,
       registrationFee: result.registrationFee,
+      sources: result.sources.map(s => ({
+        title: s.title,
+        url: s.url,
+        type: s.type,
+      })),
     });
   };
   

@@ -3904,6 +3904,11 @@ export const appRouter = router({
         primaryResidenceOnly: z.boolean(),
         registrationFee: z.string().optional(),
         notes: z.string().optional(),
+        sources: z.array(z.object({
+          title: z.string(),
+          url: z.string(),
+          type: z.enum(['official', 'news', 'third_party']),
+        })).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -3937,6 +3942,7 @@ export const appRouter = router({
           primaryResidenceOnly: input.primaryResidenceOnly ? 1 : 0,
           registrationFee: input.registrationFee,
           notes: input.notes,
+          sources: input.sources || [],
         });
         
         return { success: true };

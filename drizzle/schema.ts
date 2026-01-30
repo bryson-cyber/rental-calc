@@ -836,6 +836,9 @@ export const savedRegulations = mysqlTable("saved_regulations", {
   primaryResidenceOnly: int("primaryResidenceOnly").default(0),
   registrationFee: varchar("registrationFee", { length: 100 }),
   
+  // Official sources (JSON array of {title, url, type})
+  sources: json("sources"),
+  
   // User notes
   notes: text("notes"),
   

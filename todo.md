@@ -7955,3 +7955,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Show vote count on each comment
 - [x] Add admin moderation panel for flagged comments
 - [x] Sort comments by vote count (most helpful first)
+
+
+## Saved Regulations - Official Source Links (Jan 30, 2026)
+- [x] Include official government source links in saved regulation results
+  - Added sources JSON column to saved_regulations table
+  - Updated saveRegulation mutation to accept and store sources
+- [x] Display .gov source links on Saved Regulations dashboard cards
+  - Added "Official Sources" section to each saved regulation card
+  - Official sources show as clickable links with external link icon
+  - Links open in new tab with proper security attributes (noopener noreferrer)
+- [x] Show source links when viewing regulation details from saved items
+  - View Details button navigates with city/state params
+  - Auto-triggers regulation search to show full details with sources
