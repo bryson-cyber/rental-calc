@@ -1128,6 +1128,9 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 <div>
                   <span className="text-sm font-medium text-[#0F172A]/60">Your Property:</span>
                   <span className="ml-2 text-sm font-semibold text-[#0F172A]">{myPropertyLocation.address}</span>
+                  {myProperty?.bedrooms && (
+                    <span className="ml-2 text-sm font-medium text-[#0F172A]/60">| {myProperty.bedrooms} BR</span>
+                  )}
                 </div>
                 {activeSubmarketName && (
                   <div className="flex items-center gap-1.5 bg-[#C9A962]/10 px-3 py-1 rounded-full border border-[#C9A962]/20">

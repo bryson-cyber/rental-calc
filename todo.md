@@ -7750,3 +7750,8 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Button only appears when user has navigated from a property card
 - [x] Tested all buttons - working correctly
 
+
+
+## Map Your Property Display Enhancement (Jan 30, 2026) - COMPLETE
+- [x] Add bedroom count to "Your Property" display on map
+- [x] Show format like "Your Property: 7123 Weil Ave... | 1 BR"
