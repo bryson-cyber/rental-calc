@@ -492,6 +492,11 @@ export default function LeadMagnet() {
     const lat = params.get('lat');
     const lng = params.get('lng');
     
+    // HubSpot personalization params - city/state/zip for auto-populating tools
+    const urlCity = params.get('city');
+    const urlState = params.get('state');
+    const urlZip = params.get('zip');
+    
     // Map URL tab param to internal tab names
     const tabMapping: Record<string, TabType> = {
       'compare': 'compare',
@@ -528,6 +533,40 @@ export default function LeadMagnet() {
       }
       if (rent) {
         setMonthlyRent(rent);
+      }
+      
+      // HubSpot personalization: Build location string from city/state/zip params
+      // This enables personalized links like: /?tab=prove&city=Austin&state=TX&zip=78701
+      let hubspotLocation = '';
+      if (urlCity && urlState) {
+        hubspotLocation = `${urlCity}, ${urlState}`;
+        if (urlZip) {
+          hubspotLocation += ` ${urlZip}`;
+        }
+        // Set explore address for market-related tabs
+        setExploreAddress(hubspotLocation);
+        setResearchMarket(hubspotLocation);
+        console.log('[HubSpot] Auto-populated location:', hubspotLocation);
+        
+        // Store in myProperty context for all tools
+        setMyProperty({
+          address: urlAddress || '',
+          bedrooms: urlBedrooms ? parseInt(urlBedrooms) : 2,
+          bathrooms: urlBathrooms ? parseFloat(urlBathrooms) : 1,
+          city: urlCity,
+          state: urlState,
+          zipCode: urlZip || undefined,
+        });
+        
+        // For prove tab with zip code, set initial zip for auto-search
+        if (tabMapping[tab] === 'prove' && urlZip) {
+          setProveInitialZipCode(urlZip);
+        }
+        
+        // Auto-trigger analysis for HubSpot personalized links
+        if (!autoAnalyze) {
+          autoTriggerRef.current = { tab: tabMapping[tab], address: hubspotLocation };
+        }
       }
       
       // For map tab, set myProperty context - coordinates are optional, MapFirstLayoutV2 will geocode if missing

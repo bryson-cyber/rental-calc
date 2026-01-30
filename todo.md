@@ -7968,3 +7968,27 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Show source links when viewing regulation details from saved items
   - View Details button navigates with city/state params
   - Auto-triggers regulation search to show full details with sources
+
+
+## HubSpot Integration - Personalized Links & Usage Tracking (Jan 30, 2026)
+
+### Personalized URL Parameters Across All Tools
+- [x] Update LeadMagnet.tsx to read city/state/zip from URL params
+- [x] Pass location data to RevenueCalculatorStep (via exploreAddress and researchMarket state)
+- [x] Pass location data to MarketAdvisorStep (via myProperty context)
+- [x] Pass location data to RegulationTrackerStep (Step 1) - already done
+- [x] Auto-populate address/location fields when URL params present
+- [x] Ensure seamless experience across all tool tabs
+
+### Webhook for Usage Tracking
+- [x] Create webhook endpoint in server/routers.ts for tool usage events
+- [x] Track which tool was used (10 event types supported)
+- [x] Track city/state searched
+- [x] Track revenue estimate generated
+- [x] Track timestamp of usage
+- [x] Return data in format compatible with Zapier webhook catch
+
+### Personalized Link Generation
+- [x] Create utility to generate personalized URLs with city/state/zip
+- [x] Created useWebhook.ts hook with getPersonalizedLinks function
+- [x] Document URL parameter format for HubSpot email templates (in hook comments)
