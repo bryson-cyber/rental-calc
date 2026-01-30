@@ -7755,3 +7755,8 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Map Your Property Display Enhancement (Jan 30, 2026) - COMPLETE
 - [x] Add bedroom count to "Your Property" display on map
 - [x] Show format like "Your Property: 7123 Weil Ave... | 1 BR"
+
+
+## Map Your Property Display - Add Bathroom Count (Jan 30, 2026) - COMPLETE
+- [x] Add bathroom count to "Your Property" display on map
+- [x] Update format to "Your Property: 7123 Weil Ave... | 1 BR / 1 BA"
