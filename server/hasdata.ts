@@ -531,21 +531,23 @@ export async function searchZillowListingsWithEnrichment(
     return response;
   }
   
-  // If enrichment is disabled or all properties have prices, return as-is
+  // If enrichment is disabled, return as-is
   if (enrichmentOptions?.skipEnrichment) {
     return response;
   }
   
-  // Check if any properties need enrichment
-  const needsEnrichment = response.properties.some(p => p.price <= 0);
+  // Check if any properties need enrichment (missing price OR missing coordinates)
+  const needsEnrichment = response.properties.some(p => p.price <= 0 || !p.latitude || !p.longitude);
   if (!needsEnrichment) {
+    console.log('[HasData] All properties have prices and coordinates, skipping enrichment');
     return response;
   }
   
-  // Enrich properties without price
+  // Enrich ALL properties that are missing price or coordinates
+  // Use higher limit to ensure Map tab works properly
   const enrichedProperties = await enrichPropertiesWithPrice(
     response.properties,
-    enrichmentOptions?.maxEnrichments || 5
+    enrichmentOptions?.maxEnrichments || 20 // Increased default to enrich more properties
   );
   
   return {

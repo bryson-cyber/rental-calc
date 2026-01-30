@@ -7474,3 +7474,40 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix Compare favorites showing zero revenue/monthly rent (added toast warning to analyze first)
 - [x] Fix Map not loading - now sets myProperty even without coordinates, MapFirstLayoutV2 will geocode
 - [x] Fix tab persistence not working - now uses useState initializer functions for fresh state on each mount
+
+
+## Critical Bug Fixes Round 2 (Jan 30, 2026)
+- [ ] Fix Google Places not finding neighborhoods (Central West End, etc.)
+- [x] Always enrich ALL properties with lat/lng coordinates (increased default to 20 properties)
+- [ ] Fix action buttons disappearing after property analysis
+- [ ] Fix Load More button not showing
+- [ ] Fix tool navigation buttons missing (Map, Market, Compare, etc.)
+
+
+## Critical Bug Fixes Round 2 (Jan 30, 2026)
+
+- [x] Fix Google Places not finding neighborhoods - removed type restrictions to allow all place types
+- [x] Always enrich ALL properties with lat/lng coordinates (increased default to 20 properties)
+- [ ] Fix action buttons missing after property validation (Map, Market, AI Advisor)
+- [ ] Fix Load More button not appearing for pagination
+- [ ] Fix tab persistence not working properly
+
+
+## Bug Fixes (Jan 29, 2026)
+
+### Find a Property - Action Buttons Fix
+- [x] Fix action buttons (Competition, Map, Market) not appearing after property analysis
+- [x] Root cause: onSelectProperty callback was switching to 'validate' tab immediately after analysis
+- [x] Solution: Removed setActiveTab('validate') call to keep user on Find a Property tab
+- [x] Action buttons now appear on property card after clicking "Analyze Property"
+
+### Load More Button Investigation
+- [x] Investigate why Load More button doesn't appear for St. Louis search
+- [x] Note: API returned 24 properties total (less than 40 per page), so hasMore=false is correct
+- [x] VERIFIED: Load More button IS implemented and works correctly - only shows when hasMore=true
+
+### Google Places Autocomplete - Neighborhood Support
+- [x] Improve autocomplete to recognize neighborhoods like "Central West End"
+- [x] VERIFIED: Google Places IS recognizing "Central West End" as a neighborhood in St. Louis
+- [x] Added "Search anyway" fallback button for cases when Google doesn't recognize a location
+- [x] Users can now search even if autocomplete doesn't find a match

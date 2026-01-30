@@ -256,10 +256,13 @@ function loadSavedState(): { location: string; searchType: 'forRent' | 'forSale'
 function saveState(state: { location: string; searchType: 'forRent' | 'forSale'; properties: ZillowProperty[]; totalResults: number; hasMore: boolean; hasSearched: boolean }): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(OPPORTUNITY_FINDER_STATE_KEY, JSON.stringify({
+    console.log('[OpportunityFinder] Saving state:', state.location, state.properties?.length || 0, 'properties');
+    const dataToSave = JSON.stringify({
       ...state,
       timestamp: Date.now()
-    }));
+    });
+    localStorage.setItem(OPPORTUNITY_FINDER_STATE_KEY, dataToSave);
+    console.log('[OpportunityFinder] State saved successfully, size:', dataToSave.length);
   } catch (e) {
     console.error('[OpportunityFinder] Error saving state:', e);
   }
@@ -671,40 +674,18 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
             <div className="flex-1">
               <GooglePlacesAutocomplete
                 placeholder="Search city, neighborhood, or zip code..."
-                types={['(regions)']} // Cities, neighborhoods, zip codes
+                types={[]} // Empty = all types (cities, neighborhoods, zip codes, addresses)
                 countryRestriction="us"
+                allowDirectSearch={true} // Allow searching even if Google doesn't recognize the location
+                onQueryChange={(query) => {
+                  // Track query changes for manual search button
+                  setLocation(query);
+                }}
                 onSelect={(place) => {
-                  // Set location from selected place
-                  const locationStr = place.name;
-                  setLocation(locationStr);
-                  // Trigger search with the selected location directly
-                  // Use the location string directly since state update is async
-                  const params = {
-                    location: locationStr,
-                    priceMin: priceMin ? parseInt(priceMin) : undefined,
-                    priceMax: priceMax ? parseInt(priceMax) : undefined,
-                    bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
-                    bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
-                    bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
-                    bathsMax: bathsMax ? parseFloat(bathsMax) : undefined,
-                    homeTypes: homeType ? [homeType] : undefined,
-                    page: 1,
-                  };
-                  setHasSearched(true);
-                  setProperties([]);
-                  setValidationResults({});
-                  setCurrentPage(1);
-                  if (searchType === 'forRent') {
-                    searchRentals.mutateAsync(params).then(result => {
-                      setProperties(result.properties);
-                      setTotalResults(result.totalResults);
-                    });
-                  } else {
-                    searchForSale.mutateAsync(params).then(result => {
-                      setProperties(result.properties);
-                      setTotalResults(result.totalResults);
-                    });
-                  }
+                  // Set location from selected place and trigger search
+                  setLocation(place.name);
+                  // Use setTimeout to ensure state is updated before search
+                  setTimeout(() => handleSearch(), 50);
                 }}
               />
             </div>

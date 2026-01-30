@@ -2387,12 +2387,14 @@ export default function LeadMagnet() {
                 />
                 <OpportunityFinderStep
                   onSelectProperty={(property) => {
-                    // Pre-fill the validate tab with this property
+                    // Pre-fill the validate tab with this property (but don't switch tabs)
+                    // This allows action buttons to appear on the card after analysis
                     setAddress(property.address);
                     setBedrooms(String(property.bedrooms));
                     setBathrooms(String(property.bathrooms));
                     setMonthlyRent(String(property.monthlyRent));
-                    setActiveTab('validate');
+                    // Don't switch tabs - let user see action buttons on the card
+                    // setActiveTab('validate');
                   }}
                 />
               </div>

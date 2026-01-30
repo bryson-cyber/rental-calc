@@ -101,18 +101,22 @@ interface PlaceResult {
 
 interface GooglePlacesAutocompleteProps {
   onSelect: (place: { name: string; placeId: string; lat?: number; lng?: number }) => void;
+  onQueryChange?: (query: string) => void; // Callback when query changes (for fallback search)
   placeholder?: string;
   className?: string;
   types?: string[]; // e.g., ['(cities)', '(regions)', 'address']
   countryRestriction?: string; // e.g., 'us'
+  allowDirectSearch?: boolean; // Allow searching with unrecognized locations
 }
 
 export function GooglePlacesAutocomplete({
   onSelect,
+  onQueryChange,
   placeholder = "Search city, neighborhood, or zip code...",
   className,
-  types = ['(regions)'], // Default to regions (cities, neighborhoods, zip codes)
+  types = [], // Empty array = all types (cities, neighborhoods, zip codes, addresses)
   countryRestriction = 'us',
+  allowDirectSearch = false,
 }: GooglePlacesAutocompleteProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -163,7 +167,8 @@ export function GooglePlacesAutocomplete({
       input: searchQuery,
       sessionToken: sessionToken.current!,
       componentRestrictions: countryRestriction ? { country: countryRestriction } : undefined,
-      types: types,
+      // Only add types if specified - empty array means all types
+      ...(types.length > 0 ? { types } : {}),
     };
 
     autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
@@ -266,8 +271,13 @@ export function GooglePlacesAutocomplete({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
+    const newQuery = e.target.value;
+    setQuery(newQuery);
     setIsOpen(true);
+    // Notify parent of query changes for fallback search
+    if (onQueryChange) {
+      onQueryChange(newQuery);
+    }
   };
 
   const handleClear = () => {
@@ -369,6 +379,20 @@ export function GooglePlacesAutocomplete({
         >
           <p>No locations found for "{query}"</p>
           <p className="text-xs mt-1">Try a different city, neighborhood, or zip code</p>
+          {allowDirectSearch && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onSelect({
+                  name: query,
+                  placeId: 'direct-search',
+                });
+              }}
+              className="mt-3 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+            >
+              Search anyway
+            </button>
+          )}
         </div>
       )}
       
