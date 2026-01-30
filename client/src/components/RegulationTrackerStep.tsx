@@ -141,19 +141,37 @@ export function RegulationTrackerStep() {
   const [result, setResult] = useState<RegulationResult | null>(null);
   const [showSimplified, setShowSimplified] = useState(true);
   
+  // Helper to process regulation result
+  const processRegulationResult = (data: any) => {
+    // Map the status to our improved status labels
+    let mappedStatus = data.status;
+    if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
+      // If it's just a permit requirement, make it less scary
+      mappedStatus = 'allowed_with_permit' as any;
+    } else if (data.status === 'restricted' && data.keyRequirements.length > 0) {
+      mappedStatus = 'allowed_with_requirements' as any;
+    }
+    
+    setResult({ ...data, status: mappedStatus } as RegulationResult);
+    toast.success(`Found regulations for ${data.city}, ${data.state}`);
+  };
+
+  // Standard mutation for city/state input
   const getRegulationsMutation = trpc.regulationTracker.getRegulations.useMutation({
-    onSuccess: (data) => {
-      // Map the status to our improved status labels
-      let mappedStatus = data.status;
-      if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
-        // If it's just a permit requirement, make it less scary
-        mappedStatus = 'allowed_with_permit' as any;
-      } else if (data.status === 'restricted' && data.keyRequirements.length > 0) {
-        mappedStatus = 'allowed_with_requirements' as any;
+    onSuccess: processRegulationResult,
+    onError: (error) => {
+      toast.error('Failed to look up regulations: ' + error.message);
+    }
+  });
+  
+  // Mutation for raw input (URLs, addresses, etc.)
+  const getRegulationsFromInputMutation = trpc.regulationTracker.getRegulationsFromInput.useMutation({
+    onSuccess: (response) => {
+      if (response.success && response.data) {
+        processRegulationResult(response.data);
+      } else {
+        toast.error(response.error || 'Failed to parse location');
       }
-      
-      setResult({ ...data, status: mappedStatus } as RegulationResult);
-      toast.success(`Found regulations for ${data.city}, ${data.state}`);
     },
     onError: (error) => {
       toast.error('Failed to look up regulations: ' + error.message);
@@ -166,9 +184,22 @@ export function RegulationTrackerStep() {
     setResult(null);
   };
   
+  // Check if input looks like a URL
+  const isUrl = (input: string) => {
+    return input.startsWith('http://') || input.startsWith('https://') || 
+           input.includes('zillow.com') || input.includes('redfin.com');
+  };
+  
   const handleSearch = () => {
     if (!selectedPlace) {
       toast.error('Please select a city from the dropdown');
+      return;
+    }
+    
+    // Check if it's a direct search (URL or unrecognized location)
+    if (selectedPlace.placeId === 'direct-search' || isUrl(selectedPlace.name)) {
+      // Use the raw input endpoint for URLs and direct searches
+      getRegulationsFromInputMutation.mutate({ input: selectedPlace.name });
       return;
     }
     
@@ -195,7 +226,7 @@ export function RegulationTrackerStep() {
     getRegulationsMutation.mutate({ city, state });
   };
   
-  const isLoading = getRegulationsMutation.isPending;
+  const isLoading = getRegulationsMutation.isPending || getRegulationsFromInputMutation.isPending;
   
   // Get the status config, falling back to 'restricted' for new status types
   const getStatusConfig = (status: string) => {
@@ -227,7 +258,7 @@ export function RegulationTrackerStep() {
             <GooglePlacesAutocomplete
               onSelect={handlePlaceSelect}
               placeholder="Enter city, address, or paste Redfin/Zillow URL..."
-              types={['(regions)', 'address']} // Cities, regions, and addresses
+              types={['geocode']} // geocode includes both addresses AND regions (cities, neighborhoods, zip codes)
               countryRestriction="us"
               showSearchHistory={true}
               className="w-full"

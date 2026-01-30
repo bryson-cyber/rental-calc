@@ -151,7 +151,9 @@ function parseRedfinUrl(url: string): ParsedLocation | null {
 function parseZillowUrl(url: string): ParsedLocation | null {
   try {
     // Zillow URL format: https://www.zillow.com/homedetails/Address-City-State-Zip/ID_zpid/
-    // Example: https://www.zillow.com/homedetails/123-Main-St-Denver-CO-80202/12345_zpid/
+    // Examples:
+    // - https://www.zillow.com/homedetails/123-Main-St-Denver-CO-80202/12345_zpid/
+    // - https://www.zillow.com/homedetails/3715-Mission-Blvd-11-San-Diego-CA-92109/450213296_zpid/
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/').filter(Boolean);
     
@@ -160,20 +162,80 @@ function parseZillowUrl(url: string): ParsedLocation | null {
     if (detailsIndex !== -1 && pathParts.length > detailsIndex + 1) {
       const addressPart = pathParts[detailsIndex + 1];
       
-      // Parse address-city-state-zip format
-      // Split by hyphen and try to extract state (2 letters followed by zip)
-      const parts = addressPart.split('-');
+      // Use regex to find state-zip pattern at the end
+      // Pattern: City-Name-ST-12345 where ST is 2-letter state code and 12345 is zip
+      const stateZipMatch = addressPart.match(/^(.+)-([A-Z]{2})-(\d{5})$/i);
+      if (stateZipMatch) {
+        const beforeStateZip = stateZipMatch[1]; // e.g., "3715-Mission-Blvd-11-San-Diego"
+        const state = stateZipMatch[2].toUpperCase(); // e.g., "CA"
+        
+        // Split by hyphen
+        const parts = beforeStateZip.split('-');
+        
+        // Strategy 1: Look for a standalone unit/apt number that separates address from city
+        // This handles cases like "3715-Mission-Blvd-11-San-Diego" where "11" is unit number
+        // IMPORTANT: Skip index 0 as that's the street number, not a unit number
+        let cityStartIndex = -1;
+        
+        // Look from the end for a number that's NOT at the beginning (street number)
+        // and is followed by non-number parts (the city)
+        for (let i = parts.length - 1; i >= 2; i--) {
+          // If we find a standalone number (unit/apt number) that's not the street number
+          if (/^\d+$/.test(parts[i - 1]) && i - 1 > 0) {
+            cityStartIndex = i;
+            break;
+          }
+        }
+        
+        // If we found a unit number separator, extract city from there
+        if (cityStartIndex > 1 && cityStartIndex < parts.length) {
+          const cityParts = parts.slice(cityStartIndex);
+          const city = capitalizeWords(cityParts.join(' '));
+          const address = parts.slice(0, cityStartIndex).join(' ');
+          
+          if (city && !/\d/.test(city)) { // City should not contain numbers
+            return { city, state, address };
+          }
+        }
+        
+        // Fallback: Scan from the end looking for known multi-word city prefixes
+        // Common multi-word city prefixes (San Diego, New York, Saint Louis, etc.)
+        const multiWordPrefixes = ['san', 'new', 'los', 'las', 'saint', 'st', 'fort', 'el', 'la', 'west', 'east', 'north', 'south', 'port', 'mount', 'lake'];
+        
+        // Scan backwards through parts looking for a city prefix
+        for (let i = parts.length - 2; i >= 0; i--) {
+          const part = parts[i].toLowerCase();
+          if (multiWordPrefixes.includes(part)) {
+            // Found a city prefix - everything from here to end is the city
+            const cityParts = parts.slice(i);
+            // Verify city parts don't contain numbers (would indicate it's part of address)
+            if (!cityParts.some(p => /\d/.test(p))) {
+              const city = capitalizeWords(cityParts.join(' '));
+              const address = parts.slice(0, i).join(' ');
+              return { city, state, address };
+            }
+          }
+        }
+        
+        // Final fallback: assume last part is single-word city (Denver, Austin, etc.)
+        if (parts.length >= 1) {
+          const lastPart = parts[parts.length - 1];
+          if (!/\d/.test(lastPart)) {
+            const city = capitalizeWords(lastPart);
+            const address = parts.slice(0, -1).join(' ');
+            return { city, state, address };
+          }
+        }
+      }
       
-      // Find state abbreviation (2 uppercase letters)
+      // Fallback: Try original parsing method for other URL formats
+      const parts = addressPart.split('-');
       for (let i = parts.length - 1; i >= 0; i--) {
         const part = parts[i];
-        // Check if it's a state abbreviation (2 letters) or state with zip
-        if (/^[A-Z]{2}$/.test(part.toUpperCase()) || /^[A-Z]{2}\d{5}$/.test(part.toUpperCase())) {
-          const state = part.substring(0, 2).toUpperCase();
-          // City is usually right before state
+        if (/^[A-Z]{2}$/i.test(part)) {
+          const state = part.toUpperCase();
           const city = i > 0 ? capitalizeWords(parts[i - 1]) : '';
           const address = parts.slice(0, i - 1).join(' ');
-          
           if (city) {
             return { city, state, address };
           }

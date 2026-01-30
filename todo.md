@@ -7893,3 +7893,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Support Redfin and Zillow link parsing for location extraction
 - [x] Optimize prompts using PTCF framework (Persona, Task, Context, Format)
 - [x] Improve output quality - professional but simple, not childish
+
+
+## Google Places & Zillow URL Fixes (Jan 30, 2026)
+- [x] Fix Google Places autocomplete error "(regions) cannot be mixed with other types" - changed to geocode type
+- [x] Fix Zillow URL parsing to correctly extract city/state from URLs - improved regex for multi-word cities
+- [x] Use backend parseLocation to intelligently parse property URLs (Zillow, Redfin)
+- [x] Test with Zillow URL: https://www.zillow.com/homedetails/3715-Mission-Blvd-11-San-Diego-CA-92109/450213296_zpid/ - WORKS! Returns San Diego, CA
