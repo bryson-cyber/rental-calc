@@ -7651,3 +7651,11 @@ This makes the grading more optimistic - properties now get better grades at low
   - Traditional Rentals (~8%/year)
 - [x] Honest framing about startup costs (deposit + furniture per bedroom)
 - [x] Shows how much capital would be needed in S&P 500 to earn same monthly return
+
+
+### Property Card UI Updates (Jan 29, 2026) - COMPLETE
+- [x] Remove Turnkey button from property cards
+- [x] Add "Deep Analysis" button (goes to Step 3 Validate the Deal)
+- [x] Add AI Advisor to Research Tools section
+- [x] Add Market Advisor to Research Tools section
+- [x] Research Tools now: Comps, Map, Market, AI Advisor, Market AI

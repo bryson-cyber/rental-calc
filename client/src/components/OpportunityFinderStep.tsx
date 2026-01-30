@@ -72,7 +72,10 @@ import {
   Award,
   Clock,
   Heart,
-  Image
+  Image,
+  Bot,
+  Brain,
+  Microscope
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -1294,10 +1297,8 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                   <Phone className="w-4 h-4 mr-2" />
                                   Contact
                                 </Button>
-                                <a 
-                                  href="https://coachinayah.com/turnkey"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <Link 
+                                  href={`/?tab=validate&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}
                                   className="flex-1"
                                 >
                                   <Button
@@ -1307,38 +1308,54 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                       borderRadius: '0.75rem',
                                     }}
                                   >
-                                    <Sparkles className="w-4 h-4 mr-2" />
-                                    Turnkey
+                                    <Microscope className="w-4 h-4 mr-2" />
+                                    Deep Analysis
                                   </Button>
-                                </a>
+                                </Link>
                               </div>
                               
                               {/* Research Tools - Clean horizontal layout */}
                               <div className="bg-slate-50 rounded-xl p-3">
                                 <p className="text-xs text-slate-500 font-medium mb-2 text-center">Research Tools</p>
-                                <div className="flex justify-center gap-6">
+                                <div className="flex justify-center gap-4 flex-wrap">
                                   <Link href={`/?tab=find&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
                                     <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <Users className="w-5 h-5" />
+                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <Users className="w-4 h-4" />
                                       </div>
-                                      <span className="text-xs font-medium">Comps</span>
+                                      <span className="text-[10px] font-medium">Comps</span>
                                     </button>
                                   </Link>
                                   <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
                                     <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <MapIcon className="w-5 h-5" />
+                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <MapIcon className="w-4 h-4" />
                                       </div>
-                                      <span className="text-xs font-medium">Map</span>
+                                      <span className="text-[10px] font-medium">Map</span>
                                     </button>
                                   </Link>
                                   <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
                                     <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
-                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                        <BarChart3 className="w-5 h-5" />
+                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <BarChart3 className="w-4 h-4" />
                                       </div>
-                                      <span className="text-xs font-medium">Market</span>
+                                      <span className="text-[10px] font-medium">Market</span>
+                                    </button>
+                                  </Link>
+                                  <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
+                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
+                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <Bot className="w-4 h-4" />
+                                      </div>
+                                      <span className="text-[10px] font-medium">AI Advisor</span>
+                                    </button>
+                                  </Link>
+                                  <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
+                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
+                                      <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <Brain className="w-4 h-4" />
+                                      </div>
+                                      <span className="text-[10px] font-medium">Market AI</span>
                                     </button>
                                   </Link>
                                 </div>
