@@ -7617,3 +7617,37 @@ This makes the grading more optimistic - properties now get better grades at low
   - Added fallback to calculate totalPages from totalResults when pagination.totalPages is undefined
 - [x] Verify Load More button now works correctly
 - [x] Test shows "Showing 49 of 3155 properties" after loading more (was "22 of 41")
+
+
+### Estimated Monthly Profit Calculation Investigation (Jan 29, 2026)
+- [ ] Investigate where the Estimated Monthly Profit is being calculated in property cards
+- [ ] Verify the calculation formula is correct (Revenue - Rent = Profit)
+- [ ] Fix any issues with the profit calculation display
+
+
+### Profit Tooltip with Investment Comparison (Jan 29, 2026)
+- [ ] Create tooltip component for Estimated Monthly Profit
+- [ ] Show calculation breakdown: Revenue - Rent - 20% Operating Costs = Profit
+- [ ] Add comparison to other investment vehicles (S&P 500, real estate, savings, CDs)
+- [ ] Integrate tooltip into OpportunityFinderStep property cards
+
+
+## Bug Fixes & Enhancements (Jan 29, 2026)
+
+### Pagination Bug Fix - COMPLETE
+- [x] Fixed HasData API pagination reading wrong field names
+- [x] Changed from `searchInformation.totalResultsCount` to `searchInformation.totalResults`
+- [x] Changed from `pagination.totalPages` to calculating from `pagination.otherPages`
+- [x] St. Louis now shows 3,155 properties instead of 41
+- [x] Load More button now works correctly
+
+### Profit Tooltip with Investment Comparison - COMPLETE
+- [x] Added tooltip to "Estimated Monthly Profit" in property cards
+- [x] Shows calculation breakdown (Revenue - Rent - 20% Operating Costs = Profit)
+- [x] Compares ROI to other investment vehicles:
+  - S&P 500 (~10%/year)
+  - High-Yield Savings (~5%/year)
+  - CDs (~5%/year)
+  - Traditional Rentals (~8%/year)
+- [x] Honest framing about startup costs (deposit + furniture per bedroom)
+- [x] Shows how much capital would be needed in S&P 500 to earn same monthly return

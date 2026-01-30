@@ -1074,23 +1074,103 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 </div>
                               )}
                               
-                              {/* Monthly Profit - Hero Metric */}
-                              <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
-                                <p className="text-xs font-medium mb-1" style={{ color: 'oklch(0.50 0 0)' }}>
-                                  Estimated Monthly Profit
-                                </p>
-                                <p 
-                                  className="text-2xl font-bold"
-                                  style={{ 
-                                    color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
-                                  }}
-                                >
-                                  {formatCurrency(validation.projection.monthlyProfit)}
-                                </p>
-                                <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
-                                  {formatCurrency(validation.projection.annualProfit)}/year
-                                </p>
-                              </div>
+                              {/* Monthly Profit - Hero Metric with Investment Comparison Tooltip */}
+                              <TooltipProvider>
+                                <Tooltip delayDuration={0}>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-center mb-4 pb-3 cursor-help" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                                      <p className="text-xs font-medium mb-1 flex items-center justify-center gap-1" style={{ color: 'oklch(0.50 0 0)' }}>
+                                        Estimated Monthly Profit
+                                        <Info className="w-3 h-3" />
+                                      </p>
+                                      <p 
+                                        className="text-2xl font-bold"
+                                        style={{ 
+                                          color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)',
+                                        }}
+                                      >
+                                        {formatCurrency(validation.projection.monthlyProfit)}
+                                      </p>
+                                      <p className="text-xs mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                                        {formatCurrency(validation.projection.annualProfit)}/year
+                                      </p>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent 
+                                    side="bottom" 
+                                    className="w-80 p-0"
+                                    style={{ backgroundColor: 'white', border: '1px solid oklch(0.85 0 0)' }}
+                                  >
+                                    <div className="p-4">
+                                      {/* Calculation Breakdown */}
+                                      <div className="mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.92 0 0)' }}>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.35 0 0)' }}>How We Calculate This:</p>
+                                        <div className="space-y-1 text-xs" style={{ color: 'oklch(0.45 0 0)' }}>
+                                          <div className="flex justify-between">
+                                            <span>Monthly Revenue</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(validation.projection.monthlyRevenue)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span>− Monthly Rent</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.55 0.15 25)' }}>−{formatCurrency(property.price)}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span>− Operating Costs (20%)</span>
+                                            <span className="font-medium" style={{ color: 'oklch(0.55 0.15 25)' }}>−{formatCurrency(validation.projection.operatingCosts)}</span>
+                                          </div>
+                                          <div className="flex justify-between pt-1 mt-1" style={{ borderTop: '1px dashed oklch(0.85 0 0)' }}>
+                                            <span className="font-semibold">= Monthly Profit</span>
+                                            <span className="font-bold" style={{ color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)' }}>
+                                              {formatCurrency(validation.projection.monthlyProfit)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Investment Comparison */}
+                                      <div>
+                                        <p className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.35 0 0)' }}>To Earn {formatCurrency(validation.projection.monthlyProfit)}/mo Elsewhere:</p>
+                                        <div className="space-y-2 text-xs">
+                                          <div className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: 'oklch(0.55 0.15 250)', color: 'white' }}>S&P</div>
+                                              <span style={{ color: 'oklch(0.45 0 0)' }}>S&P 500 (10%/yr)</span>
+                                            </div>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                              {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} invested
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: 'oklch(0.55 0.12 145)', color: 'white' }}>$</div>
+                                              <span style={{ color: 'oklch(0.45 0 0)' }}>HYSA (5%/yr)</span>
+                                            </div>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                              {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.05))} saved
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: 'oklch(0.55 0.14 75)', color: 'white' }}>🏠</div>
+                                              <span style={{ color: 'oklch(0.45 0 0)' }}>Rental Property (8%/yr)</span>
+                                            </div>
+                                            <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                              {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.08))} down
+                                            </span>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* The Kicker - Honest comparison */}
+                                        <div className="mt-3 p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.1)', border: '1px solid oklch(0.55 0.15 145 / 0.2)' }}>
+                                          <p className="text-xs font-medium" style={{ color: 'oklch(0.35 0.10 145)' }}>
+                                            💡 STR startup: ~{formatCurrency(property.price * 3 + (property.bedrooms || 1) * 5000)} (deposit + furniture). Still far less than {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} for the same monthly return.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               
                               {/* Key Metrics - Compact Row */}
                               <div className="flex flex-wrap gap-2 mb-3 text-xs">
