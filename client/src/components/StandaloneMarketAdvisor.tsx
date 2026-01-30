@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
 import { useMarketAdvisorFilters } from '@/contexts/PropertyContext';
+import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 
 interface MarketSearchResult {
   id: string;
@@ -228,6 +229,9 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
 
   return (
     <div className="space-y-6">
+      {/* Back to Property Button */}
+      <BackToPropertyButton className="mb-2" />
+      
       {/* Search Section - Brand styled */}
       <Card className="apple-card">
         <CardHeader>

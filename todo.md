@@ -7736,3 +7736,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - Updated HierarchicalLocationSelector to accept initialZipCode and autoSearch props
 - Updated StandaloneMarketAdvisor to auto-populate search from myProperty.zipCode
 
+
+## Back to Property Button Feature (Jan 30, 2026) - COMPLETE
+
+### Feature: Add "Back to Finder" button in each tool tab for easy navigation back to Opportunity Finder
+- [x] Created BackToPropertyButton component with property context awareness
+- [x] Added button to Explore Listings tab (explore)
+- [x] Added button to See Real Revenue tab (prove)
+- [x] Added button to AI Advisor tab (ai)
+- [x] Added button to Market Advisor tab (market-advisor)
+- [x] Added button to Map tab (MapFirstLayoutV2)
+- [x] Button shows property address and navigates back to Opportunity Finder
+- [x] Button only appears when user has navigated from a property card
+- [x] Tested all buttons - working correctly
+

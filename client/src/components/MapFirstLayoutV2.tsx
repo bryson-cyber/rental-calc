@@ -48,6 +48,7 @@ import {
   Calendar,
   Building,
 } from 'lucide-react';
+import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 import { ExportListings } from '@/components/ExportListings';
 import { Link } from 'wouter';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
@@ -992,6 +993,13 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
   
   return (
     <div className={`${embedded ? 'h-full' : ''} bg-white ${className}`}>
+      {/* Back to Property Button */}
+      <div className="bg-white px-6 pt-4">
+        <div className="max-w-7xl mx-auto">
+          <BackToPropertyButton className="mb-0" />
+        </div>
+      </div>
+      
       {/* Premium Header with Guiding Question - Clean White Design */}
       <div className="bg-white border-b border-gray-100 py-8 px-6">
         <div className="max-w-7xl mx-auto">

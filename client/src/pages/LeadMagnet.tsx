@@ -100,6 +100,7 @@ import { AuthButton } from '@/components/AuthButton';
 import { CompareFavoritesSection } from '@/components/CompareFavoritesSection';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
+import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -389,8 +390,8 @@ export default function LeadMagnet() {
           const targetTab = tabMapping[data.tab] || data.tab;
           setActiveTab(targetTab as TabType);
           
-          // For map tab, set myProperty context
-          if (data.tab === 'map' && data.address) {
+          // Set myProperty for all tabs so BackToPropertyButton shows
+          if (data.address) {
             const hasValidCoords = data.lat && data.lng && !isNaN(data.lat) && !isNaN(data.lng);
             const cityState = data.location?.split(',').map((s: string) => s.trim()) || [];
             const city = cityState[0] || undefined;
@@ -400,6 +401,8 @@ export default function LeadMagnet() {
               address: data.address,
               bedrooms: data.bedrooms || 2,
               bathrooms: data.bathrooms || 1,
+              monthlyRent: data.rent,
+              zipCode: data.zipCode,
               ...(hasValidCoords ? { latitude: data.lat, longitude: data.lng } : {}),
               ...(city ? { city } : {}),
               ...(state ? { state } : {}),
@@ -1983,6 +1986,9 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'prove' ? null : 'prove')}
                 />
                 
+                {/* Back to Property Button */}
+                <BackToPropertyButton className="mb-4" />
+                
                 {/* Hierarchical Location Selector */}
                 <div className="space-y-4">
                   <label className="block text-base font-medium text-[oklch(0.25_0_0)]">
@@ -2481,6 +2487,9 @@ export default function LeadMagnet() {
 
             {activeTab === 'advisor' && !result && (
               <div className="max-w-2xl mx-auto">
+                {/* Back to Property Button */}
+                <BackToPropertyButton className="mb-6" />
+                
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl mb-4">
                     <Sparkles className="w-8 h-8 text-amber-600" />
@@ -2623,6 +2632,9 @@ export default function LeadMagnet() {
                   isOpen={showHelp === 'explore'}
                   onToggle={() => setShowHelp(showHelp === 'explore' ? null : 'explore')}
                 />
+                
+                {/* Back to Property Button */}
+                <BackToPropertyButton className="mb-4" />
                 
                 {/* Guiding Question */}
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4">
