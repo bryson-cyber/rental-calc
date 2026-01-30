@@ -1285,21 +1285,29 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                             // After analysis - show action buttons with clean layout
                             <div className="space-y-2">
                               {/* Primary Action - Deep Analysis (full width) */}
-                              <Link 
-                                href={`/?tab=validate&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}
-                                className="block"
+                              <Button
+                                className="w-full h-11 text-xs font-semibold px-3"
+                                style={{
+                                  backgroundColor: 'oklch(0.55 0.14 75)',
+                                  borderRadius: '0.75rem',
+                                }}
+                                onClick={() => {
+                                  // Store auto-analyze intent in localStorage
+                                  const autoAnalyzeData = {
+                                    address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                    bedrooms: property.bedrooms,
+                                    bathrooms: property.bathrooms,
+                                    rent: property.price,
+                                    timestamp: Date.now()
+                                  };
+                                  localStorage.setItem('autoAnalyzeProperty', JSON.stringify(autoAnalyzeData));
+                                  // Navigate to validate tab
+                                  window.location.href = `/?tab=validate`;
+                                }}
                               >
-                                <Button
-                                  className="w-full h-10 text-sm font-semibold"
-                                  style={{
-                                    backgroundColor: 'oklch(0.55 0.14 75)',
-                                    borderRadius: '0.75rem',
-                                  }}
-                                >
-                                  <Microscope className="w-4 h-4 mr-2" />
-                                  Deep Property Analysis
-                                </Button>
-                              </Link>
+                                <Microscope className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                                <span className="truncate">Full Analysis</span>
+                              </Button>
                               
                               {/* Secondary Action - View Listing */}
                               <a 
@@ -1320,38 +1328,87 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 </Button>
                               </a>
                               
-                              {/* Research Tools - Compact grid layout */}
+                              {/* Research Tools - Compact grid layout with tooltips */}
                               <div className="grid grid-cols-5 gap-0.5 pt-2 border-t border-slate-100">
-                                <Link href={`/?tab=explore&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
-                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                    <Users className="w-4 h-4 mb-0.5" />
-                                    <span className="text-[9px] font-medium">Comps</span>
-                                  </button>
-                                </Link>
-                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
-                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                    <MapIcon className="w-4 h-4 mb-0.5" />
-                                    <span className="text-[9px] font-medium">Map</span>
-                                  </button>
-                                </Link>
-                                <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
-                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                    <BarChart3 className="w-4 h-4 mb-0.5" />
-                                    <span className="text-[9px] font-medium">Revenue</span>
-                                  </button>
-                                </Link>
-                                <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
-                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                    <Bot className="w-4 h-4 mb-0.5" />
-                                    <span className="text-[9px] font-medium">AI</span>
-                                  </button>
-                                </Link>
-                                <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
-                                  <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                    <Brain className="w-4 h-4 mb-0.5" />
-                                    <span className="text-[9px] font-medium">Market</span>
-                                  </button>
-                                </Link>
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/?tab=explore&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
+                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                          <Users className="w-4 h-4 mb-0.5" />
+                                          <span className="text-[9px] font-medium">Comps</span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                                      <p className="text-xs">See similar Airbnb listings in this area</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
+                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                          <MapIcon className="w-4 h-4 mb-0.5" />
+                                          <span className="text-[9px] font-medium">Map</span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                                      <p className="text-xs">View competition on a map around this property</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
+                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                          <BarChart3 className="w-4 h-4 mb-0.5" />
+                                          <span className="text-[9px] font-medium">Revenue</span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                                      <p className="text-xs">See actual revenue data from hosts in this market</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
+                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                          <Bot className="w-4 h-4 mb-0.5" />
+                                          <span className="text-[9px] font-medium">Ask AI</span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                                      <p className="text-xs">Get AI insights about this specific property</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <TooltipProvider delayDuration={0}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
+                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
+                                          <TrendingUp className="w-4 h-4 mb-0.5" />
+                                          <span className="text-[9px] font-medium">Trends</span>
+                                        </button>
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-center">
+                                      <p className="text-xs">See market trends and investment outlook for this area</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                             </div>
                           )}

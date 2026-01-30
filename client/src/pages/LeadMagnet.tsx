@@ -344,15 +344,53 @@ export default function LeadMagnet() {
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
   
-  // Get URL search params
+  // Get URL search params - use window.location.search directly to capture before wouter clears them
   const searchString = useSearch();
+  const initialSearchRef = useRef(typeof window !== 'undefined' ? window.location.search : '');
   
   // Track if we should auto-trigger analysis from URL params
   const autoTriggerRef = useRef<{ tab: string; address: string } | null>(null);
   
   // Handle URL parameters for tab navigation and data passing
   useEffect(() => {
-    const params = new URLSearchParams(searchString);
+    // Check localStorage for auto-analyze property data first
+    const storedAutoAnalyze = localStorage.getItem('autoAnalyzeProperty');
+    if (storedAutoAnalyze) {
+      try {
+        const data = JSON.parse(storedAutoAnalyze);
+        // Only use if recent (within last 5 minutes)
+        if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+          console.log('[AutoAnalyze] Found stored property data:', data);
+          // Clear it immediately so it doesn't trigger again
+          localStorage.removeItem('autoAnalyzeProperty');
+          // Set form data
+          if (data.address) setAddress(data.address);
+          if (data.bedrooms) setBedrooms(String(data.bedrooms));
+          if (data.bathrooms) setBathrooms(String(data.bathrooms));
+          if (data.rent) setMonthlyRent(String(data.rent));
+          // Set tab to validate
+          setActiveTab('validate');
+          // Mark for auto-trigger
+          autoTriggerRef.current = { tab: 'validate', address: data.address };
+          // Scroll to tools section
+          setTimeout(() => {
+            document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+          return; // Skip URL param processing
+        } else {
+          // Expired, remove it
+          localStorage.removeItem('autoAnalyzeProperty');
+        }
+      } catch (e) {
+        console.error('[AutoAnalyze] Failed to parse stored data:', e);
+        localStorage.removeItem('autoAnalyzeProperty');
+      }
+    }
+    
+    // Use initialSearchRef if searchString is empty (wouter may have cleared it)
+    const effectiveSearch = searchString || initialSearchRef.current;
+    const params = new URLSearchParams(effectiveSearch);
+    console.log('[URLParams] effectiveSearch:', effectiveSearch, 'searchString:', searchString, 'initialSearchRef:', initialSearchRef.current);
     const tab = params.get('tab');
     const urlAddress = params.get('address');
     const location = params.get('location');
@@ -377,7 +415,9 @@ export default function LeadMagnet() {
       'ebook': 'ebook',
     };
     
+    console.log('[URLParams] tab:', tab, 'mapped to:', tab ? tabMapping[tab] : null, 'autoAnalyze:', autoAnalyze);
     if (tab && tabMapping[tab]) {
+      console.log('[URLParams] Setting activeTab to:', tabMapping[tab]);
       setActiveTab(tabMapping[tab]);
       
       // Pre-fill form data if provided
@@ -432,27 +472,62 @@ export default function LeadMagnet() {
   }, [searchString, setMyProperty]);
   
   // Auto-trigger analysis when URL params indicate it
+  // Runs after URL params are processed (triggered by searchString change)
+  const hasAutoTriggered = useRef(false);
   useEffect(() => {
-    if (autoTriggerRef.current && isAuthenticated) {
-      const { tab, address: triggerAddress } = autoTriggerRef.current;
-      autoTriggerRef.current = null; // Clear to prevent re-triggering
-      
-      // Small delay to ensure form is populated
-      setTimeout(() => {
-        if (tab === 'validate' && triggerAddress) {
-          // Trigger the validate analysis
-          const analyzeButton = document.querySelector('[data-analyze-button]') as HTMLButtonElement;
-          if (analyzeButton && !analyzeButton.disabled) {
-            analyzeButton.click();
+    // Small delay to ensure the URL param useEffect has run first
+    const timer = setTimeout(() => {
+      if (autoTriggerRef.current && !hasAutoTriggered.current) {
+        hasAutoTriggered.current = true;
+        const { tab, address: triggerAddress } = autoTriggerRef.current;
+        autoTriggerRef.current = null; // Clear to prevent re-triggering
+        
+        console.log('[AutoTrigger] Starting auto-trigger for tab:', tab, 'address:', triggerAddress);
+        
+        // Longer delay to ensure form is fully populated and rendered
+        setTimeout(() => {
+          if (tab === 'validate' && triggerAddress) {
+            // Trigger the validate analysis
+            const analyzeButton = document.querySelector('[data-analyze-button]') as HTMLButtonElement;
+            console.log('[AutoTrigger] Looking for analyze button, found:', analyzeButton);
+            console.log('[AutoTrigger] Button disabled:', analyzeButton?.disabled);
+            if (analyzeButton) {
+              if (!analyzeButton.disabled) {
+                console.log('[AutoTrigger] Clicking validate button for:', triggerAddress);
+                analyzeButton.click();
+              } else {
+                // Try again after another delay if button is still disabled
+                console.log('[AutoTrigger] Button disabled, retrying in 1s...');
+                setTimeout(() => {
+                  const retryButton = document.querySelector('[data-analyze-button]') as HTMLButtonElement;
+                  if (retryButton && !retryButton.disabled) {
+                    console.log('[AutoTrigger] Retry: Clicking validate button');
+                    retryButton.click();
+                  } else {
+                    console.log('[AutoTrigger] Retry: Button still disabled');
+                  }
+                }, 1500);
+              }
+            } else {
+              console.log('[AutoTrigger] Button not found');
+            }
+          } else if (tab === 'map' && triggerAddress) {
+            // For map tab, the MapFirstLayoutV2 component handles its own auto-search
+            // We just need to ensure the address is set in the explore field
+            setExploreAddress(triggerAddress);
+          } else if (tab === 'prove' && triggerAddress) {
+            // For prove tab (Revenue), auto-trigger the market analysis
+            console.log('[AutoTrigger] Setting up prove tab with:', triggerAddress);
+          } else if (tab === 'explore' && triggerAddress) {
+            // For explore tab (Comps), auto-trigger the comps search
+            console.log('[AutoTrigger] Setting up explore tab with:', triggerAddress);
           }
-        } else if (tab === 'map' && triggerAddress) {
-          // For map tab, the MapFirstLayoutV2 component handles its own auto-search
-          // We just need to ensure the address is set in the explore field
-          setExploreAddress(triggerAddress);
-        }
-      }, 500);
-    }
-  }, [isAuthenticated]);
+        }, 1200);
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [searchString]);
   
   // Ebook state
   const [isEbookExpanded, setIsEbookExpanded] = useState(true);

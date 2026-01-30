@@ -7687,3 +7687,24 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Pre-fill Revenue button with property location
 - [ ] Pre-fill Market button with property city/state
 - [ ] Fix Google Map not loading markers on Map step
+
+
+## Property Card Button Fixes - Part 2 (Jan 30, 2026)
+
+### Issues to Fix:
+- [ ] Deep Property Analysis button text is cut off - fix button width/text size
+- [ ] Clicking Deep Property Analysis should auto-run the analysis (not just fill form)
+- [ ] Add tooltips to Research Tools (Comps, Map, Revenue, AI, Market)
+- [ ] Rename "AI" and "Market" for clarity - both are AI-related, confusing
+  - AI → "Ask AI" (property-specific AI advisor)
+  - Market → "Market Report" (market-level data, not AI)
+- [ ] All Research Tools should pre-fill AND auto-run their respective analyses
+
+
+## Auto-Analyze One-Click Feature (Jan 30, 2026) - COMPLETE
+- [x] Full Analysis button stores property data in localStorage
+- [x] Navigate to Validate tab with form pre-filled
+- [x] Auto-trigger the "Validate This Deal" button
+- [x] Analysis runs automatically without user clicking
+- [x] Results display immediately
+- [x] One-click experience from property card to full analysis results
