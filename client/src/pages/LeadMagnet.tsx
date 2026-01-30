@@ -504,6 +504,7 @@ export default function LeadMagnet() {
       'advisor': 'advisor',
       'opportunity': 'opportunity',
       'ebook': 'ebook',
+      'regulations': 'regulations',
     };
     
     console.log('[URLParams] tab:', tab, 'mapped to:', tab ? tabMapping[tab] : null, 'autoAnalyze:', autoAnalyze);

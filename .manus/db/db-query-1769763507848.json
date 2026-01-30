@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE regulation_comments ADD COLUMN upvotes INT NOT NULL DEFAULT 0;\nALTER TABLE regulation_comments ADD COLUMN downvotes INT NOT NULL DEFAULT 0;\nALTER TABLE regulation_comments ADD COLUMN isFlagged INT NOT NULL DEFAULT 0;\n\nCREATE TABLE IF NOT EXISTS comment_votes (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  commentId INT NOT NULL,\n  userId INT NOT NULL,\n  voteType INT NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  UNIQUE KEY unique_user_comment_vote (userId, commentId)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute ALTER TABLE regulation_comments ADD COLUMN upvotes INT NOT NULL DEFAULT 0;\nALTER TABLE regulation_comments ADD COLUMN downvotes INT NOT NULL DEFAULT 0;\nALTER TABLE regulation_comments ADD COLUMN isFlagged INT NOT NULL DEFAULT 0;\n\nCREATE TABLE IF NOT EXISTS comment_votes (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  commentId INT NOT NULL,\n  userId INT NOT NULL,\n  voteType INT NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  UNIQUE KEY unique_user_comment_vote (userId, commentId)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1741
+}

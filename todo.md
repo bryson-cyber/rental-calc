@@ -7930,3 +7930,28 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Display comments with user name, date, and content
 - [x] Allow users to delete their own comments
 - [x] Add comment count badge
+
+## My Saved Regulations Dashboard & Comment Moderation (Jan 30, 2026)
+
+### My Saved Regulations Dashboard Page
+- [x] Create SavedRegulations.tsx page component
+- [x] Add route to App.tsx for /saved-regulations
+- [x] Display all saved regulations in a grid/list view
+- [x] Show key info: city, status, permit required, last updated
+- [x] Add quick actions: view details, remove from saved
+- [x] Add comparison view for side-by-side analysis
+- [x] Link from main navigation or user menu
+- [x] Fix "View Details" button to auto-navigate and display regulation results
+  - Added 'regulations' to tab mapping in LeadMagnet.tsx
+  - Added useEffect in RegulationTrackerStep to read city/state URL params
+  - Auto-triggers regulation search when navigating from saved regulations
+
+### Comment Moderation System
+- [x] Add votes column to regulation_comments table (upvotes/downvotes)
+- [x] Add flagged column for admin moderation
+- [x] Create upvote/downvote endpoints in routers.ts
+- [x] Create admin flag/unflag/delete endpoints
+- [x] Update RegulationTrackerStep UI with vote buttons
+- [x] Show vote count on each comment
+- [x] Add admin moderation panel for flagged comments
+- [x] Sort comments by vote count (most helpful first)

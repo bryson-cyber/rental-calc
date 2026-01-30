@@ -26,6 +26,7 @@ import AccountPage from "./pages/AccountPage";
 import RefundPolicy from "./pages/RefundPolicy";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import SavedRegulations from "./pages/SavedRegulations";
 
 function Router() {
   return (
@@ -56,6 +57,9 @@ function Router() {
       
       {/* My Saved Items */}
       <Route path={"/saved-items"} component={SavedItemsPage} />
+      
+      {/* Saved Regulations */}
+      <Route path={"/saved-regulations"} component={SavedRegulations} />
       
       {/* My Account */}
       <Route path={"/account"} component={AccountPage} />

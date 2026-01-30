@@ -866,8 +866,13 @@ export const regulationComments = mysqlTable("regulation_comments", {
   // Comment content
   content: text("content").notNull(),
   
+  // Voting
+  upvotes: int("upvotes").default(0).notNull(),
+  downvotes: int("downvotes").default(0).notNull(),
+  
   // Moderation
   isApproved: int("isApproved").default(1).notNull(), // 1 = approved, 0 = hidden
+  isFlagged: int("isFlagged").default(0).notNull(), // 1 = flagged for review
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -876,3 +881,25 @@ export const regulationComments = mysqlTable("regulation_comments", {
 
 export type RegulationComment = typeof regulationComments.$inferSelect;
 export type InsertRegulationComment = typeof regulationComments.$inferInsert;
+
+
+/**
+ * Comment Votes table to track which users have voted on which comments
+ * Prevents duplicate voting and enables vote toggling
+ */
+export const commentVotes = mysqlTable("comment_votes", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // References
+  commentId: int("commentId").notNull(),
+  userId: int("userId").notNull(),
+  
+  // Vote type: 1 = upvote, -1 = downvote
+  voteType: int("voteType").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CommentVote = typeof commentVotes.$inferSelect;
+export type InsertCommentVote = typeof commentVotes.$inferInsert;

@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings, savedRegulations, regulationComments, users } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings, savedRegulations, regulationComments, commentVotes, users } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -4036,6 +4036,9 @@ export const appRouter = router({
           createdAt: regulationComments.createdAt,
           userId: regulationComments.userId,
           userName: users.name,
+          upvotes: regulationComments.upvotes,
+          downvotes: regulationComments.downvotes,
+          isFlagged: regulationComments.isFlagged,
         })
           .from(regulationComments)
           .leftJoin(users, eq(regulationComments.userId, users.id))
@@ -4043,11 +4046,14 @@ export const appRouter = router({
             eq(regulationComments.locationKey, locationKey),
             eq(regulationComments.isApproved, 1)
           ))
-          .orderBy(desc(regulationComments.createdAt));
+          .orderBy(desc(regulationComments.upvotes), desc(regulationComments.createdAt));
         
         return {
           success: true,
-          data: comments,
+          data: comments.map(c => ({
+            ...c,
+            voteScore: c.upvotes - c.downvotes,
+          })),
           count: comments.length,
         };
       }),
@@ -4063,6 +4069,188 @@ export const appRouter = router({
             eq(regulationComments.id, input.id),
             eq(regulationComments.userId, ctx.user.id)
           ));
+        return { success: true };
+      }),
+
+    // Vote on a comment (upvote/downvote)
+    voteComment: protectedProcedure
+      .input(z.object({
+        commentId: z.number(),
+        voteType: z.enum(['up', 'down']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const voteValue = input.voteType === 'up' ? 1 : -1;
+        
+        // Check if user already voted on this comment
+        const existingVote = await db.select()
+          .from(commentVotes)
+          .where(and(
+            eq(commentVotes.commentId, input.commentId),
+            eq(commentVotes.userId, ctx.user.id)
+          ))
+          .limit(1);
+        
+        if (existingVote.length > 0) {
+          const oldVote = existingVote[0];
+          
+          if (oldVote.voteType === voteValue) {
+            // Same vote - remove it (toggle off)
+            await db.delete(commentVotes)
+              .where(eq(commentVotes.id, oldVote.id));
+            
+            // Update comment vote counts
+            if (voteValue === 1) {
+              await db.execute(`UPDATE regulation_comments SET upvotes = upvotes - 1 WHERE id = ${input.commentId}`);
+            } else {
+              await db.execute(`UPDATE regulation_comments SET downvotes = downvotes - 1 WHERE id = ${input.commentId}`);
+            }
+            
+            return { success: true, action: 'removed' };
+          } else {
+            // Different vote - change it
+            await db.update(commentVotes)
+              .set({ voteType: voteValue })
+              .where(eq(commentVotes.id, oldVote.id));
+            
+            // Update comment vote counts (swap)
+            if (voteValue === 1) {
+              await db.execute(`UPDATE regulation_comments SET upvotes = upvotes + 1, downvotes = downvotes - 1 WHERE id = ${input.commentId}`);
+            } else {
+              await db.execute(`UPDATE regulation_comments SET upvotes = upvotes - 1, downvotes = downvotes + 1 WHERE id = ${input.commentId}`);
+            }
+            
+            return { success: true, action: 'changed' };
+          }
+        } else {
+          // New vote
+          await db.insert(commentVotes).values({
+            commentId: input.commentId,
+            userId: ctx.user.id,
+            voteType: voteValue,
+          });
+          
+          // Update comment vote counts
+          if (voteValue === 1) {
+            await db.execute(`UPDATE regulation_comments SET upvotes = upvotes + 1 WHERE id = ${input.commentId}`);
+          } else {
+            await db.execute(`UPDATE regulation_comments SET downvotes = downvotes + 1 WHERE id = ${input.commentId}`);
+          }
+          
+          return { success: true, action: 'added' };
+        }
+      }),
+
+    // Get user's vote on a comment
+    getUserVote: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const vote = await db.select()
+          .from(commentVotes)
+          .where(and(
+            eq(commentVotes.commentId, input.commentId),
+            eq(commentVotes.userId, ctx.user.id)
+          ))
+          .limit(1);
+        
+        return {
+          hasVoted: vote.length > 0,
+          voteType: vote.length > 0 ? (vote[0].voteType === 1 ? 'up' : 'down') : null,
+        };
+      }),
+
+    // Get user's votes for multiple comments at once
+    getUserVotes: protectedProcedure
+      .input(z.object({ commentIds: z.array(z.number()) }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        if (input.commentIds.length === 0) return { votes: {} };
+        
+        const votes = await db.select()
+          .from(commentVotes)
+          .where(eq(commentVotes.userId, ctx.user.id));
+        
+        const voteMap: Record<number, 'up' | 'down'> = {};
+        votes.forEach(v => {
+          if (input.commentIds.includes(v.commentId)) {
+            voteMap[v.commentId] = v.voteType === 1 ? 'up' : 'down';
+          }
+        });
+        
+        return { votes: voteMap };
+      }),
+
+    // Flag a comment for admin review
+    flagComment: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.execute(`UPDATE regulation_comments SET isFlagged = 1 WHERE id = ${input.commentId}`);
+        return { success: true };
+      }),
+
+    // Admin: Get flagged comments
+    getFlaggedComments: protectedProcedure
+      .query(async ({ ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Check if user is admin
+        if (ctx.user.role !== 'admin') {
+          return { success: false, error: 'Admin access required', data: [] };
+        }
+        
+        const flagged = await db.select({
+          id: regulationComments.id,
+          content: regulationComments.content,
+          createdAt: regulationComments.createdAt,
+          userId: regulationComments.userId,
+          userName: users.name,
+          city: regulationComments.city,
+          state: regulationComments.state,
+          upvotes: regulationComments.upvotes,
+          downvotes: regulationComments.downvotes,
+        })
+          .from(regulationComments)
+          .leftJoin(users, eq(regulationComments.userId, users.id))
+          .where(eq(regulationComments.isFlagged, 1))
+          .orderBy(desc(regulationComments.createdAt));
+        
+        return { success: true, data: flagged };
+      }),
+
+    // Admin: Approve a flagged comment (unflag)
+    approveComment: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        if (ctx.user.role !== 'admin') {
+          return { success: false, error: 'Admin access required' };
+        }
+        
+        await db.execute(`UPDATE regulation_comments SET isFlagged = 0 WHERE id = ${input.commentId}`);
+        return { success: true };
+      }),
+
+    // Admin: Remove a comment (hide it)
+    adminDeleteComment: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        if (ctx.user.role !== 'admin') {
+          return { success: false, error: 'Admin access required' };
+        }
+        
+        await db.execute(`UPDATE regulation_comments SET isApproved = 0, isFlagged = 0 WHERE id = ${input.commentId}`);
         return { success: true };
       }),
   }),

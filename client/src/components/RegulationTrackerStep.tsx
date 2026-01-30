@@ -15,7 +15,8 @@
  * - Community comments section
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearch } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -43,7 +44,10 @@ import {
   MessageSquare,
   Send,
   Trash2,
-  User
+  User,
+  ThumbsUp,
+  ThumbsDown,
+  Flag
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +56,7 @@ import { toast } from 'sonner';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
+import { Link } from 'wouter';
 
 // Updated status configuration - less scary, more accurate
 const statusConfig = {
@@ -152,15 +157,21 @@ interface Comment {
   createdAt: Date | string;
   userId: number;
   userName: string | null;
+  upvotes: number;
+  downvotes: number;
+  voteScore: number;
+  isFlagged: number;
 }
 
 export function RegulationTrackerStep() {
   const { user, isAuthenticated } = useAuth();
+  const searchString = useSearch();
   const [selectedPlace, setSelectedPlace] = useState<{ name: string; placeId: string; lat?: number; lng?: number } | null>(null);
   const [result, setResult] = useState<RegulationResult | null>(null);
   const [showSimplified, setShowSimplified] = useState(true);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [autoSearchTriggered, setAutoSearchTriggered] = useState(false);
   
   // Helper to process regulation result
   const processRegulationResult = (data: any) => {
@@ -176,6 +187,28 @@ export function RegulationTrackerStep() {
     setResult({ ...data, status: mappedStatus } as RegulationResult);
     toast.success(`Found regulations for ${data.city}, ${data.state}`);
   };
+
+  // Auto-search from URL parameters (from "View Details" in saved regulations)
+  useEffect(() => {
+    if (autoSearchTriggered) return;
+    
+    const params = new URLSearchParams(searchString);
+    const city = params.get('city');
+    const state = params.get('state');
+    
+    if (city && state) {
+      setAutoSearchTriggered(true);
+      // Set the selected place for display
+      setSelectedPlace({
+        name: `${city}, ${state}, USA`,
+        placeId: 'url-param'
+      });
+      // Trigger the search
+      setTimeout(() => {
+        getRegulationsMutation.mutate({ city, state });
+      }, 100);
+    }
+  }, [searchString, autoSearchTriggered]);
 
   // Standard mutation for city/state input
   const getRegulationsMutation = trpc.regulationTracker.getRegulations.useMutation({
@@ -250,6 +283,34 @@ export function RegulationTrackerStep() {
       toast.error('Failed to delete: ' + error.message);
     }
   });
+  
+  // Vote on comment mutation
+  const voteCommentMutation = trpc.regulationTracker.voteComment.useMutation({
+    onSuccess: () => {
+      commentsQuery.refetch();
+      userVotesQuery.refetch();
+    },
+    onError: (error) => {
+      toast.error('Failed to vote: ' + error.message);
+    }
+  });
+  
+  // Flag comment mutation
+  const flagCommentMutation = trpc.regulationTracker.flagComment.useMutation({
+    onSuccess: () => {
+      toast.success('Comment flagged for review');
+    },
+    onError: (error) => {
+      toast.error('Failed to flag: ' + error.message);
+    }
+  });
+  
+  // Get user's votes on comments
+  const commentIds = (commentsQuery.data?.data || []).map((c: any) => c.id);
+  const userVotesQuery = trpc.regulationTracker.getUserVotes.useQuery(
+    { commentIds },
+    { enabled: !!result && isAuthenticated && commentIds.length > 0 }
+  );
   
   const handlePlaceSelect = (place: { name: string; placeId: string; lat?: number; lng?: number }) => {
     setSelectedPlace(place);
@@ -339,6 +400,7 @@ export function RegulationTrackerStep() {
   const isLoading = getRegulationsMutation.isPending || getRegulationsFromInputMutation.isPending;
   const isSaved = isRegulationSavedQuery.data?.saved || false;
   const comments = (commentsQuery.data?.data || []) as Comment[];
+  const userVotes = (userVotesQuery.data?.votes || {}) as Record<number, 'up' | 'down'>;
   
   // Get the status config, falling back to 'restricted' for new status types
   const getStatusConfig = (status: string) => {
@@ -358,6 +420,14 @@ export function RegulationTrackerStep() {
         <p className="text-[#0F172A]/60 max-w-lg mx-auto">
           Check current short-term rental regulations for any city. Get real-time status and requirements explained in simple terms.
         </p>
+        {isAuthenticated && (
+          <Link href="/saved-regulations">
+            <Button variant="outline" size="sm" className="mt-4">
+              <Bookmark className="w-4 h-4 mr-2" />
+              View Saved Regulations
+            </Button>
+          </Link>
+        )}
       </div>
       
       {/* Search Form - Supports cities, addresses, and property URLs */}
@@ -803,18 +873,76 @@ export function RegulationTrackerStep() {
                                   {new Date(comment.createdAt).toLocaleDateString()}
                                 </span>
                               </div>
-                              {user?.id === comment.userId && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteCommentMutation.mutate({ id: comment.id })}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Trash2 className="w-3 h-3 text-[#0F172A]/40 hover:text-red-500" />
-                                </Button>
+                              <div className="flex items-center gap-1">
+                                {user?.id === comment.userId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteCommentMutation.mutate({ id: comment.id })}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Trash2 className="w-3 h-3 text-[#0F172A]/40 hover:text-red-500" />
+                                  </Button>
+                                )}
+                                {isAuthenticated && user?.id !== comment.userId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => flagCommentMutation.mutate({ commentId: comment.id })}
+                                    className="h-6 w-6 p-0"
+                                    title="Report this comment"
+                                  >
+                                    <Flag className="w-3 h-3 text-[#0F172A]/40 hover:text-orange-500" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-[#0F172A]/70 mb-2">{comment.content}</p>
+                            
+                            {/* Vote buttons */}
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  if (!isAuthenticated) {
+                                    toast.error('Please log in to vote');
+                                    return;
+                                  }
+                                  voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' });
+                                }}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  userVotes[comment.id] === 'up' 
+                                    ? 'text-green-600' 
+                                    : 'text-[#0F172A]/40 hover:text-green-600'
+                                }`}
+                              >
+                                <ThumbsUp className="w-3 h-3" />
+                                <span>{comment.upvotes}</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (!isAuthenticated) {
+                                    toast.error('Please log in to vote');
+                                    return;
+                                  }
+                                  voteCommentMutation.mutate({ commentId: comment.id, voteType: 'down' });
+                                }}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  userVotes[comment.id] === 'down' 
+                                    ? 'text-red-600' 
+                                    : 'text-[#0F172A]/40 hover:text-red-600'
+                                }`}
+                              >
+                                <ThumbsDown className="w-3 h-3" />
+                                <span>{comment.downvotes}</span>
+                              </button>
+                              {comment.voteScore !== 0 && (
+                                <span className={`text-xs font-medium ${
+                                  comment.voteScore > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {comment.voteScore > 0 ? '+' : ''}{comment.voteScore} helpful
+                                </span>
                               )}
                             </div>
-                            <p className="text-sm text-[#0F172A]/70">{comment.content}</p>
                           </div>
                         ))}
                       </div>
