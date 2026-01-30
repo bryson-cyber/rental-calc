@@ -505,19 +505,24 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       
       if (append) {
         setProperties(prev => [...prev, ...result.properties]);
+        // When appending, only update totalResults if the new value is greater
+        // This prevents the "32 of 0" issue when API returns 0 on subsequent pages
+        setTotalResults(prev => result.totalResults > 0 ? result.totalResults : prev);
       } else {
         setProperties(result.properties);
+        setTotalResults(result.totalResults);
       }
-      setTotalResults(result.totalResults);
       setHasMore(result.hasMore || false);
       setCurrentPage(page);
       
       // Save state to localStorage for persistence when switching tabs
+      // When appending, preserve the original totalResults if API returns 0
+      const savedTotalResults = append && result.totalResults === 0 ? totalResults : result.totalResults;
       saveState({
         location: location.trim(),
         searchType,
         properties: newProperties,
-        totalResults: result.totalResults,
+        totalResults: savedTotalResults,
         hasMore: result.hasMore || false,
         hasSearched: true
       });
@@ -531,6 +536,15 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   // Load more results
   const handleLoadMore = () => {
     handleSearch(currentPage + 1, true);
+  };
+  
+  // Go to previous page (reload from start)
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      // Reset to page 1 and reload
+      setCurrentPage(1);
+      handleSearch(1, false);
+    }
   };
   
   // Handle validation (Analyze button)
@@ -1479,28 +1493,52 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 })}
               </div>
               
-              {/* Load More Button */}
-              {hasMore && (
-                <div className="flex justify-center pt-6">
-                  <Button
-                    onClick={handleLoadMore}
-                    disabled={isLoadingMore}
-                    variant="outline"
-                    className="px-8"
-                    style={{ borderRadius: '980px' }}
-                  >
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        Load More Properties
-                        <ChevronRight className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
+              {/* Pagination Controls */}
+              {(hasMore || currentPage > 1) && (
+                <div className="flex justify-center items-center gap-4 pt-6">
+                  {/* Back to Start Button */}
+                  {currentPage > 1 && (
+                    <Button
+                      onClick={handlePreviousPage}
+                      disabled={isLoadingMore}
+                      variant="outline"
+                      className="px-6"
+                      style={{ borderRadius: '980px' }}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Back to Start
+                    </Button>
+                  )}
+                  
+                  {/* Page Indicator */}
+                  {currentPage > 1 && (
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage}
+                    </span>
+                  )}
+                  
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <Button
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      variant="outline"
+                      className="px-8"
+                      style={{ borderRadius: '980px' }}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More Properties
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )}
             </>

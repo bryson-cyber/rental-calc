@@ -157,6 +157,17 @@ export async function searchZillowListings(
     // Filter out properties without price - they're not useful for analysis
     const propertiesWithPrice = properties.filter(p => p.price > 0);
     
+    // If the search keyword looks like a zip code, filter to only show properties in that zip code
+    // This ensures strict zip code matching when users search by zip code
+    const isZipCodeSearch = /^\d{5}$/.test(params.keyword.trim());
+    const filteredProperties = isZipCodeSearch 
+      ? propertiesWithPrice.filter(p => p.zipCode === params.keyword.trim())
+      : propertiesWithPrice;
+    
+    if (isZipCodeSearch && filteredProperties.length < propertiesWithPrice.length) {
+      console.log(`[HasData] Filtered ${propertiesWithPrice.length - filteredProperties.length} properties that didn't match zip code ${params.keyword}`);
+    }
+    
     // Extract pagination info from the correct API response structure
     // HasData API returns:
     // - searchInformation.totalResults (the total count of all results)
@@ -195,14 +206,17 @@ export async function searchZillowListings(
       totalPages = currentPage + 1;
     }
     
-    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}, hasNextPage: ${!!data.pagination?.nextPage}`);
+    console.log(`[HasData] Found ${properties.length} properties, ${propertiesWithPrice.length} with price data, ${filteredProperties.length} after zip filter. Total: ${totalResults}, Pages: ${totalPages}, Current: ${currentPage}, hasNextPage: ${!!data.pagination?.nextPage}`);
 
+    // For zip code searches, adjust totalResults to reflect filtered count
+    const adjustedTotalResults = isZipCodeSearch ? filteredProperties.length : totalResults;
+    
     return {
       success: true,
-      totalResults: totalResults,
+      totalResults: adjustedTotalResults,
       totalPages: totalPages,
       currentPage: currentPage,
-      properties: propertiesWithPrice
+      properties: filteredProperties
     };
 
   } catch (error) {

@@ -7784,3 +7784,32 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added more robust totalPages calculation with nextPage fallback
 - [x] Added detailed logging for debugging pagination issues
 - [x] Tested - button now shows correctly at bottom of property listings
+
+
+## Bug Fix: Property Search Issues (Jan 30, 2026)
+### Issue 1: Total count showing "32 of 0 properties"
+- [ ] Fix totalResults not being properly passed/stored after Load More
+- [ ] Ensure totalResults persists across pagination
+
+### Issue 2: No Previous Page button
+- [ ] Add Previous Page button for pagination navigation
+- [ ] Allow users to go back to earlier pages after loading more
+
+### Issue 3: Wrong zip code results
+- [ ] Investigate why searching "63114" returns results for "63123"
+- [ ] Fix search filtering to return correct zip code results
+
+
+## Bug Fixes (Jan 30, 2026)
+
+### Opportunity Finder Pagination Issues - FIXED
+- [x] Fix zip code search returning wrong results (63114 search was returning 63123 properties)
+  - Added client-side zip code filtering in hasdata.ts to ensure only properties matching the searched zip code are returned
+  - Detects if search query is a zip code (5-digit pattern) and filters results accordingly
+- [x] Fix total count showing as 0 (was showing "32 of 0 properties")
+  - Already had fix in OpportunityFinderStep.tsx to preserve totalResults when API returns 0 on subsequent pages
+  - For zip code searches, adjusted totalResults to reflect filtered count
+- [x] Previous Page button already implemented
+  - "Back to Start" button exists and resets to page 1
+  - Page indicator shows current page number
+  - Load More button advances to next page
