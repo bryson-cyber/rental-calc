@@ -906,3 +906,235 @@ export const commentVotes = mysqlTable("comment_votes", {
 
 export type CommentVote = typeof commentVotes.$inferSelect;
 export type InsertCommentVote = typeof commentVotes.$inferInsert;
+
+
+/**
+ * Email Opt-ins table for storing users who want personalized market updates
+ * This data syncs to HubSpot via Zapier webhook
+ */
+export const emailOptins = mysqlTable("email_optins", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Contact information
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  firstName: varchar("firstName", { length: 100 }),
+  lastName: varchar("lastName", { length: 100 }),
+  
+  // Location preferences (for personalized content)
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  
+  // Opt-in preferences
+  wantsMarketUpdates: int("wantsMarketUpdates").default(1).notNull(), // Daily property emails
+  wantsRegulationAlerts: int("wantsRegulationAlerts").default(1).notNull(), // Regulation change alerts
+  wantsSmsAlerts: int("wantsSmsAlerts").default(0).notNull(), // SMS via SimpleTexting
+  
+  // Source tracking
+  source: varchar("source", { length: 100 }), // Which tool they opted in from
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  
+  // HubSpot sync status
+  hubspotContactId: varchar("hubspotContactId", { length: 100 }),
+  hubspotSyncedAt: timestamp("hubspotSyncedAt"),
+  
+  // Status
+  isActive: int("isActive").default(1).notNull(),
+  unsubscribedAt: timestamp("unsubscribedAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EmailOptin = typeof emailOptins.$inferSelect;
+export type InsertEmailOptin = typeof emailOptins.$inferInsert;
+
+
+/**
+ * Personalized Links table for tracking all generated personalized links
+ * Used by admin portal to see what links were created for each user
+ */
+export const personalizedLinks = mysqlTable("personalized_links", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Link recipient
+  email: varchar("email", { length: 320 }),
+  hubspotContactId: varchar("hubspotContactId", { length: 100 }),
+  
+  // Link details
+  linkUrl: text("linkUrl").notNull(),
+  shortCode: varchar("shortCode", { length: 20 }), // Optional short code for tracking
+  
+  // Personalization parameters
+  targetCity: varchar("targetCity", { length: 255 }),
+  targetState: varchar("targetState", { length: 100 }),
+  targetZip: varchar("targetZip", { length: 20 }),
+  targetTab: varchar("targetTab", { length: 50 }), // Which tool tab the link opens
+  
+  // Campaign info
+  campaignName: varchar("campaignName", { length: 255 }),
+  campaignType: varchar("campaignType", { length: 100 }), // welcome, daily_properties, regulation_alert, etc.
+  
+  // Tracking metrics
+  clickCount: int("clickCount").default(0).notNull(),
+  lastClickedAt: timestamp("lastClickedAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PersonalizedLink = typeof personalizedLinks.$inferSelect;
+export type InsertPersonalizedLink = typeof personalizedLinks.$inferInsert;
+
+
+/**
+ * Link Clicks table for detailed click tracking
+ * Records every click on a personalized link
+ */
+export const linkClicks = mysqlTable("link_clicks", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Link reference
+  linkId: int("linkId").notNull(),
+  
+  // Click metadata
+  clickedAt: timestamp("clickedAt").defaultNow().notNull(),
+  userIp: varchar("userIp", { length: 45 }),
+  userAgent: text("userAgent"),
+  referer: text("referer"),
+  
+  // Geo data (if available)
+  clickCity: varchar("clickCity", { length: 255 }),
+  clickState: varchar("clickState", { length: 100 }),
+  clickCountry: varchar("clickCountry", { length: 100 }),
+});
+
+export type LinkClick = typeof linkClicks.$inferSelect;
+export type InsertLinkClick = typeof linkClicks.$inferInsert;
+
+
+/**
+ * Promotions table for tracking all promotional campaigns sent
+ * Admin can see history of all promotions and their performance
+ */
+export const promotions = mysqlTable("promotions", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Campaign details
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", ["email", "sms", "both"]).default("email").notNull(),
+  
+  // Target audience
+  targetCity: varchar("targetCity", { length: 255 }), // null = all cities
+  targetState: varchar("targetState", { length: 100 }), // null = all states
+  targetSegment: varchar("targetSegment", { length: 100 }), // e.g., "credit_approved", "new_leads"
+  
+  // Content
+  emailSubject: varchar("emailSubject", { length: 255 }),
+  emailPreviewText: varchar("emailPreviewText", { length: 255 }),
+  smsMessage: text("smsMessage"),
+  
+  // Personalized link template
+  linkTemplate: text("linkTemplate"), // e.g., "/?tab=prove&city={{city}}&state={{state}}"
+  
+  // Performance metrics
+  totalSent: int("totalSent").default(0).notNull(),
+  totalOpened: int("totalOpened").default(0).notNull(),
+  totalClicked: int("totalClicked").default(0).notNull(),
+  totalUnsubscribed: int("totalUnsubscribed").default(0).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["draft", "scheduled", "sent", "cancelled"]).default("draft").notNull(),
+  scheduledFor: timestamp("scheduledFor"),
+  sentAt: timestamp("sentAt"),
+  
+  // Created by
+  createdBy: int("createdBy"), // Admin user ID
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Promotion = typeof promotions.$inferSelect;
+export type InsertPromotion = typeof promotions.$inferInsert;
+
+
+/**
+ * Promotion Recipients table for tracking who received each promotion
+ */
+export const promotionRecipients = mysqlTable("promotion_recipients", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // References
+  promotionId: int("promotionId").notNull(),
+  optinId: int("optinId"), // Reference to emailOptins
+  email: varchar("email", { length: 320 }).notNull(),
+  
+  // Personalized link for this recipient
+  personalizedLinkId: int("personalizedLinkId"),
+  
+  // Delivery status
+  emailSentAt: timestamp("emailSentAt"),
+  emailOpenedAt: timestamp("emailOpenedAt"),
+  smsSentAt: timestamp("smsSentAt"),
+  
+  // Engagement
+  clicked: int("clicked").default(0).notNull(),
+  unsubscribed: int("unsubscribed").default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PromotionRecipient = typeof promotionRecipients.$inferSelect;
+export type InsertPromotionRecipient = typeof promotionRecipients.$inferInsert;
+
+
+/**
+ * Tool Usage Events table for tracking how users interact with tools
+ * This data is sent to HubSpot via Zapier to update contact properties
+ */
+export const toolUsageEvents = mysqlTable("tool_usage_events", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User identification
+  email: varchar("email", { length: 320 }),
+  sessionId: varchar("sessionId", { length: 64 }),
+  userId: int("userId"),
+  
+  // Event details
+  eventType: varchar("eventType", { length: 100 }).notNull(), // regulation_search, revenue_calc, market_advisor, etc.
+  toolName: varchar("toolName", { length: 100 }).notNull(),
+  
+  // Location searched
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  address: text("address"),
+  
+  // Results (if applicable)
+  revenueEstimate: int("revenueEstimate"),
+  regulationStatus: varchar("regulationStatus", { length: 50 }),
+  
+  // Source tracking
+  utmSource: varchar("utmSource", { length: 100 }),
+  utmMedium: varchar("utmMedium", { length: 100 }),
+  utmCampaign: varchar("utmCampaign", { length: 100 }),
+  personalizedLinkId: int("personalizedLinkId"), // If they came from a personalized link
+  
+  // Webhook sync status
+  webhookSentAt: timestamp("webhookSentAt"),
+  webhookSuccess: int("webhookSuccess"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ToolUsageEvent = typeof toolUsageEvents.$inferSelect;
+export type InsertToolUsageEvent = typeof toolUsageEvents.$inferInsert;

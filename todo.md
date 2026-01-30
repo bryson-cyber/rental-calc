@@ -7992,3 +7992,61 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Create utility to generate personalized URLs with city/state/zip
 - [x] Created useWebhook.ts hook with getPersonalizedLinks function
 - [x] Document URL parameter format for HubSpot email templates (in hook comments)
+
+
+## HubSpot Personalized Links - Bug Fixes (Jan 30, 2026)
+- [ ] Fix personalized URL not working on published site
+- [ ] Ensure URL params auto-populate location fields in all tools
+- [ ] Make sure correct tab opens based on URL param
+- [ ] Auto-trigger search when personalized link is clicked
+- [ ] Test each tool: prove, market, regulations, validate, explore, advisor
+
+
+## HubSpot Integration - Admin Portal & Email Opt-in (Jan 30, 2026)
+
+### Database Tables Created
+- [x] email_optins - Store email subscribers with preferences
+- [x] personalized_links - Track generated links with click counts
+- [x] link_clicks - Detailed click tracking with user agent, referer
+- [x] promotions - Track marketing campaigns
+- [x] tool_usage_events - Track all tool usage for analytics
+
+### Backend Routes Created
+- [x] emailOptin.subscribe - Public endpoint for email opt-in
+- [x] emailOptin.unsubscribe - Unsubscribe endpoint
+- [x] emailOptin.list - Admin list of all opt-ins
+- [x] adminTracking.createLink - Generate personalized links
+- [x] adminTracking.trackClick - Track link clicks
+- [x] adminTracking.getLinks - List all links with analytics
+- [x] adminTracking.getLinkAnalytics - Detailed link stats
+- [x] adminTracking.createPromotion - Create marketing campaigns
+- [x] adminTracking.trackToolUsage - Track tool usage events
+- [x] adminTracking.getToolUsageStats - Usage analytics by tool/city
+- [x] adminTracking.getDashboardSummary - Admin dashboard stats
+
+### Admin Portal UI (/admin/hubspot)
+- [x] Dashboard summary cards (opt-ins, links, clicks, promotions, events)
+- [x] Create Personalized Link form with city/state/zip/tab/campaign
+- [x] Recent Links list with copy/open buttons
+- [x] Email Subscribers list with preferences badges
+- [x] Tool Usage stats by tool and city
+- [x] HubSpot Templates tab with copy-paste link templates
+
+### Email Opt-in Modal Component
+- [x] Created EmailOptinModal.tsx component
+- [x] Collects email, phone, name, city, state
+- [x] Preference checkboxes for market updates, regulation alerts, SMS
+
+### Personalized Links - VERIFIED WORKING ✅
+- [x] URL params auto-populate prove tab (See Real Revenue)
+  - Tested: /?tab=prove&city=Loma+Linda&state=CA
+  - Result: Full market data loads (72 listings, 62% booking rate, $35,259 avg revenue)
+- [x] HierarchicalLocationSelector accepts initialCity and initialState props
+- [x] Auto-search triggers when city/state params present
+- [x] Market data displays correctly with all metrics
+
+### Pending
+- [ ] Get correct HubSpot property internal names from user (REMINDER SET)
+- [ ] Set up Zapier workflows to connect tool → HubSpot
+- [ ] Integrate EmailOptinModal into tool completion flows
+- [ ] Test personalized links on production domain after publish

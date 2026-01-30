@@ -563,6 +563,12 @@ export default function LeadMagnet() {
           setProveInitialZipCode(urlZip);
         }
         
+        // For prove tab with city/state (HubSpot personalization), set initial city/state
+        if (tabMapping[tab] === 'prove' && urlCity && urlState) {
+          setProveInitialCity(urlCity);
+          setProveInitialState(urlState);
+        }
+        
         // Auto-trigger analysis for HubSpot personalized links
         if (!autoAnalyze) {
           autoTriggerRef.current = { tab: tabMapping[tab], address: hubspotLocation };
@@ -595,10 +601,22 @@ export default function LeadMagnet() {
         autoTriggerRef.current = { tab: tabMapping[tab], address: urlAddress };
       }
       
-      // Scroll to tools section after a short delay
+      // Scroll to the active tool panel after a short delay
+      // Use longer delay to ensure content is rendered
       setTimeout(() => {
-        document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+        // First scroll to tools section
+        const toolsSection = document.getElementById('tools-section');
+        if (toolsSection) {
+          toolsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        // Then scroll to the specific tool panel after it renders
+        setTimeout(() => {
+          const toolPanel = document.querySelector('[data-tool-panel]');
+          if (toolPanel) {
+            toolPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 500);
+      }, 200);
     }
   }, [searchString, setMyProperty]);
   
@@ -879,6 +897,8 @@ export default function LeadMagnet() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
   const [proveInitialZipCode, setProveInitialZipCode] = useState<string | undefined>(undefined);
+  const [proveInitialCity, setProveInitialCity] = useState<string | undefined>(undefined);
+  const [proveInitialState, setProveInitialState] = useState<string | undefined>(undefined);
 
   // ============================================
   // TRPC MUTATIONS
@@ -2018,14 +2038,16 @@ export default function LeadMagnet() {
             {/* REGULATIONS TAB */}
             {/* ============================================ */}
             {activeTab === 'regulations' && (
-              <RegulationTrackerStep />
+              <div data-tool-panel="regulations">
+                <RegulationTrackerStep />
+              </div>
             )}
             
             {/* ============================================ */}
             {/* PROVE THE MARKET TAB */}
             {/* ============================================ */}
             {activeTab === 'prove' && (
-              <div className="space-y-8">
+              <div className="space-y-8" data-tool-panel="prove">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="See real revenue data from actual Airbnb hosts to prove that short-term rentals make money in any market"
@@ -2054,7 +2076,9 @@ export default function LeadMagnet() {
                     onSearch={handleHierarchicalSearch}
                     disabled={isResearching}
                     initialZipCode={proveInitialZipCode}
-                    autoSearch={!!proveInitialZipCode}
+                    initialCity={proveInitialCity}
+                    initialState={proveInitialState}
+                    autoSearch={!!proveInitialZipCode || (!!proveInitialCity && !!proveInitialState)}
                   />
                 </div>
                 
@@ -2201,7 +2225,7 @@ export default function LeadMagnet() {
             {/* VALIDATE THE DEAL TAB */}
             {/* ============================================ */}
             {activeTab === 'validate' && (
-              <div className="space-y-8">
+              <div className="space-y-8" data-tool-panel="validate">
                 <HelpSection
                   title="Run the Numbers on Your Deal"
                   description="Found a property you like? Enter the exact address and rent amount to see projected revenue, profit margins, and how it compares to similar properties nearby."
@@ -2661,7 +2685,7 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {/* MARKET ADVISOR TAB */}
             {/* ============================================ */}
-            <div className={activeTab === 'market' ? '' : 'hidden'}>
+            <div className={activeTab === 'market' ? '' : 'hidden'} data-tool-panel="market">
               <StandaloneMarketAdvisor key="market-advisor-stable" myProperty={myProperty || undefined} />
             </div>
 
@@ -2672,7 +2696,7 @@ export default function LeadMagnet() {
             {/* EXPLORE TAB - Redirects to Find with pre-filled data */}
             {/* ============================================ */}
             {activeTab === 'explore' && (
-              <div className="space-y-8">
+              <div className="space-y-8" data-tool-panel="explore">
                 <HelpSection
                   title="What You'll Discover"
                   description="See real Airbnb properties that are actually making money in your target city or neighborhood. This helps you understand what success looks like before you invest."
@@ -2795,7 +2819,7 @@ export default function LeadMagnet() {
             )}
 
             {activeTab === 'opportunity' && (
-              <div className="space-y-8">
+              <div className="space-y-8" data-tool-panel="opportunity">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Browse available rentals on Zillow and instantly validate their STR profit potential without leaving this page."
@@ -2833,7 +2857,7 @@ export default function LeadMagnet() {
       {/* MAP TAB - FULL WIDTH (outside container) */}
       {/* ============================================ */}
       {activeTab === 'map' && (
-        <section className="bg-slate-50">
+        <section className="bg-slate-50" data-tool-panel="map">
           <MapFirstLayoutV2 
             key={`map-${myProperty?.address || 'no-property'}`}
             embedded={false} 

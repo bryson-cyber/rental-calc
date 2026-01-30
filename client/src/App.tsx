@@ -27,6 +27,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SavedRegulations from "./pages/SavedRegulations";
+import AdminPortal from "./pages/AdminPortal";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function Router() {
       <Route path={"/deep-analysis/:reportId"} component={DeepAnalysis} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/admin/reports"} component={AdminReports} />
+      <Route path={"/admin/hubspot"} component={AdminPortal} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

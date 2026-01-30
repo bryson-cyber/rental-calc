@@ -150,6 +150,8 @@ interface HierarchicalLocationSelectorProps {
   onSearch: (selection: LocationSelection) => void;
   disabled?: boolean;
   initialZipCode?: string;
+  initialCity?: string;
+  initialState?: string;
   autoSearch?: boolean;
 }
 
@@ -158,6 +160,8 @@ export function HierarchicalLocationSelector({
   onSearch,
   disabled = false,
   initialZipCode,
+  initialCity,
+  initialState,
   autoSearch = false
 }: HierarchicalLocationSelectorProps) {
   // Selection state
@@ -877,7 +881,7 @@ export function HierarchicalLocationSelector({
   const [isLoadingZipSuggestions, setIsLoadingZipSuggestions] = useState(false);
   
   // Direct city/market search state
-  const [directCitySearch, setDirectCitySearch] = useState('');
+  const [directCitySearch, setDirectCitySearch] = useState(initialCity && initialState ? `${initialCity}, ${initialState}` : '');
   const [directCitySearching, setDirectCitySearching] = useState(false);
   const [directCityError, setDirectCityError] = useState<string | null>(null);
   const [citySearchResults, setCitySearchResults] = useState<Market[]>([]);
@@ -1173,6 +1177,21 @@ export function HierarchicalLocationSelector({
       setHasAutoSearched(false); // Reset so it can auto-search again
     }
   }, [initialZipCode]);
+  
+  // Auto-search when initialCity is provided and autoSearch is enabled
+  const [hasCityAutoSearched, setHasCityAutoSearched] = useState(false);
+  useEffect(() => {
+    if (initialCity && initialState && autoSearch && !hasCityAutoSearched && !initialZipCode) {
+      console.log('[HierarchicalLocationSelector] Auto-searching for city:', initialCity, initialState);
+      const cityQuery = `${initialCity}, ${initialState}`;
+      setDirectCitySearch(cityQuery);
+      setHasCityAutoSearched(true);
+      // Trigger the city search after a short delay to ensure state is set
+      setTimeout(() => {
+        handleDirectCitySearch();
+      }, 100);
+    }
+  }, [initialCity, initialState, autoSearch, hasCityAutoSearched, initialZipCode]);
   
   // Handle direct city/market search
   const handleDirectCitySearch = async () => {
