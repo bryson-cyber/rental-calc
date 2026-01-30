@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, Loader2 } from 'lucide-react';
+import { Search, MapPin, Building2, Loader2, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Google Maps API configuration
@@ -277,13 +277,16 @@ export function GooglePlacesAutocomplete({
     inputRef.current?.focus();
   };
 
+  // Get appropriate Lucide icon based on place type
   const getPlaceIcon = (types: string[]) => {
-    if (types.includes('postal_code')) return '📮';
-    if (types.includes('neighborhood') || types.includes('sublocality')) return '🏘️';
-    if (types.includes('locality') || types.includes('administrative_area_level_3')) return '🏙️';
-    if (types.includes('administrative_area_level_2')) return '📍';
-    if (types.includes('administrative_area_level_1')) return '🗺️';
-    return '📍';
+    if (types.includes('postal_code')) {
+      return <Navigation className="w-5 h-5 text-teal-500" />;
+    }
+    if (types.includes('neighborhood') || types.includes('sublocality')) {
+      return <Building2 className="w-5 h-5 text-teal-500" />;
+    }
+    // City or larger area
+    return <MapPin className="w-5 h-5 text-amber-500" />;
   };
 
   return (
@@ -325,12 +328,17 @@ export function GooglePlacesAutocomplete({
               onClick={() => handleSelect(place)}
               className="w-full px-4 py-3 flex items-start gap-3 hover:bg-neutral-50 transition-colors text-left border-b border-neutral-100 last:border-b-0"
             >
-              <div className="mt-0.5 text-lg">
+              <div className="mt-0.5">
                 {getPlaceIcon(place.types)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-neutral-900 truncate">
-                  {place.mainText}
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-neutral-900 truncate">
+                    {place.mainText}
+                  </span>
+                  {(place.types.includes('neighborhood') || place.types.includes('sublocality')) && (
+                    <span className="text-teal-600 text-xs font-medium">Neighborhood</span>
+                  )}
                 </div>
                 {place.secondaryText && (
                   <div className="text-sm text-neutral-500 truncate">

@@ -398,19 +398,25 @@ export default function LeadMagnet() {
         setMonthlyRent(rent);
       }
       
-      // For map tab, set myProperty context if we have address and coordinates
-      if (tabMapping[tab] === 'map' && urlAddress && lat && lng) {
-        const latitude = parseFloat(lat);
-        const longitude = parseFloat(lng);
-        if (!isNaN(latitude) && !isNaN(longitude)) {
-          setMyProperty({
-            address: urlAddress,
-            bedrooms: urlBedrooms ? parseInt(urlBedrooms) : 2,
-            bathrooms: urlBathrooms ? parseFloat(urlBathrooms) : 1,
-            latitude,
-            longitude,
-          });
-        }
+      // For map tab, set myProperty context - coordinates are optional, MapFirstLayoutV2 will geocode if missing
+      if (tabMapping[tab] === 'map' && urlAddress) {
+        const latitude = lat ? parseFloat(lat) : undefined;
+        const longitude = lng ? parseFloat(lng) : undefined;
+        const hasValidCoords = latitude && longitude && !isNaN(latitude) && !isNaN(longitude);
+        
+        // Extract city from location param if available
+        const cityState = location?.split(',').map(s => s.trim()) || [];
+        const city = cityState[0] || undefined;
+        const state = cityState[1] || undefined;
+        
+        setMyProperty({
+          address: urlAddress,
+          bedrooms: urlBedrooms ? parseInt(urlBedrooms) : 2,
+          bathrooms: urlBathrooms ? parseFloat(urlBathrooms) : 1,
+          ...(hasValidCoords ? { latitude, longitude } : {}),
+          ...(city ? { city } : {}),
+          ...(state ? { state } : {}),
+        });
       }
       
       // Mark for auto-trigger if autoAnalyze flag is set

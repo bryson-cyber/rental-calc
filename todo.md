@@ -7466,3 +7466,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Increase property enrichment limit from 5 to 15 per page
 - [x] Fix Map button not loading data from property analysis (enrichment now includes coordinates)
 - [x] Implement tab state persistence for Find a Property (saves location, search type, and results for 30 min)
+
+
+## Critical Bug Fixes (Jan 30, 2026)
+- [x] Fix Google Places dropdown UI styling to match app design (using Lucide icons)
+- [x] Fix property not populating to other tabs when selected in Find a Property (now calls onSelectProperty after validation)
+- [x] Fix Compare favorites showing zero revenue/monthly rent (added toast warning to analyze first)
+- [x] Fix Map not loading - now sets myProperty even without coordinates, MapFirstLayoutV2 will geocode
+- [x] Fix tab persistence not working - now uses useState initializer functions for fresh state on each mount

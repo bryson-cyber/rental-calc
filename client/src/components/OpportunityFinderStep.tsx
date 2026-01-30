@@ -269,12 +269,17 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   // Auth state
   const { user } = useAuth();
   
-  // Load saved state on mount
-  const savedState = loadSavedState();
-  
-  // Search state - restore from localStorage if available
-  const [location, setLocation] = useState(savedState?.location || '');
-  const [searchType, setSearchType] = useState<'forRent' | 'forSale'>(savedState?.searchType || 'forRent');
+  // Search state - restore from localStorage if available using initializer function
+  // This ensures state is loaded fresh on each mount (when switching tabs)
+  const [location, setLocation] = useState(() => {
+    const saved = loadSavedState();
+    console.log('[OpportunityFinder] Loading saved location:', saved?.location);
+    return saved?.location || '';
+  });
+  const [searchType, setSearchType] = useState<'forRent' | 'forSale'>(() => {
+    const saved = loadSavedState();
+    return saved?.searchType || 'forRent';
+  });
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter state
@@ -294,10 +299,23 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
   const [sortBy, setSortBy] = useState<string>('price_asc');
   
   // Results state - restore from localStorage if available
-  const [properties, setProperties] = useState<ZillowProperty[]>(savedState?.properties || []);
-  const [totalResults, setTotalResults] = useState(savedState?.totalResults || 0);
-  const [hasMore, setHasMore] = useState(savedState?.hasMore || false);
-  const [hasSearched, setHasSearched] = useState(savedState?.hasSearched || false);
+  const [properties, setProperties] = useState<ZillowProperty[]>(() => {
+    const saved = loadSavedState();
+    console.log('[OpportunityFinder] Loading saved properties:', saved?.properties?.length || 0);
+    return saved?.properties || [];
+  });
+  const [totalResults, setTotalResults] = useState(() => {
+    const saved = loadSavedState();
+    return saved?.totalResults || 0;
+  });
+  const [hasMore, setHasMore] = useState(() => {
+    const saved = loadSavedState();
+    return saved?.hasMore || false;
+  });
+  const [hasSearched, setHasSearched] = useState(() => {
+    const saved = loadSavedState();
+    return saved?.hasSearched || false;
+  });
   
   // Validation state
   const [validatingId, setValidatingId] = useState<string | null>(null);
@@ -368,6 +386,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
     } else if (property) {
       // Get validation result if available
       const validation = validationResults[propertyId];
+      
+      // Warn user if saving without analysis
+      if (!validation?.success) {
+        toast.info('Tip: Analyze the property first to save revenue data with your favorite!');
+      }
       
       try {
         const result = await addFavorite.mutateAsync({
@@ -522,6 +545,16 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
         ...prev,
         [property.id]: result,
       }));
+      
+      // Call onSelectProperty to populate data in other tabs
+      if (onSelectProperty && result.success) {
+        onSelectProperty({
+          address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+          bedrooms: property.bedrooms || 2,
+          bathrooms: property.bathrooms || 1,
+          monthlyRent: property.price,
+        });
+      }
     } catch (error) {
       console.error('Validation error:', error);
       setValidationResults(prev => ({
