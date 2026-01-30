@@ -1129,17 +1129,20 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                     <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.firstMonth)}</span>
                                   </div>
                                   <div className="flex justify-between mb-1">
-                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Security Deposit</span>
+                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Security Deposit (1.5x)</span>
                                     <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.deposit)}</span>
                                   </div>
                                   <div className="flex justify-between mb-1">
-                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Furnishing Est.</span>
+                                    <span style={{ color: 'oklch(0.55 0 0)' }}>Furnishing*</span>
                                     <span style={{ color: 'oklch(0.25 0 0)' }}>{formatCurrency(startupCosts.furnishing)}</span>
                                   </div>
                                   <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
                                     <span style={{ color: 'oklch(0.35 0 0)' }}>Total Startup</span>
                                     <span style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(startupCosts.total)}</span>
                                   </div>
+                                  <p className="text-[10px] mt-2 text-center" style={{ color: 'oklch(0.60 0 0)' }}>
+                                    *Furnishing estimate: $8K base + $4K/bedroom (industry average)
+                                  </p>
                                 </div>
                               </details>
                               
@@ -1196,75 +1199,70 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                               )}
                             </Button>
                           ) : (
-                            // After analysis - show action buttons
-                            <div className="space-y-3">
-                              {/* Contact Now Button */}
-                              <Button
-                                onClick={() => handleGetContacts(property)}
-                                variant="outline"
-                                className="w-full h-10 text-sm"
-                                style={{ borderRadius: '980px' }}
-                              >
-                                <Phone className="w-4 h-4 mr-2" />
-                                Contact Now
-                              </Button>
-                              
-                              {/* Deep Dive Buttons - Switch tabs with property data */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <Link href={`/?tab=find&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full h-10 text-xs px-3"
-                                    style={{ borderRadius: '0.5rem' }}
-                                  >
-                                    <Users className="w-3.5 h-3.5 mr-1.5" />
-                                    Competition
-                                  </Button>
-                                </Link>
-                                <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full h-10 text-xs px-3"
-                                    style={{ borderRadius: '0.5rem' }}
-                                  >
-                                    <MapIcon className="w-3.5 h-3.5 mr-1.5" />
-                                    Map
-                                  </Button>
-                                </Link>
-                                <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full h-10 text-xs px-3"
-                                    style={{ borderRadius: '0.5rem' }}
-                                  >
-                                    <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-                                    Market
-                                  </Button>
-                                </Link>
-                              </div>
-                              
-                              {/* Turnkey CTA */}
-                              <a 
-                                href="https://coachinayah.com/turnkey"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block"
-                              >
+                            // After analysis - show action buttons with clean layout
+                            <div className="space-y-4">
+                              {/* Primary Actions Row */}
+                              <div className="flex gap-2">
                                 <Button
-                                  className="w-full h-10 text-sm group"
-                                  style={{
-                                    backgroundColor: 'oklch(0.55 0.14 75)',
-                                    borderRadius: '980px',
+                                  onClick={() => handleGetContacts(property)}
+                                  className="flex-1 h-11 text-sm font-medium"
+                                  style={{ 
+                                    backgroundColor: 'oklch(0.45 0.12 145)',
+                                    borderRadius: '0.75rem',
                                   }}
                                 >
-                                  <Sparkles className="w-4 h-4 mr-2" />
-                                  Learn About Turnkey
-                                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                  <Phone className="w-4 h-4 mr-2" />
+                                  Contact
                                 </Button>
-                              </a>
+                                <a 
+                                  href="https://coachinayah.com/turnkey"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1"
+                                >
+                                  <Button
+                                    className="w-full h-11 text-sm font-medium"
+                                    style={{
+                                      backgroundColor: 'oklch(0.55 0.14 75)',
+                                      borderRadius: '0.75rem',
+                                    }}
+                                  >
+                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    Turnkey
+                                  </Button>
+                                </a>
+                              </div>
+                              
+                              {/* Research Tools - Clean horizontal layout */}
+                              <div className="bg-slate-50 rounded-xl p-3">
+                                <p className="text-xs text-slate-500 font-medium mb-2 text-center">Research Tools</p>
+                                <div className="flex justify-center gap-6">
+                                  <Link href={`/?tab=find&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}`}>
+                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
+                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <Users className="w-5 h-5" />
+                                      </div>
+                                      <span className="text-xs font-medium">Comps</span>
+                                    </button>
+                                  </Link>
+                                  <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
+                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
+                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <MapIcon className="w-5 h-5" />
+                                      </div>
+                                      <span className="text-xs font-medium">Map</span>
+                                    </button>
+                                  </Link>
+                                  <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
+                                    <button className="flex flex-col items-center gap-1 text-slate-600 hover:text-amber-600 transition-colors">
+                                      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <BarChart3 className="w-5 h-5" />
+                                      </div>
+                                      <span className="text-xs font-medium">Market</span>
+                                    </button>
+                                  </Link>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </CardContent>

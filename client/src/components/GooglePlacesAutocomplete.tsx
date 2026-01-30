@@ -208,9 +208,9 @@ export function GooglePlacesAutocomplete({
       setIsLoading(false);
       
       if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-        // Filter to only show geographic locations (cities, neighborhoods, postal codes, etc.)
-        // Exclude businesses, restaurants, stores, etc.
-        const geographicTypes = [
+        // Filter to ONLY show zip codes, neighborhoods, and cities
+        // NO street addresses, NO specific addresses, NO businesses
+        const allowedTypes = [
           'locality', // cities
           'sublocality', // neighborhoods/districts
           'sublocality_level_1',
@@ -220,39 +220,47 @@ export function GooglePlacesAutocomplete({
           'postal_code', // zip codes
           'administrative_area_level_1', // states
           'administrative_area_level_2', // counties
-          'administrative_area_level_3', // smaller admin areas
           'colloquial_area', // informal areas like "Silicon Valley"
-          'route', // streets (for address searches)
+        ];
+        
+        // Types that should be EXCLUDED (addresses, streets, specific locations)
+        const excludedTypes = [
+          'route', // streets
           'street_address', // full addresses
           'premise', // buildings/addresses
+          'street_number', // house numbers
+          'establishment', // businesses
+          'point_of_interest', // POIs
         ];
         
         const filteredPredictions = predictions.filter((prediction) => {
           const types = prediction.types || [];
           const description = prediction.description.toLowerCase();
           
-          // Include if it has any geographic type
-          const hasGeographicType = types.some(type => geographicTypes.includes(type));
+          // MUST have at least one allowed type (zip code, city, neighborhood)
+          const hasAllowedType = types.some(type => allowedTypes.includes(type));
           
-          // Exclude if it's clearly a business/establishment
-          const isEstablishment = types.includes('establishment') || types.includes('point_of_interest');
+          // MUST NOT have any excluded type (addresses, streets, businesses)
+          const hasExcludedType = types.some(type => excludedTypes.includes(type));
           
           // Exclude apartment complexes, businesses, restaurants, etc.
           const businessKeywords = ['apartments', 'apartment', 'loft', 'lofts', 'complex', 'suites', 
                                      'restaurant', 'cafe', 'bar', 'shop', 'store', 'market', 
                                      'barbershop', 'salon', 'gym', 'fitness', 'hotel', 'motel',
-                                     'church', 'school', 'hospital', 'clinic', 'office'];
-          const hasBusinessKeyword = businessKeywords.some(keyword => description.includes(keyword));
+                                     'church', 'school', 'hospital', 'clinic', 'office',
+                                     'ave', 'avenue', 'street', 'st', 'road', 'rd', 'drive', 'dr',
+                                     'lane', 'ln', 'boulevard', 'blvd', 'way', 'court', 'ct'];
+          const hasBusinessKeyword = businessKeywords.some(keyword => {
+            // Check if the keyword appears as a word boundary (not part of a city name)
+            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+            return regex.test(description);
+          });
           
           // Only include if:
-          // 1. Has a geographic type AND
-          // 2. Is NOT an establishment OR has a primary geographic type (like neighborhood)
-          // 3. Does NOT have business keywords in the name
-          const isPrimaryGeographic = types.includes('locality') || types.includes('neighborhood') || 
-                                       types.includes('sublocality') || types.includes('postal_code') ||
-                                       types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2');
-          
-          return hasGeographicType && !hasBusinessKeyword && (!isEstablishment || isPrimaryGeographic);
+          // 1. Has an allowed type (zip code, city, neighborhood) AND
+          // 2. Does NOT have an excluded type (address, street) AND
+          // 3. Does NOT have business/address keywords in the name
+          return hasAllowedType && !hasExcludedType && !hasBusinessKeyword;
         });
         
         const placeResults: PlaceResult[] = filteredPredictions.map((prediction) => ({

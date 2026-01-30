@@ -7528,3 +7528,22 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Save recent searches to localStorage
 - [x] Display recent searches dropdown for quick re-access
 - [x] Allow users to click on a recent search to re-run it
+
+
+## Bug Fixes (Jan 30, 2026)
+
+### Autocomplete Filter - Remove Street Addresses
+- [x] Fix autocomplete to ONLY show zip codes, neighborhoods, and cities
+- [x] Remove street addresses from results (e.g., "63112 East Flower Ridge Drive" should NOT appear)
+- [x] When typing "63112", only show zip code, not addresses starting with 63112
+
+### Action Buttons UI Redesign
+- [x] Redesign the Competition, Map, Market buttons layout
+- [x] Current layout is jumbled and hard to read - FIXED
+- [x] Make buttons more organized and visually clear - now uses "Research Tools" section with icon circles
+
+### Furnishing Estimate Source
+- [x] Verify where the furnishing estimate comes from - $8K base + $4K/bedroom
+- [x] Added source attribution: "*Furnishing estimate: $8K base + $4K/bedroom (industry average)"r bedroom
+- [x] This is based on industry averages for Airbnb arbitrage furnishing costs
+- [x] Added source attribution: "*Furnishing estimate: $8K base + $4K/bedroom (industry average)"
