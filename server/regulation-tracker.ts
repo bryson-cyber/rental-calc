@@ -758,23 +758,11 @@ export async function getRegulationInfo(
   // Format: JSON with specific fields
   // =========================================================================
   
-  const researchPrompt = `You are a regulatory research specialist analyzing short-term rental laws.
+  const researchPrompt = `You are a regulatory research specialist. Research the current short-term rental regulations for ${city}, ${stateAbbrev}.
 
-TASK: Research the current short-term rental (STR/Airbnb/VRBO) regulations for ${city}, ${stateAbbrev}.
+SEARCH: "${city} ${stateAbbrev} short term rental ordinance site:gov"
 
-SEARCH STRATEGY:
-1. Search: "${city} ${stateAbbrev} short term rental ordinance site:gov"
-2. Search: "${city} ${stateAbbrev} STR permit requirements"
-3. Search: "${city} municipal code vacation rental"
-4. Look for official city/county government websites (.gov domains)
-
-CONTEXT:
-- Focus ONLY on official government sources
-- Distinguish between "permit required" (normal) vs "primary residence required" (restrictive)
-- Note any recent ordinance changes, court orders, or moratoriums
-- If enforcement is paused or regulations are under legal challenge, note this
-
-OUTPUT FORMAT - Respond with ONLY this JSON structure:
+OUTPUT ONLY THIS JSON:
 {
   "status": "allowed_with_permit",
   "yesNoSummary": "Yes, short-term rentals are allowed in ${city} with a permit.",
@@ -789,20 +777,18 @@ OUTPUT FORMAT - Respond with ONLY this JSON structure:
     "Pass safety inspection",
     "Provide local contact info"
   ],
-  "summary": "Factual 2-3 sentence summary of regulations.",
-  "recentChanges": "Any recent ordinance changes or legal challenges",
+  "summary": "2-3 sentence factual summary of CURRENT regulations.",
   "confidence": "high",
-  "warnings": ["Important caveats if any"],
+  "warnings": ["Only include warnings that affect ability to operate"],
   "officialSourceUrls": ["https://city.gov/str-info"]
 }
 
-STATUS OPTIONS (choose most accurate):
-- "allowed" = Minimal restrictions, no permit needed
+STATUS OPTIONS:
+- "allowed" = No permit needed
 - "allowed_with_permit" = Permit required, standard process
-- "restricted" = Significant limits (zones, caps, or residency requirements)
+- "restricted" = Significant limits (zones, caps, residency)
 - "limited" = Heavy restrictions but possible
-- "paused" = Regulations suspended/moratorium
-- "pending" = New regulations under consideration
+- "paused" = Enforcement suspended/moratorium
 - "banned" = Not permitted
 
 CRITICAL RULES:
@@ -810,7 +796,18 @@ CRITICAL RULES:
 2. If investors CAN rent properties they don't live in, set primaryResidenceOnly = false
 3. Needing a permit is NORMAL - don't frame it negatively
 4. Include actual .gov URLs you found
-5. If uncertain about any fact, include it in warnings`;
+
+EXCLUDE FROM OUTPUT (not actionable):
+- Rejected proposals or failed legislation
+- Historical context (when ordinance was passed)
+- Pending proposals that haven't passed
+- Political debates or news commentary
+- Anything that doesn't affect current ability to operate
+
+FOCUS ONLY ON:
+- Can I operate? (Yes/No/With permit)
+- What do I need to do? (Permit, fees, requirements)
+- What restrictions apply? (Primary residence, caps, zones)`;
 
   const systemPrompt = `You are a regulatory research specialist. Your role is to provide accurate, factual information about short-term rental regulations from official government sources. Be precise and objective. If you cannot verify a fact from an official source, say so. Never make assumptions about regulations.`;
 
@@ -903,8 +900,7 @@ CRITICAL RULES:
       confidence: researchData.confidence || 'medium',
       warnings: [
         ...(researchData.warnings || []),
-        researchData.recentChanges ? `Recent changes: ${researchData.recentChanges}` : null,
-        "Always verify with official city/county sources before making investment decisions."
+        "Verify with official city/county sources before investing."
       ].filter(Boolean) as string[]
     };
 
@@ -948,60 +944,55 @@ CRITICAL RULES:
 function createSimplifiedSummary(data: any, city: string, state: string): string {
   const parts: string[] = [];
   
-  // Opening statement based on status
+  // Opening statement based on status - direct and actionable
   switch (data.status) {
     case 'allowed':
-      parts.push(`Short-term rentals are allowed in ${city} with minimal restrictions.`);
+      parts.push(`Yes, you can operate in ${city}. No permit required.`);
       break;
     case 'allowed_with_permit':
-      parts.push(`Short-term rentals are allowed in ${city} with a permit.`);
+      parts.push(`Yes, you can operate in ${city} with a permit.`);
       break;
     case 'paused':
-      parts.push(`Short-term rental regulations in ${city} are currently paused or under review.`);
+      parts.push(`${city} STR enforcement is currently paused. Check status before proceeding.`);
       break;
     case 'banned':
-      parts.push(`Short-term rentals are currently not permitted in ${city}.`);
+      parts.push(`No, STRs are not currently permitted in ${city}.`);
       break;
     case 'restricted':
-      parts.push(`Short-term rentals in ${city} have significant restrictions.`);
+      parts.push(`STRs allowed in ${city} with significant restrictions.`);
       break;
     case 'limited':
-      parts.push(`Short-term rentals in ${city} are heavily regulated but possible.`);
+      parts.push(`STRs possible in ${city} but heavily regulated.`);
       break;
     case 'pending':
-      parts.push(`${city} is currently developing new short-term rental regulations.`);
+      parts.push(`${city} regulations are changing. Verify current rules before proceeding.`);
       break;
     default:
-      parts.push(`Here's what we found about short-term rentals in ${city}.`);
+      parts.push(`STR regulations for ${city}:`);
   }
   
-  // Permit requirement
-  if (data.permitRequired) {
-    parts.push(`You'll need to get a permit to operate legally.`);
-  }
-  
-  // Primary residence - only mention if it's a restriction
+  // Primary residence - CRITICAL restriction, mention prominently
   if (data.primaryResidenceOnly) {
-    parts.push(`Important: You must live in the property as your primary residence.`);
+    parts.push(`⚠️ Primary residence required - you must live in the property.`);
   }
   
-  // Key requirements summary
-  if (data.keyRequirements && data.keyRequirements.length > 0) {
-    parts.push(`There are ${data.keyRequirements.length} main requirements to follow.`);
-  }
-  
-  // Fees
+  // Fees - actionable info
   if (data.registrationFee && data.registrationFee !== 'Unknown') {
-    parts.push(`The permit fee is ${data.registrationFee}.`);
+    parts.push(`Permit fee: ${data.registrationFee}.`);
   }
   
-  // Recent changes
-  if (data.recentChanges) {
-    parts.push(`Note: ${data.recentChanges}`);
+  // Occupancy tax - actionable info
+  if (data.occupancyTax && data.occupancyTax !== 'Unknown') {
+    parts.push(`Occupancy tax: ${data.occupancyTax}.`);
   }
   
-  // Closing
-  parts.push(`We recommend verifying these details with the official ${city} government website before proceeding.`);
+  // Key requirements count - brief
+  if (data.keyRequirements && data.keyRequirements.length > 0) {
+    parts.push(`${data.keyRequirements.length} requirements to follow (see details below).`);
+  }
+  
+  // Closing - brief
+  parts.push(`Verify with official sources before investing.`);
   
   return parts.join(' ');
 }

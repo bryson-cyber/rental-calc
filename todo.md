@@ -7900,3 +7900,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix Zillow URL parsing to correctly extract city/state from URLs - improved regex for multi-word cities
 - [x] Use backend parseLocation to intelligently parse property URLs (Zillow, Redfin)
 - [x] Test with Zillow URL: https://www.zillow.com/homedetails/3715-Mission-Blvd-11-San-Diego-CA-92109/450213296_zpid/ - WORKS! Returns San Diego, CA
+
+
+## Regulation Tracker - Simple Explanation Improvement (Jan 30, 2026)
+- [ ] Remove fluff from simple explanation (rejected proposals, historical context, pending legislation)
+- [ ] Focus only on actionable information: Can I operate? What do I need? What are the restrictions?
+- [ ] Test with San Diego to verify cleaner output
