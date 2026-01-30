@@ -58,6 +58,7 @@ import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notificati
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
 import { getRegulationInfo, parseLocation } from "./regulation-tracker";
+import { upsertContact, generateDeepLink, trackLeadEvent } from "./hubspot";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -1777,6 +1778,40 @@ export const appRouter = router({
               address: input.address,
               timestamp: new Date().toISOString(),
             });
+
+            // Sync lead to HubSpot for email automation
+            try {
+              const nameParts = input.name.split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              
+              // Generate a personalized deep link for follow-up emails
+              const baseUrl = process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com';
+              const deepLink = generateDeepLink({
+                baseUrl,
+                tool: 'calculator',
+                email: input.email,
+                utm_source: 'hubspot',
+                utm_medium: 'email',
+                utm_campaign: 'lead_followup',
+              });
+
+              await upsertContact({
+                email: input.email,
+                firstName,
+                lastName,
+                phone: input.phone,
+                source: 'rental_calculator',
+                toolUsed: 'property_calculator',
+                propertyAddress: input.address,
+                deepLink,
+              });
+              
+              console.log('[HubSpot] Lead synced to HubSpot:', input.email);
+            } catch (hubspotError) {
+              // Don't fail the lead submission if HubSpot sync fails
+              console.error('[HubSpot] Error syncing lead:', hubspotError);
+            }
           } else {
             // Log the lead if DB not available
             console.log("[Lead] Database not available, logging lead:", {

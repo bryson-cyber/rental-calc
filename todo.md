@@ -8151,3 +8151,27 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix infinite loop in MarketAdvisor share button (useCallback for onMarketChange)
 - [x] Fix infinite loop in OpportunityFinder share button (useCallback for onLocationChange)
 - [x] Test share links work correctly with URL parameters
+
+
+## Social Sharing & Rich Previews (Jan 30, 2026)
+- [x] Add social sharing options to SharePageButton (Facebook, Twitter, LinkedIn, Email)
+- [x] Create pre-populated share messages for each platform
+- [x] Implement Open Graph meta tags in index.html
+- [x] Add Twitter Card meta tags
+- [x] Style social sharing buttons with hover effects
+
+## HubSpot Email Automation (Jan 30, 2026)
+- [x] Create HubSpot Private App "Coach Inayah Rental Calculator"
+- [x] Configure API scopes (contacts.read, contacts.write, schemas.contacts.read)
+- [x] Add HUBSPOT_API_KEY to project secrets
+- [x] Create hubspot.ts integration module with:
+  - [x] upsertContact - Create or update contacts
+  - [x] findContactByEmail - Search for existing contacts
+  - [x] generateDeepLink - Create personalized links for emails
+  - [x] trackLeadEvent - Track conversion events
+  - [x] addContactToList - Add contacts to email lists
+- [x] Integrate HubSpot sync into submitLead procedure
+- [x] Write and pass HubSpot API tests (4 tests)
+- [ ] Create custom contact properties in HubSpot for rental calculator data
+- [ ] Set up email sequences in HubSpot with personalized deep links
+- [ ] Test full automation flow end-to-end
