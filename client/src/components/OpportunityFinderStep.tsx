@@ -156,6 +156,9 @@ interface OpportunityFinderStepProps {
     monthlyRent: number;
   }) => void;
   initialLocation?: string; // For pre-filling from URL params (HubSpot emails)
+  onLocationChange?: (location: { city?: string; state?: string }) => void;
+  initialCity?: string;
+  initialState?: string;
 }
 
 // Home type options
@@ -274,14 +277,20 @@ function saveState(state: { location: string; searchType: 'forRent' | 'forSale';
   }
 }
 
-export default function OpportunityFinderStep({ onSelectProperty, initialLocation }: OpportunityFinderStepProps) {
+export default function OpportunityFinderStep({ onSelectProperty, initialLocation, onLocationChange, initialCity, initialState }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
   
   // Search state - restore from localStorage if available using initializer function
   // This ensures state is loaded fresh on each mount (when switching tabs)
-  // Priority: initialLocation (from URL params) > saved state > empty
+  // Priority: initialCity/State (from URL params) > initialLocation > saved state > empty
   const [location, setLocation] = useState(() => {
+    // If initialCity/State is provided (from share link), use it
+    if (initialCity && initialState) {
+      const loc = `${initialCity}, ${initialState}`;
+      console.log('[OpportunityFinder] Using initialCity/State from URL:', loc);
+      return loc;
+    }
     // If initialLocation is provided (from HubSpot email deep link), use it
     if (initialLocation) {
       console.log('[OpportunityFinder] Using initialLocation from URL:', initialLocation);
@@ -304,6 +313,19 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       setLocation(initialLocation);
     }
   }, [initialLocation]);
+  
+  // Notify parent when location changes (for share button)
+  useEffect(() => {
+    if (onLocationChange && location) {
+      // Parse city and state from location string
+      const parts = location.split(',').map(s => s.trim());
+      if (parts.length >= 2) {
+        onLocationChange({ city: parts[0], state: parts[1] });
+      } else {
+        onLocationChange({ city: parts[0] });
+      }
+    }
+  }, [location, onLocationChange]);
   
   // Filter state
   const [priceMin, setPriceMin] = useState<string>('');

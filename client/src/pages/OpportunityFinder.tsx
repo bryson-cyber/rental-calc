@@ -7,11 +7,30 @@
  * Design: Coach Inayah brand system (gold accents, light theme)
  */
 
-import { Link } from 'wouter';
+import { useState, useEffect } from 'react';
+import { Link, useSearch } from 'wouter';
 import { ArrowLeft, Search, Home, Sparkles } from 'lucide-react';
 import OpportunityFinderStep from '@/components/OpportunityFinderStep';
+import { SharePageButton } from '@/components/SharePageButton';
 
 export default function OpportunityFinder() {
+  const [currentLocation, setCurrentLocation] = useState<{ city?: string; state?: string } | null>(null);
+  
+  // Parse URL parameters for sharing
+  const searchString = useSearch();
+  const [initialLocation, setInitialLocation] = useState<string | undefined>();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(searchString || window.location.search);
+    const city = params.get('city');
+    const state = params.get('state');
+    if (city && state) {
+      setInitialLocation(`${city}, ${state}`);
+    } else if (city) {
+      setInitialLocation(city);
+    }
+  }, [searchString]);
+  
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
       {/* Header */}
@@ -35,7 +54,18 @@ export default function OpportunityFinder() {
                 Opportunity Finder
               </h1>
             </div>
-            <div className="w-24" /> {/* Spacer for centering */}
+            <div className="flex items-center gap-2">
+              <SharePageButton
+                pagePath="/opportunity-finder"
+                params={{
+                  city: currentLocation?.city,
+                  state: currentLocation?.state,
+                }}
+                shareDescription={currentLocation?.city ? `rental opportunities in ${currentLocation.city}, ${currentLocation.state}` : 'Opportunity Finder'}
+                variant="outline"
+                size="sm"
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -67,6 +97,8 @@ export default function OpportunityFinder() {
               // Navigate to analyze the selected property
               window.location.href = `/?address=${encodeURIComponent(property.address)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.monthlyRent}`;
             }}
+            onLocationChange={(location) => setCurrentLocation(location)}
+            initialLocation={initialLocation}
           />
         </div>
       </main>

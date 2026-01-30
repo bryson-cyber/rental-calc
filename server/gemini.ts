@@ -1,8 +1,14 @@
 /**
  * Gemini AI Service for Property Analysis
  * 
- * This service uses Google's Gemini AI to generate educational,
+ * This service uses Google's Gemini 3 AI to generate educational,
  * easy-to-understand content for rental property analysis reports.
+ * 
+ * GEMINI 3 BEST PRACTICES APPLIED:
+ * - Model: gemini-3-pro-preview for complex reasoning tasks
+ * - Thinking: thinkingLevel 'high' for property/market analysis, 'low' for simple tasks
+ * - Temperature: 1.0 (recommended by Gemini 3 for optimal reasoning)
+ * - Prompts: PTCF framework (Persona, Task, Context, Format)
  */
 
 import { ENV } from './_core/env';
@@ -106,8 +112,25 @@ function stripPrescriptiveLanguage(text: string): string {
   return result.trim();
 }
 
-// Use Gemini 3 Pro Preview - the most capable model
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
+// ═══════════════════════════════════════════════════════════════════════════════
+// GEMINI 3 API CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
+// 
+// Model Selection (per Gemini 3 API skill):
+// - gemini-3-pro-preview: Complex reasoning, multi-step analysis, comprehensive reports
+// - gemini-3-flash-preview: Fast responses, chat, simple summarization
+//
+// Thinking Levels:
+// - 'high': Maximum reasoning depth (default for Pro, recommended for analysis)
+// - 'low': Minimizes latency and cost (for simpler tasks)
+// - 'minimal': Lowest latency (Flash only)
+//
+// Temperature:
+// - 1.0: Recommended by Gemini 3 for optimal reasoning
+// - Lower values (0.1-0.3): For deterministic, consistent outputs
+
+const GEMINI_3_PRO_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';
+const GEMINI_3_FLASH_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 interface GeminiResponse {
   candidates: Array<{
@@ -144,13 +167,36 @@ interface InvestmentAdvisorContext {
   }>;
 }
 
-async function callGemini(prompt: string, options?: { maxTokens?: number; temperature?: number; thinkingLevel?: 'low' | 'high' }): Promise<string> {
+interface GeminiCallOptions {
+  maxTokens?: number;
+  temperature?: number;
+  thinkingLevel?: 'minimal' | 'low' | 'medium' | 'high';
+  model?: 'pro' | 'flash';
+}
+
+/**
+ * Core Gemini 3 API call function with best practices
+ * 
+ * @param prompt - The prompt to send to Gemini
+ * @param options - Configuration options
+ * @returns The generated text response
+ */
+async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<string> {
   const controller = new AbortController();
   // Gemini 3 with thinking enabled can take longer - 3 minute timeout
   const timeoutId = setTimeout(() => controller.abort(), 180000);
   
+  const model = options?.model ?? 'pro';
+  const apiUrl = model === 'flash' ? GEMINI_3_FLASH_URL : GEMINI_3_PRO_URL;
+  
+  // Gemini 3 best practices:
+  // - Temperature 1.0 for optimal reasoning (per Gemini 3 docs)
+  // - thinkingLevel 'high' for complex analysis (default for Pro)
+  const temperature = options?.temperature ?? 1.0;
+  const thinkingLevel = options?.thinkingLevel ?? (model === 'pro' ? 'high' : 'medium');
+  
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
+    const response = await fetch(`${apiUrl}?key=${ENV.geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -160,13 +206,12 @@ async function callGemini(prompt: string, options?: { maxTokens?: number; temper
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          // Gemini 3 recommends temperature 1.0 for optimal reasoning
-          temperature: options?.temperature ?? 1.0,
+          temperature,
           maxOutputTokens: options?.maxTokens ?? 8192,
         },
         // Gemini 3 thinking configuration for advanced reasoning
         thinkingConfig: {
-          thinkingLevel: options?.thinkingLevel ?? 'high' // Use high for complex property analysis
+          thinkingLevel
         }
       }),
       signal: controller.signal
@@ -184,6 +229,59 @@ async function callGemini(prompt: string, options?: { maxTokens?: number; temper
   }
 }
 
+/**
+ * Extended capacity Gemini 3 call for comprehensive analysis
+ * Uses maximum output tokens (65K) for detailed reports
+ */
+async function callGeminiMax(prompt: string): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+  
+  try {
+    const response = await fetch(`${GEMINI_3_PRO_URL}?key=${ENV.geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          // For comprehensive reports, use lower temperature for consistency
+          // while still leveraging thinking capabilities
+          temperature: 0.7,
+          maxOutputTokens: 65536, // Maximum output capacity
+        },
+        // High thinking level for comprehensive analysis
+        thinkingConfig: {
+          thinkingLevel: 'high'
+        }
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const data: GeminiResponse = await response.json();
+    return data.candidates[0]?.content?.parts[0]?.text || '';
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Investment Advisor Chat - Uses Gemini 3 Flash for faster responses
+ * 
+ * PTCF Framework Applied:
+ * - Persona: Short-term rental investment advisor
+ * - Task: Answer questions using ONLY provided market data
+ * - Context: Market data with scores and metrics
+ * - Format: Conversational, 2-4 paragraphs with bullet points
+ */
 export async function getInvestmentAdvice(
   question: string,
   conversationHistory: ChatMessage[],
@@ -192,9 +290,9 @@ export async function getInvestmentAdvice(
   // Build context string from market data if available
   let marketContext = '';
   if (context?.markets && context.markets.length > 0) {
-    marketContext = `\n\nAvailable Market Data:\n${context.markets.map(m => 
+    marketContext = `\n\n<CONTEXT>\nAvailable Market Data:\n${context.markets.map(m => 
       `- ${m.name}: Score ${m.scores.market_score}/100, Investability ${m.scores.investability}, Demand ${m.scores.rental_demand}, Revenue Growth ${m.scores.revenue_growth}, Seasonality ${m.scores.seasonality}, Regulation ${m.scores.regulation}, Avg Revenue $${m.metrics.revenue.toLocaleString()}, Occupancy ${m.metrics.occupancy}%, ADR $${m.metrics.adr}, ${m.listing_count.toLocaleString()} listings`
-    ).join('\n')}`;
+    ).join('\n')}\n</CONTEXT>`;
   }
 
   // Build conversation history
@@ -202,37 +300,41 @@ export async function getInvestmentAdvice(
     ? `\n\nConversation History:\n${conversationHistory.map(m => `${m.role === 'user' ? 'User' : 'Advisor'}: ${m.content}`).join('\n')}`
     : '';
 
-  const prompt = `You are a short-term rental investment advisor. Your ONLY source of information is the verified market data provided below.
+  // PTCF-structured prompt
+  const prompt = `<PERSONA>
+You are a short-term rental investment advisor. You ONLY use verified market data provided to you - never external knowledge or assumptions.
+</PERSONA>
 
-CRITICAL RULE: You MUST ONLY use the market data provided. Do NOT use general knowledge, assumptions, or external information.
-
-If a user asks about markets or data NOT in the provided dataset:
-- Say "I don't have data on that market yet" or "That information isn't in my current dataset"
-- Suggest analyzing markets you DO have data for
-- Do NOT make up or assume information
-
-Your role:
-- Compare markets using ONLY the provided data
-- Analyze revenue, occupancy, ADR, seasonality, and investment scores
-- Help investors understand what the data shows
-- Be conversational but always data-driven
-
-Guidelines:
-1. ONLY reference markets in the dataset provided
-2. Use specific numbers and percentages from the data
-3. If data is missing for a market, say so clearly
-4. Keep responses concise (2-4 paragraphs)
-5. Use bullet points for market comparisons
-6. Explain what each metric means
-7. Never provide investment advice beyond what the data shows
+<TASK>
+Answer the user's question about short-term rental markets using ONLY the data provided below. If data is missing, say so clearly.
+</TASK>
 ${marketContext}${historyText}
+
+<FORMAT>
+- Keep responses concise (2-4 paragraphs)
+- Use bullet points for market comparisons
+- Cite specific numbers and percentages from the data
+- Explain what each metric means for investors
+- Never provide investment advice beyond what the data shows
+</FORMAT>
+
+<CONSTRAINTS>
+- ONLY reference markets in the dataset provided
+- If a user asks about markets NOT in the data, say "I don't have data on that market yet"
+- Do NOT make up or assume information
+</CONSTRAINTS>
 
 User Question: ${question}
 
 Respond based ONLY on the market data above. If the data doesn't cover the question, say so clearly.`;
 
   try {
-    const response = await callGemini(prompt);
+    // Use Flash model for faster chat responses with medium thinking
+    const response = await callGemini(prompt, { 
+      model: 'flash',
+      thinkingLevel: 'medium',
+      temperature: 1.0
+    });
     return response.trim();
   } catch (error) {
     console.error('Error getting investment advice:', error);
@@ -245,146 +347,152 @@ export async function generateEnhancedPropertyReport(
   address: string,
   features: Record<string, unknown>
 ): Promise<string> {
-  const prompt = `Generate a brief, professional property analysis for: ${address}
-  
-Features: ${JSON.stringify(features)}
+  // PTCF-structured prompt for property reports
+  const prompt = `<PERSONA>
+You are a real estate analyst who explains Airbnb investment opportunities in simple, beginner-friendly language.
+</PERSONA>
 
-Provide 2-3 paragraphs highlighting key investment potential.`;
+<TASK>
+Generate a brief property analysis summary for the address: ${address}
+</TASK>
+
+<CONTEXT>
+Property Features: ${JSON.stringify(features, null, 2)}
+</CONTEXT>
+
+<FORMAT>
+- Write 2-3 paragraphs
+- Use simple language anyone can understand
+- Focus on key metrics and what they mean
+- Avoid jargon without explanation
+</FORMAT>`;
 
   try {
-    return await callGemini(prompt);
+    const response = await callGemini(prompt, { 
+      maxTokens: 2048,
+      thinkingLevel: 'low' // Simple task, lower thinking
+    });
+    return response.trim();
   } catch (error) {
-    console.error('Error generating property report:', error);
-    return 'Unable to generate report at this time.';
+    console.error('Error generating enhanced property report:', error);
+    return 'Unable to generate property report at this time.';
   }
 }
 
 export async function generateEnhancedMarketReport(
   marketName: string,
-  marketData: Record<string, unknown>
+  metrics: Record<string, unknown>
 ): Promise<string> {
-  const prompt = `Generate a brief market analysis for ${marketName}:
-  
-Data: ${JSON.stringify(marketData)}
+  // PTCF-structured prompt for market reports
+  const prompt = `<PERSONA>
+You are a real estate market analyst who explains Airbnb market conditions in simple, beginner-friendly language.
+</PERSONA>
 
-Provide 2-3 paragraphs on market opportunity, trends, and investment potential.`;
+<TASK>
+Generate a brief market analysis summary for: ${marketName}
+</TASK>
+
+<CONTEXT>
+Market Metrics: ${JSON.stringify(metrics, null, 2)}
+</CONTEXT>
+
+<FORMAT>
+- Write 2-3 paragraphs
+- Use simple language anyone can understand
+- Focus on key metrics and what they mean for investors
+- Avoid jargon without explanation
+</FORMAT>`;
 
   try {
-    return await callGemini(prompt);
+    const response = await callGemini(prompt, { 
+      maxTokens: 2048,
+      thinkingLevel: 'low'
+    });
+    return response.trim();
   } catch (error) {
-    console.error('Error generating market report:', error);
-    return 'Unable to generate report at this time.';
+    console.error('Error generating enhanced market report:', error);
+    return 'Unable to generate market report at this time.';
   }
 }
 
-/**
- * Market Trend Narrator - Converts YoY data into natural language insights
- * Explains what the numbers mean in plain English for beginners
- */
-export async function generateMarketTrendNarrative(
-  marketData: {
-    marketName: string;
-    currentYearRevenue: number;
+export interface MarketTrendNarrativeInput {
+  marketName: string;
+  currentYearRevenue: number;
+  lastYearRevenue: number;
+  yoyChange: number;
+  occupancy: number;
+  adr: number;
+  monthlyData: Array<{
+    month: string;
+    currentRevenue: number;
     lastYearRevenue: number;
     yoyChange: number;
-    occupancy: number;
-    adr: number;
-    monthlyData: Array<{
-      month: string;
-      currentRevenue: number;
-      lastYearRevenue: number;
-      yoyChange: number;
-    }>;
-    marketGrade: string;
-    marketScore: number;
-  }
+  }>;
+  marketGrade: string;
+  marketScore: number;
+}
+
+export async function generateMarketTrendNarrative(
+  input: MarketTrendNarrativeInput
 ): Promise<string> {
-  const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore } = marketData;
+  const { marketName, currentYearRevenue, lastYearRevenue, yoyChange, occupancy, adr, monthlyData, marketGrade, marketScore } = input;
   
-  // Identify best and worst performing months
-  const sortedMonths = [...monthlyData].sort((a, b) => b.yoyChange - a.yoyChange);
-  const bestMonths = sortedMonths.slice(0, 3);
-  const worstMonths = sortedMonths.slice(-3).reverse();
-  
-  const prompt = `You are a friendly real estate investment advisor explaining market trends to someone new to Airbnb investing. Use simple language a third-grader could understand.
+  // PTCF-structured prompt for trend analysis
+  const prompt = `<PERSONA>
+You are a data analyst who explains market trends in simple, easy-to-understand language.
+</PERSONA>
 
+<TASK>
+Analyze the market trend data and explain what it means for ${marketName}.
+</TASK>
+
+<CONTEXT>
 Market: ${marketName}
-Market Grade: ${marketGrade} (${marketScore}/100)
+Market Grade: ${marketGrade} (Score: ${marketScore}/100)
+Current Year Revenue: $${currentYearRevenue.toLocaleString()}
+Last Year Revenue: $${lastYearRevenue.toLocaleString()}
+Year-over-Year Change: ${yoyChange > 0 ? '+' : ''}${yoyChange.toFixed(1)}%
+Current Occupancy: ${(occupancy * 100).toFixed(0)}%
+Average Daily Rate: $${adr.toFixed(0)}
 
-Annual Performance:
-- This Year's Projected Revenue: $${currentYearRevenue.toLocaleString()}
-- Last Year's Revenue: $${lastYearRevenue.toLocaleString()}
-- Year-over-Year Change: ${yoyChange >= 0 ? '+' : ''}${yoyChange.toFixed(1)}%
-- Current Occupancy: ${occupancy}%
-- Average Daily Rate: $${adr}
+Monthly Breakdown (most recent first):
+${monthlyData.slice(0, 6).map(d => `${d.month}: $${d.currentRevenue.toLocaleString()} (${d.yoyChange > 0 ? '+' : ''}${d.yoyChange.toFixed(1)}% YoY)`).join('\n')}
+</CONTEXT>
 
-Best Performing Months (YoY Growth):
-${bestMonths.map(m => `- ${m.month}: ${m.yoyChange >= 0 ? '+' : ''}${m.yoyChange.toFixed(1)}% ($${m.currentRevenue.toLocaleString()} vs $${m.lastYearRevenue.toLocaleString()})`).join('\n')}
-
-Slowest Months (YoY Change):
-${worstMonths.map(m => `- ${m.month}: ${m.yoyChange >= 0 ? '+' : ''}${m.yoyChange.toFixed(1)}% ($${m.currentRevenue.toLocaleString()} vs $${m.lastYearRevenue.toLocaleString()})`).join('\n')}
-
-Write a 3-4 paragraph analysis that:
-1. Explains whether this market is growing, stable, or declining in simple terms
-2. Highlights the best times of year to earn money and why
-3. Points out any concerning trends or opportunities
-4. Gives a simple "bottom line" recommendation
-
-Use phrases like "Think of it this way..." or "In simple terms..." to make it accessible. Avoid jargon. Use specific numbers from the data.`;
+<FORMAT>
+- Write 1-2 paragraphs
+- Identify the trend direction (growing, declining, stable)
+- Explain what this means in practical terms
+- Use simple comparisons (e.g., "up 10% from last year")
+- Mention the market grade and what it indicates
+</FORMAT>`;
 
   try {
-    return await callGemini(prompt);
+    const response = await callGemini(prompt, { 
+      maxTokens: 1024,
+      thinkingLevel: 'low'
+    });
+    return response.trim();
   } catch (error) {
     console.error('Error generating market trend narrative:', error);
-    return 'Unable to generate market trend analysis at this time.';
+    return 'Unable to generate trend analysis at this time.';
   }
 }
-
-export async function compareMarketsForInvestment(
-  markets: Array<{ name: string; scores: Record<string, number>; metrics: Record<string, number> }>,
-  investorProfile?: { budget?: number; goals?: string; riskTolerance?: string }
-): Promise<string> {
-  const marketSummary = markets.map(m => 
-    `${m.name}: Score ${m.scores.market_score}/100, Revenue $${m.metrics.revenue}, Occupancy ${m.metrics.occupancy}%`
-  ).join('\n');
-
-  const prompt = `Compare these markets for short-term rental investment:
-
-${marketSummary}
-
-${investorProfile ? `Investor Profile: Budget $${investorProfile.budget}, Goals: ${investorProfile.goals}, Risk: ${investorProfile.riskTolerance}` : ''}
-
-Provide a brief comparison with recommendation.`;
-
-  try {
-    return await callGemini(prompt);
-  } catch (error) {
-    console.error('Error comparing markets:', error);
-    return 'Unable to compare markets at this time.';
-  }
-}
-
 
 /**
- * Comprehensive AI Property Advisor
- * 
- * Takes ALL available AirDNA data and synthesizes it into a clear,
- * actionable analysis that beginners can understand and act on.
- * 
- * This is the main AI feature - it replaces the need to interpret
- * all the technical data by providing a synthesized recommendation.
+ * Property Advisor Input Interface
  */
 export interface PropertyAdvisorInput {
-  // Property Details
   property: {
     address: string;
+    city: string;
+    state: string;
+    zipCode: string;
     bedrooms: number;
     bathrooms: number;
-    accommodates?: number;
+    accommodates: number;
     monthlyRent?: number;
   };
-  
-  // Revenue Projections
   revenue: {
     projected: number;
     low: number;
@@ -392,8 +500,6 @@ export interface PropertyAdvisorInput {
     adr: number;
     occupancy: number;
   };
-  
-  // Cash Flow (if rent provided)
   cashFlow?: {
     monthlyRevenue: number;
     monthlyRent: number;
@@ -401,8 +507,6 @@ export interface PropertyAdvisorInput {
     annualProfit: number;
     profitMargin: number;
   };
-  
-  // Comparable Properties (competitors)
   comparables: Array<{
     title: string;
     bedrooms: number;
@@ -412,101 +516,82 @@ export interface PropertyAdvisorInput {
     occupancy: number;
     rating: number;
     reviews: number;
-    distanceMeters?: number;
-    isSuperhost?: boolean;
-    isProfessionallyManaged?: boolean;
+    isSuperhost: boolean;
+    isProfessionallyManaged: boolean;
   }>;
-  
-  // Market Insights
+  marketGrade?: {
+    grade: string;
+    score: number;
+    description: string;
+  };
   marketInsights?: {
+    totalListings: number;
     professionallyManagedPct: number;
     superhostPct: number;
-    avgRating?: number;
-    totalListings?: number;
+    avgRating: number;
     marketScore?: number;
   };
-  
-  // Historical Data (YoY comparison)
   historicalData?: {
     yoyChange: number;
     trend: 'up' | 'down' | 'stable';
-    months: Array<{
-      date: string;
-      revenue: number;
-      occupancy: number;
-      adr: number;
-    }>;
+    months: Array<{ date: string; revenue: number; occupancy: number; adr: number }>;
   };
-  
-  // Seasonality (12-month forecast)
   seasonality: Array<{
     month: string;
     revenue: number;
     adr: number;
     occupancy: number;
   }>;
-  
-  // Market Grade
-  marketGrade?: {
-    grade: string;
-    score: number;
-    description: string;
-  };
 }
 
+/**
+ * Generate Comprehensive Property Advice
+ * Uses PTCF framework for clear, actionable analysis
+ */
 export async function generateComprehensivePropertyAdvice(
   input: PropertyAdvisorInput
 ): Promise<string> {
-  const { property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade } = input;
+  const { property, revenue, cashFlow, comparables, marketGrade, marketInsights, historicalData, seasonality } = input;
   
-  // Calculate key metrics for the prompt
+  // Calculate metrics for context
   const avgCompRevenue = comparables.length > 0 
     ? comparables.reduce((sum, c) => sum + c.revenue, 0) / comparables.length 
     : 0;
   const revenueVsComps = avgCompRevenue > 0 
-    ? ((revenue.projected - avgCompRevenue) / avgCompRevenue * 100).toFixed(1) 
+    ? ((revenue.projected - avgCompRevenue) / avgCompRevenue * 100).toFixed(1)
     : 'N/A';
-  
   const superhostComps = comparables.filter(c => c.isSuperhost).length;
   const professionalComps = comparables.filter(c => c.isProfessionallyManaged).length;
+  const highRatedComps = comparables.filter(c => c.rating >= 4.8);
+  const lowRatedComps = comparables.filter(c => c.rating < 4.5);
   
   const bestMonths = [...seasonality].sort((a, b) => b.revenue - a.revenue).slice(0, 3);
   const worstMonths = [...seasonality].sort((a, b) => a.revenue - b.revenue).slice(0, 3);
-  
-  const highRatedComps = comparables.filter(c => c.rating >= 4.8);
-  const lowRatedComps = comparables.filter(c => c.rating < 4.5 && c.rating > 0);
 
-  const prompt = `You are an expert short-term rental investment advisor. Your job is to analyze this property opportunity and provide clear, actionable advice that someone new to Airbnb investing can understand and act on.
+  // PTCF-structured comprehensive prompt
+  const prompt = `<PERSONA>
+You are a rental arbitrage expert who helps beginners understand if a property is a good investment opportunity. You explain complex data in simple terms, like talking to a friend who's curious about Airbnb investing.
+</PERSONA>
 
-IMPORTANT RULES:
-1. ONLY use the data provided below - do not make assumptions or use external knowledge
-2. Be specific with numbers - cite the actual figures from the data
-3. Write for a beginner - explain what metrics mean and why they matter
-4. Be honest about risks - don't oversell the opportunity
-5. Give a clear recommendation at the end
+<TASK>
+Analyze this property's potential as a rental arbitrage opportunity and write a comprehensive but easy-to-understand report.
+</TASK>
 
-═══════════════════════════════════════════════════════════════════════════════
-PROPERTY ANALYSIS DATA
-═══════════════════════════════════════════════════════════════════════════════
-
+<CONTEXT>
 PROPERTY DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Address: ${property.address}
-Bedrooms: ${property.bedrooms} | Bathrooms: ${property.bathrooms}
-${property.accommodates ? `Max Guests: ${property.accommodates}` : ''}
-${property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : ''}
+Location: ${property.city}, ${property.state} ${property.zipCode}
+Configuration: ${property.bedrooms} BR | ${property.bathrooms} BA | Sleeps ${property.accommodates}
+${property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : 'Monthly Rent: Not specified'}
 
 REVENUE PROJECTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Projected Annual Revenue: $${revenue.projected.toLocaleString()}
 Conservative Estimate: $${revenue.low.toLocaleString()}
 Optimistic Estimate: $${revenue.high.toLocaleString()}
 Average Daily Rate (ADR): $${revenue.adr.toLocaleString()}
 Projected Occupancy: ${revenue.occupancy}%
 
-${cashFlow ? `
-CASH FLOW ANALYSIS (Based on $${property.monthlyRent?.toLocaleString()}/month rent)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${cashFlow ? `CASH FLOW ANALYSIS (Based on $${property.monthlyRent?.toLocaleString()}/month rent)
 Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
 Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
 Monthly Profit: $${cashFlow.monthlyProfit.toLocaleString()}
@@ -516,7 +601,6 @@ Revenue-to-Rent Ratio: ${(cashFlow.monthlyRevenue / cashFlow.monthlyRent).toFixe
 ` : ''}
 
 MARKET HEALTH
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${marketGrade ? `Market Grade: ${marketGrade.grade} (${marketGrade.score}/100) - ${marketGrade.description}` : 'Market Grade: Not available'}
 ${marketInsights ? `
 Total Listings in Area: ${marketInsights.totalListings?.toLocaleString() || 'Unknown'}
@@ -526,16 +610,13 @@ Average Rating: ${marketInsights.avgRating?.toFixed(2) || 'N/A'}
 ${marketInsights.marketScore ? `Market Score: ${marketInsights.marketScore}/100` : ''}
 ` : ''}
 
-${historicalData ? `
-YEAR-OVER-YEAR TRENDS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${historicalData ? `YEAR-OVER-YEAR TRENDS
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
 Historical Data Points: ${historicalData.months.length} months
 ` : ''}
 
-🏠 COMPETITOR ANALYSIS (${comparables.length} similar properties)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMPETITOR ANALYSIS (${comparables.length} similar properties)
 Average Competitor Revenue: $${avgCompRevenue.toLocaleString()}
 Your Projected Revenue vs Competitors: ${revenueVsComps}%
 Superhosts in Area: ${superhostComps} of ${comparables.length} (${(superhostComps/comparables.length*100).toFixed(0)}%)
@@ -549,18 +630,15 @@ ${comparables.slice(0, 5).map((c, i) =>
 ).join('\n')}
 
 SEASONALITY (Monthly Revenue Forecast)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Best Months: ${bestMonths.map(m => `${m.month.split('-')[1] || m.month} ($${m.revenue.toLocaleString()})`).join(', ')}
 Slowest Months: ${worstMonths.map(m => `${m.month.split('-')[1] || m.month} ($${m.revenue.toLocaleString()})`).join(', ')}
 Revenue Variance: ${((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 100).toFixed(0)}% between peak and slow seasons
 
 Monthly Breakdown:
 ${seasonality.map(m => `${m.month}: $${m.revenue.toLocaleString()} | ADR $${m.adr} | ${m.occupancy}% occ`).join('\n')}
+</CONTEXT>
 
-═══════════════════════════════════════════════════════════════════════════════
-YOUR ANALYSIS TASK
-═══════════════════════════════════════════════════════════════════════════════
-
+<FORMAT>
 Write a comprehensive analysis with these sections:
 
 ## Executive Summary
@@ -592,10 +670,22 @@ Give a clear YES, NO, or MAYBE recommendation with specific reasoning based on t
 - Key success factors
 - What to watch out for
 
-Remember: Be specific, cite the actual numbers, and write for someone who is new to short-term rental investing.`;
+Remember: Be specific, cite the actual numbers, and write for someone who is new to short-term rental investing.
+</FORMAT>
+
+<CONSTRAINTS>
+- ONLY use the data provided - do not make assumptions
+- Be honest about risks but also highlight genuine opportunities
+- Use simple language - explain jargon when you use it
+- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
+</CONSTRAINTS>`;
 
   try {
-    const response = await callGemini(prompt, { maxTokens: 8192, temperature: 0.7 });
+    const response = await callGemini(prompt, { 
+      maxTokens: 8192, 
+      temperature: 0.7,
+      thinkingLevel: 'high' // Complex analysis needs high thinking
+    });
     return response.trim();
   } catch (error) {
     console.error('Error generating comprehensive property advice:', error);
@@ -609,47 +699,13 @@ Remember: Be specific, cite the actual numbers, and write for someone who is new
  * MAXIMUM CAPACITY AI ADVISORS
  * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * These functions maximize Gemini 2.5 Pro's full capacity:
+ * These functions maximize Gemini 3 Pro's full capacity:
  * - Input: Up to 1,048,576 tokens (1 million)
  * - Output: Up to 65,536 tokens (~50,000 words / 50+ pages)
+ * - Thinking: High level for comprehensive reasoning
  * 
  * We send ALL available AirDNA data and request comprehensive analysis.
  */
-
-// Extended timeout for max capacity calls (3 minutes)
-async function callGeminiMax(prompt: string): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
-  
-  try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.1, // Low temperature for consistent, deterministic outputs
-          maxOutputTokens: 65536, // Maximum output capacity
-        }
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
-    }
-
-    const data: GeminiResponse = await response.json();
-    return data.candidates[0]?.content?.parts[0]?.text || '';
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 /**
  * Maximum Capacity Property Advisor Input
@@ -792,6 +848,12 @@ export interface MaxPropertyAdvisorInput {
  * 
  * This is the most comprehensive property analysis possible.
  * It sends ALL available data and requests a full investment report.
+ * 
+ * PTCF Framework Applied:
+ * - Persona: World-class rental arbitrage analyst
+ * - Task: Comprehensive rental arbitrage analysis
+ * - Context: All property, revenue, market, competitor, and historical data
+ * - Format: Structured report with executive summary, analysis sections, and recommendations
  */
 export async function generateMaxPropertyAdvice(
   input: MaxPropertyAdvisorInput
@@ -808,18 +870,10 @@ export async function generateMaxPropertyAdvice(
   const avgCompAdr = comparables.length > 0
     ? comparables.reduce((sum, c) => sum + c.adr, 0) / comparables.length
     : 0;
-  const avgCompRating = comparables.filter(c => c.rating > 0).length > 0
-    ? comparables.filter(c => c.rating > 0).reduce((sum, c) => sum + c.rating, 0) / comparables.filter(c => c.rating > 0).length
-    : 0;
-  const avgCompReviews = comparables.length > 0
-    ? comparables.reduce((sum, c) => sum + c.reviews, 0) / comparables.length
-    : 0;
   
   const superhostComps = comparables.filter(c => c.isSuperhost).length;
   const professionalComps = comparables.filter(c => c.isProfessionallyManaged).length;
   const highRatedComps = comparables.filter(c => c.rating >= 4.8);
-  const topEarners = [...comparables].sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-  const bottomEarners = [...comparables].sort((a, b) => a.revenue - b.revenue).slice(0, 10);
   
   const bestMonths = [...seasonality].sort((a, b) => b.revenue - a.revenue).slice(0, 4);
   const worstMonths = [...seasonality].sort((a, b) => a.revenue - b.revenue).slice(0, 4);
@@ -855,15 +909,21 @@ export async function generateMaxPropertyAdvice(
   const sameBRTopEarners = [...sameBedroomComps].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   const sameBRBottomEarners = [...sameBedroomComps].sort((a, b) => a.revenue - b.revenue).slice(0, 5);
 
-  const prompt = `You are a world-class RENTAL ARBITRAGE analyst. Your job is to help someone decide if they should RENT this property and sublease it on Airbnb for profit.
+  // PTCF-structured maximum capacity prompt
+  const prompt = `<PERSONA>
+You are a world-class RENTAL ARBITRAGE analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language - like talking to a smart friend who's curious about Airbnb investing but has never done it before.
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-                                    RENTAL ARBITRAGE PROPERTY ANALYSIS REPORT
-                                           Report Date: ${currentDate}
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+Your communication style:
+- Simple language (if a word is confusing, explain it)
+- Real-life comparisons ("Think of it like..." or "Imagine if...")
+- Friendly and encouraging (like talking to a friend)
+- Always explain the "so what?" - why does this number matter?
+</PERSONA>
 
-CRITICAL CONTEXT - RENTAL ARBITRAGE MODEL:
-This analysis is for RENTAL ARBITRAGE - where someone:
+<TASK>
+Analyze this property's potential as a RENTAL ARBITRAGE opportunity and produce a comprehensive investment report.
+
+IMPORTANT: This is for RENTAL ARBITRAGE - where someone:
 1. Signs a lease to RENT this property (pays monthly rent to landlord)
 2. Furnishes and lists it on Airbnb/VRBO
 3. Earns short-term rental income from guests
@@ -874,31 +934,16 @@ This is NOT about purchasing property. Focus on:
 - What's the monthly cash flow after rent?
 - Is there enough profit margin to be worth the effort?
 - What's the break-even occupancy needed?
+</TASK>
 
-IMPORTANT TONE GUIDANCE:
-- The user is RESEARCHING this opportunity - they have NOT signed a lease yet
-- They don't have the property yet, so you don't know what amenities they'll have
-- DO NOT assume they lack amenities or discourage them
-- Instead, SHOW THEM what top performers have so they know what to aim for
-- Be EDUCATIONAL and ENCOURAGING - "Here's the blueprint for success" not "You can't compete"
-- Focus on OPPORTUNITY and HOW TO SUCCEED, not barriers or limitations
-
-CRITICAL INSTRUCTIONS:
-1. ONLY use the data provided below - do not make assumptions or use external knowledge
-2. ONLY compare to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is an apples-to-apples comparison
-3. Do NOT compare to luxury hotel residences, branded properties, or properties with different bedroom counts
-4. Be extremely specific with numbers - cite actual figures from the data
-5. Write for someone who is new to Airbnb arbitrage - explain what metrics mean
-6. Be honest about risks but also highlight genuine opportunities
-7. Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
-8. This should be a complete arbitrage analysis that could stand alone
+<CONTEXT>
+Report Date: ${currentDate}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 SECTION 1: PROPERTY OVERVIEW
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 PROPERTY DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Address: ${property.address}
 City: ${property.city}, ${property.state} ${property.zipCode}
 Configuration: ${property.bedrooms} Bedrooms | ${property.bathrooms} Bathrooms | Sleeps ${property.accommodates}
@@ -910,7 +955,6 @@ SECTION 2: REVENUE PROJECTIONS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 PROJECTED EARNINGS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Annual Revenue (Projected): $${revenue.projected.toLocaleString()}
 Annual Revenue (Conservative): $${revenue.low.toLocaleString()}
 Annual Revenue (Optimistic): $${revenue.high.toLocaleString()}
@@ -923,7 +967,6 @@ Key Metrics:
 
 ${cashFlow ? `
 CASH FLOW ANALYSIS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
 Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
 Monthly Profit: $${cashFlow.monthlyProfit.toLocaleString()}
@@ -939,7 +982,6 @@ SECTION 3: MARKET HEALTH & POSITION
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 MARKET GRADE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Overall Grade: ${marketGrade.grade} (${marketGrade.score}/100)
 Assessment: ${marketGrade.description}
 
@@ -947,13 +989,11 @@ Score Breakdown:
 ${marketGrade.factors.map(f => `• ${f.name}: ${f.score}/100 (${f.weight}% weight)`).join('\n')}
 
 MARKET POSITION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Percentile Rank: ${marketPosition.percentile}th percentile
 Market Rank: #${marketPosition.rank} of ${marketPosition.totalListings} similar properties
 Performance vs Average: ${marketPosition.vsAverage >= 0 ? '+' : ''}${marketPosition.vsAverage.toFixed(1)}%
 
 MARKET LANDSCAPE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total Listings in Area: ${marketInsights.totalListings.toLocaleString()}
 Professionally Managed: ${marketInsights.professionallyManagedPct.toFixed(1)}%
 Superhost Percentage: ${marketInsights.superhostPct.toFixed(1)}%
@@ -970,7 +1010,6 @@ SECTION 4: HISTORICAL TRENDS (24 MONTHS)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 YEAR-OVER-YEAR PERFORMANCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
 Data Points: ${historicalData.months.length} months of historical data
@@ -985,7 +1024,6 @@ SECTION 5: SEASONALITY ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 12-MONTH REVENUE FORECAST
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
 
 BEST MONTHS (Peak Season):
@@ -1008,7 +1046,6 @@ We found ${sameBedroomComps.length} properties with ${property.bedrooms} bedroom
 ${otherBedroomComps.length > 0 ? `(${otherBedroomComps.length} properties with different bedroom counts were excluded from this comparison)` : ''}
 
 ${property.bedrooms}BR COMPETITOR STATISTICS (APPLES-TO-APPLES)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total ${property.bedrooms}BR Competitors: ${sameBedroomComps.length}
 Average ${property.bedrooms}BR Revenue: $${sameBRAvgRevenue.toLocaleString()}
 Average ${property.bedrooms}BR Occupancy: ${sameBRAvgOccupancy.toFixed(1)}%
@@ -1046,18 +1083,34 @@ ${sameBedroomComps.map((c, i) =>
   `${i+1}. ${c.title.substring(0, 40)}... | $${c.revenue.toLocaleString()}/yr | ${c.occupancy}% occ | $${c.adr} ADR | ${c.rating}★ (${c.reviews}) | ${c.bedrooms}BR/${c.bathrooms}BA ${c.isSuperhost ? '[SH]' : ''} ${c.isProfessionallyManaged ? '[PM]' : ''}`
 ).join('\n')}
 
+${rentometerData ? `
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-YOUR ANALYSIS TASK - PRODUCE A COMPREHENSIVE RENTAL ARBITRAGE ANALYSIS
+SECTION 7: LONG-TERM RENTAL MARKET COMPARISON (Rentometer Data)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-IMPORTANT CONTEXT:
-- This analysis is for RENTAL ARBITRAGE investors (people who rent a property long-term and sublet it on Airbnb/VRBO)
-- The user is NOT buying this property - they would be RENTING it and subletting as a short-term rental
-- Compare ONLY to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is critical for accurate analysis
-- Today's date is ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-- Focus on: Can the STR revenue cover the monthly rent + expenses and generate profit?
+TRADITIONAL RENTAL MARKET
+Median Long-Term Rent: $${rentometerData.median.toLocaleString()}/month
+Mean Long-Term Rent: $${rentometerData.mean.toLocaleString()}/month
+25th Percentile: $${rentometerData.percentile25.toLocaleString()}/month
+75th Percentile: $${rentometerData.percentile75.toLocaleString()}/month
+Rent Range: $${rentometerData.min.toLocaleString()} - $${rentometerData.max.toLocaleString()}/month
+Sample Size: ${rentometerData.samples} comparable rentals within ${rentometerData.radiusMiles} miles
 
-Write a comprehensive rental arbitrage analysis report. Be specific with numbers and provide actionable insights.
+${rentometerData.userRent ? `User's Proposed Rent: $${rentometerData.userRent.toLocaleString()}/month
+Rent Position: ${rentometerData.percentilePosition}
+Rent Advantage: ${rentometerData.rentAdvantage && rentometerData.rentAdvantage > 0 ? `$${rentometerData.rentAdvantage.toLocaleString()}/month below median (${rentometerData.rentAdvantagePercent}% savings)` : rentometerData.rentAdvantage && rentometerData.rentAdvantage < 0 ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/month above median (${Math.abs(rentometerData.rentAdvantagePercent || 0)}% premium)` : 'At market median'}` : ''}
+
+ARBITRAGE OPPORTUNITY ANALYSIS
+- Compare the STR revenue potential to traditional rental market rates
+- Is the rent being asked reasonable for this market?
+- What's the spread between STR income and traditional rent?
+- How does this affect the arbitrage opportunity?
+
+` : ''}
+</CONTEXT>
+
+<FORMAT>
+Write a comprehensive rental arbitrage analysis report with these sections:
 
 # EXECUTIVE SUMMARY
 Provide a clear, comprehensive summary of the arbitrage opportunity. Include:
@@ -1069,155 +1122,43 @@ Provide a clear, comprehensive summary of the arbitrage opportunity. Include:
    - **Estimated Net Monthly Cash Flow**: $${Math.round((revenue.projected / 12) - property.monthlyRent - ((revenue.projected / 12) * 0.20)).toLocaleString()}` : `- Monthly Rent: Not provided
    - Calculate the maximum rent this property could support while remaining profitable`}
 
-2. **How This Compares to Other Investments** (REQUIRED - MUST INCLUDE THIS SECTION):
-   This section is MANDATORY. Write a clear comparison showing how this STR investment stacks up against traditional investment vehicles.
-   
-   Initial Capital Required: 3 months rent + $5,000 setup = approximately $${property.monthlyRent ? (property.monthlyRent * 3 + 5000).toLocaleString() : '15,000-25,000'}
-   
-   If that same capital was invested in:
-   - **S&P 500 Index** (10% average annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.10).toLocaleString() : '1,500-2,500'}/year profit
-   - **High-Yield Savings** (5% annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.05).toLocaleString() : '750-1,250'}/year profit
-   - **Treasury Bonds** (4.5% annual return): ~$${property.monthlyRent ? Math.round((property.monthlyRent * 3 + 5000) * 0.045).toLocaleString() : '675-1,125'}/year profit
-   - **This STR Arbitrage**: Calculate the projected annual profit and show the ROI percentage
-   
-   Write a clear paragraph explaining: "If you put $X into the stock market, you'd make $Y. If you put that same $X into this rental arbitrage deal, you could make $Z - that's [X times] more than traditional investments." Make this comparison crystal clear and compelling.
+2. **Quick Assessment**: Is this a good arbitrage opportunity? Why or why not?
 
-3. **How this property compares** to other ${property.bedrooms}BR properties in the area
+3. **Key Success Factors**: What would it take to succeed with this property?
 
-4. **Who this opportunity is best suited for** (new vs experienced arbitrage investors)
+# DETAILED ANALYSIS
 
-# RENTAL ARBITRAGE FINANCIAL ANALYSIS
+## Revenue Potential
+- Explain the projected revenue in simple terms
+- Compare to same-bedroom competitors
+- Discuss the range (conservative to optimistic)
 
-## Revenue vs Same-Bedroom Competitors
-- Compare projected revenue ONLY to other ${property.bedrooms}BR properties
-- Average revenue for ${property.bedrooms}BR properties in this market: calculate from the data
-- Where does this property rank among ${property.bedrooms}BR competitors?
-- Revenue gap or advantage vs ${property.bedrooms}BR average
+## Cash Flow Analysis
+- Break down the monthly numbers
+- Explain the profit margin
+- Discuss the break-even occupancy
 
-## Monthly Cash Flow Analysis
-${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent}
-- Projected Monthly Revenue: $${Math.round(revenue.projected / 12).toLocaleString()}
-- Estimated Expenses (supplies, utilities, cleaning): ~20-25% of revenue
-- Projected Monthly Profit: Calculate this
-- Annual Profit Projection: Calculate this` : `- No rent provided - calculate the MAXIMUM RENT this property could support
-- Break-even rent range (revenue - 25% expenses): $${Math.round((revenue.low * 0.75) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.75) / 12 / 100) * 100}/month
-- Recommended max rent range for healthy profit margin: $${Math.round((revenue.low * 0.60) / 12 / 100) * 100} - $${Math.round((revenue.high * 0.60) / 12 / 100) * 100}/month`}
+## Market Position
+- How does this property compare to competitors?
+- What does the market grade mean?
+- Is the market growing or declining?
 
-## Break-Even & Risk Scenarios (REQUIRED - MUST CALCULATE THESE)
-This section is MANDATORY. Calculate and explain:
+## Seasonality Strategy
+- When are the best and worst months?
+- How to plan for slow seasons?
+- Revenue variance impact
 
-1. **Break-Even Occupancy**: 
-   - Formula: (Monthly Rent + Monthly Operating Costs) / (ADR × 30 days)
-   - Current projected occupancy: ${Math.round(revenue.occupancy * 100)}%
-   - Is the break-even occupancy achievable? Compare to projected occupancy.
+## Competitive Landscape
+- What are top performers doing differently?
+- How saturated is the market?
+- Professional vs individual hosts
 
-2. **Slow Season Risk**:
-   - What happens if occupancy drops 20% during winter months?
-   - Will the property still be profitable or will it lose money?
-   - How many months of the year might be unprofitable?
-
-3. **Safety Margin**:
-   - How much buffer exists between projected revenue and break-even?
-   - What's the "danger zone" rent level where this deal becomes risky?
-
-## Investment Return Summary
-Briefly reiterate the investment comparison from the Executive Summary. The key point: STR investments typically generate significantly higher returns than passive investments, but require active management. Skilled operators can achieve returns that far exceed what the stock market or savings accounts offer.
-
-# COMPETITIVE ANALYSIS (${property.bedrooms}BR PROPERTIES ONLY)
-
-## Your Position Among ${property.bedrooms}BR Competitors
-- Rank this property among the ${sameBedroomComps.length} same-bedroom competitors
-- What separates top-earning ${property.bedrooms}BR properties from bottom earners?
-- Specific lessons from the top 5 ${property.bedrooms}BR performers
-- Warning signs from the bottom 5 ${property.bedrooms}BR performers
-
-## What Top ${property.bedrooms}BR Earners Have (Your Blueprint for Success)
-- What amenities do the highest earners offer? (Be specific: pools, hot tubs, game rooms, outdoor spaces, etc.)
-- What design/decor elements appear in top listings?
-- Why do some charge higher ADR? What justifies premium pricing?
-- Why do some book more nights? What drives higher occupancy?
-- Review and rating patterns - what do guests love most?
-
-IMPORTANT: Present this as a ROADMAP - "Here's what top performers have, so you know what to aim for" - NOT as "you don't have this so you can't compete."
-
-## How to Position for Success
-- What amenities and features do the top ${property.bedrooms}BR earners have? (pools, hot tubs, game rooms, etc.)
-- What makes top performers stand out in their listings?
-- What's the path to reaching top 25% of ${property.bedrooms}BR earners?
-- Realistic timeline to profitability
-
-IMPORTANT: The user is RESEARCHING this opportunity - they haven't signed a lease yet. Focus on WHAT IT TAKES TO SUCCEED, not assumptions about what they lack. Show them the blueprint for success based on what top performers do.
-
-# SEASONALITY & TIMING STRATEGY
-
-## Seasonal Revenue Patterns
-- Detailed analysis of peak vs slow seasons
-- Month-by-month strategy recommendations
-- Pricing strategy for each season
-- Minimum stay recommendations by season
-
-## Cash Flow Management
-- How to prepare for slow months
-- Reserve requirements based on seasonality
-- When to invest in improvements vs save cash
-
-## Year-Over-Year Trends
-- Is this market growing, stable, or declining?
-- What do the historical trends suggest for the future?
-- Are there concerning patterns in the data?
-
-# RISK ASSESSMENT
-
-## Market Risks
-- Competition level and saturation
-- Professional management competition
-- Market health concerns
-- Regulatory risks (based on regulation score if available)
-
-## Property-Specific Risks
-- Underperformance risk vs competitors
-- Seasonality exposure
-- Break-even vulnerability
-- Dependency on high occupancy
-
-## Mitigation Strategies
-- How to reduce each identified risk
-- What insurance or reserves are needed
-- Exit strategy considerations
-
-${rentometerData ? `
-# LONG-TERM RENTAL MARKET COMPARISON (RENTOMETER DATA)
-
-## Traditional Rental Market Data
-This section compares the property's potential monthly rent to the broader long-term rental market in the area.
-
-Market Statistics (${property.bedrooms}BR properties within ${rentometerData.radiusMiles} mile radius):
-- Median Rent: $${rentometerData.median.toLocaleString()}/month
-- Mean Rent: $${rentometerData.mean.toLocaleString()}/month
-- 25th Percentile: $${rentometerData.percentile25.toLocaleString()}/month
-- 75th Percentile: $${rentometerData.percentile75.toLocaleString()}/month
-- Rent Range: $${rentometerData.min.toLocaleString()} - $${rentometerData.max.toLocaleString()}/month
-- Sample Size: ${rentometerData.samples} comparable rentals
-
-${rentometerData.userRent ? `User's Proposed Rent: $${rentometerData.userRent.toLocaleString()}/month
-Rent Position: ${rentometerData.percentilePosition}
-Rent Advantage: ${rentometerData.rentAdvantage && rentometerData.rentAdvantage > 0 ? `$${rentometerData.rentAdvantage.toLocaleString()}/month below median (${rentometerData.rentAdvantagePercent}% savings)` : rentometerData.rentAdvantage && rentometerData.rentAdvantage < 0 ? `$${Math.abs(rentometerData.rentAdvantage).toLocaleString()}/month above median (${Math.abs(rentometerData.rentAdvantagePercent || 0)}% premium)` : 'At market median'}` : ''}
-
-## Arbitrage Opportunity Analysis
-- Compare the STR revenue potential to traditional rental market rates
-- Is the rent being asked reasonable for this market?
-- What's the spread between STR income and traditional rent?
-- How does this affect the arbitrage opportunity?
-
-` : ''}
-# ACTION PLAN & DATA SUMMARY
-
-## Key Metrics Summary
+# KEY METRICS SUMMARY
 - Summarize the most important data points
 - Highlight the key financial metrics
 - Note any data limitations or gaps
 
-## Market Context
+# MARKET CONTEXT
 - How does this property compare to the market?
 - What are the key competitive factors?
 - What does the historical data suggest?
@@ -1226,8 +1167,22 @@ Remember:
 - Be specific with numbers - cite actual figures from the data
 - Explain what metrics mean for someone new to investing
 - Be honest about risks - don't oversell
-- Provide actionable, specific recommendations
-- This should be comprehensive enough to be a standalone investment report`;
+- This should be comprehensive enough to be a standalone investment report
+</FORMAT>
+
+<CONSTRAINTS>
+- ONLY use the data provided - do not make assumptions or use external knowledge
+- ONLY compare to properties with the SAME BEDROOM COUNT (${property.bedrooms}BR) - this is critical for accurate analysis
+- Do NOT compare to luxury hotel residences, branded properties, or properties with different bedroom counts
+- Be extremely specific with numbers - cite actual figures from the data
+- Write for someone who is new to Airbnb arbitrage - explain what metrics mean
+- Be honest about risks but also highlight genuine opportunities
+- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
+- The user is RESEARCHING this opportunity - they have NOT signed a lease yet
+- DO NOT assume they lack amenities or discourage them
+- Instead, SHOW THEM what top performers have so they know what to aim for
+- Be EDUCATIONAL and ENCOURAGING - "Here's the blueprint for success" not "You can't compete"
+</CONSTRAINTS>`;
 
   try {
     const response = await callGeminiMax(prompt);
@@ -1418,6 +1373,12 @@ export interface MaxMarketAdvisorInput {
  * Generate Maximum Capacity Market Analysis
  * 
  * Comprehensive market analysis for investors looking at a new market.
+ * 
+ * PTCF Framework Applied:
+ * - Persona: Friendly real estate teacher for beginners
+ * - Task: Beginner-friendly market report answering "How's this market for Airbnb?"
+ * - Context: All market scores, metrics, historical data, seasonality, top performers
+ * - Format: Simple language, real examples, explain "so what?" for every number
  */
 export async function generateMaxMarketAdvice(
   input: MaxMarketAdvisorInput
@@ -1481,11 +1442,12 @@ export async function generateMaxMarketAdvice(
     ? ((Math.max(...seasonality.map(s => s.revenue)) - Math.min(...seasonality.map(s => s.revenue))) / (seasonality.reduce((sum, s) => sum + s.revenue, 0) / seasonality.length) * 100)
     : 0;
 
+  // PTCF-structured maximum capacity market prompt
   const prompt = `<PERSONA>
-You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart third grader - use simple words, real examples, and make everything crystal clear. Your communication style is:
+You are a friendly real estate teacher explaining Airbnb investing to someone who has NEVER invested before. Imagine you're explaining to a smart friend who's curious but has no background in real estate. Your communication style is:
 - Super simple language (if a word is confusing, explain it or use a simpler word)
 - Use real-life comparisons ("Think of it like..." or "Imagine if...")
-- Friendly and encouraging (like talking to a friend)
+- Friendly and encouraging (like talking to a friend over coffee)
 - Always explain the "so what?" - why does this number matter?
 </PERSONA>
 
@@ -1493,25 +1455,7 @@ You are a friendly real estate teacher explaining Airbnb investing to someone wh
 Analyze the market data below and produce a BEGINNER-FRIENDLY MARKET REPORT. This report should answer the simple question: "How's this market for Airbnb?" in a way that ANYONE can understand - even if they've never invested in real estate before.
 </TASK>
 
-<TONE>
-- Warm and conversational (like explaining to a friend over coffee)
-- Use everyday language - NO jargon or technical terms without explaining them
-- Use analogies and comparisons to make numbers meaningful
-- Be honest but encouraging
-- Use phrases like "Think of it this way..." or "In simple terms..." or "What this means for you..."
-</TONE>
-
-<CONSTRAINTS>
-- ONLY use the data provided below - DO NOT make assumptions or use external knowledge
-- ALWAYS cite specific numbers from the data (e.g., "$45,000/year" not "good revenue")
-- NEVER provide prescriptive advice like "you should buy" - present data and let reader decide
-- DO NOT include startup costs or furnishing budgets
-- Keep each section focused and scannable
-- Maximum 2,500 words total
-- DO NOT include any placeholder text like "[Your Name]", dates, or "Market Analyst" headers - start directly with the analysis content
-- When displaying scores, always round to whole numbers (e.g., 73 not 73.567)
-</CONSTRAINTS>
-
+<CONTEXT>
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
                                            COMPREHENSIVE MARKET INVESTMENT ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1521,13 +1465,11 @@ SECTION 1: MARKET OVERVIEW
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 MARKET DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Market Name: ${market.name}
 Location: ${market.city}, ${market.state}, ${market.country}
 Total Active Listings: ${metrics.totalListings.toLocaleString()}${filterContext}
 
 MARKET SCORES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Overall Market Score: ${scores.marketScore}/100
 Investability Score: ${scores.investabilityScore}/100
 Rental Demand Score: ${scores.rentalDemandScore}/100
@@ -1536,7 +1478,6 @@ Seasonality Score: ${scores.seasonalityScore}/100
 Regulation Score: ${scores.regulationScore}/100
 
 MARKET METRICS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Average Annual Revenue: $${metrics.avgRevenue.toLocaleString()}
 Average Occupancy Rate: ${metrics.avgOccupancy}%
 Average Daily Rate (ADR): $${metrics.avgAdr.toLocaleString()}
@@ -1550,7 +1491,6 @@ SECTION 2: REVENUE BY PROPERTY SIZE
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 REVENUE BY BEDROOM COUNT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${revenueByBedroom.map(r => 
   `${r.bedrooms} Bedroom: $${r.avgRevenue.toLocaleString()}/yr avg | ${r.avgOccupancy}% occupancy | $${r.avgAdr} ADR | ${r.listingCount.toLocaleString()} listings`
 ).join('\n')}
@@ -1562,7 +1502,6 @@ ${bestBedrooms.slice(0, 3).map((r, i) =>
 
 ${propertyTypes ? `
 PROPERTY TYPE DISTRIBUTION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${propertyTypes.map(p => 
   `${p.type}: ${p.count.toLocaleString()} listings | $${p.avgRevenue.toLocaleString()}/yr avg | ${p.avgOccupancy}% occupancy`
 ).join('\n')}
@@ -1573,7 +1512,6 @@ SECTION 3: HISTORICAL TRENDS (5 YEARS / 60 MONTHS)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 YEAR-OVER-YEAR PERFORMANCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YoY Revenue Change: ${historicalData.yoyChange >= 0 ? '+' : ''}${historicalData.yoyChange.toFixed(1)}%
 Market Trend: ${historicalData.trend.toUpperCase()}
 Data Points: ${historicalData.months.length} months of historical data
@@ -1588,7 +1526,6 @@ SECTION 4: SEASONALITY ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 SEASONAL PATTERNS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Revenue Variance: ${revenueVariance.toFixed(0)}% between peak and slow seasons
 
 BEST MONTHS (Peak Season):
@@ -1607,7 +1544,6 @@ SECTION 5: TOP PERFORMERS IN THIS MARKET
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 TOP EARNING PROPERTIES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${topPerformers.map((p, i) => 
   `${i+1}. "${p.title.substring(0, 50)}${p.title.length > 50 ? '...' : ''}"
      Revenue: $${p.revenue.toLocaleString()}/yr | ADR: $${p.adr} | Occupancy: ${p.occupancy}%
@@ -1621,7 +1557,6 @@ SECTION 6: BOOKING PATTERNS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 GUEST BOOKING BEHAVIOR
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Average Booking Lead Time: ${bookingPatterns.avgLeadTimeDays} days in advance
 Last-Minute Bookings (0-7 days): ${bookingPatterns.lastMinutePercent}%
 Advance Bookings (30+ days): ${bookingPatterns.advanceBookingPercent}%
@@ -1639,7 +1574,6 @@ SECTION 7: SUPPLY TREND (MARKET SATURATION)
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 MARKET SUPPLY ANALYSIS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Current Active Listings: ${supplyTrend.currentListings.toLocaleString()}
 Listings 12 Months Ago: ${supplyTrend.listings12MonthsAgo.toLocaleString()}
 Net Change: ${supplyTrend.netChange >= 0 ? '+' : ''}${supplyTrend.netChange.toLocaleString()} listings
@@ -1660,7 +1594,6 @@ SECTION 8: SUBMARKETS / NEIGHBORHOODS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 NEIGHBORHOOD BREAKDOWN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${submarkets.slice(0, 15).map((s, i) => 
   `${i+1}. ${s.name}\n   Listings: ${s.listingCount.toLocaleString()}${s.metrics ? ` | Revenue: $${s.metrics.revenue.toLocaleString()}/yr | ADR: $${s.metrics.adr} | Occupancy: ${s.metrics.occupancy}%${s.metrics.marketScore ? ` | Score: ${s.metrics.marketScore}` : ''}` : ''}`
 ).join('\n\n')}
@@ -1672,7 +1605,6 @@ SECTION 9: CANCELLATION POLICY ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 POLICY DISTRIBUTION & PERFORMANCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total Listings Analyzed: ${cancellationPolicies.totalListings.toLocaleString()}
 
 ${cancellationPolicies.policies.map(p => 
@@ -1688,20 +1620,20 @@ SECTION 10: PROFESSIONAL VS INDIVIDUAL HOST ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 HOST TYPE BREAKDOWN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Total Listings: ${professionalStats.totalListings.toLocaleString()}
 Professionally Managed: ${professionalStats.professionalCount.toLocaleString()} (${professionalStats.professionalPercentage}%)
 Individual Hosts: ${professionalStats.individualCount.toLocaleString()} (${(100 - professionalStats.professionalPercentage).toFixed(1)}%)
 Superhosts: ${professionalStats.superhostCount.toLocaleString()} (${professionalStats.superhostPercentage}%)
 
 REVENUE COMPARISON
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Avg Revenue (Professional): $${professionalStats.avgRevenueProfessional.toLocaleString()}/yr
 Avg Revenue (Individual): $${professionalStats.avgRevenueIndividual.toLocaleString()}/yr
 Professional Revenue Premium: ${professionalStats.revenuePremiumPercent >= 0 ? '+' : ''}${professionalStats.revenuePremiumPercent}%
 ` : ''}
+</CONTEXT>
 
-YOUR TASK: Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
+<FORMAT>
+Write a BEGINNER-FRIENDLY market report that answers "How's this market for Airbnb?"
 
 Write like you're explaining to a friend who's curious about Airbnb investing but has never done it before. Use simple words, real examples, and always explain WHY each number matters.
 
@@ -1775,15 +1707,21 @@ End with a simple summary:
 - "The market is [growing/stable/shrinking] based on the last 12 months of data."
 
 IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (C, D, or F), that does NOT mean there are no good opportunities there. Market averages include many hosts who are doing a poor job - bad photos, wrong pricing, poor guest communication, etc. A skilled operator who does things right can often significantly outperform the market average. The top performers in ANY market prove this - look at how much more they earn than the average. So a "C grade" market might still be great for someone who's willing to put in the work to stand out from the crowd.
+</FORMAT>
 
-CRITICAL RULES:
+<CONSTRAINTS>
 - Use simple words a third grader would understand
 - Always explain what numbers MEAN, not just what they ARE
 - Use comparisons like "That's like..." or "Think of it as..."
 - Be honest but friendly - don't scare people, but don't sugarcoat problems
 - DO NOT use jargon like "RevPAR", "ADR", "YoY" without explaining them
 - DO NOT use emojis
-- DO NOT give specific advice like "you should buy here" - just explain the data`;
+- DO NOT give specific advice like "you should buy here" - just explain the data
+- ONLY use the data provided - do not make assumptions or use external knowledge
+- When displaying scores, always round to whole numbers (e.g., 73 not 73.567)
+- Maximum 2,500 words total
+- DO NOT include any placeholder text like "[Your Name]", dates, or "Market Analyst" headers - start directly with the analysis content
+</CONSTRAINTS>`;
 
   try {
     const response = await callGeminiMax(prompt);

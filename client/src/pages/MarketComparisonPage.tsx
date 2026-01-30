@@ -23,7 +23,8 @@ import {
   FileDown
 } from 'lucide-react';
 import { exportMarketComparisonPDF } from '@/lib/pdfExport';
-import { Link } from 'wouter';
+import { SharePageButton } from '@/components/SharePageButton';
+import { Link, useSearch } from 'wouter';
 
 interface SelectedMarket {
   id: string;
@@ -31,7 +32,22 @@ interface SelectedMarket {
 }
 
 export default function MarketComparisonPage() {
-  const [selectedMarkets, setSelectedMarkets] = useState<SelectedMarket[]>([]);
+  // Parse URL parameters for sharing
+  const searchString = useSearch();
+  
+  const [selectedMarkets, setSelectedMarkets] = useState<SelectedMarket[]>(() => {
+    // Check URL params for pre-selected markets
+    const params = new URLSearchParams(searchString || window.location.search);
+    const marketsParam = params.get('markets');
+    if (marketsParam) {
+      // Format: marketId:marketName,marketId:marketName
+      return marketsParam.split(',').map(m => {
+        const [id, name] = m.split(':');
+        return { id, name: decodeURIComponent(name || id) };
+      }).filter(m => m.id);
+    }
+    return [];
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
@@ -134,14 +150,29 @@ export default function MarketComparisonPage() {
             <ArrowRight className="w-4 h-4 text-slate-400" />
             <span className="text-slate-600">Market Comparison</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Market Comparison</h1>
+                <p className="text-slate-600">Compare up to 5 markets side-by-side</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Market Comparison</h1>
-              <p className="text-slate-600">Compare up to 5 markets side-by-side</p>
-            </div>
+            <SharePageButton
+              pagePath="/compare-markets"
+              params={{
+                markets: selectedMarkets.length > 0 
+                  ? selectedMarkets.map(m => `${m.id}:${encodeURIComponent(m.name)}`).join(',')
+                  : undefined,
+              }}
+              shareDescription={selectedMarkets.length > 0 
+                ? `comparison of ${selectedMarkets.map(m => m.name).join(', ')}`
+                : 'Market Comparison tool'}
+              variant="outline"
+              size="sm"
+            />
           </div>
         </div>
       </div>

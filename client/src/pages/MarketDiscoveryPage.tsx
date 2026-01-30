@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,8 @@ import {
   Building,
   Heart
 } from 'lucide-react';
-
-import { Link } from 'wouter';
+import { SharePageButton } from '@/components/SharePageButton';
+import { Link, useSearch } from 'wouter';
 
 type MarketType = 'all' | 'coastal' | 'urban_metro' | 'mountains_lakes' | 'suburban' | 'rural' | 'mid_size_city';
 
@@ -45,12 +45,18 @@ const marketTypeLabels: Record<string, string> = {
 };
 
 export default function MarketDiscoveryPage() {
-  const [filters, setFilters] = useState({
-    marketType: 'all' as MarketType,
-    minMarketScore: 0,
-    minInvestability: 0,
-    minRentalDemand: 0,
-    limit: 50,
+  // Parse URL parameters for sharing
+  const searchString = useSearch();
+  
+  const [filters, setFilters] = useState(() => {
+    const params = new URLSearchParams(searchString || window.location.search);
+    return {
+      marketType: (params.get('type') || 'all') as MarketType,
+      minMarketScore: parseInt(params.get('minScore') || '0'),
+      minInvestability: parseInt(params.get('minInvest') || '0'),
+      minRentalDemand: parseInt(params.get('minDemand') || '0'),
+      limit: 50,
+    };
   });
   const [showFilters, setShowFilters] = useState(false);
   const [sessionId] = useState(() => {
@@ -153,17 +159,31 @@ export default function MarketDiscoveryPage() {
                 <p className="text-sm text-slate-500">Explore {marketsQuery.data?.total || 0} short-term rental markets</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-              {(filters.minMarketScore > 0 || filters.minInvestability > 0 || filters.minRentalDemand > 0 || filters.marketType !== 'all') && (
-                <Badge variant="secondary" className="ml-1">Active</Badge>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <SharePageButton
+                pagePath="/discover-markets"
+                params={{
+                  type: filters.marketType !== 'all' ? filters.marketType : undefined,
+                  minScore: filters.minMarketScore > 0 ? filters.minMarketScore : undefined,
+                  minInvest: filters.minInvestability > 0 ? filters.minInvestability : undefined,
+                  minDemand: filters.minRentalDemand > 0 ? filters.minRentalDemand : undefined,
+                }}
+                shareDescription={`US market discovery${filters.marketType !== 'all' ? ` (${marketTypeLabels[filters.marketType]})` : ''}`}
+                variant="outline"
+                size="sm"
+              />
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+                {(filters.minMarketScore > 0 || filters.minInvestability > 0 || filters.minRentalDemand > 0 || filters.marketType !== 'all') && (
+                  <Badge variant="secondary" className="ml-1">Active</Badge>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -27,6 +27,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
 import { ShareReportButton } from '@/components/ShareReportButton';
+import { ShareToolButton } from '@/components/ShareToolButton';
 import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
 import { 
@@ -2037,22 +2038,40 @@ export default function LeadMagnet() {
             
             {/* Current Job Header */}
             <div className="mb-10 pb-10 border-b border-[oklch(0.92_0_0)]">
-              <div className="flex items-center gap-5 mb-4">
-                {(() => {
-                  const job = jobDescriptions[activeTab];
-                  const Icon = job.icon;
-                  return (
-                    <>
-                      <div className="w-14 h-14 rounded-2xl bg-[oklch(0.55_0.14_75)] flex items-center justify-center glow-gold">
-                        <Icon className="w-7 h-7 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)]">{job.title}</h3>
-                        <p className="text-[oklch(0.50_0_0)] text-lg">{job.subtitle}</p>
-                      </div>
-                    </>
-                  );
-                })()}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-5">
+                  {(() => {
+                    const job = jobDescriptions[activeTab];
+                    const Icon = job.icon;
+                    return (
+                      <>
+                        <div className="w-14 h-14 rounded-2xl bg-[oklch(0.55_0.14_75)] flex items-center justify-center glow-gold">
+                          <Icon className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)]">{job.title}</h3>
+                          <p className="text-[oklch(0.50_0_0)] text-lg">{job.subtitle}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                {/* Share Button - appears on all tools except ebook */}
+                {activeTab !== 'ebook' && (
+                  <ShareToolButton
+                    step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : 1}
+                    city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
+                    state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
+                    zipCode={myProperty?.zipCode}
+                    address={address || myProperty?.address}
+                    bedrooms={myProperty?.bedrooms || (bedrooms ? parseInt(bedrooms) : undefined)}
+                    bathrooms={myProperty?.bathrooms || (bathrooms ? parseFloat(bathrooms) : undefined)}
+                    rent={myProperty?.monthlyRent || (monthlyRent ? parseInt(monthlyRent) : undefined)}
+                    variant="outline"
+                    size="sm"
+                    showLabel={true}
+                  />
+                )}
               </div>
               <p className="text-gold font-medium text-lg mt-5">
                 {jobDescriptions[activeTab].job}

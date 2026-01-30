@@ -12,23 +12,39 @@
  * - Subtle shadows and refined borders
  */
 
-import { useState } from 'react';
-import { Link } from 'wouter';
+import { useState, useEffect } from 'react';
+import { Link, useSearch } from 'wouter';
 import { 
   ArrowLeft,
   TrendingUp,
   BarChart3,
   Plus,
   X,
+  Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
 import { MarketComparison, ComparisonBar, type MarketComparisonData } from '@/components/MarketComparison';
+import { SharePageButton } from '@/components/SharePageButton';
 import { AnimatePresence } from 'framer-motion';
 
 export default function MarketAdvisor() {
   const [comparisonMarkets, setComparisonMarkets] = useState<MarketComparisonData[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [currentMarket, setCurrentMarket] = useState<{ id: string; name: string } | null>(null);
+  
+  // Parse URL parameters for sharing
+  const searchString = useSearch();
+  const [initialMarket, setInitialMarket] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(searchString || window.location.search);
+    const marketName = params.get('market');
+    const marketId = params.get('marketId');
+    if (marketName) {
+      setInitialMarket(marketName);
+    }
+  }, [searchString]);
 
   const handleAddToCompare = (marketData: any) => {
     // Check if market already exists in comparison
@@ -127,18 +143,32 @@ export default function MarketAdvisor() {
               </div>
             </div>
 
-            {/* Comparison Toggle */}
-            {comparisonMarkets.length > 0 && (
-              <Button
-                onClick={() => setShowComparison(!showComparison)}
-                variant={showComparison ? "default" : "outline"}
+            <div className="flex items-center gap-2">
+              {/* Share Button */}
+              <SharePageButton
+                pagePath="/market-advisor"
+                params={{
+                  market: currentMarket?.name,
+                  marketId: currentMarket?.id,
+                }}
+                shareDescription={currentMarket ? `Market Advisor analysis for ${currentMarket.name}` : 'Market Advisor'}
+                variant="outline"
                 size="sm"
-                className={showComparison ? "btn-gold" : ""}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Compare ({comparisonMarkets.length})
-              </Button>
-            )}
+              />
+              
+              {/* Comparison Toggle */}
+              {comparisonMarkets.length > 0 && (
+                <Button
+                  onClick={() => setShowComparison(!showComparison)}
+                  variant={showComparison ? "default" : "outline"}
+                  size="sm"
+                  className={showComparison ? "btn-gold" : ""}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Compare ({comparisonMarkets.length})
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -162,6 +192,8 @@ export default function MarketAdvisor() {
             <StandaloneMarketAdvisorWithCompare 
               onAddToCompare={handleAddToCompare}
               comparisonMarkets={comparisonMarkets}
+              onMarketChange={(market) => setCurrentMarket(market)}
+              initialMarketName={initialMarket}
             />
           </div>
         </div>
@@ -191,7 +223,7 @@ export default function MarketAdvisor() {
 }
 
 // Extended StandaloneMarketAdvisor with comparison support
-import { useState as useStateLocal, useEffect } from 'react';
+import { useState as useStateLocal, useEffect as useEffectLocal } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
@@ -220,9 +252,11 @@ import { useMarketAdvisorFilters } from '@/contexts/PropertyContext';
 interface StandaloneMarketAdvisorWithCompareProps {
   onAddToCompare: (marketData: any) => void;
   comparisonMarkets: MarketComparisonData[];
+  onMarketChange?: (market: { id: string; name: string } | null) => void;
+  initialMarketName?: string | null;
 }
 
-function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets }: StandaloneMarketAdvisorWithCompareProps) {
+function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets, onMarketChange, initialMarketName }: StandaloneMarketAdvisorWithCompareProps) {
   const {
     filters,
     setBedroomFilter,
@@ -266,7 +300,7 @@ function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets 
 
   const standaloneMarketAdvisorMutation = trpc.advanced.standaloneMarketAdvisor.useMutation();
 
-  useEffect(() => {
+  useEffectLocal(() => {
     if (searchMarketsMutation.data?.success && searchMarketsMutation.data.data) {
       setSearchResults(searchMarketsMutation.data.data);
       if (!justSelected) {
@@ -274,6 +308,20 @@ function StandaloneMarketAdvisorWithCompare({ onAddToCompare, comparisonMarkets 
       }
     }
   }, [searchMarketsMutation.data, justSelected]);
+  
+  // Notify parent when market changes
+  useEffectLocal(() => {
+    if (onMarketChange && selectedMarket) {
+      onMarketChange({ id: selectedMarket.id, name: selectedMarket.name });
+    }
+  }, [selectedMarket, onMarketChange]);
+  
+  // Handle initial market from URL params
+  useEffectLocal(() => {
+    if (initialMarketName && !searchQuery) {
+      setSearchQuery(initialMarketName);
+    }
+  }, [initialMarketName]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

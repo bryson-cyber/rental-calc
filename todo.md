@@ -8100,3 +8100,42 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Create trigger Zap for when Data Perfection: City is populated
 - [ ] Build email sequence with personalized deep links
 - [ ] Test full automation flow
+
+
+---
+
+## Share Button Functionality (Jan 30, 2026)
+- [ ] Create shareable URL generator that captures tool state (city, state, step, results)
+- [ ] Add share button component to all 9 tools
+- [ ] Implement copy-to-clipboard functionality
+- [ ] Test share links work correctly for each tool
+
+## AI Prompt & Model Optimization (Jan 30, 2026)
+- [ ] Review current AI Advisor implementation
+- [ ] Optimize prompts using Gemini 3 best practices (thinking levels, structured outputs)
+- [ ] Ensure correct model selection (Pro for complex reasoning, Flash for speed)
+- [ ] Test AI responses for quality and relevance
+
+
+## Share Button Feature (Jan 30, 2026) - COMPLETE
+
+### Share Buttons Implementation
+- [x] Create SharePageButton component for standalone pages
+- [x] Add share button to Market Advisor page (/market-advisor)
+- [x] Add share button to Opportunity Finder page (/opportunity-finder)
+- [x] Add share button to Market Discovery page (/discover-markets)
+- [x] Add share button to Market Comparison page (/compare-markets)
+- [x] Implement URL parameter parsing for state restoration
+- [x] Add onLocationChange callback to OpportunityFinderStep
+- [x] Add onMarketChange callback to StandaloneMarketAdvisorWithCompare
+- [x] Fix TypeScript errors in gemini.ts (generateMarketTrendNarrative signature)
+
+### Gemini 3 API Optimization (Jan 30, 2026) - COMPLETE
+- [x] Update callGemini to use gemini-3-pro-preview model
+- [x] Add thinkingLevel configuration (high/medium/low)
+- [x] Set temperature to 1.0 as recommended by Gemini 3
+- [x] Restructure all prompts with PTCF framework (Persona, Task, Context, Format)
+- [x] Add 3-minute timeout for thinking mode processing
+- [x] Update generateMaxPropertyAdvice with optimized prompt
+- [x] Update generateMaxMarketAdvice with optimized prompt
+- [x] Update generateMarketTrendNarrative with new input interface
