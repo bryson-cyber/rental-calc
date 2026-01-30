@@ -1,0 +1,15 @@
+{
+  "query": "SELECT city, state, sources FROM regulation_cache WHERE city LIKE '%Denver%' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT city, state, sources FROM regulation_cache WHERE city LIKE '%Denver%' LIMIT 1;",
+  "rows": [
+    {
+      "city": "Denver",
+      "state": "CO",
+      "sources": "[{\"isOfficial\": false, \"title\": \"denvergov.org\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEcqJkCRhEcJ1o3aXQR0mapz-HNYgwhodzwcjJg-_MhDWDPFL-Y2sZTnI6hP__iNAwqlMvZXMkqaeBckduPt3YIMwbR7Cc7gA0sZ_sngIcLIRFNldv8NRZSgCnTW9qxztBjChhrDEc3tAjdJAJNYhePkTSO_PqWw3TYcuGllU1tAYkyc975NMo=\"}, {\"isOfficial\": false, \"title\": \"denvergov.org\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFrQasng8R6ZRNr7FDZ_WnDdjrMEhz2JuHJCvX1O5dvZvIzntzHCOYmGnRjNdcgmvbhAvt7aOMbqUzsqzFI6B0SQPn7WP9IGyJnB6Iw2AheVRTAeuQmjkmUdYlLQQh44-Rw1bYeu5tBG0DplmhTkbjMcRx_xP6-jG3XoM-BOum-ttWLJ5Ah2UPAVVRwxQ5kKPcooS08yK08nkk2F0grqxI7Mi4rI6HQVrwHRQvsU2iozp9jBIgLUSlHdXhf89h62FQPYzskcQ2Og9fTDRTz4f1buomHkf3GH07kWL2bXghnJ2K3_WBfCuTjRZ1vWF02tAI1opUQUg2mbh52Oq4cKLmArLHSb2E=\"}, {\"isOfficial\": false, \"title\": \"bnbcalc.com\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGaxDlxSt0m2FMkG3e1kVYq4zfyQ2poHRjr6_oC23DFxCjUoH6-YssgARbLWZJ153MUNPeeaAFrKt3x9G6jEoR8tXS1FtjQMoawnlfSMYptO5Y74rYqqzfvcwUmAvcTa7IRaLZ-1Mug8x9TvxBJV0avMKfufSnp-DZx3JxSdRXtt00ncf0Hjjev4OqQSnx7XXw=\"}]"
+    }
+  ],
+  "messages": [],
+  "stdout": "city\tstate\tsources\nDenver\tCO\t[{\"isOfficial\": false, \"title\": \"denvergov.org\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEcqJkCRhEcJ1o3aXQR0mapz-HNYgwhodzwcjJg-_MhDWDPFL-Y2sZTnI6hP__iNAwqlMvZXMkqaeBckduPt3YIMwbR7Cc7gA0sZ_sngIcLIRFNldv8NRZSgCnTW9qxztBjChhrDEc3tAjdJAJNYhePkTSO_PqWw3TYcuGllU1tAYkyc975NMo=\"}, {\"isOfficial\": false, \"title\": \"denvergov.org\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFrQasng8R6ZRNr7FDZ_WnDdjrMEhz2JuHJCvX1O5dvZvIzntzHCOYmGnRjNdcgmvbhAvt7aOMbqUzsqzFI6B0SQPn7WP9IGyJnB6Iw2AheVRTAeuQmjkmUdYlLQQh44-Rw1bYeu5tBG0DplmhTkbjMcRx_xP6-jG3XoM-BOum-ttWLJ5Ah2UPAVVRwxQ5kKPcooS08yK08nkk2F0grqxI7Mi4rI6HQVrwHRQvsU2iozp9jBIgLUSlHdXhf89h62FQPYzskcQ2Og9fTDRTz4f1buomHkf3GH07kWL2bXghnJ2K3_WBfCuTjRZ1vWF02tAI1opUQUg2mbh52Oq4cKLmArLHSb2E=\"}, {\"isOfficial\": false, \"title\": \"bnbcalc.com\", \"type\": \"third_party\", \"url\": \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGaxDlxSt0m2FMkG3e1kVYq4zfyQ2poHRjr6_oC23DFxCjUoH6-YssgARbLWZJ153MUNPeeaAFrKt3x9G6jEoR8tXS1FtjQMoawnlfSMYptO5Y74rYqqzfvcwUmAvcTa7IRaLZ-1Mug8x9TvxBJV0avMKfufSnp-DZx3JxSdRXtt00ncf0Hjjev4OqQSnx7XXw=\"}]\n",
+  "stderr": "",
+  "execution_time_ms": 351
+}

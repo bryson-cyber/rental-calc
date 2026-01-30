@@ -7863,3 +7863,33 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Display clickable links to official government websites
 - [x] Show specific ordinance/code numbers when available
 - [x] Include date regulation was last updated on official site
+
+
+### Regulation Tracker UI/UX Improvements (Jan 30, 2026)
+- [ ] Filter sources to .gov only (remove third-party sources)
+- [ ] Add Yes/No summary at top (1-2 sentence clear answer)
+- [ ] Remove markdown stars/asterisks from display (clean text)
+- [ ] Improve Gemini prompt for cleaner, structured responses
+- [ ] Enhance UI with Coach Inayah design system (premium look)
+- [ ] Make status messaging more encouraging (permit = doable)
+
+
+### Regulation Tracker Data Accuracy Fixes (Jan 30, 2026)
+- [ ] Fix Primary Residence requirement showing incorrectly (St. Louis shows "Yes" but should be "No")
+- [ ] Improve Gemini prompt to get more accurate data from official sources
+- [ ] Filter out ALL third-party sources (avalara, airbnb, bnbcalc still showing)
+- [ ] Add stronger disclaimer that users should verify with official sources
+
+## Regulation Tracker Improvements (Jan 30, 2026)
+- [x] Add database caching for regulation results (7-day TTL)
+- [x] Fix prompt tone - simple but professional, not childish
+- [x] Debug and fix source extraction from Gemini grounding metadata
+- [x] Improve UI to align with site design
+- [x] Test with St. Louis to verify all fixes work
+
+## Regulation Tracker Improvements (Round 2)
+- [x] Filter out 404 error URLs before displaying sources
+- [x] Add address search support (not just cities)
+- [x] Support Redfin and Zillow link parsing for location extraction
+- [x] Optimize prompts using PTCF framework (Persona, Task, Context, Format)
+- [x] Improve output quality - professional but simple, not childish

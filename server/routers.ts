@@ -57,7 +57,7 @@ import { logActivity, ActionCategory, ActionType } from "./activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
-import { getRegulationInfo } from "./regulation-tracker";
+import { getRegulationInfo, parseLocation } from "./regulation-tracker";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -3821,6 +3821,27 @@ export const appRouter = router({
 
   // Regulation Tracker - Real-time STR regulation lookup
   regulationTracker: router({
+    // Parse location from various input formats (city, address, Redfin/Zillow URL)
+    parseLocation: publicProcedure
+      .input(z.object({
+        input: z.string().min(1, "Location input is required"),
+      }))
+      .query(async ({ input }) => {
+        const parsed = parseLocation(input.input);
+        if (!parsed) {
+          return {
+            success: false,
+            error: "Could not parse location. Please enter a city/state, address, or Redfin/Zillow URL.",
+            data: null,
+          };
+        }
+        return {
+          success: true,
+          data: parsed,
+        };
+      }),
+
+    // Get regulations - supports city/state or raw input (address/URL)
     getRegulations: publicProcedure
       .input(z.object({
         city: z.string().min(1, "City is required"),
@@ -3831,7 +3852,46 @@ export const appRouter = router({
         
         const result = await getRegulationInfo(input.city, input.state);
         
+        // Debug log the sources being returned
+        console.log(`[RegulationTracker] Returning ${result.sources.length} sources:`);
+        result.sources.forEach((s, i) => {
+          console.log(`  ${i + 1}. [${s.type}] ${s.title} - ${s.url}`);
+        });
+        
         return result;
+      }),
+
+    // Get regulations from raw input (address, URL, or city/state)
+    getRegulationsFromInput: publicProcedure
+      .input(z.object({
+        input: z.string().min(1, "Location input is required"),
+      }))
+      .mutation(async ({ input }) => {
+        // Parse the input to extract city/state
+        const parsed = parseLocation(input.input);
+        if (!parsed) {
+          return {
+            success: false,
+            error: "Could not parse location. Please enter a city/state, address, or Redfin/Zillow URL.",
+            data: null,
+          };
+        }
+
+        console.log(`[RegulationTracker] Parsed input: ${parsed.city}, ${parsed.state}${parsed.address ? ` (address: ${parsed.address})` : ''}`);
+        
+        const result = await getRegulationInfo(parsed.city, parsed.state);
+        
+        // Debug log the sources being returned
+        console.log(`[RegulationTracker] Returning ${result.sources.length} sources:`);
+        result.sources.forEach((s, i) => {
+          console.log(`  ${i + 1}. [${s.type}] ${s.title} - ${s.url}`);
+        });
+        
+        return {
+          success: true,
+          data: result,
+          parsedLocation: parsed,
+        };
       }),
   }),
 

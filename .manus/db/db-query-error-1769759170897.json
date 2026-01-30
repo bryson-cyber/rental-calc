@@ -1,0 +1,8 @@
+{
+  "query": "DELETE FROM regulation_cache WHERE location_key LIKE '%stlouis%' OR location_key LIKE '%st_louis%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute DELETE FROM regulation_cache WHERE location_key LIKE '%stlouis%' OR location_key LIKE '%st_louis%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'location_key' in 'where clause'"
+  ]
+}

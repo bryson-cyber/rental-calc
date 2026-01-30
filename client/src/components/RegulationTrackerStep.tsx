@@ -70,8 +70,15 @@ const statusConfig = {
     color: 'oklch(0.65 0.15 85)',
     bgColor: 'oklch(0.65 0.15 85 / 0.1)',
     icon: AlertTriangle,
+    label: 'Some Restrictions',
+    description: 'Allowed but with some limitations to be aware of'
+  },
+  limited: {
+    color: 'oklch(0.60 0.15 60)',
+    bgColor: 'oklch(0.60 0.15 60 / 0.1)',
+    icon: AlertTriangle,
     label: 'Limited',
-    description: 'Allowed but with significant limitations'
+    description: 'Allowed in limited circumstances'
   },
   banned: {
     color: 'oklch(0.55 0.2 25)',
@@ -106,7 +113,8 @@ const statusConfig = {
 interface RegulationResult {
   city: string;
   state: string;
-  status: 'allowed' | 'allowed_with_permit' | 'allowed_with_requirements' | 'restricted' | 'banned' | 'paused' | 'pending' | 'unknown';
+  status: 'allowed' | 'allowed_with_permit' | 'allowed_with_requirements' | 'restricted' | 'limited' | 'banned' | 'paused' | 'pending' | 'unknown';
+  yesNoSummary: string;
   summary: string;
   simplifiedSummary: string;
   keyRequirements: string[];
@@ -209,26 +217,31 @@ export function RegulationTrackerStep() {
         </p>
       </div>
       
-      {/* Search Form - Now with Google Places Autocomplete */}
+      {/* Search Form - Supports cities, addresses, and property URLs */}
       <Card className="p-6" style={{ borderRadius: '1rem' }}>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <label className="block text-sm font-medium text-[#0F172A]/70 mb-2">
-              City or Location
+              City, Address, or Property URL
             </label>
             <GooglePlacesAutocomplete
               onSelect={handlePlaceSelect}
-              placeholder="Search city, county, or zip code..."
-              types={['(regions)']} // Only cities, counties, and regions
+              placeholder="Enter city, address, or paste Redfin/Zillow URL..."
+              types={['(regions)', 'address']} // Cities, regions, and addresses
               countryRestriction="us"
               showSearchHistory={true}
               className="w-full"
+              allowDirectSearch={true} // Allow searching with URLs or unrecognized locations
             />
             {selectedPlace && (
-              <p className="text-xs text-[#0F172A]/50 mt-1">
-                Selected: {selectedPlace.name}
+              <p className="text-xs text-[#0F172A]/50 mt-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {selectedPlace.name}
               </p>
             )}
+            <p className="text-xs text-[#0F172A]/40 mt-2">
+              Tip: Paste a Redfin or Zillow URL to automatically extract the location
+            </p>
           </div>
           
           <div className="flex items-end">
@@ -317,10 +330,18 @@ export function RegulationTrackerStep() {
                 </div>
               </div>
               
-              {/* Status description - helps explain what the status means */}
-              <p className="text-sm text-[#0F172A]/60 mb-4 italic">
-                {getStatusConfig(result.status).description}
-              </p>
+              {/* Yes/No Summary - Clear answer at the top */}
+              <div 
+                className="p-4 rounded-xl mb-4 border-2"
+                style={{ 
+                  backgroundColor: result.status === 'banned' ? 'oklch(0.55 0.2 25 / 0.05)' : 'oklch(0.55 0.15 145 / 0.05)',
+                  borderColor: result.status === 'banned' ? 'oklch(0.55 0.2 25 / 0.2)' : 'oklch(0.55 0.15 145 / 0.2)'
+                }}
+              >
+                <p className="text-lg font-medium" style={{ color: result.status === 'banned' ? 'oklch(0.45 0.15 25)' : 'oklch(0.35 0.12 145)' }}>
+                  {result.yesNoSummary || getStatusConfig(result.status).description}
+                </p>
+              </div>
               
               {/* Toggle between simple and detailed */}
               <div className="flex gap-2 mb-4">
@@ -486,56 +507,66 @@ export function RegulationTrackerStep() {
               </Card>
             )}
             
-            {/* Official Sources - Now more prominent */}
-            {result.sources.length > 0 && (
-              <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.55 0.15 250 / 0.3)', borderWidth: '2px' }}>
-                <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
-                  <ExternalLink className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                  Official Sources
-                </h4>
-                <p className="text-sm text-[#0F172A]/60 mb-4">
-                  Verify this information directly with official government sources:
-                </p>
-                <div className="space-y-3">
-                  {result.sources.map((source, index) => (
-                    <a
-                      key={index}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[#0F172A]/5 group"
-                    >
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ 
-                          backgroundColor: source.type === 'official' ? 'oklch(0.55 0.15 145 / 0.1)' : 
-                                          source.type === 'news' ? 'oklch(0.55 0.15 250 / 0.1)' : 
-                                          'oklch(0.50 0 0 / 0.1)'
-                        }}
-                      >
-                        {source.type === 'official' ? (
-                          <Building2 className="w-4 h-4" style={{ color: 'oklch(0.55 0.15 145)' }} />
-                        ) : source.type === 'news' ? (
-                          <FileText className="w-4 h-4" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                        ) : (
-                          <ExternalLink className="w-4 h-4" style={{ color: 'oklch(0.50 0 0)' }} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-[#0F172A] group-hover:underline truncate">
-                          {source.title}
-                        </p>
-                        <p className="text-xs text-[#0F172A]/50 truncate">
-                          {source.type === 'official' ? '🏛️ Official Government Source' : 
-                           source.type === 'news' ? '📰 News Article' : '🔗 Third Party'}
-                        </p>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-[#0F172A]/30 group-hover:text-[#0F172A]/60 flex-shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </Card>
-            )}
+            {/* Sources Section - ONLY show official government sources */}
+            {(() => {
+              // Filter to only show official government sources
+              const officialSources = result.sources.filter(s => s.type === 'official');
+              
+              if (officialSources.length > 0) {
+                return (
+                  <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.55 0.15 145 / 0.3)', borderWidth: '2px' }}>
+                    <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
+                      <Building2 className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 145)' }} />
+                      Official Government Sources
+                    </h4>
+                    <p className="text-sm text-[#0F172A]/60 mb-4">
+                      Verify this information directly with these official sources:
+                    </p>
+                    <div className="space-y-3">
+                      {officialSources.map((source, index) => (
+                        <a
+                          key={index}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[#0F172A]/5 group border border-[#0F172A]/10"
+                        >
+                          <div 
+                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.15)' }}
+                          >
+                            <Building2 className="w-5 h-5" style={{ color: 'oklch(0.45 0.15 145)' }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-[#0F172A] group-hover:underline truncate">
+                              {source.title}
+                            </p>
+                            <p className="text-xs text-green-600 font-medium">
+                              ✓ Official Government Source
+                            </p>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-[#0F172A]/30 group-hover:text-[#0F172A]/60 flex-shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  </Card>
+                );
+              } else {
+                // No official sources found - show a message
+                return (
+                  <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.65 0.15 85 / 0.3)', borderWidth: '2px' }}>
+                    <h4 className="font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 85)' }} />
+                      Verify with Official Sources
+                    </h4>
+                    <p className="text-sm text-[#0F172A]/70">
+                      We recommend verifying this information directly with the official {result.city} city or county government website. 
+                      Search for "{result.city} short term rental regulations" on your preferred search engine to find the official municipal code.
+                    </p>
+                  </Card>
+                );
+              }
+            })()}
             
             {/* Warnings */}
             {result.warnings.length > 0 && (

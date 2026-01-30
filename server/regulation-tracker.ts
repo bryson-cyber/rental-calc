@@ -1,19 +1,27 @@
 /**
  * Regulation Tracker Service
  * 
- * Provides real-time STR regulation lookup using Gemini API with Google Search grounding
- * and simplifies regulations to 3rd-grade reading level.
+ * Provides real-time STR regulation lookup using Gemini API with Google Search grounding.
+ * Features:
+ * - Database caching (7-day TTL) to reduce API calls
+ * - URL validation to filter out 404 errors
+ * - Address search support (city, address, or Redfin/Zillow links)
+ * - PTCF-optimized prompts for professional, clear output
  */
 
 import { ENV } from "./_core/env";
+import { getDb } from "./db";
+import { regulationCache } from "../drizzle/schema";
+import { eq, and, gt } from "drizzle-orm";
 
 // Types for regulation data
 export interface RegulationSearchResult {
   city: string;
   state: string;
-  status: 'allowed' | 'restricted' | 'banned' | 'paused' | 'pending' | 'unknown';
+  status: 'allowed' | 'allowed_with_permit' | 'restricted' | 'limited' | 'banned' | 'paused' | 'pending' | 'unknown';
+  yesNoSummary: string;
   summary: string;
-  simplifiedSummary: string; // 3rd-grade reading level
+  simplifiedSummary: string;
   keyRequirements: string[];
   permitRequired: boolean;
   primaryResidenceOnly: boolean;
@@ -25,14 +33,17 @@ export interface RegulationSearchResult {
   lastUpdated: string;
   confidence: 'high' | 'medium' | 'low';
   warnings: string[];
+  fromCache?: boolean;
 }
 
 export interface RegulationSource {
   title: string;
   url: string;
   type: 'official' | 'news' | 'third_party';
+  isOfficial: boolean;
   date?: string;
   snippet?: string;
+  validated?: boolean;
 }
 
 // Gemini API response types
@@ -51,6 +62,9 @@ interface GeminiResponse {
           title?: string;
         };
       }>;
+      searchEntryPoint?: {
+        renderedContent?: string;
+      };
       groundingSupports?: Array<{
         segment?: {
           startIndex?: number;
@@ -58,6 +72,7 @@ interface GeminiResponse {
           text?: string;
         };
         groundingChunkIndices?: number[];
+        confidenceScores?: number[];
       }>;
     };
   }>;
@@ -67,7 +82,455 @@ interface GeminiResponse {
   };
 }
 
-// Call Gemini API directly with Google Search grounding
+// Cache TTL: 7 days in milliseconds
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+// ============================================================================
+// LOCATION PARSING - Extract city/state from various input formats
+// ============================================================================
+
+interface ParsedLocation {
+  city: string;
+  state: string;
+  address?: string;
+}
+
+/**
+ * Parse location from various input formats:
+ * - City, State (e.g., "St. Louis, MO")
+ * - Full address (e.g., "123 Main St, Denver, CO 80202")
+ * - Redfin URL (e.g., "https://www.redfin.com/CO/Denver/123-Main-St-80202/...")
+ * - Zillow URL (e.g., "https://www.zillow.com/homedetails/123-Main-St-Denver-CO-80202/...")
+ */
+export function parseLocation(input: string): ParsedLocation | null {
+  const trimmed = input.trim();
+  
+  // Check for Redfin URL
+  if (trimmed.includes('redfin.com')) {
+    return parseRedfinUrl(trimmed);
+  }
+  
+  // Check for Zillow URL
+  if (trimmed.includes('zillow.com')) {
+    return parseZillowUrl(trimmed);
+  }
+  
+  // Check for full address (contains numbers and multiple commas)
+  if (/\d/.test(trimmed) && trimmed.split(',').length >= 2) {
+    return parseAddress(trimmed);
+  }
+  
+  // Default: City, State format
+  return parseCityState(trimmed);
+}
+
+function parseRedfinUrl(url: string): ParsedLocation | null {
+  try {
+    // Redfin URL format: https://www.redfin.com/STATE/City/Address/home/ID
+    // Example: https://www.redfin.com/CO/Denver/123-Main-St-80202/home/12345
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    
+    if (pathParts.length >= 3) {
+      const state = pathParts[0]; // e.g., "CO"
+      const city = pathParts[1].replace(/-/g, ' '); // e.g., "Denver"
+      const addressPart = pathParts[2].replace(/-/g, ' '); // e.g., "123 Main St 80202"
+      
+      return {
+        city: capitalizeWords(city),
+        state: state.toUpperCase(),
+        address: addressPart
+      };
+    }
+  } catch (e) {
+    console.error('[RegulationTracker] Failed to parse Redfin URL:', e);
+  }
+  return null;
+}
+
+function parseZillowUrl(url: string): ParsedLocation | null {
+  try {
+    // Zillow URL format: https://www.zillow.com/homedetails/Address-City-State-Zip/ID_zpid/
+    // Example: https://www.zillow.com/homedetails/123-Main-St-Denver-CO-80202/12345_zpid/
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+    
+    // Find the homedetails part
+    const detailsIndex = pathParts.indexOf('homedetails');
+    if (detailsIndex !== -1 && pathParts.length > detailsIndex + 1) {
+      const addressPart = pathParts[detailsIndex + 1];
+      
+      // Parse address-city-state-zip format
+      // Split by hyphen and try to extract state (2 letters followed by zip)
+      const parts = addressPart.split('-');
+      
+      // Find state abbreviation (2 uppercase letters)
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i];
+        // Check if it's a state abbreviation (2 letters) or state with zip
+        if (/^[A-Z]{2}$/.test(part.toUpperCase()) || /^[A-Z]{2}\d{5}$/.test(part.toUpperCase())) {
+          const state = part.substring(0, 2).toUpperCase();
+          // City is usually right before state
+          const city = i > 0 ? capitalizeWords(parts[i - 1]) : '';
+          const address = parts.slice(0, i - 1).join(' ');
+          
+          if (city) {
+            return { city, state, address };
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[RegulationTracker] Failed to parse Zillow URL:', e);
+  }
+  return null;
+}
+
+function parseAddress(address: string): ParsedLocation | null {
+  // Common address format: "123 Main St, Denver, CO 80202"
+  const parts = address.split(',').map(p => p.trim());
+  
+  if (parts.length >= 2) {
+    // Last part usually contains state (and possibly zip)
+    const lastPart = parts[parts.length - 1];
+    // Second to last is usually city
+    const cityPart = parts[parts.length - 2];
+    
+    // Extract state from last part (e.g., "CO 80202" or "CO")
+    const stateMatch = lastPart.match(/^([A-Za-z]{2})\s*\d*$/);
+    if (stateMatch) {
+      return {
+        city: capitalizeWords(cityPart),
+        state: stateMatch[1].toUpperCase(),
+        address: parts.slice(0, -2).join(', ')
+      };
+    }
+    
+    // Try to find state in the format "City, State"
+    const stateWords = lastPart.split(/\s+/);
+    for (const word of stateWords) {
+      const abbrev = getStateAbbreviation(word);
+      if (abbrev && abbrev.length === 2) {
+        return {
+          city: capitalizeWords(cityPart),
+          state: abbrev,
+          address: parts.slice(0, -2).join(', ')
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
+function parseCityState(input: string): ParsedLocation | null {
+  // Format: "City, State" or "City State"
+  const parts = input.split(/[,\s]+/).filter(Boolean);
+  
+  if (parts.length >= 2) {
+    // Last part is state
+    const statePart = parts[parts.length - 1];
+    const state = getStateAbbreviation(statePart) || statePart;
+    
+    // Everything else is city
+    const city = parts.slice(0, -1).join(' ');
+    
+    return {
+      city: capitalizeWords(city),
+      state: state.toUpperCase()
+    };
+  }
+  
+  return null;
+}
+
+function capitalizeWords(str: string): string {
+  return str.split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+// ============================================================================
+// URL VALIDATION - Filter out 404 errors
+// ============================================================================
+
+/**
+ * Validate a URL by making a HEAD request
+ * Returns true if the URL is accessible (2xx or 3xx status)
+ */
+async function validateUrl(url: string): Promise<boolean> {
+  try {
+    // Skip validation for Google redirect URLs (they're always valid)
+    if (url.includes('vertexaisearch.cloud.google.com')) {
+      return true;
+    }
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; RegulationTracker/1.0)'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Accept 2xx and 3xx status codes
+    const isValid = response.status >= 200 && response.status < 400;
+    if (!isValid) {
+      console.log(`[RegulationTracker] URL validation failed (${response.status}): ${url}`);
+    }
+    return isValid;
+  } catch (error) {
+    // If HEAD fails, try GET (some servers don't support HEAD)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; RegulationTracker/1.0)'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      return response.status >= 200 && response.status < 400;
+    } catch {
+      console.log(`[RegulationTracker] URL validation error: ${url}`);
+      return false;
+    }
+  }
+}
+
+/**
+ * Validate multiple URLs in parallel and filter out invalid ones
+ */
+async function validateSources(sources: RegulationSource[]): Promise<RegulationSource[]> {
+  const validationPromises = sources.map(async (source) => {
+    const isValid = await validateUrl(source.url);
+    return { source, isValid };
+  });
+  
+  const results = await Promise.all(validationPromises);
+  
+  const validSources = results
+    .filter(r => r.isValid)
+    .map(r => ({ ...r.source, validated: true }));
+  
+  console.log(`[RegulationTracker] URL validation: ${validSources.length}/${sources.length} sources valid`);
+  
+  return validSources;
+}
+
+// ============================================================================
+// CACHE FUNCTIONS
+// ============================================================================
+
+function normalizeLocationKey(city: string, state: string): string {
+  return `${city.toLowerCase().trim()}_${state.toLowerCase().trim()}`.replace(/[^a-z0-9_]/g, '');
+}
+
+async function getCachedRegulation(city: string, state: string): Promise<RegulationSearchResult | null> {
+  try {
+    const locationKey = normalizeLocationKey(city, state);
+    const now = new Date();
+    
+    const db = await getDb();
+    if (!db) return null;
+    
+    const cached = await db.select()
+      .from(regulationCache)
+      .where(
+        and(
+          eq(regulationCache.locationKey, locationKey),
+          gt(regulationCache.expiresAt, now)
+        )
+      )
+      .limit(1);
+    
+    if (cached.length > 0) {
+      const record = cached[0];
+      console.log(`[RegulationTracker] Cache hit for ${city}, ${state}`);
+      return {
+        city: record.city,
+        state: record.state,
+        status: record.status as any,
+        yesNoSummary: record.yesNoSummary || '',
+        summary: record.summary || '',
+        simplifiedSummary: record.simplifiedSummary || '',
+        keyRequirements: (record.keyRequirements as string[]) || [],
+        permitRequired: record.permitRequired === 1,
+        primaryResidenceOnly: record.primaryResidenceOnly === 1,
+        maxNightsPerYear: record.maxNightsPerYear || undefined,
+        registrationFee: record.registrationFee || undefined,
+        occupancyTax: record.occupancyTax || undefined,
+        zoningRestrictions: record.zoningRestrictions || undefined,
+        sources: (record.sources as RegulationSource[]) || [],
+        lastUpdated: record.updatedAt.toISOString(),
+        confidence: (record.confidence as any) || 'medium',
+        warnings: (record.warnings as string[]) || [],
+        fromCache: true
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[RegulationTracker] Cache lookup error:', error);
+    return null;
+  }
+}
+
+async function cacheRegulation(result: RegulationSearchResult): Promise<void> {
+  try {
+    const locationKey = normalizeLocationKey(result.city, result.state);
+    const expiresAt = new Date(Date.now() + CACHE_TTL_MS);
+    
+    const db = await getDb();
+    if (!db) return;
+    
+    await db.delete(regulationCache)
+      .where(eq(regulationCache.locationKey, locationKey));
+    
+    await db.insert(regulationCache).values({
+      locationKey,
+      city: result.city,
+      state: result.state,
+      status: result.status,
+      yesNoSummary: result.yesNoSummary,
+      summary: result.summary,
+      simplifiedSummary: result.simplifiedSummary,
+      keyRequirements: result.keyRequirements,
+      permitRequired: result.permitRequired ? 1 : 0,
+      primaryResidenceOnly: result.primaryResidenceOnly ? 1 : 0,
+      maxNightsPerYear: result.maxNightsPerYear || null,
+      registrationFee: result.registrationFee || null,
+      occupancyTax: result.occupancyTax || null,
+      zoningRestrictions: result.zoningRestrictions || null,
+      sources: result.sources,
+      confidence: result.confidence,
+      warnings: result.warnings,
+      expiresAt
+    });
+    
+    console.log(`[RegulationTracker] Cached regulation for ${result.city}, ${result.state}`);
+  } catch (error) {
+    console.error('[RegulationTracker] Cache save error:', error);
+  }
+}
+
+// ============================================================================
+// SOURCE CLASSIFICATION
+// ============================================================================
+
+function isOfficialSource(url: string, title: string): boolean {
+  const urlLower = url.toLowerCase();
+  const titleLower = title.toLowerCase();
+  
+  // Official government domains - check both URL and title
+  if (urlLower.includes('.gov')) return true;
+  if (titleLower.includes('.gov')) return true;
+  if (titleLower.includes('gov.')) return true;
+  
+  // Check title for specific government domain patterns
+  const govDomainPatterns = [
+    /[a-z]+gov\.org/i,
+    /[a-z]+gov\.com/i,
+    /city[a-z]+\.org/i,
+    /county[a-z]+\.org/i,
+    /denvergov/i,
+    /stlouis-mo/i,
+    /stl\.gov/i,
+  ];
+  
+  for (const pattern of govDomainPatterns) {
+    if (pattern.test(titleLower) || pattern.test(urlLower)) return true;
+  }
+  
+  // Common official municipal patterns
+  const officialPatterns = [
+    /cityof[a-z]+\.(com|org|net)/i,
+    /[a-z]+city\.(com|org|net)/i,
+    /[a-z]+-city\.(com|org|net)/i,
+    /[a-z]+county\.(com|org|net)/i,
+    /county[a-z]+\.(com|org|net)/i,
+    /[a-z]+\.municipal/i,
+    /town(of)?[a-z]+\.(com|org|net)/i,
+    /village(of)?[a-z]+\.(com|org|net)/i,
+  ];
+  
+  for (const pattern of officialPatterns) {
+    if (pattern.test(urlLower) || pattern.test(titleLower)) return true;
+  }
+  
+  // Check title for official indicators
+  const officialTitleKeywords = [
+    'official', 'city of', 'county of', 'town of', 'village of',
+    'municipal', 'government', 'city council', 'board of supervisors',
+    'ordinance', 'municipal code', 'city code'
+  ];
+  
+  for (const keyword of officialTitleKeywords) {
+    if (titleLower.includes(keyword)) return true;
+  }
+  
+  return false;
+}
+
+function isThirdPartyCommercial(url: string): boolean {
+  const urlLower = url.toLowerCase();
+  
+  const thirdPartyDomains = [
+    'allurahomes', 'vacationrentallicense', 'sdhouseguys', 'sandiegoshorttermrentals',
+    'cristineclark', 'avalara.com', 'bnbcalc.com', 'getchalet.com', 'chalet.com',
+    'hostcompliance', 'granicus', 'harmari', 'rentalscape',
+    'airbnb.com', 'vrbo.com', 'booking.com', 'expedia.com', 'homeaway.com',
+    'hostaway', 'guesty', 'lodgify', 'hostfully', 'uplisting', 'igms', 'ownerrez',
+    'hospitable', 'tokeet', 'smoobu', 'beds24', 'cloudbeds',
+    'airdna.co', 'mashvisor', 'awning', 'rabbu', 'alltherooms', 'pricelabs',
+    'realtor.com', 'zillow.com', 'redfin.com', 'trulia.com', 'homes.com',
+    'biggerpockets', 'roofstock', 'fundrise', 'arrived', 'lofty',
+    'avvo.com', 'lawyers.com', 'findlaw.com', 'justia.com', 'nolo.com',
+    'wikipedia.org', 'reddit.com', 'quora.com', 'medium.com',
+    'yelp.com', 'tripadvisor.com', 'trustpilot.com',
+    'facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
+    'youtube.com', 'tiktok.com', 'pinterest.com',
+    'strwise', 'strtips', 'airbnbsecrets', 'learnbnb', 'getpaidforyourpad',
+    'hosttools', 'beyondpricing', 'wheelhouse', 'usewheelhouse'
+  ];
+  
+  for (const domain of thirdPartyDomains) {
+    if (urlLower.includes(domain)) return true;
+  }
+  
+  return false;
+}
+
+function isNewsSource(url: string, title: string): boolean {
+  const urlLower = url.toLowerCase();
+  const titleLower = title.toLowerCase();
+  
+  const newsIndicators = [
+    'news', 'times', 'tribune', 'herald', 'post', 'journal', 'gazette',
+    'press', 'daily', 'weekly', 'chronicle', 'observer', 'reporter',
+    'patch.com', 'local', 'ktvb', 'kusa', 'ksdk', 'kmov', 'ktvi'
+  ];
+  
+  for (const indicator of newsIndicators) {
+    if (urlLower.includes(indicator) || titleLower.includes(indicator)) return true;
+  }
+  
+  return false;
+}
+
+// ============================================================================
+// GEMINI API CALL
+// ============================================================================
+
 async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Promise<{
   text: string;
   sources: RegulationSource[];
@@ -78,7 +541,7 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
@@ -87,7 +550,7 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
         parts: [{ text: `System instruction: ${systemPrompt}` }]
       }, {
         role: "model",
-        parts: [{ text: "I understand. I will follow these instructions." }]
+        parts: [{ text: "Understood. I will follow these instructions." }]
       }] : []),
       {
         role: "user",
@@ -98,7 +561,7 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
       google_search: {}
     }],
     generationConfig: {
-      temperature: 0.2,
+      temperature: 0.1,
       maxOutputTokens: 8192,
     }
   };
@@ -123,248 +586,64 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
     throw new Error(`Gemini API error: ${data.error.message}`);
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const candidates = data.candidates;
+  if (!candidates || candidates.length === 0) {
+    console.error('[Gemini API] No candidates in response');
+    return { text: '', sources: [] };
+  }
+  
+  const content = candidates[0]?.content;
+  const parts = content?.parts;
+  const text = parts?.[0]?.text || "";
   
   // Extract sources from grounding metadata
   const sources: RegulationSource[] = [];
   const groundingChunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const seenUrls = new Set<string>();
+  
+  console.log('[RegulationTracker] Grounding chunks found:', groundingChunks.length);
   
   for (const chunk of groundingChunks) {
     if (chunk.web?.uri && chunk.web?.title) {
+      const sourceUrl = chunk.web.uri;
+      const sourceTitle = chunk.web.title;
+      
+      if (seenUrls.has(sourceUrl)) continue;
+      seenUrls.add(sourceUrl);
+      
+      // Skip third-party commercial sites
+      if (isThirdPartyCommercial(sourceUrl)) {
+        continue;
+      }
+      
+      const isOfficial = isOfficialSource(sourceUrl, sourceTitle);
+      const isNews = isNewsSource(sourceUrl, sourceTitle);
+      
       sources.push({
-        title: chunk.web.title,
-        url: chunk.web.uri,
-        type: chunk.web.uri.includes('.gov') ? 'official' : 
-              chunk.web.uri.includes('news') || chunk.web.uri.includes('article') ? 'news' : 'third_party'
+        title: sourceTitle,
+        url: sourceUrl,
+        type: isOfficial ? 'official' : isNews ? 'news' : 'third_party',
+        isOfficial
       });
     }
   }
+  
+  // Sort sources: official first, then news, then others
+  sources.sort((a, b) => {
+    if (a.isOfficial && !b.isOfficial) return -1;
+    if (!a.isOfficial && b.isOfficial) return 1;
+    if (a.type === 'news' && b.type === 'third_party') return -1;
+    if (a.type === 'third_party' && b.type === 'news') return 1;
+    return 0;
+  });
 
   return { text, sources };
 }
 
-// Call Gemini without search for simplification
-async function callGeminiSimple(prompt: string, systemPrompt?: string): Promise<string> {
-  const apiKey = ENV.geminiApiKey;
-  
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
-  }
+// ============================================================================
+// STATE ABBREVIATION HELPER
+// ============================================================================
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-  const requestBody = {
-    contents: [
-      ...(systemPrompt ? [{
-        role: "user",
-        parts: [{ text: `System instruction: ${systemPrompt}` }]
-      }, {
-        role: "model",
-        parts: [{ text: "I understand. I will follow these instructions." }]
-      }] : []),
-      {
-        role: "user",
-        parts: [{ text: prompt }]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.3,
-      maxOutputTokens: 4096,
-    }
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const data: GeminiResponse = await response.json();
-  
-  if (data.error) {
-    throw new Error(`Gemini API error: ${data.error.message}`);
-  }
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-}
-
-// Use Gemini with Google Search to research and simplify regulations
-export async function getRegulationInfo(
-  city: string,
-  state: string
-): Promise<RegulationSearchResult> {
-  const stateAbbrev = getStateAbbreviation(state) || state;
-  
-  // Use Gemini with Google Search grounding to find CURRENT regulations
-  const researchPrompt = `Search for the CURRENT (2024-2026) short-term rental (Airbnb/VRBO) regulations for ${city}, ${state}.
-
-IMPORTANT: I need REAL-TIME, UP-TO-DATE information. Search for:
-- "${city} ${state} short term rental regulations 2024 2025"
-- "${city} ${state} Airbnb ordinance"
-- "${city} ${state} STR permit requirements"
-- Official city/county government sources
-
-Find and report:
-1. Current regulation STATUS - Is STR allowed, restricted, banned, paused, or pending?
-2. Are permits/licenses required? What type?
-3. Primary residence requirements (must owner live there?)
-4. Night limits per year (if any)
-5. Registration/permit fees
-6. Occupancy/lodging taxes
-7. Zoning restrictions
-8. ANY recent changes, pauses, moratoriums, or pending legislation
-9. Enforcement status - is the city actively enforcing?
-
-Format your response as JSON:
-{
-  "status": "allowed|restricted|banned|paused|pending|unknown",
-  "permitRequired": true/false,
-  "permitType": "description of permit type if required",
-  "primaryResidenceOnly": true/false,
-  "maxNightsPerYear": number or null,
-  "registrationFee": "amount or 'None' or 'Unknown'",
-  "occupancyTax": "percentage or 'None' or 'Unknown'",
-  "zoningRestrictions": "description or 'None'",
-  "keyRequirements": ["requirement 1", "requirement 2", ...],
-  "summary": "2-3 sentence professional summary of the current regulations",
-  "recentChanges": "any recent changes, pauses, moratoriums, or pending legislation",
-  "enforcementStatus": "active|paused|limited|unknown",
-  "confidence": "high|medium|low",
-  "warnings": ["any important warnings or caveats"]
-}`;
-
-  try {
-    console.log(`[RegulationTracker] Searching regulations for ${city}, ${state}...`);
-    
-    // Call Gemini with Google Search grounding
-    const { text: researchText, sources } = await callGeminiWithSearch(
-      researchPrompt,
-      "You are an expert researcher on short-term rental regulations. Use Google Search to find the most current, accurate information from official government sources. Be specific about dates and cite your sources."
-    );
-
-    console.log('[RegulationTracker] Research response received, parsing...');
-    
-    // Extract JSON from the response
-    let researchData: any = {};
-    try {
-      // Try to find JSON in the response
-      const jsonMatch = researchText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        researchData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
-      }
-    } catch (parseError) {
-      console.error('[RegulationTracker] Failed to parse JSON, using defaults:', parseError);
-      // If parsing fails, try to extract key information from text
-      researchData = {
-        status: researchText.toLowerCase().includes('banned') ? 'banned' :
-                researchText.toLowerCase().includes('paused') ? 'paused' :
-                researchText.toLowerCase().includes('restricted') ? 'restricted' :
-                researchText.toLowerCase().includes('allowed') ? 'allowed' : 'unknown',
-        permitRequired: researchText.toLowerCase().includes('permit') || researchText.toLowerCase().includes('license'),
-        primaryResidenceOnly: researchText.toLowerCase().includes('primary residence'),
-        maxNightsPerYear: null,
-        registrationFee: 'Unknown',
-        occupancyTax: 'Unknown',
-        zoningRestrictions: 'Unknown',
-        keyRequirements: [],
-        summary: researchText.slice(0, 500),
-        recentChanges: '',
-        confidence: 'low',
-        warnings: ['Could not parse structured data. Please verify with official sources.']
-      };
-    }
-
-    // Now simplify to 3rd-grade reading level
-    const simplifyPrompt = `Take this short-term rental regulation information and rewrite it so a 3rd grader (8-9 year old) can understand it. Use simple words, short sentences, and explain any confusing terms.
-
-City: ${city}, ${state}
-Status: ${researchData.status}
-Summary: "${researchData.summary || 'No summary available'}"
-
-Key requirements:
-${(researchData.keyRequirements || []).map((r: string, i: number) => `${i + 1}. ${r}`).join('\n') || 'None listed'}
-
-Recent changes: ${researchData.recentChanges || 'None'}
-
-Write a simple explanation (3-5 sentences) that covers:
-1. Can you rent your home to visitors? (yes/no/sometimes)
-2. What do you need to do first? (permits, registration)
-3. Are there any limits? (how many nights, where)
-4. How much does it cost? (fees, taxes)
-
-Use words like "you", "your home", "visitors", "permission", "rules". Avoid legal jargon. Be friendly and clear.`;
-
-    const simplifiedSummary = await callGeminiSimple(
-      simplifyPrompt,
-      "You are a teacher who explains complex topics to young children. Use simple words, short sentences, and friendly language. Never use legal jargon."
-    );
-
-    console.log('[RegulationTracker] Simplification complete');
-
-    return {
-      city,
-      state: stateAbbrev,
-      status: researchData.status || 'unknown',
-      summary: researchData.summary || `Regulations for ${city}, ${state} - please verify with official sources.`,
-      simplifiedSummary: simplifiedSummary || `We found some rules about renting your home in ${city}. Please check with the city to make sure you understand them.`,
-      keyRequirements: researchData.keyRequirements || [],
-      permitRequired: researchData.permitRequired || false,
-      primaryResidenceOnly: researchData.primaryResidenceOnly || false,
-      maxNightsPerYear: researchData.maxNightsPerYear,
-      registrationFee: researchData.registrationFee || 'Unknown',
-      occupancyTax: researchData.occupancyTax || 'Unknown',
-      zoningRestrictions: researchData.zoningRestrictions || 'Unknown',
-      sources: sources.length > 0 ? sources : [{
-        title: `${city} Official Website`,
-        url: `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} short term rental regulations official`)}`,
-        type: 'third_party'
-      }],
-      lastUpdated: new Date().toISOString(),
-      confidence: researchData.confidence || 'medium',
-      warnings: [
-        ...(researchData.warnings || []),
-        researchData.recentChanges ? `Recent changes: ${researchData.recentChanges}` : null,
-        "This information is for educational purposes only. Always verify with official city/county sources before making investment decisions."
-      ].filter(Boolean) as string[]
-    };
-  } catch (error) {
-    console.error('[RegulationTracker] Error fetching regulations:', error);
-    
-    return {
-      city,
-      state: stateAbbrev,
-      status: 'unknown',
-      summary: `Unable to retrieve current regulations for ${city}, ${state}. Please check official city/county websites.`,
-      simplifiedSummary: `We couldn't find the rules for renting your home in ${city}. You should ask the city government directly.`,
-      keyRequirements: [],
-      permitRequired: false,
-      primaryResidenceOnly: false,
-      sources: [{
-        title: `Search for ${city} STR Regulations`,
-        url: `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} short term rental regulations`)}`,
-        type: 'third_party'
-      }],
-      lastUpdated: new Date().toISOString(),
-      confidence: 'low',
-      warnings: [
-        "Could not retrieve regulation data. Please verify with official sources.",
-        "Contact your local city/county government for accurate information.",
-        error instanceof Error ? `Error: ${error.message}` : "Unknown error occurred"
-      ]
-    };
-  }
-}
-
-// Helper function to get state abbreviation
 function getStateAbbreviation(state: string): string {
   const stateMap: Record<string, string> = {
     'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
@@ -383,11 +662,284 @@ function getStateAbbreviation(state: string): string {
   };
   
   const normalized = state.toLowerCase().trim();
+  if (normalized.length === 2) return normalized.toUpperCase();
+  return stateMap[normalized] || state;
+}
+
+// ============================================================================
+// MAIN FUNCTION - Get Regulation Info
+// ============================================================================
+
+/**
+ * Get regulation info for a location
+ * Accepts: city/state, full address, or Redfin/Zillow URL
+ */
+export async function getRegulationInfo(
+  city: string,
+  state: string
+): Promise<RegulationSearchResult> {
+  const stateAbbrev = getStateAbbreviation(state) || state;
   
-  // If already an abbreviation, return as-is
-  if (normalized.length === 2) {
-    return normalized.toUpperCase();
+  // Check cache first
+  const cached = await getCachedRegulation(city, stateAbbrev);
+  if (cached) {
+    return cached;
   }
   
-  return stateMap[normalized] || state;
+  console.log(`[RegulationTracker] Cache miss - fetching fresh data for ${city}, ${stateAbbrev}`);
+
+  // =========================================================================
+  // PTCF-OPTIMIZED PROMPT
+  // Persona: Regulatory research specialist
+  // Task: Research and structure STR regulations
+  // Context: Official government sources, specific city/state
+  // Format: JSON with specific fields
+  // =========================================================================
+  
+  const researchPrompt = `You are a regulatory research specialist analyzing short-term rental laws.
+
+TASK: Research the current short-term rental (STR/Airbnb/VRBO) regulations for ${city}, ${stateAbbrev}.
+
+SEARCH STRATEGY:
+1. Search: "${city} ${stateAbbrev} short term rental ordinance site:gov"
+2. Search: "${city} ${stateAbbrev} STR permit requirements"
+3. Search: "${city} municipal code vacation rental"
+4. Look for official city/county government websites (.gov domains)
+
+CONTEXT:
+- Focus ONLY on official government sources
+- Distinguish between "permit required" (normal) vs "primary residence required" (restrictive)
+- Note any recent ordinance changes, court orders, or moratoriums
+- If enforcement is paused or regulations are under legal challenge, note this
+
+OUTPUT FORMAT - Respond with ONLY this JSON structure:
+{
+  "status": "allowed_with_permit",
+  "yesNoSummary": "Yes, short-term rentals are allowed in ${city} with a permit.",
+  "permitRequired": true,
+  "primaryResidenceOnly": false,
+  "maxNightsPerYear": null,
+  "registrationFee": "$150",
+  "occupancyTax": "10%",
+  "zoningRestrictions": "Allowed in residential zones with permit",
+  "keyRequirements": [
+    "Obtain STR permit from city",
+    "Pass safety inspection",
+    "Provide local contact info"
+  ],
+  "summary": "Factual 2-3 sentence summary of regulations.",
+  "recentChanges": "Any recent ordinance changes or legal challenges",
+  "confidence": "high",
+  "warnings": ["Important caveats if any"],
+  "officialSourceUrls": ["https://city.gov/str-info"]
+}
+
+STATUS OPTIONS (choose most accurate):
+- "allowed" = Minimal restrictions, no permit needed
+- "allowed_with_permit" = Permit required, standard process
+- "restricted" = Significant limits (zones, caps, or residency requirements)
+- "limited" = Heavy restrictions but possible
+- "paused" = Regulations suspended/moratorium
+- "pending" = New regulations under consideration
+- "banned" = Not permitted
+
+CRITICAL RULES:
+1. primaryResidenceOnly = true ONLY if owner MUST live there as main home
+2. If investors CAN rent properties they don't live in, set primaryResidenceOnly = false
+3. Needing a permit is NORMAL - don't frame it negatively
+4. Include actual .gov URLs you found
+5. If uncertain about any fact, include it in warnings`;
+
+  const systemPrompt = `You are a regulatory research specialist. Your role is to provide accurate, factual information about short-term rental regulations from official government sources. Be precise and objective. If you cannot verify a fact from an official source, say so. Never make assumptions about regulations.`;
+
+  try {
+    console.log(`[RegulationTracker] Searching regulations for ${city}, ${state}...`);
+    
+    const { text: researchText, sources } = await callGeminiWithSearch(
+      researchPrompt,
+      systemPrompt
+    );
+
+    console.log('[RegulationTracker] Response length:', researchText.length);
+    console.log('[RegulationTracker] Sources found:', sources.length);
+    
+    // Extract JSON from the response
+    let researchData: any = {};
+    try {
+      const jsonMatch = researchText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        researchData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in response");
+      }
+    } catch (parseError) {
+      console.error('[RegulationTracker] Failed to parse JSON:', parseError);
+      researchData = {
+        status: 'unknown',
+        yesNoSummary: `Please check official ${city} government sources for current STR regulations.`,
+        permitRequired: false,
+        primaryResidenceOnly: false,
+        keyRequirements: [],
+        summary: `Unable to parse regulation data for ${city}, ${state}.`,
+        confidence: 'low',
+        warnings: ['Could not parse structured data. Please verify with official sources.']
+      };
+    }
+
+    // Create simplified summary
+    const simplifiedSummary = createSimplifiedSummary(researchData, city, state);
+
+    // Combine sources from grounding metadata with any URLs in the response
+    const allSources = [...sources];
+    if (researchData.officialSourceUrls && Array.isArray(researchData.officialSourceUrls)) {
+      for (const url of researchData.officialSourceUrls) {
+        if (typeof url === 'string' && url.startsWith('http') && !allSources.some(s => s.url === url)) {
+          allSources.push({
+            title: url.includes('.gov') ? `${city} Government - STR Regulations` : `${city} Official STR Regulations`,
+            url,
+            type: 'official',
+            isOfficial: url.includes('.gov')
+          });
+        }
+      }
+    }
+    
+    // Filter to official and news sources only
+    const filteredSources = allSources.filter(s => s.isOfficial || s.type === 'news');
+    
+    let finalSources = filteredSources.length > 0 
+      ? filteredSources.slice(0, 6)
+      : allSources.slice(0, 3);
+    
+    // Validate URLs to filter out 404 errors
+    if (finalSources.length > 0) {
+      console.log('[RegulationTracker] Validating source URLs...');
+      finalSources = await validateSources(finalSources);
+    }
+
+    const result: RegulationSearchResult = {
+      city,
+      state: stateAbbrev,
+      status: researchData.status || 'unknown',
+      yesNoSummary: researchData.yesNoSummary || `Check official ${city} sources for current STR regulations.`,
+      summary: researchData.summary || `Regulations for ${city}, ${state} - please verify with official sources.`,
+      simplifiedSummary,
+      keyRequirements: researchData.keyRequirements || [],
+      permitRequired: researchData.permitRequired || false,
+      primaryResidenceOnly: researchData.primaryResidenceOnly || false,
+      maxNightsPerYear: researchData.maxNightsPerYear,
+      registrationFee: researchData.registrationFee || 'Unknown',
+      occupancyTax: researchData.occupancyTax || 'Unknown',
+      zoningRestrictions: researchData.zoningRestrictions || 'Unknown',
+      sources: finalSources.length > 0 ? finalSources : [{
+        title: `Search ${city} STR Regulations`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} short term rental regulations site:gov`)}`,
+        type: 'official',
+        isOfficial: false
+      }],
+      lastUpdated: new Date().toISOString(),
+      confidence: researchData.confidence || 'medium',
+      warnings: [
+        ...(researchData.warnings || []),
+        researchData.recentChanges ? `Recent changes: ${researchData.recentChanges}` : null,
+        "Always verify with official city/county sources before making investment decisions."
+      ].filter(Boolean) as string[]
+    };
+
+    // Cache the result
+    await cacheRegulation(result);
+
+    return result;
+  } catch (error) {
+    console.error('[RegulationTracker] Error:', error);
+    
+    return {
+      city,
+      state: stateAbbrev,
+      status: 'unknown',
+      yesNoSummary: `Unable to retrieve regulations for ${city}. Please check official city/county websites.`,
+      summary: `Unable to retrieve current regulations for ${city}, ${state}. Please check official city/county websites.`,
+      simplifiedSummary: `We couldn't find the current rules for ${city}. Please check the city's official website or contact their planning department.`,
+      keyRequirements: [],
+      permitRequired: false,
+      primaryResidenceOnly: false,
+      sources: [{
+        title: `Search ${city} STR Regulations`,
+        url: `https://www.google.com/search?q=${encodeURIComponent(`${city} ${state} short term rental regulations site:gov`)}`,
+        type: 'official',
+        isOfficial: false
+      }],
+      lastUpdated: new Date().toISOString(),
+      confidence: 'low',
+      warnings: [
+        "Could not retrieve regulation data. Please verify with official sources.",
+        error instanceof Error ? `Error: ${error.message}` : "Unknown error occurred"
+      ]
+    };
+  }
+}
+
+// ============================================================================
+// SIMPLIFIED SUMMARY - Professional but clear
+// ============================================================================
+
+function createSimplifiedSummary(data: any, city: string, state: string): string {
+  const parts: string[] = [];
+  
+  // Opening statement based on status
+  switch (data.status) {
+    case 'allowed':
+      parts.push(`Short-term rentals are allowed in ${city} with minimal restrictions.`);
+      break;
+    case 'allowed_with_permit':
+      parts.push(`Short-term rentals are allowed in ${city} with a permit.`);
+      break;
+    case 'paused':
+      parts.push(`Short-term rental regulations in ${city} are currently paused or under review.`);
+      break;
+    case 'banned':
+      parts.push(`Short-term rentals are currently not permitted in ${city}.`);
+      break;
+    case 'restricted':
+      parts.push(`Short-term rentals in ${city} have significant restrictions.`);
+      break;
+    case 'limited':
+      parts.push(`Short-term rentals in ${city} are heavily regulated but possible.`);
+      break;
+    case 'pending':
+      parts.push(`${city} is currently developing new short-term rental regulations.`);
+      break;
+    default:
+      parts.push(`Here's what we found about short-term rentals in ${city}.`);
+  }
+  
+  // Permit requirement
+  if (data.permitRequired) {
+    parts.push(`You'll need to get a permit to operate legally.`);
+  }
+  
+  // Primary residence - only mention if it's a restriction
+  if (data.primaryResidenceOnly) {
+    parts.push(`Important: You must live in the property as your primary residence.`);
+  }
+  
+  // Key requirements summary
+  if (data.keyRequirements && data.keyRequirements.length > 0) {
+    parts.push(`There are ${data.keyRequirements.length} main requirements to follow.`);
+  }
+  
+  // Fees
+  if (data.registrationFee && data.registrationFee !== 'Unknown') {
+    parts.push(`The permit fee is ${data.registrationFee}.`);
+  }
+  
+  // Recent changes
+  if (data.recentChanges) {
+    parts.push(`Note: ${data.recentChanges}`);
+  }
+  
+  // Closing
+  parts.push(`We recommend verifying these details with the official ${city} government website before proceeding.`);
+  
+  return parts.join(' ');
 }

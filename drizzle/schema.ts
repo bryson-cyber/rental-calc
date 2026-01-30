@@ -762,3 +762,54 @@ export const favoriteListings = mysqlTable("favorite_listings", {
 
 export type FavoriteListing = typeof favoriteListings.$inferSelect;
 export type InsertFavoriteListing = typeof favoriteListings.$inferInsert;
+
+
+/**
+ * Regulation Cache table for storing STR regulation lookup results
+ * Caches Gemini API responses to reduce API calls and improve response time
+ * TTL: 7 days (regulations don't change frequently)
+ */
+export const regulationCache = mysqlTable("regulation_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Location key (normalized city + state)
+  locationKey: varchar("locationKey", { length: 255 }).notNull().unique(),
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  
+  // Regulation status
+  status: varchar("status", { length: 50 }).notNull(), // allowed, allowed_with_permit, restricted, etc.
+  
+  // Summaries
+  yesNoSummary: text("yesNoSummary"),
+  summary: text("summary"),
+  simplifiedSummary: text("simplifiedSummary"),
+  
+  // Key requirements (JSON array)
+  keyRequirements: json("keyRequirements"),
+  
+  // Regulation details
+  permitRequired: int("permitRequired").default(0), // 0 = false, 1 = true
+  primaryResidenceOnly: int("primaryResidenceOnly").default(0),
+  maxNightsPerYear: int("maxNightsPerYear"),
+  registrationFee: varchar("registrationFee", { length: 100 }),
+  occupancyTax: varchar("occupancyTax", { length: 100 }),
+  zoningRestrictions: text("zoningRestrictions"),
+  
+  // Sources (JSON array)
+  sources: json("sources"),
+  
+  // Confidence and warnings
+  confidence: varchar("confidence", { length: 20 }),
+  warnings: json("warnings"),
+  
+  // Cache metadata
+  expiresAt: timestamp("expiresAt").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RegulationCache = typeof regulationCache.$inferSelect;
+export type InsertRegulationCache = typeof regulationCache.$inferInsert;
