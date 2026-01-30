@@ -22,6 +22,7 @@ import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
 import { AIAdvisorStep } from '@/components/AIAdvisorStep';
+import { RegulationTrackerStep } from '@/components/RegulationTrackerStep';
 import PropertyCard from '@/components/PropertyCard';
 import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
@@ -333,7 +334,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore';
+type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore';
 
 export default function LeadMagnet() {
   // Auth state for login requirement
@@ -1631,6 +1632,13 @@ export default function LeadMagnet() {
       icon: BookOpen,
       color: "from-violet-500 to-purple-500"
     },
+    regulations: {
+      title: "Check Regulations",
+      subtitle: "See if STRs are allowed in your target market",
+      job: "Answer: Can I legally operate here?",
+      icon: Shield,
+      color: "from-blue-500 to-indigo-500"
+    },
     prove: {
       title: "See Real Revenue",
       subtitle: "View actual Airbnb earnings data from any market",
@@ -1884,7 +1892,7 @@ export default function LeadMagnet() {
           
           {/* Job-Focused Tab Navigation */}
           <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {(['ebook', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+            {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
               const isActive = activeTab === tab;
@@ -1908,7 +1916,7 @@ export default function LeadMagnet() {
                       <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
                     <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
-                      {tab === 'ebook' ? 'Guide' : tab === 'opportunity' ? 'Find' : tab === 'prove' ? 'Step 1' : tab === 'find' ? 'Step 2' : tab === 'validate' ? 'Step 3' : tab === 'compare' ? 'Step 4' : tab === 'map' ? 'Step 5' : tab === 'market' ? 'Step 6' : tab === 'advisor' ? 'Step 7' : `Step ${index}`}
+                      {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'prove' ? 'Step 3' : tab === 'find' ? 'Step 4' : tab === 'validate' ? 'Step 5' : tab === 'compare' ? 'Step 6' : tab === 'map' ? 'Step 7' : tab === 'market' ? 'Step 8' : tab === 'advisor' ? 'Step 9' : `Step ${index}`}
                     </span>
                   </div>
                   <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
@@ -1964,6 +1972,13 @@ export default function LeadMagnet() {
                   setActiveTab('prove');
                 }} />
               </div>
+            )}
+            
+            {/* ============================================ */}
+            {/* REGULATIONS TAB */}
+            {/* ============================================ */}
+            {activeTab === 'regulations' && (
+              <RegulationTrackerStep />
             )}
             
             {/* ============================================ */}

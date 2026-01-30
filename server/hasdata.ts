@@ -622,11 +622,22 @@ export async function searchZillowListingsWithEnrichment(
     enrichmentOptions?.maxEnrichments || 20 // Increased default to enrich more properties
   );
   
+  // Deduplicate properties by ID to prevent React key errors
+  const seenIds = new Set<string>();
+  const deduplicatedProperties = enrichedProperties.filter(prop => {
+    if (seenIds.has(prop.id)) {
+      console.log(`[HasData] Removing duplicate property: ${prop.id}`);
+      return false;
+    }
+    seenIds.add(prop.id);
+    return true;
+  });
+  
   // Preserve the original pagination info, don't override totalResults
   // The totalResults should reflect the total available in the market, not just what we have
   return {
     ...response,
-    properties: enrichedProperties,
+    properties: deduplicatedProperties,
     // Keep original totalResults for pagination calculation
   };
 }

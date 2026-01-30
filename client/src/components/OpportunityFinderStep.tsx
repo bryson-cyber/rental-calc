@@ -962,53 +962,123 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
       {/* Results */}
       {hasSearched && (
         <div className="space-y-4">
-          {/* Results Header with Sorting and Per-Page Selector */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
-              {isSearching ? (
-                'Searching...'
-              ) : (
-                <>
-                  Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{sortedProperties.length}</span> loaded
-                  {totalResults > sortedProperties.length && (
-                    <span className="text-xs ml-1">({totalResults} total available)</span>
-                  )}
-                </>
+          {/* Results Header with Sorting, Per-Page Selector, and Pagination */}
+          <div className="flex flex-col gap-4">
+            {/* Top Row: Count and Controls */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
+                {isSearching ? (
+                  'Searching...'
+                ) : (
+                  <>
+                    Showing <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{startIndex + 1}-{Math.min(endIndex, sortedProperties.length)}</span> of <span className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>{totalResults > 0 ? totalResults : sortedProperties.length}</span> properties
+                  </>
+                )}
+              </p>
+              
+              {/* Controls Row */}
+              {sortedProperties.length > 0 && (
+                <div className="flex items-center gap-4 flex-wrap">
+                  {/* Per-Page Selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Show:</span>
+                    <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setDisplayPage(1); }}>
+                      <SelectTrigger className="w-[80px] h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Sorting Dropdown */}
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-[180px] h-9 text-sm">
+                        <SelectValue placeholder="Sort by..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SORT_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               )}
-            </p>
+            </div>
             
-            {/* Controls Row */}
-            {sortedProperties.length > 0 && (
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* Per-Page Selector */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>Show:</span>
-                  <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setDisplayPage(1); }}>
-                    <SelectTrigger className="w-[80px] h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
+            {/* Pagination Controls - At Top */}
+            {sortedProperties.length > 0 && (totalPages > 1 || hasMore) && (
+              <div className="flex items-center justify-center gap-3 py-2 px-4 rounded-xl" style={{ backgroundColor: 'oklch(0.97 0 0)', border: '1px solid oklch(0.92 0 0)' }}>
+                {/* Previous Button */}
+                <Button
+                  onClick={() => setDisplayPage(Math.max(1, displayPage - 1))}
+                  disabled={displayPage === 1}
+                  variant="outline"
+                  size="sm"
+                  className="px-3"
+                  style={{ borderRadius: '8px' }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, index) => (
+                    page === 'ellipsis' ? (
+                      <span key={`ellipsis-${index}`} className="px-2 text-sm" style={{ color: 'oklch(0.55 0 0)' }}>...</span>
+                    ) : (
+                      <Button
+                        key={page}
+                        onClick={() => setDisplayPage(page)}
+                        variant={displayPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        style={{ 
+                          borderRadius: '8px',
+                          backgroundColor: displayPage === page ? 'oklch(0.55 0.14 75)' : undefined,
+                        }}
+                      >
+                        {page}
+                      </Button>
+                    )
+                  ))}
                 </div>
                 
-                {/* Sorting Dropdown */}
-                <div className="flex items-center gap-2">
-                  <ArrowUpDown className="w-4 h-4" style={{ color: 'oklch(0.55 0 0)' }} />
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] h-9 text-sm">
-                      <SelectValue placeholder="Sort by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Next Button - Auto-loads more when at end of loaded results */}
+                <Button
+                  onClick={() => {
+                    const nextDisplayPage = displayPage + 1;
+                    if (nextDisplayPage > totalPages && hasMore) {
+                      // Need to load more data from API
+                      handleLoadMore();
+                      // After loading, we'll be on the new page
+                    } else if (nextDisplayPage <= totalPages) {
+                      setDisplayPage(nextDisplayPage);
+                    }
+                  }}
+                  disabled={displayPage === totalPages && !hasMore}
+                  variant="outline"
+                  size="sm"
+                  className="px-3"
+                  style={{ borderRadius: '8px' }}
+                >
+                  {isLoadingMore ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </Button>
+                
+                {/* Page Info */}
+                <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0 0)' }}>
+                  Page {displayPage} of {hasMore ? `${totalPages}+` : totalPages}
+                </span>
               </div>
             )}
           </div>
@@ -1031,7 +1101,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
           ) : (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {displayedProperties.map((property) => {
+                {displayedProperties.map((property, index) => {
                   const validation = validationResults[property.id];
                   const isValidating = validatingId === property.id;
                   const hasAnalysis = validation?.success && validation?.projection;
@@ -1046,7 +1116,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                   
                   return (
                     <motion.div
-                      key={property.id}
+                      key={`${property.id}-${index}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
@@ -1618,85 +1688,7 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                 })}
               </div>
               
-              {/* Pagination Controls */}
-              {sortedProperties.length > 0 && (
-                <div className="flex flex-col items-center gap-4 pt-6">
-                  {/* Page Navigation */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-2">
-                      {/* Previous Button */}
-                      <Button
-                        onClick={() => setDisplayPage(Math.max(1, displayPage - 1))}
-                        disabled={displayPage === 1}
-                        variant="outline"
-                        size="sm"
-                        className="px-3"
-                        style={{ borderRadius: '8px' }}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </Button>
-                      
-                      {/* Page Numbers */}
-                      <div className="flex items-center gap-1">
-                        {getPageNumbers().map((page, index) => (
-                          page === 'ellipsis' ? (
-                            <span key={`ellipsis-${index}`} className="px-2 text-sm" style={{ color: 'oklch(0.55 0 0)' }}>...</span>
-                          ) : (
-                            <Button
-                              key={page}
-                              onClick={() => setDisplayPage(page)}
-                              variant={displayPage === page ? 'default' : 'outline'}
-                              size="sm"
-                              className="w-9 h-9 p-0"
-                              style={{ 
-                                borderRadius: '8px',
-                                backgroundColor: displayPage === page ? 'oklch(0.55 0.14 75)' : undefined,
-                              }}
-                            >
-                              {page}
-                            </Button>
-                          )
-                        ))}
-                      </div>
-                      
-                      {/* Next Button */}
-                      <Button
-                        onClick={() => setDisplayPage(Math.min(totalPages, displayPage + 1))}
-                        disabled={displayPage === totalPages}
-                        variant="outline"
-                        size="sm"
-                        className="px-3"
-                        style={{ borderRadius: '8px' }}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {/* Load More from API */}
-                  {hasMore && (
-                    <Button
-                      onClick={handleLoadMore}
-                      disabled={isLoadingMore}
-                      variant="outline"
-                      className="px-8"
-                      style={{ borderRadius: '980px' }}
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Loading more from Zillow...
-                        </>
-                      ) : (
-                        <>
-                          Load More Properties ({totalResults - sortedProperties.length} more available)
-                          <ChevronRight className="w-4 h-4 ml-2" />
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
+
             </>
           )}
         </div>

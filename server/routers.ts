@@ -57,6 +57,7 @@ import { logActivity, ActionCategory, ActionType } from "./activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
+import { getRegulationInfo } from "./regulation-tracker";
 
 // Input validation schema for rental estimate
 const rentalizerInputSchema = z.object({
@@ -3817,6 +3818,22 @@ export const appRouter = router({
 
   // Opportunity Finder (Zillow + AirDNA + Coach Inayah)
   opportunityFinder: opportunityFinderRouter,
+
+  // Regulation Tracker - Real-time STR regulation lookup
+  regulationTracker: router({
+    getRegulations: publicProcedure
+      .input(z.object({
+        city: z.string().min(1, "City is required"),
+        state: z.string().min(1, "State is required"),
+      }))
+      .mutation(async ({ input }) => {
+        console.log(`[RegulationTracker] Looking up regulations for ${input.city}, ${input.state}`);
+        
+        const result = await getRegulationInfo(input.city, input.state);
+        
+        return result;
+      }),
+  }),
 
   // Admin portal for user activity tracking
   admin: adminRouter,

@@ -7825,3 +7825,41 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add results-per-page selector (20, 50, 100 properties per page)
 - [x] Client-side pagination for instant page navigation through loaded results
 - [x] Maintain pagination state when navigating between pages
+
+
+### Pagination UX Fix (Jan 30, 2026)
+- [x] Move page navigation controls to TOP of results (above property grid)
+- [x] Remove "Load More Properties" button
+- [x] Auto-load next page data when clicking Next (at end of loaded results)
+- [x] Seamless page-by-page navigation (1→2→3→4 etc.)
+
+### Regulation Tracker Tool (Jan 30, 2026)
+- [x] Create regulation-tracker.ts backend service
+- [x] Implement real-time regulation lookup using Gemini AI
+- [x] Integrate Gemini for 3rd-grade reading level simplification
+- [x] Show regulation status (allowed, restricted, banned, paused, pending)
+- [x] Display key requirements, permit info, fees, taxes
+- [x] Create RegulationTrackerStep UI component
+- [x] Position as 2nd tab (after ebook, before property search)
+- [x] Add to main navigation/tool list
+
+
+### Bug Fix - Duplicate Key Errors (Jan 30, 2026)
+- [x] Fix duplicate property key errors in Opportunity Finder
+- [x] Add deduplication at API level (hasdata.ts)
+- [x] Use unique key with index fallback in React component
+
+
+### Regulation Tracker Improvements (Jan 30, 2026)
+- [x] Add Google Places autocomplete (same as Find Property)
+- [x] Add smart jurisdiction resolution for small towns (find governing city/county)
+- [x] Reorder tools - Make Check Regulations Step 1
+- [x] Improve status messaging to be less scary:
+  - "Allowed with Permit" instead of "Restricted"
+  - "Allowed with Requirements" for cities with rules but doable
+  - "Limited" for significant restrictions
+  - "Not Allowed" for actual bans
+- [x] Update prompt to not scare people off when it's just a permit requirement
+- [x] Display clickable links to official government websites
+- [x] Show specific ordinance/code numbers when available
+- [x] Include date regulation was last updated on official site
