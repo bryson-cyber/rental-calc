@@ -343,6 +343,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
           {selectedMarket && !marketAdvice && (
             <div className="space-y-4">
               <Button
+                data-market-button
                 onClick={handleGenerateAnalysis}
                 disabled={standaloneMarketAdvisorMutation.isPending}
                 className="w-full btn-gold py-6 text-lg"

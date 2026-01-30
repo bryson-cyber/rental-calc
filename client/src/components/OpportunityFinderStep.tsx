@@ -1333,12 +1333,23 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link href={`/?tab=explore&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
-                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                          <Users className="w-4 h-4 mb-0.5" />
-                                          <span className="text-[9px] font-medium">Comps</span>
-                                        </button>
-                                      </Link>
+                                      <button 
+                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
+                                        onClick={() => {
+                                          const toolData = {
+                                            tab: 'explore',
+                                            location: `${property.city}, ${property.state}`,
+                                            bedrooms: property.bedrooms,
+                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                            timestamp: Date.now()
+                                          };
+                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
+                                          window.location.href = '/?tab=explore';
+                                        }}
+                                      >
+                                        <Users className="w-4 h-4 mb-0.5" />
+                                        <span className="text-[9px] font-medium">Comps</span>
+                                      </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-center">
                                       <p className="text-xs">See similar Airbnb listings in this area</p>
@@ -1349,12 +1360,25 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link href={`/?tab=map&location=${encodeURIComponent(property.city + ', ' + property.state)}&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&lat=${property.latitude || ''}&lng=${property.longitude || ''}&autoAnalyze=true`}>
-                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                          <MapIcon className="w-4 h-4 mb-0.5" />
-                                          <span className="text-[9px] font-medium">Map</span>
-                                        </button>
-                                      </Link>
+                                      <button 
+                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
+                                        onClick={() => {
+                                          const toolData = {
+                                            tab: 'map',
+                                            location: `${property.city}, ${property.state}`,
+                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                            bedrooms: property.bedrooms,
+                                            lat: property.latitude,
+                                            lng: property.longitude,
+                                            timestamp: Date.now()
+                                          };
+                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
+                                          window.location.href = '/?tab=map';
+                                        }}
+                                      >
+                                        <MapIcon className="w-4 h-4 mb-0.5" />
+                                        <span className="text-[9px] font-medium">Map</span>
+                                      </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-center">
                                       <p className="text-xs">View competition on a map around this property</p>
@@ -1365,12 +1389,24 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link href={`/?tab=prove&location=${encodeURIComponent(property.city + ', ' + property.state)}&bedrooms=${property.bedrooms}&autoAnalyze=true`}>
-                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                          <BarChart3 className="w-4 h-4 mb-0.5" />
-                                          <span className="text-[9px] font-medium">Revenue</span>
-                                        </button>
-                                      </Link>
+                                      <button 
+                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
+                                        onClick={() => {
+                                          const toolData = {
+                                            tab: 'prove',
+                                            location: `${property.city}, ${property.state}`,
+                                            bedrooms: property.bedrooms,
+                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                            zipCode: property.zipCode,
+                                            timestamp: Date.now()
+                                          };
+                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
+                                          window.location.href = '/?tab=prove';
+                                        }}
+                                      >
+                                        <BarChart3 className="w-4 h-4 mb-0.5" />
+                                        <span className="text-[9px] font-medium">Revenue</span>
+                                      </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-center">
                                       <p className="text-xs">See actual revenue data from hosts in this market</p>
@@ -1381,12 +1417,25 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link href={`/?tab=ai&address=${encodeURIComponent(property.address + ', ' + property.city + ', ' + property.state + ' ' + property.zipCode)}&bedrooms=${property.bedrooms}&bathrooms=${property.bathrooms}&rent=${property.price}&autoAnalyze=true`}>
-                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                          <Bot className="w-4 h-4 mb-0.5" />
-                                          <span className="text-[9px] font-medium">Ask AI</span>
-                                        </button>
-                                      </Link>
+                                      <button 
+                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
+                                        onClick={() => {
+                                          const toolData = {
+                                            tab: 'ai',
+                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                            bedrooms: property.bedrooms,
+                                            bathrooms: property.bathrooms,
+                                            rent: property.price,
+                                            location: `${property.city}, ${property.state}`,
+                                            timestamp: Date.now()
+                                          };
+                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
+                                          window.location.href = '/?tab=ai';
+                                        }}
+                                      >
+                                        <Bot className="w-4 h-4 mb-0.5" />
+                                        <span className="text-[9px] font-medium">Ask AI</span>
+                                      </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-center">
                                       <p className="text-xs">Get AI insights about this specific property</p>
@@ -1397,12 +1446,23 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link href={`/?tab=market-advisor&location=${encodeURIComponent(property.city + ', ' + property.state)}&autoAnalyze=true`}>
-                                        <button className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full">
-                                          <TrendingUp className="w-4 h-4 mb-0.5" />
-                                          <span className="text-[9px] font-medium">Trends</span>
-                                        </button>
-                                      </Link>
+                                      <button 
+                                        className="flex flex-col items-center py-2 text-slate-500 hover:text-amber-600 transition-colors w-full"
+                                        onClick={() => {
+                                          const toolData = {
+                                            tab: 'market-advisor',
+                                            location: `${property.city}, ${property.state}`,
+                                            address: `${property.address}, ${property.city}, ${property.state} ${property.zipCode}`,
+                                            zipCode: property.zipCode,
+                                            timestamp: Date.now()
+                                          };
+                                          localStorage.setItem('autoToolData', JSON.stringify(toolData));
+                                          window.location.href = '/?tab=market-advisor';
+                                        }}
+                                      >
+                                        <TrendingUp className="w-4 h-4 mb-0.5" />
+                                        <span className="text-[9px] font-medium">Trends</span>
+                                      </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-center">
                                       <p className="text-xs">See market trends and investment outlook for this area</p>

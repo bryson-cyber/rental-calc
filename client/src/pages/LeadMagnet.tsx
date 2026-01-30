@@ -332,7 +332,7 @@ const getMonthAbbr = (dateStr: string): string => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
-type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity';
+type TabType = 'ebook' | 'prove' | 'find' | 'validate' | 'compare' | 'map' | 'advisor' | 'market' | 'opportunity' | 'explore';
 
 export default function LeadMagnet() {
   // Auth state for login requirement
@@ -353,7 +353,94 @@ export default function LeadMagnet() {
   
   // Handle URL parameters for tab navigation and data passing
   useEffect(() => {
-    // Check localStorage for auto-analyze property data first
+    // Check localStorage for Research Tools button data first (from property cards)
+    const storedToolData = localStorage.getItem('autoToolData');
+    if (storedToolData) {
+      try {
+        const data = JSON.parse(storedToolData);
+        // Only use if recent (within last 5 minutes)
+        if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+          console.log('[AutoToolData] Found stored tool data:', data);
+          // Clear it immediately so it doesn't trigger again
+          localStorage.removeItem('autoToolData');
+          
+          // Set form data based on what's available
+          if (data.address) setAddress(data.address);
+          if (data.location) setExploreAddress(data.location);
+          if (data.bedrooms) {
+            setBedrooms(String(data.bedrooms));
+            // Also set explore bedroom filter for explore/find tabs
+            setExploreBedroomFilter(data.bedrooms);
+            exploreBedroomFilterRef.current = data.bedrooms;
+          }
+          if (data.bathrooms) setBathrooms(String(data.bathrooms));
+          if (data.rent) setMonthlyRent(String(data.rent));
+          
+          // Map tab names to internal tab types
+          const tabMapping: Record<string, TabType> = {
+            'explore': 'explore',
+            'map': 'map',
+            'prove': 'prove',
+            'ai': 'advisor',
+            'market-advisor': 'market',
+            'validate': 'validate',
+          };
+          
+          const targetTab = tabMapping[data.tab] || data.tab;
+          setActiveTab(targetTab as TabType);
+          
+          // For map tab, set myProperty context
+          if (data.tab === 'map' && data.address) {
+            const hasValidCoords = data.lat && data.lng && !isNaN(data.lat) && !isNaN(data.lng);
+            const cityState = data.location?.split(',').map((s: string) => s.trim()) || [];
+            const city = cityState[0] || undefined;
+            const state = cityState[1] || undefined;
+            
+            setMyProperty({
+              address: data.address,
+              bedrooms: data.bedrooms || 2,
+              bathrooms: data.bathrooms || 1,
+              ...(hasValidCoords ? { latitude: data.lat, longitude: data.lng } : {}),
+              ...(city ? { city } : {}),
+              ...(state ? { state } : {}),
+            });
+          }
+          
+          // For prove tab, set the initial zip code for auto-search
+          if (data.tab === 'prove' && data.zipCode) {
+            setProveInitialZipCode(data.zipCode);
+          }
+          
+          // For market-advisor tab, set myProperty with zipCode for auto-population
+          if (data.tab === 'market-advisor' && data.zipCode) {
+            setMyProperty({
+              ...myProperty,
+              zipCode: data.zipCode,
+              address: data.address || myProperty?.address || '',
+              bedrooms: data.bedrooms || myProperty?.bedrooms || 2,
+              bathrooms: data.bathrooms || myProperty?.bathrooms || 1,
+            });
+          }
+          
+          // Mark for auto-trigger
+          autoTriggerRef.current = { tab: targetTab, address: data.address || data.location };
+          
+          // Scroll to tools section
+          setTimeout(() => {
+            document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+          return; // Skip other processing
+        } else {
+          // Expired, remove it
+          localStorage.removeItem('autoToolData');
+        }
+      } catch (e) {
+        console.error('[AutoToolData] Failed to parse stored data:', e);
+        localStorage.removeItem('autoToolData');
+      }
+    }
+    
+    // Check localStorage for auto-analyze property data (from Full Analysis button)
     const storedAutoAnalyze = localStorage.getItem('autoAnalyzeProperty');
     if (storedAutoAnalyze) {
       try {
@@ -518,9 +605,73 @@ export default function LeadMagnet() {
           } else if (tab === 'prove' && triggerAddress) {
             // For prove tab (Revenue), auto-trigger the market analysis
             console.log('[AutoTrigger] Setting up prove tab with:', triggerAddress);
+            // Try to click the analyze button in the prove tab
+            const proveButton = document.querySelector('[data-prove-button]') as HTMLButtonElement;
+            if (proveButton && !proveButton.disabled) {
+              console.log('[AutoTrigger] Clicking prove button');
+              proveButton.click();
+            } else {
+              // Retry after delay
+              setTimeout(() => {
+                const retryButton = document.querySelector('[data-prove-button]') as HTMLButtonElement;
+                if (retryButton && !retryButton.disabled) {
+                  console.log('[AutoTrigger] Retry: Clicking prove button');
+                  retryButton.click();
+                }
+              }, 1500);
+            }
           } else if (tab === 'explore' && triggerAddress) {
             // For explore tab (Comps), auto-trigger the comps search
             console.log('[AutoTrigger] Setting up explore tab with:', triggerAddress);
+            // Try to click the analyze button in the explore tab
+            const exploreButton = document.querySelector('[data-explore-button]') as HTMLButtonElement;
+            if (exploreButton && !exploreButton.disabled) {
+              console.log('[AutoTrigger] Clicking explore button');
+              exploreButton.click();
+            } else {
+              // Retry after delay
+              setTimeout(() => {
+                const retryButton = document.querySelector('[data-explore-button]') as HTMLButtonElement;
+                if (retryButton && !retryButton.disabled) {
+                  console.log('[AutoTrigger] Retry: Clicking explore button');
+                  retryButton.click();
+                }
+              }, 1500);
+            }
+          } else if (tab === 'advisor' && triggerAddress) {
+            // For AI advisor tab, auto-trigger the AI analysis
+            console.log('[AutoTrigger] Setting up AI advisor tab with:', triggerAddress);
+            // The AI advisor component should handle auto-analysis when address is pre-filled
+            const aiButton = document.querySelector('[data-ai-button]') as HTMLButtonElement;
+            if (aiButton && !aiButton.disabled) {
+              console.log('[AutoTrigger] Clicking AI button');
+              aiButton.click();
+            } else {
+              setTimeout(() => {
+                const retryButton = document.querySelector('[data-ai-button]') as HTMLButtonElement;
+                if (retryButton && !retryButton.disabled) {
+                  console.log('[AutoTrigger] Retry: Clicking AI button');
+                  retryButton.click();
+                }
+              }, 1500);
+            }
+          } else if (tab === 'market' && triggerAddress) {
+            // For market advisor tab, auto-trigger the market analysis
+            console.log('[AutoTrigger] Setting up market advisor tab with:', triggerAddress);
+            // The market advisor component should handle auto-analysis when location is pre-filled
+            const marketButton = document.querySelector('[data-market-button]') as HTMLButtonElement;
+            if (marketButton && !marketButton.disabled) {
+              console.log('[AutoTrigger] Clicking market button');
+              marketButton.click();
+            } else {
+              setTimeout(() => {
+                const retryButton = document.querySelector('[data-market-button]') as HTMLButtonElement;
+                if (retryButton && !retryButton.disabled) {
+                  console.log('[AutoTrigger] Retry: Clicking market button');
+                  retryButton.click();
+                }
+              }, 1500);
+            }
           }
         }, 1200);
       }
@@ -683,6 +834,7 @@ export default function LeadMagnet() {
   }>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [locationSelection, setLocationSelection] = useState<LocationSelection | null>(null);
+  const [proveInitialZipCode, setProveInitialZipCode] = useState<string | undefined>(undefined);
 
   // ============================================
   // TRPC MUTATIONS
@@ -1531,6 +1683,13 @@ export default function LeadMagnet() {
       job: "Answer: What properties are available in my target market?",
       icon: Search,
       color: "from-rose-500 to-pink-500"
+    },
+    explore: {
+      title: "Explore Comps",
+      subtitle: "See similar Airbnb listings in any area",
+      job: "Answer: What are similar properties earning?",
+      icon: Users,
+      color: "from-indigo-500 to-purple-500"
     }
   };
 
@@ -1833,6 +1992,8 @@ export default function LeadMagnet() {
                     onSelectionChange={setLocationSelection}
                     onSearch={handleHierarchicalSearch}
                     disabled={isResearching}
+                    initialZipCode={proveInitialZipCode}
+                    autoSearch={!!proveInitialZipCode}
                   />
                 </div>
                 
@@ -2443,6 +2604,129 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {/* OPPORTUNITY FINDER TAB (Step 8) */}
             {/* ============================================ */}
+            {/* ============================================ */}
+            {/* EXPLORE TAB - Redirects to Find with pre-filled data */}
+            {/* ============================================ */}
+            {activeTab === 'explore' && (
+              <div className="space-y-8">
+                <HelpSection
+                  title="What You'll Discover"
+                  description="See real Airbnb properties that are actually making money in your target city or neighborhood. This helps you understand what success looks like before you invest."
+                  example="You've heard St. Louis has good Airbnb potential. Now you want to see actual properties making $50K+ per year so you know what to look for."
+                  steps={[
+                    'Type a zip code, city, or neighborhood (e.g., "63101", "St. Louis", or "Central West End")',
+                    'Select from the dropdown to see which zip codes are included',
+                    'Filter by bedroom count if you have a target property type',
+                    'Browse real listings sorted by annual revenue',
+                    'See which neighborhoods perform best within the city'
+                  ]}
+                  isOpen={showHelp === 'explore'}
+                  onToggle={() => setShowHelp(showHelp === 'explore' ? null : 'explore')}
+                />
+                
+                {/* Guiding Question */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-4">
+                  <p className="text-indigo-800 font-medium flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    What are similar properties earning in this area?
+                  </p>
+                </div>
+                
+                {/* Market Search */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                    <InfoTooltip content="Search for a city or neighborhood. The dropdown shows how many active Airbnb properties are in each area and which zip codes are included.">
+                      <span>City or Neighborhood</span>
+                    </InfoTooltip>
+                  </label>
+                  <MarketAutocomplete
+                    onSelect={(market) => {
+                      // Log the current filter values for debugging
+                      console.log('[Explore Tab] Market selected:', market);
+                      // Use ref values which are updated immediately on change
+                      handleMarketSearch(market, { 
+                        bedrooms: exploreBedroomFilterRef.current, 
+                        sortBy: exploreSortByRef.current 
+                      });
+                    }}
+                    placeholder="Type a zip code, city, or neighborhood (e.g., 63101, St. Louis)..."
+                  />
+                </div>
+                
+                {/* Optional Filters */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
+                      <InfoTooltip content="Filter by bedroom count to see properties similar to what you're looking for. This gives you an apples-to-apples comparison.">
+                        <span>Bedrooms</span>
+                      </InfoTooltip>
+                      {hasProperty && exploreBedroomFilter === myProperty?.bedrooms && (
+                        <span className="text-xs px-2 py-0.5 bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.55_0.14_75)] rounded-full">
+                          Apples-to-apples
+                        </span>
+                      )}
+                    </label>
+                    <select
+                      value={exploreBedroomFilter ?? ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value ? parseInt(e.target.value) : null;
+                        console.log('[Explore Tab] Bedroom filter changed to:', newValue);
+                        setExploreBedroomFilter(newValue);
+                        exploreBedroomFilterRef.current = newValue;
+                        userSetBedroomFilterRef.current = true;
+                        if (selectedMarket) {
+                          handleMarketSearch(selectedMarket, { bedrooms: newValue });
+                        }
+                      }}
+                      className="input-apple h-12"
+                      data-explore-button
+                    >
+                      <option value="">Any</option>
+                      <option value="0">Studio</option>
+                      <option value="1">1 Bedroom</option>
+                      <option value="2">2 Bedrooms</option>
+                      <option value="3">3 Bedrooms</option>
+                      <option value="4">4 Bedrooms</option>
+                      <option value="5">5+ Bedrooms</option>
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                      <InfoTooltip content="Sort results by what matters most to you. 'Highest Revenue' shows top earners first.">
+                        <span>Sort By</span>
+                      </InfoTooltip>
+                    </label>
+                    <select
+                      value={exploreSortBy}
+                      onChange={(e) => {
+                        const newValue = e.target.value as typeof exploreSortBy;
+                        setExploreSortBy(newValue);
+                        exploreSortByRef.current = newValue;
+                        if (selectedMarket) {
+                          handleMarketSearch(selectedMarket, { sortBy: newValue });
+                        }
+                      }}
+                      className="input-apple h-12"
+                    >
+                      <option value="revenue">Highest Revenue</option>
+                      <option value="occupancy">Highest Booking Rate</option>
+                      <option value="rating">Best Rated</option>
+                      <option value="adr">Highest Nightly Rate</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Loading State */}
+                {isLoadingMarketListings && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    <span className="ml-3 text-slate-600">Loading comparable properties...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === 'opportunity' && (
               <div className="space-y-8">
                 <HelpSection

@@ -7708,3 +7708,31 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Analysis runs automatically without user clicking
 - [x] Results display immediately
 - [x] One-click experience from property card to full analysis results
+
+
+## Research Tools Auto-Populate Fix (Jan 30, 2026)
+- [ ] Fix Comps button to auto-populate with property data
+- [ ] Fix Map button to auto-populate with property location
+- [ ] Fix Revenue button to auto-populate with property location
+- [ ] Fix Ask AI button to auto-populate with property data
+- [ ] Fix Trends button to auto-populate with property location
+- [ ] Each button should store property data in localStorage and navigate to correct tab
+- [ ] Each tool tab should read from localStorage and auto-populate form
+
+
+## Research Tools Button Fixes (Jan 30, 2026) - COMPLETE
+
+### Issue: Research Tools buttons not navigating to correct tabs with pre-filled data
+- [x] Fixed Comps button → Explore Listings tab (pre-fills bedrooms filter)
+- [x] Fixed Map button → Map tab (pre-fills location and shows property on map)
+- [x] Fixed Revenue button → Prove tab (pre-fills zip code and auto-searches)
+- [x] Fixed Ask AI button → AI Advisor tab (pre-fills address, bedrooms, bathrooms, rent)
+- [x] Fixed Trends button → Market Advisor tab (pre-fills zip code and shows search results)
+
+### Technical Changes:
+- Added zipCode to autoToolData for prove and market-advisor tabs in OpportunityFinderStep.tsx
+- Added proveInitialZipCode state in LeadMagnet.tsx for auto-populating prove tab
+- Added market-advisor tab handling in LeadMagnet.tsx to set myProperty with zipCode
+- Updated HierarchicalLocationSelector to accept initialZipCode and autoSearch props
+- Updated StandaloneMarketAdvisor to auto-populate search from myProperty.zipCode
+

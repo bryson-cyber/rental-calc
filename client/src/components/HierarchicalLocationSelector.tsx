@@ -1718,6 +1718,7 @@ export function HierarchicalLocationSelector({
             
             {/* Search at City/Metro level */}
             <button
+              data-prove-button
               onClick={() => handleSearchAtLevel('market')}
               disabled={disabled || !selectedMarket}
               className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
@@ -1835,6 +1836,7 @@ export function HierarchicalLocationSelector({
             
             {/* Search at Neighborhood level */}
             <button
+              data-prove-button
               onClick={() => handleSearchAtLevel('submarket')}
               disabled={disabled || !selectedSubmarket}
               className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
@@ -1932,6 +1934,7 @@ export function HierarchicalLocationSelector({
             
             {/* Search at Zip Code level */}
             <button
+              data-prove-button
               onClick={() => handleSearchAtLevel('zipcode')}
               disabled={disabled || !selectedZipcode}
               className={`h-14 px-5 flex items-center gap-2 justify-center bg-[oklch(0.75_0.15_75)] text-white rounded-xl transition-all font-medium ${
