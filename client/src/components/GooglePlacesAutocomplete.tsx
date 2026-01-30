@@ -196,74 +196,25 @@ export function GooglePlacesAutocomplete({
 
     setIsLoading(true);
 
+    // Use (regions) type to get ONLY cities, neighborhoods, and zip codes
+    // This is the key fix - (regions) includes: locality, sublocality, postal_code, country, admin_area_1, admin_area_2
     const request: google.maps.places.AutocompletionRequest = {
       input: searchQuery,
       sessionToken: sessionToken.current!,
       componentRestrictions: countryRestriction ? { country: countryRestriction } : undefined,
-      // Only add types if specified - empty array means all types
-      ...(types.length > 0 ? { types } : {}),
+      // ALWAYS use (regions) to get cities, neighborhoods, and zip codes - NOT addresses or businesses
+      types: types.length > 0 ? types : ['(regions)'],
     };
 
     autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
       setIsLoading(false);
       
       if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-        // Filter to ONLY show zip codes, neighborhoods, and cities
-        // NO street addresses, NO specific addresses, NO businesses
-        const allowedTypes = [
-          'locality', // cities
-          'sublocality', // neighborhoods/districts
-          'sublocality_level_1',
-          'sublocality_level_2',
-          'sublocality_level_3',
-          'neighborhood', // neighborhoods
-          'postal_code', // zip codes
-          'administrative_area_level_1', // states
-          'administrative_area_level_2', // counties
-          'colloquial_area', // informal areas like "Silicon Valley"
-        ];
+        // With (regions) type, Google already filters to only return:
+        // locality, sublocality, postal_code, country, admin_area_1, admin_area_2
+        // We just need minimal filtering to remove any edge cases
         
-        // Types that should be EXCLUDED (addresses, streets, specific locations)
-        const excludedTypes = [
-          'route', // streets
-          'street_address', // full addresses
-          'premise', // buildings/addresses
-          'street_number', // house numbers
-          'establishment', // businesses
-          'point_of_interest', // POIs
-        ];
-        
-        const filteredPredictions = predictions.filter((prediction) => {
-          const types = prediction.types || [];
-          const description = prediction.description.toLowerCase();
-          
-          // MUST have at least one allowed type (zip code, city, neighborhood)
-          const hasAllowedType = types.some(type => allowedTypes.includes(type));
-          
-          // MUST NOT have any excluded type (addresses, streets, businesses)
-          const hasExcludedType = types.some(type => excludedTypes.includes(type));
-          
-          // Exclude apartment complexes, businesses, restaurants, etc.
-          const businessKeywords = ['apartments', 'apartment', 'loft', 'lofts', 'complex', 'suites', 
-                                     'restaurant', 'cafe', 'bar', 'shop', 'store', 'market', 
-                                     'barbershop', 'salon', 'gym', 'fitness', 'hotel', 'motel',
-                                     'church', 'school', 'hospital', 'clinic', 'office',
-                                     'ave', 'avenue', 'street', 'st', 'road', 'rd', 'drive', 'dr',
-                                     'lane', 'ln', 'boulevard', 'blvd', 'way', 'court', 'ct'];
-          const hasBusinessKeyword = businessKeywords.some(keyword => {
-            // Check if the keyword appears as a word boundary (not part of a city name)
-            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-            return regex.test(description);
-          });
-          
-          // Only include if:
-          // 1. Has an allowed type (zip code, city, neighborhood) AND
-          // 2. Does NOT have an excluded type (address, street) AND
-          // 3. Does NOT have business/address keywords in the name
-          return hasAllowedType && !hasExcludedType && !hasBusinessKeyword;
-        });
-        
-        const placeResults: PlaceResult[] = filteredPredictions.map((prediction) => ({
+        const placeResults: PlaceResult[] = predictions.map((prediction) => ({
           placeId: prediction.place_id,
           description: prediction.description,
           mainText: prediction.structured_formatting.main_text,

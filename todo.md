@@ -7547,3 +7547,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added source attribution: "*Furnishing estimate: $8K base + $4K/bedroom (industry average)"r bedroom
 - [x] This is based on industry averages for Airbnb arbitrage furnishing costs
 - [x] Added source attribution: "*Furnishing estimate: $8K base + $4K/bedroom (industry average)"
+
+
+## Bug Fix - Zip Code Autocomplete (Jan 30, 2026)
+- [x] Fix Google Places autocomplete to properly recognize zip codes like "63104"
+- [x] Research Google Places API documentation for postal code handling
+- [x] Implement proper postal code detection - using types: ['(regions)'] to get postal_code results
+- [x] VERIFIED: Typing "63104" now shows "63104 - St. Louis, MO, USA" in dropdown
+- [x] VERIFIED: Search returns 31 properties for zip code 63104
