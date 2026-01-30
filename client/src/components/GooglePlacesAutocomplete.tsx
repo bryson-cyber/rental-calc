@@ -412,11 +412,12 @@ export function GooglePlacesAutocomplete({
           {/* Google attribution */}
           <div className="px-4 py-2 text-xs text-neutral-400 border-t border-neutral-100 flex items-center gap-1">
             <span>Powered by</span>
-            <img 
-              src="https://developers.google.com/static/maps/documentation/images/google_on_white.png" 
-              alt="Google" 
-              className="h-3"
-            />
+            <span className="font-medium" style={{ color: '#4285F4' }}>G</span>
+            <span className="font-medium" style={{ color: '#EA4335' }}>o</span>
+            <span className="font-medium" style={{ color: '#FBBC05' }}>o</span>
+            <span className="font-medium" style={{ color: '#4285F4' }}>g</span>
+            <span className="font-medium" style={{ color: '#34A853' }}>l</span>
+            <span className="font-medium" style={{ color: '#EA4335' }}>e</span>
           </div>
         </div>
       )}

@@ -1037,11 +1037,11 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                           <div className="flex items-center gap-4 text-xs mb-4" style={{ color: 'oklch(0.45 0 0)' }}>
                             <span className="flex items-center gap-1">
                               <Bed className="w-3.5 h-3.5" />
-                              {property.bedrooms || '?'} bed
+                              {property.bedrooms === 0 ? 'Studio' : property.bedrooms ? `${property.bedrooms} bed` : '— bed'}
                             </span>
                             <span className="flex items-center gap-1">
                               <Bath className="w-3.5 h-3.5" />
-                              {property.bathrooms || '?'} bath
+                              {property.bathrooms ? `${property.bathrooms} bath` : '— bath'}
                             </span>
                             {property.squareFeet && (
                               <span>{property.squareFeet.toLocaleString()} sqft</span>
@@ -1537,8 +1537,8 @@ export default function OpportunityFinderStep({ onSelectProperty }: OpportunityF
                       'Contact for Price'
                     )}
                   </span>
-                  <span>{photoGalleryProperty.bedrooms} bed</span>
-                  <span>{photoGalleryProperty.bathrooms} bath</span>
+                  <span>{photoGalleryProperty.bedrooms === 0 ? 'Studio' : photoGalleryProperty.bedrooms ? `${photoGalleryProperty.bedrooms} bed` : '— bed'}</span>
+                  <span>{photoGalleryProperty.bathrooms ? `${photoGalleryProperty.bathrooms} bath` : '— bath'}</span>
                   {photoGalleryProperty.squareFeet && <span>{photoGalleryProperty.squareFeet.toLocaleString()} sqft</span>}
                 </div>
               </div>

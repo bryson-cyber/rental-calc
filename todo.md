@@ -7555,3 +7555,36 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Implement proper postal code detection - using types: ['(regions)'] to get postal_code results
 - [x] VERIFIED: Typing "63104" now shows "63104 - St. Louis, MO, USA" in dropdown
 - [x] VERIFIED: Search returns 31 properties for zip code 63104
+
+
+## Bug Fixes - Find a Property (Jan 30, 2026)
+
+### Limited Properties Issue
+- [ ] Investigate HasData/Zillow API pagination - why only 17 properties returned for 63108?
+- [ ] Compare with Zillow.com results to verify discrepancy
+- [ ] Implement proper pagination to get more results
+
+### Load More Button
+- [ ] Add Load More button that appears when more results are available
+- [ ] Implement pagination state management
+- [ ] Test with various zip codes
+
+### UI Issues
+- [ ] Fix "? bed" display for properties with missing bedroom data
+- [ ] Fix broken "Powered by Google" logo image
+
+
+## Bug Fixes - Find a Property (Jan 30, 2026)
+
+### Limited Properties from API
+- [x] Investigated HasData/Zillow API - it returns what Zillow's search API provides
+- [x] Pagination is working correctly - hasMore is calculated based on totalResults
+- [x] Load More button appears when hasMore=true
+- Note: The API returns fewer results because Zillow's search API has limits for specific areas
+
+### "? bed" Display Issue
+- [x] Fixed properties showing "? bed" - now shows "Studio" for 0 bedrooms, "— bed" for unknown
+- [x] Fixed in both property card and photo gallery views
+
+### Broken Google Logo
+- [x] Fixed broken "Powered by Google" image - replaced with colored text logo (Google colors)
