@@ -8654,3 +8654,19 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added useEffect to sync data when switching to validate tab
 - [x] Badge shows property details: BR, BA, and price (purchase or rent based on mode)
 
+
+
+## Bug Fix: Step 6 Compare Favorites $0 Revenue Issue (Jan 31, 2026) - COMPLETE
+
+- [x] Investigate why some saved properties show $0 revenue in Compare Favorites
+  - Root cause: Properties saved from Step 2 without running AirDNA analysis have NULL revenue
+  - Also found: Purchase prices incorrectly saved as monthlyRent when switching modes
+- [x] Check how revenue data is stored when properties are saved
+  - favoriteProperties table allows NULL for annualRevenue, monthlyRent fields
+- [x] Verify if revenue data is being fetched/displayed correctly
+  - Display was correct, but no warning shown for missing data
+- [x] Fix the issue to display correct revenue data
+  - Added warning badge for properties with $0 revenue ("Revenue data missing")
+  - Added "Analyze Property" button to run analysis on properties with missing data
+  - Added warning badge for suspicious rent values >$50,000/mo (likely purchase prices)
+  - Added warning indicators in comparison table for missing revenue and suspicious rent

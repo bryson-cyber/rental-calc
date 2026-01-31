@@ -29,7 +29,9 @@ import {
   BarChart3,
   Users,
   LayoutGrid,
-  Table2
+  Table2,
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { ComparisonDashboard } from './ComparisonDashboard';
@@ -412,6 +414,45 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                   </span>
                 </div>
                 
+                {/* Warning: Missing Revenue Data */}
+                {annualRevenue === 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium">Revenue data missing</p>
+                        <p className="text-xs opacity-80">Run analysis to get revenue estimate</p>
+                      </div>
+                    </div>
+                    <Link 
+                      href={`/?tab=validate&address=${encodeURIComponent(fav.address)}&bedrooms=${fav.bedrooms || 2}&bathrooms=${fav.bathrooms || 1}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 w-full h-7 text-xs bg-amber-100 border-amber-300 hover:bg-amber-200 text-amber-800"
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Analyze Property
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+                
+                {/* Warning: Suspicious Rent Value (likely purchase price) */}
+                {monthlyRent > 50000 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center gap-2 text-red-700">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium">Rent value looks incorrect</p>
+                        <p className="text-xs opacity-80">${monthlyRent.toLocaleString()}/mo may be a purchase price</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Revenue Info */}
                 {annualRevenue > 0 && (
                   <div className="bg-[oklch(0.97_0_0)] rounded-lg p-3 mb-3">
@@ -427,7 +468,7 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                 )}
                 
                 {/* Profit Preview */}
-                {monthlyRent > 0 && annualRevenue > 0 && (
+                {monthlyRent > 0 && monthlyRent <= 50000 && annualRevenue > 0 && (
                   <div className={`flex items-center justify-between p-2 rounded-lg border ${grade.bgColor}`}>
                     <span className="text-xs text-[oklch(0.45_0_0)]">Est. Monthly Profit</span>
                     <span className={`font-bold ${monthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -523,10 +564,24 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
                         <div className="text-xs text-[oklch(0.55_0_0)]">{result.city}, {result.state}</div>
                       </td>
                       <td className="p-3 text-right font-medium text-[oklch(0.25_0_0)]">
-                        {formatCurrency(result.annualRevenue)}
+                        {result.annualRevenue > 0 ? (
+                          formatCurrency(result.annualRevenue)
+                        ) : (
+                          <span className="flex items-center justify-end gap-1 text-amber-600">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>No data</span>
+                          </span>
+                        )}
                       </td>
                       <td className="p-3 text-right text-[oklch(0.45_0_0)]">
-                        {formatCurrency(result.monthlyRent)}/mo
+                        {result.monthlyRent > 50000 ? (
+                          <span className="flex items-center justify-end gap-1 text-red-600">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span title="This looks like a purchase price, not rent">{formatCurrency(result.monthlyRent)}/mo</span>
+                          </span>
+                        ) : (
+                          <span>{formatCurrency(result.monthlyRent)}/mo</span>
+                        )}
                       </td>
                       <td className={`p-3 text-right font-bold ${result.monthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                         {formatCurrency(result.monthlyProfit)}/mo
