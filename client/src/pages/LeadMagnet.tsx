@@ -2009,8 +2009,8 @@ export default function LeadMagnet() {
             </div>
           )}
           
-          {/* Job-Focused Tab Navigation */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {/* Job-Focused Tab Navigation - Mobile Optimized */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 md:mb-12">
             {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
               const job = jobDescriptions[tab];
               const Icon = job.icon;
@@ -2020,28 +2020,28 @@ export default function LeadMagnet() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative p-4 rounded-2xl transition-all duration-300 text-left hover-lift w-[140px] flex-shrink-0 ${
+                  className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 text-left min-h-[100px] sm:min-h-[120px] ${
                     isActive
                       ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
-                      : 'apple-card'
+                      : 'apple-card hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`step-badge flex-shrink-0 ${
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 ${
                       isActive 
                         ? 'bg-[oklch(0.55_0.14_75)]' 
                         : 'bg-[oklch(0.92_0_0)]'
                     }`}>
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
+                      <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
                     </div>
-                    <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider whitespace-nowrap">
+                    <span className="text-[9px] sm:text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
                       {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'prove' ? 'Step 3' : tab === 'find' ? 'Step 4' : tab === 'validate' ? 'Step 5' : tab === 'compare' ? 'Step 6' : tab === 'map' ? 'Step 7' : tab === 'market' ? 'Step 8' : tab === 'advisor' ? 'Step 9' : `Step ${index}`}
                     </span>
                   </div>
-                  <h3 className={`font-semibold text-sm mb-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
+                  <h3 className={`font-semibold text-xs sm:text-sm mb-0.5 sm:mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
                     {job.title}
                   </h3>
-                  <p className="text-xs text-[oklch(0.55_0_0)] leading-snug line-clamp-2">
+                  <p className="text-[10px] sm:text-xs text-[oklch(0.55_0_0)] leading-snug line-clamp-2 hidden sm:block">
                     {job.job}
                   </p>
                 </button>
@@ -2051,23 +2051,23 @@ export default function LeadMagnet() {
           
           
           {/* Tool Content Area */}
-          <div className="apple-card p-8 md:p-12">
+          <div className="apple-card p-4 sm:p-6 md:p-8 lg:p-12">
             
             {/* Current Job Header */}
-            <div className="mb-10 pb-10 border-b border-[oklch(0.92_0_0)]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-5">
+            <div className="mb-6 sm:mb-8 md:mb-10 pb-6 sm:pb-8 md:pb-10 border-b border-[oklch(0.92_0_0)]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3 sm:gap-5">
                   {(() => {
                     const job = jobDescriptions[activeTab];
                     const Icon = job.icon;
                     return (
                       <>
-                        <div className="w-14 h-14 rounded-2xl bg-[oklch(0.55_0.14_75)] flex items-center justify-center glow-gold">
-                          <Icon className="w-7 h-7 text-white" />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[oklch(0.55_0.14_75)] flex items-center justify-center glow-gold flex-shrink-0">
+                          <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                         </div>
                         <div>
-                          <h3 className="text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)]">{job.title}</h3>
-                          <p className="text-[oklch(0.50_0_0)] text-lg">{job.subtitle}</p>
+                          <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)]">{job.title}</h3>
+                          <p className="text-[oklch(0.50_0_0)] text-sm sm:text-base md:text-lg">{job.subtitle}</p>
                         </div>
                       </>
                     );
@@ -2090,7 +2090,7 @@ export default function LeadMagnet() {
                   />
                 )}
               </div>
-              <p className="text-gold font-medium text-lg mt-5">
+              <p className="text-gold font-medium text-sm sm:text-base md:text-lg mt-3 sm:mt-4 md:mt-5">
                 {jobDescriptions[activeTab].job}
               </p>
             </div>
@@ -2225,7 +2225,7 @@ export default function LeadMagnet() {
                 </div>
                 
                 {/* Optional Filters */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
                       <InfoTooltip content="Filter by bedroom count to see properties similar to what you're looking for. This gives you an apples-to-apples comparison.">
@@ -2445,7 +2445,7 @@ export default function LeadMagnet() {
                       <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                         Loan Type
                       </label>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {(['conventional', 'dscr', 'fha', 'cash'] as const).map((type) => (
                           <button
                             key={type}
@@ -2473,7 +2473,7 @@ export default function LeadMagnet() {
 
                     {/* Down Payment & Interest Rate (not for Cash) */}
                     {myProperty?.loanType !== 'cash' && (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                             Down Payment %
@@ -2522,7 +2522,7 @@ export default function LeadMagnet() {
                     {myProperty?.purchasePrice && (
                       <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                         <h4 className="text-sm font-semibold text-slate-700 mb-3">Financing Summary</h4>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
                           <div>
                             <span className="text-slate-500">Down Payment:</span>
                             <span className="ml-2 font-medium">
@@ -2555,7 +2555,7 @@ export default function LeadMagnet() {
                 )}
                 
                 {/* Bedrooms & Bathrooms */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                       Beds
@@ -3017,7 +3017,7 @@ export default function LeadMagnet() {
                 </div>
                 
                 {/* Optional Filters */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)] flex items-center gap-2">
                       <InfoTooltip content="Filter by bedroom count to see properties similar to what you're looking for. This gives you an apples-to-apples comparison.">
@@ -5339,7 +5339,7 @@ export default function LeadMagnet() {
                     <p className="text-sm text-slate-500">Based on profit multiplier</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded bg-emerald-500 text-white font-bold flex items-center justify-center text-xs">A+</span>
                     <span className="text-slate-600">3x+ rent (Excellent)</span>
