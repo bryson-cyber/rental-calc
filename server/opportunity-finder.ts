@@ -24,6 +24,8 @@ import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowProp
 // CITY NAME NORMALIZATION
 // ============================================
 
+import { makeRequest, GeocodingResult } from './_core/map';
+
 /**
  * Normalize city name abbreviations to their full forms for better search results
  * This helps with searching for cities like "St. Louis" vs "Saint Louis"
@@ -48,6 +50,62 @@ function normalizeCityName(name: string): string {
   }
   
   return normalized.trim();
+}
+
+/**
+ * Disambiguate location by geocoding to get the correct city and state
+ * This fixes issues where "Saint Louis" could match multiple cities
+ */
+async function disambiguateLocation(location: string): Promise<string> {
+  // If location already contains a state abbreviation or full state name, use as-is
+  const statePattern = /,\s*([A-Z]{2}|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)\s*$/i;
+  
+  if (statePattern.test(location)) {
+    console.log(`[OpportunityFinder] Location already has state: ${location}`);
+    return location;
+  }
+  
+  // If it's a zip code, use as-is
+  if (/^\d{5}$/.test(location.trim())) {
+    console.log(`[OpportunityFinder] Location is a zip code: ${location}`);
+    return location;
+  }
+  
+  try {
+    // Geocode the location to get the correct city and state
+    console.log(`[OpportunityFinder] Geocoding location for disambiguation: ${location}`);
+    
+    const geocodeResult = await makeRequest<GeocodingResult>(
+      '/maps/api/geocode/json',
+      { address: `${location}, USA` }
+    );
+    
+    if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
+      const result = geocodeResult.results[0];
+      let city = '';
+      let state = '';
+      
+      for (const component of result.address_components) {
+        if (component.types.includes('locality')) {
+          city = component.long_name;
+        } else if (component.types.includes('administrative_area_level_1')) {
+          state = component.short_name; // Use state abbreviation (MO, FL, etc.)
+        }
+      }
+      
+      if (city && state) {
+        const disambiguated = `${city}, ${state}`;
+        console.log(`[OpportunityFinder] Disambiguated "${location}" to "${disambiguated}"`);
+        return disambiguated;
+      }
+    }
+    
+    console.log(`[OpportunityFinder] Could not disambiguate, using original: ${location}`);
+    return location;
+  } catch (error) {
+    console.error(`[OpportunityFinder] Geocoding error:`, error);
+    return location;
+  }
 }
 
 // ============================================
@@ -426,15 +484,19 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        // Normalize city name variations (St. Louis -> Saint Louis, etc.)
+        // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
         const normalizedLocation = normalizeCityName(input.location);
-        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} (normalized: ${normalizedLocation}), page: ${input.page}`);
+        
+        // Then disambiguate location by geocoding to get correct city + state
+        // This fixes issues where "Saint Louis" could match Florida instead of Missouri
+        const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
+        console.log(`[Opportunity Finder] Searching Zillow rentals: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}`);
         
         // Fetch the requested page with automatic price enrichment for multi-unit listings
         // This calls the Property Details API for listings without price ("Contact for Price")
         const result = await searchZillowListingsWithEnrichment(
           {
-            keyword: normalizedLocation,
+            keyword: disambiguatedLocation,
             type: 'forRent',
             priceMin: input.priceMin,
             priceMax: input.priceMax,
@@ -508,14 +570,18 @@ export const opportunityFinderRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
-        // Normalize city name variations (St. Louis -> Saint Louis, etc.)
+        // First, normalize city name variations (St. Louis -> Saint Louis, etc.)
         const normalizedLocation = normalizeCityName(input.location);
-        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} (normalized: ${normalizedLocation})`);
+        
+        // Then disambiguate location by geocoding to get correct city + state
+        // This fixes issues where "Saint Louis" could match Florida instead of Missouri
+        const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}`);
         
         // Fetch first page to get total results with automatic price enrichment
         const firstResult = await searchZillowListingsWithEnrichment(
           {
-            keyword: normalizedLocation,
+            keyword: disambiguatedLocation,
             type: 'forSale',
             priceMin: input.priceMin,
             priceMax: input.priceMax,
@@ -552,7 +618,7 @@ export const opportunityFinderRouter = router({
           for (let page = 2; page <= pagesToFetch; page++) {
             pagePromises.push(
               searchZillowListings({
-                keyword: input.location,
+                keyword: disambiguatedLocation,
                 type: 'forSale',
                 priceMin: input.priceMin,
                 priceMax: input.priceMax,

@@ -91,11 +91,13 @@ export async function findContactByEmail(email: string): Promise<HubSpotContact 
             'firstname',
             'lastname',
             'phone',
-            'rental_calculator_source',
-            'rental_calculator_tool_used',
-            'rental_calculator_market',
+            'rental_calculator_lead_source',
+            'rental_calculator_last_tool_used',
+            'rental_calculator_city',
+            'rental_calculator_state',
             'rental_calculator_estimated_revenue',
-            'rental_calculator_deep_link',
+            'rental_calculator_property_address',
+            'deep_link_url',
           ],
         }),
       }
@@ -119,12 +121,17 @@ export async function createContact(input: CreateContactInput): Promise<HubSpotC
   if (input.firstName) properties.firstname = input.firstName;
   if (input.lastName) properties.lastname = input.lastName;
   if (input.phone) properties.phone = input.phone;
-  if (input.source) properties.rental_calculator_source = input.source;
-  if (input.toolUsed) properties.rental_calculator_tool_used = input.toolUsed;
-  if (input.marketAnalyzed) properties.rental_calculator_market = input.marketAnalyzed;
+  if (input.source) properties.rental_calculator_lead_source = input.source;
+  if (input.toolUsed) properties.rental_calculator_last_tool_used = input.toolUsed;
+  if (input.marketAnalyzed) {
+    // Parse city and state from market string like "Austin, TX"
+    const parts = input.marketAnalyzed.split(',').map(s => s.trim());
+    if (parts[0]) properties.rental_calculator_city = parts[0];
+    if (parts[1]) properties.rental_calculator_state = parts[1];
+  }
   if (input.estimatedRevenue) properties.rental_calculator_estimated_revenue = String(input.estimatedRevenue);
   if (input.propertyAddress) properties.rental_calculator_property_address = input.propertyAddress;
-  if (input.deepLink) properties.rental_calculator_deep_link = input.deepLink;
+  if (input.deepLink) properties.deep_link_url = input.deepLink;
 
   return hubspotRequest<HubSpotContact>('/crm/v3/objects/contacts', {
     method: 'POST',
@@ -144,12 +151,17 @@ export async function updateContact(
   if (input.firstName) properties.firstname = input.firstName;
   if (input.lastName) properties.lastname = input.lastName;
   if (input.phone) properties.phone = input.phone;
-  if (input.source) properties.rental_calculator_source = input.source;
-  if (input.toolUsed) properties.rental_calculator_tool_used = input.toolUsed;
-  if (input.marketAnalyzed) properties.rental_calculator_market = input.marketAnalyzed;
+  if (input.source) properties.rental_calculator_lead_source = input.source;
+  if (input.toolUsed) properties.rental_calculator_last_tool_used = input.toolUsed;
+  if (input.marketAnalyzed) {
+    // Parse city and state from market string like "Austin, TX"
+    const parts = input.marketAnalyzed.split(',').map(s => s.trim());
+    if (parts[0]) properties.rental_calculator_city = parts[0];
+    if (parts[1]) properties.rental_calculator_state = parts[1];
+  }
   if (input.estimatedRevenue) properties.rental_calculator_estimated_revenue = String(input.estimatedRevenue);
   if (input.propertyAddress) properties.rental_calculator_property_address = input.propertyAddress;
-  if (input.deepLink) properties.rental_calculator_deep_link = input.deepLink;
+  if (input.deepLink) properties.deep_link_url = input.deepLink;
 
   return hubspotRequest<HubSpotContact>(`/crm/v3/objects/contacts/${contactId}`, {
     method: 'PATCH',

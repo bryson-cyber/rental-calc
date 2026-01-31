@@ -8175,3 +8175,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Create custom contact properties in HubSpot for rental calculator data
 - [ ] Set up email sequences in HubSpot with personalized deep links
 - [ ] Test full automation flow end-to-end
+
+
+## Bug Fix: Property Search Returns Wrong Location (Jan 30, 2026) - COMPLETE
+- [x] Investigate "Find a Property" search returning Florida results for "Saint Louis" query
+- [x] Fix the search/geocoding logic to return correct location (added disambiguateLocation function)
+- [x] Added geocoding-based location disambiguation to searchZillowRentals and searchZillowForSale
+- [x] Test with various city names to ensure accuracy - Verified Saint Louis returns 3,152 MO properties
