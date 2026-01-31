@@ -8243,3 +8243,57 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Remove any chart/table formatting instructions
 - [x] Ensure output is beginner-friendly and non-prescriptive
 
+
+## New Tasks (Jan 31, 2026)
+
+### Step 8 Verification
+- [ ] Verify Step 8 Market Advisor filters are working correctly
+
+### Trustpilot Integration
+- [ ] Implement dynamic Trustpilot review count update
+
+### SimpleTexting API Integration
+- [ ] Review SimpleTexting API documentation
+- [ ] Implement SMS messaging capability
+
+
+
+## New Feature Research (Jan 31, 2026)
+
+### STR Purchase Analysis Tools
+- [ ] Research competitor tools for STR property purchase analysis (not arbitrage)
+- [ ] Document key features and metrics used by competitors
+- [ ] Design purchase-focused tools for investors who buy properties
+- [ ] Create sophisticated prompts for purchase analysis AI
+
+### SimpleTexting API Integration
+- [ ] Review SimpleTexting API v2 documentation
+- [ ] Document available SMS capabilities
+- [ ] Design integration points for lead nurturing
+
+### Step 8 Filter Bug (Critical)
+- [ ] Fix bedroom filter resetting to "All Sizes" when button is clicked
+- [ ] Root cause: Component state being reset on re-render
+
+
+## Bedroom Filter Bug Fix (Jan 30, 2026) - COMPLETE
+
+### Issue
+- [x] Step 8 Market Advisor bedroom filter was resetting to "All Sizes" when clicking the analyze button
+- [x] Filter value was not being persisted across component re-renders
+
+### Root Cause
+- React component re-rendering was resetting the local state
+- The filter value was being lost before the async API call completed
+
+### Solution
+- [x] Added localStorage persistence for bedroom filter (`marketAdvisor_bedroomFilter_immediate`)
+- [x] Added useRef to capture filter value before async operations
+- [x] Read filter value from localStorage as backup in handleGenerateAnalysis
+- [x] Filter now persists correctly and analysis uses the correct bedroom value
+
+### Testing
+- [x] Verified filter persists when selecting "2 Bedrooms" and clicking analyze
+- [x] Verified analysis results show "Filtered to show only 2 Bedroom properties"
+- [x] Verified dropdown shows correct value after analysis completes
+

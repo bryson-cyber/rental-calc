@@ -3015,8 +3015,9 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
+          console.log('[Standalone Market Advisor] FULL INPUT:', JSON.stringify(input));
           console.log('[Standalone Market Advisor] Starting analysis for:', input.marketId, 'type:', input.marketType);
-          if (input.bedrooms !== undefined) console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms === 0 ? 'Studio' : `${input.bedrooms} BR`);
+          console.log('[Standalone Market Advisor] Bedroom filter:', input.bedrooms, '(type:', typeof input.bedrooms, ')');
           console.log('[Standalone Market Advisor] Property type: entire_home (fixed)');
           
           // Step 1: Fetch comprehensive market data with simplified filters

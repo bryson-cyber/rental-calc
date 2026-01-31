@@ -8,7 +8,7 @@
  * - No green backgrounds - use gold/amber for success states
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
@@ -60,10 +60,39 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   // Use context for bedroom filter to persist across component remounts
   const {
     filters,
-    setBedroomFilter,
+    setBedroomFilter: setContextBedroomFilter,
   } = useMarketAdvisorFilters();
   
-  const bedroomFilter = filters.bedroomFilter || 'all';
+  // Use local state to avoid race condition between dropdown change and button click
+  const [localBedroomFilter, setLocalBedroomFilter] = useState(filters.bedroomFilter || 'all');
+  
+  // Use a ref to store the current filter value that won't be reset on re-render
+  const bedroomFilterRef = useRef(localBedroomFilter);
+  
+  // Keep the ref in sync with local state
+  useEffect(() => {
+    bedroomFilterRef.current = localBedroomFilter;
+  }, [localBedroomFilter]);
+  
+  const bedroomFilter = localBedroomFilter;
+  
+  // Sync local state with context on mount and when context changes
+  useEffect(() => {
+    if (filters.bedroomFilter && filters.bedroomFilter !== localBedroomFilter) {
+      setLocalBedroomFilter(filters.bedroomFilter);
+      bedroomFilterRef.current = filters.bedroomFilter;
+    }
+  }, [filters.bedroomFilter]);
+  
+  // Update both local state, ref, context, and localStorage when filter changes
+  const setBedroomFilter = (value: string) => {
+    console.log('[StandaloneMarketAdvisor] Setting bedroom filter to:', value);
+    setLocalBedroomFilter(value);
+    bedroomFilterRef.current = value;
+    setContextBedroomFilter(value);
+    // Also store directly in localStorage as a backup
+    localStorage.setItem('marketAdvisor_bedroomFilter_immediate', value);
+  };
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MarketSearchResult[]>([]);
@@ -147,6 +176,11 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const handleGenerateAnalysis = async () => {
     if (!selectedMarket) return;
     
+    // Read the filter value directly from localStorage as a backup
+    const storedFilter = localStorage.getItem('marketAdvisor_bedroomFilter_immediate');
+    const capturedBedroomFilter = storedFilter || bedroomFilterRef.current || 'all';
+    console.log('[StandaloneMarketAdvisor] Using bedroom filter:', capturedBedroomFilter, '(stored:', storedFilter, ', ref:', bedroomFilterRef.current, ')');
+    
     setShowResults(false);
     
     const startTime = Date.now();
@@ -181,10 +215,11 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
     }, 1000);
     
     try {
+      console.log('[StandaloneMarketAdvisor] About to call mutation with capturedBedroomFilter:', capturedBedroomFilter);
       const result = await standaloneMarketAdvisorMutation.mutateAsync({
         marketId: selectedMarket.id,
         marketType: selectedMarket.type,
-        bedrooms: bedroomFilter !== 'all' ? parseInt(bedroomFilter) : undefined,
+        bedrooms: capturedBedroomFilter !== 'all' ? parseInt(capturedBedroomFilter) : undefined,
         listingType: 'entire_home',
       });
       
