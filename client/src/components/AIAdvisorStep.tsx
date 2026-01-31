@@ -17,6 +17,20 @@ import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
 
 interface AIAdvisorStepProps {
+  // Mode (rent or purchase)
+  mode?: 'rent' | 'purchase';
+  // Purchase data (only for purchase mode)
+  purchaseData?: {
+    purchasePrice: number;
+    loanType: 'conventional' | 'dscr' | 'fha' | 'cash';
+    downPaymentPercent: number;
+    downPayment: number;
+    loanAmount: number;
+    interestRate: number;
+    monthlyMortgage: number;
+    closingCosts: number;
+    totalCashNeeded: number;
+  };
   // Property data
   property: {
     address: string;
@@ -217,6 +231,8 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
         seasonality: props.seasonality,
         marketGrade: props.marketGrade,
         marketPosition: props.marketPosition,
+        mode: props.mode,
+        purchaseData: props.purchaseData,
       });
       
       clearInterval(elapsedInterval);

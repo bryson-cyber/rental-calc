@@ -2370,10 +2370,12 @@ export default function LeadMagnet() {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === '' || parseFloat(val) >= 0) {
-                            setMyProperty(prev => ({
-                              ...prev!,
-                              purchasePrice: val ? parseFloat(val) : undefined
-                            }));
+                            if (myProperty) {
+                              setMyProperty({
+                                ...myProperty,
+                                purchasePrice: val ? parseFloat(val) : undefined
+                              });
+                            }
                           }
                         }}
                         placeholder="450000"
@@ -2391,11 +2393,15 @@ export default function LeadMagnet() {
                           <button
                             key={type}
                             type="button"
-                            onClick={() => setMyProperty(prev => ({
-                              ...prev!,
-                              loanType: type,
-                              downPaymentPercent: type === 'fha' ? 3.5 : type === 'cash' ? 100 : (prev?.downPaymentPercent || 20)
-                            }))}
+                            onClick={() => {
+                              if (myProperty) {
+                                setMyProperty({
+                                  ...myProperty,
+                                  loanType: type,
+                                  downPaymentPercent: type === 'fha' ? 3.5 : type === 'cash' ? 100 : (myProperty.downPaymentPercent || 20)
+                                });
+                              }
+                            }}
                             className={`px-3 py-2 text-xs font-medium rounded-lg border transition-all ${
                               myProperty?.loanType === type
                                 ? 'bg-amber-500 text-white border-amber-500'
@@ -2420,10 +2426,14 @@ export default function LeadMagnet() {
                             min="0"
                             max="100"
                             value={myProperty?.downPaymentPercent || 20}
-                            onChange={(e) => setMyProperty((prev: PropertyDetails | null) => ({
-                              ...prev!,
-                              downPaymentPercent: parseFloat(e.target.value) || 20
-                            }))}
+                            onChange={(e) => {
+                              if (myProperty) {
+                                setMyProperty({
+                                  ...myProperty,
+                                  downPaymentPercent: parseFloat(e.target.value) || 20
+                                });
+                              }
+                            }}
                             className="input-apple h-12"
                           />
                         </div>
@@ -2437,10 +2447,14 @@ export default function LeadMagnet() {
                             max="20"
                             step="0.125"
                             value={myProperty?.interestRate || 7}
-                            onChange={(e) => setMyProperty((prev: PropertyDetails | null) => ({
-                              ...prev!,
-                              interestRate: parseFloat(e.target.value) || 7
-                            }))}
+                            onChange={(e) => {
+                              if (myProperty) {
+                                setMyProperty({
+                                  ...myProperty,
+                                  interestRate: parseFloat(e.target.value) || 7
+                                });
+                              }
+                            }}
                             className="input-apple h-12"
                           />
                         </div>
@@ -2617,7 +2631,7 @@ export default function LeadMagnet() {
                 
                 <button
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || !address || !monthlyRent || parseFloat(monthlyRent) <= 0 || !isAuthenticated}
+                  disabled={isAnalyzing || !address || (globalMode === 'rent' ? (!monthlyRent || parseFloat(monthlyRent) <= 0) : (!myProperty?.purchasePrice || myProperty.purchasePrice <= 0)) || !isAuthenticated}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   data-analyze-button
                 >
@@ -2745,6 +2759,23 @@ export default function LeadMagnet() {
                   totalListings: result.marketInsights?.totalListings || 0,
                   vsAverage: 0,
                 }}
+                mode={globalMode}
+                purchaseData={globalMode === 'purchase' && myProperty?.purchasePrice ? {
+                  purchasePrice: myProperty.purchasePrice,
+                  loanType: (myProperty.loanType || 'conventional') as 'conventional' | 'dscr' | 'fha' | 'cash',
+                  downPaymentPercent: myProperty.downPaymentPercent || 20,
+                  downPayment: myProperty.purchasePrice * ((myProperty.downPaymentPercent || 20) / 100),
+                  loanAmount: myProperty.purchasePrice * (1 - (myProperty.downPaymentPercent || 20) / 100),
+                  interestRate: myProperty.interestRate || 7,
+                  monthlyMortgage: (() => {
+                    const principal = myProperty.purchasePrice * (1 - (myProperty.downPaymentPercent || 20) / 100);
+                    const monthlyRate = (myProperty.interestRate || 7) / 100 / 12;
+                    const numPayments = 30 * 12;
+                    return principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+                  })(),
+                  closingCosts: myProperty.purchasePrice * 0.03,
+                  totalCashNeeded: myProperty.purchasePrice * ((myProperty.downPaymentPercent || 20) / 100) + myProperty.purchasePrice * 0.03,
+                } : undefined}
               />
             )}
 

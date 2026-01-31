@@ -2698,14 +2698,28 @@ export const appRouter = router({
           totalListings: z.number(),
           vsAverage: z.number(),
         }),
+        // Purchase mode support
+        mode: z.enum(['rent', 'purchase']).optional(),
+        purchaseData: z.object({
+          purchasePrice: z.number(),
+          loanType: z.enum(['conventional', 'dscr', 'fha', 'cash']),
+          downPaymentPercent: z.number(),
+          downPayment: z.number(),
+          loanAmount: z.number(),
+          interestRate: z.number(),
+          monthlyMortgage: z.number(),
+          closingCosts: z.number(),
+          totalCashNeeded: z.number(),
+        }).optional(),
       }))
       .mutation(async ({ input }) => {
         try {
           const db = await getDb();
           
-          // Generate cache key from property address + bedrooms + bathrooms
+          // Generate cache key from property address + bedrooms + bathrooms + mode
           const normalizedAddress = input.property.address.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const cacheKey = `property_${normalizedAddress}_${input.property.bedrooms}_${input.property.bathrooms}`;
+          const mode = input.mode || 'rent';
+          const cacheKey = `property_${normalizedAddress}_${input.property.bedrooms}_${input.property.bathrooms}_${mode}`;
           
           // Check cache first (only if db is available)
           if (db) {

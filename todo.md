@@ -8406,3 +8406,19 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] PURCHASE MODE: Show Purchase Price, Loan Type, Down Payment %, Interest Rate %
 - [x] PURCHASE MODE: Auto-calculate monthly mortgage from inputs (Financing Summary)
 - [x] Test both modes end-to-end
+
+
+## Purchase Mode AI Prompts & Testing (Jan 31, 2026) - COMPLETE
+
+### AI Prompts Update (PTCF Framework)
+- [x] Update AI Advisor prompts for purchase mode (investment-focused advice)
+- [x] Update Market Advisor prompts for purchase mode (investor perspective)
+- [x] Add investment metrics to AI context (Cap Rate, Cash-on-Cash, DSCR)
+
+### Purchase Mode Testing
+- [x] Test Step 1 (My Property) - purchase mode toggle and fields ✅
+- [x] Test Step 5 (Validate the Deal) - purchase mode form and analysis ✅
+- [x] Test Step 3 (See Real Revenue) - revenue projection in purchase context ✅
+- [x] Test Step 8 (Market Advisor) - market analysis for investors ✅
+- [x] Test Step 9 (AI Advisor) - investment-focused AI advice ✅
+- [x] Fix any issues found during testing (fixed Validate button disabled condition)

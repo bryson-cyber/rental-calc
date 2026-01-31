@@ -538,6 +538,7 @@ ${monthlyData.slice(0, 6).map(d => `${d.month}: $${d.currentRevenue.toLocaleStri
  * Property Advisor Input Interface
  */
 export interface PropertyAdvisorInput {
+  mode?: 'rent' | 'purchase'; // Analysis mode
   property: {
     address: string;
     city: string;
@@ -547,6 +548,11 @@ export interface PropertyAdvisorInput {
     bathrooms: number;
     accommodates: number;
     monthlyRent?: number;
+    // Purchase mode fields
+    purchasePrice?: number;
+    loanType?: 'conventional' | 'dscr' | 'fha' | 'cash';
+    downPaymentPercent?: number;
+    interestRate?: number;
   };
   revenue: {
     projected: number;
@@ -602,11 +608,12 @@ export interface PropertyAdvisorInput {
 /**
  * Generate Comprehensive Property Advice
  * Uses PTCF framework for clear, actionable analysis
+ * Supports both rent (arbitrage) and purchase (investment) modes
  */
 export async function generateComprehensivePropertyAdvice(
   input: PropertyAdvisorInput
 ): Promise<string> {
-  const { property, revenue, cashFlow, comparables, marketGrade, marketInsights, historicalData, seasonality } = input;
+  const { mode = 'rent', property, revenue, cashFlow, comparables, marketGrade, marketInsights, historicalData, seasonality } = input;
   
   // Calculate metrics for context
   const avgCompRevenue = comparables.length > 0 
@@ -623,13 +630,89 @@ export async function generateComprehensivePropertyAdvice(
   const bestMonths = [...seasonality].sort((a, b) => b.revenue - a.revenue).slice(0, 3);
   const worstMonths = [...seasonality].sort((a, b) => a.revenue - b.revenue).slice(0, 3);
 
+  // Calculate purchase mode investment metrics
+  const purchasePrice = property.purchasePrice || 0;
+  const downPaymentPercent = property.downPaymentPercent || 20;
+  const interestRate = property.interestRate || 7;
+  const loanType = property.loanType || 'conventional';
+  
+  // Investment calculations for purchase mode
+  const downPayment = purchasePrice * (downPaymentPercent / 100);
+  const loanAmount = purchasePrice - downPayment;
+  const closingCosts = purchasePrice * 0.03; // 3% closing costs
+  const totalCashNeeded = downPayment + closingCosts;
+  
+  // Monthly mortgage calculation (30-year fixed)
+  const monthlyRate = interestRate / 100 / 12;
+  const numPayments = 360; // 30 years
+  const monthlyMortgage = loanType === 'cash' ? 0 : 
+    loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+    (Math.pow(1 + monthlyRate, numPayments) - 1);
+  const annualMortgage = monthlyMortgage * 12;
+  
+  // Operating expenses (48% of revenue is industry standard)
+  const operatingExpenses = revenue.projected * 0.48;
+  const netOperatingIncome = revenue.projected - operatingExpenses;
+  
+  // Investment metrics
+  const capRate = purchasePrice > 0 ? (netOperatingIncome / purchasePrice * 100) : 0;
+  const annualCashFlow = netOperatingIncome - annualMortgage;
+  const monthlyCashFlow = annualCashFlow / 12;
+  const cashOnCashReturn = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded * 100) : 0;
+  const dscr = annualMortgage > 0 ? (netOperatingIncome / annualMortgage) : 0;
+  const breakEvenOccupancy = annualMortgage > 0 ? 
+    ((annualMortgage + operatingExpenses) / revenue.projected * revenue.occupancy) : 0;
+
+  // Choose prompt based on mode
+  const isPurchaseMode = mode === 'purchase' && purchasePrice > 0;
+  
+  // Build mode-specific context and prompt
+  const purchaseContext = isPurchaseMode ? `
+PURCHASE ANALYSIS
+Purchase Price: $${purchasePrice.toLocaleString()}
+Loan Type: ${loanType.toUpperCase()}
+Down Payment: $${downPayment.toLocaleString()} (${downPaymentPercent}%)
+Loan Amount: $${loanAmount.toLocaleString()}
+Interest Rate: ${interestRate}%
+Closing Costs: $${closingCosts.toLocaleString()}
+Total Cash Needed: $${totalCashNeeded.toLocaleString()}
+
+INVESTMENT METRICS
+Cap Rate: ${capRate.toFixed(2)}%
+Cash-on-Cash Return: ${cashOnCashReturn.toFixed(2)}%
+DSCR (Debt Service Coverage Ratio): ${dscr.toFixed(2)}
+Break-even Occupancy: ${breakEvenOccupancy.toFixed(0)}%
+
+CASH FLOW ANALYSIS
+Projected Annual Revenue: $${revenue.projected.toLocaleString()}
+Operating Expenses (48%): -$${operatingExpenses.toLocaleString()}
+Net Operating Income (NOI): $${netOperatingIncome.toLocaleString()}
+Annual Mortgage Payment: -$${annualMortgage.toLocaleString()}
+Annual Cash Flow: $${annualCashFlow.toLocaleString()}
+Monthly Cash Flow: $${monthlyCashFlow.toLocaleString()}
+` : '';
+
+  const rentContext = !isPurchaseMode && property.monthlyRent ? `
+CASH FLOW ANALYSIS (Based on $${property.monthlyRent.toLocaleString()}/month rent)
+Monthly Revenue: $${cashFlow?.monthlyRevenue.toLocaleString() || 'N/A'}
+Monthly Rent: $${cashFlow?.monthlyRent.toLocaleString() || 'N/A'}
+Monthly Profit: $${cashFlow?.monthlyProfit.toLocaleString() || 'N/A'}
+Annual Profit: $${cashFlow?.annualProfit.toLocaleString() || 'N/A'}
+Profit Margin: ${cashFlow?.profitMargin.toFixed(1) || 'N/A'}%
+Revenue-to-Rent Ratio: ${cashFlow ? (cashFlow.monthlyRevenue / cashFlow.monthlyRent).toFixed(2) : 'N/A'}x
+` : '';
+
   // PTCF-structured comprehensive prompt
   const prompt = `<PERSONA>
-You are a rental arbitrage expert who helps beginners understand if a property is a good investment opportunity. You explain complex data in simple terms, like talking to a friend who's curious about Airbnb investing.
+${isPurchaseMode 
+  ? `You are a short-term rental investment analyst who helps investors evaluate properties for purchase. You specialize in analyzing investment metrics like Cap Rate, Cash-on-Cash Return, and DSCR. You explain complex financial data in simple terms, like talking to a friend who's considering buying their first investment property.`
+  : `You are a rental arbitrage expert who helps beginners understand if a property is a good investment opportunity. You explain complex data in simple terms, like talking to a friend who's curious about Airbnb investing.`}
 </PERSONA>
 
 <TASK>
-Analyze this property's potential as a rental arbitrage opportunity and write a comprehensive but easy-to-understand report.
+${isPurchaseMode
+  ? `Analyze this property as a SHORT-TERM RENTAL INVESTMENT PURCHASE. Focus on investment metrics (Cap Rate, Cash-on-Cash Return, DSCR) and whether the numbers make sense for buying this property.`
+  : `Analyze this property's potential as a rental arbitrage opportunity and write a comprehensive but easy-to-understand report.`}
 </TASK>
 
 <CONTEXT>
@@ -637,7 +720,7 @@ PROPERTY DETAILS
 Address: ${property.address}
 Location: ${property.city}, ${property.state} ${property.zipCode}
 Configuration: ${property.bedrooms} BR | ${property.bathrooms} BA | Sleeps ${property.accommodates}
-${property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : 'Monthly Rent: Not specified'}
+${isPurchaseMode ? purchaseContext : rentContext}
 
 REVENUE PROJECTIONS
 Projected Annual Revenue: $${revenue.projected.toLocaleString()}
@@ -645,15 +728,6 @@ Conservative Estimate: $${revenue.low.toLocaleString()}
 Optimistic Estimate: $${revenue.high.toLocaleString()}
 Average Daily Rate (ADR): $${revenue.adr.toLocaleString()}
 Projected Occupancy: ${revenue.occupancy}%
-
-${cashFlow ? `CASH FLOW ANALYSIS (Based on $${property.monthlyRent?.toLocaleString()}/month rent)
-Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
-Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
-Monthly Profit: $${cashFlow.monthlyProfit.toLocaleString()}
-Annual Profit: $${cashFlow.annualProfit.toLocaleString()}
-Profit Margin: ${cashFlow.profitMargin.toFixed(1)}%
-Revenue-to-Rent Ratio: ${(cashFlow.monthlyRevenue / cashFlow.monthlyRent).toFixed(2)}x
-` : ''}
 
 MARKET HEALTH
 ${marketGrade ? `Market Grade: ${marketGrade.grade} (${marketGrade.score}/100) - ${marketGrade.description}` : 'Market Grade: Not available'}
@@ -694,7 +768,38 @@ ${seasonality.map(m => `${m.month}: $${m.revenue.toLocaleString()} | ADR $${m.ad
 </CONTEXT>
 
 <FORMAT>
-Write a comprehensive analysis with these sections:
+${isPurchaseMode ? `Write a comprehensive INVESTMENT analysis with these sections:
+
+## Executive Summary
+A 2-3 sentence overview of whether this is a good INVESTMENT to purchase and why, based on the investment metrics.
+
+## Investment Metrics Breakdown
+- What does the ${capRate.toFixed(2)}% Cap Rate tell us? (Industry benchmark: 8-12% is good for STR)
+- What does the ${cashOnCashReturn.toFixed(2)}% Cash-on-Cash Return mean? (Benchmark: 15%+ is excellent)
+- Is the DSCR of ${dscr.toFixed(2)} healthy? (Benchmark: 1.25+ is required by most lenders)
+- At ${breakEvenOccupancy.toFixed(0)}% break-even, how much cushion do you have?
+
+## The Numbers
+- Monthly cash flow of $${monthlyCashFlow.toLocaleString()} - is this sustainable?
+- Total cash needed of $${totalCashNeeded.toLocaleString()} - what's the payback period?
+- How does the revenue compare to competitors?
+
+## Key Risks & Challenges
+- What could impact your returns?
+- Market saturation concerns?
+- Regulatory or seasonal risks?
+
+## Competitive Positioning
+- How does this property stack up against competitors?
+- What would it take to achieve projected occupancy?
+
+## Bottom Line Investment Recommendation
+Give a clear BUY, PASS, or CONSIDER recommendation with specific reasoning. Include:
+- Who this investment is best suited for (cash buyer, DSCR investor, house hacker, etc.)
+- Key success factors for achieving projected returns
+- What to watch out for
+
+Remember: Focus on the INVESTMENT METRICS and CASH FLOW. This is about whether the numbers make sense for a property PURCHASE.` : `Write a comprehensive analysis with these sections:
 
 ## Executive Summary
 A 2-3 sentence overview of whether this is a good opportunity and why.
@@ -725,14 +830,16 @@ Give a clear YES, NO, or MAYBE recommendation with specific reasoning based on t
 - Key success factors
 - What to watch out for
 
-Remember: Be specific, cite the actual numbers, and write for someone who is new to short-term rental investing.
+Remember: Be specific, cite the actual numbers, and write for someone who is new to short-term rental investing.`}
 </FORMAT>
 
 <CONSTRAINTS>
 - ONLY use the data provided - do not make assumptions
 - Be honest about risks but also highlight genuine opportunities
 - Use simple language - explain jargon when you use it
-- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation
+${isPurchaseMode ? `- Focus on INVESTMENT METRICS: Cap Rate, Cash-on-Cash Return, DSCR, and monthly cash flow
+- Compare metrics to industry benchmarks
+- This is a PURCHASE decision, not a rental arbitrage decision` : `- Focus on CASH FLOW and PROFIT MARGIN, not property appreciation`}
 </CONSTRAINTS>`;
 
   try {
@@ -767,6 +874,22 @@ Remember: Be specific, cite the actual numbers, and write for someone who is new
  * Includes ALL available data from AirDNA
  */
 export interface MaxPropertyAdvisorInput {
+  // Analysis Mode
+  mode?: 'rent' | 'purchase';
+  
+  // Purchase Mode Data (only used when mode === 'purchase')
+  purchaseData?: {
+    purchasePrice: number;
+    downPaymentPercent: number;
+    interestRate: number;
+    loanType: 'conventional' | 'dscr' | 'fha' | 'cash';
+    monthlyMortgage: number;
+    downPayment: number;
+    loanAmount: number;
+    closingCosts: number;
+    totalCashNeeded: number;
+  };
+  
   // Property Details
   property: {
     address: string;
@@ -913,7 +1036,10 @@ export interface MaxPropertyAdvisorInput {
 export async function generateMaxPropertyAdvice(
   input: MaxPropertyAdvisorInput
 ): Promise<string> {
-  const { property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData } = input;
+  const { mode = 'rent', purchaseData, property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData } = input;
+  
+  // Determine if this is purchase mode analysis
+  const isPurchaseMode = mode === 'purchase' && purchaseData;
   
   // Calculate comprehensive metrics
   const avgCompRevenue = comparables.length > 0 
@@ -964,8 +1090,49 @@ export async function generateMaxPropertyAdvice(
   const sameBRTopEarners = [...sameBedroomComps].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   const sameBRBottomEarners = [...sameBedroomComps].sort((a, b) => a.revenue - b.revenue).slice(0, 5);
 
-  // PTCF-structured maximum capacity prompt
-  const prompt = `<PERSONA>
+  // Calculate purchase mode investment metrics if applicable
+  let purchaseMetrics: {
+    capRate: number;
+    cashOnCash: number;
+    dscr: number;
+    breakEvenOccupancy: number;
+    monthlyNOI: number;
+    annualNOI: number;
+    annualCashFlow: number;
+    monthlyCashFlow: number;
+  } | null = null;
+  
+  if (isPurchaseMode && purchaseData) {
+    const operatingExpenses = revenue.projected * 0.35; // 35% operating expenses
+    const annualNOI = revenue.projected - operatingExpenses;
+    const monthlyNOI = annualNOI / 12;
+    const annualMortgage = purchaseData.monthlyMortgage * 12;
+    const annualCashFlow = annualNOI - annualMortgage;
+    const monthlyCashFlow = annualCashFlow / 12;
+    
+    purchaseMetrics = {
+      capRate: (annualNOI / purchaseData.purchasePrice) * 100,
+      cashOnCash: (annualCashFlow / purchaseData.totalCashNeeded) * 100,
+      dscr: annualNOI / annualMortgage,
+      breakEvenOccupancy: ((purchaseData.monthlyMortgage + (operatingExpenses / 12)) / (revenue.projected / 12)) * 100,
+      monthlyNOI,
+      annualNOI,
+      annualCashFlow,
+      monthlyCashFlow,
+    };
+  }
+
+  // PTCF-structured maximum capacity prompt - MODE AWARE
+  const personaSection = isPurchaseMode ? `<PERSONA>
+You are a world-class REAL ESTATE INVESTMENT analyst who helps beginners understand property purchase opportunities. You explain complex investment metrics in simple, friendly language - like talking to a smart friend who's curious about buying rental properties but has never done it before.
+
+Your communication style:
+- Simple language (if a word is confusing, explain it)
+- Real-life comparisons ("Think of it like..." or "Imagine if...")
+- Friendly and encouraging (like talking to a friend)
+- Always explain the "so what?" - why does this number matter?
+- Focus on investment returns: Cap Rate, Cash-on-Cash, DSCR
+</PERSONA>` : `<PERSONA>
 You are a world-class RENTAL ARBITRAGE analyst who helps beginners understand investment opportunities. You explain complex data in simple, friendly language - like talking to a smart friend who's curious about Airbnb investing but has never done it before.
 
 Your communication style:
@@ -973,9 +1140,25 @@ Your communication style:
 - Real-life comparisons ("Think of it like..." or "Imagine if...")
 - Friendly and encouraging (like talking to a friend)
 - Always explain the "so what?" - why does this number matter?
-</PERSONA>
+</PERSONA>`;
 
-<TASK>
+  const taskSection = isPurchaseMode ? `<TASK>
+Analyze this property's potential as a PROPERTY PURCHASE investment and produce a comprehensive investment report.
+
+IMPORTANT: This is for PROPERTY PURCHASE - where someone:
+1. BUYS this property (pays purchase price, gets a mortgage)
+2. Furnishes and lists it on Airbnb/VRBO as a short-term rental
+3. Earns short-term rental income from guests
+4. Keeps the profit (STR income minus mortgage, taxes, and expenses)
+
+This is NOT about rental arbitrage. Focus on:
+- Is this a good investment to BUY?
+- What's the Cap Rate? (NOI / Purchase Price)
+- What's the Cash-on-Cash Return? (Annual Cash Flow / Cash Invested)
+- What's the DSCR? (Does the property income cover the mortgage?)
+- What's the monthly cash flow after mortgage?
+- How does STR income compare to traditional long-term rental?
+</TASK>` : `<TASK>
 Analyze this property's potential as a RENTAL ARBITRAGE opportunity and produce a comprehensive investment report.
 
 IMPORTANT: This is for RENTAL ARBITRAGE - where someone:
@@ -989,7 +1172,11 @@ This is NOT about purchasing property. Focus on:
 - What's the monthly cash flow after rent?
 - Is there enough profit margin to be worth the effort?
 - What's the break-even occupancy needed?
-</TASK>
+</TASK>`;
+
+  const prompt = `${personaSection}
+
+${taskSection}
 
 <CONTEXT>
 Report Date: ${currentDate}
@@ -1002,7 +1189,17 @@ PROPERTY DETAILS
 Address: ${property.address}
 City: ${property.city}, ${property.state} ${property.zipCode}
 Configuration: ${property.bedrooms} Bedrooms | ${property.bathrooms} Bathrooms | Sleeps ${property.accommodates}
-${property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : 'Monthly Rent: Not specified'}
+${isPurchaseMode && purchaseData ? `
+PURCHASE DETAILS
+Purchase Price: $${purchaseData.purchasePrice.toLocaleString()}
+Loan Type: ${purchaseData.loanType.toUpperCase()}
+Down Payment: $${purchaseData.downPayment.toLocaleString()} (${purchaseData.downPaymentPercent}%)
+Loan Amount: $${purchaseData.loanAmount.toLocaleString()}
+Interest Rate: ${purchaseData.interestRate}%
+Monthly Mortgage: $${purchaseData.monthlyMortgage.toLocaleString()}
+Closing Costs: $${purchaseData.closingCosts.toLocaleString()}
+Total Cash Needed: $${purchaseData.totalCashNeeded.toLocaleString()}
+` : property.monthlyRent ? `Monthly Rent: $${property.monthlyRent.toLocaleString()}` : 'Monthly Rent: Not specified'}
 ${property.latitude && property.longitude ? `Coordinates: ${property.latitude}, ${property.longitude}` : ''}
 
 ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1020,8 +1217,29 @@ Key Metrics:
 • Projected Occupancy Rate: ${revenue.occupancy}%
 • Revenue Per Available Room (RevPAR): $${revenue.revpar.toLocaleString()}
 
-${cashFlow ? `
+${isPurchaseMode && purchaseMetrics ? `
+INVESTMENT ANALYSIS (PURCHASE MODE)
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+KEY INVESTMENT METRICS
+• Cap Rate: ${purchaseMetrics.capRate.toFixed(1)}% ${purchaseMetrics.capRate >= 8 ? '(Excellent - above 8% target)' : purchaseMetrics.capRate >= 6 ? '(Good - meets 6% minimum)' : '(Below typical 6% threshold)'}
+• Cash-on-Cash Return: ${purchaseMetrics.cashOnCash.toFixed(1)}% ${purchaseMetrics.cashOnCash >= 15 ? '(Excellent - above 15% target)' : purchaseMetrics.cashOnCash >= 10 ? '(Good - meets 10% minimum)' : '(Below typical 10% threshold)'}
+• DSCR (Debt Service Coverage Ratio): ${purchaseMetrics.dscr.toFixed(2)} ${purchaseMetrics.dscr >= 1.25 ? '(Strong - lenders prefer 1.25+)' : purchaseMetrics.dscr >= 1.0 ? '(Adequate - covers debt)' : '(Warning - income does not cover debt)'}
+• Break-Even Occupancy: ${purchaseMetrics.breakEvenOccupancy.toFixed(1)}% ${purchaseMetrics.breakEvenOccupancy <= 50 ? '(Excellent - low risk)' : purchaseMetrics.breakEvenOccupancy <= 65 ? '(Good - manageable)' : '(High - risky in slow seasons)'}
+
 CASH FLOW ANALYSIS
+• Annual Net Operating Income (NOI): $${purchaseMetrics.annualNOI.toLocaleString()}
+• Monthly NOI: $${purchaseMetrics.monthlyNOI.toLocaleString()}
+• Annual Mortgage Payments: $${(purchaseData!.monthlyMortgage * 12).toLocaleString()}
+• Annual Cash Flow (After Mortgage): $${purchaseMetrics.annualCashFlow.toLocaleString()}
+• Monthly Cash Flow: $${purchaseMetrics.monthlyCashFlow.toLocaleString()}
+
+INVESTMENT SUMMARY
+• Total Cash Invested: $${purchaseData!.totalCashNeeded.toLocaleString()}
+• Projected Annual Return: $${purchaseMetrics.annualCashFlow.toLocaleString()} (${purchaseMetrics.cashOnCash.toFixed(1)}% of cash invested)
+• Time to Recover Investment: ${(purchaseData!.totalCashNeeded / purchaseMetrics.annualCashFlow).toFixed(1)} years
+` : cashFlow ? `
+CASH FLOW ANALYSIS (RENTAL ARBITRAGE)
 Monthly Revenue: $${cashFlow.monthlyRevenue.toLocaleString()}
 Monthly Rent: $${cashFlow.monthlyRent.toLocaleString()}
 Monthly Profit: $${cashFlow.monthlyProfit.toLocaleString()}
