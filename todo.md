@@ -8685,3 +8685,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Spacing and padding inconsistent on mobile → Standardized with responsive spacing utilities
 - [x] Step cards grid not adapting to mobile → Changed to grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5
 - [x] Property form inputs need mobile optimization → Added responsive sizing and spacing
+
+
+## Mobile UI Fixes - Specific Issues (Jan 31, 2026) - COMPLETE
+
+### Loan Type Buttons
+- [x] Fix "Conventional" text being cut off on mobile → Shows "Conv." on mobile via sm:hidden/hidden sm:inline spans
+- [x] Make loan type buttons wrap or stack on small screens → grid-cols-2 sm:grid-cols-4
+- [x] Use shorter labels on mobile (Conv., DSCR, FHA, Cash) → Implemented with responsive spans
+
+### Form Layout (Bedrooms, Bathrooms, Monthly Rent)
+- [x] Stack form fields vertically on mobile → Changed to grid-cols-1 sm:grid-cols-3
+- [x] Fix "Monthly Rent" label wrapping awkwardly → Now stacks vertically on mobile
+- [x] Fix "Optional" text being cut off → Full width on mobile shows complete text
+- [x] Ensure proper spacing between form fields on mobile → gap-4 provides consistent spacing

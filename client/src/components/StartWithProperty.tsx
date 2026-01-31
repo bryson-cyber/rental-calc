@@ -769,18 +769,19 @@ export function StartWithProperty({
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Loan Type
               </label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {(Object.keys(LOAN_CONFIGS) as LoanType[]).map((type) => (
                   <button
                     key={type}
                     onClick={() => setLoanType(type)}
-                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
                       loanType === type
                         ? 'bg-amber-100 text-amber-700 border-2 border-amber-500'
                         : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    {LOAN_CONFIGS[type].name}
+                    <span className="sm:hidden">{type === 'conventional' ? 'Conv.' : LOAN_CONFIGS[type].name}</span>
+                    <span className="hidden sm:inline">{LOAN_CONFIGS[type].name}</span>
                   </button>
                 ))}
               </div>
