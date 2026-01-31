@@ -29,6 +29,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SavedRegulations from "./pages/SavedRegulations";
 import AdminPortal from "./pages/AdminPortal";
 import BugReportPage from "./pages/BugReportPage";
+import InvestmentCalculator from "./pages/InvestmentCalculator";
 
 function Router() {
   return (
@@ -80,6 +81,9 @@ function Router() {
       
       {/* Opportunity Finder - Browse Zillow listings */}
       <Route path="/opportunity-finder" component={OpportunityFinder} />
+      
+      {/* Investment Calculator - For property buyers */}
+      <Route path="/investment-calculator" component={InvestmentCalculator} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

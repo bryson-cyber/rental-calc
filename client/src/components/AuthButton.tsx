@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings } from 'lucide-react';
+import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator } from 'lucide-react';
 import { Link } from 'wouter';
 
 export function AuthButton() {
@@ -70,6 +70,13 @@ export function AuthButton() {
           <DropdownMenuItem className="gap-2 cursor-pointer">
             <Settings className="w-4 h-4" />
             <span>Account Settings</span>
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
+        <Link href="/investment-calculator">
+          <DropdownMenuItem className="gap-2 cursor-pointer">
+            <Calculator className="w-4 h-4" />
+            <span>Investment Calculator</span>
           </DropdownMenuItem>
         </Link>
         <DropdownMenuSeparator />

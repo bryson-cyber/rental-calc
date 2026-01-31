@@ -8297,3 +8297,44 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verified analysis results show "Filtered to show only 2 Bedroom properties"
 - [x] Verified dropdown shows correct value after analysis completes
 
+
+
+## Investment Calculator MVP (Jan 31, 2026) - COMPLETE (Jan 31, 2026)
+
+### Phase 1: Property Link Parser
+- [x] Create Zillow link parser to extract address, price, beds, baths (uses existing SmartAddressInput)
+- [x] Create Redfin link parser to extract address, price, beds, baths (uses existing SmartAddressInput)
+- [x] Add property link input field with auto-detection
+- [x] Test link parsing with various Zillow/Redfin URLs
+
+### Phase 2: Loan Calculators
+- [x] Create Conventional Loan Calculator (20-25% down, standard rates)
+- [x] Create DSCR Loan Calculator (based on property income)
+- [x] Create FHA Loan Calculator (3.5% down for owner-occupants)
+- [x] Create Cash Purchase Calculator (no financing, cap rate focused)
+- [x] Add loan type selector UI with tabs
+
+### Phase 3: Investment Metrics
+- [x] Calculate Cap Rate (NOI / Purchase Price)
+- [x] Calculate Cash-on-Cash Return (Annual Cash Flow / Cash Invested)
+- [x] Calculate DSCR (NOI / Annual Debt Service)
+- [x] Calculate Break-even Occupancy
+- [x] Calculate Monthly Cash Flow
+
+### Phase 4: Investment Calculator Page
+- [x] Create InvestmentCalculator page component
+- [x] Add property link import section (SmartAddressInput with Zillow/Redfin support)
+- [x] Add purchase details form (price, bedrooms, bathrooms)
+- [x] Add loan calculator section with 4 tabs (Conventional, DSCR, FHA, Cash)
+- [x] Add investment metrics display (Cap Rate, Cash-on-Cash, DSCR, Break-even)
+- [x] Integrate with existing AirDNA revenue projections
+- [x] Add comparable properties section
+- [x] Add historical performance section
+
+### Phase 5: Integration
+- [x] Add Investment Calculator to navigation (user dropdown menu)
+- [x] Connect to existing market analysis features
+- [x] Connect to existing comp data features
+- [x] Add lead capture for investment calculator users
+- [x] Test full flow end-to-end
+
