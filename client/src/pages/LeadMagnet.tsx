@@ -66,6 +66,8 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Play,
   Zap,
   Trophy,
@@ -2011,59 +2013,98 @@ export default function LeadMagnet() {
           
           {/* Job-Focused Tab Navigation - Horizontal Swipe on Mobile, Grid on Desktop */}
           <div className="relative mb-8 md:mb-12">
-            {/* Mobile: Horizontal Swipe Container */}
+            {/* Mobile: Improved Navigation with Clear Affordances */}
             <div className="sm:hidden">
-              <div 
-                className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
+              {/* Header with Step Counter and Navigation Arrows */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <span className="text-sm font-medium text-[oklch(0.45_0_0)]">
+                  {(() => {
+                    const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                    const currentIndex = tabs.indexOf(activeTab);
+                    return `Tool ${currentIndex + 1} of ${tabs.length}`;
+                  })()}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                      const currentIndex = tabs.indexOf(activeTab);
+                      if (currentIndex > 0) {
+                        setActiveTab(tabs[currentIndex - 1]);
+                      }
+                    }}
+                    disabled={activeTab === 'ebook'}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+                    aria-label="Previous tool"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-[oklch(0.35_0_0)]" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                      const currentIndex = tabs.indexOf(activeTab);
+                      if (currentIndex < tabs.length - 1) {
+                        setActiveTab(tabs[currentIndex + 1]);
+                      }
+                    }}
+                    disabled={activeTab === 'advisor'}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+                    aria-label="Next tool"
+                  >
+                    <ChevronRight className="w-5 h-5 text-[oklch(0.35_0_0)]" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Current Tool Card - Full Width */}
+              {(() => {
+                const job = jobDescriptions[activeTab];
+                const Icon = job.icon;
+                const tabs = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[];
+                const currentIndex = tabs.indexOf(activeTab);
+                
+                return (
+                  <div className="apple-card p-4 ring-2 ring-[oklch(0.55_0.14_75)]/30">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-[oklch(0.55_0.14_75)]">
+                        <Icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] text-[oklch(0.55_0_0)] font-semibold uppercase tracking-wider bg-[oklch(0.92_0_0)] px-2 py-0.5 rounded">
+                            {activeTab === 'ebook' ? 'Guide' : `Step ${currentIndex}`}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-base text-[oklch(0.55_0.14_75)] mb-1">
+                          {job.title}
+                        </h3>
+                        <p className="text-sm text-[oklch(0.45_0_0)] leading-snug">
+                          {job.job}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {/* Quick Jump Pills */}
+              <div className="flex gap-2 mt-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
-                  const job = jobDescriptions[tab];
-                  const Icon = job.icon;
                   const isActive = activeTab === tab;
-                  
                   return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`relative flex-shrink-0 w-[140px] p-3 rounded-xl transition-all duration-300 text-left snap-center ${
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                         isActive
-                          ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
-                          : 'apple-card hover:shadow-md'
+                          ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                          : 'bg-[oklch(0.95_0_0)] text-[oklch(0.45_0_0)] border border-[oklch(0.88_0_0)]'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          isActive 
-                            ? 'bg-[oklch(0.55_0.14_75)]' 
-                            : 'bg-[oklch(0.92_0_0)]'
-                        }`}>
-                          <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
-                        </div>
-                        <span className="text-[9px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                          {tab === 'ebook' ? 'Guide' : `Step ${index}`}
-                        </span>
-                      </div>
-                      <h3 className={`font-semibold text-xs mb-0.5 line-clamp-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
-                        {job.title}
-                      </h3>
+                      {tab === 'ebook' ? 'Guide' : index}
                     </button>
                   );
                 })}
-              </div>
-              {/* Swipe Indicator */}
-              <div className="flex justify-center gap-1.5 mt-2">
-                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      activeTab === tab 
-                        ? 'bg-[oklch(0.55_0.14_75)] w-4' 
-                        : 'bg-[oklch(0.80_0_0)]'
-                    }`}
-                  />
-                ))}
               </div>
             </div>
             

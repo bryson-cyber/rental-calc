@@ -8701,12 +8701,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Ensure proper spacing between form fields on mobile → gap-4 provides consistent spacing
 
 
-## Mobile Swipe Navigation for Step Cards (Jan 31, 2026) - COMPLETE
+## Mobile Step Navigation Redesign (Jan 31, 2026) - COMPLETE
 
-### Horizontal Swipe Implementation
-- [x] Convert step cards grid to horizontal scroll container on mobile → Uses flex with overflow-x-auto and snap-x snap-mandatory
-- [x] Add CSS scroll-snap for smooth card-by-card swiping → snap-center on each card
-- [x] Hide scrollbar but keep scroll functionality → scrollbar-hide utility class added
-- [x] Add navigation dots/indicators below the cards → 10 dots with active state (elongated amber dot)
-- [x] Clicking dots navigates to that step → onClick handler on each dot
-- [x] Desktop grid layout preserved → hidden sm:grid for desktop, sm:hidden for mobile swipe
+### Improved Mobile Navigation UX (Replaced confusing swipe-only interface)
+- [x] Add "Tool X of 10" step counter → Shows current position clearly at top left
+- [x] Add left/right arrow buttons → Explicit navigation controls with 44px touch targets
+- [x] Show single full-width card → Displays current tool with icon, title, and description
+- [x] Add quick jump pills → Scrollable numbered pills for direct navigation to any step
+- [x] Desktop grid layout preserved → hidden sm:grid for desktop, sm:hidden for mobile
+- [x] Removed confusing dots → Replaced with explicit numbered controls
