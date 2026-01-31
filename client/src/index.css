@@ -665,3 +665,14 @@
   transform: scale(1.1);
   box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
 }
+
+
+/* Hide scrollbar for horizontal swipe navigation */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}

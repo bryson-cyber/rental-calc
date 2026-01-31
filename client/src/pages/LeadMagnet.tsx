@@ -2009,44 +2009,103 @@ export default function LeadMagnet() {
             </div>
           )}
           
-          {/* Job-Focused Tab Navigation - Mobile Optimized */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 md:mb-12">
-            {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
-              const job = jobDescriptions[tab];
-              const Icon = job.icon;
-              const isActive = activeTab === tab;
-              
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 text-left min-h-[100px] sm:min-h-[120px] ${
-                    isActive
-                      ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
-                      : 'apple-card hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      isActive 
-                        ? 'bg-[oklch(0.55_0.14_75)]' 
-                        : 'bg-[oklch(0.92_0_0)]'
-                    }`}>
-                      <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
+          {/* Job-Focused Tab Navigation - Horizontal Swipe on Mobile, Grid on Desktop */}
+          <div className="relative mb-8 md:mb-12">
+            {/* Mobile: Horizontal Swipe Container */}
+            <div className="sm:hidden">
+              <div 
+                className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-4 px-4"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+                  const job = jobDescriptions[tab];
+                  const Icon = job.icon;
+                  const isActive = activeTab === tab;
+                  
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`relative flex-shrink-0 w-[140px] p-3 rounded-xl transition-all duration-300 text-left snap-center ${
+                        isActive
+                          ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
+                          : 'apple-card hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          isActive 
+                            ? 'bg-[oklch(0.55_0.14_75)]' 
+                            : 'bg-[oklch(0.92_0_0)]'
+                        }`}>
+                          <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
+                        </div>
+                        <span className="text-[9px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
+                          {tab === 'ebook' ? 'Guide' : `Step ${index}`}
+                        </span>
+                      </div>
+                      <h3 className={`font-semibold text-xs mb-0.5 line-clamp-2 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
+                        {job.title}
+                      </h3>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Swipe Indicator */}
+              <div className="flex justify-center gap-1.5 mt-2">
+                {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      activeTab === tab 
+                        ? 'bg-[oklch(0.55_0.14_75)] w-4' 
+                        : 'bg-[oklch(0.80_0_0)]'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            {/* Desktop: Grid Layout */}
+            <div className="hidden sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {(['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'] as TabType[]).map((tab, index) => {
+                const job = jobDescriptions[tab];
+                const Icon = job.icon;
+                const isActive = activeTab === tab;
+                
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`relative p-4 rounded-2xl transition-all duration-300 text-left min-h-[120px] ${
+                      isActive
+                        ? 'apple-card ring-2 ring-[oklch(0.55_0.14_75)]/30'
+                        : 'apple-card hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        isActive 
+                          ? 'bg-[oklch(0.55_0.14_75)]' 
+                          : 'bg-[oklch(0.92_0_0)]'
+                      }`}>
+                        <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[oklch(0.50_0_0)]'}`} />
+                      </div>
+                      <span className="text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
+                        {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'prove' ? 'Step 3' : tab === 'find' ? 'Step 4' : tab === 'validate' ? 'Step 5' : tab === 'compare' ? 'Step 6' : tab === 'map' ? 'Step 7' : tab === 'market' ? 'Step 8' : tab === 'advisor' ? 'Step 9' : `Step ${index}`}
+                      </span>
                     </div>
-                    <span className="text-[9px] sm:text-[10px] text-[oklch(0.55_0_0)] font-medium uppercase tracking-wider">
-                      {tab === 'ebook' ? 'Guide' : tab === 'regulations' ? 'Step 1' : tab === 'opportunity' ? 'Step 2' : tab === 'prove' ? 'Step 3' : tab === 'find' ? 'Step 4' : tab === 'validate' ? 'Step 5' : tab === 'compare' ? 'Step 6' : tab === 'map' ? 'Step 7' : tab === 'market' ? 'Step 8' : tab === 'advisor' ? 'Step 9' : `Step ${index}`}
-                    </span>
-                  </div>
-                  <h3 className={`font-semibold text-xs sm:text-sm mb-0.5 sm:mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
-                    {job.title}
-                  </h3>
-                  <p className="text-[10px] sm:text-xs text-[oklch(0.55_0_0)] leading-snug line-clamp-2 hidden sm:block">
-                    {job.job}
-                  </p>
-                </button>
-              );
-            })}
+                    <h3 className={`font-semibold text-sm mb-1 line-clamp-1 ${isActive ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.25_0_0)]'}`}>
+                      {job.title}
+                    </h3>
+                    <p className="text-xs text-[oklch(0.55_0_0)] leading-snug line-clamp-2">
+                      {job.job}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           
           
