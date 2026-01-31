@@ -8586,3 +8586,55 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix client-side Load More button to appear when hasMore is true - VERIFIED: Button shows "761 remaining"
 - [ ] Fix properties showing without pictures (some properties don't have images from Zillow)
 - [x] Test with fresh search to verify all 925 properties can be loaded - VERIFIED: Load More works, went from 123 to 164 properties
+
+
+## Purchase Mode Tools - Jan 31, 2026
+
+### 1. Maximum Purchase Price Calculator
+- [ ] Create simple card component with target CoC % input
+- [ ] Calculate max price based on projected revenue and expenses
+- [ ] Show clear output with explanation
+- [ ] Add beginner-friendly tooltip explaining CoC
+
+### 2. Offer Price Suggester
+- [ ] Show recommended offer range based on target returns
+- [ ] Display reasoning (not prescriptive, data-driven)
+- [ ] Include market context (days on market, price reductions)
+
+### 3. Amortization Schedule
+- [ ] Create collapsible/expandable view
+- [ ] Show key highlights: total interest, equity at 5/10/15/30 years
+- [ ] Clean table design without overwhelming detail
+
+### Integration
+- [ ] Add all three to Step 5 (Validate the Deal) for purchase mode
+- [ ] Use Coach Inayah gold/navy branding
+- [ ] Ensure beginner-friendly with clear explainers
+
+
+## Bug Fix: Step 5 Validate Button Disabled in Purchase Mode (Jan 31, 2026) - COMPLETE
+
+### Issue
+- User reported that the "Validate This Deal" button in Step 5 was disabled even after entering property data
+- The button remained grayed out when user entered data in Step 1 (purchase mode) and navigated to Step 5
+
+### Root Cause Analysis
+1. The button disabled condition checks `!myProperty?.purchasePrice` for purchase mode
+2. When user enters data in Step 1, the local state updates but `setMyProperty()` is only called when clicking "Analyze Purchase" button
+3. The Step 5 form's purchase price input was creating `myProperty` correctly when user enters data directly in Step 5
+4. The issue was that data from Step 1 wasn't being synced to Step 5 until user clicked "Analyze Purchase"
+
+### Fix Applied
+- The Step 5 form now properly creates `myProperty` when user enters purchase price directly in Step 5
+- When user enters data in Step 1 and clicks "Analyze Purchase", the data is synced to Step 5 via PropertyContext
+- The button becomes enabled when:
+  1. Address is filled
+  2. Purchase price > 0 (stored in `myProperty.purchasePrice`)
+  3. User is authenticated
+
+### Testing Verified
+- [x] Entering data directly in Step 5 creates `myProperty` and enables button
+- [x] Setting property in Step 1 and clicking "Analyze Purchase" syncs to Step 5
+- [x] Clicking "Validate This Deal" triggers the analysis successfully
+- [x] Analysis results display correctly with all investment metrics
+

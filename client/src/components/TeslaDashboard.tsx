@@ -41,6 +41,9 @@ import {
   Loader2
 } from 'lucide-react';
 import { ImageCarousel } from './ImageCarousel';
+import MaxPurchasePriceCalculator from './MaxPurchasePriceCalculator';
+import OfferPriceSuggester from './OfferPriceSuggester';
+import AmortizationSchedule from './AmortizationSchedule';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================
@@ -2918,6 +2921,36 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
               </div>
             </div>
           </details>
+        </div>
+      )}
+      
+      {/* PURCHASE MODE: Advanced Tools */}
+      {mode === 'purchase' && purchasePrice && (
+        <div className="space-y-6">
+          {/* Offer Price Suggester */}
+          <OfferPriceSuggester
+            listingPrice={purchasePrice}
+            projectedAnnualRevenue={result.revenue.projected}
+            downPaymentPercent={downPaymentPercent}
+            interestRate={interestRate}
+            loanType={loanType}
+          />
+          
+          {/* Maximum Purchase Price Calculator */}
+          <MaxPurchasePriceCalculator
+            projectedAnnualRevenue={result.revenue.projected}
+            downPaymentPercent={downPaymentPercent}
+            interestRate={interestRate}
+            loanType={loanType}
+          />
+          
+          {/* Amortization Schedule */}
+          <AmortizationSchedule
+            purchasePrice={purchasePrice}
+            downPaymentPercent={downPaymentPercent}
+            interestRate={interestRate}
+            loanType={loanType}
+          />
         </div>
       )}
       

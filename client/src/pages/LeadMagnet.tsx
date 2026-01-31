@@ -959,6 +959,8 @@ export default function LeadMagnet() {
   // ============================================
   // Track if user has manually set the bedroom filter
   const userSetBedroomFilterRef = useRef(false);
+  // Track if user has manually edited the Step 5 form
+  const userEditedStep5Ref = useRef(false);
   
   useEffect(() => {
     // When property context changes, auto-populate bedroom filter for apples-to-apples comparison
@@ -967,20 +969,33 @@ export default function LeadMagnet() {
       // Step 2: Explore Listings - set bedroom filter for apples-to-apples
       setExploreBedroomFilter(myProperty.bedrooms);
       exploreBedroomFilterRef.current = myProperty.bedrooms;
-      
-      // Step 3: Validate the Deal - auto-populate form if not already set
-      if (!address && myProperty.address) {
-        setAddress(myProperty.address);
-        setBedrooms(String(myProperty.bedrooms));
-        setBathrooms(String(myProperty.bathrooms));
-        if (myProperty.monthlyRent) {
-          setMonthlyRent(String(myProperty.monthlyRent));
-        }
-      }
-      // Note: Step 4 (Find the Best Deal) is intentionally NOT auto-populated
-      // because it's for comparing multiple different properties
     }
+    
+    // Step 5: Validate the Deal - auto-populate form from myProperty
+    // Sync when myProperty has data and user hasn't manually edited the form
+    if (hasProperty && myProperty?.address && !userEditedStep5Ref.current) {
+      setAddress(myProperty.address);
+      setBedrooms(String(myProperty.bedrooms));
+      setBathrooms(String(myProperty.bathrooms));
+      if (myProperty.monthlyRent) {
+        setMonthlyRent(String(myProperty.monthlyRent));
+      }
+    }
+    // Note: Step 4 (Find the Best Deal) is intentionally NOT auto-populated
+    // because it's for comparing multiple different properties
   }, [hasProperty, myProperty]);
+  
+  // Also sync when switching to the validate tab
+  useEffect(() => {
+    if (activeTab === 'validate' && hasProperty && myProperty?.address && !userEditedStep5Ref.current) {
+      setAddress(myProperty.address);
+      setBedrooms(String(myProperty.bedrooms));
+      setBathrooms(String(myProperty.bathrooms));
+      if (myProperty.monthlyRent) {
+        setMonthlyRent(String(myProperty.monthlyRent));
+      }
+    }
+  }, [activeTab, hasProperty, myProperty]);
 
   // ============================================
   // DEBOUNCED MARKET SEARCH
@@ -2370,10 +2385,25 @@ export default function LeadMagnet() {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === '' || parseFloat(val) >= 0) {
+                            // Initialize myProperty if null (user went directly to Step 5)
                             if (myProperty) {
                               setMyProperty({
                                 ...myProperty,
                                 purchasePrice: val ? parseFloat(val) : undefined
+                              });
+                            } else {
+                              // Create new property with default values
+                              setMyProperty({
+                                address: address || '',
+                                city: '',
+                                state: '',
+                                zipCode: '',
+                                bedrooms: parseInt(bedrooms) || 2,
+                                bathrooms: parseFloat(bathrooms) || 1,
+                                purchasePrice: val ? parseFloat(val) : undefined,
+                                loanType: 'conventional',
+                                downPaymentPercent: 20,
+                                interestRate: 7
                               });
                             }
                           }
