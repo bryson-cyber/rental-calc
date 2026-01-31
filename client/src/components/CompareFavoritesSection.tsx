@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useProperty } from '@/contexts/PropertyContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +27,12 @@ import {
   Search,
   Map,
   BarChart3,
-  Users
+  Users,
+  LayoutGrid,
+  Table2
 } from 'lucide-react';
 import { Link } from 'wouter';
+import { ComparisonDashboard } from './ComparisonDashboard';
 
 // Generate or retrieve session ID for anonymous users
 function getSessionId(): string {
@@ -71,10 +75,12 @@ interface CompareFavoritesSectionProps {
 
 export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSectionProps) {
   const { user, isAuthenticated } = useAuth();
+  const { globalMode } = useProperty();
   const [rentInputs, setRentInputs] = useState<Record<number, number>>({});
   const [comparisonResults, setComparisonResults] = useState<ComparisonResult[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<Set<number>>(new Set());
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table'); // Default to table view
   
   // Get sessionId for anonymous users
   const sessionId = useMemo(() => {
@@ -255,10 +261,27 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
         <div>
           <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)]">Your Saved Favorites</h3>
           <p className="text-sm text-[oklch(0.55_0_0)]">
-            {favorites.length} properties saved • Select properties to compare
+            {favorites.length} properties saved • {globalMode === 'purchase' ? 'Purchase Mode' : 'Arbitrage Mode'}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center border border-slate-200 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-amber-100 text-amber-700' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Table View"
+            >
+              <Table2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-1.5 rounded-md transition-colors ${viewMode === 'cards' ? 'bg-amber-100 text-amber-700' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Card View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -268,39 +291,73 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
             <RefreshCw className={`w-4 h-4 mr-2 ${favoritesQuery.isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          {selectedForComparison.size > 0 && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearSelection}
-              >
-                Clear ({selectedForComparison.size})
-              </Button>
-              <Button
-                size="sm"
-                onClick={runComparison}
-                disabled={selectedForComparison.size < 2}
-                className="btn-gold"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Compare Selected
-              </Button>
-            </>
-          )}
-          {selectedForComparison.size === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={selectAll}
-            >
-              Select All
-            </Button>
-          )}
         </div>
       </div>
       
-      {/* Favorites Grid */}
+      {/* Table View - ComparisonDashboard */}
+      {viewMode === 'table' && (
+        <ComparisonDashboard
+          properties={favorites.map(fav => ({
+            id: fav.id,
+            address: fav.address,
+            city: fav.city,
+            state: fav.state,
+            zipCode: fav.zipCode,
+            bedrooms: fav.bedrooms || 0,
+            bathrooms: fav.bathrooms || '0',
+            annualRevenue: fav.annualRevenue || 0,
+            occupancyRate: fav.occupancyRate || '0',
+            averageDailyRate: fav.averageDailyRate || 0,
+            monthlyRent: fav.monthlyRent,
+            zillowUrl: fav.zillowUrl,
+            // Purchase mode fields - use defaults if not stored
+            purchasePrice: (fav as any).purchasePrice || null,
+            loanType: (fav as any).loanType || null,
+            downPaymentPercent: (fav as any).downPaymentPercent || null,
+            interestRate: (fav as any).interestRate || null,
+          }))}
+          onRemove={(id) => handleRemove(id)}
+          mode={globalMode || 'rent'}
+        />
+      )}
+      
+      {/* Card View - Original Grid */}
+      {viewMode === 'cards' && (
+        <>
+          {/* Selection Actions */}
+          <div className="flex items-center gap-2">
+            {selectedForComparison.size > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSelection}
+                >
+                  Clear ({selectedForComparison.size})
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={runComparison}
+                  disabled={selectedForComparison.size < 2}
+                  className="btn-gold"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Compare Selected
+                </Button>
+              </>
+            )}
+            {selectedForComparison.size === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAll}
+              >
+                Select All
+              </Button>
+            )}
+          </div>
+      
+          {/* Favorites Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {favorites.map(fav => {
           const isSelected = selectedForComparison.has(fav.id);
@@ -501,6 +558,8 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );

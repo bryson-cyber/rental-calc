@@ -8507,3 +8507,34 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Allow removing properties from comparison
 - [ ] Store comparison data in session/localStorage
 
+
+
+## Comparison Dashboard (Step 6) - Jan 31, 2026
+
+### Dedicated Comparison Dashboard
+- [ ] Create side-by-side table view for saved properties
+- [ ] Add investor metrics columns (Revenue, Cash Flow, CoC Return, Cap Rate)
+- [ ] Add property details columns (Address, Price, Bedrooms, Bathrooms)
+- [ ] Add sorting functionality by different metrics
+- [ ] Add remove from comparison action
+- [ ] Style the table for easy readability and comparison
+
+
+## Comparison Dashboard (Step 6) - Jan 31, 2026 - COMPLETE
+
+### Side-by-Side Comparison Table
+- [x] Create ComparisonDashboard component with sortable table view
+- [x] Show all saved properties with investor metrics
+- [x] Add sorting functionality by different metrics (Cash-on-Cash, Annual Revenue, Cash Flow, Cap Rate, Grade)
+- [x] Support both arbitrage and purchase mode
+- [x] Highlight best deal based on selected metric (green banner with best property)
+- [x] Add view toggle (Table/Card view)
+- [x] Add metric explanations at bottom of table
+- [x] Integrate with CompareFavoritesSection
+
+### Verified Features:
+- Table columns: Property, Annual Revenue, Price, Cash Flow, CoC Return, Cap Rate
+- Best Deal banner: Shows top property with cash flow and CoC return
+- Mode indicator: "3 properties • Purchase Mode"
+- Remove buttons for each property
+- Sort dropdown for different metrics
