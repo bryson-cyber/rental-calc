@@ -8638,3 +8638,19 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Clicking "Validate This Deal" triggers the analysis successfully
 - [x] Analysis results display correctly with all investment metrics
 
+
+
+## Step 5 UX Improvements (Jan 31, 2026) - COMPLETE
+
+### Visual Indicator for Synced Data
+- [x] Add "Property loaded from Step 1" badge when data is synced from PropertyContext
+- [x] Show badge near the form fields to indicate data source
+- [x] Style badge with Coach Inayah gold/amber branding (gradient from amber-50 to amber-100)
+
+### Auto-Populate Step 5 Form
+- [x] Auto-fill Step 5 form fields when myProperty exists in context
+- [x] Populate address, purchase price, bedrooms, bathrooms from myProperty
+- [x] Ensure form updates when user navigates to Step 5 with existing property
+- [x] Added useEffect to sync data when switching to validate tab
+- [x] Badge shows property details: BR, BA, and price (purchase or rent based on mode)
+

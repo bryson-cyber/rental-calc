@@ -977,9 +977,12 @@ export default function LeadMagnet() {
       setAddress(myProperty.address);
       setBedrooms(String(myProperty.bedrooms));
       setBathrooms(String(myProperty.bathrooms));
+      // Rent mode: sync monthly rent
       if (myProperty.monthlyRent) {
         setMonthlyRent(String(myProperty.monthlyRent));
       }
+      // Purchase mode: myProperty already contains purchasePrice, loanType, downPaymentPercent, interestRate
+      // These are read directly from myProperty in the form, so no separate state sync needed
     }
     // Note: Step 4 (Find the Best Deal) is intentionally NOT auto-populated
     // because it's for comparing multiple different properties
@@ -991,9 +994,12 @@ export default function LeadMagnet() {
       setAddress(myProperty.address);
       setBedrooms(String(myProperty.bedrooms));
       setBathrooms(String(myProperty.bathrooms));
+      // Rent mode: sync monthly rent
       if (myProperty.monthlyRent) {
         setMonthlyRent(String(myProperty.monthlyRent));
       }
+      // Purchase mode: data is read directly from myProperty in the form
+      // (purchasePrice, loanType, downPaymentPercent, interestRate)
     }
   }, [activeTab, hasProperty, myProperty]);
 
@@ -2312,6 +2318,27 @@ export default function LeadMagnet() {
                   isOpen={showHelp === 'validate'}
                   onToggle={() => setShowHelp(showHelp === 'validate' ? null : 'validate')}
                 />
+                
+                {/* Visual indicator when data is synced from Step 1 */}
+                {hasProperty && myProperty?.address && address === myProperty.address && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-50 to-amber-100/50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center justify-center w-5 h-5 bg-amber-500 rounded-full">
+                      <CheckCircle2 className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-sm font-medium text-amber-800">
+                      Property loaded from Step 1
+                    </span>
+                    <span className="text-xs text-amber-600 ml-auto">
+                      {myProperty.bedrooms} BR • {myProperty.bathrooms} BA
+                      {globalMode === 'purchase' && myProperty.purchasePrice && (
+                        <> • ${myProperty.purchasePrice.toLocaleString()}</>
+                      )}
+                      {globalMode === 'rent' && myProperty.monthlyRent && (
+                        <> • ${myProperty.monthlyRent.toLocaleString()}/mo</>
+                      )}
+                    </span>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
