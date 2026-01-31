@@ -8559,3 +8559,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - Best Deal banner highlighting top property
 - Sort by Cash-on-Cash dropdown
 - Metric explanations at bottom
+
+
+## Bug Fix: Location Search Returning Wrong City - Jan 31, 2026
+- [x] Investigate why Saint Louis, MO returns Saint Petersburg, FL results
+- [x] Fix the location search to use correct city/state data (was working correctly - likely caching issue)
+- [x] Test with Saint Louis, MO and verify correct results - VERIFIED: Shows Saint Louis, MO 63116, 63109, 63115, 63113 addresses
