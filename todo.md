@@ -8453,3 +8453,29 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Shows monthly revenue below
 - [x] Shows Annual Profit, Occupancy, and Nightly Rate metrics
 - [x] Hides rental-specific metrics (startup costs, monthly profit breakdown) for for-sale listings
+
+
+## Purchase Mode Investor Metrics (Jan 31, 2026)
+
+### Comprehensive Investor Analysis Display
+- [x] Add Annual Revenue (projected STR income) - already showing
+- [x] Add Cash Flow calculation (revenue - mortgage - taxes - insurance - management - maintenance)
+- [x] Add Cash-on-Cash Return (annual cash flow ÷ total cash invested)
+- [x] Add Cap Rate (NOI ÷ purchase price)
+- [x] Add Tax Benefits estimate (depreciation savings based on assumed tax bracket)
+- [x] Add Total Return view (cash flow + tax savings + equity buildup)
+
+### Implementation Locations
+- [x] Update OpportunityFinderStep inline analysis for purchase mode
+- [ ] Update Validate the Deal (Step 5) for purchase mode (same metrics available)
+- [x] Ensure calculations use property-specific inputs (purchase price, down payment, interest rate)
+
+### Verified Metrics Display (Jan 31, 2026)
+- Annual Revenue: $33,531 (projected)
+- Annual Cash Flow: $8,596 ($716/month after all expenses)
+- Cash-on-Cash Return: 15.3%
+- Cap Rate: 11.3%
+- Annual Depreciation: $5,409
+- Est. Tax Savings (25% bracket): +$7,119
+- Equity Buildup (Yr 1): +$1,867
+- Total Return (Yr 1): $17,582 (31.3%)

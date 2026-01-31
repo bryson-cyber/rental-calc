@@ -85,6 +85,7 @@ import { InfoTooltip } from '@/components/InfoTooltip';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { toast } from 'sonner';
+import { useProperty } from '@/contexts/PropertyContext';
 
 // Types
 interface ZillowProperty {
@@ -280,6 +281,9 @@ function saveState(state: { location: string; searchType: 'forRent' | 'forSale';
 export default function OpportunityFinderStep({ onSelectProperty, initialLocation, onLocationChange, initialCity, initialState }: OpportunityFinderStepProps) {
   // Auth state
   const { user } = useAuth();
+  
+  // Property context for purchase mode data
+  const { globalMode, myProperty } = useProperty();
   
   // Search state - restore from localStorage if available using initializer function
   // This ensures state is loaded fresh on each mount (when switching tabs)
@@ -1325,48 +1329,203 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 </div>
                               )}
                               
-                              {/* For Sale: Show Annual Revenue prominently */}
-                              {searchType === 'forSale' ? (
-                                <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
-                                  <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: 'oklch(0.55 0.14 75)' }}>
-                                    Projected Annual Revenue
-                                  </p>
-                                  <p 
-                                    className="text-4xl font-black"
-                                    style={{ 
-                                      color: 'oklch(0.35 0.12 75)',
-                                      textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                    }}
-                                  >
-                                    {formatCurrency(validation.projection.annualRevenue)}
-                                  </p>
-                                  <p className="text-sm font-medium mt-2" style={{ color: 'oklch(0.45 0 0)' }}>
-                                    {formatCurrency(validation.projection.monthlyRevenue)}/month
-                                  </p>
-                                  <div className="flex items-center justify-center gap-4 mt-3 pt-3" style={{ borderTop: '1px dashed oklch(0.85 0 0)' }}>
-                                    <div className="text-center">
-                                      <p className="text-lg font-bold" style={{ color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)' }}>
-                                        {formatCurrency(validation.projection.annualProfit)}
+                              {/* For Sale: Show comprehensive investor metrics */}
+                              {searchType === 'forSale' ? (() => {
+                                // Calculate investor metrics using property price and user's financing settings
+                                const purchasePrice = property.price;
+                                const downPaymentPercent = myProperty?.downPaymentPercent || 20;
+                                const interestRate = myProperty?.interestRate || 7;
+                                const loanType = myProperty?.loanType || 'conventional';
+                                
+                                // Calculate mortgage payment (30-year fixed)
+                                const downPayment = purchasePrice * (downPaymentPercent / 100);
+                                const loanAmount = purchasePrice - downPayment;
+                                const monthlyRate = interestRate / 100 / 12;
+                                const numPayments = 30 * 12;
+                                const monthlyMortgage = loanType === 'cash' ? 0 : 
+                                  loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+                                  (Math.pow(1 + monthlyRate, numPayments) - 1);
+                                
+                                // Annual expenses
+                                const annualMortgage = monthlyMortgage * 12;
+                                const propertyTax = purchasePrice * 0.012; // ~1.2% of purchase price
+                                const insurance = purchasePrice * 0.005; // ~0.5% of purchase price
+                                const managementFee = validation.projection.annualRevenue * 0.20; // 20% management
+                                const maintenance = validation.projection.annualRevenue * 0.05; // 5% maintenance reserve
+                                const utilities = 200 * 12; // $200/month utilities estimate
+                                
+                                // Cash flow calculation
+                                const totalExpenses = annualMortgage + propertyTax + insurance + managementFee + maintenance + utilities;
+                                const annualCashFlow = validation.projection.annualRevenue - totalExpenses;
+                                const monthlyCashFlow = annualCashFlow / 12;
+                                
+                                // NOI (Net Operating Income) - before debt service
+                                const operatingExpenses = propertyTax + insurance + managementFee + maintenance + utilities;
+                                const noi = validation.projection.annualRevenue - operatingExpenses;
+                                
+                                // Investment metrics
+                                const closingCosts = purchasePrice * 0.03; // ~3% closing costs
+                                const startupCosts = 8000 + (property.bedrooms * 4000); // Furnishing
+                                const totalCashInvested = downPayment + closingCosts + startupCosts;
+                                const cashOnCashReturn = (annualCashFlow / totalCashInvested) * 100;
+                                const capRate = (noi / purchasePrice) * 100;
+                                
+                                // Tax benefits (simplified - assumes 25% tax bracket)
+                                const taxBracket = 0.25;
+                                const annualDepreciation = (purchasePrice * 0.85) / 27.5; // Building value / 27.5 years
+                                const mortgageInterestYear1 = loanAmount * (interestRate / 100) * 0.95; // Approximate first year interest
+                                const taxDeductions = annualDepreciation + mortgageInterestYear1 + operatingExpenses;
+                                const taxSavings = taxDeductions * taxBracket;
+                                
+                                // Equity buildup (first year principal paydown)
+                                const firstYearPrincipal = annualMortgage - mortgageInterestYear1;
+                                
+                                // Total return
+                                const totalReturn = annualCashFlow + taxSavings + firstYearPrincipal;
+                                const totalReturnPercent = (totalReturn / totalCashInvested) * 100;
+                                
+                                return (
+                                <div className="mb-4">
+                                  {/* Annual Revenue - Hero metric */}
+                                  <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                                    <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: 'oklch(0.55 0.14 75)' }}>
+                                      Projected Annual Revenue
+                                    </p>
+                                    <p 
+                                      className="text-4xl font-black"
+                                      style={{ 
+                                        color: 'oklch(0.35 0.12 75)',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                      }}
+                                    >
+                                      {formatCurrency(validation.projection.annualRevenue)}
+                                    </p>
+                                    <p className="text-sm font-medium mt-1" style={{ color: 'oklch(0.45 0 0)' }}>
+                                      {formatCurrency(validation.projection.monthlyRevenue)}/month • {Math.round(validation.projection.occupancy)}% occ • {formatCurrency(validation.projection.adr)}/night
+                                    </p>
+                                  </div>
+                                  
+                                  {/* Cash Flow - The key metric for investors */}
+                                  <div className="text-center mb-3 p-3 rounded-lg" style={{ backgroundColor: annualCashFlow > 0 ? 'oklch(0.55 0.15 145 / 0.08)' : 'oklch(0.55 0.20 25 / 0.08)' }}>
+                                    <p className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: annualCashFlow > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.50 0.15 25)' }}>
+                                      Annual Cash Flow
+                                    </p>
+                                    <p 
+                                      className="text-2xl font-bold"
+                                      style={{ color: annualCashFlow > 0 ? 'oklch(0.40 0.15 145)' : 'oklch(0.50 0.20 25)' }}
+                                    >
+                                      {formatCurrency(annualCashFlow)}
+                                    </p>
+                                    <p className="text-xs mt-1" style={{ color: 'oklch(0.50 0 0)' }}>
+                                      {formatCurrency(monthlyCashFlow)}/month after all expenses
+                                    </p>
+                                  </div>
+                                  
+                                  {/* Return Metrics Grid */}
+                                  <div className="grid grid-cols-2 gap-2 mb-3">
+                                    <div className="p-2 rounded-lg text-center" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                      <p className="text-lg font-bold" style={{ color: cashOnCashReturn > 10 ? 'oklch(0.45 0.15 145)' : 'oklch(0.35 0 0)' }}>
+                                        {cashOnCashReturn.toFixed(1)}%
                                       </p>
-                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Annual Profit</p>
+                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Cash-on-Cash</p>
                                     </div>
-                                    <div className="w-px h-8" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
-                                    <div className="text-center">
-                                      <p className="text-lg font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
-                                        {Math.round(validation.projection.occupancy)}%
+                                    <div className="p-2 rounded-lg text-center" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                                      <p className="text-lg font-bold" style={{ color: capRate > 8 ? 'oklch(0.45 0.15 145)' : 'oklch(0.35 0 0)' }}>
+                                        {capRate.toFixed(1)}%
                                       </p>
-                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</p>
-                                    </div>
-                                    <div className="w-px h-8" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
-                                    <div className="text-center">
-                                      <p className="text-lg font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
-                                        {formatCurrency(validation.projection.adr)}
-                                      </p>
-                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</p>
+                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Cap Rate</p>
                                     </div>
                                   </div>
+                                  
+                                  {/* Tax Benefits & Total Return */}
+                                  <details className="text-xs mb-3">
+                                    <summary className="cursor-pointer font-medium py-1 flex items-center gap-1" style={{ color: 'oklch(0.45 0 0)' }}>
+                                      <ChevronDown className="w-3 h-3" />
+                                      View Tax Benefits & Total Return
+                                    </summary>
+                                    <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                      <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Annual Depreciation</span>
+                                          <span className="font-medium" style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(annualDepreciation)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Est. Tax Savings (25% bracket)</span>
+                                          <span className="font-medium" style={{ color: 'oklch(0.45 0.15 145)' }}>+{formatCurrency(taxSavings)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Equity Buildup (Yr 1)</span>
+                                          <span className="font-medium" style={{ color: 'oklch(0.45 0.15 145)' }}>+{formatCurrency(firstYearPrincipal)}</span>
+                                        </div>
+                                        <div className="flex justify-between pt-2 mt-2" style={{ borderTop: '1px dashed oklch(0.85 0 0)' }}>
+                                          <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>Total Return (Yr 1)</span>
+                                          <span className="font-bold" style={{ color: 'oklch(0.45 0.15 145)' }}>{formatCurrency(totalReturn)} ({totalReturnPercent.toFixed(1)}%)</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </details>
+                                  
+                                  {/* Investment Breakdown */}
+                                  <details className="text-xs mb-3">
+                                    <summary className="cursor-pointer font-medium py-1 flex items-center gap-1" style={{ color: 'oklch(0.45 0 0)' }}>
+                                      <ChevronDown className="w-3 h-3" />
+                                      View Investment Breakdown
+                                    </summary>
+                                    <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
+                                      <p className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.35 0 0)' }}>Cash Needed to Close:</p>
+                                      <div className="space-y-1 mb-3">
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Down Payment ({downPaymentPercent}%)</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(downPayment)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Closing Costs (~3%)</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(closingCosts)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Furnishing</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(startupCosts)}</span>
+                                        </div>
+                                        <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>Total Cash Needed</span>
+                                          <span style={{ color: 'oklch(0.55 0.14 75)' }}>{formatCurrency(totalCashInvested)}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      <p className="text-xs font-semibold mb-2 pt-2" style={{ color: 'oklch(0.35 0 0)', borderTop: '1px dashed oklch(0.85 0 0)' }}>Monthly Expenses:</p>
+                                      <div className="space-y-1">
+                                        {loanType !== 'cash' && (
+                                          <div className="flex justify-between">
+                                            <span style={{ color: 'oklch(0.55 0 0)' }}>Mortgage ({interestRate}%)</span>
+                                            <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(monthlyMortgage)}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Property Tax</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(propertyTax / 12)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Insurance</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(insurance / 12)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Management (20%)</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(managementFee / 12)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span style={{ color: 'oklch(0.55 0 0)' }}>Maintenance (5%)</span>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>{formatCurrency(maintenance / 12)}</span>
+                                        </div>
+                                        <div className="flex justify-between pt-1 font-semibold" style={{ borderTop: '1px solid oklch(0.90 0 0)' }}>
+                                          <span style={{ color: 'oklch(0.35 0 0)' }}>Total Monthly</span>
+                                          <span style={{ color: 'oklch(0.55 0.15 25)' }}>{formatCurrency(totalExpenses / 12)}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </details>
                                 </div>
-                              ) : (
+                                );
+                              })() : (
                               /* For Rent: Show Monthly Profit prominently (original behavior) */
                               <TooltipProvider>
                                 <Tooltip delayDuration={0}>
