@@ -8369,7 +8369,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 
-## Global Rent/Purchase Mode Switch (Jan 31, 2026) - IN PROGRESS
+## Global Rent/Purchase Mode Switch (Jan 31, 2026) - COMPLETE
 
 ### Phase 1: Global Mode System
 - [x] Add global mode state to PropertyContext ('rent' | 'purchase')
@@ -8389,12 +8389,20 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Update collapsed property card to show mode-specific info
 
 ### Phase 4: Mode-Specific Analysis
-- [ ] Show BreakEvenCalculator in RENT mode
-- [ ] Show LoanCalculator + STR vs LTR in PURCHASE mode
-- [ ] Update AI prompts based on mode
-- [ ] Update metric labels and explanations per mode
+- [x] Show BreakEvenCalculator in RENT mode (existing)
+- [x] Show LoanCalculator + STR vs LTR in PURCHASE mode (in Investment Calculator)
+- [x] Update AI prompts based on mode (TeslaDashboard updated)
+- [x] Update metric labels and explanations per mode
 
 ### Phase 5: Testing
-- [ ] Test RENT mode full flow
-- [ ] Test PURCHASE mode full flow
-- [ ] Verify mode persists across page navigation
+- [x] Test RENT mode full flow
+- [x] Test PURCHASE mode full flow
+- [x] Verify mode persists across page navigation
+
+
+## Validate the Deal Form Mode Update (Jan 31, 2026) - COMPLETE
+- [x] Update Validate the Deal form to respect global mode
+- [x] RENT MODE: Show only "Monthly Rent" field (remove mortgage option)
+- [x] PURCHASE MODE: Show Purchase Price, Loan Type, Down Payment %, Interest Rate %
+- [x] PURCHASE MODE: Auto-calculate monthly mortgage from inputs (Financing Summary)
+- [x] Test both modes end-to-end

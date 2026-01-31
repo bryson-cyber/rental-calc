@@ -2325,36 +2325,163 @@ export default function LeadMagnet() {
                   />
                 </div>
                 
-                {/* Monthly Rent or Mortgage */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
-                    Rent or Mortgage <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={monthlyRent}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        // Prevent negative values
-                        if (val === '' || parseFloat(val) >= 0) {
-                          setMonthlyRent(val);
-                          // Clear rentometer data when rent changes
-                          setRentometerData(null);
-                        }
-                      }}
-                      placeholder="2000"
-                      className="input-apple h-12"
-                    />
-                    {isLoadingRentometer && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                {/* RENT MODE: Monthly Rent */}
+                {globalMode === 'rent' && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                      Monthly Rent <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={monthlyRent}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || parseFloat(val) >= 0) {
+                            setMonthlyRent(val);
+                            setRentometerData(null);
+                          }
+                        }}
+                        placeholder="2000"
+                        className="input-apple h-12"
+                      />
+                      {isLoadingRentometer && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* PURCHASE MODE: Purchase Price & Financing */}
+                {globalMode === 'purchase' && (
+                  <div className="space-y-4">
+                    {/* Purchase Price */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                        Purchase Price <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={myProperty?.purchasePrice || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || parseFloat(val) >= 0) {
+                            setMyProperty(prev => ({
+                              ...prev!,
+                              purchasePrice: val ? parseFloat(val) : undefined
+                            }));
+                          }
+                        }}
+                        placeholder="450000"
+                        className="input-apple h-12"
+                      />
+                    </div>
+
+                    {/* Loan Type */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                        Loan Type
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {(['conventional', 'dscr', 'fha', 'cash'] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setMyProperty(prev => ({
+                              ...prev!,
+                              loanType: type,
+                              downPaymentPercent: type === 'fha' ? 3.5 : type === 'cash' ? 100 : (prev?.downPaymentPercent || 20)
+                            }))}
+                            className={`px-3 py-2 text-xs font-medium rounded-lg border transition-all ${
+                              myProperty?.loanType === type
+                                ? 'bg-amber-500 text-white border-amber-500'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-amber-300'
+                            }`}
+                          >
+                            {type === 'conventional' ? 'Conv.' : type.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Down Payment & Interest Rate (not for Cash) */}
+                    {myProperty?.loanType !== 'cash' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                            Down Payment %
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={myProperty?.downPaymentPercent || 20}
+                            onChange={(e) => setMyProperty((prev: PropertyDetails | null) => ({
+                              ...prev!,
+                              downPaymentPercent: parseFloat(e.target.value) || 20
+                            }))}
+                            className="input-apple h-12"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
+                            Interest Rate %
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="20"
+                            step="0.125"
+                            value={myProperty?.interestRate || 7}
+                            onChange={(e) => setMyProperty((prev: PropertyDetails | null) => ({
+                              ...prev!,
+                              interestRate: parseFloat(e.target.value) || 7
+                            }))}
+                            className="input-apple h-12"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Financing Summary */}
+                    {myProperty?.purchasePrice && (
+                      <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Financing Summary</h4>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-slate-500">Down Payment:</span>
+                            <span className="ml-2 font-medium">
+                              ${Math.round(myProperty.purchasePrice * (myProperty.downPaymentPercent || 20) / 100).toLocaleString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Loan Amount:</span>
+                            <span className="ml-2 font-medium">
+                              ${Math.round(myProperty.purchasePrice * (1 - (myProperty.downPaymentPercent || 20) / 100)).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="col-span-2 pt-2 border-t border-slate-200">
+                            <span className="text-slate-500">Monthly Mortgage:</span>
+                            <span className="ml-2 font-semibold text-amber-600">
+                              ${(() => {
+                                if (myProperty.loanType === 'cash') return '0';
+                                const principal = myProperty.purchasePrice * (1 - (myProperty.downPaymentPercent || 20) / 100);
+                                const monthlyRate = (myProperty.interestRate || 7) / 100 / 12;
+                                const numPayments = 30 * 12;
+                                const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+                                return Math.round(payment).toLocaleString();
+                              })()}/mo
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
-
-                </div>
+                )}
                 
                 {/* Bedrooms & Bathrooms */}
                 <div className="grid grid-cols-2 gap-4">
@@ -4923,7 +5050,7 @@ export default function LeadMagnet() {
               rentometerData={rentometerData}
               mode={globalMode}
               purchasePrice={myProperty?.purchasePrice}
-              loanType={myProperty?.loanType}
+              loanType={myProperty?.loanType as 'conventional' | 'dscr' | 'fha' | 'cash' | undefined}
               downPaymentPercent={myProperty?.downPaymentPercent}
               interestRate={myProperty?.interestRate}
             />
