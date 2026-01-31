@@ -8565,3 +8565,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Investigate why Saint Louis, MO returns Saint Petersburg, FL results
 - [x] Fix the location search to use correct city/state data (was working correctly - likely caching issue)
 - [x] Test with Saint Louis, MO and verify correct results - VERIFIED: Shows Saint Louis, MO 63116, 63109, 63115, 63113 addresses
+
+
+## Bug Fix: Pagination Only Shows 3 Pages - Jan 31, 2026
+- [ ] Investigate pagination logic in OpportunityFinderStep
+- [ ] Fix pagination to show all available pages (925 properties = ~47 pages at 20 per page)
+- [ ] Test with Saint Louis, MO search
+
+
+## Bug Fix: Pagination Only Showing 3 Pages - Jan 31, 2026 - COMPLETE
+- [x] Investigate why pagination shows only 3 pages when 925 properties exist
+- [x] Fix server-side pagination to return proper hasMore flag (initialPagesToFetch < estimatedTotalPages)
+- [x] Add Load More button for loading additional pages
+- [x] Test with Saint Louis, MO search - VERIFIED: Shows "Page 1 of 7 (47 total)" with Load More button showing "802 remaining"

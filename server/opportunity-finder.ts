@@ -565,8 +565,8 @@ export const opportunityFinderRouter = router({
       bathsMin: z.number().optional(),
       bathsMax: z.number().optional(),
       homeTypes: z.array(z.string()).optional(),
-      page: z.number().optional(),
-      maxPages: z.number().optional().default(5), // Fetch up to 5 pages by default
+      page: z.number().optional().default(1),
+      loadMore: z.boolean().optional().default(false), // If true, fetch only the specified page
     }))
     .mutation(async ({ input }) => {
       try {
@@ -576,9 +576,50 @@ export const opportunityFinderRouter = router({
         // Then disambiguate location by geocoding to get correct city + state
         // This fixes issues where "Saint Louis" could match Florida instead of Missouri
         const disambiguatedLocation = await disambiguateLocation(normalizedLocation);
-        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}`);
+        console.log(`[Opportunity Finder] Searching Zillow for sale: ${input.location} -> ${normalizedLocation} -> ${disambiguatedLocation}, page: ${input.page}, loadMore: ${input.loadMore}`);
         
-        // Fetch first page to get total results with automatic price enrichment
+        // If loadMore is true, just fetch the specific page
+        if (input.loadMore && input.page > 1) {
+          const result = await searchZillowListingsWithEnrichment(
+            {
+              keyword: disambiguatedLocation,
+              type: 'forSale',
+              priceMin: input.priceMin,
+              priceMax: input.priceMax,
+              bedsMin: input.bedsMin,
+              bedsMax: input.bedsMax,
+              bathsMin: input.bathsMin,
+              bathsMax: input.bathsMax,
+              homeTypes: input.homeTypes,
+              page: input.page,
+            },
+            { maxEnrichments: 10 }
+          );
+          
+          if (!result.success) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: result.error || 'Failed to search Zillow properties',
+            });
+          }
+          
+          // Estimate ~40 properties per page
+          const estimatedTotalPages = Math.ceil(result.totalResults / 40);
+          const hasMore = input.page < estimatedTotalPages;
+          
+          console.log(`[Opportunity Finder] Load more page ${input.page}: ${result.properties.length} properties, hasMore: ${hasMore}`);
+          
+          return {
+            success: true,
+            totalResults: result.totalResults,
+            properties: result.properties,
+            location: input.location,
+            hasMore,
+            currentPage: input.page,
+          };
+        }
+        
+        // Initial search: fetch first 3 pages for faster initial load
         const firstResult = await searchZillowListingsWithEnrichment(
           {
             keyword: disambiguatedLocation,
@@ -590,9 +631,9 @@ export const opportunityFinderRouter = router({
             bathsMin: input.bathsMin,
             bathsMax: input.bathsMax,
             homeTypes: input.homeTypes,
-            page: input.page || 1,
+            page: 1,
           },
-          { maxEnrichments: 15 } // Enrich up to 15 properties per page for better coverage
+          { maxEnrichments: 15 }
         );
         
         if (!firstResult.success) {
@@ -604,18 +645,18 @@ export const opportunityFinderRouter = router({
         
         let allProperties = [...firstResult.properties];
         const totalResults = firstResult.totalResults;
-        const maxPages = input.maxPages || 5;
         
-        // Estimate ~40 properties per page, fetch additional pages
-        const estimatedPages = Math.ceil(totalResults / 40);
-        const pagesToFetch = Math.min(estimatedPages, maxPages);
+        // Estimate ~40 properties per page
+        const estimatedTotalPages = Math.ceil(totalResults / 40);
+        // Fetch first 3 pages on initial load for faster response
+        const initialPagesToFetch = Math.min(3, estimatedTotalPages);
         
-        console.log(`[Opportunity Finder] Total results: ${totalResults}, fetching ${pagesToFetch} pages`);
+        console.log(`[Opportunity Finder] Total results: ${totalResults}, estimated pages: ${estimatedTotalPages}, fetching initial ${initialPagesToFetch} pages`);
         
-        // Fetch additional pages in parallel (pages 2 through pagesToFetch)
-        if (pagesToFetch > 1 && !input.page) {
+        // Fetch pages 2-3 in parallel for initial load
+        if (initialPagesToFetch > 1) {
           const pagePromises = [];
-          for (let page = 2; page <= pagesToFetch; page++) {
+          for (let page = 2; page <= initialPagesToFetch; page++) {
             pagePromises.push(
               searchZillowListings({
                 keyword: disambiguatedLocation,
@@ -644,14 +685,18 @@ export const opportunityFinderRouter = router({
           }
         }
         
-        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties for sale`);
+        // Determine if there are more pages to load
+        const hasMore = initialPagesToFetch < estimatedTotalPages;
+        
+        console.log(`[Opportunity Finder] Fetched ${allProperties.length} total properties for sale, hasMore: ${hasMore}`);
         
         return {
           success: true,
           totalResults: totalResults,
           properties: allProperties,
           location: input.location,
-          hasMore: false, // For sale fetches all pages upfront
+          hasMore,
+          currentPage: initialPagesToFetch,
         };
         
       } catch (error) {

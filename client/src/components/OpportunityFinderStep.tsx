@@ -538,6 +538,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       bathsMax: bathsMax ? parseFloat(bathsMax) : undefined,
       homeTypes: homeType ? [homeType] : undefined,
       page,
+      loadMore: append, // Pass loadMore flag for for-sale pagination
     };
     
     try {
@@ -722,7 +723,11 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   const [displayPage, setDisplayPage] = useState(1);
   
   // Calculate pagination values
-  const totalPages = Math.ceil(sortedProperties.length / pageSize);
+  // Use totalResults to show actual total pages available (not just loaded properties)
+  const loadedPages = Math.ceil(sortedProperties.length / pageSize);
+  const estimatedTotalPages = totalResults > 0 ? Math.ceil(totalResults / pageSize) : loadedPages;
+  // Show loaded pages for navigation, but indicate more are available
+  const totalPages = loadedPages;
   const startIndex = (displayPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const displayedProperties = sortedProperties.slice(startIndex, endIndex);
@@ -1122,7 +1127,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                 
                 {/* Page Info */}
                 <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0 0)' }}>
-                  Page {displayPage} of {hasMore ? `${totalPages}+` : totalPages}
+                  Page {displayPage} of {hasMore ? `${totalPages} (${estimatedTotalPages} total)` : totalPages}
                 </span>
               </div>
             )}
@@ -1955,7 +1960,37 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                 })}
               </div>
               
-
+              {/* Load More Button - Prominent display when more properties available */}
+              {hasMore && (
+                <div className="mt-8 text-center">
+                  <div className="mb-3">
+                    <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>
+                      Showing {sortedProperties.length} of {totalResults} properties
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="px-8 py-3 text-base font-semibold"
+                    style={{
+                      backgroundColor: 'oklch(0.55 0.14 75)',
+                      borderRadius: '980px',
+                    }}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Loading More Properties...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-5 h-5 mr-2" />
+                        Load More Properties ({totalResults - sortedProperties.length} remaining)
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
