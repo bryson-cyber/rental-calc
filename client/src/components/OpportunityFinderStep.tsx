@@ -453,6 +453,8 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           bathrooms: property.bathrooms,
           propertyType: property.homeType,
           monthlyRent: property.price,
+          zillowUrl: property.url,
+          imageUrl: property.image, // Property thumbnail image
           // Include analysis data if available
           annualRevenue: validation?.projection?.annualRevenue,
           monthlyRevenue: validation?.projection?.monthlyRevenue,

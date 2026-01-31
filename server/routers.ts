@@ -3240,6 +3240,8 @@ export const appRouter = router({
         averageDailyRate: z.number().int().optional(),
         monthlyRent: z.number().int().optional(),
         estimatedProfit: z.number().int().optional(),
+        zillowUrl: z.string().optional(),
+        imageUrl: z.string().optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -3276,6 +3278,8 @@ export const appRouter = router({
             averageDailyRate: input.averageDailyRate,
             monthlyRent: input.monthlyRent,
             estimatedProfit: input.estimatedProfit,
+            zillowUrl: input.zillowUrl,
+            imageUrl: input.imageUrl,
             notes: input.notes,
           });
 

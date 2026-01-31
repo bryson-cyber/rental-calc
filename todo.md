@@ -8538,3 +8538,24 @@ This makes the grading more optimistic - properties now get better grades at low
 - Mode indicator: "3 properties • Purchase Mode"
 - Remove buttons for each property
 - Sort dropdown for different metrics
+
+
+## Property Photos in Comparison Table - Jan 31, 2026
+
+- [ ] Update database schema to store property images (imageUrl field)
+- [ ] Update ComparisonDashboard to display property thumbnails
+- [ ] Update Save for Comparison to capture property images from Zillow listings
+- [ ] Test photo display in comparison table
+
+
+## Property Photos in Comparison Table - Jan 31, 2026 - COMPLETE
+- [x] Add imageUrl field to favoriteProperties database schema
+- [x] Update ComparisonDashboard to display property thumbnails (56x56px with fallback icon)
+- [x] Update Save for Comparison to capture property images (imageUrl from Zillow)
+- [x] Test photo display in comparison table - WORKING
+
+### Verified Features:
+- Table view with property thumbnails
+- Best Deal banner highlighting top property
+- Sort by Cash-on-Cash dropdown
+- Metric explanations at bottom

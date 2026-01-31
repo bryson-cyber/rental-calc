@@ -56,6 +56,7 @@ interface ComparisonProperty {
   averageDailyRate: number;
   monthlyRent: number | null;
   zillowUrl: string | null;
+  imageUrl?: string | null; // Property thumbnail image URL
   // Purchase mode fields (may be null for arbitrage properties)
   purchasePrice?: number | null;
   loanType?: string | null;
@@ -493,13 +494,28 @@ export function ComparisonDashboard({ properties, onRemove, mode }: ComparisonDa
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-start gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                          {mode === 'rent' ? (
-                            <Home className="w-4 h-4 text-slate-500" />
-                          ) : (
-                            <Building className="w-4 h-4 text-slate-500" />
-                          )}
+                      <div className="flex items-start gap-3">
+                        {/* Property Thumbnail */}
+                        <div className="w-14 h-14 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden">
+                          {property.imageUrl ? (
+                            <img 
+                              src={property.imageUrl} 
+                              alt={property.address}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // Fallback to icon if image fails to load
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-full h-full flex items-center justify-center ${property.imageUrl ? 'hidden' : ''}`}>
+                            {mode === 'rent' ? (
+                              <Home className="w-6 h-6 text-slate-400" />
+                            ) : (
+                              <Building className="w-6 h-6 text-slate-400" />
+                            )}
+                          </div>
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-slate-900 text-sm truncate max-w-[180px]">
