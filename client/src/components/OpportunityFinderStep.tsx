@@ -1325,7 +1325,49 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 </div>
                               )}
                               
-                              {/* Monthly Profit - Hero Metric with Investment Comparison Tooltip */}
+                              {/* For Sale: Show Annual Revenue prominently */}
+                              {searchType === 'forSale' ? (
+                                <div className="text-center mb-4 pb-3" style={{ borderBottom: '1px solid oklch(0.90 0 0)' }}>
+                                  <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: 'oklch(0.55 0.14 75)' }}>
+                                    Projected Annual Revenue
+                                  </p>
+                                  <p 
+                                    className="text-4xl font-black"
+                                    style={{ 
+                                      color: 'oklch(0.35 0.12 75)',
+                                      textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                    }}
+                                  >
+                                    {formatCurrency(validation.projection.annualRevenue)}
+                                  </p>
+                                  <p className="text-sm font-medium mt-2" style={{ color: 'oklch(0.45 0 0)' }}>
+                                    {formatCurrency(validation.projection.monthlyRevenue)}/month
+                                  </p>
+                                  <div className="flex items-center justify-center gap-4 mt-3 pt-3" style={{ borderTop: '1px dashed oklch(0.85 0 0)' }}>
+                                    <div className="text-center">
+                                      <p className="text-lg font-bold" style={{ color: validation.projection.monthlyProfit > 0 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.20 25)' }}>
+                                        {formatCurrency(validation.projection.annualProfit)}
+                                      </p>
+                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Annual Profit</p>
+                                    </div>
+                                    <div className="w-px h-8" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
+                                    <div className="text-center">
+                                      <p className="text-lg font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                        {Math.round(validation.projection.occupancy)}%
+                                      </p>
+                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Occupancy</p>
+                                    </div>
+                                    <div className="w-px h-8" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
+                                    <div className="text-center">
+                                      <p className="text-lg font-bold" style={{ color: 'oklch(0.35 0 0)' }}>
+                                        {formatCurrency(validation.projection.adr)}
+                                      </p>
+                                      <p className="text-[10px] uppercase tracking-wide" style={{ color: 'oklch(0.55 0 0)' }}>Nightly Rate</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                              /* For Rent: Show Monthly Profit prominently (original behavior) */
                               <TooltipProvider>
                                 <Tooltip delayDuration={0}>
                                   <TooltipTrigger asChild>
@@ -1422,8 +1464,10 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
+                              )}
                               
-                              {/* Key Metrics - Compact Row */}
+                              {/* Key Metrics - Compact Row - Only show for rentals */}
+                              {searchType === 'forRent' && (
                               <div className="flex flex-wrap gap-2 mb-3 text-xs">
                                 <div className="flex items-center gap-1 px-2 py-1 rounded-md" style={{ backgroundColor: 'oklch(0.98 0 0)' }}>
                                   <DollarSign className="w-3 h-3" style={{ color: 'oklch(0.55 0.14 75)' }} />
@@ -1446,10 +1490,10 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   <span className="font-semibold" style={{ color: validation.projection.roi > 25 ? 'oklch(0.45 0.15 145)' : 'oklch(0.25 0 0)' }}>{validation.projection.roi}%</span>
                                 </div>
                               </div>
+                              )}
                               
-                              
-                              
-                              {/* Startup Costs (collapsed by default) */}
+                              {/* Startup Costs (collapsed by default) - Only for rentals */}
+                              {searchType === 'forRent' && (
                               <details className="text-xs mb-3">
                                 <summary className="cursor-pointer font-medium py-1" style={{ color: 'oklch(0.45 0 0)' }}>
                                   View Startup Costs
@@ -1476,6 +1520,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   </p>
                                 </div>
                               </details>
+                              )}
                               
                               {/* Verdict */}
                               <p 

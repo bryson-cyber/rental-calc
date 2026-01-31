@@ -8422,3 +8422,34 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test Step 8 (Market Advisor) - market analysis for investors ✅
 - [x] Test Step 9 (AI Advisor) - investment-focused AI advice ✅
 - [x] Fix any issues found during testing (fixed Validate button disabled condition)
+
+
+### Purchase Mode For-Sale Listings Enhancement
+- [ ] Update Find a Property (Step 2) for-sale listings to show Annual Revenue prominently
+- [ ] Make the Annual Revenue display big and bold for purchase mode properties
+
+
+## Purchase Mode Enhancements (Jan 31, 2026) - COMPLETE
+
+### Comma Formatting
+- [x] Fix purchase price input to show comma formatting (e.g., $279,888 instead of 279888)
+- [x] Updated StartWithProperty component
+- [x] Updated LeadMagnet Step 5 (Validate the Deal)
+- [x] Updated InvestmentCalculator
+
+### Zillow For-Sale Integration
+- [x] Add Zillow for-sale listings integration for purchase mode (synced with global mode)
+- [x] OpportunityFinderStep now syncs with globalMode from PropertyContext
+
+### Property Favorites
+- [x] Property saving/favorites feature already implemented (heart icons on cards, CompareFavoritesSection)
+
+### Purchase Mode Verification
+- [x] Verified all buttons and tools work correctly in purchase mode with proper prompts
+
+### Annual Revenue Display for Purchase Mode
+- [x] Make Annual Revenue display big and bold for purchase mode property cards
+- [x] Shows "PROJECTED ANNUAL REVENUE" prominently with large font
+- [x] Shows monthly revenue below
+- [x] Shows Annual Profit, Occupancy, and Nightly Rate metrics
+- [x] Hides rental-specific metrics (startup costs, monthly profit breakdown) for for-sale listings
