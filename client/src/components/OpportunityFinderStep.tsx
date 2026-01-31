@@ -1922,6 +1922,28 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                   </Tooltip>
                                 </TooltipProvider>
                               </div>
+                              
+                              {/* Save for Comparison Button */}
+                              <div className="pt-2 mt-2 border-t border-slate-100">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full h-8 text-xs font-medium"
+                                  style={{ 
+                                    borderRadius: '0.75rem',
+                                    borderColor: favorites.has(property.id) ? 'oklch(0.55 0.14 75)' : 'oklch(0.85 0 0)',
+                                    backgroundColor: favorites.has(property.id) ? 'oklch(0.55 0.14 75 / 0.1)' : 'transparent',
+                                    color: favorites.has(property.id) ? 'oklch(0.45 0.12 75)' : 'oklch(0.45 0 0)',
+                                  }}
+                                  onClick={() => toggleFavorite(property.id, property)}
+                                >
+                                  <Heart 
+                                    className="w-3.5 h-3.5 mr-1.5" 
+                                    fill={favorites.has(property.id) ? 'currentColor' : 'none'}
+                                  />
+                                  {favorites.has(property.id) ? 'Saved for Comparison' : 'Save for Comparison'}
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </CardContent>

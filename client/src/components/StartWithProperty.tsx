@@ -59,7 +59,7 @@ const LOAN_CONFIGS: Record<LoanType, LoanConfig> = {
     name: 'DSCR',
     description: 'Investor loan, 25% down',
     defaultDownPayment: 25,
-    interestRate: 7.5,
+    interestRate: 8.5,
     termYears: 30,
   },
   fha: {

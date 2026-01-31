@@ -318,9 +318,16 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                   )}
                   
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[oklch(0.15_0_0)] truncate">
-                      {property.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-[oklch(0.15_0_0)] truncate">
+                        {property.title}
+                      </p>
+                      {property.mode === 'purchase' && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 rounded">
+                          Purchase
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-sm text-[oklch(0.50_0_0)]">
                       <span className="flex items-center gap-1">
                         <Bed className="w-3 h-3" />
@@ -330,6 +337,11 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                         <Bath className="w-3 h-3" />
                         {property.bathrooms}
                       </span>
+                      {property.purchasePrice && (
+                        <span className="text-purple-600 font-medium">
+                          {formatCurrency(property.purchasePrice)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 ml-4">
@@ -337,9 +349,15 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                       <p className="text-sm font-medium text-emerald-600">
                         {formatCurrency(property.revenue)}/yr
                       </p>
-                      <p className="text-xs text-[oklch(0.50_0_0)]">
-                        {formatCurrency(property.adr)}/night
-                      </p>
+                      {property.mode === 'purchase' && property.cashOnCash !== undefined ? (
+                        <p className="text-xs text-purple-600 font-medium">
+                          {property.cashOnCash.toFixed(1)}% CoC
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[oklch(0.50_0_0)]">
+                          {formatCurrency(property.adr)}/night
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <button

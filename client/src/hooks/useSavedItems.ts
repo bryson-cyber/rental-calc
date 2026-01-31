@@ -22,6 +22,17 @@ export interface SavedProperty {
   airbnbUrl?: string;
   savedAt: string;
   notes?: string;
+  // Purchase mode investor metrics
+  mode?: 'rent' | 'purchase';
+  purchasePrice?: number;
+  loanType?: 'conventional' | 'dscr' | 'fha' | 'cash';
+  downPaymentPercent?: number;
+  interestRate?: number;
+  cashFlow?: number;
+  cashOnCash?: number;
+  capRate?: number;
+  totalReturn?: number;
+  zillowUrl?: string;
 }
 
 const SAVED_MARKETS_KEY = 'rental-calculator-saved-markets';

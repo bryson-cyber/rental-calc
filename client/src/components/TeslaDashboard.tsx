@@ -2806,6 +2806,73 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
             </div>
           </div>
           
+          {/* Tax Benefits & Total Return Section */}
+          <details className="mt-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100">
+            <summary className="cursor-pointer text-sm font-medium text-purple-700 hover:text-purple-800 flex items-center gap-2">
+              <ChevronDown className="w-4 h-4" />
+              Tax Benefits & Total Return
+            </summary>
+            <div className="mt-4 space-y-4">
+              {/* Tax Benefits Calculations */}
+              {(() => {
+                const annualDepreciation = (purchasePrice || 0) / 27.5; // 27.5 year depreciation
+                const taxBracket = 0.25; // Assume 25% tax bracket
+                const taxSavings = annualDepreciation * taxBracket;
+                
+                // Equity buildup (Year 1 principal paydown)
+                const monthlyRate = interestRate / 100 / 12;
+                const numPayments = 30 * 12;
+                const firstYearPrincipal = (() => {
+                  if (loanType === 'cash' || purchaseCalcs?.loanAmount === 0) return 0;
+                  let balance = purchaseCalcs?.loanAmount || 0;
+                  let totalPrincipal = 0;
+                  for (let i = 0; i < 12; i++) {
+                    const interestPayment = balance * monthlyRate;
+                    const principalPayment = (purchaseCalcs?.monthlyMortgage || 0) - interestPayment;
+                    totalPrincipal += principalPayment;
+                    balance -= principalPayment;
+                  }
+                  return totalPrincipal;
+                })();
+                
+                const totalReturn = (purchaseCalcs?.annualCashFlow || 0) + taxSavings + firstYearPrincipal;
+                const totalReturnPercent = (purchaseCalcs?.totalCashNeeded || 0) > 0 
+                  ? (totalReturn / (purchaseCalcs?.totalCashNeeded || 1)) * 100 
+                  : 0;
+                
+                return (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-500 mb-1">Annual Depreciation</div>
+                        <div className="text-lg font-bold text-purple-600">{formatCurrency(annualDepreciation)}</div>
+                        <div className="text-xs text-slate-400">27.5 year schedule</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-500 mb-1">Est. Tax Savings</div>
+                        <div className="text-lg font-bold text-emerald-600">+{formatCurrency(taxSavings)}</div>
+                        <div className="text-xs text-slate-400">at 25% bracket</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-500 mb-1">Equity Buildup (Yr 1)</div>
+                        <div className="text-lg font-bold text-blue-600">+{formatCurrency(firstYearPrincipal)}</div>
+                        <div className="text-xs text-slate-400">Principal paydown</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-500 mb-1">Total Return (Yr 1)</div>
+                        <div className="text-lg font-bold text-emerald-600">{formatCurrency(totalReturn)}</div>
+                        <div className="text-xs text-slate-400">{totalReturnPercent.toFixed(1)}% return</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">
+                      Total Return = Cash Flow ({formatCurrency(purchaseCalcs?.annualCashFlow || 0)}) + Tax Savings ({formatCurrency(taxSavings)}) + Equity ({formatCurrency(firstYearPrincipal)})
+                    </p>
+                  </>
+                );
+              })()}
+            </div>
+          </details>
+          
           {/* Detailed Breakdown (Collapsible) */}
           <details className="mt-4">
             <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-700 flex items-center gap-2">

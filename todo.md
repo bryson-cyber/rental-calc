@@ -8479,3 +8479,31 @@ This makes the grading more optimistic - properties now get better grades at low
 - Est. Tax Savings (25% bracket): +$7,119
 - Equity Buildup (Yr 1): +$1,867
 - Total Return (Yr 1): $17,582 (31.3%)
+
+
+## Purchase Mode Enhancements Phase 2 (Jan 31, 2026)
+
+### 1. Loan Type Presets with Auto-Fill Rates
+- [x] Add preset rates for each loan type:
+  - Conventional: 7% interest, 20% down
+  - DSCR: 8.5% interest, 25% down
+  - FHA: 6.5% interest, 3.5% down
+  - Cash: 0% interest, 100% down (no mortgage)
+- [x] Auto-fill rates when loan type is selected (already implemented)
+- [x] Update StartWithProperty component (DSCR rate updated to 8.5%)
+- [x] Update any other loan type selectors
+
+### 2. Investor Metrics in All Applicable Steps
+- [x] Add investor metrics to Step 5 (Validate the Deal) - Added Tax Benefits & Total Return section
+- [x] Ensure consistent metrics display across all purchase mode analysis
+- [x] Include: Annual Revenue, Cash Flow, CoC Return, Cap Rate, Tax Benefits, Total Return
+
+### 3. Save to Compare Feature
+- [x] Add "Save for Comparison" button on analyzed properties
+- [x] Updated SavedProperty interface to include purchase mode investor metrics
+- [x] Updated SavedItemsPanel to show purchase mode metrics (CoC, purchase price)
+- [x] Comparison view already exists in Step 4 (CompareFavoritesSection)
+- [ ] Display investor metrics for each saved property
+- [ ] Allow removing properties from comparison
+- [ ] Store comparison data in session/localStorage
+
