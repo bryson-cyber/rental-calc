@@ -8182,3 +8182,64 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix the search/geocoding logic to return correct location (added disambiguateLocation function)
 - [x] Added geocoding-based location disambiguation to searchZillowRentals and searchZillowForSale
 - [x] Test with various city names to ensure accuracy - Verified Saint Louis returns 3,152 MO properties
+
+
+## HubSpot Email Sequence Build-Out (Jan 30, 2026)
+- [ ] Review all 9 existing tool email templates in HubSpot
+- [ ] Update email CTAs to use deep_link_url personalization token
+- [ ] Create automated workflow triggered by lead submission
+- [ ] Configure email sequence timing (drip campaign)
+- [ ] Set up enrollment triggers based on lead source
+- [ ] Add personalization tokens for city, state, and property data
+- [ ] Test complete email automation flow end-to-end
+- [ ] Verify deep links work correctly in test emails
+
+## Bug Fixes - January 31, 2026
+
+### Step 8 - Market Advisor Error - FIXED
+- [x] Fix "Unable to generate comprehensive market analysis" error
+- [x] Add retry logic for Gemini API failures (3 retries with exponential backoff: 2s, 4s, 8s)
+- [x] Add better error handling and fallback display
+
+### Step 9 - AI Advisor Login Redirect - FIXED
+- [x] Investigate why AI Advisor redirects to login (found auth check in handleAnalyze function)
+- [x] Fix authentication requirement issue (removed login requirement from handleAnalyze)
+- [ ] Test with Dallas property (418 Lansing St)
+
+
+
+## Bug Fixes (Jan 31, 2026) - COMPLETE
+
+### Step 8 & Step 9 Authentication Fix
+- [x] Fix Step 8 (Market Advisor) redirecting to login page instead of running analysis
+- [x] Fix Step 9 (AI Advisor) redirecting to login page instead of running analysis
+- [x] Remove authentication requirement from standaloneMarketAdvisor endpoint
+- [x] Remove authentication requirement from propertyAdvisorMax endpoint
+- [x] Test both steps work without login on dev server
+
+### Gemini API Fix
+- [x] Fix Gemini API returning empty responses due to thinkingConfig
+- [x] Remove thinkingConfig from callGeminiMax function
+- [x] Clear AI Advisor cache to regenerate with fixed API
+- [x] Verify Step 8 generates comprehensive market reports
+- [x] Verify Step 9 generates comprehensive property reports
+
+
+
+## Step 9 AI Advisor Fixes (Jan 31, 2026)
+
+### UI Fixes
+- [x] Fix headline to say "property" instead of "property or market"
+- [x] Remove asterisks/markdown formatting from AI output (should be clean narrative)
+
+### Data Fixes
+- [x] Fix blank revenue range data in "The Range" section
+
+### Performance Fixes
+- [x] Optimize Gemini API call to reduce 2+ minute wait time (reduced max tokens from 65K to 16K)
+
+### Prompt Fixes (PTCF Framework)
+- [x] Update Gemini prompt to output clean narrative document style
+- [x] Remove any chart/table formatting instructions
+- [x] Ensure output is beginner-friendly and non-prescriptive
+

@@ -230,47 +230,102 @@ async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<
 }
 
 /**
+ * Utility function to sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Extended capacity Gemini 3 call for comprehensive analysis
  * Uses maximum output tokens (65K) for detailed reports
+ * Includes retry logic with exponential backoff for resilience
  */
-async function callGeminiMax(prompt: string): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+async function callGeminiMax(prompt: string, maxRetries: number = 3): Promise<string> {
+  let lastError: Error | null = null;
   
-  try {
-    const response = await fetch(`${GEMINI_3_PRO_URL}?key=${ENV.geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          // For comprehensive reports, use lower temperature for consistency
-          // while still leveraging thinking capabilities
-          temperature: 0.7,
-          maxOutputTokens: 65536, // Maximum output capacity
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+    
+    try {
+      console.log(`[Gemini Max] Attempt ${attempt + 1}/${maxRetries}...`);
+      
+      const response = await fetch(`${GEMINI_3_PRO_URL}?key=${ENV.geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        // High thinking level for comprehensive analysis
-        thinkingConfig: {
-          thinkingLevel: 'high'
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            // For comprehensive reports, use moderate temperature for consistency
+            // Note: Removed thinkingConfig as it was consuming all tokens and returning empty responses
+            temperature: 0.7,
+            maxOutputTokens: 16384, // Reduced from 65K for faster response while still comprehensive
+          }
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error?.message || 'Unknown error';
+        console.error(`[Gemini Max] API error on attempt ${attempt + 1}: ${errorMessage}`);
+        
+        // Check if it's a rate limit error (429) or server error (5xx)
+        if (response.status === 429 || response.status >= 500) {
+          lastError = new Error(`Gemini API error: ${errorMessage}`);
+          // Exponential backoff: 2s, 4s, 8s
+          const backoffMs = Math.pow(2, attempt + 1) * 1000;
+          console.log(`[Gemini Max] Retrying in ${backoffMs}ms...`);
+          await sleep(backoffMs);
+          continue;
         }
-      }),
-      signal: controller.signal
-    });
+        
+        throw new Error(`Gemini API error: ${errorMessage}`);
+      }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+      const data: GeminiResponse = await response.json();
+      const result = data.candidates[0]?.content?.parts[0]?.text || '';
+      
+      if (result) {
+        console.log(`[Gemini Max] Success on attempt ${attempt + 1}`);
+        return result;
+      }
+      
+      // Empty response, retry
+      lastError = new Error('Empty response from Gemini API');
+      console.warn(`[Gemini Max] Empty response on attempt ${attempt + 1}, retrying...`);
+      await sleep(Math.pow(2, attempt + 1) * 1000);
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Check if it's an abort error (timeout)
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`[Gemini Max] Timeout on attempt ${attempt + 1}`);
+      } else {
+        console.error(`[Gemini Max] Error on attempt ${attempt + 1}:`, error);
+      }
+      
+      // Don't retry on the last attempt
+      if (attempt < maxRetries - 1) {
+        const backoffMs = Math.pow(2, attempt + 1) * 1000;
+        console.log(`[Gemini Max] Retrying in ${backoffMs}ms...`);
+        await sleep(backoffMs);
+      }
     }
-
-    const data: GeminiResponse = await response.json();
-    return data.candidates[0]?.content?.parts[0]?.text || '';
-  } finally {
-    clearTimeout(timeoutId);
   }
+  
+  // All retries exhausted
+  console.error(`[Gemini Max] All ${maxRetries} attempts failed. Last error:`, lastError);
+  throw lastError || new Error('All retry attempts failed');
 }
 
 /**
@@ -1110,64 +1165,53 @@ ARBITRAGE OPPORTUNITY ANALYSIS
 </CONTEXT>
 
 <FORMAT>
-Write a comprehensive rental arbitrage analysis report with these sections:
+Write a comprehensive rental arbitrage analysis report as a clean narrative document. Use plain text formatting only - NO markdown, NO asterisks, NO bullet points, NO headers with # symbols. Write in flowing paragraphs like a professional consultant's report.
 
-# EXECUTIVE SUMMARY
-Provide a clear, comprehensive summary of the arbitrage opportunity. Include:
+Structure your response as follows:
 
-1. **The Numbers That Matter**:
-   - Projected Monthly Revenue: $${Math.round(revenue.projected / 12).toLocaleString()}
-   ${property.monthlyRent ? `- Monthly Rent: $${property.monthlyRent.toLocaleString()}
-   - Estimated Operating Costs (20%): $${Math.round((revenue.projected / 12) * 0.20).toLocaleString()}
-   - **Estimated Net Monthly Cash Flow**: $${Math.round((revenue.projected / 12) - property.monthlyRent - ((revenue.projected / 12) * 0.20)).toLocaleString()}` : `- Monthly Rent: Not provided
-   - Calculate the maximum rent this property could support while remaining profitable`}
+EXECUTIVE SUMMARY
 
-2. **Quick Assessment**: Is this a good arbitrage opportunity? Why or why not?
+Provide a clear, comprehensive summary of the arbitrage opportunity in narrative form. Include:
 
-3. **Key Success Factors**: What would it take to succeed with this property?
+The Numbers That Matter: Start with the projected monthly revenue of $${Math.round(revenue.projected / 12).toLocaleString()}. ${property.monthlyRent ? `The monthly rent is $${property.monthlyRent.toLocaleString()}, with estimated operating costs around $${Math.round((revenue.projected / 12) * 0.20).toLocaleString()} (20% of revenue). This leaves an estimated net monthly cash flow of $${Math.round((revenue.projected / 12) - property.monthlyRent - ((revenue.projected / 12) * 0.20)).toLocaleString()}.` : `The monthly rent was not provided, so discuss what maximum rent this property could support while remaining profitable.`}
 
-# DETAILED ANALYSIS
+Quick Assessment: Explain whether this is a good arbitrage opportunity and why.
 
-## Revenue Potential
-- Explain the projected revenue in simple terms
-- Compare to same-bedroom competitors
-- Discuss the range (conservative to optimistic)
+Key Success Factors: Describe what it would take to succeed with this property.
 
-## Cash Flow Analysis
-- Break down the monthly numbers
-- Explain the profit margin
-- Discuss the break-even occupancy
+DETAILED ANALYSIS
 
-## Market Position
-- How does this property compare to competitors?
-- What does the market grade mean?
-- Is the market growing or declining?
+Revenue Potential: Explain the projected revenue in simple terms. YOU MUST include all three revenue estimates:
+- Projected Annual Revenue: $${revenue.projected.toLocaleString()}
+- Conservative Estimate (Safe Bet): $${revenue.low.toLocaleString()}/year
+- Optimistic Estimate (Best Case): $${revenue.high.toLocaleString()}/year
 
-## Seasonality Strategy
-- When are the best and worst months?
-- How to plan for slow seasons?
-- Revenue variance impact
+Explain what each estimate means and when an investor might expect to hit each level. Compare these figures to same-bedroom competitors.
 
-## Competitive Landscape
-- What are top performers doing differently?
-- How saturated is the market?
-- Professional vs individual hosts
+Cash Flow Analysis: Break down the monthly numbers clearly. Explain the profit margin and what break-even occupancy means in practical terms.
 
-# KEY METRICS SUMMARY
-- Summarize the most important data points
-- Highlight the key financial metrics
-- Note any data limitations or gaps
+Market Position: Describe how this property compares to competitors. Explain what the market grade means and whether the market is growing or declining.
 
-# MARKET CONTEXT
-- How does this property compare to the market?
-- What are the key competitive factors?
-- What does the historical data suggest?
+Seasonality Strategy: Discuss when the best and worst months are. Explain how to plan for slow seasons and what the revenue variance impact means.
 
-Remember:
+Competitive Landscape: Describe what top performers are doing differently. Discuss how saturated the market is and the balance between professional and individual hosts.
+
+KEY METRICS SUMMARY
+
+Summarize the most important data points in narrative form. Highlight the key financial metrics and note any data limitations.
+
+MARKET CONTEXT
+
+Explain how this property compares to the overall market. Discuss the key competitive factors and what the historical data suggests about future performance.
+
+IMPORTANT FORMATTING RULES:
+- Write everything in flowing paragraphs, not bullet points
+- Do NOT use asterisks, hashtags, or markdown formatting
+- Do NOT use headers with # symbols - just use CAPS for section titles
 - Be specific with numbers - cite actual figures from the data
 - Explain what metrics mean for someone new to investing
-- Be honest about risks - don't oversell
-- This should be comprehensive enough to be a standalone investment report
+- Be honest about risks but also highlight genuine opportunities
+- This should read like a professional consultant's narrative report
 </FORMAT>
 
 <CONSTRAINTS>

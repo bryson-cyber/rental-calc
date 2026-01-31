@@ -1138,3 +1138,62 @@ export const toolUsageEvents = mysqlTable("tool_usage_events", {
 
 export type ToolUsageEvent = typeof toolUsageEvents.$inferSelect;
 export type InsertToolUsageEvent = typeof toolUsageEvents.$inferInsert;
+
+
+/**
+ * Bug Reports table for tracking user-reported issues
+ * Generates shareable links for easy bug reporting and tracking
+ */
+export const bugReports = mysqlTable("bug_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Unique shareable ID (short code for URLs)
+  shareCode: varchar("shareCode", { length: 20 }).notNull().unique(),
+  
+  // Reporter information (optional)
+  reporterEmail: varchar("reporterEmail", { length: 320 }),
+  reporterName: varchar("reporterName", { length: 255 }),
+  sessionId: varchar("sessionId", { length: 64 }),
+  userId: int("userId"),
+  
+  // Bug details
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  stepsToReproduce: text("stepsToReproduce"),
+  expectedBehavior: text("expectedBehavior"),
+  actualBehavior: text("actualBehavior"),
+  
+  // Context - what they were doing
+  toolName: varchar("toolName", { length: 100 }), // Step 8, Step 9, etc.
+  pagePath: varchar("pagePath", { length: 255 }),
+  
+  // Property/Market context (if applicable)
+  propertyAddress: text("propertyAddress"),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  marketId: varchar("marketId", { length: 64 }),
+  
+  // Technical context
+  browserInfo: text("browserInfo"),
+  screenSize: varchar("screenSize", { length: 50 }),
+  errorMessage: text("errorMessage"),
+  consoleErrors: text("consoleErrors"),
+  
+  // Screenshot (stored as S3 URL)
+  screenshotUrl: text("screenshotUrl"),
+  
+  // Status tracking
+  status: mysqlEnum("status", ["new", "investigating", "in_progress", "resolved", "wont_fix", "duplicate"]).default("new").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "critical"]).default("medium").notNull(),
+  
+  // Resolution
+  resolvedAt: timestamp("resolvedAt"),
+  resolution: text("resolution"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BugReport = typeof bugReports.$inferSelect;
+export type InsertBugReport = typeof bugReports.$inferInsert;

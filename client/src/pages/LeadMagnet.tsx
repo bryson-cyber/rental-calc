@@ -28,6 +28,7 @@ import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
 import { ShareReportButton } from '@/components/ShareReportButton';
 import { ShareToolButton } from '@/components/ShareToolButton';
+import { BugReportButton } from '@/components/BugReportButton';
 import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
 import { 
@@ -1014,12 +1015,7 @@ export default function LeadMagnet() {
   
   // Validate the Deal (Single Property)
   const handleAnalyze = async () => {
-    // Require login before running analysis
-    if (!isAuthenticated) {
-      toast.error('Please create a free account to run property analysis');
-      window.location.href = getLoginUrl();
-      return;
-    }
+    // Note: Login requirement removed - AI Advisor is now free for all users
     
     if (!address) {
       toast.error('Please enter a property address');
@@ -1778,7 +1774,7 @@ export default function LeadMagnet() {
     },
     advisor: {
       title: "AI Advisor",
-      subtitle: "Get comprehensive AI-powered analysis of your property or market",
+      subtitle: "Get comprehensive AI-powered analysis of your property",
       job: "Answer: What does all this data mean for me?",
       icon: Sparkles,
       color: "from-amber-500 to-yellow-500"
@@ -5664,6 +5660,14 @@ export default function LeadMagnet() {
         onContinueWithoutAccount={handleContinueWithoutAccount}
         itemType={pendingSave?.type || 'market'}
         itemName={pendingSave?.name || ''}
+      />
+      
+      {/* Bug Report Button */}
+      <BugReportButton
+        toolName={activeTab ? `Step ${activeTab}` : undefined}
+        propertyAddress={address || undefined}
+        city={researchMarket?.split(',')[0]?.trim()}
+        state={researchMarket?.split(',')[1]?.trim()}
       />
     </div>
   );

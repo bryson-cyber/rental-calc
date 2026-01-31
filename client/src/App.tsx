@@ -28,6 +28,7 @@ import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import SavedRegulations from "./pages/SavedRegulations";
 import AdminPortal from "./pages/AdminPortal";
+import BugReportPage from "./pages/BugReportPage";
 
 function Router() {
   return (
@@ -73,6 +74,9 @@ function Router() {
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />
       <Route path="/share/compare/:data" component={SharedComparisonPage} />
+      
+      {/* Bug Reports */}
+      <Route path="/bug/:shareCode" component={BugReportPage} />
       
       {/* Opportunity Finder - Browse Zillow listings */}
       <Route path="/opportunity-finder" component={OpportunityFinder} />
