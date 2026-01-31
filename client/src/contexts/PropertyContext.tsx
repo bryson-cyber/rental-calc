@@ -40,8 +40,19 @@ export interface PropertyDetails {
   accommodates?: number;
   propertyType?: string;
   
-  // Financial inputs
+  // Mode: rent (arbitrage) or purchase (buying)
+  mode?: 'rent' | 'purchase';
+  
+  // Financial inputs - Rent mode
   monthlyRent?: number;
+  
+  // Financial inputs - Purchase mode
+  purchasePrice?: number;
+  downPaymentPercent?: number;
+  loanType?: string; // 'conventional' | 'dscr' | 'fha' | 'cash'
+  interestRate?: number;
+  monthlyMortgage?: number;
+  totalCashNeeded?: number;
   
   // Analysis results (optional - populated after validation)
   annualRevenue?: number;
@@ -97,6 +108,34 @@ const defaultMarketAdvisorFilters: MarketAdvisorFilters = {
 // LocalStorage keys
 const MARKET_ADVISOR_FILTERS_KEY = 'marketAdvisorFilters';
 const MY_PROPERTY_KEY = 'myProperty';
+const GLOBAL_MODE_KEY = 'globalMode';
+
+// Global mode type - determines entire app experience
+export type GlobalMode = 'rent' | 'purchase';
+
+// Helper to load mode from localStorage
+function loadModeFromStorage(): GlobalMode {
+  if (typeof window === 'undefined') return 'rent';
+  try {
+    const saved = localStorage.getItem(GLOBAL_MODE_KEY);
+    if (saved === 'rent' || saved === 'purchase') {
+      return saved;
+    }
+  } catch (e) {
+    console.error('[PropertyContext] Error loading mode from localStorage:', e);
+  }
+  return 'rent'; // Default to rent mode
+}
+
+// Helper to save mode to localStorage
+function saveModeToStorage(mode: GlobalMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(GLOBAL_MODE_KEY, mode);
+  } catch (e) {
+    console.error('[PropertyContext] Error saving mode to localStorage:', e);
+  }
+}
 
 // Helper to load property from URL parameters (for Opportunity Finder integration)
 function loadPropertyFromUrlParams(): PropertyDetails | null {
@@ -209,6 +248,10 @@ function saveFiltersToStorage(filters: MarketAdvisorFilters): void {
 }
 
 interface PropertyContextType {
+  // Global mode - rent (arbitrage) or purchase (buying)
+  globalMode: GlobalMode;
+  setGlobalMode: (mode: GlobalMode) => void;
+  
   // The user's property being analyzed
   myProperty: PropertyDetails | null;
   
@@ -251,6 +294,17 @@ interface PropertyContextType {
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
 export function PropertyProvider({ children }: { children: ReactNode }) {
+  // Global mode state
+  const [globalMode, setGlobalModeState] = useState<GlobalMode>(() => {
+    return loadModeFromStorage();
+  });
+  
+  const setGlobalMode = useCallback((mode: GlobalMode) => {
+    console.log('[PropertyContext] setGlobalMode called with:', mode);
+    setGlobalModeState(mode);
+    saveModeToStorage(mode);
+  }, []);
+  
   const [myProperty, setMyPropertyState] = useState<PropertyDetails | null>(() => {
     return loadPropertyFromStorage();
   });
@@ -346,6 +400,8 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
   return (
     <PropertyContext.Provider
       value={{
+        globalMode,
+        setGlobalMode,
         myProperty,
         setMyProperty,
         updateProperty,

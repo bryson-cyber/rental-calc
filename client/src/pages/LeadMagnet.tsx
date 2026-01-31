@@ -343,7 +343,7 @@ export default function LeadMagnet() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   
   // Property context for property-centric workflow
-  const { myProperty, hasProperty, bedroomFilter, setMyProperty } = useProperty();
+  const { myProperty, hasProperty, bedroomFilter, setMyProperty, globalMode } = useProperty();
   
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
@@ -4921,6 +4921,11 @@ export default function LeadMagnet() {
               expensePercent={expensePercent}
               marketId={result.marketId}
               rentometerData={rentometerData}
+              mode={globalMode}
+              purchasePrice={myProperty?.purchasePrice}
+              loanType={myProperty?.loanType}
+              downPaymentPercent={myProperty?.downPaymentPercent}
+              interestRate={myProperty?.interestRate}
             />
             
             {/* Next Step CTA */}

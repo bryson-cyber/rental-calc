@@ -121,6 +121,12 @@ interface TeslaDashboardProps {
   furnitureCost?: number;  // Furniture & setup cost for break-even calculation
   expensePercent?: number;  // Operating expense percentage (default 20%)
   marketId?: string | number;  // For MarketInsightsPanel
+  // Purchase mode props
+  mode?: 'rent' | 'purchase';
+  purchasePrice?: number;
+  loanType?: 'conventional' | 'dscr' | 'fha' | 'cash';
+  downPaymentPercent?: number;
+  interestRate?: number;
   rentometerData?: {
     median: number;
     percentile25: number;
@@ -2614,7 +2620,7 @@ function ComparableProperties({
 // MAIN COMPONENT
 // ============================================
 
-export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData }: TeslaDashboardProps) {
+export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommodates, monthlyRent, furnitureCost = 0, expensePercent = 20, marketId, rentometerData, mode = 'rent', purchasePrice, loanType = 'conventional', downPaymentPercent = 20, interestRate = 7 }: TeslaDashboardProps) {
   console.log('[TeslaDashboard] marketId received:', marketId);
   // DEBUG: Remove this after testing
   if (typeof window !== 'undefined') {
@@ -2622,12 +2628,59 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
   }
   const yearlyChange = result.historicalData?.summary?.yearly_pct_change;
   
+  // Purchase mode calculations
+  const purchaseCalcs = useMemo(() => {
+    if (mode !== 'purchase' || !purchasePrice) return null;
+    
+    const annualRevenue = result.revenue.projected;
+    const operatingExpenses = annualRevenue * (expensePercent / 100);
+    const noi = annualRevenue - operatingExpenses;
+    
+    // Loan calculations
+    const downPayment = purchasePrice * (downPaymentPercent / 100);
+    const loanAmount = purchasePrice - downPayment;
+    const closingCosts = purchasePrice * 0.03; // 3% closing costs
+    const totalCashNeeded = downPayment + closingCosts;
+    
+    // Monthly mortgage payment (P&I)
+    const monthlyRate = interestRate / 100 / 12;
+    const numPayments = 30 * 12; // 30-year loan
+    const monthlyMortgage = loanType === 'cash' ? 0 : 
+      loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+      (Math.pow(1 + monthlyRate, numPayments) - 1);
+    const annualDebtService = monthlyMortgage * 12;
+    
+    // Investment metrics
+    const capRate = (noi / purchasePrice) * 100;
+    const annualCashFlow = noi - annualDebtService;
+    const cashOnCash = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded) * 100 : 0;
+    const dscr = annualDebtService > 0 ? noi / annualDebtService : Infinity;
+    const breakEvenOccupancy = annualDebtService > 0 ? 
+      ((annualDebtService + operatingExpenses) / annualRevenue) * result.metrics.occupancy : 0;
+    
+    return {
+      noi,
+      downPayment,
+      loanAmount,
+      closingCosts,
+      totalCashNeeded,
+      monthlyMortgage,
+      annualDebtService,
+      capRate,
+      annualCashFlow,
+      monthlyCashFlow: annualCashFlow / 12,
+      cashOnCash,
+      dscr,
+      breakEvenOccupancy
+    };
+  }, [mode, purchasePrice, result.revenue.projected, expensePercent, downPaymentPercent, interestRate, loanType, result.metrics.occupancy]);
+  
   return (
     <div className="space-y-6">
       {/* Property Header */}
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-          Property Analysis
+          {mode === 'purchase' ? 'Investment Analysis' : 'Property Analysis'}
         </h2>
         <p className="text-slate-500">{address}</p>
         <div className="flex items-center justify-center gap-3 mt-2 text-sm text-slate-500">
@@ -2662,15 +2715,156 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         revenueHigh={result.revenue.high}
       />
       
-      {/* SECTION 4: Profit & Break-even - "What's left? When do I recoup?" */}
-      <ArbitrageCalculator
-        monthlyRevenue={result.cashFlow.monthlyRevenue}
-        monthlyRent={result.cashFlow.monthlyRent}
-        occupancy={result.metrics.occupancy}
-        adr={result.metrics.adr}
-        furnitureCost={furnitureCost}
-        expensePercent={expensePercent}
-      />
+      {/* PURCHASE MODE: Investment Metrics Section */}
+      {mode === 'purchase' && purchaseCalcs && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">Investment Analysis</h3>
+              <p className="text-sm text-slate-500">
+                {loanType === 'cash' ? 'Cash Purchase' : 
+                 loanType === 'dscr' ? 'DSCR Loan' : 
+                 loanType === 'fha' ? 'FHA Loan' : 'Conventional Loan'} • 
+                {formatCurrency(purchasePrice || 0)} purchase price
+              </p>
+            </div>
+          </div>
+          
+          {/* Key Investment Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Cap Rate</div>
+              <div className={`text-2xl font-bold ${purchaseCalcs.capRate >= 8 ? 'text-emerald-600' : purchaseCalcs.capRate >= 5 ? 'text-amber-600' : 'text-red-600'}`}>
+                {purchaseCalcs.capRate.toFixed(1)}%
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {purchaseCalcs.capRate >= 8 ? 'Excellent' : purchaseCalcs.capRate >= 5 ? 'Good' : 'Below Average'}
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Cash-on-Cash</div>
+              <div className={`text-2xl font-bold ${purchaseCalcs.cashOnCash >= 15 ? 'text-emerald-600' : purchaseCalcs.cashOnCash >= 8 ? 'text-amber-600' : 'text-red-600'}`}>
+                {purchaseCalcs.cashOnCash.toFixed(1)}%
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {purchaseCalcs.cashOnCash >= 15 ? 'Excellent' : purchaseCalcs.cashOnCash >= 8 ? 'Good' : 'Below Average'}
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">DSCR</div>
+              <div className={`text-2xl font-bold ${purchaseCalcs.dscr >= 1.25 ? 'text-emerald-600' : purchaseCalcs.dscr >= 1 ? 'text-amber-600' : 'text-red-600'}`}>
+                {purchaseCalcs.dscr === Infinity ? '∞' : purchaseCalcs.dscr.toFixed(2)}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {purchaseCalcs.dscr >= 1.25 ? 'Strong' : purchaseCalcs.dscr >= 1 ? 'Acceptable' : 'Risky'}
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Break-even</div>
+              <div className={`text-2xl font-bold ${purchaseCalcs.breakEvenOccupancy <= 50 ? 'text-emerald-600' : purchaseCalcs.breakEvenOccupancy <= 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                {purchaseCalcs.breakEvenOccupancy.toFixed(0)}%
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Occupancy needed
+              </div>
+            </div>
+          </div>
+          
+          {/* Cash Flow Summary */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Monthly Cash Flow</div>
+                <div className={`text-lg font-bold ${purchaseCalcs.monthlyCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {purchaseCalcs.monthlyCashFlow >= 0 ? '+' : ''}{formatCurrency(purchaseCalcs.monthlyCashFlow)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Annual Cash Flow</div>
+                <div className={`text-lg font-bold ${purchaseCalcs.annualCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {purchaseCalcs.annualCashFlow >= 0 ? '+' : ''}{formatCurrency(purchaseCalcs.annualCashFlow)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Total Cash Needed</div>
+                <div className="text-lg font-bold text-slate-900">
+                  {formatCurrency(purchaseCalcs.totalCashNeeded)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Monthly Mortgage</div>
+                <div className="text-lg font-bold text-slate-900">
+                  {formatCurrency(purchaseCalcs.monthlyMortgage)}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Detailed Breakdown (Collapsible) */}
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-700 flex items-center gap-2">
+              <ChevronDown className="w-4 h-4" />
+              View detailed breakdown
+            </summary>
+            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Purchase Price</span>
+                  <span className="font-medium">{formatCurrency(purchasePrice || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Down Payment ({downPaymentPercent}%)</span>
+                  <span className="font-medium">{formatCurrency(purchaseCalcs.downPayment)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Loan Amount</span>
+                  <span className="font-medium">{formatCurrency(purchaseCalcs.loanAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Closing Costs (3%)</span>
+                  <span className="font-medium">{formatCurrency(purchaseCalcs.closingCosts)}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Projected Revenue</span>
+                  <span className="font-medium">{formatCurrency(result.revenue.projected)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Operating Expenses ({expensePercent}%)</span>
+                  <span className="font-medium text-red-600">-{formatCurrency(result.revenue.projected * (expensePercent / 100))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Net Operating Income</span>
+                  <span className="font-medium">{formatCurrency(purchaseCalcs.noi)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Annual Debt Service</span>
+                  <span className="font-medium text-red-600">-{formatCurrency(purchaseCalcs.annualDebtService)}</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+      
+      {/* SECTION 4: Profit & Break-even - "What's left? When do I recoup?" (RENT MODE ONLY) */}
+      {mode === 'rent' && (
+        <ArbitrageCalculator
+          monthlyRevenue={result.cashFlow.monthlyRevenue}
+          monthlyRent={result.cashFlow.monthlyRent}
+          occupancy={result.metrics.occupancy}
+          adr={result.metrics.adr}
+          furnitureCost={furnitureCost}
+          expensePercent={expensePercent}
+        />
+      )}
       
       {/* SECTION 4.5: Airbnb vs Long-Term Comparison */}
       <AirbnbVsLongTermComparison

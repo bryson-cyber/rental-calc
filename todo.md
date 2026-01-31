@@ -8338,3 +8338,63 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add lead capture for investment calculator users
 - [x] Test full flow end-to-end
 
+
+
+## Rent vs Purchase Toggle & STR vs LTR Comparison (Jan 31, 2026)
+
+### Phase 1: StartWithProperty Rent/Purchase Toggle
+- [ ] Add Rent/Purchase toggle switch to StartWithProperty component
+- [ ] When "Rent" selected: Show monthly rent field (current behavior)
+- [ ] When "Purchase" selected: Show purchase price, down payment %, loan type fields
+- [ ] Calculate monthly mortgage automatically based on purchase inputs
+- [ ] Pass purchase mode data through the analysis flow
+
+### Phase 2: STR vs LTR Comparison
+- [ ] Create STRvsLTRComparison component
+- [ ] Calculate LTR income based on market rent data (Rentometer or estimate)
+- [ ] Calculate STR income from AirDNA projections
+- [ ] Show side-by-side comparison with:
+  - Monthly income (STR vs LTR)
+  - Annual income (STR vs LTR)
+  - Occupancy assumptions
+  - Management effort comparison
+  - Risk/volatility comparison
+- [ ] Integrate into property analysis results
+
+### Phase 3: Purchase Mode Integration
+- [ ] Update PropertyContext to store purchase mode data
+- [ ] Update analysis results to show purchase-based calculations when applicable
+- [ ] Add loan calculator section to property results when in purchase mode
+- [ ] Show investment metrics (Cap Rate, Cash-on-Cash, DSCR) for purchase mode
+
+
+
+## Global Rent/Purchase Mode Switch (Jan 31, 2026) - IN PROGRESS
+
+### Phase 1: Global Mode System
+- [x] Add global mode state to PropertyContext ('rent' | 'purchase')
+- [x] Persist mode selection in localStorage
+- [x] Create mode-specific configuration (labels, prompts, fields)
+
+### Phase 2: Mode Switch UI
+- [x] Create ModeSwitch component for header
+- [x] Add mode switch to StartWithProperty form
+- [x] Style switch with clear visual distinction (amber highlight)
+
+### Phase 3: Mode-Specific Property Input
+- [x] Update StartWithProperty to show mode-specific fields
+- [x] Show rent fields in RENT mode
+- [x] Show purchase/financing fields in PURCHASE mode (price, loan type, down payment, interest rate)
+- [x] Add financing summary calculation (down payment, loan amount, monthly payment, cash needed)
+- [x] Update collapsed property card to show mode-specific info
+
+### Phase 4: Mode-Specific Analysis
+- [ ] Show BreakEvenCalculator in RENT mode
+- [ ] Show LoanCalculator + STR vs LTR in PURCHASE mode
+- [ ] Update AI prompts based on mode
+- [ ] Update metric labels and explanations per mode
+
+### Phase 5: Testing
+- [ ] Test RENT mode full flow
+- [ ] Test PURCHASE mode full flow
+- [ ] Verify mode persists across page navigation

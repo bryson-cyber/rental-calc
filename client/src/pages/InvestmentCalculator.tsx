@@ -15,6 +15,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { SmartAddressInput, type PropertyDetails } from '@/components/SmartAddressInput';
 import LoanCalculator, { type LoanCalculations } from '@/components/LoanCalculator';
+import { STRvsLTRComparison } from '@/components/STRvsLTRComparison';
 // Note: CompDataTable and HistoricalCharts require market/submarket IDs
 // For now we'll show a simple comparables list
 import { ShareReportButton } from '@/components/ShareReportButton';
@@ -629,6 +630,19 @@ export default function InvestmentCalculator() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* STR vs LTR Comparison */}
+            {analysisResult && loanCalculations && (
+              <STRvsLTRComparison
+                strAnnualRevenue={analysisResult.revenue.projected}
+                strOccupancyRate={analysisResult.metrics.occupancy}
+                strAdr={analysisResult.metrics.adr}
+                bedrooms={bedrooms}
+                purchasePrice={purchasePrice}
+                monthlyMortgage={loanCalculations.monthlyMortgage}
+                downPaymentPercent={loanCalculations.downPaymentPercent}
+              />
             )}
 
             {/* Investment Summary Card */}
