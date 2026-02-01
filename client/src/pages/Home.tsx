@@ -337,6 +337,11 @@ export default function RentalEstimator() {
   });
   const [reportData, setReportData] = useState<ComprehensiveReportData | null>(null);
 
+  // Set SEO-optimized page title (30-60 characters recommended)
+  useEffect(() => {
+    document.title = 'Free Airbnb Calculator | Rental Revenue Estimator';
+  }, []);
+
   // Progress tracking for real-time updates
   const { sessionId, progress, startTracking, stopTracking } = useAnalysisProgress();
 

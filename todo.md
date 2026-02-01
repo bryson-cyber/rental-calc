@@ -8917,3 +8917,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test HubSpot email sending with real template (12 tests passing)
 - [x] Test share buttons on Explore Listings and Map View
 - [x] Verify contact creation in HubSpot CRM (upsertHubSpotContact tested)
+
+
+## SEO Fixes (Feb 1, 2026)
+- [x] Fix homepage title to be 30-60 characters (now 50 chars: 'Free Airbnb Calculator | Rental Revenue Estimator')
