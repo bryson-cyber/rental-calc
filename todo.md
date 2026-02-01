@@ -8958,3 +8958,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Update ShareableReportViewer to use Coach Inayah branding (gold/navy theme)
 - [x] Display clean report view without full tool interface
 - [x] Test shared link displays proper branding (verified on dev server)
+
+
+## Share Link Redirect to Actual Tool Pages (Feb 1, 2026)
+- [x] Update /share/:shareCode to redirect to actual tool page instead of separate viewer (ShareRedirect.tsx)
+- [x] Add query parameter support for pre-loading shared data on tool pages
+- [x] Ensure Regulation Tracker can load shared regulation data from URL (tab=regulations)
+- [x] Ensure Revenue Calculator can load shared revenue data from URL (tab=prove)
+- [x] Ensure Market Advisor can load shared market data from URL (tab=market)
+- [x] Ensure AI Advisor can load shared AI advice from URL (tab=advisor)
+- [x] Test all share links redirect correctly with pre-populated data (15 tests passing)
+- [x] Verified: Share link redirects to actual tool page with same branding

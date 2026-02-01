@@ -535,6 +535,10 @@ export default function LeadMagnet() {
     const lat = params.get('lat');
     const lng = params.get('lng');
     
+    // Shared report params - when coming from a share link
+    const isShared = params.get('shared') === 'true';
+    const shareCode = params.get('shareCode');
+    
     // HubSpot personalization params - city/state/zip for auto-populating tools
     const urlCity = params.get('city');
     const urlState = params.get('state');
@@ -664,6 +668,13 @@ export default function LeadMagnet() {
       // Mark for auto-trigger if autoAnalyze flag is set
       if (autoAnalyze === 'true' && urlAddress) {
         autoTriggerRef.current = { tab: targetTab, address: urlAddress };
+      }
+      
+      // If this is a shared report, log it for tracking
+      if (isShared && shareCode) {
+        console.log('[SharedReport] Loading shared report:', shareCode, 'for tab:', targetTab);
+        // The autoAnalyze=true flag will trigger the analysis automatically
+        // This ensures the user sees the same experience as the original analysis
       }
       
       // Scroll to the active tool panel after a short delay

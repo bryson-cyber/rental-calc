@@ -32,6 +32,7 @@ import BugReportPage from "./pages/BugReportPage";
 import InvestmentCalculator from "./pages/InvestmentCalculator";
 import ShareableReport from "./pages/ShareableReport";
 import ShareableReportViewer from "./pages/ShareableReportViewer";
+import ShareRedirect from "./pages/ShareRedirect";
 import NotificationAnalytics from "./pages/NotificationAnalytics";
 
 function Router() {
@@ -82,8 +83,11 @@ function Router() {
       {/* Shareable Regulation Reports */}
       <Route path="/regulation/:shareCode" component={ShareableReport} />
       
-      {/* Universal Shareable Reports (all tools) */}
-      <Route path="/share/:shareCode" component={ShareableReportViewer} />
+      {/* Universal Shareable Reports - Redirect to actual tool page */}
+      <Route path="/share/:shareCode" component={ShareRedirect} />
+      
+      {/* Legacy: Direct report viewer (for backwards compatibility) */}
+      <Route path="/view-report/:shareCode" component={ShareableReportViewer} />
       
       {/* Bug Reports */}
       <Route path="/bug/:shareCode" component={BugReportPage} />
