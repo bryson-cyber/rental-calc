@@ -31,56 +31,68 @@ import {
   FileText,
 } from 'lucide-react';
 
-// Report type configurations
+// Coach Inayah Brand Colors
+// Primary: Deep Navy #0F172A
+// Accent: Warm Gold #C9A962
+// Background: Warm off-white
+
+// Report type configurations - all use consistent Coach Inayah branding
 const reportTypeConfig = {
   revenue: {
     title: 'Revenue Analysis',
     icon: DollarSign,
-    color: 'text-green-600',
-    bg: 'bg-green-100',
-    gradient: 'from-green-800 to-green-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   validator: {
     title: 'Property Validation',
     icon: CheckCircle2,
-    color: 'text-blue-600',
-    bg: 'bg-blue-100',
-    gradient: 'from-blue-800 to-blue-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   market: {
     title: 'Market Analysis',
     icon: BarChart3,
-    color: 'text-purple-600',
-    bg: 'bg-purple-100',
-    gradient: 'from-purple-800 to-purple-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   ai_advisor: {
     title: 'AI Advisor Report',
     icon: Star,
-    color: 'text-amber-600',
-    bg: 'bg-amber-100',
-    gradient: 'from-amber-800 to-amber-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   listings: {
     title: 'Listings Report',
     icon: Building,
-    color: 'text-teal-600',
-    bg: 'bg-teal-100',
-    gradient: 'from-teal-800 to-teal-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   comparison: {
     title: 'Property Comparison',
     icon: TrendingUp,
-    color: 'text-indigo-600',
-    bg: 'bg-indigo-100',
-    gradient: 'from-indigo-800 to-indigo-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
   map: {
     title: 'Map View Report',
     icon: MapPin,
-    color: 'text-rose-600',
-    bg: 'bg-rose-100',
-    gradient: 'from-rose-800 to-rose-900',
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
+  },
+  regulation: {
+    title: 'Regulation Check',
+    icon: FileText,
+    color: 'text-[#C9A962]',
+    bg: 'bg-[#C9A962]/10',
+    gradient: 'from-[#0F172A] to-[#1e293b]',
   },
 };
 
@@ -230,32 +242,37 @@ export default function ShareableReportViewer() {
           url: `/share/${shareCode}`
         })}
       />
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
+      <div className="min-h-screen bg-gradient-to-b from-[#FFFBF5] to-white">
+      {/* Header - Coach Inayah Branding */}
+      <header className="bg-[#0F172A] text-white sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button 
-            onClick={() => setLocation('/')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Tools</span>
-          </button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowShareOptions(!showShareOptions)}
-            className="gap-2"
-          >
-            <Share2 className="w-4 h-4" />
-            Share Report
-          </Button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setLocation('/')}
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Tools</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-[#C9A962] font-serif font-semibold hidden sm:block">Coach Inayah</span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowShareOptions(!showShareOptions)}
+              className="gap-2 border-[#C9A962]/50 text-[#C9A962] hover:bg-[#C9A962]/10 hover:text-[#C9A962]"
+            >
+              <Share2 className="w-4 h-4" />
+              Share Report
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Share Options Panel */}
       {showShareOptions && (
-        <div className="bg-white border-b border-gray-200 py-4">
+        <div className="bg-[#0F172A]/5 border-b border-[#C9A962]/20 py-4">
           <div className="max-w-4xl mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Copy Link */}
@@ -316,13 +333,15 @@ export default function ShareableReportViewer() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-          {/* Status Header */}
+          {/* Status Header - Coach Inayah Navy/Gold */}
           <div className={`bg-gradient-to-r ${config.gradient} text-white p-8`}>
             <div className="flex items-center gap-3 mb-4">
-              <ReportIcon className="w-8 h-8 text-white/80" />
-              <span className="text-white/80 font-medium">{config.title}</span>
+              <div className="w-12 h-12 bg-[#C9A962]/20 rounded-xl flex items-center justify-center">
+                <ReportIcon className="w-6 h-6 text-[#C9A962]" />
+              </div>
+              <span className="text-[#C9A962] font-medium">{config.title}</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-2">
               {report.title || location}
             </h1>
             {report.title && (
@@ -332,10 +351,10 @@ export default function ShareableReportViewer() {
               </p>
             )}
             {report.verdict && (
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mt-4 ${
-                report.verdict === 'GO' ? 'bg-green-500/20 text-green-200' :
-                report.verdict === 'CAUTION' ? 'bg-amber-500/20 text-amber-200' :
-                'bg-red-500/20 text-red-200'
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mt-4 border ${
+                report.verdict === 'GO' ? 'bg-[#C9A962]/20 text-[#C9A962] border-[#C9A962]/30' :
+                report.verdict === 'CAUTION' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                'bg-red-500/20 text-red-300 border-red-500/30'
               }`}>
                 {report.verdict === 'GO' ? <CheckCircle2 className="w-5 h-5" /> :
                  report.verdict === 'CAUTION' ? <AlertTriangle className="w-5 h-5" /> :
@@ -347,19 +366,19 @@ export default function ShareableReportViewer() {
 
           {/* Summary */}
           {report.summary && (
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Summary</h2>
-              <p className="text-gray-700 leading-relaxed">{report.summary}</p>
+            <div className="p-6 border-b border-[#C9A962]/20">
+              <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Summary</h2>
+              <p className="text-[#0F172A]/80 leading-relaxed">{report.summary}</p>
             </div>
           )}
 
           {/* Key Metrics */}
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h2>
+            <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Key Metrics</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {report.annualRevenue && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <DollarSign className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <DollarSign className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCurrency(report.annualRevenue)}
                   </p>
@@ -368,8 +387,8 @@ export default function ShareableReportViewer() {
               )}
 
               {report.occupancyRate && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <Calendar className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <Calendar className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {formatPercent(report.occupancyRate)}
                   </p>
@@ -378,8 +397,8 @@ export default function ShareableReportViewer() {
               )}
 
               {report.averageDailyRate && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <TrendingUp className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <TrendingUp className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCurrency(report.averageDailyRate)}
                   </p>
@@ -388,8 +407,8 @@ export default function ShareableReportViewer() {
               )}
 
               {report.profitMargin && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <Percent className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <Percent className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {formatPercent(report.profitMargin)}
                   </p>
@@ -398,8 +417,8 @@ export default function ShareableReportViewer() {
               )}
 
               {report.bedrooms && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <Home className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <Home className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {report.bedrooms} BR / {report.bathrooms || '?'} BA
                   </p>
@@ -408,8 +427,8 @@ export default function ShareableReportViewer() {
               )}
 
               {report.monthlyRent && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <Building className="w-5 h-5 text-gray-400 mb-2" />
+                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                  <Building className="w-5 h-5 text-[#C9A962] mb-2" />
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCurrency(report.monthlyRent)}
                   </p>
@@ -509,12 +528,13 @@ export default function ShareableReportViewer() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm">
-          <p>Report generated by Coach Inayah Turnkey Tool</p>
-          <p className="mt-1">
+        {/* Footer - Coach Inayah Branding */}
+        <div className="text-center mt-8 py-6 border-t border-[#C9A962]/20">
+          <p className="text-[#0F172A] font-serif font-semibold text-lg">Coach Inayah Turnkey Tool</p>
+          <p className="text-[#0F172A]/60 text-sm mt-1">
             Views: {report.viewCount} • Created: {new Date(report.createdAt).toLocaleDateString()}
           </p>
+          <p className="text-[#C9A962] text-xs mt-3">Powered by AirDNA & VRBO performance data</p>
         </div>
       </main>
     </div>
