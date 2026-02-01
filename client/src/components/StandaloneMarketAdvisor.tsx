@@ -34,7 +34,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
-import { useMarketAdvisorFilters } from '@/contexts/PropertyContext';
+import { useMarketAdvisorFilters, useProperty } from '@/contexts/PropertyContext';
+import { toast } from 'sonner';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 
 interface MarketSearchResult {
@@ -101,6 +102,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   const [marketAdvice, setMarketAdvice] = useState<string | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
   const [showTopPerformers, setShowTopPerformers] = useState(true);
+  const [autoNotificationSent, setAutoNotificationSent] = useState(false);
+  const { myProperty: contextProperty } = useProperty();
   
   const [analysisProgress, setAnalysisProgress] = useState<{
     step: number;
@@ -129,6 +132,28 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   );
 
   const standaloneMarketAdvisorMutation = trpc.advanced.standaloneMarketAdvisor.useMutation();
+  
+  // Auto-notification mutation
+  const createAndNotifyReport = trpc.shareableReports.createAndNotify.useMutation({
+    onSuccess: (response) => {
+      if (response.success && response.shareCode) {
+        setAutoNotificationSent(true);
+        const sentMethods: string[] = [];
+        if (response.notificationsSent?.sms) sentMethods.push('SMS');
+        if (response.notificationsSent?.email) sentMethods.push('email');
+        
+        if (sentMethods.length > 0) {
+          toast.success(`Market report sent via ${sentMethods.join(' and ')}!`, {
+            description: 'Check your inbox for the shareable link.',
+            duration: 5000,
+          });
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[MarketAdvisor AutoNotify] Error:', error);
+    }
+  });
 
   // Auto-populate search with zip code from myProperty if available
   useEffect(() => {
@@ -230,6 +255,36 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
       if (result.success && result.data) {
         setMarketData(result.data);
         setMarketAdvice(result.data.advice);
+        
+        // Auto-send notification if user has contact info and auto-notifications enabled
+        const hasContactInfo = contextProperty?.userEmail || contextProperty?.userPhone;
+        const autoNotifyEnabled = contextProperty?.enableAutoNotifications !== false;
+        
+        if (hasContactInfo && autoNotifyEnabled && !autoNotificationSent) {
+          console.log('[MarketAdvisor] Auto-sending notification');
+          createAndNotifyReport.mutate({
+            reportType: 'market',
+            marketId: selectedMarket.id,
+            marketName: selectedMarket.name,
+            city: contextProperty?.city,
+            state: contextProperty?.state,
+            reportData: {
+              advice: result.data.advice,
+              metrics: result.data.metrics,
+              scores: result.data.scores,
+              topPerformers: result.data.topPerformers?.slice(0, 5),
+            },
+            title: `Market Analysis: ${selectedMarket.name}`,
+            summary: `Market analysis with ${result.data.metrics?.totalListings || 0} listings and $${(result.data.metrics?.avgRevenue || 0).toLocaleString()}/yr avg revenue.`,
+            annualRevenue: result.data.metrics?.avgRevenue,
+            occupancyRate: result.data.metrics?.avgOccupancy,
+            averageDailyRate: result.data.metrics?.avgAdr,
+            userEmail: contextProperty?.userEmail,
+            userPhone: contextProperty?.userPhone,
+            userName: contextProperty?.userEmail?.split('@')[0],
+            triggeredBy: 'market_advisor',
+          });
+        }
       }
     } catch (error) {
       clearInterval(progressInterval);

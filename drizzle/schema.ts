@@ -1260,3 +1260,140 @@ export const shareableRegulationReports = mysqlTable("shareable_regulation_repor
 
 export type ShareableRegulationReport = typeof shareableRegulationReports.$inferSelect;
 export type InsertShareableRegulationReport = typeof shareableRegulationReports.$inferInsert;
+
+
+
+/**
+ * Universal Shareable Reports table for creating shareable links to any tool's output
+ * This unified table supports all tool types: revenue calculator, property validator,
+ * market advisor, AI advisor, etc.
+ */
+export const universalShareableReports = mysqlTable("universal_shareable_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Unique shareable code for URLs (e.g., /share/abc123xyz)
+  shareCode: varchar("shareCode", { length: 20 }).notNull().unique(),
+  
+  // Report type to determine which viewer to use
+  reportType: mysqlEnum("reportType", [
+    "revenue",      // Revenue Calculator (Step 3)
+    "validator",    // Property Validator (Step 5)
+    "market",       // Market Advisor (Step 8)
+    "ai_advisor",   // AI Advisor (Step 9)
+    "listings",     // Explore Listings (Step 4)
+    "comparison",   // Compare Favorites (Step 6)
+    "map"           // Map View (Step 7)
+  ]).notNull(),
+  
+  // Property information (for property-based reports)
+  address: text("address"),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zipCode", { length: 20 }),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  monthlyRent: int("monthlyRent"),
+  
+  // Market information (for market-based reports)
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Full report data (JSON blob containing all the analysis data)
+  reportData: json("reportData"),
+  
+  // Summary for preview/sharing
+  title: varchar("title", { length: 500 }),
+  summary: text("summary"),
+  
+  // Key metrics for quick display
+  annualRevenue: int("annualRevenue"),
+  occupancyRate: decimal("occupancyRate", { precision: 5, scale: 2 }),
+  averageDailyRate: int("averageDailyRate"),
+  profitMargin: decimal("profitMargin", { precision: 5, scale: 2 }),
+  verdict: varchar("verdict", { length: 50 }), // GO, CAUTION, NO-GO
+  
+  // Creator information
+  creatorEmail: varchar("creatorEmail", { length: 320 }),
+  creatorPhone: varchar("creatorPhone", { length: 50 }),
+  creatorName: varchar("creatorName", { length: 255 }),
+  creatorUserId: int("creatorUserId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  
+  // View tracking
+  viewCount: int("viewCount").default(0).notNull(),
+  lastViewedAt: timestamp("lastViewedAt"),
+  
+  // Notification tracking
+  smsSentTo: varchar("smsSentTo", { length: 50 }),
+  smsSentAt: timestamp("smsSentAt"),
+  emailSentTo: varchar("emailSentTo", { length: 320 }),
+  emailSentAt: timestamp("emailSentAt"),
+  autoNotificationSent: int("autoNotificationSent").default(0), // 0 = false, 1 = true
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type UniversalShareableReport = typeof universalShareableReports.$inferSelect;
+export type InsertUniversalShareableReport = typeof universalShareableReports.$inferInsert;
+
+
+/**
+ * Notification Analytics table for tracking all notifications sent
+ * This enables analytics dashboard showing notification performance
+ */
+export const notificationAnalytics = mysqlTable("notification_analytics", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Notification details
+  notificationType: mysqlEnum("notificationType", ["sms", "email"]).notNull(),
+  reportType: mysqlEnum("reportType", [
+    "regulation",
+    "revenue",
+    "validator",
+    "market",
+    "ai_advisor",
+    "listings",
+    "comparison",
+    "map"
+  ]).notNull(),
+  
+  // Reference to the shared report
+  shareCode: varchar("shareCode", { length: 20 }).notNull(),
+  
+  // Recipient information
+  recipientPhone: varchar("recipientPhone", { length: 50 }),
+  recipientEmail: varchar("recipientEmail", { length: 320 }),
+  recipientName: varchar("recipientName", { length: 255 }),
+  
+  // Location/property context
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  address: text("address"),
+  
+  // Delivery status
+  status: mysqlEnum("status", ["pending", "sent", "delivered", "failed", "opened", "clicked"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  
+  // Tracking (for email opens/clicks)
+  openedAt: timestamp("openedAt"),
+  clickedAt: timestamp("clickedAt"),
+  
+  // Source tracking
+  isAutoNotification: int("isAutoNotification").default(0), // 0 = manual, 1 = auto
+  triggeredBy: varchar("triggeredBy", { length: 100 }), // Which tool triggered this
+  
+  // Creator/sender information
+  senderUserId: int("senderUserId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  sentAt: timestamp("sentAt"),
+});
+
+export type NotificationAnalytic = typeof notificationAnalytics.$inferSelect;
+export type InsertNotificationAnalytic = typeof notificationAnalytics.$inferInsert;

@@ -991,6 +991,27 @@ export default function LeadMagnet() {
   const getSubmarketReport = trpc.marketResearchSimple.getSubmarketReport.useMutation();
   const getMarketReportByLocation = trpc.marketResearchSimple.getMarketReportByLocation.useMutation();
   const analyzeRent = trpc.rentometer.analyzeRent.useMutation();
+  
+  // Auto-notification for shareable reports
+  const createAndNotifyReport = trpc.shareableReports.createAndNotify.useMutation({
+    onSuccess: (response) => {
+      if (response.success && response.shareCode) {
+        const sentMethods: string[] = [];
+        if (response.notificationsSent?.sms) sentMethods.push('SMS');
+        if (response.notificationsSent?.email) sentMethods.push('email');
+        
+        if (sentMethods.length > 0) {
+          toast.success(`Report sent via ${sentMethods.join(' and ')}!`, {
+            description: 'Check your inbox for the shareable link.',
+            duration: 5000,
+          });
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[AutoNotify] Error sending notification:', error);
+    }
+  });
 
   // ============================================
   // AUTO-POPULATE FROM PROPERTY CONTEXT
@@ -1318,6 +1339,45 @@ export default function LeadMagnet() {
       
       toast.success('Property validated! See your results below.');
       console.log('[handleAnalyze] Result set successfully:', { hasResult: true, activeTab });
+      
+      // Auto-send notification if user has contact info and auto-notifications enabled
+      const hasContactInfo = myProperty?.userEmail || myProperty?.userPhone;
+      const autoNotifyEnabled = myProperty?.enableAutoNotifications !== false;
+      
+      if (hasContactInfo && autoNotifyEnabled) {
+        console.log('[handleAnalyze] Auto-sending revenue report notification');
+        const annualRev = data.property.estimates?.annual_revenue || 0;
+        const occupancy = data.property.estimates?.occupancy_rate || 0;
+        const adr = data.property.estimates?.average_daily_rate || 0;
+        
+        createAndNotifyReport.mutate({
+          reportType: 'revenue',
+          address: address,
+          city: myProperty?.city,
+          state: myProperty?.state,
+          zipCode: myProperty?.zipCode,
+          latitude: myProperty?.latitude,
+          longitude: myProperty?.longitude,
+          bedrooms: parseInt(bedrooms),
+          bathrooms: parseFloat(bathrooms),
+          monthlyRent: parseFloat(monthlyRent) || undefined,
+          reportData: {
+            estimates: data.property.estimates,
+            monthly_forecast: data.property.monthly_forecast,
+            comps: data.same_bedroom_comps?.slice(0, 5),
+            market: data.market,
+          },
+          title: `Revenue Analysis: ${address}`,
+          summary: `Projected annual revenue: $${annualRev.toLocaleString()} with ${Math.round(occupancy * 100)}% occupancy and $${Math.round(adr)}/night ADR.`,
+          annualRevenue: annualRev,
+          occupancyRate: occupancy,
+          averageDailyRate: adr,
+          userEmail: myProperty?.userEmail,
+          userPhone: myProperty?.userPhone,
+          userName: myProperty?.userEmail?.split('@')[0],
+          triggeredBy: 'revenue_calculator',
+        });
+      }
     } catch (error) {
       console.error('Analysis error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not analyze this property. Please try again.';

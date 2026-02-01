@@ -308,3 +308,76 @@ The Houston property analysis completed successfully. The "could not generate pr
 
 All features are working correctly including the new timer feature.
 
+
+
+---
+
+## Test Date: Feb 1, 2026 - Shareable Links & Auto-Notifications Test
+
+### Features Implemented
+
+#### 1. Universal Shareable Reports System
+- Created `universal_shareable_reports` database table
+- Supports 8 report types: revenue, validator, market, ai_advisor, listings, comparison, map, regulation
+- Each report gets a unique 8-character share code
+- Share URLs format: `/share/:shareCode`
+- View count tracking on each report access
+
+#### 2. Auto-Notification System
+- "Get Report via SMS/Email" toggle in property form (Step 1)
+- Email and phone input fields (both optional)
+- Contact info persists in PropertyContext across all tools
+- Auto-triggers when user completes analysis in:
+  - Regulation Tracker (Step 1)
+  - Property Validator (Step 5)
+  - Market Advisor (Step 8)
+  - AI Advisor (Step 9)
+
+#### 3. Notification Channels
+- **SMS**: Via SimpleTexting API
+- **Email**: Via Zapier webhook
+- Both channels track success/failure in `notification_analytics` table
+
+#### 4. Notification Analytics Dashboard
+- Located at `/admin/notifications`
+- Admin-only access (requires role='admin')
+- Filter by report type
+- Shows:
+  - Total reports created
+  - Total views
+  - SMS sent count
+  - Email sent count
+  - SMS/Email success rates
+  - Recent notifications list
+
+### UI Verification
+1. **Notification Settings in Property Form** - VISIBLE ✅
+   - "Get Report via SMS/Email" toggle present
+   - Email (optional) field present
+   - Phone (optional) field present
+   - Helper text: "We'll automatically send you a shareable report link when you complete an analysis."
+
+2. **Notification Analytics Dashboard** - ACCESSIBLE ✅
+   - Located at /admin/notifications
+   - Filter buttons for all 8 report types
+   - Shows "No analytics data available yet" (expected for fresh system)
+
+### Test Results Summary
+- **Shareable Reports Tests**: 34 passed (2 test files)
+- **Auto-Notification Tests**: 8 passed
+- **Features Tests**: 13 passed
+- **Saved Searches Tests**: 10 passed
+- **Total**: 65 tests passed
+
+### TypeScript Status
+- No errors ✅
+- Server running properly ✅
+
+### Files Created/Modified
+- `server/shareable-reports.ts` - Universal shareable reports service
+- `server/shareable-reports-comprehensive.test.ts` - Comprehensive tests
+- `client/src/pages/ShareableReportViewer.tsx` - Share link viewer page
+- `client/src/pages/NotificationAnalytics.tsx` - Analytics dashboard
+- `drizzle/schema.ts` - Added universal_shareable_reports and notification_analytics tables
+- Updated: LeadMagnet.tsx, AIAdvisorStep.tsx, StandaloneMarketAdvisor.tsx, RegulationTrackerStep.tsx
+

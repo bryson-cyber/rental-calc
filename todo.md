@@ -8833,3 +8833,42 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Display which methods were used (SMS, email, or both)
 - [x] Auto-set shareCode for manual sharing panel
 - [x] Silently fail if notification fails (don't disrupt user experience)
+
+
+## Shareable Links & Auto-Notifications for All Tools (Feb 1, 2026)
+
+### Phase 1: Shareable Links for Each Tool
+- [x] Revenue Calculator (Step 3) - Share property revenue estimate with link
+- [x] Property Validator (Step 5) - Share deal validation analysis
+- [x] Market Advisor (Step 8) - Share market analysis report
+- [x] Explore Listings (Step 4) - Share specific listing details
+- [x] Compare Favorites (Step 6) - Share comparison table
+- [x] AI Advisor (Step 9) - Share AI analysis conversation
+- [x] Regulation Tracker (Step 1) - Already implemented ✓
+- [x] Map View (Step 7) - Share map view with markers
+
+### Phase 2: Auto-Notifications for All Tools
+- [x] Extend auto-notification trigger to Revenue Calculator (LeadMagnet.tsx)
+- [x] Extend auto-notification trigger to Property Validator (LeadMagnet.tsx)
+- [x] Extend auto-notification trigger to Market Advisor (StandaloneMarketAdvisor.tsx)
+- [x] Extend auto-notification trigger to AI Advisor (AIAdvisorStep.tsx)
+- [x] Create unified notification service for all tools (shareable-reports.ts)
+
+### Phase 3: Notification Analytics Dashboard
+- [x] Create notifications database table for tracking (notification_analytics)
+- [x] Track: report type, recipient, delivery status, open/click events
+- [x] Build analytics dashboard UI showing:
+  - [x] Total notifications sent (by type, by channel)
+  - [x] Delivery success rate (SMS/email success rates)
+  - [x] View counts for shared reports
+  - [x] Recent notification history
+- [x] Add notification tracking to all send functions
+- [x] Admin-only access at /admin/notifications
+
+### Phase 4: Comprehensive Testing
+- [x] Test each shareable link type end-to-end (34 tests passing)
+- [x] Test auto-notification for each tool (8 tests passing)
+- [x] Test notification analytics tracking
+- [x] All 65 tests passing across shareable reports, auto-notification, features, and saved searches
+- [ ] Verify mobile responsiveness of shared pages
+- [ ] Test link expiration/persistence

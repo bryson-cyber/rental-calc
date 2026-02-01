@@ -31,6 +31,8 @@ import AdminPortal from "./pages/AdminPortal";
 import BugReportPage from "./pages/BugReportPage";
 import InvestmentCalculator from "./pages/InvestmentCalculator";
 import ShareableReport from "./pages/ShareableReport";
+import ShareableReportViewer from "./pages/ShareableReportViewer";
+import NotificationAnalytics from "./pages/NotificationAnalytics";
 
 function Router() {
   return (
@@ -80,6 +82,9 @@ function Router() {
       {/* Shareable Regulation Reports */}
       <Route path="/regulation/:shareCode" component={ShareableReport} />
       
+      {/* Universal Shareable Reports (all tools) */}
+      <Route path="/share/:shareCode" component={ShareableReportViewer} />
+      
       {/* Bug Reports */}
       <Route path="/bug/:shareCode" component={BugReportPage} />
       
@@ -95,6 +100,7 @@ function Router() {
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/admin/reports"} component={AdminReports} />
       <Route path={"/admin/hubspot"} component={AdminPortal} />
+      <Route path={"/admin/notifications"} component={NotificationAnalytics} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />
