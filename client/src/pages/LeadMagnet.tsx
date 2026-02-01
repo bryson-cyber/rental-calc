@@ -28,6 +28,7 @@ import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
 import { ShareReportButton } from '@/components/ShareReportButton';
 import { ShareToolButton } from '@/components/ShareToolButton';
+import { UniversalShareButton } from '@/components/UniversalShareButton';
 import { BugReportButton } from '@/components/BugReportButton';
 import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
@@ -5327,6 +5328,27 @@ export default function LeadMagnet() {
       {activeTab === 'validate' && result && (
         <section className="py-12 bg-slate-50">
           <div className="container max-w-5xl mx-auto px-4">
+            {/* Share Report Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Property Analysis Results</h2>
+                <p className="text-slate-500">{address}</p>
+              </div>
+              <UniversalShareButton
+                reportType="validator"
+                reportData={result}
+                address={address}
+                bedrooms={parseInt(bedrooms)}
+                bathrooms={parseFloat(bathrooms)}
+                monthlyRent={parseFloat(monthlyRent) || undefined}
+                annualRevenue={(result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue}
+                occupancyRate={(result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate}
+                averageDailyRate={(result as any)?.revenue_estimate?.nightly || (result as any)?.estimates?.average_daily_rate}
+                verdict={(result as any)?.verdict}
+                title={`Property Validation - ${address}`}
+                summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}
+              />
+            </div>
             <TeslaDashboard
               result={result}
               address={address}
@@ -5369,6 +5391,20 @@ export default function LeadMagnet() {
       {activeTab === 'compare' && sortedBulkResults && (
         <section className="py-12 bg-gradient-to-b from-slate-50 to-white">
           <div className="container max-w-6xl mx-auto">
+            {/* Share Comparison Header */}
+            <div className="flex items-center justify-between mb-6 px-4">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Property Comparison</h2>
+                <p className="text-slate-500">{sortedBulkResults.filter(r => r.status === 'success').length} properties analyzed</p>
+              </div>
+              <UniversalShareButton
+                reportType="comparison"
+                reportData={{ properties: sortedBulkResults }}
+                title="Property Comparison Report"
+                summary={`Comparing ${sortedBulkResults.filter(r => r.status === 'success').length} properties • Best: ${sortedBulkResults[0]?.address || 'N/A'}`}
+                annualRevenue={(sortedBulkResults[0] as any)?.annualRevenue || (sortedBulkResults[0] as any)?.revenue}
+              />
+            </div>
             
             {/* ===== WINNER HERO SECTION ===== */}
             {sortedBulkResults.length > 0 && sortedBulkResults[0].status === 'success' && (

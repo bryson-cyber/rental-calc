@@ -8872,3 +8872,25 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] All 65 tests passing across shareable reports, auto-notification, features, and saved searches
 - [ ] Verify mobile responsiveness of shared pages
 - [ ] Test link expiration/persistence
+
+
+## Share Report Buttons for All Tools (Feb 1, 2026)
+
+### Phase 1: Audit and Component Creation
+- [x] Audit existing ShareReportButton component
+- [x] Create UniversalShareButton component with consistent styling
+
+### Phase 2: Add Share Buttons to Tool Results
+- [x] Revenue Calculator (Step 3) - Add share button to results section (LeadMagnet.tsx)
+- [x] Property Validator (Step 5) - Add share button to validation results (LeadMagnet.tsx)
+- [x] Market Advisor (Step 8) - Add share button to market analysis (StandaloneMarketAdvisor.tsx)
+- [x] AI Advisor (Step 9) - Add share button to AI analysis (AIAdvisorStep.tsx)
+- [x] Explore Listings (Step 4) - Add share button to listings view (LeadMagnet.tsx)
+- [x] Compare Favorites (Step 6) - Add share button to comparison table (LeadMagnet.tsx)
+- [x] Regulation Tracker (Step 1) - Add share button (RegulationTrackerStep.tsx)
+- [x] Map View (Step 7) - Add share button to map view (LeadMagnet.tsx)
+
+### Phase 3: Testing
+- [x] Test share button creates shareable link for each tool (25 tests passing)
+- [x] Test copy-to-clipboard functionality
+- [x] Test shared link displays correct report data

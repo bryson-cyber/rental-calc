@@ -37,6 +37,7 @@ import { trpc } from '@/lib/trpc';
 import { useMarketAdvisorFilters, useProperty } from '@/contexts/PropertyContext';
 import { toast } from 'sonner';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
+import { UniversalShareButton } from '@/components/UniversalShareButton';
 
 interface MarketSearchResult {
   id: string;
@@ -621,6 +622,23 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
           {marketAdvice && (
             <Card className="apple-card border-2 border-primary/20">
               <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-primary">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">Market Analysis Complete</span>
+                  </div>
+                  <UniversalShareButton
+                    reportType="market"
+                    reportData={{ advice: marketAdvice, market: marketData.market, topPerformers: marketData.topPerformers }}
+                    marketId={marketData.market.id}
+                    marketName={marketData.market.name}
+                    city={marketData.market.city}
+                    state={marketData.market.state}
+                    title={`Market Analysis - ${marketData.market.name}`}
+                    summary={`AI-powered market analysis for ${marketData.market.name}, ${marketData.market.state}`}
+                    size="sm"
+                  />
+                </div>
                 <div className="prose prose-slate max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
                   <Streamdown>{marketAdvice}</Streamdown>
                 </div>

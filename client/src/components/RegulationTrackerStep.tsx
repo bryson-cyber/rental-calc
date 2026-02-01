@@ -64,6 +64,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { Link } from 'wouter';
 import { useProperty } from '@/contexts/PropertyContext';
+import { UniversalShareButton } from '@/components/UniversalShareButton';
 
 // Premium status configuration with gradients
 const statusConfig = {
@@ -664,6 +665,18 @@ export function RegulationTrackerStep() {
                       <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                         <Building2 className="w-4 h-4" />
                         <span>{result.governingJurisdiction || result.city}</span>
+                        <UniversalShareButton
+                          reportType="market"
+                          reportData={result}
+                          city={result.city}
+                          state={result.state}
+                          title={`Regulation Check - ${result.city}, ${result.state}`}
+                          summary={`${status?.label}: ${result.yesNoSummary || status?.description}`}
+                          verdict={status?.label}
+                          size="sm"
+                          variant="ghost"
+                          className="ml-2"
+                        />
                       </div>
                       <h3 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
                         {result.city}, {result.state}

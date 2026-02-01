@@ -1,0 +1,70 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'universal_shareable_reports' AND COLUMN_NAME LIKE '%sms%' OR COLUMN_NAME LIKE '%email%' OR COLUMN_NAME LIKE '%view%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'universal_shareable_reports' AND COLUMN_NAME LIKE '%sms%' OR COLUMN_NAME LIKE '%email%' OR COLUMN_NAME LIKE '%view%';",
+  "rows": [
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "viewCount"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "emailSubject"
+    },
+    {
+      "COLUMN_NAME": "emailPreviewText"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "emailSentAt"
+    },
+    {
+      "COLUMN_NAME": "emailOpenedAt"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "viewCount"
+    },
+    {
+      "COLUMN_NAME": "emailSentTo"
+    },
+    {
+      "COLUMN_NAME": "emailSentAt"
+    },
+    {
+      "COLUMN_NAME": "viewCount"
+    },
+    {
+      "COLUMN_NAME": "smsSentTo"
+    },
+    {
+      "COLUMN_NAME": "smsSentAt"
+    },
+    {
+      "COLUMN_NAME": "emailSentTo"
+    },
+    {
+      "COLUMN_NAME": "emailSentAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nemail\nemail\nemail\nviewCount\nemail\nemail\nemailSubject\nemailPreviewText\nemail\nemailSentAt\nemailOpenedAt\nemail\nviewCount\nemailSentTo\nemailSentAt\nviewCount\nsmsSentTo\nsmsSentAt\nemailSentTo\nemailSentAt\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}

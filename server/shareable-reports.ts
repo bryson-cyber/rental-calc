@@ -427,10 +427,10 @@ export async function getNotificationAnalytics(options?: {
     const [reportCounts] = await db.execute(`
       SELECT 
         reportType,
-        COUNT(*) as count,
-        SUM(viewCount) as views,
-        SUM(CASE WHEN smsSentAt IS NOT NULL THEN 1 ELSE 0 END) as smsSent,
-        SUM(CASE WHEN emailSentAt IS NOT NULL THEN 1 ELSE 0 END) as emailsSent
+        COUNT(*) as totalCount,
+        SUM(viewCount) as totalViews,
+        SUM(CASE WHEN smsSentAt IS NOT NULL THEN 1 ELSE 0 END) as totalSmsSent,
+        SUM(CASE WHEN emailSentAt IS NOT NULL THEN 1 ELSE 0 END) as totalEmailsSent
       FROM universal_shareable_reports
       ${whereClause}
       GROUP BY reportType
@@ -461,10 +461,10 @@ export async function getNotificationAnalytics(options?: {
     
     if (Array.isArray(reportCounts)) {
       for (const row of reportCounts as any[]) {
-        const count = Number(row.count) || 0;
-        const views = Number(row.views) || 0;
-        const smsSent = Number(row.smsSent) || 0;
-        const emailsSent = Number(row.emailsSent) || 0;
+        const count = Number(row.totalCount) || 0;
+        const views = Number(row.totalViews) || 0;
+        const smsSent = Number(row.totalSmsSent) || 0;
+        const emailsSent = Number(row.totalEmailsSent) || 0;
         
         totalReports += count;
         totalViews += views;

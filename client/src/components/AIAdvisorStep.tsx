@@ -17,6 +17,7 @@ import { Streamdown } from 'streamdown';
 import { trpc } from '@/lib/trpc';
 import { useProperty } from '@/contexts/PropertyContext';
 import { toast } from 'sonner';
+import { UniversalShareButton } from '@/components/UniversalShareButton';
 
 interface AIAdvisorStepProps {
   // Mode (rent or purchase)
@@ -442,9 +443,26 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-4"
             >
-              <div className="flex items-center gap-2 text-green-600">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="font-medium">Analysis Complete</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">Analysis Complete</span>
+                </div>
+                <UniversalShareButton
+                  reportType="ai_advisor"
+                  reportData={{ advice: propertyAdvice, property: props.property, revenue: props.revenue, cashFlow: props.cashFlow, comparables: props.comparables }}
+                  address={props.property.address}
+                  city={props.property.city}
+                  state={props.property.state}
+                  bedrooms={props.property.bedrooms}
+                  bathrooms={props.property.bathrooms}
+                  annualRevenue={props.revenue.projected}
+                  occupancyRate={props.revenue.occupancy}
+                  averageDailyRate={props.revenue.adr}
+                  title={`AI Analysis - ${props.property.address}`}
+                  summary={`AI-powered investment analysis for ${props.property.address}`}
+                  size="sm"
+                />
               </div>
               
               <div className="prose prose-slate max-w-none bg-white rounded-lg border border-slate-200 p-6">
