@@ -8746,3 +8746,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Preserve all existing functionality (save, comments, sources) → All features working
 - [x] Ensure mobile responsiveness with premium feel → Responsive layout
 - [x] Add micro-interactions and hover effects → Button hover states
+
+
+## Regulation Tracker Stat Cards Fix (Feb 1, 2026)
+
+### UI Issues to Fix
+- [ ] Truncate long Registration fee values (e.g., "Varies by tier ($226 - $1,170...)" → "$226-$1,170")
+- [ ] Make all stat cards equal height
+- [ ] Add proper text overflow handling with ellipsis
+- [ ] Ensure cards don't break layout with long content

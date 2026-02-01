@@ -591,48 +591,96 @@ export function RegulationTrackerStep() {
                             </div>
                           </div>
                           
-                          {/* Stats Grid */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                              <FileText className="w-5 h-5 text-gray-400 mb-3" />
-                              <p className="text-2xl font-bold text-gray-900">{result.permitRequired ? 'Yes' : 'No'}</p>
-                              <p className="text-sm text-gray-500">Permit Required</p>
+                          {/* Stats Grid - Fixed height cards with proper text handling */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between">
+                              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                              <div>
+                                <p className="text-lg sm:text-xl font-bold text-gray-900">{result.permitRequired ? 'Yes' : 'No'}</p>
+                                <p className="text-xs sm:text-sm text-gray-500">Permit Required</p>
+                              </div>
                             </div>
                             
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                              <Home className="w-5 h-5 text-gray-400 mb-3" />
-                              <p className="text-2xl font-bold text-gray-900">{result.primaryResidenceOnly ? 'Yes' : 'No'}</p>
-                              <p className="text-sm text-gray-500">Primary Only</p>
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between">
+                              <Home className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                              <div>
+                                <p className="text-lg sm:text-xl font-bold text-gray-900">{result.primaryResidenceOnly ? 'Yes' : 'No'}</p>
+                                <p className="text-xs sm:text-sm text-gray-500">Primary Only</p>
+                              </div>
                             </div>
                             
                             {result.registrationFee && (
-                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                                <DollarSign className="w-5 h-5 text-gray-400 mb-3" />
-                                <p className="text-2xl font-bold text-gray-900">{result.registrationFee}</p>
-                                <p className="text-sm text-gray-500">Registration</p>
+                              <div 
+                                className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between cursor-help" 
+                                title={result.registrationFee}
+                              >
+                                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                                <div className="overflow-hidden">
+                                  <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                                    {(() => {
+                                      const fee = result.registrationFee;
+                                      // If it says "Not specified" or similar, show "N/A"
+                                      if (fee.toLowerCase().includes('not specified') || fee.toLowerCase().includes('not available')) {
+                                        return 'N/A';
+                                      }
+                                      // Extract just the dollar amounts (e.g., "$226-$1,170")
+                                      const dollarMatch = fee.match(/\$[\d,]+(?:\s*[-–]\s*\$[\d,]+)?/);
+                                      if (dollarMatch) {
+                                        return dollarMatch[0].replace(/\s+/g, '');
+                                      }
+                                      // If no dollar match, show truncated version
+                                      return fee.length > 10 ? fee.substring(0, 10) + '…' : fee;
+                                    })()}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-gray-500">Registration</p>
+                                </div>
                               </div>
                             )}
                             
                             {result.occupancyTax && (
-                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                                <DollarSign className="w-5 h-5 text-gray-400 mb-3" />
-                                <p className="text-2xl font-bold text-gray-900">{result.occupancyTax}</p>
-                                <p className="text-sm text-gray-500">Tax Rate</p>
+                              <div 
+                                className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between cursor-help"
+                                title={result.occupancyTax}
+                              >
+                                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                                <div className="overflow-hidden">
+                                  <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                                    {(() => {
+                                      const tax = result.occupancyTax;
+                                      // Extract percentage (e.g., "10.5%")
+                                      const percentMatch = tax.match(/[\d.]+%/);
+                                      if (percentMatch) {
+                                        return percentMatch[0];
+                                      }
+                                      // If it says "Not specified" or similar, show "N/A"
+                                      if (tax.toLowerCase().includes('not specified') || tax.toLowerCase().includes('not available')) {
+                                        return 'N/A';
+                                      }
+                                      // Otherwise truncate
+                                      return tax.length > 10 ? tax.substring(0, 10) + '…' : tax;
+                                    })()}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-gray-500">Tax Rate</p>
+                                </div>
                               </div>
                             )}
                             
                             {result.maxNightsPerYear && (
-                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                                <Calendar className="w-5 h-5 text-gray-400 mb-3" />
-                                <p className="text-2xl font-bold text-gray-900">{result.maxNightsPerYear}</p>
-                                <p className="text-sm text-gray-500">Max Nights/Year</p>
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between">
+                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                                <div>
+                                  <p className="text-lg sm:text-xl font-bold text-gray-900">{result.maxNightsPerYear}</p>
+                                  <p className="text-xs sm:text-sm text-gray-500">Max Nights/Year</p>
+                                </div>
                               </div>
                             )}
                             
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                              <Shield className="w-5 h-5 text-gray-400 mb-3" />
-                              <p className="text-2xl font-bold text-gray-900 capitalize">{result.confidence}</p>
-                              <p className="text-sm text-gray-500">Confidence</p>
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm h-[100px] sm:h-[110px] flex flex-col justify-between">
+                              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                              <div>
+                                <p className="text-lg sm:text-xl font-bold text-gray-900 capitalize">{result.confidence}</p>
+                                <p className="text-xs sm:text-sm text-gray-500">Confidence</p>
+                              </div>
                             </div>
                           </div>
                           
