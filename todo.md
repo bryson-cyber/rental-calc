@@ -8894,3 +8894,26 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Test share button creates shareable link for each tool (25 tests passing)
 - [x] Test copy-to-clipboard functionality
 - [x] Test shared link displays correct report data
+
+
+## HubSpot Email Integration (Feb 1, 2026)
+
+### Phase 1: Share Buttons for Remaining Tools
+- [x] Add share button to Explore Listings (Step 4) - LeadMagnet.tsx
+- [x] Add share button to Map View (Step 7) - MapFirstLayoutV2.tsx
+
+### Phase 2: HubSpot Single Send API Integration
+- [x] Create hubspot-email.ts service module
+- [x] Implement sendHubSpotEmail function with Single Send API
+- [x] Add HUBSPOT_REPORT_EMAIL_ID environment variable for template ID
+- [x] Add HUBSPOT_SHARE_EMAIL_ID environment variable for share template ID
+
+### Phase 3: Update Notification Service
+- [x] Update sms-email-notifications.ts to use HubSpot for emails
+- [x] Pass dynamic properties (report link, property address, etc.)
+- [x] Add fallback to Zapier if HubSpot fails
+
+### Phase 4: Testing
+- [x] Test HubSpot email sending with real template (12 tests passing)
+- [x] Test share buttons on Explore Listings and Map View
+- [x] Verify contact creation in HubSpot CRM (upsertHubSpotContact tested)

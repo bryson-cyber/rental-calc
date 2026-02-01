@@ -1,9 +1,10 @@
 /**
  * SMS and Email Notification Service
- * Handles sending notifications via SimpleTexting (SMS) and email
+ * Handles sending notifications via SimpleTexting (SMS) and HubSpot/Zapier (email)
  */
 
 import { ENV } from "./_core/env";
+import { sendReportNotificationEmail, sendShareNotificationEmail } from './hubspot-email';
 
 // Generate a unique share code for reports
 export function generateShareCode(): string {
@@ -87,15 +88,49 @@ export async function sendSMSNotification(
 
 /**
  * Send Email notification
- * Uses the built-in notification system or Zapier webhook
+ * Priority: HubSpot Single Send API > Zapier webhook > Console log
  */
 export async function sendEmailNotification(
   email: string,
   subject: string,
   body: string,
-  recipientName?: string
-): Promise<{ success: boolean; error?: string }> {
-  // Try using Zapier webhook for email if configured
+  recipientName?: string,
+  metadata?: {
+    reportLink?: string;
+    reportType?: string;
+    propertyAddress?: string;
+    marketName?: string;
+    annualRevenue?: number;
+    occupancyRate?: number;
+  }
+): Promise<{ success: boolean; error?: string; provider?: string }> {
+  
+  // Priority 1: Try HubSpot Single Send API if configured
+  const hubspotApiKey = process.env.HUBSPOT_API_KEY;
+  const hubspotEmailId = process.env.HUBSPOT_REPORT_EMAIL_ID;
+  
+  if (hubspotApiKey && hubspotEmailId && metadata?.reportLink) {
+    console.log(`[Email] Attempting HubSpot Single Send to ${email}`);
+    const hubspotResult = await sendReportNotificationEmail({
+      recipientEmail: email,
+      recipientName,
+      reportLink: metadata.reportLink,
+      reportType: metadata.reportType || 'Analysis Report',
+      propertyAddress: metadata.propertyAddress,
+      marketName: metadata.marketName,
+      annualRevenue: metadata.annualRevenue,
+      occupancyRate: metadata.occupancyRate
+    });
+    
+    if (hubspotResult.success) {
+      console.log(`[Email] Successfully sent to ${email} via HubSpot`);
+      return { success: true, provider: 'hubspot' };
+    } else {
+      console.warn(`[Email] HubSpot failed: ${hubspotResult.error}, falling back to Zapier`);
+    }
+  }
+  
+  // Priority 2: Try Zapier webhook
   const zapierWebhook = ENV.zapierWebhookUrl;
   
   if (zapierWebhook) {
@@ -111,27 +146,28 @@ export async function sendEmailNotification(
           recipientName: recipientName || 'Investor',
           subject,
           body,
+          reportLink: metadata?.reportLink,
+          reportType: metadata?.reportType,
+          propertyAddress: metadata?.propertyAddress,
           timestamp: new Date().toISOString(),
         }),
       });
       
       if (response.ok) {
         console.log(`[Email] Successfully queued email to ${email} via Zapier`);
-        return { success: true };
+        return { success: true, provider: 'zapier' };
       }
     } catch (error) {
       console.error('[Email] Zapier webhook error:', error);
     }
   }
   
-  // Fallback: Log the email for manual sending
+  // Priority 3: Log for manual sending (development fallback)
   console.log(`[Email] Would send to ${email}:`);
   console.log(`  Subject: ${subject}`);
   console.log(`  Body: ${body.substring(0, 100)}...`);
   
-  // For now, return success since we've logged it
-  // In production, you'd integrate with SendGrid, Mailgun, etc.
-  return { success: true };
+  return { success: true, provider: 'console' };
 }
 
 /**
@@ -143,49 +179,129 @@ export async function sendReportNotifications(
     state: string;
     status: string;
     shareCode: string;
+    reportType?: string;
+    propertyAddress?: string;
+    annualRevenue?: number;
+    occupancyRate?: number;
   },
   contact: {
     phone?: string;
     email?: string;
     name?: string;
   }
-): Promise<{ sms?: { success: boolean; error?: string }; email?: { success: boolean; error?: string } }> {
-  const results: { sms?: { success: boolean; error?: string }; email?: { success: boolean; error?: string } } = {};
+): Promise<{ sms?: { success: boolean; error?: string }; email?: { success: boolean; error?: string; provider?: string } }> {
+  const results: { sms?: { success: boolean; error?: string }; email?: { success: boolean; error?: string; provider?: string } } = {};
   const baseUrl = process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com';
-  const reportUrl = `${baseUrl}/report/${reportData.shareCode}`;
+  const reportUrl = `${baseUrl}/share/${reportData.shareCode}`;
   
   // Send SMS if phone provided
   if (contact.phone) {
-    const smsMessage = `Your STR Regulation Report for ${reportData.city}, ${reportData.state} is ready! Status: ${reportData.status}. View: ${reportUrl}`;
+    const smsMessage = `Your ${reportData.reportType || 'Analysis'} Report for ${reportData.city}, ${reportData.state} is ready! View: ${reportUrl}`;
     results.sms = await sendSMSNotification(contact.phone, smsMessage);
   }
   
-  // Send Email if email provided
+  // Send Email if email provided (with HubSpot priority)
   if (contact.email) {
-    const emailSubject = `STR Regulation Report: ${reportData.city}, ${reportData.state}`;
+    const emailSubject = `Your ${reportData.reportType || 'Analysis'} Report: ${reportData.city}, ${reportData.state}`;
     const emailBody = `Hi ${contact.name || 'there'},
 
-Your STR Regulation Report is ready!
+Your ${reportData.reportType || 'Analysis'} Report is ready!
 
 Location: ${reportData.city}, ${reportData.state}
-Status: ${reportData.status}
+${reportData.propertyAddress ? `Property: ${reportData.propertyAddress}\n` : ''}
+${reportData.annualRevenue ? `Estimated Annual Revenue: $${reportData.annualRevenue.toLocaleString()}\n` : ''}
+${reportData.occupancyRate ? `Occupancy Rate: ${Math.round(reportData.occupancyRate * 100)}%\n` : ''}
 
 View your full report here: ${reportUrl}
-
-This report includes:
-• Permit requirements
-• Registration fees
-• Occupancy taxes
-• Key regulations to follow
-• Official sources
 
 Questions? Reply to this email or visit coachinayahturnkeytool.com
 
 Best,
 Coach Inayah Team`;
     
-    results.email = await sendEmailNotification(contact.email, emailSubject, emailBody, contact.name);
+    results.email = await sendEmailNotification(
+      contact.email, 
+      emailSubject, 
+      emailBody, 
+      contact.name,
+      {
+        reportLink: reportUrl,
+        reportType: reportData.reportType,
+        propertyAddress: reportData.propertyAddress,
+        marketName: `${reportData.city}, ${reportData.state}`,
+        annualRevenue: reportData.annualRevenue,
+        occupancyRate: reportData.occupancyRate
+      }
+    );
   }
   
   return results;
+}
+
+/**
+ * Send share notification when someone shares a report with another person
+ */
+export async function sendShareNotification(
+  shareData: {
+    shareCode: string;
+    reportType: string;
+    propertyAddress?: string;
+    senderName?: string;
+  },
+  recipient: {
+    email: string;
+    name?: string;
+  }
+): Promise<{ success: boolean; error?: string; provider?: string }> {
+  const baseUrl = process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com';
+  const reportUrl = `${baseUrl}/share/${shareData.shareCode}`;
+  
+  // Try HubSpot first
+  const hubspotApiKey = process.env.HUBSPOT_API_KEY;
+  const hubspotShareEmailId = process.env.HUBSPOT_SHARE_EMAIL_ID;
+  
+  if (hubspotApiKey && hubspotShareEmailId) {
+    const result = await sendShareNotificationEmail({
+      recipientEmail: recipient.email,
+      recipientName: recipient.name,
+      senderName: shareData.senderName,
+      reportLink: reportUrl,
+      reportType: shareData.reportType,
+      propertyAddress: shareData.propertyAddress
+    });
+    
+    if (result.success) {
+      return { success: true, provider: 'hubspot' };
+    }
+  }
+  
+  // Fallback to Zapier
+  const zapierWebhook = ENV.zapierWebhookUrl;
+  if (zapierWebhook) {
+    try {
+      const response = await fetch(zapierWebhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'share_notification',
+          email: recipient.email,
+          recipientName: recipient.name || 'there',
+          senderName: shareData.senderName || 'Someone',
+          reportType: shareData.reportType,
+          propertyAddress: shareData.propertyAddress,
+          reportLink: reportUrl,
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        return { success: true, provider: 'zapier' };
+      }
+    } catch (error) {
+      console.error('[Share Email] Zapier error:', error);
+    }
+  }
+  
+  console.log(`[Share Email] Would send share notification to ${recipient.email}`);
+  return { success: true, provider: 'console' };
 }

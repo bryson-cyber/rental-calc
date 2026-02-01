@@ -4686,6 +4686,26 @@ export default function LeadMagnet() {
                   marketId={selectedMarket.id}
                   marketName={selectedMarket.name}
                 />
+                <UniversalShareButton
+                  reportType="listings"
+                  title={`Explore Listings: ${selectedMarket.name}`}
+                  reportData={{
+                    marketName: selectedMarket.name,
+                    marketId: selectedMarket.id,
+                    totalCount: marketListingsStats?.totalCount || marketListings.length,
+                    avgRevenue: marketListingsStats?.avgRevenue || 0,
+                    avgOccupancy: marketListingsStats?.avgOccupancy || 0,
+                    topListings: marketListings.slice(0, 10).map((l: any) => ({
+                      title: l.title,
+                      bedrooms: l.bedrooms,
+                      annualRevenue: l.annualRevenue,
+                      occupancy: l.occupancy,
+                      listingUrl: l.listingUrl
+                    }))
+                  }}
+                  variant="outline"
+                  size="sm"
+                />
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
                 What's Working in {selectedMarket.name}

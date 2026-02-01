@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 import { ExportListings } from '@/components/ExportListings';
+import { UniversalShareButton } from '@/components/UniversalShareButton';
 import { Link } from 'wouter';
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import {
@@ -1003,16 +1004,54 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
       {/* Premium Header with Guiding Question - Clean White Design */}
       <div className="bg-white border-b border-gray-100 py-8 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#b8984f] flex items-center justify-center shadow-lg">
-              <MapPin className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9A962] to-[#b8984f] flex items-center justify-center shadow-lg">
+                <MapPin className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#0F172A]">How does my property compare to nearby competition?</h2>
+                <p className="text-[#0F172A]/60 text-sm font-sans mt-1">
+                  See revenue, occupancy, and nightly rates for comparable properties in your market
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#0F172A]">How does my property compare to nearby competition?</h2>
-              <p className="text-[#0F172A]/60 text-sm font-sans mt-1">
-                See revenue, occupancy, and nightly rates for comparable properties in your market
-              </p>
-            </div>
+            {filteredListings.length > 0 && (
+              <UniversalShareButton
+                reportType="map"
+                title={`Map View: ${locationName || 'Property Comparison'}`}
+                reportData={{
+                  locationName: locationName || 'Property Comparison',
+                  myProperty: myPropertyLocation ? {
+                    address: myProperty?.address,
+                    lat: myPropertyLocation.lat,
+                    lng: myPropertyLocation.lng
+                  } : null,
+                  filters: {
+                    bedrooms: bedroomFilter,
+                    distance: distanceFilter,
+                    tier: tierFilter
+                  },
+                  stats: {
+                    totalListings: filteredListings.length,
+                    avgRevenue,
+                    avgOccupancy,
+                    avgAdr
+                  },
+                  topListings: filteredListings.slice(0, 10).map(l => ({
+                    title: l.title,
+                    bedrooms: l.bedrooms,
+                    revenue: l.revenue,
+                    occupancy: l.occupancy,
+                    adr: l.adr,
+                    latitude: l.latitude,
+                    longitude: l.longitude
+                  }))
+                }}
+                variant="outline"
+                size="sm"
+              />
+            )}
           </div>
         </div>
       </div>
