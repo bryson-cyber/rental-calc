@@ -1,0 +1,36 @@
+{
+  "scope": "component",
+  "isRedesign": true,
+  "targetPath": "client/src/components/RegulationTrackerStep.tsx",
+  "targetName": "RegulationTrackerStep",
+  "painPoints": ["Generic styling - looks like any other tool"],
+  "inspiration": {
+    "visual": ["Apple"],
+    "functional": ["Progressive disclosure", "Clear status hierarchy"]
+  },
+  "brand": {
+    "adjectives": ["premium", "refined", "spacious", "trustworthy"],
+    "density": "spacious",
+    "darkMode": false
+  },
+  "persona": {
+    "primary": "Business user",
+    "context": "both equally",
+    "keyTasks": ["Check if STR is allowed", "Understand requirements", "Save for reference"]
+  },
+  "constraints": {
+    "mustKeep": ["existing functionality", "status types", "save feature"],
+    "technical": ["use existing components", "maintain accessibility"]
+  },
+  "framework": "vite-react",
+  "packageManager": "pnpm",
+  "stylingSystem": "tailwind",
+  "designTokens": {
+    "gold": "oklch(0.55 0.14 75)",
+    "goldLight": "oklch(0.65 0.12 75)",
+    "background": "oklch(0.99 0 0)",
+    "foreground": "oklch(0.15 0 0)",
+    "card": "oklch(0.98 0 0)",
+    "border": "oklch(0.90 0 0)"
+  }
+}
