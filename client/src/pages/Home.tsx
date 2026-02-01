@@ -45,6 +45,7 @@ import ChapterPropertyReport from '@/components/ChapterPropertyReport';
 import AnalysisProgress from '@/components/AnalysisProgress';
 import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/EnhancedInsights';
 import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
+import { SEOHead, calculatorSchema, organizationSchema } from '@/components/SEOHead';
 
 // Type definitions based on API response
 interface MonthlyForecast {
@@ -337,10 +338,7 @@ export default function RentalEstimator() {
   });
   const [reportData, setReportData] = useState<ComprehensiveReportData | null>(null);
 
-  // Set SEO-optimized page title (30-60 characters recommended)
-  useEffect(() => {
-    document.title = 'Free Airbnb Calculator | Rental Revenue Estimator';
-  }, []);
+  // SEO is now handled by SEOHead component in the return statement
 
   // Progress tracking for real-time updates
   const { sessionId, progress, startTracking, stopTracking } = useAnalysisProgress();
@@ -537,7 +535,15 @@ export default function RentalEstimator() {
   // Search Form
   if (step === 'search') {
     return (
-      <div className="min-h-screen relative overflow-hidden">
+      <>
+        <SEOHead
+          title="Free Airbnb Calculator"
+          description="Discover how much your property could earn on Airbnb & VRBO. Free rental revenue calculator with market data, comparable properties, and investment analysis."
+          canonicalPath="/"
+          keywords={['Airbnb calculator', 'rental arbitrage', 'short-term rental revenue', 'vacation rental profit', 'STR analysis', 'rental income estimator']}
+          structuredData={[calculatorSchema, organizationSchema]}
+        />
+        <div className="min-h-screen relative overflow-hidden">
         {/* Background Image with Overlay */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -844,6 +850,7 @@ export default function RentalEstimator() {
           </motion.div>
         </div>
       </div>
+      </>
     );
   }
 

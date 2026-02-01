@@ -107,6 +107,7 @@ import { CompareFavoritesSection } from '@/components/CompareFavoritesSection';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
+import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -1927,7 +1928,19 @@ export default function LeadMagnet() {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEOHead
+        title="Free Property Analysis Tools"
+        description="Analyze rental properties with our free tools. Get revenue estimates, market insights, regulation checks, and AI-powered investment advice for Airbnb & VRBO."
+        canonicalPath="/tools"
+        keywords={['property analysis', 'rental calculator', 'Airbnb tools', 'market research', 'investment analysis', 'short-term rental']}
+        structuredData={createWebPageSchema({
+          name: 'Free Property Analysis Tools',
+          description: 'Comprehensive rental property analysis tools including revenue calculator, market advisor, and regulation tracker.',
+          url: '/tools'
+        })}
+      />
+      <div className="min-h-screen bg-white">
       
       {/* Fixed Header Actions */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
@@ -6193,5 +6206,6 @@ export default function LeadMagnet() {
       {/* Bottom padding to prevent content from being hidden behind bottom nav on mobile */}
       <div className="sm:hidden h-20" />
     </div>
+    </>
   );
 }

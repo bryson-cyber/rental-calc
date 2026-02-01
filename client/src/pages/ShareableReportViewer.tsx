@@ -5,7 +5,8 @@
 
 import { useParams, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -212,8 +213,24 @@ export default function ShareableReportViewer() {
   const location = report.address || 
     (report.city && report.state ? `${report.city}, ${report.state}` : report.marketName || 'Unknown Location');
 
+  // Dynamic SEO based on report data
+  const seoTitle = `${config.title} - ${location}`;
+  const seoDescription = `View the ${config.title.toLowerCase()} for ${location}. Shared via Coach Inayah Turnkey Tool.`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
+    <>
+      <SEOHead
+        title={seoTitle}
+        description={seoDescription}
+        canonicalPath={`/share/${shareCode}`}
+        noIndex={true} // Shared reports should not be indexed
+        structuredData={createWebPageSchema({
+          name: seoTitle,
+          description: seoDescription,
+          url: `/share/${shareCode}`
+        })}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -501,5 +518,6 @@ export default function ShareableReportViewer() {
         </div>
       </main>
     </div>
+    </>
   );
 }

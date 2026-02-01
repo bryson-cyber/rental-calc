@@ -8921,3 +8921,33 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## SEO Fixes (Feb 1, 2026)
 - [x] Fix homepage title to be 30-60 characters (now 50 chars: 'Free Airbnb Calculator | Rental Revenue Estimator')
+
+
+## Comprehensive SEO Improvements (Feb 1, 2026)
+
+### Phase 1: Reusable SEO Component
+- [x] Create SEOHead component for meta tags, canonical URLs, and structured data
+- [x] Support dynamic title, description, canonical URL, and JSON-LD
+
+### Phase 2: Unique Meta Descriptions
+- [x] Homepage - rental calculator description (Home.tsx)
+- [x] Tools page (/tools) - property analysis tools description (LeadMagnet.tsx)
+- [x] Market Advisor - market analysis description (included in tools page)
+- [x] Shareable Report pages - dynamic descriptions based on report type (ShareableReportViewer.tsx)
+
+### Phase 3: Canonical URLs
+- [x] Add canonical URL to homepage (/)
+- [x] Add canonical URL to tools page (/tools)
+- [x] Add canonical URL to shareable report pages (/share/:shareCode)
+
+### Phase 4: JSON-LD Structured Data
+- [x] SoftwareApplication schema for the calculator tool (calculatorSchema)
+- [x] Organization schema for Coach Inayah (organizationSchema)
+- [x] WebPage schema for each major page (createWebPageSchema)
+- [x] FAQPage schema generator (createFAQSchema)
+- [x] BreadcrumbList schema generator (createBreadcrumbSchema)
+
+### Phase 5: Testing
+- [x] Verify meta tags render correctly (24 tests passing)
+- [x] Test canonical URLs
+- [x] Validate JSON-LD schema structure
