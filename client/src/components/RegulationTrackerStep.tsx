@@ -666,7 +666,7 @@ export function RegulationTrackerStep() {
                         <Building2 className="w-4 h-4" />
                         <span>{result.governingJurisdiction || result.city}</span>
                         <UniversalShareButton
-                          reportType="market"
+                          reportType="regulation"
                           reportData={result}
                           city={result.city}
                           state={result.state}

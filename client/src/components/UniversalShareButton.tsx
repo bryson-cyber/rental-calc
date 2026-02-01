@@ -22,7 +22,8 @@ export type ReportType =
   | 'ai_advisor'
   | 'listings'
   | 'comparison'
-  | 'map';
+  | 'map'
+  | 'regulation';
 
 interface UniversalShareButtonProps {
   /** Type of report being shared */
@@ -178,6 +179,7 @@ export function UniversalShareButton({
       listings: 'Listings Report',
       comparison: 'Property Comparison',
       map: 'Map View',
+      regulation: 'Regulation Check',
     };
     
     const location = address || (city && state ? `${city}, ${state}` : city || marketName || 'Property');
@@ -277,6 +279,7 @@ export function UniversalShareButton({
       listings: 'Listings Report',
       comparison: 'Comparison',
       map: 'Map View',
+      regulation: 'Regulation Check',
     };
     return labels[reportType];
   };

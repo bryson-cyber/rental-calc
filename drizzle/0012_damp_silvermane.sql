@@ -1,0 +1,1 @@
+ALTER TABLE `universal_shareable_reports` MODIFY COLUMN `reportType` enum('revenue','validator','market','ai_advisor','listings','comparison','map','regulation') NOT NULL;

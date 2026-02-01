@@ -6847,7 +6847,7 @@ export const appRouter = router({
     // Create a shareable report for any tool type
     create: publicProcedure
       .input(z.object({
-        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map']),
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
         // Property information
         address: z.string().optional(),
         city: z.string().optional(),
@@ -6898,7 +6898,7 @@ export const appRouter = router({
     sendNotifications: publicProcedure
       .input(z.object({
         shareCode: z.string().min(1),
-        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map']),
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
         phone: z.string().optional(),
         email: z.string().email().optional(),
         name: z.string().optional(),
@@ -6920,7 +6920,7 @@ export const appRouter = router({
     // Create shareable report and send notifications in one call (for auto-notification)
     createAndNotify: publicProcedure
       .input(z.object({
-        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map']),
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
         // Property information
         address: z.string().optional(),
         city: z.string().optional(),

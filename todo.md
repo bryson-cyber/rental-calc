@@ -8969,3 +8969,15 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Ensure AI Advisor can load shared AI advice from URL (tab=advisor)
 - [x] Test all share links redirect correctly with pre-populated data (15 tests passing)
 - [x] Verified: Share link redirects to actual tool page with same branding
+
+
+## Share Link Domain Fix (Feb 1, 2026)
+- [ ] Fix share links to use production domain (coachinayahturnkeytool.com) instead of dev server URL
+- [ ] Use window.location.origin to get current domain dynamically
+- [ ] Test share links maintain correct domain in both dev and production
+
+
+## Share Redirect Tab Mapping Fix (Feb 1, 2026)
+- [x] Fix regulation reports redirecting to wrong tab (market instead of regulations)
+- [x] Added 'regulation' to ReportType in UniversalShareButton, ShareableReportType in server, and routers.ts
+- [x] Verify all report types map to correct tabs (15 tests passing)

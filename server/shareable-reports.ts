@@ -16,7 +16,8 @@ export type ShareableReportType =
   | "ai_advisor"   // AI Advisor (Step 9)
   | "listings"     // Explore Listings (Step 4)
   | "comparison"   // Compare Favorites (Step 6)
-  | "map";         // Map View (Step 7)
+  | "map"          // Map View (Step 7)
+  | "regulation"; // Regulation Tracker (Step 1)
 
 // Input for creating a shareable report
 export interface CreateShareableReportInput {
@@ -193,6 +194,7 @@ export async function sendShareableReportNotifications(
     listings: "Listings Report",
     comparison: "Property Comparison",
     map: "Map View Report",
+    regulation: "Regulation Check",
   };
   const reportTypeName = reportTypeNames[reportType] || "Analysis Report";
   
