@@ -15,4 +15,6 @@ export const ENV = {
   coachinayahPassword: process.env.COACHINAYAH_PASSWORD ?? "",
   hasdataApiKey: process.env.HASDATA_API_KEY ?? "",
   rentometerApiKey: process.env.RENTOMETER_API_KEY ?? "",
+  simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
+  zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
 };

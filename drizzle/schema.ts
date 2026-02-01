@@ -1198,3 +1198,65 @@ export const bugReports = mysqlTable("bug_reports", {
 
 export type BugReport = typeof bugReports.$inferSelect;
 export type InsertBugReport = typeof bugReports.$inferInsert;
+
+
+/**
+ * Shareable Regulation Reports table for generating unique links to regulation reports
+ * When a user completes a regulation check, they can share the results via SMS/email
+ */
+export const shareableRegulationReports = mysqlTable("shareable_regulation_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Unique shareable code for URLs (e.g., "abc123xyz")
+  shareCode: varchar("shareCode", { length: 20 }).notNull().unique(),
+  
+  // Location information
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  locationKey: varchar("locationKey", { length: 255 }).notNull(),
+  
+  // Regulation status and summary
+  status: varchar("status", { length: 50 }).notNull(), // allowed, allowed_with_permit, restricted, banned
+  yesNoSummary: text("yesNoSummary"),
+  summary: text("summary"),
+  
+  // Key details for display
+  permitRequired: int("permitRequired").default(0), // 0 = false, 1 = true
+  primaryResidenceOnly: int("primaryResidenceOnly").default(0),
+  maxNightsPerYear: int("maxNightsPerYear"),
+  registrationFee: varchar("registrationFee", { length: 255 }),
+  occupancyTax: varchar("occupancyTax", { length: 100 }),
+  confidence: varchar("confidence", { length: 20 }),
+  
+  // Full regulation data (JSON blob)
+  fullRegulationData: json("fullRegulationData"),
+  
+  // Key requirements (JSON array)
+  keyRequirements: json("keyRequirements"),
+  
+  // Sources (JSON array)
+  sources: json("sources"),
+  
+  // Creator information (optional)
+  creatorEmail: varchar("creatorEmail", { length: 320 }),
+  creatorPhone: varchar("creatorPhone", { length: 50 }),
+  creatorUserId: int("creatorUserId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  
+  // Sharing tracking
+  viewCount: int("viewCount").default(0).notNull(),
+  lastViewedAt: timestamp("lastViewedAt"),
+  
+  // SMS/Email notification tracking
+  smsSentTo: varchar("smsSentTo", { length: 50 }),
+  smsSentAt: timestamp("smsSentAt"),
+  emailSentTo: varchar("emailSentTo", { length: 320 }),
+  emailSentAt: timestamp("emailSentAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"), // Optional expiration for temporary links
+});
+
+export type ShareableRegulationReport = typeof shareableRegulationReports.$inferSelect;
+export type InsertShareableRegulationReport = typeof shareableRegulationReports.$inferInsert;

@@ -30,6 +30,7 @@ import SavedRegulations from "./pages/SavedRegulations";
 import AdminPortal from "./pages/AdminPortal";
 import BugReportPage from "./pages/BugReportPage";
 import InvestmentCalculator from "./pages/InvestmentCalculator";
+import ShareableReport from "./pages/ShareableReport";
 
 function Router() {
   return (
@@ -75,6 +76,9 @@ function Router() {
       {/* Shared Reports */}
       <Route path="/report/:shareId" component={SharedReportPage} />
       <Route path="/share/compare/:data" component={SharedComparisonPage} />
+      
+      {/* Shareable Regulation Reports */}
+      <Route path="/regulation/:shareCode" component={ShareableReport} />
       
       {/* Bug Reports */}
       <Route path="/bug/:shareCode" component={BugReportPage} />

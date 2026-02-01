@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings, savedRegulations, regulationComments, commentVotes, users, emailOptins, personalizedLinks, linkClicks, promotions, promotionRecipients, toolUsageEvents, bugReports } from "../drizzle/schema";
+import { leads, savedSearches, favoriteProperties, analysisReports, favoriteMarkets, marketAlerts, sharedReports, aiAdvisorCache, notifications, favoriteListings, savedRegulations, regulationComments, commentVotes, users, emailOptins, personalizedLinks, linkClicks, promotions, promotionRecipients, toolUsageEvents, bugReports, shareableRegulationReports } from "../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { 
   getRentalizerEstimate, 
@@ -58,6 +58,7 @@ import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notificati
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
 import { getRegulationInfo, parseLocation } from "./regulation-tracker";
+import { generateShareCode, sendSMSNotification, sendEmailNotification } from "./sms-email-notifications";
 import { upsertContact, generateDeepLink, trackLeadEvent } from "./hubspot";
 
 // Input validation schema for rental estimate
@@ -4312,6 +4313,161 @@ export const appRouter = router({
         
         await db.execute(`UPDATE regulation_comments SET isApproved = 0, isFlagged = 0 WHERE id = ${input.commentId}`);
         return { success: true };
+      }),
+
+    // Create a shareable regulation report link
+    createShareableReport: publicProcedure
+      .input(z.object({
+        city: z.string().min(1),
+        state: z.string().min(1),
+        status: z.string(),
+        summary: z.string().optional(),
+        permitRequired: z.boolean().default(false),
+        primaryResidenceOnly: z.boolean().default(false),
+        maxNightsPerYear: z.number().optional(),
+        registrationFee: z.string().optional(),
+        occupancyTax: z.string().optional(),
+        confidence: z.string().optional(),
+        fullRegulationData: z.any().optional(),
+        keyRequirements: z.array(z.any()).optional(),
+        sources: z.array(z.any()).optional(),
+        creatorEmail: z.string().email().optional(),
+        creatorPhone: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Generate a unique share code
+        const shareCode = generateShareCode();
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        
+        const [result] = await db.insert(shareableRegulationReports).values({
+          shareCode,
+          city: input.city,
+          state: input.state,
+          locationKey,
+          status: input.status,
+          summary: input.summary,
+          permitRequired: input.permitRequired ? 1 : 0,
+          primaryResidenceOnly: input.primaryResidenceOnly ? 1 : 0,
+          maxNightsPerYear: input.maxNightsPerYear,
+          registrationFee: input.registrationFee,
+          occupancyTax: input.occupancyTax,
+          confidence: input.confidence,
+          fullRegulationData: input.fullRegulationData,
+          keyRequirements: input.keyRequirements,
+          sources: input.sources,
+          creatorEmail: input.creatorEmail,
+          creatorPhone: input.creatorPhone,
+        });
+        
+        return {
+          success: true,
+          shareCode,
+          shareUrl: `/report/${shareCode}`,
+          reportId: result.insertId,
+        };
+      }),
+
+    // Get a shareable report by share code
+    getShareableReport: publicProcedure
+      .input(z.object({ shareCode: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        const [report] = await db.select()
+          .from(shareableRegulationReports)
+          .where(eq(shareableRegulationReports.shareCode, input.shareCode))
+          .limit(1);
+        
+        if (!report) {
+          return { success: false, error: 'Report not found', data: null };
+        }
+        
+        // Increment view count
+        await db.execute(`UPDATE shareable_regulation_reports SET viewCount = viewCount + 1, lastViewedAt = NOW() WHERE id = ${report.id}`);
+        
+        return {
+          success: true,
+          data: {
+            ...report,
+            permitRequired: report.permitRequired === 1,
+            primaryResidenceOnly: report.primaryResidenceOnly === 1,
+          },
+        };
+      }),
+
+    // Send shareable report via SMS
+    sendReportSMS: publicProcedure
+      .input(z.object({
+        shareCode: z.string(),
+        phoneNumber: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Get the report
+        const [report] = await db.select()
+          .from(shareableRegulationReports)
+          .where(eq(shareableRegulationReports.shareCode, input.shareCode))
+          .limit(1);
+        
+        if (!report) {
+          return { success: false, error: 'Report not found' };
+        }
+        
+        // Send SMS via SimpleTexting
+        const smsResult = await sendSMSNotification(
+          input.phoneNumber,
+          `Your STR Regulation Report for ${report.city}, ${report.state} is ready! Status: ${report.status}. View full report: ${process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com'}/report/${input.shareCode}`
+        );
+        
+        if (smsResult.success) {
+          // Update the report with SMS sent info
+          await db.execute(`UPDATE shareable_regulation_reports SET smsSentTo = '${input.phoneNumber}', smsSentAt = NOW() WHERE id = ${report.id}`);
+        }
+        
+        return smsResult;
+      }),
+
+    // Send shareable report via Email
+    sendReportEmail: publicProcedure
+      .input(z.object({
+        shareCode: z.string(),
+        email: z.string().email(),
+        recipientName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Get the report
+        const [report] = await db.select()
+          .from(shareableRegulationReports)
+          .where(eq(shareableRegulationReports.shareCode, input.shareCode))
+          .limit(1);
+        
+        if (!report) {
+          return { success: false, error: 'Report not found' };
+        }
+        
+        // Send email via notification service
+        const emailResult = await sendEmailNotification(
+          input.email,
+          `STR Regulation Report: ${report.city}, ${report.state}`,
+          `Your STR Regulation Report is ready!\n\nLocation: ${report.city}, ${report.state}\nStatus: ${report.status}\n\nView full report: ${process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com'}/report/${input.shareCode}`,
+          input.recipientName
+        );
+        
+        if (emailResult.success) {
+          // Update the report with email sent info
+          await db.execute(`UPDATE shareable_regulation_reports SET emailSentTo = '${input.email}', emailSentAt = NOW() WHERE id = ${report.id}`);
+        }
+        
+        return emailResult;
       }),
   }),
 

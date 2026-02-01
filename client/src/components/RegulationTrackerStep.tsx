@@ -49,7 +49,11 @@ import {
   ThumbsDown,
   Flag,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Share2,
+  Copy,
+  Mail,
+  Phone
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -183,6 +187,10 @@ export function RegulationTrackerStep() {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [autoSearchTriggered, setAutoSearchTriggered] = useState(false);
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareCode, setShareCode] = useState<string | null>(null);
+  const [sharePhoneNumber, setSharePhoneNumber] = useState('');
+  const [shareEmail, setShareEmail] = useState('');
   
   // Helper to process regulation result
   const processRegulationResult = (data: any) => {
@@ -289,6 +297,40 @@ export function RegulationTrackerStep() {
     }
   });
   
+  // Share mutations
+  const createShareableReportMutation = trpc.regulationTracker.createShareableReport.useMutation({
+    onSuccess: (response) => {
+      if (response.success) {
+        setShareCode(response.shareCode);
+        toast.success('Shareable link created!');
+      } else {
+        toast.error('Failed to create shareable link');
+      }
+    }
+  });
+  
+  const sendReportSMSMutation = trpc.regulationTracker.sendReportSMS.useMutation({
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success('SMS sent successfully!');
+        setSharePhoneNumber('');
+      } else {
+        toast.error(response.error || 'Failed to send SMS');
+      }
+    }
+  });
+  
+  const sendReportEmailMutation = trpc.regulationTracker.sendReportEmail.useMutation({
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success('Email sent successfully!');
+        setShareEmail('');
+      } else {
+        toast.error(response.error || 'Failed to send email');
+      }
+    }
+  });
+  
   // Queries
   const isRegulationSavedQuery = trpc.regulationTracker.isRegulationSaved.useQuery(
     { city: result?.city || '', state: result?.state || '' },
@@ -376,6 +418,48 @@ export function RegulationTrackerStep() {
       city: result.city,
       state: result.state,
       content: newComment.trim(),
+    });
+  };
+  
+  const handleCreateShareLink = () => {
+    if (!result) return;
+    createShareableReportMutation.mutate({
+      city: result.city,
+      state: result.state,
+      status: result.status,
+      summary: result.summary,
+      permitRequired: result.permitRequired,
+      primaryResidenceOnly: result.primaryResidenceOnly,
+      maxNightsPerYear: result.maxNightsPerYear,
+      registrationFee: result.registrationFee || undefined,
+      occupancyTax: result.occupancyTax || undefined,
+      confidence: result.confidence,
+      fullRegulationData: result,
+      keyRequirements: result.keyRequirements,
+      sources: result.sources,
+    });
+  };
+  
+  const handleCopyShareLink = async () => {
+    if (!shareCode) return;
+    const url = `${window.location.origin}/regulation/${shareCode}`;
+    await navigator.clipboard.writeText(url);
+    toast.success('Link copied to clipboard!');
+  };
+  
+  const handleSendSMS = () => {
+    if (!shareCode || !sharePhoneNumber) return;
+    sendReportSMSMutation.mutate({
+      shareCode,
+      phoneNumber: sharePhoneNumber,
+    });
+  };
+  
+  const handleSendEmail = () => {
+    if (!shareCode || !shareEmail) return;
+    sendReportEmailMutation.mutate({
+      shareCode,
+      email: shareEmail,
     });
   };
   
@@ -844,8 +928,127 @@ export function RegulationTrackerStep() {
                           </>
                         )}
                       </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (!shareCode) {
+                            handleCreateShareLink();
+                          }
+                          setShowSharePanel(!showSharePanel);
+                        }}
+                        disabled={createShareableReportMutation.isPending}
+                        className="rounded-xl px-6 border-amber-200 text-amber-700 hover:bg-amber-50"
+                      >
+                        {createShareableReportMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-4 h-4 mr-2" />
+                            Share Report
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
+                  
+                  {/* Share Panel */}
+                  <AnimatePresence>
+                    {showSharePanel && shareCode && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-6 p-6 bg-gradient-to-br from-amber-50 to-white rounded-2xl border border-amber-100"
+                      >
+                        <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <Share2 className="w-5 h-5 text-amber-600" />
+                          Share This Report
+                        </h4>
+                        
+                        {/* Copy Link */}
+                        <div className="mb-6">
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Shareable Link</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={`${window.location.origin}/regulation/${shareCode}`}
+                              className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600"
+                            />
+                            <Button
+                              onClick={handleCopyShareLink}
+                              variant="outline"
+                              className="rounded-xl px-4"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Send via SMS */}
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-gray-400" />
+                              Send via SMS
+                            </label>
+                            <div className="flex gap-2">
+                              <input
+                                type="tel"
+                                placeholder="Phone number"
+                                value={sharePhoneNumber}
+                                onChange={(e) => setSharePhoneNumber(e.target.value)}
+                                className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                              />
+                              <Button
+                                onClick={handleSendSMS}
+                                disabled={sendReportSMSMutation.isPending || !sharePhoneNumber}
+                                className="rounded-xl bg-amber-600 hover:bg-amber-700"
+                              >
+                                {sendReportSMSMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  'Send'
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Send via Email */}
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-gray-400" />
+                              Send via Email
+                            </label>
+                            <div className="flex gap-2">
+                              <input
+                                type="email"
+                                placeholder="Email address"
+                                value={shareEmail}
+                                onChange={(e) => setShareEmail(e.target.value)}
+                                className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                              />
+                              <Button
+                                onClick={handleSendEmail}
+                                disabled={sendReportEmailMutation.isPending || !shareEmail}
+                                className="rounded-xl bg-amber-600 hover:bg-amber-700"
+                              >
+                                {sendReportEmailMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  'Send'
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
               
