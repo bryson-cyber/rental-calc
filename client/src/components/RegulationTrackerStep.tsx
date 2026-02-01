@@ -1,8 +1,8 @@
 /**
- * Regulation Tracker Step Component
+ * Regulation Tracker Step Component - Premium Glass Morphism Design
  * 
- * Allows users to look up current STR regulations for any city
- * and see them explained in simple, 3rd-grade reading level language.
+ * Apple-inspired design with glass effects, generous whitespace,
+ * and the status verdict as the hero element.
  * 
  * Features:
  * - Google Places autocomplete for city selection
@@ -10,9 +10,9 @@
  * - Real-time regulation lookup via Gemini with Google Search
  * - Simple explanation (3rd-grade level) and full details
  * - Links to official government sources
- * - Less scary status messaging (permit required ≠ banned)
  * - Save regulations to favorites
  * - Community comments section
+ * - Premium glass morphism UI with smooth animations
  */
 
 import { useState, useEffect } from 'react';
@@ -47,7 +47,9 @@ import {
   User,
   ThumbsUp,
   ThumbsDown,
-  Flag
+  Flag,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,70 +60,79 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { Link } from 'wouter';
 
-// Updated status configuration - less scary, more accurate
+// Premium status configuration with gradients
 const statusConfig = {
   allowed: {
-    color: 'oklch(0.55 0.15 145)',
-    bgColor: 'oklch(0.55 0.15 145 / 0.1)',
+    gradient: 'from-emerald-400 to-teal-500',
+    glow: 'shadow-emerald-500/25',
+    bgGlow: 'from-emerald-100/50',
     icon: CheckCircle2,
     label: 'Allowed',
-    description: 'Short-term rentals are permitted with minimal requirements'
+    description: 'You can operate here'
   },
   'allowed_with_permit': {
-    color: 'oklch(0.55 0.15 145)',
-    bgColor: 'oklch(0.55 0.15 145 / 0.1)',
+    gradient: 'from-emerald-400 to-teal-500',
+    glow: 'shadow-emerald-500/25',
+    bgGlow: 'from-emerald-100/50',
     icon: FileCheck,
-    label: 'Allowed with Permit',
-    description: 'You can operate - just need to get a permit first'
+    label: 'Allowed',
+    description: 'Permit required'
   },
   'allowed_with_requirements': {
-    color: 'oklch(0.60 0.12 85)',
-    bgColor: 'oklch(0.60 0.12 85 / 0.1)',
+    gradient: 'from-amber-400 to-orange-500',
+    glow: 'shadow-amber-500/25',
+    bgGlow: 'from-amber-100/50',
     icon: Scale,
-    label: 'Allowed with Requirements',
-    description: 'Permitted with some rules to follow'
+    label: 'Allowed',
+    description: 'With requirements'
   },
   restricted: {
-    color: 'oklch(0.65 0.15 85)',
-    bgColor: 'oklch(0.65 0.15 85 / 0.1)',
+    gradient: 'from-amber-400 to-orange-500',
+    glow: 'shadow-amber-500/25',
+    bgGlow: 'from-amber-100/50',
     icon: AlertTriangle,
-    label: 'Some Restrictions',
-    description: 'Allowed but with some limitations to be aware of'
+    label: 'Restricted',
+    description: 'Some limitations apply'
   },
   limited: {
-    color: 'oklch(0.60 0.15 60)',
-    bgColor: 'oklch(0.60 0.15 60 / 0.1)',
+    gradient: 'from-orange-400 to-red-400',
+    glow: 'shadow-orange-500/25',
+    bgGlow: 'from-orange-100/50',
     icon: AlertTriangle,
     label: 'Limited',
-    description: 'Allowed in limited circumstances'
+    description: 'Limited circumstances'
   },
   banned: {
-    color: 'oklch(0.55 0.2 25)',
-    bgColor: 'oklch(0.55 0.2 25 / 0.1)',
+    gradient: 'from-red-400 to-rose-500',
+    glow: 'shadow-red-500/25',
+    bgGlow: 'from-red-100/50',
     icon: Ban,
     label: 'Not Allowed',
-    description: 'Short-term rentals are currently prohibited'
+    description: 'Prohibited in this area'
   },
   paused: {
-    color: 'oklch(0.60 0.15 250)',
-    bgColor: 'oklch(0.60 0.15 250 / 0.1)',
+    gradient: 'from-blue-400 to-indigo-500',
+    glow: 'shadow-blue-500/25',
+    bgGlow: 'from-blue-100/50',
     icon: PauseCircle,
     label: 'Paused',
-    description: 'Regulations currently under review or suspended'
+    description: 'Under review'
   },
   pending: {
-    color: 'oklch(0.65 0.12 60)',
-    bgColor: 'oklch(0.65 0.12 60 / 0.1)',
+    gradient: 'from-yellow-400 to-amber-500',
+    glow: 'shadow-yellow-500/25',
+    bgGlow: 'from-yellow-100/50',
     icon: Clock,
     label: 'Pending',
-    description: 'New regulations are being considered'
+    description: 'Being considered'
   },
   unknown: {
-    color: 'oklch(0.50 0 0)',
-    bgColor: 'oklch(0.50 0 0 / 0.1)',
+    gradient: 'from-gray-400 to-gray-500',
+    glow: 'shadow-gray-500/25',
+    bgGlow: 'from-gray-100/50',
     icon: HelpCircle,
     label: 'Unknown',
-    description: 'Unable to determine current status'
+    description: 'Status unclear'
   }
 };
 
@@ -168,27 +179,26 @@ export function RegulationTrackerStep() {
   const searchString = useSearch();
   const [selectedPlace, setSelectedPlace] = useState<{ name: string; placeId: string; lat?: number; lng?: number } | null>(null);
   const [result, setResult] = useState<RegulationResult | null>(null);
-  const [showSimplified, setShowSimplified] = useState(true);
+  const [activeTab, setActiveTab] = useState<'summary' | 'requirements' | 'sources'>('summary');
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [autoSearchTriggered, setAutoSearchTriggered] = useState(false);
   
   // Helper to process regulation result
   const processRegulationResult = (data: any) => {
-    // Map the status to our improved status labels
     let mappedStatus = data.status;
     if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
-      // If it's just a permit requirement, make it less scary
       mappedStatus = 'allowed_with_permit' as any;
     } else if (data.status === 'restricted' && data.keyRequirements.length > 0) {
       mappedStatus = 'allowed_with_requirements' as any;
     }
     
     setResult({ ...data, status: mappedStatus } as RegulationResult);
+    setActiveTab('summary');
     toast.success(`Found regulations for ${data.city}, ${data.state}`);
   };
 
-  // Auto-search from URL parameters (from "View Details" in saved regulations)
+  // Auto-search from URL parameters
   useEffect(() => {
     if (autoSearchTriggered) return;
     
@@ -198,19 +208,17 @@ export function RegulationTrackerStep() {
     
     if (city && state) {
       setAutoSearchTriggered(true);
-      // Set the selected place for display
       setSelectedPlace({
         name: `${city}, ${state}, USA`,
         placeId: 'url-param'
       });
-      // Trigger the search
       setTimeout(() => {
         getRegulationsMutation.mutate({ city, state });
       }, 100);
     }
   }, [searchString, autoSearchTriggered]);
 
-  // Standard mutation for city/state input
+  // Mutations
   const getRegulationsMutation = trpc.regulationTracker.getRegulations.useMutation({
     onSuccess: processRegulationResult,
     onError: (error) => {
@@ -218,7 +226,6 @@ export function RegulationTrackerStep() {
     }
   });
   
-  // Mutation for raw input (URLs, addresses, etc.)
   const getRegulationsFromInputMutation = trpc.regulationTracker.getRegulationsFromInput.useMutation({
     onSuccess: (response) => {
       if (response.success && response.data) {
@@ -232,7 +239,6 @@ export function RegulationTrackerStep() {
     }
   });
   
-  // Save regulation mutation
   const saveRegulationMutation = trpc.regulationTracker.saveRegulation.useMutation({
     onSuccess: (response) => {
       if (response.success) {
@@ -249,108 +255,79 @@ export function RegulationTrackerStep() {
     }
   });
   
-  // Check if regulation is saved
-  const isRegulationSavedQuery = trpc.regulationTracker.isRegulationSaved.useQuery(
-    { city: result?.city || '', state: result?.state || '' },
-    { enabled: !!result && isAuthenticated }
-  );
-  
-  // Get comments for this regulation
-  const commentsQuery = trpc.regulationTracker.getComments.useQuery(
-    { city: result?.city || '', state: result?.state || '' },
-    { enabled: !!result }
-  );
-  
-  // Add comment mutation
+  // Comments mutations
   const addCommentMutation = trpc.regulationTracker.addComment.useMutation({
-    onSuccess: () => {
-      toast.success('Comment added!');
-      setNewComment('');
-      commentsQuery.refetch();
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success('Comment added!');
+        setNewComment('');
+        commentsQuery.refetch();
+      }
     },
     onError: (error) => {
       toast.error('Failed to add comment: ' + error.message);
     }
   });
   
-  // Delete comment mutation
   const deleteCommentMutation = trpc.regulationTracker.deleteComment.useMutation({
     onSuccess: () => {
       toast.success('Comment deleted');
       commentsQuery.refetch();
-    },
-    onError: (error) => {
-      toast.error('Failed to delete: ' + error.message);
     }
   });
   
-  // Vote on comment mutation
   const voteCommentMutation = trpc.regulationTracker.voteComment.useMutation({
     onSuccess: () => {
       commentsQuery.refetch();
       userVotesQuery.refetch();
-    },
-    onError: (error) => {
-      toast.error('Failed to vote: ' + error.message);
     }
   });
   
-  // Flag comment mutation
   const flagCommentMutation = trpc.regulationTracker.flagComment.useMutation({
     onSuccess: () => {
-      toast.success('Comment flagged for review');
-    },
-    onError: (error) => {
-      toast.error('Failed to flag: ' + error.message);
+      toast.success('Comment reported');
     }
   });
   
-  // Get user's votes on comments
-  const commentIds = (commentsQuery.data?.data || []).map((c: any) => c.id);
+  // Queries
+  const isRegulationSavedQuery = trpc.regulationTracker.isRegulationSaved.useQuery(
+    { city: result?.city || '', state: result?.state || '' },
+    { enabled: !!result && isAuthenticated }
+  );
+  
+  const commentsQuery = trpc.regulationTracker.getComments.useQuery(
+    { city: result?.city || '', state: result?.state || '' },
+    { enabled: !!result }
+  );
+  
+  const commentIds = (commentsQuery.data?.data || []).map((c: Comment) => c.id);
   const userVotesQuery = trpc.regulationTracker.getUserVotes.useQuery(
     { commentIds },
-    { enabled: !!result && isAuthenticated && commentIds.length > 0 }
+    { enabled: commentIds.length > 0 && isAuthenticated }
   );
   
   const handlePlaceSelect = (place: { name: string; placeId: string; lat?: number; lng?: number }) => {
     setSelectedPlace(place);
-    // Clear previous results when selecting new place
-    setResult(null);
-  };
-  
-  // Check if input looks like a URL
-  const isUrl = (input: string) => {
-    return input.startsWith('http://') || input.startsWith('https://') || 
-           input.includes('zillow.com') || input.includes('redfin.com');
   };
   
   const handleSearch = () => {
-    if (!selectedPlace) {
-      toast.error('Please select a city from the dropdown');
+    if (!selectedPlace) return;
+    
+    const input = selectedPlace.name;
+    
+    // Check if it's a URL
+    if (input.includes('redfin.com') || input.includes('zillow.com') || input.includes('realtor.com')) {
+      getRegulationsFromInputMutation.mutate({ input });
       return;
     }
     
-    // Check if it's a direct search (URL or unrecognized location)
-    if (selectedPlace.placeId === 'direct-search' || isUrl(selectedPlace.name)) {
-      // Use the raw input endpoint for URLs and direct searches
-      getRegulationsFromInputMutation.mutate({ input: selectedPlace.name });
-      return;
-    }
-    
-    // Parse city and state from the place name
-    // Format is usually "City, State, USA" or "City, State"
-    const parts = selectedPlace.name.split(',').map(p => p.trim());
+    // Parse city/state from the place name
+    const parts = input.split(',').map(p => p.trim());
     let city = parts[0];
     let state = parts.length > 1 ? parts[1] : '';
     
-    // Remove "USA" if present
-    if (state.toLowerCase() === 'usa' && parts.length > 2) {
-      state = parts[1];
-    }
-    
-    // Handle zip codes - if city looks like a zip code, use it differently
+    // Handle zip codes
     if (/^\d{5}$/.test(city)) {
-      // It's a zip code, use the second part as city
       if (parts.length > 1) {
         city = parts[1];
         state = parts.length > 2 ? parts[2] : '';
@@ -407,447 +384,474 @@ export function RegulationTrackerStep() {
   const comments = (commentsQuery.data?.data || []) as Comment[];
   const userVotes = (userVotesQuery.data?.votes || {}) as Record<number, 'up' | 'down'>;
   
-  // Get the status config, falling back to 'restricted' for new status types
   const getStatusConfig = (status: string) => {
     return statusConfig[status as keyof typeof statusConfig] || statusConfig.restricted;
   };
   
+  const status = result ? getStatusConfig(result.status) : null;
+  const StatusIcon = status?.icon || Shield;
+  
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: 'oklch(0.55 0.15 250 / 0.1)' }}>
-          <Shield className="w-8 h-8" style={{ color: 'oklch(0.55 0.15 250)' }} />
-        </div>
-        <h2 className="text-2xl font-serif font-semibold text-[#0F172A] mb-2">
-          Regulation Tracker
-        </h2>
-        <p className="text-[#0F172A]/60 max-w-lg mx-auto">
-          Check current short-term rental regulations for any city. Get real-time status and requirements explained in simple terms.
-        </p>
-        {isAuthenticated && (
-          <Link href="/saved-regulations">
-            <Button variant="outline" size="sm" className="mt-4">
-              <Bookmark className="w-4 h-4 mr-2" />
-              View Saved Regulations
-            </Button>
-          </Link>
-        )}
+    <div className="relative min-h-[600px]">
+      {/* Background Decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-amber-100/30 to-transparent rounded-full blur-3xl -translate-y-1/3 translate-x-1/3"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-blue-100/30 to-transparent rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
       </div>
       
-      {/* Search Form - Supports cities, addresses, and property URLs */}
-      <Card className="p-6" style={{ borderRadius: '1rem' }}>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-[#0F172A]/70 mb-2">
-              City, Address, or Property URL
-            </label>
-            <GooglePlacesAutocomplete
-              onSelect={handlePlaceSelect}
-              placeholder="Enter city, address, or paste Redfin/Zillow URL..."
-              types={['geocode']} // geocode includes both addresses AND regions (cities, neighborhoods, zip codes)
-              countryRestriction="us"
-              showSearchHistory={true}
-              className="w-full"
-              allowDirectSearch={true} // Allow searching with URLs or unrecognized locations
-            />
-            {selectedPlace && (
-              <p className="text-xs text-[#0F172A]/50 mt-1 flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {selectedPlace.name}
-              </p>
-            )}
-            <p className="text-xs text-[#0F172A]/40 mt-2">
-              Tip: Paste a Redfin or Zillow URL to automatically extract the location
-            </p>
-          </div>
-          
-          <div className="flex items-end">
-            <Button
-              onClick={handleSearch}
-              disabled={isLoading || !selectedPlace}
-              className="w-full md:w-auto px-8"
-              style={{ backgroundColor: '#0F172A' }}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <Search className="w-4 h-4 mr-2" />
-                  Check Regulations
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </Card>
-      
-      {/* Loading State */}
-      <AnimatePresence>
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-center py-12"
+      <div className="relative z-10 space-y-8">
+        {/* Premium Header */}
+        <div className="text-center pt-8">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl mb-6"
           >
-            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin" style={{ color: 'oklch(0.55 0.15 250)' }} />
-            <p className="text-[#0F172A]/60">
-              Researching current regulations...
-            </p>
-            <p className="text-sm text-[#0F172A]/40 mt-2">
-              Searching official government sources
-            </p>
+            <Shield className="w-10 h-10 text-white" />
           </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* Results */}
-      <AnimatePresence>
-        {result && !isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-6"
-          >
-            {/* Status Card */}
-            <Card className="p-6 overflow-hidden" style={{ borderRadius: '1rem' }}>
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-[#0F172A]">
-                    {result.city}, {result.state}
-                  </h3>
-                  {result.governingJurisdiction && result.governingJurisdiction !== result.city && (
-                    <p className="text-sm text-[#0F172A]/60 flex items-center gap-1 mt-1">
-                      <Building2 className="w-3 h-3" />
-                      Governed by: {result.governingJurisdiction}
-                    </p>
-                  )}
-                  <p className="text-sm text-[#0F172A]/50 mt-1">
-                    Last updated: {new Date(result.lastUpdated).toLocaleDateString()}
-                  </p>
-                </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+            Regulation Tracker
+          </h2>
+          <p className="text-lg text-gray-500 max-w-xl mx-auto font-light">
+            Check short-term rental regulations for any city. Get instant answers explained simply.
+          </p>
+          {isAuthenticated && (
+            <Link href="/saved-regulations">
+              <Button variant="outline" size="sm" className="mt-6 rounded-full px-6">
+                <Bookmark className="w-4 h-4 mr-2" />
+                View Saved Regulations
+              </Button>
+            </Link>
+          )}
+        </div>
+        
+        {/* Premium Search Card */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-6 md:p-8"
+        >
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-500 mb-3 uppercase tracking-wider">
+                City, Address, or Property URL
+              </label>
+              <GooglePlacesAutocomplete
+                onSelect={handlePlaceSelect}
+                placeholder="Enter city, address, or paste Redfin/Zillow URL..."
+                types={['geocode']}
+                countryRestriction="us"
+                showSearchHistory={true}
+                className="w-full"
+                allowDirectSearch={true}
+              />
+              {selectedPlace && (
+                <p className="text-sm text-gray-400 mt-2 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  {selectedPlace.name}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex items-end">
+              <Button
+                onClick={handleSearch}
+                disabled={isLoading || !selectedPlace}
+                className="w-full md:w-auto px-8 py-6 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white font-medium shadow-lg transition-all hover:shadow-xl"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" />
+                    Check Regulations
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Loading State */}
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="text-center py-16"
+            >
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 mb-6">
+                <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+              </div>
+              <p className="text-xl text-gray-600 font-light">
+                Researching regulations...
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                Searching official government sources
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Results - Premium Glass Design */}
+        <AnimatePresence>
+          {result && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-6"
+            >
+              {/* Status Hero Card */}
+              <div className={`relative bg-gradient-to-br ${status?.bgGlow} to-white/50 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl overflow-hidden`}>
+                {/* Decorative gradient orb */}
+                <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${status?.gradient} opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`}></div>
                 
-                <div className="flex items-center gap-2">
-                  {/* Save Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveRegulation}
-                    disabled={saveRegulationMutation.isPending || isSaved}
-                    className="flex items-center gap-1"
-                  >
-                    {isSaved ? (
-                      <>
-                        <BookmarkCheck className="w-4 h-4" style={{ color: 'oklch(0.55 0.15 145)' }} />
-                        <span className="hidden sm:inline">Saved</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="w-4 h-4" />
-                        <span className="hidden sm:inline">Save</span>
-                      </>
-                    )}
-                  </Button>
+                <div className="relative p-8 md:p-10">
+                  {/* Header with Status Badge */}
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+                    <div>
+                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
+                        <Building2 className="w-4 h-4" />
+                        <span>{result.governingJurisdiction || result.city}</span>
+                      </div>
+                      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+                        {result.city}, {result.state}
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-2">
+                        Updated {new Date(result.lastUpdated).toLocaleDateString()}
+                      </p>
+                    </div>
+                    
+                    {/* Floating Status Badge */}
+                    <div className={`bg-gradient-to-r ${status?.gradient} p-1 rounded-2xl shadow-lg ${status?.glow}`}>
+                      <div className="bg-white/95 backdrop-blur-sm rounded-xl px-6 py-4 flex items-center gap-3">
+                        <StatusIcon className="w-7 h-7 text-gray-700" />
+                        <div>
+                          <p className="font-bold text-gray-900 text-lg">{status?.label}</p>
+                          <p className="text-sm text-gray-500">{status?.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
-                  {/* Status Badge - Now with improved labels */}
-                  <div 
-                    className="flex items-center gap-2 px-4 py-2 rounded-full"
-                    style={{ 
-                      backgroundColor: getStatusConfig(result.status).bgColor,
-                      color: getStatusConfig(result.status).color
-                    }}
-                  >
-                    {(() => {
-                      const StatusIcon = getStatusConfig(result.status).icon;
-                      return <StatusIcon className="w-5 h-5" />;
-                    })()}
-                    <span className="font-semibold">{getStatusConfig(result.status).label}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Yes/No Summary - Clear answer at the top */}
-              <div 
-                className="p-4 rounded-xl mb-4 border-2"
-                style={{ 
-                  backgroundColor: result.status === 'banned' ? 'oklch(0.55 0.2 25 / 0.05)' : 'oklch(0.55 0.15 145 / 0.05)',
-                  borderColor: result.status === 'banned' ? 'oklch(0.55 0.2 25 / 0.2)' : 'oklch(0.55 0.15 145 / 0.2)'
-                }}
-              >
-                <p className="text-lg font-medium" style={{ color: result.status === 'banned' ? 'oklch(0.45 0.15 25)' : 'oklch(0.35 0.12 145)' }}>
-                  {result.yesNoSummary || getStatusConfig(result.status).description}
-                </p>
-              </div>
-              
-              {/* Toggle between simple and detailed */}
-              <div className="flex gap-2 mb-4">
-                <Button
-                  variant={showSimplified ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setShowSimplified(true)}
-                  style={showSimplified ? { backgroundColor: 'oklch(0.55 0.15 250)' } : {}}
-                >
-                  Simple Explanation
-                </Button>
-                <Button
-                  variant={!showSimplified ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setShowSimplified(false)}
-                  style={!showSimplified ? { backgroundColor: 'oklch(0.55 0.15 250)' } : {}}
-                >
-                  Full Details
-                </Button>
-              </div>
-              
-              {/* Summary */}
-              <div 
-                className="p-4 rounded-xl mb-4"
-                style={{ backgroundColor: 'oklch(0.97 0 0)' }}
-              >
-                <p className="text-[#0F172A]/80 leading-relaxed whitespace-pre-line">
-                  {showSimplified ? result.simplifiedSummary : result.summary}
-                </p>
-              </div>
-              
-              {/* Key Info Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <FileText className="w-4 h-4 text-[#0F172A]/40" />
-                    <span className="text-xs text-[#0F172A]/50">Permit Required</span>
-                  </div>
-                  <p className="font-semibold text-[#0F172A]">
-                    {result.permitRequired ? 'Yes' : 'No'}
-                  </p>
-                </div>
-                
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Home className="w-4 h-4 text-[#0F172A]/40" />
-                    <span className="text-xs text-[#0F172A]/50">Primary Residence Only</span>
-                  </div>
-                  <p className="font-semibold text-[#0F172A]">
-                    {result.primaryResidenceOnly ? 'Yes' : 'No'}
-                  </p>
-                </div>
-                
-                {result.registrationFee && (
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="w-4 h-4 text-[#0F172A]/40" />
-                      <span className="text-xs text-[#0F172A]/50">Registration Fee</span>
-                    </div>
-                    <p className="font-semibold text-[#0F172A] text-sm">
-                      {result.registrationFee}
+                  {/* Yes/No Summary Banner */}
+                  <div className="bg-white/80 backdrop-blur rounded-2xl p-6 mb-8 border border-gray-100">
+                    <p className="text-xl text-gray-700 leading-relaxed font-medium">
+                      {result.yesNoSummary || status?.description}
                     </p>
                   </div>
-                )}
-                
-                {result.occupancyTax && (
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="w-4 h-4 text-[#0F172A]/40" />
-                      <span className="text-xs text-[#0F172A]/50">Occupancy Tax</span>
-                    </div>
-                    <p className="font-semibold text-[#0F172A] text-sm">
-                      {result.occupancyTax}
-                    </p>
-                  </div>
-                )}
-                
-                {result.maxNightsPerYear && (
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-[#0F172A]/40" />
-                      <span className="text-xs text-[#0F172A]/50">Max Nights/Year</span>
-                    </div>
-                    <p className="font-semibold text-[#0F172A]">
-                      {result.maxNightsPerYear}
-                    </p>
-                  </div>
-                )}
-                
-                {result.zoningRestrictions && (
-                  <div className="p-3 rounded-lg col-span-2" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin className="w-4 h-4 text-[#0F172A]/40" />
-                      <span className="text-xs text-[#0F172A]/50">Zoning</span>
-                    </div>
-                    <p className="font-semibold text-[#0F172A] text-sm">
-                      {result.zoningRestrictions}
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Confidence Indicator */}
-              <div className="flex items-center gap-2 text-sm">
-                <Info className="w-4 h-4 text-[#0F172A]/40" />
-                <span className="text-[#0F172A]/50">
-                  Confidence: <span className={`font-medium ${
-                    result.confidence === 'high' ? 'text-green-600' :
-                    result.confidence === 'medium' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>{result.confidence}</span>
-                </span>
-                {result.ordinanceNumber && (
-                  <span className="text-[#0F172A]/40">
-                    • Ordinance: {result.ordinanceNumber}
-                  </span>
-                )}
-              </div>
-            </Card>
-            
-            {/* Key Requirements */}
-            {result.keyRequirements.length > 0 && (
-              <Card className="p-6" style={{ borderRadius: '1rem' }}>
-                <h4 className="font-semibold text-[#0F172A] mb-4 flex items-center gap-2">
-                  <FileText className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                  Key Requirements ({result.keyRequirements.length})
-                </h4>
-                <ul className="space-y-3">
-                  {result.keyRequirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <span 
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium"
-                        style={{ backgroundColor: 'oklch(0.55 0.15 250 / 0.1)', color: 'oklch(0.55 0.15 250)' }}
+                  
+                  {/* Tab Navigation */}
+                  <div className="flex gap-2 mb-6 p-1.5 bg-gray-100/80 rounded-2xl w-fit">
+                    {(['summary', 'requirements', 'sources'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-6 py-3 rounded-xl text-sm font-medium transition-all ${
+                          activeTab === tab 
+                            ? 'bg-white shadow-sm text-gray-900' 
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
                       >
-                        {index + 1}
-                      </span>
-                      <span className="text-[#0F172A]/80">{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-            
-            {/* Official Sources */}
-            {(() => {
-              const officialSources = result.sources.filter(s => s.type === 'official');
-              if (officialSources.length > 0) {
-                return (
-                  <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.55 0.15 145 / 0.3)', borderWidth: '2px' }}>
-                    <h4 className="font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
-                      <Building2 className="w-5 h-5" style={{ color: 'oklch(0.45 0.15 145)' }} />
-                      Official Government Sources
-                    </h4>
-                    <p className="text-sm text-[#0F172A]/60 mb-4">
-                      Verify this information directly with these official sources:
-                    </p>
-                    <div className="space-y-3">
-                      {officialSources.map((source, index) => (
-                        <a
-                          key={index}
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[#0F172A]/5 group border border-[#0F172A]/10"
+                        {tab === 'summary' && 'Summary'}
+                        {tab === 'requirements' && `Requirements (${result.keyRequirements.length})`}
+                        {tab === 'sources' && `Sources (${result.sources.length})`}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Tab Content */}
+                  <div className="min-h-[300px]">
+                    <AnimatePresence mode="wait">
+                      {activeTab === 'summary' && (
+                        <motion.div
+                          key="summary"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          <div 
-                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.15)' }}
-                          >
-                            <Building2 className="w-5 h-5" style={{ color: 'oklch(0.45 0.15 145)' }} />
+                          {/* Quick Answer */}
+                          <div className="flex items-start gap-4 mb-8">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center flex-shrink-0 shadow-sm">
+                              <Sparkles className="w-7 h-7 text-amber-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-2 text-lg">Quick Answer</h4>
+                              <p className="text-lg text-gray-600 leading-relaxed">
+                                {result.simplifiedSummary}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-[#0F172A] group-hover:underline truncate">
-                              {source.title}
-                            </p>
-                            <p className="text-xs text-green-600 font-medium">
-                              ✓ Official Government Source
+                          
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                              <FileText className="w-5 h-5 text-gray-400 mb-3" />
+                              <p className="text-2xl font-bold text-gray-900">{result.permitRequired ? 'Yes' : 'No'}</p>
+                              <p className="text-sm text-gray-500">Permit Required</p>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                              <Home className="w-5 h-5 text-gray-400 mb-3" />
+                              <p className="text-2xl font-bold text-gray-900">{result.primaryResidenceOnly ? 'Yes' : 'No'}</p>
+                              <p className="text-sm text-gray-500">Primary Only</p>
+                            </div>
+                            
+                            {result.registrationFee && (
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                                <DollarSign className="w-5 h-5 text-gray-400 mb-3" />
+                                <p className="text-2xl font-bold text-gray-900">{result.registrationFee}</p>
+                                <p className="text-sm text-gray-500">Registration</p>
+                              </div>
+                            )}
+                            
+                            {result.occupancyTax && (
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                                <DollarSign className="w-5 h-5 text-gray-400 mb-3" />
+                                <p className="text-2xl font-bold text-gray-900">{result.occupancyTax}</p>
+                                <p className="text-sm text-gray-500">Tax Rate</p>
+                              </div>
+                            )}
+                            
+                            {result.maxNightsPerYear && (
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                                <Calendar className="w-5 h-5 text-gray-400 mb-3" />
+                                <p className="text-2xl font-bold text-gray-900">{result.maxNightsPerYear}</p>
+                                <p className="text-sm text-gray-500">Max Nights/Year</p>
+                              </div>
+                            )}
+                            
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                              <Shield className="w-5 h-5 text-gray-400 mb-3" />
+                              <p className="text-2xl font-bold text-gray-900 capitalize">{result.confidence}</p>
+                              <p className="text-sm text-gray-500">Confidence</p>
+                            </div>
+                          </div>
+                          
+                          {/* Zoning Info */}
+                          {result.zoningRestrictions && (
+                            <div className="mt-6 bg-gradient-to-br from-blue-50 to-white rounded-2xl p-5 border border-blue-100">
+                              <div className="flex items-start gap-3">
+                                <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-gray-900 mb-1">Zoning Restrictions</p>
+                                  <p className="text-gray-600">{result.zoningRestrictions}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Full Details Toggle */}
+                          <div className="mt-6 p-5 bg-gray-50 rounded-2xl">
+                            <h4 className="font-medium text-gray-900 mb-3">Full Details</h4>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                              {result.summary}
                             </p>
                           </div>
-                          <ExternalLink className="w-4 h-4 text-[#0F172A]/30 group-hover:text-[#0F172A]/60 flex-shrink-0" />
-                        </a>
-                      ))}
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'requirements' && (
+                        <motion.div
+                          key="requirements"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.2 }}
+                          className="space-y-3"
+                        >
+                          {result.keyRequirements.length === 0 ? (
+                            <div className="text-center py-12">
+                              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                              <p className="text-lg text-gray-600">No specific requirements found</p>
+                              <p className="text-sm text-gray-400 mt-1">This area may have minimal regulations</p>
+                            </div>
+                          ) : (
+                            result.keyRequirements.map((req, i) => (
+                              <motion.div 
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="flex items-start gap-4 p-5 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors"
+                              >
+                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${status?.gradient} text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm`}>
+                                  {i + 1}
+                                </div>
+                                <p className="text-gray-700 pt-2 leading-relaxed">{req}</p>
+                              </motion.div>
+                            ))
+                          )}
+                        </motion.div>
+                      )}
+                      
+                      {activeTab === 'sources' && (
+                        <motion.div
+                          key="sources"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          transition={{ duration: 0.2 }}
+                          className="space-y-3"
+                        >
+                          {result.sources.length === 0 ? (
+                            <div className="text-center py-12">
+                              <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                              <p className="text-lg text-gray-600">No official sources found</p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                Search for "{result.city} short term rental regulations" to find official sources
+                              </p>
+                            </div>
+                          ) : (
+                            result.sources.map((source, i) => (
+                              <motion.a 
+                                key={i}
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all group"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                    source.type === 'official' 
+                                      ? 'bg-emerald-100' 
+                                      : source.type === 'news' 
+                                        ? 'bg-blue-100' 
+                                        : 'bg-gray-100'
+                                  }`}>
+                                    {source.type === 'official' ? (
+                                      <Building2 className="w-6 h-6 text-emerald-600" />
+                                    ) : (
+                                      <FileText className="w-6 h-6 text-gray-600" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900 group-hover:text-gray-700">{source.title}</p>
+                                    <p className={`text-sm capitalize ${
+                                      source.type === 'official' ? 'text-emerald-600 font-medium' : 'text-gray-500'
+                                    }`}>
+                                      {source.type === 'official' ? '✓ Official Government Source' : `${source.type} source`}
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
+                              </motion.a>
+                            ))
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  
+                  {/* Action Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 mt-8 border-t border-gray-100">
+                    <div className="flex items-center gap-3 text-sm text-gray-400">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${
+                        result.confidence === 'high' ? 'bg-emerald-100 text-emerald-700' :
+                        result.confidence === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                        {result.confidence} confidence
+                      </span>
+                      {result.ordinanceNumber && (
+                        <span className="text-gray-400">Ordinance: {result.ordinanceNumber}</span>
+                      )}
                     </div>
-                  </Card>
-                );
-              } else {
-                // No official sources found - show a message
-                return (
-                  <Card className="p-6" style={{ borderRadius: '1rem', borderColor: 'oklch(0.65 0.15 85 / 0.3)', borderWidth: '2px' }}>
-                    <h4 className="font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 85)' }} />
-                      Verify with Official Sources
-                    </h4>
-                    <p className="text-sm text-[#0F172A]/70">
-                      We recommend verifying this information directly with the official {result.city} city or county government website. 
-                      Search for "{result.city} short term rental regulations" on your preferred search engine to find the official municipal code.
-                    </p>
-                  </Card>
-                );
-              }
-            })()}
-            
-            {/* Warnings */}
-            {result.warnings.length > 0 && (
-              <Card 
-                className="p-4" 
-                style={{ 
-                  borderRadius: '0.75rem',
-                  backgroundColor: 'oklch(0.65 0.15 85 / 0.05)',
-                  borderColor: 'oklch(0.65 0.15 85 / 0.2)'
-                }}
-              >
-                <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: 'oklch(0.55 0.15 85)' }}>
-                  <AlertTriangle className="w-5 h-5" />
-                  Important Notes
-                </h4>
-                <ul className="space-y-2">
-                  {result.warnings.map((warning, index) => (
-                    <li key={index} className="text-sm text-[#0F172A]/70 flex items-start gap-2">
-                      <span className="text-[#0F172A]/40">•</span>
-                      {warning}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-            
-            {/* Community Comments Section */}
-            <Card className="p-6" style={{ borderRadius: '1rem' }}>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-[#0F172A] flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" style={{ color: 'oklch(0.55 0.15 250)' }} />
-                  Community Insights ({comments.length})
-                </h4>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowComments(!showComments)}
-                >
-                  {showComments ? 'Hide' : 'Show'} Comments
-                </Button>
+                    
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowComments(!showComments)}
+                        className="rounded-xl"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Comments ({comments.length})
+                      </Button>
+                      
+                      <Button
+                        onClick={handleSaveRegulation}
+                        disabled={saveRegulationMutation.isPending || isSaved}
+                        className={`rounded-xl px-6 ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-900 hover:bg-gray-800'}`}
+                      >
+                        {isSaved ? (
+                          <>
+                            <BookmarkCheck className="w-4 h-4 mr-2" />
+                            Saved
+                          </>
+                        ) : (
+                          <>
+                            <Bookmark className="w-4 h-4 mr-2" />
+                            Save Regulation
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
               
+              {/* Warnings */}
+              {result.warnings.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-amber-50 to-white rounded-2xl p-6 border border-amber-100"
+                >
+                  <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Important Notes
+                  </h4>
+                  <ul className="space-y-2">
+                    {result.warnings.map((warning, index) => (
+                      <li key={index} className="text-sm text-amber-700 flex items-start gap-2">
+                        <span className="text-amber-400 mt-1">•</span>
+                        {warning}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+              
+              {/* Community Comments Section */}
               <AnimatePresence>
                 {showComments && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="space-y-4"
+                    className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-6 md:p-8"
                   >
+                    <h4 className="font-semibold text-gray-900 mb-6 flex items-center gap-2 text-lg">
+                      <MessageSquare className="w-5 h-5 text-gray-400" />
+                      Community Insights
+                    </h4>
+                    
                     {/* Add Comment Form */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-3 mb-6">
                       <input
                         type="text"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder={isAuthenticated ? "Share your experience or tips..." : "Log in to comment"}
                         disabled={!isAuthenticated}
-                        className="flex-1 px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F172A]/20"
+                        className="flex-1 px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all"
                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                       />
                       <Button
                         onClick={handleAddComment}
                         disabled={addCommentMutation.isPending || !newComment.trim() || !isAuthenticated}
-                        size="sm"
+                        className="rounded-xl px-6 bg-gray-900 hover:bg-gray-800"
                       >
                         {addCommentMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -859,24 +863,27 @@ export function RegulationTrackerStep() {
                     
                     {/* Comments List */}
                     {comments.length === 0 ? (
-                      <p className="text-sm text-[#0F172A]/50 text-center py-4">
-                        No comments yet. Be the first to share your insights!
-                      </p>
+                      <div className="text-center py-8">
+                        <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No comments yet. Be the first to share your insights!</p>
+                      </div>
                     ) : (
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
                         {comments.map((comment) => (
-                          <div key={comment.id} className="p-3 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
+                          <div key={comment.id} className="p-4 bg-gray-50 rounded-xl">
                             <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-6 h-6 rounded-full bg-[#0F172A]/10 flex items-center justify-center">
-                                  <User className="w-3 h-3 text-[#0F172A]/50" />
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <User className="w-4 h-4 text-gray-500" />
                                 </div>
-                                <span className="text-sm font-medium text-[#0F172A]">
-                                  {comment.userName || 'Anonymous'}
-                                </span>
-                                <span className="text-xs text-[#0F172A]/40">
-                                  {new Date(comment.createdAt).toLocaleDateString()}
-                                </span>
+                                <div>
+                                  <span className="font-medium text-gray-900">
+                                    {comment.userName || 'Anonymous'}
+                                  </span>
+                                  <span className="text-xs text-gray-400 ml-2">
+                                    {new Date(comment.createdAt).toLocaleDateString()}
+                                  </span>
+                                </div>
                               </div>
                               <div className="flex items-center gap-1">
                                 {user?.id === comment.userId && (
@@ -884,9 +891,9 @@ export function RegulationTrackerStep() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => deleteCommentMutation.mutate({ id: comment.id })}
-                                    className="h-6 w-6 p-0"
+                                    className="h-8 w-8 p-0 rounded-lg"
                                   >
-                                    <Trash2 className="w-3 h-3 text-[#0F172A]/40 hover:text-red-500" />
+                                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
                                   </Button>
                                 )}
                                 {isAuthenticated && user?.id !== comment.userId && (
@@ -894,59 +901,38 @@ export function RegulationTrackerStep() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => flagCommentMutation.mutate({ commentId: comment.id })}
-                                    className="h-6 w-6 p-0"
+                                    className="h-8 w-8 p-0 rounded-lg"
                                     title="Report this comment"
                                   >
-                                    <Flag className="w-3 h-3 text-[#0F172A]/40 hover:text-orange-500" />
+                                    <Flag className="w-4 h-4 text-gray-400 hover:text-orange-500" />
                                   </Button>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-[#0F172A]/70 mb-2">{comment.content}</p>
+                            <p className="text-gray-700 ml-11">{comment.content}</p>
                             
-                            {/* Vote buttons */}
-                            <div className="flex items-center gap-3">
+                            {/* Voting */}
+                            <div className="flex items-center gap-4 mt-3 ml-11">
                               <button
-                                onClick={() => {
-                                  if (!isAuthenticated) {
-                                    toast.error('Please log in to vote');
-                                    return;
-                                  }
-                                  voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' });
-                                }}
-                                className={`flex items-center gap-1 text-xs transition-colors ${
-                                  userVotes[comment.id] === 'up' 
-                                    ? 'text-green-600' 
-                                    : 'text-[#0F172A]/40 hover:text-green-600'
+                                onClick={() => voteCommentMutation.mutate({ commentId: comment.id, voteType: 'up' })}
+                                disabled={!isAuthenticated}
+                                className={`flex items-center gap-1.5 text-sm transition-colors ${
+                                  userVotes[comment.id] === 'up' ? 'text-emerald-600' : 'text-gray-400 hover:text-gray-600'
                                 }`}
                               >
-                                <ThumbsUp className="w-3 h-3" />
-                                <span>{comment.upvotes}</span>
+                                <ThumbsUp className="w-4 h-4" />
+                                {comment.upvotes}
                               </button>
                               <button
-                                onClick={() => {
-                                  if (!isAuthenticated) {
-                                    toast.error('Please log in to vote');
-                                    return;
-                                  }
-                                  voteCommentMutation.mutate({ commentId: comment.id, voteType: 'down' });
-                                }}
-                                className={`flex items-center gap-1 text-xs transition-colors ${
-                                  userVotes[comment.id] === 'down' 
-                                    ? 'text-red-600' 
-                                    : 'text-[#0F172A]/40 hover:text-red-600'
+                                onClick={() => voteCommentMutation.mutate({ commentId: comment.id, voteType: 'down' })}
+                                disabled={!isAuthenticated}
+                                className={`flex items-center gap-1.5 text-sm transition-colors ${
+                                  userVotes[comment.id] === 'down' ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'
                                 }`}
                               >
-                                <ThumbsDown className="w-3 h-3" />
-                                <span>{comment.downvotes}</span>
+                                <ThumbsDown className="w-4 h-4" />
+                                {comment.downvotes}
                               </button>
-                              {comment.voteScore !== 0 && (
-                                <span className={`text-xs font-medium ${
-                                  comment.voteScore > 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {comment.voteScore > 0 ? '+' : ''}{comment.voteScore} helpful
-                                </span>
-                              )}
                             </div>
                           </div>
                         ))}
@@ -955,35 +941,10 @@ export function RegulationTrackerStep() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </Card>
-            
-            {/* Disclaimer */}
-            <p className="text-center text-sm text-[#0F172A]/40 px-4">
-              This information is for educational purposes only. Always verify with official city/county sources before making investment decisions.
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* Empty State */}
-      {!result && !isLoading && (
-        <Card 
-          className="p-12 text-center" 
-          style={{ 
-            borderRadius: '1rem',
-            backgroundColor: 'oklch(0.98 0 0)',
-            borderStyle: 'dashed'
-          }}
-        >
-          <Shield className="w-16 h-16 mx-auto mb-4" style={{ color: 'oklch(0.80 0 0)' }} />
-          <h3 className="text-lg font-semibold text-[#0F172A]/60 mb-2">
-            Check Before You Invest
-          </h3>
-          <p className="text-[#0F172A]/40 max-w-md mx-auto">
-            Enter a city and state above to see current short-term rental regulations. Understanding local rules is the first step to a successful rental business.
-          </p>
-        </Card>
-      )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

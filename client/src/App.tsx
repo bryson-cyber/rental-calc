@@ -30,7 +30,6 @@ import SavedRegulations from "./pages/SavedRegulations";
 import AdminPortal from "./pages/AdminPortal";
 import BugReportPage from "./pages/BugReportPage";
 import InvestmentCalculator from "./pages/InvestmentCalculator";
-import DesignLabPage from "./pages/design-lab/page";
 
 function Router() {
   return (
@@ -85,9 +84,6 @@ function Router() {
       
       {/* Investment Calculator - For property buyers */}
       <Route path="/investment-calculator" component={InvestmentCalculator} />
-      
-      {/* Design Lab - Temporary route for design exploration */}
-      <Route path="/__design_lab" component={DesignLabPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
