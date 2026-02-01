@@ -8710,3 +8710,24 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add quick jump pills → Scrollable numbered pills for direct navigation to any step
 - [x] Desktop grid layout preserved → hidden sm:grid for desktop, sm:hidden for mobile
 - [x] Removed confusing dots → Replaced with explicit numbered controls
+
+
+## Mobile Navigation Improvements (Jan 31, 2026) - COMPLETE
+
+### Loan Type Labels Fix
+- [x] Change "CONV" to "Conventional" with smaller text size → Shows full names, 2-col grid on mobile, 4-col on desktop
+- [x] Ensure all loan type labels are readable on mobile → text-xs on mobile, text-sm on desktop, 44px min height
+
+### Fixed Bottom Navigation Bar
+- [x] Create fixed bottom nav bar component for mobile → Fixed at bottom with white bg, shadow
+- [x] Add key tool shortcuts (Guide, Find, Validate, Compare, AI) → 5 key tools with icons and labels
+- [x] Show current step indicator in bottom nav → Active tab highlighted with amber color
+- [x] Hide on desktop, show only on mobile (< 640px) → sm:hidden class
+- [x] Ensure proper z-index and safe area padding → z-50, iOS safe area support
+
+### Swipe Gestures Between Steps
+- [x] Add touch event handlers for swipe detection → handleTouchStart and handleTouchEnd with refs
+- [x] Implement left swipe to go to next step → deltaX < 0 triggers next tab
+- [x] Implement right swipe to go to previous step → deltaX > 0 triggers previous tab
+- [x] Horizontal swipe detection → Only triggers when horizontal > vertical movement (50px threshold)
+- [x] Ensure swipe works on the main content area → Touch handlers on Tool Content Area div

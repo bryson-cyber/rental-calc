@@ -774,14 +774,13 @@ export function StartWithProperty({
                   <button
                     key={type}
                     onClick={() => setLoanType(type)}
-                    className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all min-h-[44px] ${
+                    className={`py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-h-[44px] ${
                       loanType === type
                         ? 'bg-amber-100 text-amber-700 border-2 border-amber-500'
                         : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <span className="sm:hidden">{type === 'conventional' ? 'Conv.' : LOAN_CONFIGS[type].name}</span>
-                    <span className="hidden sm:inline">{LOAN_CONFIGS[type].name}</span>
+                    {LOAN_CONFIGS[type].name}
                   </button>
                 ))}
               </div>

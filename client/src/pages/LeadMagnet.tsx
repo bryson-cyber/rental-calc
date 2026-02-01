@@ -350,6 +350,42 @@ export default function LeadMagnet() {
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
   
+  // Swipe gesture state for mobile navigation
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const toolContentRef = useRef<HTMLDivElement>(null);
+  const TAB_ORDER: TabType[] = ['ebook', 'regulations', 'opportunity', 'prove', 'find', 'validate', 'compare', 'map', 'market', 'advisor'];
+  
+  // Swipe handlers for mobile navigation
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    };
+  }, []);
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+    const minSwipeDistance = 50;
+    
+    // Only trigger if horizontal swipe is dominant (not scrolling)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+      const currentIndex = TAB_ORDER.indexOf(activeTab);
+      
+      if (deltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
+        // Swipe left -> next step
+        setActiveTab(TAB_ORDER[currentIndex + 1]);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right -> previous step
+        setActiveTab(TAB_ORDER[currentIndex - 1]);
+      }
+    }
+    
+    touchStartRef.current = null;
+  }, [activeTab]);
+  
   // Get URL search params - use window.location.search directly to capture before wouter clears them
   const searchString = useSearch();
   const initialSearchRef = useRef(typeof window !== 'undefined' ? window.location.search : '');
@@ -2151,7 +2187,12 @@ export default function LeadMagnet() {
           
           
           {/* Tool Content Area */}
-          <div className="apple-card p-4 sm:p-6 md:p-8 lg:p-12">
+          <div 
+            ref={toolContentRef}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="apple-card p-4 sm:p-6 md:p-8 lg:p-12"
+          >
             
             {/* Current Job Header */}
             <div className="mb-6 sm:mb-8 md:mb-10 pb-6 sm:pb-8 md:pb-10 border-b border-[oklch(0.92_0_0)]">
@@ -5989,6 +6030,52 @@ export default function LeadMagnet() {
         city={researchMarket?.split(',')[0]?.trim()}
         state={researchMarket?.split(',')[1]?.trim()}
       />
+      
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50 pb-safe">
+        <div className="flex justify-around items-center h-16 px-2">
+          {[
+            { tab: 'ebook' as TabType, icon: BookOpen, label: 'Guide' },
+            { tab: 'opportunity' as TabType, icon: Search, label: 'Find' },
+            { tab: 'validate' as TabType, icon: Target, label: 'Validate' },
+            { tab: 'compare' as TabType, icon: Trophy, label: 'Compare' },
+            { tab: 'advisor' as TabType, icon: Sparkles, label: 'AI' },
+          ].map(({ tab, icon: Icon, label }) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  // Scroll to tools section
+                  document.getElementById('tools-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className={`flex flex-col items-center justify-center min-w-[60px] py-2 px-1 rounded-lg transition-all ${
+                  isActive
+                    ? 'text-amber-600'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-0.5 transition-all ${
+                  isActive
+                    ? 'bg-amber-100'
+                    : 'bg-transparent'
+                }`}>
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-amber-600' : ''}`} />
+                </div>
+                <span className={`text-[10px] font-medium ${isActive ? 'text-amber-600' : ''}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Safe area spacer for iOS */}
+        <div className="h-[env(safe-area-inset-bottom)]" />
+      </div>
+      
+      {/* Bottom padding to prevent content from being hidden behind bottom nav on mobile */}
+      <div className="sm:hidden h-20" />
     </div>
   );
 }
