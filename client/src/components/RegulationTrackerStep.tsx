@@ -63,6 +63,7 @@ import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete'
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { Link } from 'wouter';
+import { useProperty } from '@/contexts/PropertyContext';
 
 // Premium status configuration with gradients
 const statusConfig = {
@@ -180,6 +181,7 @@ interface Comment {
 
 export function RegulationTrackerStep() {
   const { user, isAuthenticated } = useAuth();
+  const { myProperty } = useProperty();
   const searchString = useSearch();
   const [selectedPlace, setSelectedPlace] = useState<{ name: string; placeId: string; lat?: number; lng?: number } | null>(null);
   const [result, setResult] = useState<RegulationResult | null>(null);
@@ -191,8 +193,9 @@ export function RegulationTrackerStep() {
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [sharePhoneNumber, setSharePhoneNumber] = useState('');
   const [shareEmail, setShareEmail] = useState('');
+  const [autoNotificationSent, setAutoNotificationSent] = useState(false);
   
-  // Helper to process regulation result
+  // Helper to process regulation result and trigger auto-notification
   const processRegulationResult = (data: any) => {
     let mappedStatus = data.status;
     if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
@@ -201,9 +204,40 @@ export function RegulationTrackerStep() {
       mappedStatus = 'allowed_with_requirements' as any;
     }
     
-    setResult({ ...data, status: mappedStatus } as RegulationResult);
+    const processedResult = { ...data, status: mappedStatus } as RegulationResult;
+    setResult(processedResult);
     setActiveTab('summary');
     toast.success(`Found regulations for ${data.city}, ${data.state}`);
+    
+    // Auto-send notification if user has contact info and auto-notifications enabled
+    const hasContactInfo = myProperty?.userEmail || myProperty?.userPhone;
+    const autoNotifyEnabled = myProperty?.enableAutoNotifications !== false; // Default to true
+    
+    if (hasContactInfo && autoNotifyEnabled && !autoNotificationSent) {
+      console.log('[RegulationTracker] Auto-sending notification to:', {
+        email: myProperty?.userEmail,
+        phone: myProperty?.userPhone,
+      });
+      
+      // Trigger auto-notification
+      autoCreateAndNotifyMutation.mutate({
+        city: data.city,
+        state: data.state,
+        status: mappedStatus,
+        summary: data.summary,
+        permitRequired: data.permitRequired || false,
+        primaryResidenceOnly: data.primaryResidenceOnly || false,
+        maxNightsPerYear: data.maxNightsPerYear,
+        registrationFee: data.registrationFee,
+        occupancyTax: data.occupancyTax,
+        confidence: data.confidence,
+        fullRegulationData: data,
+        keyRequirements: data.keyRequirements,
+        sources: data.sources,
+        userEmail: myProperty?.userEmail,
+        userPhone: myProperty?.userPhone,
+      });
+    }
   };
 
   // Auto-search from URL parameters
@@ -328,6 +362,32 @@ export function RegulationTrackerStep() {
       } else {
         toast.error(response.error || 'Failed to send email');
       }
+    }
+  });
+  
+  // Auto-create and notify mutation
+  const autoCreateAndNotifyMutation = trpc.regulationTracker.autoCreateAndNotify.useMutation({
+    onSuccess: (response) => {
+      if (response.success) {
+        setShareCode(response.shareCode);
+        setAutoNotificationSent(true);
+        
+        // Show appropriate toast based on what was sent
+        const sentMethods: string[] = [];
+        if (response.notificationsSent?.sms) sentMethods.push('SMS');
+        if (response.notificationsSent?.email) sentMethods.push('email');
+        
+        if (sentMethods.length > 0) {
+          toast.success(`Report sent via ${sentMethods.join(' and ')}!`, {
+            description: 'Check your inbox for the shareable link.',
+            duration: 5000,
+          });
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[AutoNotify] Error:', error);
+      // Silently fail - don't disrupt the user experience
     }
   });
   

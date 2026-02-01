@@ -58,6 +58,11 @@ export interface PropertyDetails {
   annualRevenue?: number;
   occupancyRate?: number;
   adr?: number;
+  
+  // User contact info for notifications
+  userEmail?: string;
+  userPhone?: string;
+  enableAutoNotifications?: boolean;
 }
 
 // Market Advisor amenities filter type

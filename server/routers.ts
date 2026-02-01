@@ -4433,6 +4433,104 @@ export const appRouter = router({
         return smsResult;
       }),
 
+    // Auto-create shareable report and send notifications (for auto-notification flow)
+    autoCreateAndNotify: publicProcedure
+      .input(z.object({
+        city: z.string().min(1),
+        state: z.string().min(1),
+        status: z.string(),
+        summary: z.string().optional(),
+        permitRequired: z.boolean().default(false),
+        primaryResidenceOnly: z.boolean().default(false),
+        maxNightsPerYear: z.number().optional(),
+        registrationFee: z.string().optional(),
+        occupancyTax: z.string().optional(),
+        confidence: z.string().optional(),
+        fullRegulationData: z.any().optional(),
+        keyRequirements: z.array(z.any()).optional(),
+        sources: z.array(z.any()).optional(),
+        // Contact info for auto-notification
+        userEmail: z.string().email().optional(),
+        userPhone: z.string().optional(),
+        userName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Only proceed if at least one contact method provided
+        if (!input.userEmail && !input.userPhone) {
+          return {
+            success: false,
+            error: 'No contact information provided for notification',
+            shareCode: null,
+            notificationsSent: { sms: false, email: false },
+          };
+        }
+        
+        // Generate a unique share code
+        const shareCode = generateShareCode();
+        const locationKey = `${input.city.toLowerCase()}-${input.state.toLowerCase()}`;
+        
+        // Create the shareable report
+        const [result] = await db.insert(shareableRegulationReports).values({
+          shareCode,
+          city: input.city,
+          state: input.state,
+          locationKey,
+          status: input.status,
+          summary: input.summary,
+          permitRequired: input.permitRequired ? 1 : 0,
+          primaryResidenceOnly: input.primaryResidenceOnly ? 1 : 0,
+          maxNightsPerYear: input.maxNightsPerYear,
+          registrationFee: input.registrationFee,
+          occupancyTax: input.occupancyTax,
+          confidence: input.confidence,
+          fullRegulationData: input.fullRegulationData,
+          keyRequirements: input.keyRequirements,
+          sources: input.sources,
+          creatorEmail: input.userEmail,
+          creatorPhone: input.userPhone,
+        });
+        
+        // Send notifications using the helper function
+        const { sendReportNotifications } = await import('./sms-email-notifications');
+        const notificationResults = await sendReportNotifications(
+          {
+            city: input.city,
+            state: input.state,
+            status: input.status,
+            shareCode,
+          },
+          {
+            phone: input.userPhone,
+            email: input.userEmail,
+            name: input.userName,
+          }
+        );
+        
+        // Update the report with notification status
+        if (notificationResults.sms?.success && input.userPhone) {
+          await db.execute(`UPDATE shareable_regulation_reports SET smsSentTo = '${input.userPhone}', smsSentAt = NOW() WHERE id = ${result.insertId}`);
+        }
+        if (notificationResults.email?.success && input.userEmail) {
+          await db.execute(`UPDATE shareable_regulation_reports SET emailSentTo = '${input.userEmail}', emailSentAt = NOW() WHERE id = ${result.insertId}`);
+        }
+        
+        console.log(`[AutoNotify] Created report ${shareCode} for ${input.city}, ${input.state}. SMS: ${notificationResults.sms?.success || false}, Email: ${notificationResults.email?.success || false}`);
+        
+        return {
+          success: true,
+          shareCode,
+          shareUrl: `/report/${shareCode}`,
+          reportId: result.insertId,
+          notificationsSent: {
+            sms: notificationResults.sms?.success || false,
+            email: notificationResults.email?.success || false,
+          },
+        };
+      }),
+
     // Send shareable report via Email
     sendReportEmail: publicProcedure
       .input(z.object({

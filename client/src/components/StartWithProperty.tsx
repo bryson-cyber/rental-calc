@@ -32,7 +32,10 @@ import {
   Key,
   Percent,
   Calculator,
-  TrendingUp
+  TrendingUp,
+  Mail,
+  Phone,
+  Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -107,6 +110,11 @@ export function StartWithProperty({
   const [downPaymentPercent, setDownPaymentPercent] = useState('20');
   const [loanType, setLoanType] = useState<LoanType>('conventional');
   const [interestRate, setInterestRate] = useState('7.0');
+  
+  // Contact info for auto-notifications
+  const [userEmail, setUserEmail] = useState(myProperty?.userEmail || '');
+  const [userPhone, setUserPhone] = useState(myProperty?.userPhone || '');
+  const [enableAutoNotifications, setEnableAutoNotifications] = useState(myProperty?.enableAutoNotifications ?? true);
   
   // Update down payment and interest rate when loan type changes
   useEffect(() => {
@@ -337,6 +345,10 @@ export function StartWithProperty({
       interestRate: mode === 'purchase' ? parseFloat(interestRate) : undefined,
       monthlyMortgage: mode === 'purchase' ? monthlyMortgage : undefined,
       totalCashNeeded: mode === 'purchase' ? totalCashNeeded : undefined,
+      // Contact info for auto-notifications
+      userEmail: userEmail || undefined,
+      userPhone: userPhone || undefined,
+      enableAutoNotifications,
     };
     
     console.log('[StartWithProperty] Setting property:', property);
@@ -868,6 +880,63 @@ export function StartWithProperty({
             )}
           </>
         )}
+        
+        {/* Notification Settings - Collapsible */}
+        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setEnableAutoNotifications(!enableAutoNotifications)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-amber-600" />
+              <span className="font-medium text-slate-900">Get Report via SMS/Email</span>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors ${enableAutoNotifications ? 'bg-amber-500' : 'bg-slate-300'} relative`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${enableAutoNotifications ? 'right-1' : 'left-1'}`} />
+            </div>
+          </button>
+          
+          {enableAutoNotifications && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-slate-600 mb-3">
+                We'll automatically send you a shareable report link when you complete an analysis.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email (optional)
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      type="email"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full h-10 pl-10 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Phone (optional)
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      type="tel"
+                      value={userPhone}
+                      onChange={(e) => setUserPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                      className="w-full h-10 pl-10 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Submit Button */}
         <Button

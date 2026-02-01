@@ -8782,3 +8782,54 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Send email when user completes a report → Email input in share panel
 - [x] Include shareable link in email → Full URL included
 - [x] Professional email template with Coach Inayah branding → Via Zapier workflow
+
+
+## Automatic SMS/Email Notifications on Report Completion (Feb 1, 2026)
+
+### Lead Capture Enhancement
+- [ ] Add phone number field to lead capture form (optional)
+- [ ] Store phone/email in user context for auto-notifications
+- [ ] Update PropertyContext to include notification preferences
+
+### Auto-Notification Trigger
+- [ ] Detect when regulation analysis completes successfully
+- [ ] Automatically create shareable report after analysis
+- [ ] Trigger SMS notification if phone number exists
+- [ ] Trigger email notification if email exists
+- [ ] Show confirmation toast when notifications are sent
+
+### Backend Integration
+- [ ] Create combined auto-notify endpoint
+- [ ] Handle both SMS and email in single call
+- [ ] Log notification attempts for debugging
+- [ ] Handle failures gracefully (don't block user flow)
+
+
+## Auto-Notification Feature (Feb 1, 2026)
+
+### Phase 1: Lead Capture Enhancement
+- [x] Add userEmail and userPhone fields to PropertyContext
+- [x] Add enableAutoNotifications toggle to PropertyContext
+- [x] Add notification settings UI to StartWithProperty component
+- [x] Add "Get Report via SMS/Email" toggle with email/phone inputs
+- [x] Store contact info when user sets their property
+
+### Phase 2: Auto-Notification Trigger
+- [x] Import useProperty context in RegulationTrackerStep
+- [x] Add autoNotificationSent state to prevent duplicate sends
+- [x] Add autoCreateAndNotifyMutation for backend call
+- [x] Modify processRegulationResult to trigger auto-notification
+- [x] Check for contact info and enableAutoNotifications before sending
+
+### Phase 3: Backend Endpoint
+- [x] Add autoCreateAndNotify endpoint to regulationTracker router
+- [x] Create shareable report with unique share code
+- [x] Send SMS via SimpleTexting API (existing integration)
+- [x] Send email via Zapier webhook (existing integration)
+- [x] Update report with notification status (smsSentTo, emailSentTo, timestamps)
+
+### Phase 4: User Experience
+- [x] Show toast notification when report is sent
+- [x] Display which methods were used (SMS, email, or both)
+- [x] Auto-set shareCode for manual sharing panel
+- [x] Silently fail if notification fails (don't disrupt user experience)
