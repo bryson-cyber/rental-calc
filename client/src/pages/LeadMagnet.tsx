@@ -111,6 +111,8 @@ import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { OnboardingTour, useOnboarding, WelcomeModal } from '@/components/OnboardingTour';
+import { ContextualAIChat } from '@/components/ContextualAIChat';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -348,6 +350,18 @@ type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compar
 export default function LeadMagnet() {
   // Auth state for login requirement
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  
+  // Onboarding tour state
+  const { showTour, isFirstVisit, startTour, closeTour, resetTour } = useOnboarding();
+  const [showWelcome, setShowWelcome] = useState(false);
+  
+  // Show welcome modal for first-time visitors
+  useEffect(() => {
+    if (isFirstVisit && !showTour) {
+      const timer = setTimeout(() => setShowWelcome(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isFirstVisit, showTour]);
   
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter, setMyProperty, globalMode } = useProperty();
@@ -6292,6 +6306,50 @@ export default function LeadMagnet() {
       
       {/* Bottom padding to prevent content from being hidden behind bottom nav on mobile */}
       <div className="sm:hidden h-20" />
+      
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        isOpen={showTour}
+        onClose={closeTour}
+        onComplete={() => {
+          closeTour();
+          toast.success('Tour complete! Start exploring the tools.');
+        }}
+        onNavigateToTab={(tabId) => setActiveTab(tabId as TabType)}
+      />
+      
+      {/* Welcome Modal for first-time users */}
+      <WelcomeModal
+        isOpen={showWelcome && !showTour}
+        onStartTour={() => {
+          setShowWelcome(false);
+          startTour();
+        }}
+        onSkip={() => setShowWelcome(false)}
+      />
+      
+      {/* Contextual AI Chat Assistant */}
+      <ContextualAIChat
+        pageContext={{
+          currentTool: activeTab,
+          propertyData: result ? {
+            address: address,
+            bedrooms: bedrooms ? parseInt(bedrooms) : undefined,
+            bathrooms: bathrooms ? parseFloat(bathrooms) : undefined,
+            monthlyRent: monthlyRent ? parseInt(monthlyRent) : undefined,
+            projectedRevenue: result.revenue?.projected,
+            profitMargin: result.cashFlow ? (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100 : undefined,
+            occupancyRate: result.metrics?.occupancy,
+          } : undefined,
+          marketData: researchResult ? {
+            city: researchMarket?.split(',')[0]?.trim(),
+            state: researchMarket?.split(',')[1]?.trim(),
+            averageRevenue: researchResult.avgRevenue,
+            averageOccupancy: researchResult.avgOccupancy,
+            averageADR: researchResult.avgAdr,
+          } : undefined,
+        }}
+      />
     </div>
     </>
   );

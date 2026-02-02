@@ -7004,6 +7004,41 @@ export const appRouter = router({
         return analytics;
       }),
   }),
+
+  // AI Chat Router for contextual assistant
+  ai: router({
+    // General chat endpoint for the contextual AI assistant
+    chat: publicProcedure
+      .input(z.object({
+        messages: z.array(z.object({
+          role: z.enum(['system', 'user', 'assistant']),
+          content: z.string(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const { invokeLLM } = await import('./_core/llm');
+          
+          const response = await invokeLLM({
+            messages: input.messages.map(m => ({
+              role: m.role,
+              content: m.content,
+            })),
+          });
+          
+          return {
+            content: response.choices?.[0]?.message?.content || 'I apologize, but I could not generate a response.',
+            success: true,
+          };
+        } catch (error) {
+          console.error('[AI Chat] Error:', error);
+          return {
+            content: 'I apologize, but I encountered an error. Please try again.',
+            success: false,
+          };
+        }
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -9024,3 +9024,33 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Position button in bottom-right corner (above bottom nav, bottomOffset=80)
 - [x] Animate button appearance/disappearance (opacity + translate-y transitions)
 - [x] Smooth scroll to top on click (window.scrollTo with behavior: 'smooth')
+
+
+## Interactive Training Environment & Custom AI Assistant (Feb 2026)
+
+### Onboarding Tour Component
+- [x] Create OnboardingTour component with step-by-step guidance
+- [x] Welcome modal for first-time users with option to start tour or skip
+- [x] Highlight each tool tab one-by-one with tooltip explanations
+- [x] Show tool purpose, key features, and how to use it (with Pro Tips)
+- [x] Progress indicator showing current step and total steps
+- [x] "Next", "Previous", "Skip" navigation buttons
+- [x] Store completion status in localStorage to show only once
+- [x] useOnboarding hook with resetTour() for restart functionality
+
+### Sandbox Training Mode
+- [x] Create sample/demo data for each tool (sampleData.ts)
+- [x] Add "Try with Sample Data" button for each tool (SampleDataButton component)
+- [x] Visual indicator when in sandbox/training mode (TrainingModeProvider banner)
+- [x] Clear distinction between real analysis and training mode (TrainingModeIndicator)
+- [x] Pre-populated address and property details for demo (SAMPLE_PROPERTY, SAMPLE_MARKET)
+
+### Custom AI Assistant (RAG-based)
+- [x] Create knowledge base with Coach Inayah methodology (knowledgeBase.ts)
+- [x] Include tool documentation and usage guides (TOOL_DOCUMENTATION)
+- [x] Build context-aware responses based on current page data (PageContext interface)
+- [x] AI can reference current analysis results in responses (buildContextString)
+- [x] Add AI chat interface accessible from all tools (ContextualAIChat.tsx)
+- [x] System prompt that grounds AI in rental investment expertise (AI_SYSTEM_PROMPT)
+- [x] Prevent hallucination by limiting responses to embedded knowledge
+- [x] Add suggested questions based on current tool context (SUGGESTED_QUESTIONS)
