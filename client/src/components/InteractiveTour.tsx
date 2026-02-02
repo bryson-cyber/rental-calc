@@ -290,7 +290,10 @@ export function useInteractiveTour() {
   }, []);
 
   const closeTour = useCallback(() => {
+    // Also mark as complete when skipping to prevent re-showing
+    localStorage.setItem('coach-inayah-interactive-tour-complete', 'true');
     setShowTour(false);
+    setIsFirstVisit(false);
   }, []);
 
   const completeTour = useCallback(() => {
