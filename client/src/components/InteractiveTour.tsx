@@ -6,6 +6,18 @@
  * 2. Highlights real UI elements
  * 3. Auto-fills sample data
  * 4. Shows what results look like
+ * 
+ * CORRECT TAB IDs (from LeadMagnet.tsx TabType):
+ * - 'ebook' = Read the Guide (GUIDE)
+ * - 'regulations' = Check Regulations (STEP 1)
+ * - 'opportunity' = Find a Property (STEP 2)
+ * - 'prove' = See Real Revenue (STEP 3) - has MarketAutocomplete
+ * - 'find' = Explore Listings (STEP 4)
+ * - 'validate' = Validate the Deal (STEP 5) - has address input, property details
+ * - 'compare' = Compare Favorites (STEP 6)
+ * - 'map' = See the Map (STEP 7)
+ * - 'market' = Market Advisor (STEP 8)
+ * - 'advisor' = AI Advisor (STEP 9)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -48,44 +60,59 @@ export function InteractiveTour({
   const [tourStarted, setTourStarted] = useState(false);
 
   // Define tour steps with actual UI element selectors
+  // Using correct tab IDs from LeadMagnet.tsx
   const tourSteps: TourStep[] = [
+    // Step 0: Welcome
     {
       id: 'welcome',
       title: 'Welcome to Coach Inayah\'s Tools!',
-      description: 'I\'ll walk you through each tool so you can see exactly how to analyze rental properties like a pro. Let\'s start with finding opportunities!',
+      description: 'I\'ll walk you through each tool so you can see exactly how to analyze rental properties like a pro. Let\'s start!',
       position: 'center',
     },
+    // Step 1: Guide intro - use 'ebook' tab
     {
-      id: 'opportunity-intro',
-      title: 'Step 1: Find Opportunities',
-      description: 'The Opportunity Finder helps you discover properties in any market. Let me show you how it works.',
+      id: 'guide-intro',
+      title: 'Start with the Guide',
+      description: 'New to rental arbitrage? Start here! The guide teaches you the fundamentals before diving into the analysis tools.',
       position: 'center',
-      action: () => onNavigateToTab('opportunity'),
+      action: () => onNavigateToTab('ebook'),
     },
+    // Step 2: Navigate to "find" tab (Explore Listings - STEP 4)
     {
-      id: 'opportunity-search',
+      id: 'find-intro',
+      title: 'See What\'s Working',
+      description: 'This tool shows you real Airbnb properties that are actually making money. Let\'s search a market!',
+      position: 'center',
+      action: () => onNavigateToTab('find'),
+    },
+    // Step 3: Highlight the search input in "find" tab
+    {
+      id: 'find-search',
       targetSelector: '[data-tour="opportunity-search"]',
-      title: 'Search Any Location',
-      description: 'Type a city, zip code, or neighborhood to find rental opportunities. Try "Denver, CO" or any market you\'re interested in.',
+      title: 'Search Any Market',
+      description: 'Type a city, zip code, or neighborhood to see successful Airbnb properties. Try "Denver, CO" or any market you\'re interested in.',
       position: 'bottom',
       waitForElement: true,
     },
+    // Step 4: Navigate to "validate" tab (Validate the Deal - STEP 5)
     {
       id: 'validate-intro',
-      title: 'Step 2: Validate a Property',
+      title: 'Validate a Property',
       description: 'Found a property you like? The Validator shows you exactly how much it could earn. Let me demonstrate.',
       position: 'center',
       action: () => onNavigateToTab('validate'),
     },
+    // Step 5: Highlight address input
     {
       id: 'validate-address',
       targetSelector: '[data-tour="address-input"]',
       title: 'Enter the Property Address',
-      description: 'Paste any address, Zillow link, or Redfin link here. I\'ll show you with a sample property in Denver.',
+      description: 'Paste any address, Zillow link, or Redfin link here. I\'ll fill in a sample property in Denver to show you.',
       position: 'bottom',
       waitForElement: true,
       showSampleData: true,
     },
+    // Step 6: Highlight property details
     {
       id: 'validate-details',
       targetSelector: '[data-tour="property-details"]',
@@ -94,6 +121,7 @@ export function InteractiveTour({
       position: 'bottom',
       waitForElement: true,
     },
+    // Step 7: Highlight analyze button
     {
       id: 'validate-button',
       targetSelector: '[data-tour="analyze-button"]',
@@ -102,13 +130,15 @@ export function InteractiveTour({
       position: 'top',
       waitForElement: true,
     },
+    // Step 8: Navigate to "compare" tab
     {
       id: 'compare-intro',
-      title: 'Step 3: Compare Properties',
+      title: 'Compare Properties',
       description: 'Comparing multiple properties? The Compare tool lets you see them side-by-side to find the best deal.',
       position: 'center',
       action: () => onNavigateToTab('compare'),
     },
+    // Step 9: Highlight compare section
     {
       id: 'compare-add',
       targetSelector: '[data-tour="compare-add"]',
@@ -117,13 +147,15 @@ export function InteractiveTour({
       position: 'bottom',
       waitForElement: true,
     },
+    // Step 10: Navigate to "map" tab
     {
       id: 'map-intro',
-      title: 'Step 4: Explore the Map',
+      title: 'Explore the Map',
       description: 'The Map View shows you all active rentals in an area. See what\'s actually performing well nearby.',
       position: 'center',
       action: () => onNavigateToTab('map'),
     },
+    // Step 11: Highlight map container
     {
       id: 'map-explore',
       targetSelector: '[data-tour="map-container"]',
@@ -132,13 +164,15 @@ export function InteractiveTour({
       position: 'top',
       waitForElement: true,
     },
+    // Step 12: Navigate to "advisor" tab (AI Advisor)
     {
       id: 'advisor-intro',
-      title: 'Step 5: Ask the AI Advisor',
+      title: 'Ask the AI Advisor',
       description: 'Have questions? The AI Advisor can analyze your data and give personalized recommendations.',
       position: 'center',
       action: () => onNavigateToTab('advisor'),
     },
+    // Step 13: Highlight advisor input
     {
       id: 'advisor-chat',
       targetSelector: '[data-tour="advisor-input"]',
@@ -147,13 +181,7 @@ export function InteractiveTour({
       position: 'top',
       waitForElement: true,
     },
-    {
-      id: 'regulations-intro',
-      title: 'Bonus: Check Regulations',
-      description: 'Before you invest, always check local STR regulations. This tool shows permit requirements, restrictions, and recent changes.',
-      position: 'center',
-      action: () => onNavigateToTab('regulations'),
-    },
+    // Step 14: Completion
     {
       id: 'complete',
       title: 'You\'re Ready to Go! 🎉',

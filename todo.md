@@ -9082,3 +9082,60 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] InteractiveTour.tsx - manages tour state, navigation, and tooltips
 - [x] Sample data injection via handleFillSampleData callback
 - [x] 10 unit tests passing
+
+
+## Tour Bug Fix & AI Knowledge Base Expansion (Feb 2)
+
+### Tour Bug Fix
+- [ ] Debug why tour doesn't show what to do after clicking "Start Quick Tour"
+- [ ] Verify TourSpotlight component renders and highlights elements
+- [ ] Verify tour steps navigate to correct tabs
+- [ ] Verify sample data auto-fills when tour reaches relevant steps
+- [ ] Test tour flow end-to-end
+
+### AI Knowledge Base Expansion - Max Out All Available Data
+- [ ] Inventory all available data sources
+- [ ] Add AirDNA API data patterns and metrics explanations
+- [ ] Add market-specific benchmarks (occupancy, ADR, revenue by region)
+- [ ] Add common investor FAQs with detailed answers
+- [ ] Add case studies from successful arbitrage deals
+- [ ] Add Coach Inayah methodology deep dive
+- [ ] Add seasonal patterns and booking trends
+- [ ] Add property type comparisons
+- [ ] Add financing strategies and calculations
+- [ ] Add landlord negotiation scripts
+- [ ] Add red flags and deal breakers
+
+
+## Tour Bug Fix (Feb 2) - COMPLETE
+
+### Issues Fixed:
+- [x] TourSpotlight now properly finds elements with data-tour attributes
+- [x] Dark overlay with spotlight "hole" effect working
+- [x] Tooltip positioned correctly near highlighted elements
+- [x] Tab navigation working (ebook → find → validate → compare → map → advisor)
+- [x] Element retry logic with 10 attempts and 300ms intervals
+- [x] Scroll into view before highlighting
+
+## AI Knowledge Base Expansion (Feb 2) - IN PROGRESS
+
+### Available Data Sources:
+- [ ] AirDNA API data (market stats, revenue, occupancy, ADR, comps)
+- [ ] Coach Inayah ebook content (13 chapters on arbitrage)
+- [ ] Tool documentation (all 9 tools)
+- [ ] Market research methodology
+- [ ] Break-even calculations and formulas
+- [ ] Comparable property analysis
+- [ ] Booking patterns and seasonality
+- [ ] Supply trends and market saturation
+
+### Knowledge Base Sections to Add:
+- [ ] Market-specific insights (top 50 US markets)
+- [ ] Property type performance data
+- [ ] Seasonal revenue patterns
+- [ ] Case studies from successful deals
+- [ ] Common investor mistakes
+- [ ] Landlord negotiation strategies
+- [ ] Financing options and calculations
+- [ ] Red flags and deal breakers
+- [ ] Coach Inayah methodology
