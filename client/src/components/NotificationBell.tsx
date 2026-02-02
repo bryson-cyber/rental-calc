@@ -85,11 +85,11 @@ export function NotificationBell() {
   
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Bell Button */}
+      {/* Bell Button - 44px minimum touch target for mobile accessibility */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "relative p-2 rounded-lg transition-colors",
+          "relative p-2.5 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
           "hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20",
           isOpen && "bg-slate-100"
         )}

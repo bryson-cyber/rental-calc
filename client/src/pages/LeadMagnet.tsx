@@ -2155,7 +2155,7 @@ export default function LeadMagnet() {
                       }
                     }}
                     disabled={activeTab === 'ebook'}
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
                     aria-label="Previous tool"
                   >
                     <ChevronLeft className="w-5 h-5 text-[oklch(0.35_0_0)]" />
@@ -2169,7 +2169,7 @@ export default function LeadMagnet() {
                       }
                     }}
                     disabled={activeTab === 'advisor'}
-                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-[oklch(0.95_0_0)] border border-[oklch(0.88_0_0)] disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
                     aria-label="Next tool"
                   >
                     <ChevronRight className="w-5 h-5 text-[oklch(0.35_0_0)]" />
@@ -6196,7 +6196,7 @@ export default function LeadMagnet() {
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-0.5 transition-all ${
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-0.5 transition-all ${
                   isActive
                     ? 'bg-amber-100'
                     : 'bg-transparent'

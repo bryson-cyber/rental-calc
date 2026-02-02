@@ -107,10 +107,12 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
+    overflow-x: hidden; /* Prevent horizontal scroll on mobile */
   }
   
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden; /* Prevent horizontal scroll on mobile */
     font-family: var(--font-body);
     font-feature-settings: 'kern' 1, 'liga' 1;
     letter-spacing: -0.01em;
