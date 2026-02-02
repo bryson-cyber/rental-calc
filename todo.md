@@ -9425,3 +9425,43 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Build SMS alerts using SimpleTexting API
 - [ ] Build HasData Zillow deal caching system
 - [ ] Add engagement tracking from HubSpot contact fields
+
+
+## Deal Alert Email Improvements (Feb 2, 2026)
+
+### Property Links & Navigation:
+- [x] Update property link in email to go directly to Step 5 with property details pre-filled
+- [x] Include address, bedrooms, bathrooms, and rent in the URL parameters
+- [x] Enable autoAnalyze=true so analysis runs automatically when link is clicked
+
+### Rent & Profit Display:
+- [x] Add monthlyRent field to deal alert email sender
+- [x] Display Monthly Rent in email stat grid
+- [x] Calculate and display Est. Monthly Profit (revenue - rent)
+- [x] Show profit in green color for positive values
+- [x] Include rent and profit in the narrative text
+- [x] Update subject line to show profit potential instead of just revenue
+
+### Turnkey Program Description:
+- [x] Update email copy to include full turnkey services:
+  - Running full numbers
+  - Reaching out to landlord
+  - Negotiating terms
+  - Setting up the property
+  - Designing and furnishing
+  - Automating operations
+- [x] Emphasize "we handle the entire process so you can start earning without the headache"
+
+### AI Prompt Optimization:
+- [x] Rewrite Gemini prompt for deal alert newsletter content
+- [x] Add context about Coach Inayah and Turnkey Program
+- [x] Focus on profit potential, not just revenue
+- [x] Improve tone: conversational, warm, like a knowledgeable friend
+- [x] Include all turnkey services in the prompt context
+- [x] Better writing guidelines for engaging content
+
+### Email Preview Template:
+- [x] Update email-preview-deal-alert.html with new format
+- [x] Show 4 stats: Revenue, Rent, Profit, Occupancy
+- [x] Property-specific link to Step 5 analysis
+- [x] Full turnkey description in closing paragraph

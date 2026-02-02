@@ -601,6 +601,7 @@ export async function sendDealAlertEmail(params: {
     occupancyRate: number;
     averageDailyRate: number;
     dealScore: number;
+    monthlyRent?: number; // Monthly rent from Zillow/source
     propertyUrl?: string;
     zillowUrl?: string;
   };
@@ -610,15 +611,29 @@ export async function sendDealAlertEmail(params: {
   const formatCurrency = (n: number) => `$${n.toLocaleString()}`;
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
   
-  // Build narrative based on deal characteristics
-  let narrative = `This property came across our dashboard this morning, and I wanted to share it with you because it fits the profile of what we look for in ${city}.`;
+  // Calculate profit if we have rent data
+  const hasRentData = deal.monthlyRent && deal.monthlyRent > 0;
+  const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! : 0;
+  const profitMargin = hasRentData && deal.monthlyRevenue > 0 ? (monthlyProfit / deal.monthlyRevenue) * 100 : 0;
+  
+  // Build narrative based on deal characteristics - more engaging and specific
+  let narrative = `I just found a property in ${city} that caught my attention, and I wanted to share it with you right away.`;
   
   if (deal.dealScore >= 80) {
-    narrative += ` The numbers are strong – we're seeing potential for ${formatCurrency(deal.monthlyRevenue)}/month based on how similar properties are performing in the area.`;
+    narrative += ` This one has strong numbers – we're projecting ${formatCurrency(deal.monthlyRevenue)}/month in revenue based on how similar properties are performing in the area.`;
+    if (hasRentData) {
+      narrative += ` With rent at ${formatCurrency(deal.monthlyRent!)}, that's a potential profit of ${formatCurrency(monthlyProfit)}/month (${Math.round(profitMargin)}% margin).`;
+    }
   } else if (deal.dealScore >= 60) {
-    narrative += ` It's showing solid potential with an estimated ${formatCurrency(deal.monthlyRevenue)}/month in revenue based on comparable properties nearby.`;
+    narrative += ` It's showing solid potential with an estimated ${formatCurrency(deal.monthlyRevenue)}/month in revenue.`;
+    if (hasRentData) {
+      narrative += ` At ${formatCurrency(deal.monthlyRent!)}/month rent, you're looking at roughly ${formatCurrency(monthlyProfit)}/month profit.`;
+    }
   } else {
-    narrative += ` While it's not a slam dunk, the ${formatCurrency(deal.monthlyRevenue)}/month revenue potential could work depending on your investment criteria.`;
+    narrative += ` The ${formatCurrency(deal.monthlyRevenue)}/month revenue potential could work depending on your criteria.`;
+    if (hasRentData) {
+      narrative += ` Rent is ${formatCurrency(deal.monthlyRent!)}/month.`;
+    }
   }
   
   // Add context about why this matters
@@ -626,20 +641,28 @@ export async function sendDealAlertEmail(params: {
     ? `Properties like this in ${city} are averaging ${formatPercent(deal.occupancyRate)} occupancy, which means consistent bookings throughout the year.`
     : `The ${formatPercent(deal.occupancyRate)} occupancy rate is typical for this area – with the right setup and pricing strategy, there's room to outperform.`;
   
-  const mainContent = `
-    <p class="narrative">
-      ${narrative}
-    </p>
-    
-    <div class="property-card">
-      <span class="opportunity-badge">New Opportunity</span>
-      <h2>📍 ${deal.address}</h2>
-      <p class="address">${deal.bedrooms} bedroom · ${deal.bathrooms} bath · ${city}, ${state}</p>
-      <p style="margin: 12px 0 0; font-size: 14px;">
-        <a href="${WEBSITE_URL}?step=2&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}" style="color: #C9A962; text-decoration: none; font-weight: 500;">📸 View Property Photos & Listings →</a>
-      </p>
-      
-      <div class="stat-grid">
+  // Build property-specific analysis URL that goes directly to Step 5 with this property
+  const propertyAnalysisUrl = `${WEBSITE_URL}?step=5&address=${encodeURIComponent(deal.address)}&bedrooms=${deal.bedrooms}&bathrooms=${deal.bathrooms}${hasRentData ? `&rent=${deal.monthlyRent}` : ''}&autoAnalyze=true`;
+  
+  // Build stat grid - include rent if available
+  const statItems = hasRentData ? `
+        <div class="stat-item">
+          <div class="stat-value highlight">${formatCurrency(deal.monthlyRevenue)}</div>
+          <div class="stat-label">Est. Monthly Revenue</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${formatCurrency(deal.monthlyRent!)}</div>
+          <div class="stat-label">Monthly Rent</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: ${monthlyProfit > 0 ? '#22c55e' : '#ef4444'};">${formatCurrency(monthlyProfit)}</div>
+          <div class="stat-label">Est. Monthly Profit</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${formatPercent(deal.occupancyRate)}</div>
+          <div class="stat-label">Market Occupancy</div>
+        </div>
+  ` : `
         <div class="stat-item">
           <div class="stat-value highlight">${formatCurrency(deal.monthlyRevenue)}</div>
           <div class="stat-label">Est. Monthly Revenue</div>
@@ -652,6 +675,23 @@ export async function sendDealAlertEmail(params: {
           <div class="stat-value">${formatCurrency(deal.averageDailyRate)}</div>
           <div class="stat-label">Avg Nightly Rate</div>
         </div>
+  `;
+  
+  const mainContent = `
+    <p class="narrative">
+      ${narrative}
+    </p>
+    
+    <div class="property-card">
+      <span class="opportunity-badge">New Opportunity</span>
+      <h2>📍 ${deal.address}</h2>
+      <p class="address">${deal.bedrooms} bedroom · ${deal.bathrooms} bath · ${city}, ${state}</p>
+      <p style="margin: 12px 0 0; font-size: 14px;">
+        <a href="${propertyAnalysisUrl}" style="color: #C9A962; text-decoration: none; font-weight: 500;">📊 View Full Property Analysis →</a>
+      </p>
+      
+      <div class="stat-grid">
+        ${statItems}
       </div>
     </div>
     
@@ -660,17 +700,18 @@ export async function sendDealAlertEmail(params: {
     </div>
     
     <p class="narrative">
-      If you're interested in exploring this opportunity, my team can help you run the full numbers, reach out to the landlord, and negotiate terms. That's exactly what we do in the Turnkey Program.
+      If you're interested in exploring this opportunity, my team can help you with everything – running the full numbers, reaching out to the landlord, negotiating terms, setting up the property, designing and furnishing it, and automating your operations. That's exactly what we do in the <strong>Turnkey Program</strong> – we handle the entire process so you can start earning without the headache.
     </p>
   `;
   
-  const subject = `New opportunity in ${city} – ${formatCurrency(deal.monthlyRevenue)}/mo potential`;
+  // Subject line - include profit if available
+  const subject = hasRentData && monthlyProfit > 0
+    ? `New opportunity in ${city} – ${formatCurrency(monthlyProfit)}/mo profit potential`
+    : `New opportunity in ${city} – ${formatCurrency(deal.monthlyRevenue)}/mo potential`;
   
   // Build URLs for the Turnkey Tool
-  // Step 2 (Find a Property) - shows property photos and listings in the area
-  const propertyPhotosUrl = `${WEBSITE_URL}?step=2&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`;
   // Step 5 (Validate the Deal) - shows full revenue analysis with autoAnalyze
-  const analysisUrl = `${WEBSITE_URL}?step=5&address=${encodeURIComponent(deal.address)}&bedrooms=${deal.bedrooms}&bathrooms=${deal.bathrooms}&autoAnalyze=true`;
+  const analysisUrl = propertyAnalysisUrl;
   
   const htmlContent = generateEmailHTML({
     type: 'deal',

@@ -150,41 +150,56 @@ DEAL ${i + 1}:
 - Deal Score: ${deal.dealScore}/100 (Grade ${deal.dealGrade})
 `).join('\n');
   
-  const prompt = `You are Coach Inayah's AI assistant, writing an urgent deal alert email for someone interested in Airbnb arbitrage in ${contact.city}, ${contact.state}.
+  // Calculate the best deal's profit for context
+  const topDeal = deals[0];
+  const profitDisplay = topDeal.monthlyProfit > 0 ? `$${topDeal.monthlyProfit.toLocaleString()}/mo profit` : `$${topDeal.projectedMonthlyRevenue.toLocaleString()}/mo revenue`;
+  
+  const prompt = `You are writing a personalized deal alert email from Coach Inayah's team to someone interested in Airbnb rental arbitrage.
 
-RECIPIENT INFO:
-- Name: ${contact.firstName} ${contact.lastName}
+IMPORTANT CONTEXT:
+- Coach Inayah helps people start Airbnb businesses through rental arbitrage (renting a property and listing it on Airbnb for profit)
+- The Turnkey Program is our done-for-you service where we handle EVERYTHING: finding properties, negotiating with landlords, setting up and designing the property, furnishing it, creating the Airbnb listing, and automating operations
+- This email is meant to excite them about a real opportunity we found in their target market
+
+RECIPIENT:
+- First Name: ${contact.firstName}
 - Target Market: ${contact.city}, ${contact.state}
 
-HOT DEALS FOUND IN ${contact.city.toUpperCase()}:
+THE OPPORTUNITY:
 ${dealsText}
 
-${marketSnapshot ? `MARKET CONTEXT:
-- Market Health: ${marketSnapshot.insights.marketHealth.toUpperCase()}
+${marketSnapshot ? `MARKET DATA:
+- Market Health: ${marketSnapshot.insights.marketHealth}
 - Average Occupancy: ${Math.round(marketSnapshot.metrics.occupancyRate * 100)}%
+- Average Daily Rate: $${marketSnapshot.metrics.averageDailyRate}
 ` : ''}
 
-TOOL URL: ${toolUrl}
+WRITING GUIDELINES:
+1. Start with a warm, personal greeting using their first name
+2. Share the excitement naturally - you just found something good and want to share it
+3. Focus on the PROFIT potential, not just revenue (rent vs. projected income = profit)
+4. Mention specific numbers that matter: monthly profit, rent amount, occupancy rate
+5. Explain briefly why this property caught your attention (location, numbers, market conditions)
+6. Create gentle urgency - good deals get taken quickly, but don't be pushy or salesy
+7. Mention that the Turnkey Program handles everything: finding deals, landlord negotiation, property setup, design, furnishing, listing creation, and automation
+8. End with a clear next step (view the full analysis or book a call)
 
-Write an exciting, urgent deal alert email that:
-1. Creates excitement about the opportunity (without being spammy)
-2. Highlights the best deal(s) with key numbers
-3. Explains why this is a good opportunity
-4. Includes urgency (deals don't last long)
-5. CTAs to analyze the deal in detail using the free tool
-6. Signs off as "Coach Inayah's Team"
+TONE:
+- Conversational and warm, like a knowledgeable friend sharing an opportunity
+- Confident but not arrogant
+- Helpful and educational, not salesy
+- Use "I" and "we" naturally ("I found this property..." "My team can help...")
 
-TONE: Excited but professional - like a friend who just found a great investment opportunity.
-LENGTH: Keep it punchy - 100-150 words max for main content.
+LENGTH: 120-180 words for main content. Quality over brevity.
 
-Output as JSON with these fields:
+Output as JSON:
 {
-  "subject": "Email subject line (urgent, compelling)",
-  "preheader": "Preview text (50 chars max)",
-  "greeting": "Personalized greeting",
-  "mainContent": "The main email body (use \\n for line breaks)",
-  "callToAction": "CTA text and link",
-  "footer": "Sign-off"
+  "subject": "Email subject line - include the profit potential or key number, make it specific to their city",
+  "preheader": "Preview text that creates curiosity (50 chars max)",
+  "greeting": "Warm personalized greeting with their name",
+  "mainContent": "The main email body. Use \\n\\n for paragraph breaks. Be conversational and specific about the numbers.",
+  "callToAction": "Clear next step with the tool URL",
+  "footer": "Warm sign-off from Coach Inayah's Team"
 }`;
 
   try {

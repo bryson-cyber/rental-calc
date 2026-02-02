@@ -287,6 +287,7 @@ export async function runDealAlertJob(params?: {
                 occupancyRate: topDeal?.projectedOccupancy || 0,
                 averageDailyRate: topDeal?.projectedAdr || 0,
                 dealScore: topDeal?.dealScore || 0,
+                monthlyRent: topDeal?.monthlyRent || 0, // Include rent for profit calculation
                 propertyUrl: topDeal?.sourceUrl
               }
             });
