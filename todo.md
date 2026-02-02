@@ -9378,3 +9378,50 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Job history and send statistics
 - [x] City-based contact counts
 - [x] Test email functionality
+
+
+## Newsletter Enhancements (Feb 2, 2026)
+
+### SMS Alerts for Hot Deals:
+- [ ] Create SimpleTexting integration service
+- [ ] Add SMS sending for deals with score 80+
+- [ ] Integrate SMS alerts into deal alert job
+- [ ] Add phone number retrieval from HubSpot contacts
+
+### Deal Caching with HasData API:
+- [ ] Create HasData Zillow scraping service
+- [ ] Build daily deal caching job
+- [ ] Store deals in newsletter_deals table
+- [ ] Filter and rank deals by profitability
+
+### Engagement Tracking:
+- [ ] Pull engagement data from HubSpot contact fields
+- [ ] Track email opens/clicks
+- [ ] Segment contacts by engagement level
+- [ ] Adjust email frequency based on engagement
+
+### Email Preview:
+- [ ] Generate preview of weekly market email
+- [ ] Generate preview of deal alert email
+- [ ] Generate preview of monthly report email
+
+
+## Email Template Redesign (Feb 2, 2026)
+- [ ] Apply Coach Inayah brand design system (navy + gold, Playfair + DM Sans)
+- [ ] Remove all AirDNA mentions - data appears proprietary
+- [ ] Update CTA: Primary → VSL, Secondary → Turnkey Tool
+- [ ] Change website link from coachinayah.com to coachinayahturnkeytool.com
+- [ ] Improve copy: Frame as "opportunity came across our dashboard"
+- [ ] Better narration with data interpretation
+- [ ] Fix spacing and visual polish
+- [ ] Add SMS alerts for hot deals (SimpleTexting)
+- [ ] Build HasData Zillow deal caching
+- [ ] Add engagement tracking from HubSpot
+
+
+## Email & Newsletter Enhancements v2 (Feb 2, 2026)
+- [ ] Update email font to cleaner sans-serif (remove Playfair Display)
+- [ ] Add Zillow property link so users can see pictures
+- [ ] Build SMS alerts using SimpleTexting API
+- [ ] Build HasData Zillow deal caching system
+- [ ] Add engagement tracking from HubSpot contact fields

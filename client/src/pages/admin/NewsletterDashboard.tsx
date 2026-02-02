@@ -135,7 +135,7 @@ export default function NewsletterDashboard() {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalSent || 0}</div>
+            <div className="text-2xl font-bold">{stats?.total || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats?.successful || 0} successful, {stats?.failed || 0} failed
             </p>
@@ -149,7 +149,7 @@ export default function NewsletterDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.totalSent ? Math.round((stats.successful / stats.totalSent) * 100) : 0}%
+              {stats?.total ? Math.round((stats.successful / stats.total) * 100) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">
               Email delivery rate
@@ -261,28 +261,7 @@ export default function NewsletterDashboard() {
               </CardContent>
             </Card>
           </div>
-          
-          {/* Sends by City */}
-          {stats?.byCity && stats.byCity.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Cities (30 days)</CardTitle>
-                <CardDescription>
-                  Cities with most newsletter sends
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-                  {stats.byCity.slice(0, 8).map((city, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                      <span className="text-sm font-medium">{city.city}, {city.state}</span>
-                      <Badge variant="outline">{city.count}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
         </TabsContent>
         
         {/* Cities Tab */}

@@ -23,7 +23,8 @@ import {
   sendWeeklyMarketEmail,
   sendDealAlertEmail,
   sendMonthlyReportEmail,
-  logNewsletterSend, 
+  isSubscribed,
+  logNewsletterSend,
   isContactUnsubscribed,
   type SendEmailResult 
 } from './newsletter-email-sender';

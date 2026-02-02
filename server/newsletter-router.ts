@@ -35,10 +35,7 @@ export const newsletterRouter = router({
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const stats = await getSendStats({
-      startDate: thirtyDaysAgo,
-      endDate: new Date()
-    });
+    const stats = await getSendStats('month');
     
     // Get unique cities count
     let citiesCount = 0;

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New opportunity in Atlanta – $4,200/mo potential</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; 
+      line-height: 1.7; 
+      color: #0F172A; 
+      margin: 0; 
+      padding: 0; 
+      background-color: #F8F9FA; 
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background: #FFFFFF; 
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .header { 
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); 
+      padding: 48px 40px; 
+      text-align: center; 
+    }
+    .header h1 { 
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #C9A962; 
+      margin: 0; 
+      font-size: 28px; 
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .header p { 
+      color: #FFFFFF; 
+      opacity: 0.85; 
+      margin: 12px 0 0; 
+      font-size: 15px;
+      font-weight: 400;
+    }
+    .content { 
+      padding: 40px; 
+    }
+    .greeting { 
+      font-size: 18px; 
+      margin-bottom: 24px; 
+      color: #0F172A;
+      font-weight: 500;
+    }
+    .narrative {
+      font-size: 16px;
+      line-height: 1.8;
+      color: #0F172A;
+      margin-bottom: 24px;
+    }
+    .property-card { 
+      background: #FAFAF8; 
+      border-radius: 16px; 
+      padding: 28px; 
+      margin: 28px 0; 
+      border: 1px solid rgba(201, 169, 98, 0.2);
+    }
+    .property-card h2 { 
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0F172A; 
+      margin: 0 0 8px; 
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .property-card .address {
+      color: #64748B;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .property-link {
+      margin: 12px 0 20px;
+      font-size: 14px;
+    }
+    .property-link a {
+      color: #C9A962;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .property-link a:hover {
+      text-decoration: underline;
+    }
+    .opportunity-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #C9A962 0%, #D4B978 100%);
+      color: #0F172A;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .stat-grid { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 12px; 
+      margin-top: 20px;
+    }
+    .stat-item { 
+      flex: 1; 
+      min-width: 110px; 
+      text-align: center; 
+      padding: 16px 12px; 
+      background: #FFFFFF; 
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .stat-value { 
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 24px; 
+      font-weight: 700; 
+      color: #0F172A; 
+      letter-spacing: -0.02em;
+    }
+    .stat-value.highlight {
+      color: #C9A962;
+    }
+    .stat-label { 
+      font-size: 11px; 
+      color: #64748B; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .insight-box {
+      background: linear-gradient(135deg, rgba(201, 169, 98, 0.08) 0%, rgba(201, 169, 98, 0.04) 100%);
+      border-left: 3px solid #C9A962;
+      padding: 20px 24px;
+      border-radius: 0 12px 12px 0;
+      margin: 24px 0;
+    }
+    .insight-box p {
+      margin: 0;
+      font-size: 15px;
+      color: #0F172A;
+      line-height: 1.7;
+    }
+    .insight-box strong {
+      color: #0F172A;
+    }
+    .cta-section {
+      text-align: center;
+      margin: 36px 0 24px;
+    }
+    .cta-button { 
+      display: inline-block; 
+      background: linear-gradient(135deg, #C9A962 0%, #D4B978 100%);
+      color: #0F172A; 
+      padding: 16px 36px; 
+      border-radius: 50px; 
+      text-decoration: none; 
+      font-weight: 600; 
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 16px rgba(201, 169, 98, 0.3);
+      transition: all 0.3s ease;
+    }
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(201, 169, 98, 0.4);
+    }
+    .secondary-link {
+      display: block;
+      margin-top: 16px;
+      color: #64748B;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .secondary-link a {
+      color: #C9A962;
+      text-decoration: underline;
+    }
+    .footer { 
+      background: #0F172A; 
+      padding: 32px 40px; 
+      text-align: center; 
+    }
+    .footer-logo {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #C9A962;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .footer p { 
+      color: rgba(255,255,255,0.7); 
+      font-size: 13px; 
+      margin: 8px 0;
+    }
+    .footer a { 
+      color: #C9A962; 
+      text-decoration: none; 
+    }
+    .footer-links {
+      margin: 16px 0;
+    }
+    .footer-links a {
+      margin: 0 12px;
+      font-size: 13px;
+    }
+    .unsubscribe { 
+      margin-top: 20px; 
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 11px; 
+      color: rgba(255,255,255,0.5); 
+    }
+    .unsubscribe a {
+      color: rgba(255,255,255,0.5);
+    }
+    @media (max-width: 600px) {
+      .content { padding: 28px 24px; }
+      .header { padding: 36px 24px; }
+      .header h1 { font-size: 24px; }
+      .stat-grid { flex-direction: column; }
+      .stat-item { min-width: 100%; }
+      .property-card { padding: 20px; }
+      .footer { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 20px 16px;">
+    <div class="container">
+      <div class="header">
+        <h1>New Opportunity Found</h1>
+        <p>Atlanta, GA Market Update</p>
+      </div>
+      <div class="content">
+        <div class="greeting">
+          Hi Sarah,
+        </div>
+        
+        <p class="narrative">
+          This property came across our dashboard this morning, and I wanted to share it with you because it fits the profile of what we look for in Atlanta. The numbers are strong – we're seeing potential for $4,200/month based on how similar properties are performing in the area.
+        </p>
+        
+        <div class="property-card">
+          <span class="opportunity-badge">New Opportunity</span>
+          <h2>📍 1847 Peachtree St NE, Atlanta, GA 30309</h2>
+          <p class="address">3 bedroom · 2 bath · Atlanta, GA</p>
+          <p class="property-link">
+            <a href="https://coachinayahturnkeytool.com?step=2&city=Atlanta&state=GA">📸 View Property Photos & Listings →</a>
+          </p>
+          
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-value highlight">$4,200</div>
+              <div class="stat-label">Est. Monthly Revenue</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">72%</div>
+              <div class="stat-label">Market Occupancy</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">$195</div>
+              <div class="stat-label">Avg Nightly Rate</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="insight-box">
+          <p><strong>Why we flagged this:</strong> Properties like this in Atlanta are averaging 72% occupancy, which means consistent bookings throughout the year.</p>
+        </div>
+        
+        <p class="narrative">
+          If you're interested in exploring this opportunity, my team can help you run the full numbers, reach out to the landlord, and negotiate terms. That's exactly what we do in the Turnkey Program.
+        </p>
+        
+        <div class="cta-section">
+          <a href="https://masterclass.coachinayah.com/the-turnkey-program" class="cta-button">Book a Strategy Call</a>
+          <p class="secondary-link">
+            Or <a href="https://coachinayahturnkeytool.com?step=5&address=1847%20Peachtree%20St%20NE%2C%20Atlanta%2C%20GA%2030309&bedrooms=3&bathrooms=2&autoAnalyze=true">view full property analysis</a>
+          </p>
+        </div>
+        
+      </div>
+      <div class="footer">
+        <div class="footer-logo">Coach Inayah</div>
+        <p>Helping you build wealth through short-term rentals</p>
+        <div class="footer-links">
+          <a href="https://coachinayahturnkeytool.com">Analyze Properties</a>
+          <a href="https://masterclass.coachinayah.com/the-turnkey-program">Apply for Turnkey Program</a>
+        </div>
+        <div class="unsubscribe">
+          <a href="#">Unsubscribe</a> · 
+          <a href="#">Manage Preferences</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

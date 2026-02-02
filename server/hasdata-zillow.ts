@@ -275,3 +275,314 @@ export async function getMultipleZillowProperties(
   
   return { results, totalCreditsUsed };
 }
+
+
+// ============================================
+// NEWSLETTER DEAL CACHING FUNCTIONS
+// ============================================
+
+import { getDb } from './db';
+import { newsletterDeals } from '../drizzle/schema';
+import { eq, and, gte, sql } from 'drizzle-orm';
+
+export interface ZillowListing {
+  zpid: string;
+  address: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  livingArea: number;
+  homeType: string;
+  latitude: number;
+  longitude: number;
+  imgSrc: string;
+  detailUrl: string;
+  statusText: string;
+  daysOnZillow: number;
+}
+
+export interface ZillowListingResponse {
+  success: boolean;
+  listings: ZillowListing[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+}
+
+/**
+ * Search Zillow for rental listings in a city
+ * Uses the HasData Zillow Listing API
+ */
+export async function searchZillowRentals(params: {
+  city: string;
+  state: string;
+  minBeds?: number;
+  maxBeds?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  page?: number;
+}): Promise<ZillowListingResponse> {
+  const apiKey = ENV.hasdataApiKey;
+  
+  if (!apiKey) {
+    console.warn('[HasData] API key not configured');
+    return { success: false, listings: [], totalCount: 0, currentPage: 1, totalPages: 0 };
+  }
+
+  const searchParams = new URLSearchParams({
+    keyword: `${params.city}, ${params.state}`,
+    type: 'forRent',
+  });
+
+  if (params.minBeds) searchParams.append('beds[min]', params.minBeds.toString());
+  if (params.maxBeds) searchParams.append('beds[max]', params.maxBeds.toString());
+  if (params.minPrice) searchParams.append('price[min]', params.minPrice.toString());
+  if (params.maxPrice) searchParams.append('price[max]', params.maxPrice.toString());
+  if (params.page) searchParams.append('page', params.page.toString());
+
+  try {
+    console.log(`[HasData] Searching rentals in ${params.city}, ${params.state}...`);
+    
+    const response = await fetch(`https://api.hasdata.com/scrape/zillow/listing?${searchParams}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[HasData] Listing API error:', response.status, await response.text());
+      return { success: false, listings: [], totalCount: 0, currentPage: 1, totalPages: 0 };
+    }
+
+    const data = await response.json();
+    
+    // Transform the response to our format
+    const listings: ZillowListing[] = (data.listings || data.results || []).map((item: any) => ({
+      zpid: item.zpid || item.id || '',
+      address: item.address || `${item.streetAddress || ''}, ${item.city || ''}, ${item.state || ''} ${item.zipcode || ''}`,
+      streetAddress: item.streetAddress || item.address?.streetAddress || '',
+      city: item.city || item.address?.city || params.city,
+      state: item.state || item.address?.state || params.state,
+      zipcode: item.zipcode || item.address?.zipcode || '',
+      price: item.price || item.unformattedPrice || 0,
+      bedrooms: item.bedrooms || item.beds || 0,
+      bathrooms: item.bathrooms || item.baths || 0,
+      livingArea: item.livingArea || item.area || 0,
+      homeType: item.homeType || item.propertyType || '',
+      latitude: item.latitude || item.latLong?.latitude || 0,
+      longitude: item.longitude || item.latLong?.longitude || 0,
+      imgSrc: item.imgSrc || item.image || '',
+      detailUrl: item.detailUrl || item.url || `https://www.zillow.com/homedetails/${item.zpid}_zpid/`,
+      statusText: item.statusText || item.status || '',
+      daysOnZillow: item.daysOnZillow || 0,
+    }));
+
+    console.log(`[HasData] Found ${listings.length} listings`);
+
+    return {
+      success: true,
+      listings,
+      totalCount: data.totalCount || data.total || listings.length,
+      currentPage: data.currentPage || params.page || 1,
+      totalPages: data.totalPages || Math.ceil((data.totalCount || listings.length) / 40),
+    };
+  } catch (error) {
+    console.error('[HasData] Listing request failed:', error);
+    return { success: false, listings: [], totalCount: 0, currentPage: 1, totalPages: 0 };
+  }
+}
+
+/**
+ * Cache a deal in the database for newsletter alerts
+ */
+export async function cacheDeal(deal: {
+  city: string;
+  state: string;
+  address: string;
+  zillowUrl: string;
+  zillowId: string;
+  bedrooms: number;
+  bathrooms: number;
+  monthlyRent: number;
+  estimatedRevenue: number;
+  dealScore: number;
+  imageUrl?: string;
+  propertyType?: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Check if deal already exists by sourceUrl
+  const existing = await db
+    .select()
+    .from(newsletterDeals)
+    .where(eq(newsletterDeals.sourceUrl, deal.zillowUrl))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing deal
+    await db
+      .update(newsletterDeals)
+      .set({
+        dealScore: deal.dealScore,
+        projectedRevenue: deal.estimatedRevenue,
+        monthlyRent: deal.monthlyRent,
+      })
+      .where(eq(newsletterDeals.sourceUrl, deal.zillowUrl));
+  } else {
+    // Insert new deal
+    await db.insert(newsletterDeals).values({
+      cityId: 0, // Will be updated when we have city tracking
+      city: deal.city,
+      state: deal.state,
+      address: deal.address,
+      sourceUrl: deal.zillowUrl,
+      sourcePlatform: 'zillow',
+      bedrooms: deal.bedrooms,
+      bathrooms: String(deal.bathrooms),
+      monthlyRent: deal.monthlyRent,
+      projectedRevenue: deal.estimatedRevenue,
+      dealScore: deal.dealScore,
+      imageUrl: deal.imageUrl,
+      propertyType: deal.propertyType,
+      status: 'active',
+    });
+  }
+}
+
+/**
+ * Get cached deals for a city (for newsletter alerts)
+ */
+export async function getCachedDeals(params: {
+  city: string;
+  state: string;
+  minScore?: number;
+  limit?: number;
+}): Promise<any[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  
+  const deals = await db
+    .select()
+    .from(newsletterDeals)
+    .where(
+      and(
+        eq(newsletterDeals.city, params.city),
+        eq(newsletterDeals.state, params.state),
+        eq(newsletterDeals.status, 'active'),
+        gte(newsletterDeals.discoveredAt, oneDayAgo),
+        params.minScore ? gte(newsletterDeals.dealScore, params.minScore) : undefined
+      )
+    )
+    .orderBy(sql`${newsletterDeals.dealScore} DESC`)
+    .limit(params.limit || 10);
+
+  return deals;
+}
+
+/**
+ * Mark a deal as sent (so we don't send it again)
+ */
+export async function markDealAsSent(zillowId: string): Promise<void> {
+  const db = await getDb();
+  
+  if (!db) return;
+  
+  await db
+    .update(newsletterDeals)
+    .set({
+      status: 'sent',
+      sentAt: new Date(),
+    })
+    .where(eq(newsletterDeals.sourceUrl, `https://www.zillow.com/homedetails/${zillowId}_zpid/`));
+}
+
+/**
+ * Scan a city for rental deals and cache them
+ * This is the main function called by the daily deal scan job
+ */
+export async function scanCityForDeals(params: {
+  city: string;
+  state: string;
+  getRevenueEstimate: (address: string, bedrooms: number, bathrooms: number) => Promise<{ monthlyRevenue: number } | null>;
+}): Promise<{ scanned: number; cached: number; errors: number }> {
+  console.log(`[HasData] Scanning ${params.city}, ${params.state} for deals...`);
+  
+  const stats = { scanned: 0, cached: 0, errors: 0 };
+  
+  // Search for rentals in the city
+  const searchResult = await searchZillowRentals({
+    city: params.city,
+    state: params.state,
+    minBeds: 1,
+    maxBeds: 5,
+  });
+
+  if (!searchResult.success || searchResult.listings.length === 0) {
+    console.log(`[HasData] No listings found for ${params.city}, ${params.state}`);
+    return stats;
+  }
+
+  console.log(`[HasData] Processing ${searchResult.listings.length} listings...`);
+
+  // Process each listing
+  for (const listing of searchResult.listings) {
+    stats.scanned++;
+    
+    try {
+      // Get revenue estimate from AirDNA
+      const estimate = await params.getRevenueEstimate(
+        listing.address,
+        listing.bedrooms,
+        listing.bathrooms
+      );
+
+      if (!estimate) {
+        stats.errors++;
+        continue;
+      }
+
+      // Calculate deal score
+      const monthlyRent = listing.price;
+      const monthlyRevenue = estimate.monthlyRevenue;
+      const profitMargin = monthlyRent > 0 ? (monthlyRevenue - monthlyRent) / monthlyRent : 0;
+      
+      // Deal score: 0-100 based on profit margin
+      // 50% margin = 100 score, 0% margin = 50 score, negative = below 50
+      const dealScore = Math.min(100, Math.max(0, 50 + (profitMargin * 100)));
+
+      // Only cache deals with score >= 60 (at least 10% profit margin)
+      if (dealScore >= 60) {
+        await cacheDeal({
+          city: listing.city,
+          state: listing.state,
+          address: listing.address,
+          zillowUrl: listing.detailUrl,
+          zillowId: listing.zpid,
+          bedrooms: listing.bedrooms,
+          bathrooms: listing.bathrooms,
+          monthlyRent,
+          estimatedRevenue: monthlyRevenue,
+          dealScore: Math.round(dealScore),
+          imageUrl: listing.imgSrc,
+          propertyType: listing.homeType,
+        });
+        stats.cached++;
+        console.log(`[HasData] Cached deal: ${listing.address} (score: ${Math.round(dealScore)})`);
+      }
+    } catch (error) {
+      console.error(`[HasData] Error processing listing ${listing.zpid}:`, error);
+      stats.errors++;
+    }
+  }
+
+  console.log(`[HasData] Scan complete: ${stats.scanned} scanned, ${stats.cached} cached, ${stats.errors} errors`);
+  return stats;
+}
