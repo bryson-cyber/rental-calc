@@ -9260,3 +9260,74 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
 
+
+
+## Deal Flow Machine - Autonomous Newsletter System (Feb 2, 2026) - COMPLETE
+
+### HubSpot Integration:
+- [x] Create HubSpot integration service (server/hubspot.ts)
+- [x] getUniqueCities() - retrieves all unique cities from contacts
+- [x] getContactsByCity() - retrieves contacts by Data Perfection city field
+- [x] Uses HubSpot CRM Search API with Data Perfection fields
+
+### Market Data Aggregation:
+- [x] Create newsletter-market-data.ts service
+- [x] getMarketSnapshotForCity() - gets ADR, occupancy, revenue, trends
+- [x] batchGetMarketSnapshots() - batch processing for multiple cities
+- [x] Caches market data to reduce API calls
+
+### Automated Deal Finder:
+- [x] Create newsletter-deal-finder.ts service
+- [x] findDealsForCity() - finds deals using Step 5 logic
+- [x] Calculates deal scores based on revenue potential
+- [x] Filters by minimum deal score threshold
+
+### Newsletter Content Generator:
+- [x] Create newsletter-content-generator.ts service
+- [x] generateWeeklyMarketContent() - AI-written market summaries
+- [x] generateDealAlertContent() - AI-written deal alerts
+- [x] Uses Gemini 2.0 Flash for personalized content
+
+### Email Sending:
+- [x] Create newsletter-email-sender.ts service
+- [x] sendWeeklyMarketEmail() - sends via HubSpot Single Send API
+- [x] sendDealAlertEmail() - sends deal alerts
+- [x] getSendStats() - retrieves send statistics
+- [x] unsubscribeContact() - handles unsubscribes
+
+### Scheduled Jobs:
+- [x] Create newsletter-orchestrator.ts service
+- [x] runWeeklyMarketNewsletterJob() - weekly market intelligence
+- [x] runDealAlertJob() - daily deal scanning
+- [x] sendTestNewsletter() - test email generation
+- [x] getJobHistory() - retrieves job run history
+
+### Database Tables:
+- [x] newsletter_cities - cached city market data
+- [x] newsletter_deals - discovered deals
+- [x] newsletter_sends - email send history
+- [x] newsletter_preferences - contact preferences
+- [x] newsletter_jobs - job run history
+
+### Admin Dashboard:
+- [x] Create NewsletterDashboard.tsx page (/admin/newsletter)
+- [x] Dashboard stats (emails sent, success rate, active cities)
+- [x] Cities tab with contact counts
+- [x] Job history tab with detailed logs
+- [x] Test & Preview tab for sending test emails
+- [x] Configuration tab showing API status
+
+### Newsletter Router:
+- [x] Create newsletter-router.ts with admin endpoints
+- [x] getDashboardStats - dashboard statistics
+- [x] getCities - cities with contact counts
+- [x] getMarketSnapshot - preview market data
+- [x] triggerWeeklyJob - manual job trigger
+- [x] triggerDealAlertJob - manual deal scan
+- [x] sendTestEmail - test email generation
+- [x] previewContent - preview newsletter content
+
+### Testing:
+- [x] 14 unit tests passing for newsletter system
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors

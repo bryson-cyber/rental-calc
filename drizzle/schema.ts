@@ -1454,3 +1454,197 @@ export const aiMessages = mysqlTable("ai_messages", {
 
 export type AIMessage = typeof aiMessages.$inferSelect;
 export type InsertAIMessage = typeof aiMessages.$inferInsert;
+
+
+/**
+ * Newsletter Cities table for tracking unique cities from HubSpot contacts
+ * Used to batch market data fetching and deal scanning
+ */
+export const newsletterCities = mysqlTable("newsletter_cities", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Location data (from HubSpot Data Perfection fields)
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  postalCode: varchar("postalCode", { length: 20 }),
+  
+  // AirDNA market mapping
+  airdnaMarketId: varchar("airdnaMarketId", { length: 64 }),
+  airdnaMarketName: varchar("airdnaMarketName", { length: 255 }),
+  
+  // Contact count in this city
+  contactCount: int("contactCount").default(0).notNull(),
+  
+  // Last sync timestamps
+  lastMarketDataSync: timestamp("lastMarketDataSync"),
+  lastDealScan: timestamp("lastDealScan"),
+  
+  // Cached market data (refreshed weekly)
+  cachedAdr: int("cachedAdr"),
+  cachedOccupancy: decimal("cachedOccupancy", { precision: 5, scale: 2 }),
+  cachedRevenue: int("cachedRevenue"),
+  cachedMarketScore: int("cachedMarketScore"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NewsletterCity = typeof newsletterCities.$inferSelect;
+export type InsertNewsletterCity = typeof newsletterCities.$inferInsert;
+
+/**
+ * Newsletter Deals table for storing discovered rental opportunities
+ * Populated by automated deal scanning using Step 5 logic
+ */
+export const newsletterDeals = mysqlTable("newsletter_deals", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Link to city
+  cityId: int("cityId").notNull(),
+  
+  // Property information
+  address: text("address").notNull(),
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  zipCode: varchar("zipCode", { length: 20 }),
+  
+  // Property details
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  monthlyRent: int("monthlyRent"),
+  propertyType: varchar("propertyType", { length: 100 }),
+  
+  // Source information
+  sourceUrl: text("sourceUrl"), // Zillow/Apartments.com link
+  sourcePlatform: varchar("sourcePlatform", { length: 50 }), // zillow, apartments, trulia
+  imageUrl: text("imageUrl"),
+  
+  // AirDNA projections
+  projectedRevenue: int("projectedRevenue"),
+  projectedAdr: int("projectedAdr"),
+  projectedOccupancy: decimal("projectedOccupancy", { precision: 5, scale: 2 }),
+  projectedProfit: int("projectedProfit"),
+  
+  // Deal scoring
+  dealScore: int("dealScore"), // 1-100 score
+  profitMargin: decimal("profitMargin", { precision: 5, scale: 2 }),
+  
+  // Status
+  status: mysqlEnum("status", ["active", "sent", "expired", "removed"]).default("active").notNull(),
+  
+  // Timestamps
+  discoveredAt: timestamp("discoveredAt").defaultNow().notNull(),
+  sentAt: timestamp("sentAt"),
+  expiresAt: timestamp("expiresAt"),
+});
+
+export type NewsletterDeal = typeof newsletterDeals.$inferSelect;
+export type InsertNewsletterDeal = typeof newsletterDeals.$inferInsert;
+
+/**
+ * Newsletter Sends table for tracking all email sends
+ * Used for analytics and preventing duplicate sends
+ */
+export const newsletterSends = mysqlTable("newsletter_sends", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // HubSpot contact info
+  hubspotContactId: varchar("hubspotContactId", { length: 64 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  firstName: varchar("firstName", { length: 255 }),
+  lastName: varchar("lastName", { length: 255 }),
+  
+  // Location
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 100 }),
+  
+  // Email type
+  emailType: mysqlEnum("emailType", ["weekly_market", "deal_alert", "monthly_report"]).notNull(),
+  
+  // Content reference
+  dealId: int("dealId"), // If deal alert, link to the deal
+  cityId: int("cityId"), // Link to the city
+  
+  // HubSpot send details
+  hubspotEmailId: varchar("hubspotEmailId", { length: 64 }),
+  hubspotSendId: varchar("hubspotSendId", { length: 128 }),
+  
+  // Status
+  status: mysqlEnum("status", ["queued", "sent", "delivered", "opened", "clicked", "bounced", "failed"]).default("queued").notNull(),
+  errorMessage: text("errorMessage"),
+  
+  // Engagement tracking
+  openedAt: timestamp("openedAt"),
+  clickedAt: timestamp("clickedAt"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  sentAt: timestamp("sentAt"),
+});
+
+export type NewsletterSend = typeof newsletterSends.$inferSelect;
+export type InsertNewsletterSend = typeof newsletterSends.$inferInsert;
+
+/**
+ * Newsletter Preferences table for managing unsubscribes and preferences
+ */
+export const newsletterPreferences = mysqlTable("newsletter_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // HubSpot contact info
+  hubspotContactId: varchar("hubspotContactId", { length: 64 }).notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull(),
+  
+  // Preferences
+  weeklyMarketEnabled: int("weeklyMarketEnabled").default(1).notNull(), // 1 = enabled
+  dealAlertsEnabled: int("dealAlertsEnabled").default(1).notNull(),
+  monthlyReportEnabled: int("monthlyReportEnabled").default(1).notNull(),
+  smsAlertsEnabled: int("smsAlertsEnabled").default(0).notNull(),
+  
+  // Frequency preferences
+  dealAlertFrequency: mysqlEnum("dealAlertFrequency", ["instant", "daily", "weekly"]).default("daily").notNull(),
+  
+  // Unsubscribe tracking
+  unsubscribedAt: timestamp("unsubscribedAt"),
+  unsubscribeReason: text("unsubscribeReason"),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NewsletterPreference = typeof newsletterPreferences.$inferSelect;
+export type InsertNewsletterPreference = typeof newsletterPreferences.$inferInsert;
+
+/**
+ * Newsletter Jobs table for tracking scheduled job runs
+ * Provides audit trail and debugging for automation
+ */
+export const newsletterJobs = mysqlTable("newsletter_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Job type
+  jobType: mysqlEnum("jobType", ["sync_contacts", "scan_deals", "send_weekly", "send_deals"]).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["running", "completed", "failed"]).default("running").notNull(),
+  
+  // Metrics
+  citiesProcessed: int("citiesProcessed").default(0),
+  contactsProcessed: int("contactsProcessed").default(0),
+  dealsFound: int("dealsFound").default(0),
+  emailsSent: int("emailsSent").default(0),
+  
+  // Error tracking
+  errorCount: int("errorCount").default(0),
+  errors: json("errors"), // Array of error messages
+  
+  // Timing
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  durationMs: int("durationMs"),
+});
+
+export type NewsletterJob = typeof newsletterJobs.$inferSelect;
+export type InsertNewsletterJob = typeof newsletterJobs.$inferInsert;

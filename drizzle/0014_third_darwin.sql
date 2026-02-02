@@ -1,0 +1,100 @@
+CREATE TABLE `newsletter_cities` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`city` varchar(255) NOT NULL,
+	`state` varchar(100) NOT NULL,
+	`postalCode` varchar(20),
+	`airdnaMarketId` varchar(64),
+	`airdnaMarketName` varchar(255),
+	`contactCount` int NOT NULL DEFAULT 0,
+	`lastMarketDataSync` timestamp,
+	`lastDealScan` timestamp,
+	`cachedAdr` int,
+	`cachedOccupancy` decimal(5,2),
+	`cachedRevenue` int,
+	`cachedMarketScore` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `newsletter_cities_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `newsletter_deals` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`cityId` int NOT NULL,
+	`address` text NOT NULL,
+	`city` varchar(255) NOT NULL,
+	`state` varchar(100) NOT NULL,
+	`zipCode` varchar(20),
+	`bedrooms` int,
+	`bathrooms` decimal(3,1),
+	`monthlyRent` int,
+	`propertyType` varchar(100),
+	`sourceUrl` text,
+	`sourcePlatform` varchar(50),
+	`imageUrl` text,
+	`projectedRevenue` int,
+	`projectedAdr` int,
+	`projectedOccupancy` decimal(5,2),
+	`projectedProfit` int,
+	`dealScore` int,
+	`profitMargin` decimal(5,2),
+	`status` enum('active','sent','expired','removed') NOT NULL DEFAULT 'active',
+	`discoveredAt` timestamp NOT NULL DEFAULT (now()),
+	`sentAt` timestamp,
+	`expiresAt` timestamp,
+	CONSTRAINT `newsletter_deals_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `newsletter_jobs` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`jobType` enum('sync_contacts','scan_deals','send_weekly','send_deals') NOT NULL,
+	`status` enum('running','completed','failed') NOT NULL DEFAULT 'running',
+	`citiesProcessed` int DEFAULT 0,
+	`contactsProcessed` int DEFAULT 0,
+	`dealsFound` int DEFAULT 0,
+	`emailsSent` int DEFAULT 0,
+	`errorCount` int DEFAULT 0,
+	`errors` json,
+	`startedAt` timestamp NOT NULL DEFAULT (now()),
+	`completedAt` timestamp,
+	`durationMs` int,
+	CONSTRAINT `newsletter_jobs_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `newsletter_preferences` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`hubspotContactId` varchar(64) NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`weeklyMarketEnabled` int NOT NULL DEFAULT 1,
+	`dealAlertsEnabled` int NOT NULL DEFAULT 1,
+	`monthlyReportEnabled` int NOT NULL DEFAULT 1,
+	`smsAlertsEnabled` int NOT NULL DEFAULT 0,
+	`dealAlertFrequency` enum('instant','daily','weekly') NOT NULL DEFAULT 'daily',
+	`unsubscribedAt` timestamp,
+	`unsubscribeReason` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `newsletter_preferences_id` PRIMARY KEY(`id`),
+	CONSTRAINT `newsletter_preferences_hubspotContactId_unique` UNIQUE(`hubspotContactId`)
+);
+--> statement-breakpoint
+CREATE TABLE `newsletter_sends` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`hubspotContactId` varchar(64) NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`firstName` varchar(255),
+	`lastName` varchar(255),
+	`city` varchar(255),
+	`state` varchar(100),
+	`emailType` enum('weekly_market','deal_alert','monthly_report') NOT NULL,
+	`dealId` int,
+	`cityId` int,
+	`hubspotEmailId` varchar(64),
+	`hubspotSendId` varchar(128),
+	`status` enum('queued','sent','delivered','opened','clicked','bounced','failed') NOT NULL DEFAULT 'queued',
+	`errorMessage` text,
+	`openedAt` timestamp,
+	`clickedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`sentAt` timestamp,
+	CONSTRAINT `newsletter_sends_id` PRIMARY KEY(`id`)
+);

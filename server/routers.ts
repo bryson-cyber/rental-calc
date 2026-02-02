@@ -53,6 +53,7 @@ import { marketResearchSimpleRouter } from "./market-research-simple";
 import { geocodeZipCodeToMarket } from "./airdna-hierarchy";
 import { getLocationQuality, type LocationQualityResult } from "./location-quality";
 import { adminRouter } from "./admin-router";
+import { newsletterRouter } from "./newsletter-router";
 import { logActivity, ActionCategory, ActionType } from "./activity";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
@@ -130,6 +131,7 @@ const smartSearchInputSchema = z.object({
 
 export const appRouter = router({
   system: systemRouter,
+  newsletter: newsletterRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

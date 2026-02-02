@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `newsletter_preferences` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `hubspotContactId` varchar(64) NOT NULL UNIQUE,\n  `email` varchar(320) NOT NULL,\n  `weeklyMarketEnabled` int NOT NULL DEFAULT 1,\n  `dealAlertsEnabled` int NOT NULL DEFAULT 1,\n  `monthlyReportEnabled` int NOT NULL DEFAULT 1,\n  `smsAlertsEnabled` int NOT NULL DEFAULT 0,\n  `dealAlertFrequency` enum('instant','daily','weekly') NOT NULL DEFAULT 'daily',\n  `unsubscribedAt` timestamp NULL,\n  `unsubscribeReason` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `newsletter_preferences_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE IF NOT EXISTS `newsletter_preferences` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `hubspotContactId` varchar(64) NOT NULL UNIQUE,\n  `email` varchar(320) NOT NULL,\n  `weeklyMarketEnabled` int NOT NULL DEFAULT 1,\n  `dealAlertsEnabled` int NOT NULL DEFAULT 1,\n  `monthlyReportEnabled` int NOT NULL DEFAULT 1,\n  `smsAlertsEnabled` int NOT NULL DEFAULT 0,\n  `dealAlertFrequency` enum('instant','daily','weekly') NOT NULL DEFAULT 'daily',\n  `unsubscribedAt` timestamp NULL,\n  `unsubscribeReason` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `newsletter_preferences_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 184
+}

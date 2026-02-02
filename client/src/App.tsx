@@ -34,6 +34,7 @@ import ShareableReport from "./pages/ShareableReport";
 import ShareableReportViewer from "./pages/ShareableReportViewer";
 import ShareRedirect from "./pages/ShareRedirect";
 import NotificationAnalytics from "./pages/NotificationAnalytics";
+import NewsletterDashboard from "./pages/admin/NewsletterDashboard";
 
 function Router() {
   return (
@@ -105,6 +106,7 @@ function Router() {
       <Route path={"/admin/reports"} component={AdminReports} />
       <Route path={"/admin/hubspot"} component={AdminPortal} />
       <Route path={"/admin/notifications"} component={NotificationAnalytics} />
+      <Route path={"/admin/newsletter"} component={NewsletterDashboard} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

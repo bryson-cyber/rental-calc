@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `newsletter_cities` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `city` varchar(255) NOT NULL,\n  `state` varchar(100) NOT NULL,\n  `postalCode` varchar(20),\n  `airdnaMarketId` varchar(64),\n  `airdnaMarketName` varchar(255),\n  `contactCount` int NOT NULL DEFAULT 0,\n  `lastMarketDataSync` timestamp NULL,\n  `lastDealScan` timestamp NULL,\n  `cachedAdr` int,\n  `cachedOccupancy` decimal(5,2),\n  `cachedRevenue` int,\n  `cachedMarketScore` int,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `newsletter_cities_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE IF NOT EXISTS `newsletter_cities` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `city` varchar(255) NOT NULL,\n  `state` varchar(100) NOT NULL,\n  `postalCode` varchar(20),\n  `airdnaMarketId` varchar(64),\n  `airdnaMarketName` varchar(255),\n  `contactCount` int NOT NULL DEFAULT 0,\n  `lastMarketDataSync` timestamp NULL,\n  `lastDealScan` timestamp NULL,\n  `cachedAdr` int,\n  `cachedOccupancy` decimal(5,2),\n  `cachedRevenue` int,\n  `cachedMarketScore` int,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `newsletter_cities_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 269
+}

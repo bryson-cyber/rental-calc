@@ -366,3 +366,336 @@ export default {
   getContactProperties,
   createContactProperty,
 };
+
+
+// ============================================
+// NEWSLETTER AUTOMATION FUNCTIONS
+// Deal Flow Machine - HubSpot Integration
+// ============================================
+
+import axios from 'axios';
+
+// Data Perfection field names from HubSpot
+const DATA_PERFECTION_CITY = 'data_perfection__city';
+const DATA_PERFECTION_STATE = 'data_perfection__state';
+const DATA_PERFECTION_POSTAL_CODE = 'data_perfection__postal_code';
+const DATA_PERFECTION_PHONE = 'data_perfection__phones';
+
+interface NewsletterContact {
+  hubspotId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
+interface CityContactGroup {
+  city: string;
+  state: string;
+  postalCode: string;
+  contacts: NewsletterContact[];
+}
+
+interface HubSpotSearchResponse {
+  total: number;
+  results: Array<{
+    id: string;
+    properties: Record<string, string | undefined>;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  paging?: {
+    next?: {
+      after: string;
+    };
+  };
+}
+
+/**
+ * Get all contacts with city data from HubSpot
+ * Uses the CRM Search API to retrieve contacts with Data Perfection fields
+ */
+export async function getAllContactsWithCity(): Promise<NewsletterContact[]> {
+  if (!HUBSPOT_API_KEY) {
+    throw new Error('HUBSPOT_API_KEY is not configured');
+  }
+
+  const allContacts: NewsletterContact[] = [];
+  let after: string | undefined;
+  
+  do {
+    const response = await axios.post<HubSpotSearchResponse>(
+      `${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/search`,
+      {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: DATA_PERFECTION_CITY,
+                operator: 'HAS_PROPERTY'
+              }
+            ]
+          }
+        ],
+        properties: [
+          'email',
+          'firstname',
+          'lastname',
+          'phone',
+          DATA_PERFECTION_CITY,
+          DATA_PERFECTION_STATE,
+          DATA_PERFECTION_POSTAL_CODE,
+          DATA_PERFECTION_PHONE
+        ],
+        limit: 100,
+        after
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const contacts = response.data.results.map(contact => ({
+      hubspotId: contact.id,
+      email: contact.properties.email || '',
+      firstName: contact.properties.firstname || '',
+      lastName: contact.properties.lastname || '',
+      phone: contact.properties[DATA_PERFECTION_PHONE] || contact.properties.phone || '',
+      city: contact.properties[DATA_PERFECTION_CITY] || '',
+      state: contact.properties[DATA_PERFECTION_STATE] || '',
+      postalCode: contact.properties[DATA_PERFECTION_POSTAL_CODE] || ''
+    }));
+
+    allContacts.push(...contacts.filter(c => c.email && c.city));
+    after = response.data.paging?.next?.after;
+  } while (after);
+
+  return allContacts;
+}
+
+/**
+ * Get contacts for a specific city
+ */
+export async function getContactsByCity(city: string, state?: string): Promise<NewsletterContact[]> {
+  if (!HUBSPOT_API_KEY) {
+    throw new Error('HUBSPOT_API_KEY is not configured');
+  }
+
+  const filters: Array<{ propertyName: string; operator: string; value: string }> = [
+    {
+      propertyName: DATA_PERFECTION_CITY,
+      operator: 'EQ',
+      value: city.toUpperCase()
+    }
+  ];
+
+  if (state) {
+    filters.push({
+      propertyName: DATA_PERFECTION_STATE,
+      operator: 'EQ',
+      value: state.toUpperCase()
+    });
+  }
+
+  const allContacts: NewsletterContact[] = [];
+  let after: string | undefined;
+
+  do {
+    const response = await axios.post<HubSpotSearchResponse>(
+      `${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/search`,
+      {
+        filterGroups: [{ filters }],
+        properties: [
+          'email',
+          'firstname',
+          'lastname',
+          'phone',
+          DATA_PERFECTION_CITY,
+          DATA_PERFECTION_STATE,
+          DATA_PERFECTION_POSTAL_CODE,
+          DATA_PERFECTION_PHONE
+        ],
+        limit: 100,
+        after
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const contacts = response.data.results.map(contact => ({
+      hubspotId: contact.id,
+      email: contact.properties.email || '',
+      firstName: contact.properties.firstname || '',
+      lastName: contact.properties.lastname || '',
+      phone: contact.properties[DATA_PERFECTION_PHONE] || contact.properties.phone || '',
+      city: contact.properties[DATA_PERFECTION_CITY] || '',
+      state: contact.properties[DATA_PERFECTION_STATE] || '',
+      postalCode: contact.properties[DATA_PERFECTION_POSTAL_CODE] || ''
+    }));
+
+    allContacts.push(...contacts.filter(c => c.email));
+    after = response.data.paging?.next?.after;
+  } while (after);
+
+  return allContacts;
+}
+
+/**
+ * Group contacts by city
+ * Returns a map of city -> contacts for batch processing
+ */
+export async function getContactsGroupedByCity(): Promise<CityContactGroup[]> {
+  const allContacts = await getAllContactsWithCity();
+  
+  const cityMap = new Map<string, CityContactGroup>();
+  
+  for (const contact of allContacts) {
+    const key = `${contact.city.toUpperCase()}-${contact.state.toUpperCase()}`;
+    
+    if (!cityMap.has(key)) {
+      cityMap.set(key, {
+        city: contact.city.toUpperCase(),
+        state: contact.state.toUpperCase(),
+        postalCode: contact.postalCode,
+        contacts: []
+      });
+    }
+    
+    cityMap.get(key)!.contacts.push(contact);
+  }
+  
+  return Array.from(cityMap.values());
+}
+
+/**
+ * Get unique cities from all contacts
+ * Used to determine which markets to scan for deals
+ */
+export async function getUniqueCities(): Promise<Array<{ city: string; state: string; postalCode: string; contactCount: number }>> {
+  const groups = await getContactsGroupedByCity();
+  
+  return groups.map(g => ({
+    city: g.city,
+    state: g.state,
+    postalCode: g.postalCode,
+    contactCount: g.contacts.length
+  }));
+}
+
+/**
+ * Send a single email via HubSpot Single Send API
+ * Requires Marketing Hub Enterprise
+ */
+export async function sendMarketingEmail(params: {
+  emailId: number; // HubSpot email template ID
+  recipientEmail: string;
+  contactProperties?: Record<string, string>;
+  customProperties?: Record<string, string>;
+}): Promise<{ success: boolean; sendId?: string; error?: string }> {
+  if (!HUBSPOT_API_KEY) {
+    throw new Error('HUBSPOT_API_KEY is not configured');
+  }
+
+  try {
+    const sendId = `deal-flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    await axios.post(
+      `${HUBSPOT_BASE_URL}/marketing/v4/email/single-send`,
+      {
+        emailId: params.emailId,
+        message: {
+          to: params.recipientEmail,
+          sendId
+        },
+        contactProperties: params.contactProperties || {},
+        customProperties: params.customProperties || {}
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      sendId
+    };
+  } catch (error: any) {
+    console.error('HubSpot Single Send Error:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message
+    };
+  }
+}
+
+/**
+ * Send batch marketing emails to multiple recipients
+ * Handles rate limiting and retries
+ */
+export async function sendBatchMarketingEmails(params: {
+  emailId: number;
+  recipients: Array<{
+    email: string;
+    contactProperties?: Record<string, string>;
+    customProperties?: Record<string, string>;
+  }>;
+}): Promise<{
+  successful: number;
+  failed: number;
+  errors: Array<{ email: string; error: string }>;
+}> {
+  const results = {
+    successful: 0,
+    failed: 0,
+    errors: [] as Array<{ email: string; error: string }>
+  };
+
+  // Process in batches of 10 to respect rate limits
+  const batchSize = 10;
+  for (let i = 0; i < params.recipients.length; i += batchSize) {
+    const batch = params.recipients.slice(i, i + batchSize);
+    
+    const promises = batch.map(async (recipient) => {
+      const result = await sendMarketingEmail({
+        emailId: params.emailId,
+        recipientEmail: recipient.email,
+        contactProperties: recipient.contactProperties,
+        customProperties: recipient.customProperties
+      });
+
+      if (result.success) {
+        results.successful++;
+      } else {
+        results.failed++;
+        results.errors.push({
+          email: recipient.email,
+          error: result.error || 'Unknown error'
+        });
+      }
+    });
+
+    await Promise.all(promises);
+    
+    // Small delay between batches to respect rate limits
+    if (i + batchSize < params.recipients.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  return results;
+}
+
+export type { NewsletterContact, CityContactGroup };

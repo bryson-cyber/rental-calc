@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `newsletter_jobs` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `jobType` enum('sync_contacts','scan_deals','send_weekly','send_deals') NOT NULL,\n  `status` enum('running','completed','failed') NOT NULL DEFAULT 'running',\n  `citiesProcessed` int DEFAULT 0,\n  `contactsProcessed` int DEFAULT 0,\n  `dealsFound` int DEFAULT 0,\n  `emailsSent` int DEFAULT 0,\n  `errorCount` int DEFAULT 0,\n  `errors` json,\n  `startedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `completedAt` timestamp NULL,\n  `durationMs` int,\n  CONSTRAINT `newsletter_jobs_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE IF NOT EXISTS `newsletter_jobs` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `jobType` enum('sync_contacts','scan_deals','send_weekly','send_deals') NOT NULL,\n  `status` enum('running','completed','failed') NOT NULL DEFAULT 'running',\n  `citiesProcessed` int DEFAULT 0,\n  `contactsProcessed` int DEFAULT 0,\n  `dealsFound` int DEFAULT 0,\n  `emailsSent` int DEFAULT 0,\n  `errorCount` int DEFAULT 0,\n  `errors` json,\n  `startedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `completedAt` timestamp NULL,\n  `durationMs` int,\n  CONSTRAINT `newsletter_jobs_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 207
+}
