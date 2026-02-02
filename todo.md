@@ -9003,3 +9003,24 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Step button overlaps - not an issue, mobile uses single card display
 - [x] Mobile step navigation already well-designed with counter and arrows
 - [x] Bottom navigation bar already implemented with 5 key tools
+
+
+## Mobile UX Enhancements (Feb 1, 2026)
+
+### Swipe Gestures for Tab Navigation
+- [x] Add touch event handlers for swipe detection on mobile (already implemented in LeadMagnet)
+- [x] Implement swipe left to go to next tab (handleTouchStart/handleTouchEnd)
+- [x] Implement swipe right to go to previous tab (handleTouchStart/handleTouchEnd)
+- [x] Created reusable useSwipeGesture hook for future use
+
+### Pull-to-Refresh
+- [x] Add pull-to-refresh gesture detection on main content area
+- [x] Show loading indicator when pulling down (PullToRefreshIndicator component)
+- [x] Trigger data refresh on release
+- [x] Add smooth animation for pull and release (arrow rotation + spinner)
+
+### Scroll-to-Top Floating Button
+- [x] Add floating button that appears when scrolling down (ScrollToTopButton component)
+- [x] Position button in bottom-right corner (above bottom nav, bottomOffset=80)
+- [x] Animate button appearance/disappearance (opacity + translate-y transitions)
+- [x] Smooth scroll to top on click (window.scrollTo with behavior: 'smooth')

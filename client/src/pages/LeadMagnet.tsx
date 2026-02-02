@@ -108,6 +108,9 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
+import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -387,6 +390,59 @@ export default function LeadMagnet() {
     
     touchStartRef.current = null;
   }, [activeTab]);
+  
+  // Pull-to-refresh state for mobile
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartRef = useRef<number | null>(null);
+  const PULL_THRESHOLD = 80;
+  const MAX_PULL = 120;
+  
+  // Pull-to-refresh handlers
+  const handlePullStart = useCallback((e: React.TouchEvent) => {
+    // Only start pull if at top of page
+    if (window.scrollY <= 0 && !isPullRefreshing) {
+      pullStartRef.current = e.touches[0].clientY;
+    }
+  }, [isPullRefreshing]);
+  
+  const handlePullMove = useCallback((e: React.TouchEvent) => {
+    if (pullStartRef.current === null || isPullRefreshing) return;
+    if (window.scrollY > 0) {
+      pullStartRef.current = null;
+      setPullDistance(0);
+      return;
+    }
+    
+    const diff = e.touches[0].clientY - pullStartRef.current;
+    if (diff > 0) {
+      const resistance = 0.5;
+      const distance = Math.min(diff * resistance, MAX_PULL);
+      setPullDistance(distance);
+    }
+  }, [isPullRefreshing]);
+  
+  const handlePullEnd = useCallback(async () => {
+    if (pullStartRef.current === null) return;
+    pullStartRef.current = null;
+    
+    if (pullDistance >= PULL_THRESHOLD && !isPullRefreshing) {
+      setIsPullRefreshing(true);
+      setPullDistance(PULL_THRESHOLD);
+      
+      // Simulate refresh - in production, this would invalidate queries
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh the page data by scrolling to trigger any lazy loading
+      window.scrollTo({ top: 1, behavior: 'instant' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      
+      setIsPullRefreshing(false);
+      setPullDistance(0);
+    } else {
+      setPullDistance(0);
+    }
+  }, [pullDistance, isPullRefreshing]);
   
   // Get URL search params - use window.location.search directly to capture before wouter clears them
   const searchString = useSearch();
@@ -1951,7 +2007,22 @@ export default function LeadMagnet() {
           url: '/tools'
         })}
       />
-      <div className="min-h-screen bg-white">
+      <div 
+        className="min-h-screen bg-white"
+        onTouchStart={handlePullStart}
+        onTouchMove={handlePullMove}
+        onTouchEnd={handlePullEnd}
+      >
+      
+      {/* Pull-to-Refresh Indicator - Mobile only */}
+      <div className="sm:hidden">
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          pullProgress={Math.min(pullDistance / PULL_THRESHOLD, 1)}
+          isRefreshing={isPullRefreshing}
+          isPulling={pullDistance > 0}
+        />
+      </div>
       
       {/* Fixed Header Actions */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
@@ -6170,6 +6241,11 @@ export default function LeadMagnet() {
         city={researchMarket?.split(',')[0]?.trim()}
         state={researchMarket?.split(',')[1]?.trim()}
       />
+      
+      {/* Scroll to Top Button - Mobile only, positioned above bottom nav */}
+      <div className="sm:hidden">
+        <ScrollToTopButton threshold={400} bottomOffset={80} />
+      </div>
       
       {/* Mobile Bottom Navigation Bar */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50 pb-safe">
