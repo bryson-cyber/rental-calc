@@ -1398,3 +1398,59 @@ export const notificationAnalytics = mysqlTable("notification_analytics", {
 
 export type NotificationAnalytic = typeof notificationAnalytics.$inferSelect;
 export type InsertNotificationAnalytic = typeof notificationAnalytics.$inferInsert;
+
+
+/**
+ * AI Conversations table for storing chat conversation sessions
+ * Allows users to continue previous conversations with the AI assistant
+ */
+export const aiConversations = mysqlTable("ai_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference (optional - can be null for anonymous users)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }), // For anonymous users
+  
+  // Conversation metadata
+  title: varchar("title", { length: 255 }), // Auto-generated from first message
+  
+  // Context at time of conversation (what tool/data was being viewed)
+  contextTool: varchar("contextTool", { length: 64 }), // e.g., "revenue", "market", "validator"
+  contextAddress: text("contextAddress"),
+  contextMarket: varchar("contextMarket", { length: 255 }),
+  
+  // Message count for quick display
+  messageCount: int("messageCount").default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
+});
+
+export type AIConversation = typeof aiConversations.$inferSelect;
+export type InsertAIConversation = typeof aiConversations.$inferInsert;
+
+/**
+ * AI Messages table for storing individual chat messages
+ * Each message belongs to a conversation
+ */
+export const aiMessages = mysqlTable("ai_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Reference to conversation
+  conversationId: int("conversationId").notNull(),
+  
+  // Message content
+  role: mysqlEnum("role", ["user", "assistant", "system"]).notNull(),
+  content: text("content").notNull(),
+  
+  // For tracking streaming status
+  isComplete: int("isComplete").default(1).notNull(), // 1 = complete, 0 = still streaming
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AIMessage = typeof aiMessages.$inferSelect;
+export type InsertAIMessage = typeof aiMessages.$inferInsert;

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useStreamingChat } from '@/hooks/useStreamingChat';
 import { 
   MessageCircle, 
   Send, 
@@ -129,8 +130,14 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Get the AI chat mutation
+  // Get the AI chat mutation (fallback)
   const chatMutation = trpc.ai?.chat?.useMutation?.() || null;
+  
+  // Streaming chat hook
+  const { sendMessage: sendStreamingMessage, isStreaming, streamedContent, cancelStream } = useStreamingChat();
+  
+  // Track the streaming message ID
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
 
   // Check if we have live data
   const hasPropertyData = !!(pageContext?.propertyData?.address || pageContext?.propertyData?.projectedRevenue);
@@ -266,9 +273,20 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
     return parts.join('\n');
   }, [pageContext]);
 
-  // Handle sending a message
+  // Update streaming message content in real-time
+  useEffect(() => {
+    if (streamingMessageId && streamedContent) {
+      setMessages(prev => prev.map(m => 
+        m.id === streamingMessageId 
+          ? { ...m, content: streamedContent }
+          : m
+      ));
+    }
+  }, [streamedContent, streamingMessageId]);
+
+  // Handle sending a message with streaming
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isStreaming) return;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -277,7 +295,17 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Create placeholder for streaming response
+    const assistantMessageId = `assistant-${Date.now()}`;
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    setStreamingMessageId(assistantMessageId);
     setInput('');
     setIsLoading(true);
 
@@ -292,7 +320,7 @@ ${TOOL_DOCUMENTATION}
 ${FAQ_KNOWLEDGE}
 `;
 
-      // Build conversation history
+      // Build conversation history (excluding the new messages we just added)
       const conversationHistory = messages.map(m => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
@@ -310,53 +338,49 @@ IMPORTANT: You have access to LIVE DATA from the user's current analysis. When a
 5. If the user asks about their property or market, use the live data to give personalized answers`
         : AI_SYSTEM_PROMPT;
 
-      // Call the AI endpoint
-      if (chatMutation) {
-        const response = await chatMutation.mutateAsync({
-          messages: [
-            { role: 'system', content: enhancedSystemPrompt },
-            { role: 'system', content: `Knowledge Base:\n${knowledgeContext}` },
-            ...(contextString ? [{ role: 'system' as const, content: `Current Page Context:\n${contextString}` }] : []),
-            ...conversationHistory,
-            { role: 'user', content: input.trim() },
-          ],
-        });
+      // Build full message array for streaming
+      const fullMessages = [
+        { role: 'system' as const, content: enhancedSystemPrompt },
+        { role: 'system' as const, content: `Knowledge Base:\n${knowledgeContext}` },
+        ...(contextString ? [{ role: 'system' as const, content: `Current Page Context:\n${contextString}` }] : []),
+        ...conversationHistory,
+        { role: 'user' as const, content: input.trim() },
+      ];
 
-        const responseContent = typeof response.content === 'string' 
-          ? response.content 
-          : "I apologize, but I couldn't generate a response. Please try again.";
-        
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: responseContent,
-          timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        // Fallback response if AI endpoint not available
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: "I'm Coach Inayah's AI Assistant! I can help you understand the tools and analyze properties. However, the AI chat feature requires the backend to be configured. Please check with your administrator.",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      }
+      // Use streaming endpoint
+      await sendStreamingMessage(fullMessages, {
+        systemPrompt: enhancedSystemPrompt,
+        onComplete: (response) => {
+          // Final update with complete response
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, content: response }
+              : m
+          ));
+          setStreamingMessageId(null);
+        },
+        onError: (error) => {
+          console.error('Streaming error:', error);
+          setMessages(prev => prev.map(m => 
+            m.id === assistantMessageId 
+              ? { ...m, content: 'I apologize, but I encountered an error. Please try again.' }
+              : m
+          ));
+          setStreamingMessageId(null);
+        },
+      });
     } catch (error) {
       console.error('AI chat error:', error);
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: "I apologize, but I encountered an error. Please try again or rephrase your question.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => prev.map(m => 
+        m.id === assistantMessageId 
+          ? { ...m, content: 'I apologize, but I encountered an error. Please try again or rephrase your question.' }
+          : m
+      ));
+      setStreamingMessageId(null);
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, buildContextString, chatMutation, hasLiveData]);
+  }, [input, isLoading, isStreaming, messages, buildContextString, sendStreamingMessage, hasLiveData]);
 
   // Handle suggested question click
   const handleSuggestedQuestion = (question: string) => {

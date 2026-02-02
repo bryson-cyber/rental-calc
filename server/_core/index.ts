@@ -420,6 +420,97 @@ async function startServer() {
     }
   });
   
+  // SSE endpoint for streaming AI chat responses
+  app.post('/api/ai/stream', async (req, res) => {
+    const { messages, systemPrompt, conversationId } = req.body;
+    
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+    
+    console.log(`[AI Stream] Starting stream with ${messages.length} messages`);
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    
+    let isClientConnected = true;
+    
+    // Track client disconnect
+    req.on('close', () => {
+      isClientConnected = false;
+    });
+    
+    try {
+      const { streamGeminiChat } = await import('../gemini-streaming');
+      
+      let fullResponse = '';
+      
+      await streamGeminiChat({
+        messages: messages.map((m: any) => ({
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content,
+        })),
+        systemPrompt,
+        onChunk: (chunk) => {
+          if (isClientConnected) {
+            fullResponse += chunk;
+            res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+          }
+        },
+        onComplete: async (response) => {
+          if (isClientConnected) {
+            // If conversationId provided, save to database
+            if (conversationId) {
+              try {
+                const { aiMessages, aiConversations } = await import('../../drizzle/schema');
+                const { eq } = await import('drizzle-orm');
+                const db = await getDb();
+                if (db) {
+                  // Save the assistant message
+                  await db.insert(aiMessages).values({
+                    conversationId: parseInt(conversationId),
+                    role: 'assistant',
+                    content: response,
+                    isComplete: 1,
+                  });
+                  // Update conversation message count and last message time
+                  const { sql } = await import('drizzle-orm');
+                  await db.execute(
+                    sql`UPDATE ai_conversations SET messageCount = messageCount + 1, lastMessageAt = NOW() WHERE id = ${parseInt(conversationId)}`
+                  );
+                }
+              } catch (dbError) {
+                console.error('[AI Stream] Error saving to database:', dbError);
+              }
+            }
+            
+            res.write(`data: ${JSON.stringify({ type: 'complete', content: response })}\n\n`);
+            res.end();
+          }
+        },
+        onError: (error) => {
+          if (isClientConnected) {
+            res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+            res.end();
+          }
+        },
+      });
+    } catch (error) {
+      console.error('[AI Stream] Error:', error);
+      if (isClientConnected) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: error instanceof Error ? error.message : 'Failed to stream AI response'
+        })}\n\n`);
+        res.end();
+      }
+    }
+  });
+  
   // Admin API endpoints
   app.get('/api/admin/reports', async (req, res) => {
     try {

@@ -9219,3 +9219,44 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] AI correctly identifies current tool context (ebook section)
 - [x] AI references actual tools (Tool 2: Check Regulations)
 - [x] Response quality improved with better reasoning
+
+
+## AI Streaming & Conversation Memory (Feb 2)
+
+### Streaming Responses
+- [ ] Update gemini-chat.ts to support streaming with generateContentStream
+- [ ] Create streaming endpoint in routers.ts using Server-Sent Events (SSE)
+- [ ] Update ContextualAIChat to consume streaming responses
+- [ ] Show real-time "typing" effect as AI generates response
+- [ ] Handle stream errors gracefully with fallback
+
+### Conversation Memory
+- [ ] Add ai_conversations table to database schema (userId, title, createdAt, updatedAt)
+- [ ] Add ai_messages table to database schema (conversationId, role, content, timestamp)
+- [ ] Create conversation CRUD endpoints (create, list, get, delete)
+- [ ] Update AI chat to save messages to database
+- [ ] Add conversation history sidebar/dropdown in ContextualAIChat
+- [ ] Allow users to continue previous conversations
+- [ ] Auto-generate conversation titles from first message
+
+
+## AI Streaming & Conversation Memory (Feb 2, 2026) - COMPLETE
+
+### Streaming Responses:
+- [x] Create gemini-streaming.ts with Gemini 2.0 Flash
+- [x] Add SSE endpoint /api/ai/chat/stream for real-time streaming
+- [x] Create useStreamingChat hook for frontend
+- [x] Update ContextualAIChat component with streaming support
+- [x] Users see AI "typing" in real-time instead of waiting for full response
+
+### Conversation Memory:
+- [x] Add ai_conversations table (id, userId, title, context, createdAt, updatedAt)
+- [x] Add ai_messages table (id, conversationId, role, content, createdAt)
+- [x] Create conversation CRUD endpoints (create, list, get, delete)
+- [x] Messages persist across sessions for logged-in users
+
+### Testing:
+- [x] 19 unit tests passing for streaming and conversation features
+- [x] TypeScript compilation clean
+- [x] Dev server running without errors
+
