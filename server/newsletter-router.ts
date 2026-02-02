@@ -10,9 +10,11 @@ import { getDb } from "./db";
 import { sql } from "drizzle-orm";
 import { 
   runWeeklyMarketNewsletterJob, 
-  runDealAlertJob, 
+  runDealAlertJob,
+  runMonthlyReportJob,
   getJobHistory,
-  sendTestNewsletter 
+  sendTestNewsletter,
+  getNewsletterSchedule
 } from "./newsletter-orchestrator";
 import { getUniqueCities, getContactsByCity } from "./hubspot";
 import { getMarketSnapshotForCity, batchGetMarketSnapshots } from "./newsletter-market-data";
@@ -178,6 +180,34 @@ export const newsletterRouter = router({
         message: 'Deal alert job started. Check job history for results.' 
       };
     }),
+  
+  // Manually trigger monthly report job
+  triggerMonthlyJob: protectedProcedure.mutation(async ({ ctx }) => {
+    if (ctx.user.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+    
+    console.log('[Newsletter] Admin triggered monthly report job');
+    
+    // Run in background
+    runMonthlyReportJob().catch(err => {
+      console.error('[Newsletter] Monthly report job error:', err);
+    });
+    
+    return { 
+      success: true, 
+      message: 'Monthly report job started. Check job history for results.' 
+    };
+  }),
+  
+  // Get newsletter schedule configuration
+  getSchedule: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.role !== 'admin') {
+      throw new Error('Admin access required');
+    }
+    
+    return getNewsletterSchedule();
+  }),
   
   // Send test newsletter to a specific email
   sendTestEmail: protectedProcedure

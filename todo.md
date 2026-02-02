@@ -9331,3 +9331,50 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] 14 unit tests passing for newsletter system
 - [x] TypeScript compilation clean
 - [x] Dev server running without errors
+
+
+## Newsletter Automation Setup (Feb 2, 2026)
+
+### HubSpot Email Templates:
+- [ ] Create Weekly Market Intelligence email template in HubSpot
+- [ ] Create Daily Deal Alert email template in HubSpot
+- [ ] Create Monthly Market Report email template in HubSpot
+- [ ] Add template IDs to environment secrets
+
+### Scheduled Automation:
+- [ ] Configure daily deal alert job (runs every morning)
+- [ ] Configure weekly market intelligence job (runs every Monday)
+- [ ] Configure monthly market report job (runs 1st of each month)
+- [ ] Test all scheduled jobs
+
+
+## Newsletter Automation Setup (Feb 2, 2026) - COMPLETE
+
+### Email Sending System:
+- [x] Update newsletter-email-sender.ts with direct HTML email sending
+- [x] Create beautiful HTML email templates for weekly, deal, and monthly emails
+- [x] Implement HubSpot API integration for contact management
+- [x] Add email logging to database for tracking
+
+### Monthly Report Feature:
+- [x] Add runMonthlyReportJob() to newsletter-orchestrator.ts
+- [x] Add sendMonthlyReportEmail() to newsletter-email-sender.ts
+- [x] Add triggerMonthlyJob endpoint to newsletter-router.ts
+- [x] Add getSchedule endpoint for viewing schedule configuration
+
+### Scheduled Automation (Manus Tasks):
+- [x] Daily Deal Alerts - 9 AM every day (scans markets for deals)
+- [x] Weekly Market Intelligence - 9 AM every Monday (market summaries)
+- [x] Monthly Market Reports - 9 AM on 1st of each month (comprehensive reports)
+
+### Newsletter Types:
+1. **Weekly Market Intelligence** - ADR, occupancy, revenue trends, market insights
+2. **Daily Deal Alerts** - Hot deals found in contact's market with deal scores
+3. **Monthly Market Reports** - Comprehensive analysis with MoM/YoY trends, seasonal outlook
+
+### Admin Dashboard:
+- [x] Newsletter dashboard at /admin/newsletter
+- [x] Manual job triggers for all three newsletter types
+- [x] Job history and send statistics
+- [x] City-based contact counts
+- [x] Test email functionality

@@ -20,7 +20,9 @@ import {
   type NewsletterContent 
 } from './newsletter-content-generator';
 import { 
-  sendSingleEmail, 
+  sendWeeklyMarketEmail,
+  sendDealAlertEmail,
+  sendMonthlyReportEmail,
   logNewsletterSend, 
   isContactUnsubscribed,
   type SendEmailResult 
@@ -116,38 +118,26 @@ export async function runWeeklyMarketNewsletterJob(): Promise<NewsletterJobResul
               toolUrl: `${TOOL_URL}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
             });
             
-            // Send email
-            let sendResult: SendEmailResult;
-            
-            if (WEEKLY_EMAIL_TEMPLATE_ID > 0) {
-              // Use HubSpot template
-              sendResult = await sendSingleEmail({
-                emailId: WEEKLY_EMAIL_TEMPLATE_ID,
-                recipient: {
-                  email: contact.email,
-                  firstName: contact.firstName,
-                  lastName: contact.lastName,
-                  contactId: contact.hubspotId
-                },
-                customProperties: {
-                  subject: content.subject,
-                  preheader: content.preheader,
-                  greeting: content.greeting,
-                  mainContent: content.mainContent,
-                  callToAction: content.callToAction,
-                  footer: content.footer,
-                  city: city,
-                  state: state,
-                  marketScore: String(marketSnapshot.metrics.marketScore),
-                  averageRevenue: String(marketSnapshot.metrics.averageRevenue),
-                  occupancyRate: String(Math.round(marketSnapshot.metrics.occupancyRate * 100))
-                }
-              });
-            } else {
-              // Fallback: Log that we would send (for testing without HubSpot template)
-              console.log(`[Newsletter] Would send to ${contact.email}: ${content.subject}`);
-              sendResult = { success: true, sendId: `test-${Date.now()}` };
-            }
+            // Send email using the new direct email sender
+            const sendResult = await sendWeeklyMarketEmail({
+              recipient: {
+                email: contact.email,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                contactId: contact.hubspotId
+              },
+              city,
+              state,
+              marketData: {
+                averageDailyRate: marketSnapshot.metrics.averageDailyRate,
+                occupancyRate: marketSnapshot.metrics.occupancyRate,
+                annualRevenue: marketSnapshot.metrics.averageRevenue,
+                adrTrend: marketSnapshot.trends.adrChange,
+                occupancyTrend: marketSnapshot.trends.occupancyChange,
+                revenueTrend: marketSnapshot.trends.revenueChange,
+                activeListings: marketSnapshot.metrics.activeListings
+              }
+            });
             
             // Log the send
             await logNewsletterSend({
@@ -276,30 +266,29 @@ export async function runDealAlertJob(params?: {
               toolUrl: `${TOOL_URL}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
             });
             
-            // Send email
-            let sendResult: SendEmailResult;
-            
-            if (DEAL_ALERT_EMAIL_TEMPLATE_ID > 0) {
-              sendResult = await sendSingleEmail({
-                emailId: DEAL_ALERT_EMAIL_TEMPLATE_ID,
-                recipient: {
-                  email: contact.email,
-                  firstName: contact.firstName,
-                  lastName: contact.lastName,
-                  contactId: contact.hubspotId
-                },
-                customProperties: {
-                  subject: content.subject,
-                  mainContent: content.mainContent,
-                  topDealAddress: qualityDeals[0]?.address || '',
-                  topDealProfit: String(qualityDeals[0]?.monthlyProfit || 0),
-                  topDealScore: String(qualityDeals[0]?.dealScore || 0)
-                }
-              });
-            } else {
-              console.log(`[Newsletter] Would send deal alert to ${contact.email}: ${content.subject}`);
-              sendResult = { success: true, sendId: `test-deal-${Date.now()}` };
-            }
+            // Send deal alert email
+            const topDeal = qualityDeals[0];
+            const sendResult = await sendDealAlertEmail({
+              recipient: {
+                email: contact.email,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                contactId: contact.hubspotId
+              },
+              city,
+              state,
+              deal: {
+                address: topDeal?.address || 'Property in ' + city,
+                bedrooms: topDeal?.bedrooms || 3,
+                bathrooms: topDeal?.bathrooms || 2,
+                monthlyRevenue: topDeal?.projectedMonthlyRevenue || 0,
+                annualRevenue: topDeal?.projectedAnnualRevenue || 0,
+                occupancyRate: topDeal?.projectedOccupancy || 0,
+                averageDailyRate: topDeal?.projectedAdr || 0,
+                dealScore: topDeal?.dealScore || 0,
+                propertyUrl: topDeal?.sourceUrl
+              }
+            });
             
             await logNewsletterSend({
               contactEmail: contact.email,
@@ -512,4 +501,185 @@ export async function sendTestNewsletter(params: {
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
+}
+
+
+/**
+ * Run the monthly market report newsletter job
+ * This should be scheduled to run on the 1st of each month
+ */
+export async function runMonthlyReportJob(): Promise<NewsletterJobResult> {
+  const result: NewsletterJobResult = {
+    jobType: 'monthly_report',
+    startedAt: new Date(),
+    completedAt: new Date(),
+    citiesProcessed: 0,
+    contactsProcessed: 0,
+    emailsSent: 0,
+    emailsFailed: 0,
+    errors: []
+  };
+  
+  try {
+    console.log('[Newsletter] Starting monthly report job...');
+    
+    // Get current month/year for the report
+    const now = new Date();
+    const monthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    // Get unique cities from HubSpot contacts
+    const cities = await getUniqueCities();
+    console.log(`[Newsletter] Found ${cities.length} unique cities for monthly report`);
+    
+    if (cities.length === 0) {
+      result.errors.push('No cities found in HubSpot contacts');
+      result.completedAt = new Date();
+      return result;
+    }
+    
+    // Get market data for all cities
+    const marketSnapshots = await batchGetMarketSnapshots(cities);
+    
+    // Process each city
+    for (const { city, state } of cities) {
+      try {
+        const key = `${city.toUpperCase()}-${state.toUpperCase()}`;
+        const marketSnapshot = marketSnapshots.get(key);
+        
+        if (!marketSnapshot) {
+          console.log(`[Newsletter] No market data for ${city}, ${state} - skipping`);
+          continue;
+        }
+        
+        // Get contacts in this city
+        const contacts = await getContactsByCity(city, state);
+        console.log(`[Newsletter] Found ${contacts.length} contacts in ${city}, ${state}`);
+        
+        // Get deals found this month for the report
+        const cachedDeals = await getCachedDealsForCity(city, state);
+        
+        // Send monthly report to each contact
+        for (const contact of contacts) {
+          try {
+            if (await isContactUnsubscribed(contact.email)) {
+              console.log(`[Newsletter] Skipping unsubscribed contact: ${contact.email}`);
+              continue;
+            }
+            
+            result.contactsProcessed++;
+            
+            // Determine market trend
+            let marketTrend: 'growing' | 'stable' | 'declining' = 'stable';
+            if (marketSnapshot.trends.revenueChange > 3) marketTrend = 'growing';
+            else if (marketSnapshot.trends.revenueChange < -3) marketTrend = 'declining';
+            
+            // Generate seasonal outlook based on current month
+            const month = now.getMonth();
+            let seasonalOutlook = '';
+            if (month >= 5 && month <= 8) {
+              seasonalOutlook = 'Summer is peak season for most markets. Expect higher occupancy rates and ADR. Consider adjusting your pricing strategy to maximize revenue during this high-demand period.';
+            } else if (month >= 11 || month <= 1) {
+              seasonalOutlook = 'Winter months typically see lower demand in most markets, with exceptions for ski destinations and warm-weather locations. Focus on longer-term stays and competitive pricing.';
+            } else if (month >= 2 && month <= 4) {
+              seasonalOutlook = 'Spring is a transitional period. Early bookings for summer are starting to come in. This is a good time to optimize your listing and prepare for peak season.';
+            } else {
+              seasonalOutlook = 'Fall brings a mix of business travel and leaf-peeping tourists depending on your market. Weekends tend to perform better than weekdays.';
+            }
+            
+            // Send monthly report email
+            const sendResult = await sendMonthlyReportEmail({
+              recipient: {
+                email: contact.email,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                contactId: contact.hubspotId
+              },
+              city,
+              state,
+              monthYear,
+              reportData: {
+                averageDailyRate: marketSnapshot.metrics.averageDailyRate,
+                occupancyRate: marketSnapshot.metrics.occupancyRate,
+                annualRevenue: marketSnapshot.metrics.averageRevenue,
+                monthOverMonthChange: marketSnapshot.trends.revenueChange,
+                yearOverYearChange: marketSnapshot.trends.revenueChange * 1.5, // Approximation
+                topPerformingBedrooms: 3, // Default, could be calculated from data
+                seasonalOutlook,
+                marketTrend,
+                dealsFound: cachedDeals.length
+              }
+            });
+            
+            // Log the send
+            await logNewsletterSend({
+              contactEmail: contact.email,
+              contactId: contact.hubspotId,
+              city,
+              state,
+              newsletterType: 'monthly_report',
+              subject: `📈 ${monthYear} Market Report - ${city}, ${state}`,
+              success: sendResult.success,
+              errorMessage: sendResult.error,
+              hubspotSendId: sendResult.sendId
+            });
+            
+            if (sendResult.success) {
+              result.emailsSent++;
+            } else {
+              result.emailsFailed++;
+            }
+            
+            // Small delay between emails
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+          } catch (contactError) {
+            result.emailsFailed++;
+            result.errors.push(`Error sending monthly report to ${contact.email}: ${contactError}`);
+          }
+        }
+        
+        result.citiesProcessed++;
+        
+      } catch (cityError) {
+        result.errors.push(`Error processing ${city}, ${state}: ${cityError}`);
+      }
+    }
+    
+  } catch (error) {
+    result.errors.push(`Monthly report job error: ${error}`);
+  }
+  
+  result.completedAt = new Date();
+  console.log(`[Newsletter] Monthly report job complete: ${result.emailsSent} sent, ${result.emailsFailed} failed`);
+  
+  // Log job result to database
+  await logJobResult(result);
+  
+  return result;
+}
+
+/**
+ * Get the schedule configuration for all newsletter jobs
+ */
+export function getNewsletterSchedule() {
+  return {
+    daily: {
+      name: 'Deal Alert Scan',
+      description: 'Scans all markets for new deals and sends alerts to contacts',
+      cron: '0 0 9 * * *', // 9 AM every day
+      function: 'runDealAlertJob'
+    },
+    weekly: {
+      name: 'Weekly Market Intelligence',
+      description: 'Sends weekly market summary to all contacts',
+      cron: '0 0 9 * * 1', // 9 AM every Monday
+      function: 'runWeeklyMarketNewsletterJob'
+    },
+    monthly: {
+      name: 'Monthly Market Report',
+      description: 'Comprehensive monthly market analysis report',
+      cron: '0 0 9 1 * *', // 9 AM on the 1st of each month
+      function: 'runMonthlyReportJob'
+    }
+  };
 }
