@@ -9054,3 +9054,31 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] System prompt that grounds AI in rental investment expertise (AI_SYSTEM_PROMPT)
 - [x] Prevent hallucination by limiting responses to embedded knowledge
 - [x] Add suggested questions based on current tool context (SUGGESTED_QUESTIONS)
+
+
+## Interactive Onboarding Tour Rebuild (Feb 2) - COMPLETE
+
+### Requirements
+- [x] Tour should navigate to actual tools (not just show modals)
+- [x] Highlight real UI elements with spotlight/tooltip overlays (TourSpotlight.tsx)
+- [x] Auto-fill sample data to demonstrate tool functionality (handleFillSampleData)
+- [x] Show what results look like with sample data
+- [x] Walk through actual workflow step-by-step (15 steps)
+- [x] Tooltips should point to specific inputs (data-tour attributes added)
+
+### Tour Flow
+- [x] Step 1: Welcome - explain what tools are available
+- [x] Step 2: Navigate to Opportunity Finder - highlight search input
+- [x] Step 3: Show sample market search results
+- [x] Step 4: Navigate to Validate - highlight address input
+- [x] Step 5: Auto-fill sample property, show analysis results
+- [x] Step 6: Navigate to Compare - show how to add properties
+- [x] Step 7: Navigate to Map - demonstrate map exploration
+- [x] Step 8: Navigate to AI Advisor - show how to ask questions
+- [x] Step 9: Completion - encourage user to start their own analysis
+
+### Components Created
+- [x] TourSpotlight.tsx - highlights specific UI elements with dark overlay
+- [x] InteractiveTour.tsx - manages tour state, navigation, and tooltips
+- [x] Sample data injection via handleFillSampleData callback
+- [x] 10 unit tests passing

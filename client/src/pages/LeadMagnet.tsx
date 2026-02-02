@@ -111,7 +111,7 @@ import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
-import { OnboardingTour, useOnboarding, WelcomeModal } from '@/components/OnboardingTour';
+import { InteractiveTour, useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTour';
 import { ContextualAIChat } from '@/components/ContextualAIChat';
 
 // ============================================
@@ -351,17 +351,16 @@ export default function LeadMagnet() {
   // Auth state for login requirement
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   
-  // Onboarding tour state
-  const { showTour, isFirstVisit, startTour, closeTour, resetTour } = useOnboarding();
-  const [showWelcome, setShowWelcome] = useState(false);
+  // Interactive tour state
+  const { showTour, isFirstVisit, startTour, closeTour, completeTour, resetTour } = useInteractiveTour();
   
-  // Show welcome modal for first-time visitors
+  // Show tour for first-time visitors after a delay
   useEffect(() => {
     if (isFirstVisit && !showTour) {
-      const timer = setTimeout(() => setShowWelcome(true), 1000);
+      const timer = setTimeout(() => startTour(), 1500);
       return () => clearTimeout(timer);
     }
-  }, [isFirstVisit, showTour]);
+  }, [isFirstVisit, showTour, startTour]);
   
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter, setMyProperty, globalMode } = useProperty();
@@ -972,6 +971,14 @@ export default function LeadMagnet() {
   const [isLoadingRentometer, setIsLoadingRentometer] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
+  
+  // Handler to fill sample data during tour
+  const handleFillSampleData = useCallback((data: typeof TOUR_SAMPLE_DATA) => {
+    setAddress(data.property.address);
+    setBedrooms(data.property.bedrooms);
+    setBathrooms(data.property.bathrooms);
+    setMonthlyRent(data.property.monthlyRent);
+  }, []);
   
   // ============================================
   // FIND THE BEST DEAL STATE (formerly Compare)
@@ -2509,7 +2516,7 @@ export default function LeadMagnet() {
                 </div>
                 
                 {/* Market Search */}
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="opportunity-search">
                   <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                     <InfoTooltip content="Search for a city or neighborhood. The dropdown shows how many active Airbnb properties are in each area and which zip codes are included.">
                       <span>City or Neighborhood</span>
@@ -2651,7 +2658,7 @@ export default function LeadMagnet() {
                   </div>
                 )}
                 
-                <div className="space-y-2">
+                <div className="space-y-2" data-tour="address-input">
                   <InfoTooltip content="Paste a Zillow or Redfin listing URL to auto-fill property details, or type an address manually. URLs automatically extract bedrooms, bathrooms, and rent/price.">
                     <span className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                       Property Address or Zillow/Redfin URL
@@ -2866,7 +2873,7 @@ export default function LeadMagnet() {
                 )}
                 
                 {/* Bedrooms & Bathrooms */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4" data-tour="property-details">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[oklch(0.45_0.01_265)]">
                       Beds
@@ -3002,6 +3009,7 @@ export default function LeadMagnet() {
                   disabled={isAnalyzing || !address || (globalMode === 'rent' ? (!monthlyRent || parseFloat(monthlyRent) <= 0) : (!myProperty?.purchasePrice || myProperty.purchasePrice <= 0)) || !isAuthenticated}
                   className="btn-gold w-full h-12 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   data-analyze-button
+                  data-tour="analyze-button"
                 >
                   {isAnalyzing ? (
                     <>
@@ -3022,7 +3030,7 @@ export default function LeadMagnet() {
             {/* COMPARE FAVORITES TAB */}
             {/* ============================================ */}
             {activeTab === 'compare' && (
-              <div className="space-y-8">
+              <div className="space-y-8" data-tour="compare-add">
                 <HelpSection
                   title="How This Tool Helps You"
                   description="Compare your saved favorites from the Map view side-by-side to find which one will make you the most money"
@@ -3148,7 +3156,7 @@ export default function LeadMagnet() {
             )}
 
             {activeTab === 'advisor' && !result && (
-              <div className="max-w-2xl mx-auto">
+              <div className="max-w-2xl mx-auto" data-tour="advisor-input">
                 {/* Back to Property Button */}
                 <BackToPropertyButton className="mb-6" />
                 
@@ -3441,7 +3449,7 @@ export default function LeadMagnet() {
       {/* MAP TAB - FULL WIDTH (outside container) */}
       {/* ============================================ */}
       {activeTab === 'map' && (
-        <section className="bg-slate-50" data-tool-panel="map">
+        <section className="bg-slate-50" data-tool-panel="map" data-tour="map-container">
           <MapFirstLayoutV2 
             key={`map-${myProperty?.address || 'no-property'}`}
             embedded={false} 
@@ -6307,25 +6315,17 @@ export default function LeadMagnet() {
       {/* Bottom padding to prevent content from being hidden behind bottom nav on mobile */}
       <div className="sm:hidden h-20" />
       
-      {/* Onboarding Tour */}
-      <OnboardingTour
+      {/* Interactive Tour - guides users through actual tools */}
+      <InteractiveTour
         isOpen={showTour}
         onClose={closeTour}
         onComplete={() => {
-          closeTour();
+          completeTour();
           toast.success('Tour complete! Start exploring the tools.');
         }}
         onNavigateToTab={(tabId) => setActiveTab(tabId as TabType)}
-      />
-      
-      {/* Welcome Modal for first-time users */}
-      <WelcomeModal
-        isOpen={showWelcome && !showTour}
-        onStartTour={() => {
-          setShowWelcome(false);
-          startTour();
-        }}
-        onSkip={() => setShowWelcome(false)}
+        onFillSampleData={handleFillSampleData}
+        currentTab={activeTab}
       />
       
       {/* Contextual AI Chat Assistant */}
