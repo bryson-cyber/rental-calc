@@ -9159,3 +9159,31 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Tests:
 - [x] 28 unit tests passing for knowledge base content
+
+
+## AI Live Data Integration (Feb 2)
+
+### Requirements
+- [ ] Pass live property analysis results to AI chat (revenue, ADR, occupancy, comps)
+- [ ] Pass live market research results to AI chat (market stats, trends, submarkets)
+- [ ] Update AI system prompt to reference live data in responses
+- [ ] Show data context indicator in AI chat (e.g., "Analyzing: 123 Main St, Denver")
+- [ ] AI can answer specific questions about the current analysis
+
+### Implementation
+- [ ] Update ContextualAIChat props to accept live data
+- [ ] Update AI chat router to include live data in system prompt
+- [ ] Update LeadMagnet to pass analysisResult and marketResearchResult to AI
+- [ ] Add data freshness indicator (when data was last fetched)
+- [ ] Test AI responses reference actual numbers from the analysis
+
+
+## AI Live Data Integration (Feb 2) - COMPLETE
+- [x] Update ContextualAIChat to accept comprehensive live data (LivePropertyData, LiveMarketData interfaces)
+- [x] Pass monthly forecasts from property analysis (12 months)
+- [x] Pass comparable properties data (up to 5 comps)
+- [x] Pass market seasonality data (peak/low season, seasonality index)
+- [x] Pass market trends (RevPAR, listings count)
+- [x] Add visual indicator showing what data AI has access to (DataContextIndicator component)
+- [x] Update suggested questions based on available live data (dynamic generation)
+- [x] 22 unit tests passing

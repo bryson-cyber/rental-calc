@@ -6336,17 +6336,77 @@ export default function LeadMagnet() {
             address: address,
             bedrooms: bedrooms ? parseInt(bedrooms) : undefined,
             bathrooms: bathrooms ? parseFloat(bathrooms) : undefined,
+            // accommodates not available as separate state
             monthlyRent: monthlyRent ? parseInt(monthlyRent) : undefined,
+            // Revenue estimates
             projectedRevenue: result.revenue?.projected,
-            profitMargin: result.cashFlow ? (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100 : undefined,
+            revenueRangeLow: result.revenue?.low,
+            revenueRangeHigh: result.revenue?.high,
+            averageDailyRate: result.metrics?.adr,
             occupancyRate: result.metrics?.occupancy,
+            revPAR: result.metrics?.adr && result.metrics?.occupancy 
+              ? result.metrics.adr * result.metrics.occupancy 
+              : undefined,
+            // Profitability
+            profitMargin: result.cashFlow 
+              ? (result.cashFlow.monthlyProfit / result.cashFlow.monthlyRevenue) * 100 
+              : undefined,
+            monthlyProfit: result.cashFlow?.monthlyProfit,
+            annualProfit: result.cashFlow?.monthlyProfit 
+              ? result.cashFlow.monthlyProfit * 12 
+              : undefined,
+            // Monthly forecast
+            monthlyForecast: result.forecast?.slice(0, 12).map(f => ({
+              month: f.month,
+              revenue: f.revenue,
+              adr: f.adr,
+              occupancy: f.occupancy,
+            })),
+            // Comparable properties
+            comparableProperties: result.comparables?.slice(0, 5).map(c => ({
+              title: c.title,
+              bedrooms: c.bedrooms,
+              bathrooms: c.bathrooms,
+              rating: c.rating,
+              reviews: c.reviews,
+              annualRevenue: c.revenue,
+              adr: c.adr,
+              occupancy: c.occupancy,
+              distance: c.distanceMeters,
+            })),
+            analyzedAt: new Date(),
           } : undefined,
           marketData: researchResult ? {
             city: researchMarket?.split(',')[0]?.trim(),
             state: researchMarket?.split(',')[1]?.trim(),
+            marketName: researchResult.marketName,
+            // Market stats
             averageRevenue: researchResult.avgRevenue,
             averageOccupancy: researchResult.avgOccupancy,
             averageADR: researchResult.avgAdr,
+            revPAR: researchResult.avgAdr && researchResult.avgOccupancy
+              ? researchResult.avgAdr * researchResult.avgOccupancy
+              : undefined,
+            // Supply/demand
+            totalActiveListings: researchResult.totalListings,
+            // Seasonality
+            peakSeason: researchResult.seasonality?.length 
+              ? researchResult.seasonality.reduce((max, s) => 
+                  s.occupancy > (max?.occupancy || 0) ? s : max, 
+                  researchResult.seasonality[0]
+                )?.month
+              : undefined,
+            lowSeason: researchResult.seasonality?.length
+              ? researchResult.seasonality.reduce((min, s) => 
+                  s.occupancy < (min?.occupancy || 1) ? s : min, 
+                  researchResult.seasonality[0]
+                )?.month
+              : undefined,
+            seasonalityIndex: researchResult.seasonality?.length
+              ? Math.max(...researchResult.seasonality.map(s => s.occupancy)) / 
+                Math.min(...researchResult.seasonality.map(s => s.occupancy))
+              : undefined,
+            analyzedAt: new Date(),
           } : undefined,
         }}
       />

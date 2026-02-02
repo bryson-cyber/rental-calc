@@ -11,7 +11,12 @@ import {
   Bot,
   Minimize2,
   Maximize2,
-  RotateCcw
+  RotateCcw,
+  Database,
+  MapPin,
+  TrendingUp,
+  Home,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,24 +37,81 @@ interface Message {
   timestamp: Date;
 }
 
+// Expanded interfaces for live data
+interface MonthlyForecast {
+  month: string;
+  revenue: number;
+  adr: number;
+  occupancy: number;
+}
+
+interface CompProperty {
+  title?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  rating?: number;
+  reviews?: number;
+  annualRevenue?: number;
+  adr?: number;
+  occupancy?: number;
+  distance?: number;
+}
+
+interface LivePropertyData {
+  address?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  accommodates?: number;
+  monthlyRent?: number;
+  // Revenue estimates
+  projectedRevenue?: number;
+  revenueRangeLow?: number;
+  revenueRangeHigh?: number;
+  averageDailyRate?: number;
+  occupancyRate?: number;
+  revPAR?: number;
+  // Profitability
+  profitMargin?: number;
+  monthlyProfit?: number;
+  annualProfit?: number;
+  // Monthly forecast
+  monthlyForecast?: MonthlyForecast[];
+  // Comparable properties
+  comparableProperties?: CompProperty[];
+  // Analysis timestamp
+  analyzedAt?: Date;
+}
+
+interface LiveMarketData {
+  city?: string;
+  state?: string;
+  marketName?: string;
+  // Market stats
+  averageRevenue?: number;
+  medianRevenue?: number;
+  averageOccupancy?: number;
+  averageADR?: number;
+  revPAR?: number;
+  // Supply/demand
+  totalActiveListings?: number;
+  newListingsLast30Days?: number;
+  listingsRemovedLast30Days?: number;
+  // Market trends
+  revenueGrowthYoY?: number;
+  occupancyChangeYoY?: number;
+  adrChangeYoY?: number;
+  // Seasonality
+  peakSeason?: string;
+  lowSeason?: string;
+  seasonalityIndex?: number;
+  // Analysis timestamp
+  analyzedAt?: Date;
+}
+
 interface PageContext {
   currentTool?: string;
-  propertyData?: {
-    address?: string;
-    bedrooms?: number;
-    bathrooms?: number;
-    monthlyRent?: number;
-    projectedRevenue?: number;
-    profitMargin?: number;
-    occupancyRate?: number;
-  };
-  marketData?: {
-    city?: string;
-    state?: string;
-    averageRevenue?: number;
-    averageOccupancy?: number;
-    averageADR?: number;
-  };
+  propertyData?: LivePropertyData;
+  marketData?: LiveMarketData;
 }
 
 interface ContextualAIChatProps {
@@ -63,11 +125,17 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDataContext, setShowDataContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Get the AI chat mutation
   const chatMutation = trpc.ai?.chat?.useMutation?.() || null;
+
+  // Check if we have live data
+  const hasPropertyData = !!(pageContext?.propertyData?.address || pageContext?.propertyData?.projectedRevenue);
+  const hasMarketData = !!(pageContext?.marketData?.city || pageContext?.marketData?.averageRevenue);
+  const hasLiveData = hasPropertyData || hasMarketData;
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -81,7 +149,7 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
     }
   }, [isOpen, isMinimized]);
 
-  // Build context string from page data
+  // Build comprehensive context string from live data
   const buildContextString = useCallback(() => {
     const parts: string[] = [];
 
@@ -89,25 +157,110 @@ export function ContextualAIChat({ pageContext, className = '' }: ContextualAICh
       parts.push(`Current tool: ${pageContext.currentTool}`);
     }
 
+    // Property data with full details
     if (pageContext?.propertyData) {
       const p = pageContext.propertyData;
-      parts.push(`\nProperty being analyzed:`);
-      if (p.address) parts.push(`- Address: ${p.address}`);
-      if (p.bedrooms) parts.push(`- Bedrooms: ${p.bedrooms}`);
-      if (p.bathrooms) parts.push(`- Bathrooms: ${p.bathrooms}`);
-      if (p.monthlyRent) parts.push(`- Monthly Rent: $${p.monthlyRent.toLocaleString()}`);
-      if (p.projectedRevenue) parts.push(`- Projected Annual Revenue: $${p.projectedRevenue.toLocaleString()}`);
-      if (p.profitMargin) parts.push(`- Profit Margin: ${p.profitMargin.toFixed(1)}%`);
-      if (p.occupancyRate) parts.push(`- Occupancy Rate: ${(p.occupancyRate * 100).toFixed(0)}%`);
+      parts.push(`\n=== LIVE PROPERTY ANALYSIS DATA ===`);
+      
+      if (p.address) parts.push(`Property Address: ${p.address}`);
+      if (p.bedrooms) parts.push(`Bedrooms: ${p.bedrooms}`);
+      if (p.bathrooms) parts.push(`Bathrooms: ${p.bathrooms}`);
+      if (p.accommodates) parts.push(`Accommodates: ${p.accommodates} guests`);
+      if (p.monthlyRent) parts.push(`Monthly Rent: $${p.monthlyRent.toLocaleString()}`);
+      
+      // Revenue estimates
+      if (p.projectedRevenue) {
+        parts.push(`\nRevenue Projections:`);
+        parts.push(`- Projected Annual Revenue: $${p.projectedRevenue.toLocaleString()}`);
+        if (p.revenueRangeLow && p.revenueRangeHigh) {
+          parts.push(`- Revenue Range: $${p.revenueRangeLow.toLocaleString()} - $${p.revenueRangeHigh.toLocaleString()}`);
+        }
+        if (p.averageDailyRate) parts.push(`- Average Daily Rate (ADR): $${p.averageDailyRate}`);
+        if (p.occupancyRate) parts.push(`- Occupancy Rate: ${(p.occupancyRate * 100).toFixed(1)}%`);
+        if (p.revPAR) parts.push(`- RevPAR: $${p.revPAR.toFixed(0)}`);
+      }
+      
+      // Profitability
+      if (p.profitMargin !== undefined || p.monthlyProfit !== undefined) {
+        parts.push(`\nProfitability:`);
+        if (p.monthlyProfit) parts.push(`- Monthly Profit: $${p.monthlyProfit.toLocaleString()}`);
+        if (p.annualProfit) parts.push(`- Annual Profit: $${p.annualProfit.toLocaleString()}`);
+        if (p.profitMargin !== undefined) parts.push(`- Profit Margin: ${p.profitMargin.toFixed(1)}%`);
+      }
+      
+      // Monthly forecast
+      if (p.monthlyForecast && p.monthlyForecast.length > 0) {
+        parts.push(`\nMonthly Revenue Forecast:`);
+        p.monthlyForecast.forEach(m => {
+          parts.push(`- ${m.month}: $${m.revenue.toLocaleString()} (ADR: $${m.adr}, Occ: ${(m.occupancy * 100).toFixed(0)}%)`);
+        });
+      }
+      
+      // Comparable properties
+      if (p.comparableProperties && p.comparableProperties.length > 0) {
+        parts.push(`\nComparable Properties (${p.comparableProperties.length} comps):`);
+        p.comparableProperties.slice(0, 5).forEach((comp, i) => {
+          const compInfo = [
+            comp.title || `Comp ${i + 1}`,
+            comp.bedrooms ? `${comp.bedrooms}BR` : '',
+            comp.annualRevenue ? `$${comp.annualRevenue.toLocaleString()}/yr` : '',
+            comp.occupancy ? `${(comp.occupancy * 100).toFixed(0)}% occ` : '',
+            comp.rating ? `${comp.rating}★` : '',
+          ].filter(Boolean).join(' | ');
+          parts.push(`- ${compInfo}`);
+        });
+      }
+      
+      if (p.analyzedAt) {
+        parts.push(`\nData freshness: Analyzed ${new Date(p.analyzedAt).toLocaleString()}`);
+      }
     }
 
+    // Market data with full details
     if (pageContext?.marketData) {
       const m = pageContext.marketData;
-      parts.push(`\nMarket being analyzed:`);
-      if (m.city && m.state) parts.push(`- Location: ${m.city}, ${m.state}`);
-      if (m.averageRevenue) parts.push(`- Average Annual Revenue: $${m.averageRevenue.toLocaleString()}`);
-      if (m.averageOccupancy) parts.push(`- Average Occupancy: ${(m.averageOccupancy * 100).toFixed(0)}%`);
-      if (m.averageADR) parts.push(`- Average Daily Rate: $${m.averageADR}`);
+      parts.push(`\n=== LIVE MARKET RESEARCH DATA ===`);
+      
+      if (m.marketName) parts.push(`Market: ${m.marketName}`);
+      else if (m.city && m.state) parts.push(`Location: ${m.city}, ${m.state}`);
+      
+      // Market stats
+      if (m.averageRevenue || m.medianRevenue) {
+        parts.push(`\nMarket Performance:`);
+        if (m.averageRevenue) parts.push(`- Average Annual Revenue: $${m.averageRevenue.toLocaleString()}`);
+        if (m.medianRevenue) parts.push(`- Median Annual Revenue: $${m.medianRevenue.toLocaleString()}`);
+        if (m.averageOccupancy) parts.push(`- Average Occupancy: ${(m.averageOccupancy * 100).toFixed(1)}%`);
+        if (m.averageADR) parts.push(`- Average Daily Rate: $${m.averageADR}`);
+        if (m.revPAR) parts.push(`- RevPAR: $${m.revPAR.toFixed(0)}`);
+      }
+      
+      // Supply/demand
+      if (m.totalActiveListings) {
+        parts.push(`\nSupply & Demand:`);
+        parts.push(`- Total Active Listings: ${m.totalActiveListings.toLocaleString()}`);
+        if (m.newListingsLast30Days) parts.push(`- New Listings (30 days): ${m.newListingsLast30Days}`);
+        if (m.listingsRemovedLast30Days) parts.push(`- Listings Removed (30 days): ${m.listingsRemovedLast30Days}`);
+      }
+      
+      // Market trends
+      if (m.revenueGrowthYoY !== undefined || m.occupancyChangeYoY !== undefined) {
+        parts.push(`\nYear-over-Year Trends:`);
+        if (m.revenueGrowthYoY !== undefined) parts.push(`- Revenue Growth: ${m.revenueGrowthYoY > 0 ? '+' : ''}${m.revenueGrowthYoY.toFixed(1)}%`);
+        if (m.occupancyChangeYoY !== undefined) parts.push(`- Occupancy Change: ${m.occupancyChangeYoY > 0 ? '+' : ''}${m.occupancyChangeYoY.toFixed(1)}%`);
+        if (m.adrChangeYoY !== undefined) parts.push(`- ADR Change: ${m.adrChangeYoY > 0 ? '+' : ''}${m.adrChangeYoY.toFixed(1)}%`);
+      }
+      
+      // Seasonality
+      if (m.peakSeason || m.lowSeason) {
+        parts.push(`\nSeasonality:`);
+        if (m.peakSeason) parts.push(`- Peak Season: ${m.peakSeason}`);
+        if (m.lowSeason) parts.push(`- Low Season: ${m.lowSeason}`);
+        if (m.seasonalityIndex) parts.push(`- Seasonality Index: ${m.seasonalityIndex.toFixed(2)}`);
+      }
+      
+      if (m.analyzedAt) {
+        parts.push(`\nData freshness: Analyzed ${new Date(m.analyzedAt).toLocaleString()}`);
+      }
     }
 
     return parts.join('\n');
@@ -145,11 +298,23 @@ ${FAQ_KNOWLEDGE}
         content: m.content,
       }));
 
+      // Enhanced system prompt when live data is available
+      const enhancedSystemPrompt = hasLiveData
+        ? `${AI_SYSTEM_PROMPT}
+
+IMPORTANT: You have access to LIVE DATA from the user's current analysis. When answering questions:
+1. Reference specific numbers from the live data (revenue, occupancy, ADR, etc.)
+2. Compare the property/market to benchmarks from your knowledge base
+3. Provide actionable insights based on the actual data
+4. Be specific - mention exact figures like "$85,000 annual revenue" not just "good revenue"
+5. If the user asks about their property or market, use the live data to give personalized answers`
+        : AI_SYSTEM_PROMPT;
+
       // Call the AI endpoint
       if (chatMutation) {
         const response = await chatMutation.mutateAsync({
           messages: [
-            { role: 'system', content: AI_SYSTEM_PROMPT },
+            { role: 'system', content: enhancedSystemPrompt },
             { role: 'system', content: `Knowledge Base:\n${knowledgeContext}` },
             ...(contextString ? [{ role: 'system' as const, content: `Current Page Context:\n${contextString}` }] : []),
             ...conversationHistory,
@@ -191,7 +356,7 @@ ${FAQ_KNOWLEDGE}
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, buildContextString, chatMutation]);
+  }, [input, isLoading, messages, buildContextString, chatMutation, hasLiveData]);
 
   // Handle suggested question click
   const handleSuggestedQuestion = (question: string) => {
@@ -199,15 +364,89 @@ ${FAQ_KNOWLEDGE}
     inputRef.current?.focus();
   };
 
-  // Get suggested questions based on current tool
-  const suggestedQuestions = pageContext?.currentTool
-    ? SUGGESTED_QUESTIONS[pageContext.currentTool] || SUGGESTED_QUESTIONS.general
-    : SUGGESTED_QUESTIONS.general;
+  // Get suggested questions based on current tool and available data
+  const getSuggestedQuestions = () => {
+    const baseQuestions = pageContext?.currentTool
+      ? SUGGESTED_QUESTIONS[pageContext.currentTool] || SUGGESTED_QUESTIONS.general
+      : SUGGESTED_QUESTIONS.general;
+    
+    // Add data-specific questions if live data is available
+    const dataQuestions: string[] = [];
+    
+    if (hasPropertyData && pageContext?.propertyData) {
+      const p = pageContext.propertyData;
+      if (p.projectedRevenue) {
+        dataQuestions.push(`Is $${p.projectedRevenue.toLocaleString()} good revenue for this property?`);
+      }
+      if (p.occupancyRate) {
+        dataQuestions.push(`How does ${(p.occupancyRate * 100).toFixed(0)}% occupancy compare to the market?`);
+      }
+      if (p.profitMargin !== undefined) {
+        dataQuestions.push(`Is a ${p.profitMargin.toFixed(0)}% profit margin healthy for arbitrage?`);
+      }
+    }
+    
+    if (hasMarketData && pageContext?.marketData) {
+      const m = pageContext.marketData;
+      if (m.city) {
+        dataQuestions.push(`What should I know about investing in ${m.city}?`);
+      }
+      if (m.averageOccupancy) {
+        dataQuestions.push(`Is ${(m.averageOccupancy * 100).toFixed(0)}% occupancy typical for this market?`);
+      }
+    }
+    
+    // Combine and limit to 4 questions
+    return [...dataQuestions, ...baseQuestions].slice(0, 4);
+  };
+
+  const suggestedQuestions = getSuggestedQuestions();
 
   // Clear chat history
   const handleClearChat = () => {
     setMessages([]);
   };
+
+  // Format data context summary
+  const getDataContextSummary = () => {
+    const items: { icon: React.ReactNode; label: string; value: string }[] = [];
+    
+    if (pageContext?.propertyData?.address) {
+      items.push({
+        icon: <Home className="w-3.5 h-3.5" />,
+        label: 'Property',
+        value: pageContext.propertyData.address.split(',')[0] || 'Analyzing...',
+      });
+    }
+    
+    if (pageContext?.propertyData?.projectedRevenue) {
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        label: 'Revenue',
+        value: `$${pageContext.propertyData.projectedRevenue.toLocaleString()}/yr`,
+      });
+    }
+    
+    if (pageContext?.marketData?.city) {
+      items.push({
+        icon: <MapPin className="w-3.5 h-3.5" />,
+        label: 'Market',
+        value: `${pageContext.marketData.city}, ${pageContext.marketData.state || ''}`,
+      });
+    }
+    
+    if (pageContext?.marketData?.averageRevenue) {
+      items.push({
+        icon: <BarChart3 className="w-3.5 h-3.5" />,
+        label: 'Avg Revenue',
+        value: `$${pageContext.marketData.averageRevenue.toLocaleString()}/yr`,
+      });
+    }
+    
+    return items;
+  };
+
+  const dataContextItems = getDataContextSummary();
 
   return (
     <>
@@ -223,7 +462,14 @@ ${FAQ_KNOWLEDGE}
             aria-label="Open AI Assistant"
           >
             <MessageCircle className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+            {hasLiveData && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                <Database className="w-3 h-3" />
+              </span>
+            )}
+            {!hasLiveData && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+            )}
           </motion.button>
         )}
       </AnimatePresence>
@@ -252,10 +498,22 @@ ${FAQ_KNOWLEDGE}
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm">Coach Inayah's AI</h3>
-                  <p className="text-xs text-white/70">Ask me anything about STR investing</p>
+                  <p className="text-xs text-white/70">
+                    {hasLiveData ? 'Analyzing your data' : 'Ask me anything about STR investing'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {hasLiveData && (
+                  <button
+                    onClick={() => setShowDataContext(!showDataContext)}
+                    className={`p-1.5 rounded-full transition-colors ${showDataContext ? 'bg-white/30' : 'hover:bg-white/20'}`}
+                    aria-label="Show data context"
+                    title="View live data"
+                  >
+                    <Database className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={handleClearChat}
                   className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -281,6 +539,35 @@ ${FAQ_KNOWLEDGE}
               </div>
             </div>
 
+            {/* Data Context Panel */}
+            <AnimatePresence>
+              {showDataContext && hasLiveData && !isMinimized && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-green-50 border-b border-green-100 overflow-hidden"
+                >
+                  <div className="p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database className="w-4 h-4 text-green-600" />
+                      <span className="text-xs font-medium text-green-800">Live Data Available</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {dataContextItems.map((item, index) => (
+                        <div key={index} className="flex items-center gap-1.5 text-xs">
+                          <span className="text-green-600">{item.icon}</span>
+                          <span className="text-green-700 truncate" title={item.value}>
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Chat Content (hidden when minimized) */}
             {!isMinimized && (
               <>
@@ -291,10 +578,23 @@ ${FAQ_KNOWLEDGE}
                       <div className="w-16 h-16 rounded-full bg-[oklch(0.55_0.14_75)]/10 flex items-center justify-center mx-auto mb-4">
                         <Bot className="w-8 h-8 text-[oklch(0.55_0.14_75)]" />
                       </div>
-                      <h4 className="font-semibold text-gray-900 mb-2">How can I help you?</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">
+                        {hasLiveData ? "I'm ready to analyze your data!" : "How can I help you?"}
+                      </h4>
                       <p className="text-sm text-gray-500 mb-4">
-                        I'm trained on Coach Inayah's methodology and can help you analyze properties.
+                        {hasLiveData 
+                          ? "Ask me about your property analysis or market research. I have access to your live data."
+                          : "I'm trained on Coach Inayah's methodology and can help you analyze properties."
+                        }
                       </p>
+                      
+                      {/* Live Data Badge */}
+                      {hasLiveData && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium mb-4">
+                          <Database className="w-3.5 h-3.5" />
+                          Live data connected
+                        </div>
+                      )}
                       
                       {/* Suggested Questions */}
                       <div className="space-y-2">
@@ -378,7 +678,7 @@ ${FAQ_KNOWLEDGE}
                           handleSend();
                         }
                       }}
-                      placeholder="Ask about STR investing..."
+                      placeholder={hasLiveData ? "Ask about your analysis..." : "Ask about STR investing..."}
                       className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.55_0.14_75)]/50 focus:border-[oklch(0.55_0.14_75)]"
                       rows={1}
                       disabled={isLoading}
@@ -397,7 +697,10 @@ ${FAQ_KNOWLEDGE}
                     </Button>
                   </div>
                   <p className="text-xs text-gray-400 mt-2 text-center">
-                    AI responses are based on Coach Inayah's methodology
+                    {hasLiveData 
+                      ? "Responses include your live analysis data"
+                      : "AI responses are based on Coach Inayah's methodology"
+                    }
                   </p>
                 </div>
               </>
