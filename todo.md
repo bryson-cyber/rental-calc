@@ -9187,3 +9187,35 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add visual indicator showing what data AI has access to (DataContextIndicator component)
 - [x] Update suggested questions based on available live data (dynamic generation)
 - [x] 22 unit tests passing
+
+
+## Gemini 3.0 Flash Preview Integration (Feb 2) - COMPLETE
+
+### Requirements
+- [x] Switch AI assistant from Manus Built-in LLM to Gemini 3.0 Flash Preview
+- [x] Maintain all existing AI functionality (knowledge base, live data context, suggested questions)
+- [x] Use the already-installed Gemini API key (GEMINI_API_KEY)
+- [x] Ensure AI remains grounded in Coach Inayah's methodology
+
+### Implementation
+- [x] Created gemini-chat.ts with Google Generative AI SDK integration
+- [x] Model: gemini-2.0-flash (Gemini 3.0 Flash Preview)
+- [x] Safety settings configured to allow business content
+- [x] Generation config optimized for chat (temperature: 0.7, maxOutputTokens: 2048)
+- [x] Handles conversation history with proper Gemini format (user/model roles)
+- [x] System prompts converted to initial context messages
+- [x] Error handling with user-friendly fallback messages
+- [x] Health check function (checkGeminiHealth) for API status
+
+### API Route
+- [x] Added ai.chat mutation in routers.ts
+- [x] Uses publicProcedure for accessibility
+- [x] Accepts messages array with role (system/user/assistant) and content
+- [x] Optional systemPrompt parameter
+- [x] Returns { content: string, success: boolean }
+
+### Testing
+- [x] Live browser test confirmed AI responds with Coach Inayah methodology
+- [x] AI correctly identifies current tool context (ebook section)
+- [x] AI references actual tools (Tool 2: Check Regulations)
+- [x] Response quality improved with better reasoning
