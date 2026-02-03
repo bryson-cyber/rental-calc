@@ -1411,13 +1411,15 @@ export interface DealAlertData {
   previewText?: string;
   aiNarration: string;
   propertyAddress: string;
+  city?: string;  // Optional - will be extracted from address if not provided
+  state?: string; // Optional - will be extracted from address if not provided
   bedrooms: number;
   bathrooms: number;
   propertyType?: string;
   monthlyRevenue: number;
   monthlyRent: number;
   monthlyProfit: number;
-  occupancy: number;
+  occupancy: number; // Stored as whole number (e.g., 73 for 73%)
   analysisUrl: string;
   compsSummary?: string;
   comps?: Array<{
@@ -1436,20 +1438,29 @@ async function updateContactDealProperties(contactId: string, dealData: DealAler
     return false;
   }
 
+  // Extract city and state from address if not provided
+  const addressParts = dealData.propertyAddress.split(',').map(p => p.trim());
+  const city = dealData.city || (addressParts.length >= 2 ? addressParts[addressParts.length - 2] : '');
+  const state = dealData.state || (addressParts.length >= 1 ? addressParts[addressParts.length - 1].split(' ')[0] : '');
+
   // Build properties object with deal data
   const properties: Record<string, string> = {
     deal_preview_text: dealData.previewText || `New opportunity: ${dealData.propertyAddress}`,
     deal_ai_narration: dealData.aiNarration,
     deal_property_address: dealData.propertyAddress,
+    deal_city: city,
+    deal_state: state,
     deal_bedrooms: String(dealData.bedrooms),
     deal_bathrooms: String(dealData.bathrooms),
     deal_property_type: dealData.propertyType || 'Single Family',
     deal_monthly_revenue: String(dealData.monthlyRevenue),
     deal_monthly_rent: String(dealData.monthlyRent),
     deal_monthly_profit: String(dealData.monthlyProfit),
-    deal_occupancy: String(Math.round(dealData.occupancy * 100)),
+    deal_occupancy: String(Math.round(dealData.occupancy)),
     deal_analysis_url: dealData.analysisUrl,
-    deal_comps_summary: dealData.compsSummary || ''
+    deal_comps_summary: dealData.compsSummary || '',
+    // TRIGGER THE HUBSPOT WORKFLOW
+    deal_alert_trigger: 'send'
   };
 
   // Add comp properties if available

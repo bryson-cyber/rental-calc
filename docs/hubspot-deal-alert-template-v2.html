@@ -1,0 +1,332 @@
+<!--
+  ============================================================
+  COACH INAYAH - DEAL ALERT EMAIL TEMPLATE (v2)
+  ============================================================
+  
+  HOW TO USE THIS TEMPLATE:
+  1. Copy everything below the instructions into your HubSpot transactional email
+  2. Make sure all the contact properties exist in HubSpot (see list below)
+  3. Set up your workflow to trigger when deal_alert_trigger = "send"
+  
+  ============================================================
+  REQUIRED HUBSPOT CONTACT PROPERTIES:
+  ============================================================
+  
+  Create these in HubSpot: Settings > Data Management > Properties > Create property
+  
+  PROPERTY NAME              | TYPE    | EXAMPLE VALUE
+  ---------------------------|---------|---------------------------
+  firstname                  | text    | Bryson (built-in)
+  deal_property_address      | text    | 1321 15th St
+  deal_city                  | text    | Denver
+  deal_state                 | text    | CO
+  deal_bedrooms              | number  | 3
+  deal_bathrooms             | number  | 2
+  deal_monthly_revenue       | number  | 8500
+  deal_monthly_rent          | number  | 5653
+  deal_monthly_profit        | number  | 2847
+  deal_occupancy             | number  | 73 (stored as whole number)
+  deal_analysis_url          | text    | https://coachinayahturnkeytool.com?step=5&...
+  deal_ai_narration          | text    | I just came across a property...
+  deal_comp1_title           | text    | Downtown Luxury Loft
+  deal_comp1_revenue         | number  | 9746
+  deal_comp1_occupancy       | number  | 66
+  deal_comp2_title           | text    | Modern City Townhome
+  deal_comp2_revenue         | number  | 5973
+  deal_comp2_occupancy       | number  | 71
+  deal_comp3_title           | text    | Spacious Urban Retreat
+  deal_comp3_revenue         | number  | 5093
+  deal_comp3_occupancy       | number  | 88
+  deal_alert_trigger         | text    | send (workflow trigger)
+  
+  ============================================================
+  HOW THE DATA FLOWS:
+  ============================================================
+  
+  1. Our system finds a deal matching a lead's criteria
+  2. We call HubSpot API to update the contact's properties:
+     
+     PATCH https://api.hubapi.com/crm/v3/objects/contacts/{contactId}
+     {
+       "properties": {
+         "deal_property_address": "1321 15th St",
+         "deal_city": "Denver",
+         "deal_state": "CO",
+         "deal_monthly_revenue": "8500",
+         "deal_monthly_profit": "2847",
+         ...
+         "deal_alert_trigger": "send"  <-- This triggers the workflow!
+       }
+     }
+  
+  3. Your HubSpot workflow detects deal_alert_trigger = "send"
+  4. Workflow sends this email - HubSpot replaces all {{ contact.* }} tokens
+  5. Workflow resets deal_alert_trigger to empty (ready for next alert)
+  
+  ============================================================
+  COPY EVERYTHING BELOW THIS LINE INTO HUBSPOT:
+  ============================================================
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>New Investment Opportunity</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table { border-collapse: collapse; }
+    .stat-cell { width: 25% !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #0F172A; background-color: #f1f5f9; -webkit-font-smoothing: antialiased;">
+  
+  <!-- Email Container -->
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        
+        <!-- Main Content Card -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); padding: 40px 32px; text-align: center;">
+              <h1 style="color: #C9A962; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em;">🏠 New Investment Opportunity</h1>
+              <p style="color: #ffffff; opacity: 0.85; margin: 12px 0 0; font-size: 15px; font-weight: 400;">A property in {{ contact.deal_city }} caught our attention</p>
+            </td>
+          </tr>
+          
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+              <!-- Greeting -->
+              <p style="font-size: 17px; margin: 0 0 20px; color: #0F172A; font-weight: 500;">
+                Hey {{ contact.firstname|default("there", true) }},
+              </p>
+              
+              <!-- AI Narration - Dynamic personalized message -->
+              <p style="font-size: 15px; line-height: 1.7; color: #0F172A; margin: 0 0 24px;">
+                {{ contact.deal_ai_narration|default("I just came across a property that caught my attention, and I wanted to share it with you right away. This one has strong numbers based on how similar properties are performing in the area.", true) }}
+              </p>
+              
+              <!-- Property Card -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #fafafa; border-radius: 12px; border: 1px solid rgba(201, 169, 98, 0.2); margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    
+                    <!-- Property Address -->
+                    <h2 style="margin: 0 0 8px; font-size: 20px; color: #0F172A; font-weight: 600;">
+                      {{ contact.deal_property_address }}
+                    </h2>
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 16px;">
+                      {{ contact.deal_city }}, {{ contact.deal_state }}
+                    </p>
+                    
+                    <!-- Property Badges -->
+                    <span style="display: inline-block; background: rgba(201, 169, 98, 0.2); color: #0F172A; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                      {{ contact.deal_bedrooms }} Bed · {{ contact.deal_bathrooms }} Bath
+                    </span>
+                    
+                    <!-- Stats Grid -->
+                    <table role="presentation" cellpadding="0" cellspacing="8" width="100%" style="margin-top: 20px;">
+                      <tr>
+                        <!-- Revenue -->
+                        <td class="stat-cell" width="25%" style="text-align: center; padding: 12px 8px; background: #ffffff; border-radius: 8px;">
+                          <div style="font-size: 20px; font-weight: 700; color: #C9A962;">${{ contact.deal_monthly_revenue }}</div>
+                          <div style="font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px;">Revenue/Mo</div>
+                        </td>
+                        
+                        <!-- Rent -->
+                        <td class="stat-cell" width="25%" style="text-align: center; padding: 12px 8px; background: #ffffff; border-radius: 8px;">
+                          <div style="font-size: 20px; font-weight: 700; color: #0F172A;">${{ contact.deal_monthly_rent }}</div>
+                          <div style="font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px;">Rent</div>
+                        </td>
+                        
+                        <!-- Profit -->
+                        <td class="stat-cell" width="25%" style="text-align: center; padding: 12px 8px; background: #ffffff; border-radius: 8px;">
+                          <div style="font-size: 20px; font-weight: 700; color: #22c55e;">${{ contact.deal_monthly_profit }}</div>
+                          <div style="font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px;">Profit/Mo</div>
+                        </td>
+                        
+                        <!-- Occupancy -->
+                        <td class="stat-cell" width="25%" style="text-align: center; padding: 12px 8px; background: #ffffff; border-radius: 8px;">
+                          <div style="font-size: 20px; font-weight: 700; color: #0F172A;">{{ contact.deal_occupancy }}%</div>
+                          <div style="font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px;">Occupancy</div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Analysis Link -->
+                    <div style="margin-top: 20px; text-align: center;">
+                      <a href="{{ contact.deal_analysis_url }}" style="display: inline-block; color: #C9A962; font-size: 14px; font-weight: 600; text-decoration: none;">
+                        📊 View Full Analysis →
+                      </a>
+                    </div>
+                    
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Comparable Properties Section -->
+              {% if contact.deal_comp1_title %}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%); border-radius: 12px; border-left: 4px solid #22c55e;">
+                    
+                    <h3 style="margin: 0 0 12px; font-size: 16px; color: #0F172A; font-weight: 600;">
+                      <span style="color: #22c55e;">✓</span> Properties Nearby Already Making Money
+                    </h3>
+                    
+                    <p style="color: #64748b; font-size: 13px; margin: 0 0 16px;">Similar properties within 1 mile are generating consistent revenue:</p>
+                    
+                    <!-- Comp 1 -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #ffffff; border-radius: 8px; margin-bottom: 8px;">
+                      <tr>
+                        <td style="padding: 12px 16px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="font-size: 14px; color: #0F172A; font-weight: 500;">{{ contact.deal_comp1_title }}</td>
+                              <td style="text-align: right;">
+                                <span style="color: #22c55e; font-weight: 700; font-size: 14px;">${{ contact.deal_comp1_revenue }}/mo</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 8px;">{{ contact.deal_comp1_occupancy }}% occ</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Comp 2 -->
+                    {% if contact.deal_comp2_title %}
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #ffffff; border-radius: 8px; margin-bottom: 8px;">
+                      <tr>
+                        <td style="padding: 12px 16px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="font-size: 14px; color: #0F172A; font-weight: 500;">{{ contact.deal_comp2_title }}</td>
+                              <td style="text-align: right;">
+                                <span style="color: #22c55e; font-weight: 700; font-size: 14px;">${{ contact.deal_comp2_revenue }}/mo</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 8px;">{{ contact.deal_comp2_occupancy }}% occ</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+                    
+                    <!-- Comp 3 -->
+                    {% if contact.deal_comp3_title %}
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #ffffff; border-radius: 8px;">
+                      <tr>
+                        <td style="padding: 12px 16px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="font-size: 14px; color: #0F172A; font-weight: 500;">{{ contact.deal_comp3_title }}</td>
+                              <td style="text-align: right;">
+                                <span style="color: #22c55e; font-weight: 700; font-size: 14px;">${{ contact.deal_comp3_revenue }}/mo</span>
+                                <span style="color: #64748b; font-size: 12px; margin-left: 8px;">{{ contact.deal_comp3_occupancy }}% occ</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    {% endif %}
+                    
+                  </td>
+                </tr>
+              </table>
+              {% endif %}
+              
+              <!-- Turnkey Services Section -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+                <tr>
+                  <td style="background: #0F172A; border-radius: 12px; padding: 24px;">
+                    <h3 style="color: #C9A962; margin: 0 0 12px; font-size: 16px; font-weight: 600;">What We Do For You (Turnkey Program)</h3>
+                    <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.9);">If you're interested in this opportunity, my team handles everything:</p>
+                    
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Run the full numbers and validate the deal
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Reach out to the landlord and negotiate terms
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Set up the property from scratch
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Design and furnish it for maximum bookings
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Automate your operations so you can be hands-off
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: rgba(255,255,255,0.85);">
+                          <span style="color: #C9A962; margin-right: 8px;">✓</span> Ongoing support to optimize your revenue
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px;">
+                    <a href="https://masterclass.coachinayah.com/the-turnkey-program" style="display: inline-block; background: linear-gradient(135deg, #C9A962 0%, #d4b978 100%); color: #0F172A; padding: 16px 48px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 15px; letter-spacing: 0.02em;">
+                      Book a Call with Our Team
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Secondary Link -->
+              <p style="text-align: center; margin: 0; font-size: 13px; color: #64748b;">
+                Or <a href="{{ contact.deal_analysis_url }}" style="color: #C9A962; text-decoration: underline;">view the full property analysis</a> first
+              </p>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #0F172A; padding: 28px 32px; text-align: center;">
+              <div style="color: #C9A962; font-size: 18px; font-weight: 600; margin-bottom: 10px;">Coach Inayah</div>
+              <p style="color: rgba(255,255,255,0.7); font-size: 12px; margin: 6px 0;">Helping you build wealth through short-term rentals</p>
+              <p style="color: rgba(255,255,255,0.7); font-size: 12px; margin: 6px 0;">
+                <a href="https://coachinayahturnkeytool.com" style="color: #C9A962; text-decoration: none;">coachinayahturnkeytool.com</a>
+              </p>
+              <p style="color: rgba(255,255,255,0.5); font-size: 11px; margin: 16px 0 0;">
+                You're receiving this because you expressed interest in short-term rental opportunities.
+                <br>
+                <a href="{{ unsubscribe_link }}" style="color: rgba(255,255,255,0.5); text-decoration: underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
+  
+</body>
+</html>
