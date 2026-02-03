@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Deal Alert</title>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 50px auto; padding: 20px; }
+    button { background: #C9A962; color: #0F172A; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #b8994f; }
+    #result { margin-top: 20px; padding: 16px; background: #f1f5f9; border-radius: 8px; white-space: pre-wrap; }
+    .loading { opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <h1>Test Deal Alert Email</h1>
+  <p>Click the button below to send a test deal alert email to bryson@coachinayah.com</p>
+  
+  <button id="sendBtn" onclick="sendTestAlert()">Send Test Deal Alert</button>
+  
+  <div id="result"></div>
+  
+  <script>
+    async function sendTestAlert() {
+      const btn = document.getElementById('sendBtn');
+      const result = document.getElementById('result');
+      
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = 'Sending...';
+      result.textContent = 'Sending test deal alert...';
+      
+      try {
+        const response = await fetch('/api/trpc/newsletter.sendTestDealAlertFull', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            json: {
+              email: 'bryson@coachinayah.com',
+              firstName: 'Bryson',
+              city: 'Atlanta',
+              state: 'GA'
+            }
+          })
+        });
+        
+        const data = await response.json();
+        result.textContent = JSON.stringify(data, null, 2);
+        
+        if (data.result?.data?.json?.success) {
+          result.style.background = '#dcfce7';
+          result.textContent = '✅ Email sent successfully!\n\n' + JSON.stringify(data, null, 2);
+        } else if (data.error) {
+          result.style.background = '#fee2e2';
+          result.textContent = '❌ Error: ' + (data.error.json?.message || JSON.stringify(data.error));
+        }
+      } catch (error) {
+        result.style.background = '#fee2e2';
+        result.textContent = '❌ Error: ' + error.message;
+      }
+      
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = 'Send Test Deal Alert';
+    }
+  </script>
+</body>
+</html>
