@@ -1,0 +1,216 @@
+<!--
+  templateType: email
+  isAvailableForNewContent: true
+  label: Nurture Day 7 - Market Summary
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Summary</title>
+  <style type="text/css" id="hs-inline-css">
+    body { margin: 0; padding: 0; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9;">
+
+  <div id="preview_text" style="display:none;">Your complete {{ contact.nurture_city|default("market") }} rental arbitrage summary + what's next...</div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 24px 16px;">
+
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); padding: 32px 24px; text-align: center;">
+              <h1 style="color: #C9A962; font-size: 28px; margin: 0 0 8px 0; font-weight: 600;">📋 Your Market Summary</h1>
+              <p style="color: rgba(255,255,255,0.8); font-size: 16px; margin: 0;">Everything you need to know about {{ contact.nurture_city|default("your market") }}</p>
+            </td>
+          </tr>
+
+          <!-- Intro -->
+          <tr>
+            <td style="padding: 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hey {{ contact.firstname|default("there") }},</p>
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">Over the past week, I've shared a lot of data about <strong>{{ contact.nurture_city|default("your market") }}, {{ contact.nurture_state|default("ST") }}</strong>. Here's your complete summary:</p>
+            </td>
+          </tr>
+
+          <!-- Quick Stats Recap -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="background: #0F172A; padding: 16px 20px;">
+                    <h2 style="color: #ffffff; font-size: 18px; margin: 0;">{{ contact.nurture_city|default("Your Market") }} At a Glance</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="50%" style="padding: 10px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Annual Revenue</p>
+                          <p style="color: #C9A962; font-size: 20px; font-weight: 700; margin: 0;">${{ contact.nurture_avg_annual_revenue|default("45,000") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Occupancy</p>
+                          <p style="color: #166534; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_avg_occupancy|default("65") }}%</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding: 10px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Arbitrage Friendly</p>
+                          <p style="color: #0F172A; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_arbitrage_friendly|default("Yes") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 10px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Active Listings</p>
+                          <p style="color: #0F172A; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_listing_count|default("1,500") }}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding: 10px; text-align: center; border-right: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Peak Season</p>
+                          <p style="color: #0F172A; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_peak_month|default("June") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 10px; text-align: center;">
+                          <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; text-transform: uppercase;">Market Trend</p>
+                          <p style="color: #0F172A; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_revenue_trend|default("Stable") }}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- What We Covered -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <h3 style="color: #0F172A; font-size: 18px; margin: 0 0 16px 0;">What We Covered This Week:</h3>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 1</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Market snapshot with real revenue data</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 2</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Regulation updates and compliance requirements</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 3</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Real deal opportunity with profit projections</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 4</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Seasonality patterns and pricing strategies</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 5</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Current market activity and what to look for</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="30"><p style="color: #C9A962; font-size: 14px; font-weight: 700; margin: 0;">Day 6</p></td>
+                        <td><p style="color: #334155; font-size: 14px; margin: 0;">Top performers and what makes them successful</p></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Your Next Steps -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="color: #C9A962; font-size: 18px; margin: 0 0 16px 0;">🚀 Your Next Steps</h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr><td style="padding: 8px 0; color: rgba(255,255,255,0.9); font-size: 14px;"><strong style="color: #C9A962;">1.</strong> Research landlords open to STR arrangements</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255,255,255,0.9); font-size: 14px;"><strong style="color: #C9A962;">2.</strong> Get your business license and insurance in order</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255,255,255,0.9); font-size: 14px;"><strong style="color: #C9A962;">3.</strong> Run the numbers on specific properties</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255,255,255,0.9); font-size: 14px;"><strong style="color: #C9A962;">4.</strong> Build your team (cleaners, handyman, etc.)</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255,255,255,0.9); font-size: 14px;"><strong style="color: #C9A962;">5.</strong> Take action – the best time to start is now</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Stay Connected -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px; background-color: #f8fafc; border-left: 4px solid #C9A962;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 16px 0;">I'll continue sending you valuable market insights and opportunities. Keep an eye on your inbox – the next great deal could be just around the corner!</p>
+            </td>
+          </tr>
+
+          <!-- Sign Off -->
+          <tr>
+            <td style="padding: 24px 24px 32px 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Here's to your success,<br><strong>Coach Inayah</strong></p>
+              <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0; font-style: italic;">P.S. Have questions about {{ contact.nurture_city|default("your market") }} or rental arbitrage in general? Just reply to this email – I read every response.</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f1f5f9; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">
+                {{ site_settings.company_name }} | {{ site_settings.company_city }}, {{ site_settings.company_state }}
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                <a href="{{ unsubscribe_link }}" style="color: #94a3b8;">Update preferences</a> |
+                <a href="{{ unsubscribe_link_all }}" style="color: #94a3b8;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

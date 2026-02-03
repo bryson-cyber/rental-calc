@@ -1,0 +1,152 @@
+<!--
+  templateType: email
+  isAvailableForNewContent: true
+  label: Nurture Day 1 - Market Snapshot
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Market Snapshot</title>
+  <style type="text/css" id="hs-inline-css">
+    body { margin: 0; padding: 0; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9;">
+
+  <div id="preview_text" style="display:none;">See what hosts in {{ contact.nurture_city|default("your market") }} are actually earning...</div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 24px 16px;">
+
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); padding: 32px 24px; text-align: center;">
+              <h1 style="color: #C9A962; font-size: 28px; margin: 0 0 8px 0; font-weight: 600;">Your Market Snapshot</h1>
+              <p style="color: rgba(255,255,255,0.8); font-size: 16px; margin: 0;">{{ contact.nurture_city|default("Your City") }}, {{ contact.nurture_state|default("ST") }}</p>
+            </td>
+          </tr>
+
+          <!-- Welcome Message -->
+          <tr>
+            <td style="padding: 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hey {{ contact.firstname|default("there") }},</p>
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">Welcome to the Coach Inayah community! I pulled some real numbers from <strong>{{ contact.nurture_city|default("your market") }}, {{ contact.nurture_state|default("ST") }}</strong> that you'll want to see.</p>
+            </td>
+          </tr>
+
+          <!-- Market Stats Card -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+
+                <!-- Card Header -->
+                <tr>
+                  <td style="background: #0F172A; padding: 16px 20px;">
+                    <h2 style="color: #ffffff; font-size: 18px; margin: 0;">Market Overview</h2>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 4px 0 0 0;">Real data from {{ contact.nurture_listing_count|default("1,000+") }} active short-term rentals</p>
+                  </td>
+                </tr>
+
+                <!-- Stats Grid -->
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="50%" style="padding: 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Annual Revenue</p>
+                          <p style="color: #C9A962; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.nurture_avg_annual_revenue|default("45,000") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Monthly Revenue</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.nurture_avg_monthly_revenue|default("3,750") }}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding: 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Occupancy</p>
+                          <p style="color: #166534; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.nurture_avg_occupancy|default("65") }}%</p>
+                        </td>
+                        <td width="50%" style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Daily Rate</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.nurture_avg_adr|default("165") }}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding: 12px; text-align: center; border-right: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Active Listings</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.nurture_listing_count|default("1,500") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 12px; text-align: center;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Revenue Trend</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.nurture_revenue_trend|default("Stable") }}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- What This Means Section -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="color: #C9A962; font-size: 18px; margin: 0 0 12px 0;">💡 What This Means For You</h3>
+                    <p style="color: rgba(255,255,255,0.9); font-size: 15px; line-height: 1.6; margin: 0;">With rental arbitrage, you don't need to buy property to start earning. If you could capture even the average revenue in {{ contact.nurture_city|default("this market") }}, you'd be looking at <strong style="color: #C9A962;">${{ contact.nurture_avg_monthly_revenue|default("3,750") }} per month</strong> in rental income – without owning real estate.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Coming Up Section -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Over the next few days, I'll send you more insights about {{ contact.nurture_city|default("your market") }}:</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr><td style="padding: 8px 0; color: #334155; font-size: 15px;">📋 <strong>Tomorrow:</strong> Regulation updates – can you legally do arbitrage here?</td></tr>
+                <tr><td style="padding: 8px 0; color: #334155; font-size: 15px;">💰 <strong>Day 3:</strong> Real deal opportunities with profit potential</td></tr>
+                <tr><td style="padding: 8px 0; color: #334155; font-size: 15px;">📈 <strong>Day 4:</strong> Seasonality patterns and pricing trends</td></tr>
+                <tr><td style="padding: 8px 0; color: #334155; font-size: 15px;">🏆 <strong>Day 5+:</strong> What the top performers are doing differently</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Sign Off -->
+          <tr>
+            <td style="padding: 0 24px 32px 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">Talk soon,<br><strong>Coach Inayah</strong></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f1f5f9; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">
+                {{ site_settings.company_name }} | {{ site_settings.company_city }}, {{ site_settings.company_state }}
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                <a href="{{ unsubscribe_link }}" style="color: #94a3b8;">Update preferences</a> |
+                <a href="{{ unsubscribe_link_all }}" style="color: #94a3b8;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

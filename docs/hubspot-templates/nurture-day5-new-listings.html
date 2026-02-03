@@ -1,0 +1,143 @@
+<!--
+  templateType: email
+  isAvailableForNewContent: true
+  label: Nurture Day 5 - New Listings Alert
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Listings Alert</title>
+  <style type="text/css" id="hs-inline-css">
+    body { margin: 0; padding: 0; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9;">
+
+  <div id="preview_text" style="display:none;">Fresh rental opportunities just hit the market in {{ contact.nurture_city|default("your area") }}...</div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
+    <tr>
+      <td align="center" style="padding: 24px 16px;">
+
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); padding: 32px 24px; text-align: center;">
+              <h1 style="color: #C9A962; font-size: 28px; margin: 0 0 8px 0; font-weight: 600;">🏠 New Listings Alert</h1>
+              <p style="color: rgba(255,255,255,0.8); font-size: 16px; margin: 0;">Fresh opportunities in {{ contact.nurture_city|default("your market") }}</p>
+            </td>
+          </tr>
+
+          <!-- Intro -->
+          <tr>
+            <td style="padding: 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hey {{ contact.firstname|default("there") }},</p>
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">New properties are always coming on the market. Here's a snapshot of what's available in <strong>{{ contact.nurture_city|default("your market") }}</strong> right now:</p>
+            </td>
+          </tr>
+
+          <!-- Market Activity Card -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="background: #0F172A; padding: 16px 20px;">
+                    <h2 style="color: #ffffff; font-size: 18px; margin: 0;">Current Market Activity</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="50%" style="padding: 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Active STR Listings</p>
+                          <p style="color: #C9A962; font-size: 28px; font-weight: 700; margin: 0;">{{ contact.nurture_listing_count|default("1,500") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Revenue/Month</p>
+                          <p style="color: #0F172A; font-size: 28px; font-weight: 700; margin: 0;">${{ contact.nurture_avg_monthly_revenue|default("3,750") }}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="50%" style="padding: 12px; text-align: center; border-right: 1px solid #e2e8f0;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Market Trend</p>
+                          <p style="color: #166534; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_revenue_trend|default("Growing") }}</p>
+                        </td>
+                        <td width="50%" style="padding: 12px; text-align: center;">
+                          <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Avg Occupancy</p>
+                          <p style="color: #0F172A; font-size: 20px; font-weight: 700; margin: 0;">{{ contact.nurture_avg_occupancy|default("65") }}%</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- What to Look For Section -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="color: #C9A962; font-size: 18px; margin: 0 0 16px 0;">🔍 What to Look For in {{ contact.nurture_city|default("This Market") }}</h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Properties near downtown or tourist attractions</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Landlords open to short-term rental arrangements</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ 2-3 bedroom units (best ROI in most markets)</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Properties with parking and outdoor space</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Buildings without strict HOA restrictions</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Quick Tip -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px; background-color: #f8fafc; border-left: 4px solid #C9A962;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 16px 0;"><strong>Quick Tip:</strong> The best arbitrage deals often come from building relationships with landlords and property managers. Many aren't listed publicly – they come through networking and referrals.</p>
+            </td>
+          </tr>
+
+          <!-- Tomorrow Preview -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;"><strong>Tomorrow:</strong> I'll show you what the top performers in {{ contact.nurture_city|default("your market") }} are doing differently – and how you can learn from their success. 🏆</p>
+            </td>
+          </tr>
+
+          <!-- Sign Off -->
+          <tr>
+            <td style="padding: 0 24px 32px 24px;">
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">Talk soon,<br><strong>Coach Inayah</strong></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f1f5f9; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 12px; margin: 0 0 8px 0;">
+                {{ site_settings.company_name }} | {{ site_settings.company_city }}, {{ site_settings.company_state }}
+              </p>
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                <a href="{{ unsubscribe_link }}" style="color: #94a3b8;">Update preferences</a> |
+                <a href="{{ unsubscribe_link_all }}" style="color: #94a3b8;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
