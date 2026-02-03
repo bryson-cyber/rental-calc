@@ -18,7 +18,7 @@ import {
 } from "./newsletter-orchestrator";
 import { getUniqueCities, getContactsByCity } from "./hubspot";
 import { getMarketSnapshotForCity, batchGetMarketSnapshots } from "./newsletter-market-data";
-import { getSendStats, unsubscribeContact } from './newsletter-email-sender';
+import { getSendStats, unsubscribeContact, sendDealAlertWithTemplate, sendTestDealAlert as sendTestDealAlertTemplate, type DealAlertData } from './newsletter-email-sender';
 import { sendTestDealAlert } from './test-deal-alert';
 
 export const newsletterRouter = router({
@@ -353,5 +353,69 @@ export const newsletterRouter = router({
         content: result.content,
         error: result.error
       };
+    }),
+  
+  // Send deal alert with HubSpot template (production method)
+  sendDealAlertTemplate: protectedProcedure
+    .input(z.object({
+      email: z.string().email(),
+      firstName: z.string(),
+      lastName: z.string().optional(),
+      contactId: z.string().optional(),
+      dealData: z.object({
+        previewText: z.string().optional(),
+        aiNarration: z.string(),
+        propertyAddress: z.string(),
+        bedrooms: z.number(),
+        bathrooms: z.number(),
+        propertyType: z.string().optional(),
+        monthlyRevenue: z.number(),
+        monthlyRent: z.number(),
+        monthlyProfit: z.number(),
+        occupancy: z.number(),
+        analysisUrl: z.string(),
+        compsSummary: z.string().optional(),
+        comps: z.array(z.object({
+          title: z.string(),
+          revenue: z.number(),
+          occupancy: z.number()
+        })).optional()
+      })
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      
+      console.log(`[Newsletter] Sending deal alert template to ${input.email}`);
+      
+      const result = await sendDealAlertWithTemplate({
+        recipient: {
+          email: input.email,
+          firstName: input.firstName,
+          lastName: input.lastName || '',
+          contactId: input.contactId
+        },
+        dealData: input.dealData as DealAlertData
+      });
+      
+      return result;
+    }),
+  
+  // Quick test deal alert with sample data
+  quickTestDealAlert: protectedProcedure
+    .input(z.object({
+      email: z.string().email()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      
+      console.log(`[Newsletter] Sending quick test deal alert to ${input.email}`);
+      
+      const result = await sendTestDealAlertTemplate(input.email);
+      
+      return result;
     })
 });

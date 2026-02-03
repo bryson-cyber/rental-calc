@@ -5,7 +5,13 @@
  * Uses sample data for testing purposes.
  */
 
-import { sendDealAlertEmail, type ComparableProperty } from './newsletter-email-sender';
+import { 
+  sendDealAlertEmail, 
+  sendDealAlertWithTemplate,
+  sendTestDealAlert as sendTestDealAlertTemplate,
+  type ComparableProperty,
+  type DealAlertData
+} from './newsletter-email-sender';
 import { sendDealAlertSMS, sendWelcomeSMS, type SMSRecipient } from './newsletter-sms';
 
 export interface TestDealAlertParams {
@@ -27,6 +33,7 @@ export interface TestDealAlertParams {
   // Options
   sendEmail?: boolean;
   sendSms?: boolean;
+  useHubSpotTemplate?: boolean; // Use HubSpot Design Manager template
 }
 
 export interface TestDealAlertResult {
@@ -62,7 +69,8 @@ export async function sendTestDealAlert(params: TestDealAlertParams): Promise<Te
     monthlyRevenue = 4200,
     occupancyRate = 0.72,
     sendEmail: shouldSendEmail = true,
-    sendSms: shouldSendSms = true
+    sendSms: shouldSendSms = true,
+    useHubSpotTemplate = true
   } = params;
   
   const result: TestDealAlertResult = {
@@ -151,39 +159,80 @@ export async function sendTestDealAlert(params: TestDealAlertParams): Promise<Te
   // Send email
   if (shouldSendEmail) {
     try {
-      console.log(`[TestDealAlert] Sending email to ${email}...`);
+      console.log(`[TestDealAlert] Sending email to ${email} (template: ${useHubSpotTemplate})...`);
       
-      const emailResult = await sendDealAlertEmail({
-        recipient: {
-          email,
-          firstName,
-          lastName: '',
-          contactId: undefined
-        },
-        city,
-        state,
-        deal: {
-          address,
+      if (useHubSpotTemplate) {
+        // Use HubSpot Design Manager template
+        const dealData: DealAlertData = {
+          previewText: `New ${city} opportunity - $${monthlyProfit.toLocaleString()}/mo profit potential`,
+          aiNarration: `I just came across a property in ${city} that caught my attention, and I wanted to share it with you right away. This ${bedrooms}-bedroom in a prime location is showing strong numbers – we're projecting $${monthlyRevenue.toLocaleString()}/month in revenue based on how similar properties are performing nearby. With rent at $${monthlyRent.toLocaleString()}/month, that's a potential profit of <strong>$${monthlyProfit.toLocaleString()}/month</strong>.`,
+          propertyAddress: `${address}, ${city}, ${state}`,
           bedrooms,
           bathrooms,
           propertyType: 'Single Family',
           monthlyRevenue,
-          annualRevenue,
-          occupancyRate,
-          averageDailyRate,
-          dealScore: 75,
           monthlyRent,
-          zillowUrl: `https://zillow.com/homedetails/${address.replace(/\s+/g, '-').toLowerCase()}-${city.toLowerCase()}-${state.toLowerCase()}`
-        },
-        comparables
-      });
-      
-      result.emailSent = emailResult.success;
-      if (!emailResult.success) {
-        result.emailError = emailResult.error;
+          monthlyProfit,
+          occupancy: occupancyRate,
+          analysisUrl: `https://coachinayahturnkeytool.com?step=5&address=${encodeURIComponent(address)}&bedrooms=${bedrooms}&bathrooms=${bathrooms}&rent=${monthlyRent}&autoAnalyze=true`,
+          compsSummary: `${comparables.length} similar properties within 1 mile averaging $${Math.round(comparables.reduce((sum, c) => sum + c.monthlyRevenue, 0) / comparables.length).toLocaleString()}/mo`,
+          comps: comparables.slice(0, 3).map(c => ({
+            title: c.title,
+            revenue: c.monthlyRevenue,
+            occupancy: Math.round(c.occupancy * 100)
+          }))
+        };
+        
+        const emailResult = await sendDealAlertWithTemplate({
+          recipient: {
+            email,
+            firstName,
+            lastName: '',
+            contactId: undefined
+          },
+          dealData
+        });
+        
+        result.emailSent = emailResult.success;
+        if (!emailResult.success) {
+          result.emailError = emailResult.error;
+        }
+        
+        console.log(`[TestDealAlert] Email ${emailResult.success ? 'sent successfully' : 'failed'}: ${emailResult.error || ''}`);
+      } else {
+        // Use direct HTML email (fallback)
+        const emailResult = await sendDealAlertEmail({
+          recipient: {
+            email,
+            firstName,
+            lastName: '',
+            contactId: undefined
+          },
+          city,
+          state,
+          deal: {
+            address,
+            bedrooms,
+            bathrooms,
+            propertyType: 'Single Family',
+            monthlyRevenue,
+            annualRevenue,
+            occupancyRate,
+            averageDailyRate,
+            dealScore: 75,
+            monthlyRent,
+            zillowUrl: `https://zillow.com/homedetails/${address.replace(/\s+/g, '-').toLowerCase()}-${city.toLowerCase()}-${state.toLowerCase()}`
+          },
+          comparables
+        });
+        
+        result.emailSent = emailResult.success;
+        if (!emailResult.success) {
+          result.emailError = emailResult.error;
+        }
+        
+        console.log(`[TestDealAlert] Email ${emailResult.success ? 'sent successfully' : 'failed'}: ${emailResult.error || ''}`);
       }
-      
-      console.log(`[TestDealAlert] Email ${emailResult.success ? 'sent successfully' : 'failed'}: ${emailResult.error || ''}`);
     } catch (error) {
       result.emailSent = false;
       result.emailError = error instanceof Error ? error.message : 'Unknown error';
@@ -272,4 +321,11 @@ export async function sendWelcomeMessages(params: {
   }
   
   return result;
+}
+
+/**
+ * Quick test function using the built-in test data
+ */
+export async function quickTestDealAlert(email: string): Promise<TestDealAlertResult> {
+  return sendTestDealAlertTemplate(email);
 }
