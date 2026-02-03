@@ -1,0 +1,4 @@
+New HubSpot API Token (rotated with transactional-email scope):
+pat-na1-aea2e0be-22e9-422a-a056-65b4abb94346
+
+This token needs to be updated in Manus secrets as HUBSPOT_API_KEY

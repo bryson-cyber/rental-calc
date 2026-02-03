@@ -3,181 +3,322 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New opportunity in Atlanta – $1,800/mo profit potential</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Deal Alert Email Preview - Coach Inayah</title>
   <style>
     body { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; 
-      line-height: 1.7; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+      line-height: 1.6; 
       color: #0F172A; 
       margin: 0; 
       padding: 0; 
-      background-color: #F8F9FA; 
+      background-color: #f1f5f9; 
+      -webkit-font-smoothing: antialiased;
     }
     .container { 
       max-width: 600px; 
       margin: 0 auto; 
-      background: #FFFFFF; 
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      background: #ffffff; 
     }
     .header { 
-      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); 
-      padding: 48px 40px; 
+      background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%); 
+      padding: 40px 32px; 
       text-align: center; 
     }
     .header h1 { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #C9A962; 
       margin: 0; 
-      font-size: 28px; 
-      font-weight: 700;
+      font-size: 26px; 
+      font-weight: 600;
       letter-spacing: -0.02em;
     }
     .header p { 
-      color: #FFFFFF; 
+      color: #ffffff; 
       opacity: 0.85; 
-      margin: 12px 0 0; 
+      margin: 10px 0 0; 
       font-size: 15px;
       font-weight: 400;
     }
     .content { 
-      padding: 40px; 
+      padding: 32px; 
     }
     .greeting { 
-      font-size: 18px; 
-      margin-bottom: 24px; 
+      font-size: 17px; 
+      margin-bottom: 20px; 
       color: #0F172A;
       font-weight: 500;
     }
     .narrative {
-      font-size: 16px;
-      line-height: 1.8;
+      font-size: 15px;
+      line-height: 1.7;
       color: #0F172A;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .property-card { 
-      background: #FAFAF8; 
-      border-radius: 16px; 
-      padding: 28px; 
-      margin: 28px 0; 
+      background: #fafafa; 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin: 24px 0; 
       border: 1px solid rgba(201, 169, 98, 0.2);
     }
-    .property-card h2 { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      color: #0F172A; 
-      margin: 0 0 8px; 
-      font-size: 20px;
-      font-weight: 600;
-    }
-    .property-card .address {
-      color: #64748B;
-      font-size: 14px;
-      margin-bottom: 12px;
-    }
-    .property-link {
-      margin: 12px 0 20px;
-      font-size: 14px;
-    }
-    .property-link a {
-      color: #C9A962;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .property-link a:hover {
-      text-decoration: underline;
-    }
-    .opportunity-badge {
-      display: inline-block;
-      background: linear-gradient(135deg, #C9A962 0%, #D4B978 100%);
-      color: #0F172A;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .property-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
       margin-bottom: 16px;
     }
+    .property-image-placeholder {
+      width: 100px;
+      height: 75px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .property-image-placeholder span {
+      color: #C9A962;
+      font-size: 28px;
+    }
+    .property-info {
+      flex: 1;
+    }
+    .property-card h2 { 
+      color: #0F172A; 
+      margin: 0 0 6px; 
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .property-card .address {
+      color: #64748b;
+      font-size: 13px;
+      margin: 0;
+    }
+    .property-badges {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-gold {
+      background: linear-gradient(135deg, #C9A962 0%, #d4b978 100%);
+      color: #0F172A;
+    }
+    .badge-gray {
+      background: #f1f5f9;
+      color: #64748b;
+    }
     .stat-grid { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 12px; 
+      display: table;
+      width: 100%;
       margin-top: 20px;
+      border-spacing: 8px;
+    }
+    .stat-row {
+      display: table-row;
     }
     .stat-item { 
-      flex: 1; 
-      min-width: 110px; 
+      display: table-cell;
       text-align: center; 
-      padding: 16px 12px; 
-      background: #FFFFFF; 
-      border-radius: 12px;
+      padding: 14px 8px; 
+      background: #ffffff; 
+      border-radius: 10px;
       border: 1px solid rgba(0,0,0,0.06);
+      vertical-align: top;
     }
     .stat-value { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 22px; 
       font-weight: 700; 
       color: #0F172A; 
       letter-spacing: -0.02em;
     }
-    .stat-value.highlight {
+    .stat-value.gold {
       color: #C9A962;
     }
-    .stat-value.profit {
+    .stat-value.green {
       color: #22c55e;
     }
     .stat-label { 
-      font-size: 11px; 
-      color: #64748B; 
+      font-size: 10px; 
+      color: #64748b; 
       text-transform: uppercase; 
       letter-spacing: 0.5px;
       margin-top: 4px;
     }
+    .property-links {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .property-link {
+      color: #C9A962;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .property-link:hover {
+      text-decoration: underline;
+    }
+    .comps-section {
+      margin: 28px 0;
+      padding: 24px;
+      background: #fafafa;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .comps-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .comps-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #0F172A;
+    }
+    .comps-header .icon {
+      color: #22c55e;
+      font-size: 18px;
+    }
+    .comps-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin: 0 0 16px;
+    }
+    .comp-card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .comp-card:last-child {
+      margin-bottom: 0;
+    }
+    .comp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .comp-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #0F172A;
+      margin: 0;
+      flex: 1;
+      min-width: 150px;
+    }
+    .comp-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .comp-stat {
+      text-align: center;
+    }
+    .comp-stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+    }
+    .comp-stat-value.green {
+      color: #22c55e;
+    }
+    .comp-stat-label {
+      font-size: 9px;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .comp-link {
+      font-size: 12px;
+      color: #C9A962;
+      text-decoration: none;
+    }
     .insight-box {
       background: linear-gradient(135deg, rgba(201, 169, 98, 0.08) 0%, rgba(201, 169, 98, 0.04) 100%);
       border-left: 3px solid #C9A962;
-      padding: 20px 24px;
-      border-radius: 0 12px 12px 0;
+      padding: 18px 20px;
+      border-radius: 0 10px 10px 0;
       margin: 24px 0;
     }
     .insight-box p {
       margin: 0;
-      font-size: 15px;
+      font-size: 14px;
       color: #0F172A;
-      line-height: 1.7;
+      line-height: 1.6;
     }
-    .insight-box strong {
-      color: #0F172A;
+    .turnkey-section {
+      background: #0F172A;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 28px 0;
+      color: #ffffff;
+    }
+    .turnkey-section h3 {
+      color: #C9A962;
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .turnkey-section p {
+      margin: 0 0 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.9);
+    }
+    .turnkey-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .turnkey-list li {
+      padding: 6px 0 6px 24px;
+      position: relative;
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+    }
+    .turnkey-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #C9A962;
+      font-weight: bold;
     }
     .cta-section {
       text-align: center;
-      margin: 36px 0 24px;
+      margin: 32px 0 24px;
     }
     .cta-button { 
       display: inline-block; 
-      background: linear-gradient(135deg, #C9A962 0%, #D4B978 100%);
+      background: linear-gradient(135deg, #C9A962 0%, #d4b978 100%);
       color: #0F172A; 
-      padding: 16px 36px; 
+      padding: 16px 40px; 
       border-radius: 50px; 
       text-decoration: none; 
       font-weight: 600; 
       font-size: 15px;
       letter-spacing: 0.02em;
-      box-shadow: 0 4px 16px rgba(201, 169, 98, 0.3);
-      transition: all 0.3s ease;
-    }
-    .cta-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(201, 169, 98, 0.4);
     }
     .secondary-link {
       display: block;
-      margin-top: 16px;
-      color: #64748B;
-      font-size: 14px;
-      text-decoration: none;
+      margin-top: 14px;
+      color: #64748b;
+      font-size: 13px;
     }
     .secondary-link a {
       color: #C9A962;
@@ -185,119 +326,237 @@
     }
     .footer { 
       background: #0F172A; 
-      padding: 32px 40px; 
+      padding: 28px 32px; 
       text-align: center; 
     }
     .footer-logo {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: #C9A962;
       font-size: 18px;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .footer p { 
       color: rgba(255,255,255,0.7); 
-      font-size: 13px; 
-      margin: 8px 0;
+      font-size: 12px; 
+      margin: 6px 0;
     }
     .footer a { 
       color: #C9A962; 
       text-decoration: none; 
     }
     .footer-links {
-      margin: 16px 0;
+      margin: 14px 0;
     }
     .footer-links a {
-      margin: 0 12px;
-      font-size: 13px;
+      margin: 0 10px;
+      font-size: 12px;
     }
     .unsubscribe { 
-      margin-top: 20px; 
-      padding-top: 20px;
+      margin-top: 18px; 
+      padding-top: 18px;
       border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 11px; 
+      font-size: 10px; 
       color: rgba(255,255,255,0.5); 
     }
     .unsubscribe a {
       color: rgba(255,255,255,0.5);
     }
     @media (max-width: 600px) {
-      .content { padding: 28px 24px; }
-      .header { padding: 36px 24px; }
-      .header h1 { font-size: 24px; }
-      .stat-grid { flex-direction: column; }
-      .stat-item { min-width: 100%; }
-      .property-card { padding: 20px; }
-      .footer { padding: 28px 24px; }
+      .content { padding: 24px 20px; }
+      .header { padding: 32px 20px; }
+      .header h1 { font-size: 22px; }
+      .stat-grid { display: block; }
+      .stat-row { display: block; }
+      .stat-item { display: block; width: 100% !important; margin-bottom: 8px; }
+      .property-card { padding: 18px; }
+      .property-header { flex-direction: column; }
+      .property-image-placeholder { width: 100%; height: 120px; }
+      .footer { padding: 24px 20px; }
+      .comp-row { flex-direction: column; align-items: flex-start; }
+      .comp-stats { width: 100%; justify-content: space-between; margin-top: 8px; }
+      .turnkey-section { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div style="padding: 20px 16px;">
+  <div style="padding: 16px 12px;">
     <div class="container">
       <div class="header">
-        <h1>New Opportunity Found</h1>
-        <p>Atlanta, GA Market Update</p>
+        <h1>🏠 New Investment Opportunity</h1>
+        <p>A property in Atlanta, GA caught our attention</p>
       </div>
       <div class="content">
         <div class="greeting">
-          Hi Sarah,
+          Hi Bryson,
         </div>
         
         <p class="narrative">
-          I just found a property in Atlanta that caught my attention, and I wanted to share it with you right away. This one has strong numbers – we're projecting $4,200/month in revenue based on how similar properties are performing in the area. With rent at $2,400, that's a potential profit of $1,800/month (43% margin).
+          I just found a property in Atlanta that caught my attention, and I wanted to share it with you right away. This one has strong numbers – we're projecting <strong>$4,200/month</strong> in revenue based on how similar properties are performing in the area. With rent at $2,400, that's a potential profit of <strong>$1,800/month</strong>.
         </p>
         
         <div class="property-card">
-          <span class="opportunity-badge">New Opportunity</span>
-          <h2>📍 1847 Peachtree St NE, Atlanta, GA 30309</h2>
-          <p class="address">3 bedroom · 2 bath · Atlanta, GA</p>
-          <p class="property-link">
-            <a href="https://coachinayahturnkeytool.com?step=5&address=1847%20Peachtree%20St%20NE%2C%20Atlanta%2C%20GA%2030309&bedrooms=3&bathrooms=2&rent=2400&autoAnalyze=true">📊 View Full Property Analysis →</a>
-          </p>
+          <div class="property-header">
+            <div class="property-image-placeholder"><span>🏠</span></div>
+            <div class="property-info">
+              <h2>1234 Peachtree St NE</h2>
+              <p class="address">Atlanta, GA</p>
+              <div class="property-badges">
+                <span class="badge badge-gold">3 Bed · 2 Bath</span>
+                <span class="badge badge-gray">Single Family</span>
+              </div>
+            </div>
+          </div>
           
           <div class="stat-grid">
-            <div class="stat-item">
-              <div class="stat-value highlight">$4,200</div>
-              <div class="stat-label">Est. Monthly Revenue</div>
+            <div class="stat-row">
+              <div class="stat-item">
+                <div class="stat-value gold">$4,200</div>
+                <div class="stat-label">Est. Revenue/Mo</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">$2,400</div>
+                <div class="stat-label">Monthly Rent</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value green">$1,800</div>
+                <div class="stat-label">Est. Profit/Mo</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value">72%</div>
+                <div class="stat-label">Occupancy</div>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">$2,400</div>
-              <div class="stat-label">Monthly Rent</div>
+          </div>
+          
+          <div class="property-links">
+            <a href="https://coachinayahturnkeytool.com?step=5&address=1234%20Peachtree%20St%20NE%2C%20Atlanta%2C%20GA&bedrooms=3&bathrooms=2&rent=2400&autoAnalyze=true" class="property-link">📊 Full Analysis</a>
+            <a href="https://zillow.com/homedetails/1234-peachtree-st-ne-atlanta-ga" class="property-link">🏠 View on Zillow</a>
+          </div>
+        </div>
+        
+        <div class="comps-section">
+          <div class="comps-header">
+            <span class="icon">✓</span>
+            <h3>Properties Nearby Already Making Money</h3>
+          </div>
+          <p class="comps-subtitle">5 similar properties within 1 mile are averaging <strong>$3,850/mo</strong></p>
+          
+          <div class="comp-card">
+            <div class="comp-row">
+              <p class="comp-title">3BR · Charming Midtown Retreat</p>
+              <div class="comp-stats">
+                <div class="comp-stat">
+                  <div class="comp-stat-value green">$4,100/mo</div>
+                  <div class="comp-stat-label">Revenue</div>
+                </div>
+                <div class="comp-stat">
+                  <div class="comp-stat-value">74%</div>
+                  <div class="comp-stat-label">Occupancy</div>
+                </div>
+                <a href="https://airbnb.com/rooms/12345678" class="comp-link" target="_blank">View →</a>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value profit">$1,800</div>
-              <div class="stat-label">Est. Monthly Profit</div>
+          </div>
+          
+          <div class="comp-card">
+            <div class="comp-row">
+              <p class="comp-title">3BR · Modern Atlanta Home</p>
+              <div class="comp-stats">
+                <div class="comp-stat">
+                  <div class="comp-stat-value green">$3,900/mo</div>
+                  <div class="comp-stat-label">Revenue</div>
+                </div>
+                <div class="comp-stat">
+                  <div class="comp-stat-value">71%</div>
+                  <div class="comp-stat-label">Occupancy</div>
+                </div>
+                <a href="https://airbnb.com/rooms/23456789" class="comp-link" target="_blank">View →</a>
+              </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">72%</div>
-              <div class="stat-label">Market Occupancy</div>
+          </div>
+          
+          <div class="comp-card">
+            <div class="comp-row">
+              <p class="comp-title">3BR · Buckhead Luxury Suite</p>
+              <div class="comp-stats">
+                <div class="comp-stat">
+                  <div class="comp-stat-value green">$4,500/mo</div>
+                  <div class="comp-stat-label">Revenue</div>
+                </div>
+                <div class="comp-stat">
+                  <div class="comp-stat-value">78%</div>
+                  <div class="comp-stat-label">Occupancy</div>
+                </div>
+                <a href="https://airbnb.com/rooms/34567890" class="comp-link" target="_blank">View →</a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="comp-card">
+            <div class="comp-row">
+              <p class="comp-title">3BR · Cozy Inman Park Gem</p>
+              <div class="comp-stats">
+                <div class="comp-stat">
+                  <div class="comp-stat-value green">$3,650/mo</div>
+                  <div class="comp-stat-label">Revenue</div>
+                </div>
+                <div class="comp-stat">
+                  <div class="comp-stat-value">69%</div>
+                  <div class="comp-stat-label">Occupancy</div>
+                </div>
+                <a href="https://airbnb.com/rooms/45678901" class="comp-link" target="_blank">View →</a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="comp-card">
+            <div class="comp-row">
+              <p class="comp-title">3BR · Virginia Highland Escape</p>
+              <div class="comp-stats">
+                <div class="comp-stat">
+                  <div class="comp-stat-value green">$3,100/mo</div>
+                  <div class="comp-stat-label">Revenue</div>
+                </div>
+                <div class="comp-stat">
+                  <div class="comp-stat-value">65%</div>
+                  <div class="comp-stat-label">Occupancy</div>
+                </div>
+                <a href="https://airbnb.com/rooms/56789012" class="comp-link" target="_blank">View →</a>
+              </div>
             </div>
           </div>
         </div>
         
         <div class="insight-box">
-          <p><strong>Why we flagged this:</strong> Properties like this in Atlanta are averaging 72% occupancy, which means consistent bookings throughout the year. The profit margin on this one is solid.</p>
+          <p><strong>Why we flagged this:</strong> Properties like this in Atlanta are averaging 72% occupancy, which means consistent bookings throughout the year. The numbers work even at conservative estimates.</p>
         </div>
         
-        <p class="narrative">
-          If you're interested in exploring this opportunity, my team can help you with everything – running the full numbers, reaching out to the landlord, negotiating terms, setting up the property, designing and furnishing it, and automating your operations. That's exactly what we do in the <strong>Turnkey Program</strong> – we handle the entire process so you can start earning without the headache.
-        </p>
+        <div class="turnkey-section">
+          <h3>What We Do For You (Turnkey Program)</h3>
+          <p>If you're interested in this opportunity, my team handles everything:</p>
+          <ul class="turnkey-list">
+            <li>Run the full numbers and validate the deal</li>
+            <li>Reach out to the landlord and negotiate terms</li>
+            <li>Set up the property from scratch</li>
+            <li>Design and furnish it for maximum bookings</li>
+            <li>Automate your operations so you can be hands-off</li>
+            <li>Ongoing support to optimize your revenue</li>
+          </ul>
+        </div>
         
         <div class="cta-section">
-          <a href="https://masterclass.coachinayah.com/the-turnkey-program" class="cta-button">Book a Strategy Call</a>
+          <a href="https://masterclass.coachinayah.com/the-turnkey-program" class="cta-button">Book a Call with Our Team</a>
           <p class="secondary-link">
-            Or <a href="https://coachinayahturnkeytool.com?step=5&address=1847%20Peachtree%20St%20NE%2C%20Atlanta%2C%20GA%2030309&bedrooms=3&bathrooms=2&rent=2400&autoAnalyze=true">view full property analysis</a>
+            Or <a href="https://coachinayahturnkeytool.com?step=5&address=1234%20Peachtree%20St%20NE%2C%20Atlanta%2C%20GA&bedrooms=3&bathrooms=2&rent=2400&autoAnalyze=true">view full property analysis</a>
           </p>
         </div>
-        
       </div>
       <div class="footer">
         <div class="footer-logo">Coach Inayah</div>
         <p>Helping you build wealth through short-term rentals</p>
         <div class="footer-links">
           <a href="https://coachinayahturnkeytool.com">Analyze Properties</a>
-          <a href="https://masterclass.coachinayah.com/the-turnkey-program">Apply for Turnkey Program</a>
+          <a href="https://masterclass.coachinayah.com/the-turnkey-program">Turnkey Program</a>
         </div>
         <div class="unsubscribe">
           <a href="#">Unsubscribe</a> · 

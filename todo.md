@@ -9465,3 +9465,55 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Show 4 stats: Revenue, Rent, Profit, Occupancy
 - [x] Property-specific link to Step 5 analysis
 - [x] Full turnkey description in closing paragraph
+
+
+## Value-First Communication System (Feb 2, 2026)
+
+### Customer Journey Mapping:
+- [ ] Map complete opt-in to nurture flow
+- [ ] Define email touchpoints (welcome, market updates, deal alerts, monthly reports)
+- [ ] Define SMS touchpoints (welcome, hot deals, quick market stats)
+- [ ] Document API capabilities for each channel
+
+### Deal Alert Email Redesign (Zillow-like):
+- [ ] Add property photo/thumbnail if available
+- [ ] Add Zillow listing link
+- [ ] Show property type (apartment, house, condo)
+- [ ] Show square footage if available
+- [ ] Add neighborhood/area context
+- [ ] Show comparable properties summary
+- [ ] Better button design and visual hierarchy
+- [ ] Mobile-responsive email layout
+
+### SimpleTexting SMS Integration:
+- [ ] Create SimpleTexting service module
+- [ ] Implement send SMS function
+- [ ] Build welcome SMS for new opt-ins
+- [ ] Build deal alert SMS (short, with link)
+- [ ] Build market stat SMS (quick insight)
+- [ ] Integrate with newsletter orchestrator
+
+### HubSpot Workflow Integration:
+- [ ] Switch from Single Send API to workflow-based sending
+- [ ] Create welcome sequence workflow
+- [ ] Create deal alert workflow trigger
+- [ ] Create market update workflow trigger
+- [ ] Track engagement (opens, clicks) for segmentation
+
+### Test Real Deal Alert:
+- [ ] Send test deal alert email to bryson@coachinayah.com
+- [ ] Send test SMS to associated phone number
+- [ ] Verify all links work correctly
+- [ ] Verify property data displays correctly
+
+
+## HubSpot Transactional Email Setup (Feb 3, 2026)
+- [ ] Set up dedicated IP address for email sending (user handling)
+- [x] Configure transactional email settings in HubSpot
+- [x] Create SMTP token via HubSpot UI (Coach Inayah Deal Alerts)
+- [x] Add HUBSPOT_SMTP_USER and HUBSPOT_SMTP_PASS to secrets
+- [x] Update newsletter-email-sender.ts to use HubSpot SMTP via nodemailer
+- [x] Install nodemailer package
+- [ ] Deploy to production (SMTP blocked in sandbox)
+- [ ] Send test deal alert email to bryson@coachinayah.com
+- [ ] Send test SMS to bryson@coachinayah.com

@@ -7,9 +7,26 @@
 
 import { getDb } from './db';
 import { sql } from 'drizzle-orm';
+import nodemailer from 'nodemailer';
 
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 const HUBSPOT_API_BASE = 'https://api.hubapi.com';
+const ZAPIER_WEBHOOK_URL = process.env.ZAPIER_WEBHOOK_URL;
+
+// HubSpot SMTP credentials for transactional emails
+const HUBSPOT_SMTP_USER = process.env.HUBSPOT_SMTP_USER;
+const HUBSPOT_SMTP_PASS = process.env.HUBSPOT_SMTP_PASS;
+
+// Create nodemailer transporter for HubSpot SMTP
+const smtpTransporter = HUBSPOT_SMTP_USER && HUBSPOT_SMTP_PASS ? nodemailer.createTransport({
+  host: 'smtp.hubspot.net',
+  port: 587,
+  secure: false, // TLS
+  auth: {
+    user: HUBSPOT_SMTP_USER,
+    pass: HUBSPOT_SMTP_PASS
+  }
+}) : null;
 
 // Email sender configuration
 const FROM_EMAIL = 'bryson@coachinayah.com';
@@ -19,6 +36,7 @@ const REPLY_TO = 'support@coachinayah.com';
 // Brand URLs
 const WEBSITE_URL = 'https://coachinayahturnkeytool.com';
 const VSL_URL = 'https://masterclass.coachinayah.com/the-turnkey-program';
+const BOOKING_URL = 'https://masterclass.coachinayah.com/the-turnkey-program';
 
 export interface EmailRecipient {
   email: string;
@@ -53,9 +71,38 @@ export interface BulkSendResult {
   }>;
 }
 
+// Comparable property interface for deal alerts
+export interface ComparableProperty {
+  title: string;
+  bedrooms: number;
+  annualRevenue: number;
+  monthlyRevenue: number;
+  occupancy: number;
+  adr: number;
+  rating: number | null;
+  reviews: number;
+  airbnbUrl?: string;
+  distance?: number; // in meters
+}
+
+// Coach Inayah brand colors
+const brand = {
+  navy: '#0F172A',
+  navyLight: '#1e293b',
+  gold: '#C9A962',
+  goldLight: '#d4b978',
+  white: '#ffffff',
+  offWhite: '#fafafa',
+  gray: '#64748b',
+  grayLight: '#f1f5f9',
+  green: '#22c55e',
+  greenLight: '#dcfce7',
+  red: '#ef4444'
+};
+
 /**
  * Generate beautiful HTML email template with Coach Inayah branding
- * Design: Navy (#0F172A) + Gold (#C9A962), Playfair Display + DM Sans
+ * Design: Navy (#0F172A) + Gold (#C9A962), DM Sans
  */
 function generateEmailHTML(params: {
   type: 'weekly' | 'deal' | 'monthly';
@@ -71,21 +118,9 @@ function generateEmailHTML(params: {
 }): string {
   const { type, recipientName, subject, mainContent, ctaUrl, ctaText, secondaryCtaUrl, secondaryCtaText, city, additionalContent } = params;
   
-  // Coach Inayah brand colors
-  const brand = {
-    navy: '#0F172A',
-    navyLight: '#1e293b',
-    gold: '#C9A962',
-    goldLight: '#d4b978',
-    white: '#ffffff',
-    offWhite: '#fafafa',
-    gray: '#64748b',
-    grayLight: '#f1f5f9'
-  };
-  
   const headerTitle = {
     weekly: '📊 Your Weekly Market Update',
-    deal: '✨ New Opportunity in Your Market',
+    deal: '🏠 New Investment Opportunity',
     monthly: '📈 Your Monthly Market Report'
   };
   
@@ -102,160 +137,341 @@ function generateEmailHTML(params: {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!--[if mso]>
+  <style type="text/css">
+    table { border-collapse: collapse; }
+    .stat-item { width: 25% !important; }
+  </style>
+  <![endif]-->
   <style>
     body { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; 
-      line-height: 1.7; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+      line-height: 1.6; 
       color: ${brand.navy}; 
       margin: 0; 
       padding: 0; 
       background-color: ${brand.grayLight}; 
+      -webkit-font-smoothing: antialiased;
     }
     .container { 
       max-width: 600px; 
       margin: 0 auto; 
       background: ${brand.white}; 
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
     .header { 
       background: linear-gradient(135deg, ${brand.navy} 0%, ${brand.navyLight} 100%); 
-      padding: 48px 40px; 
+      padding: 40px 32px; 
       text-align: center; 
     }
     .header h1 { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: ${brand.gold}; 
       margin: 0; 
-      font-size: 28px; 
+      font-size: 26px; 
       font-weight: 600;
       letter-spacing: -0.02em;
     }
     .header p { 
       color: ${brand.white}; 
       opacity: 0.85; 
-      margin: 12px 0 0; 
+      margin: 10px 0 0; 
       font-size: 15px;
       font-weight: 400;
     }
     .content { 
-      padding: 40px; 
+      padding: 32px; 
     }
     .greeting { 
-      font-size: 18px; 
-      margin-bottom: 24px; 
+      font-size: 17px; 
+      margin-bottom: 20px; 
       color: ${brand.navy};
       font-weight: 500;
     }
     .narrative {
-      font-size: 16px;
-      line-height: 1.8;
+      font-size: 15px;
+      line-height: 1.7;
       color: ${brand.navy};
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .property-card { 
       background: ${brand.offWhite}; 
-      border-radius: 16px; 
-      padding: 28px; 
-      margin: 28px 0; 
+      border-radius: 12px; 
+      padding: 24px; 
+      margin: 24px 0; 
       border: 1px solid rgba(201, 169, 98, 0.2);
     }
+    .property-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .property-image {
+      width: 100px;
+      height: 75px;
+      border-radius: 8px;
+      background: ${brand.grayLight};
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .property-image-placeholder {
+      width: 100px;
+      height: 75px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, ${brand.navy} 0%, ${brand.navyLight} 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .property-image-placeholder span {
+      color: ${brand.gold};
+      font-size: 28px;
+    }
+    .property-info {
+      flex: 1;
+    }
     .property-card h2 { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: ${brand.navy}; 
-      margin: 0 0 8px; 
-      font-size: 20px;
+      margin: 0 0 6px; 
+      font-size: 18px;
       font-weight: 600;
+      line-height: 1.3;
     }
     .property-card .address {
       color: ${brand.gray};
-      font-size: 14px;
-      margin-bottom: 20px;
+      font-size: 13px;
+      margin: 0;
     }
-    .opportunity-badge {
+    .property-badges {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
       display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-gold {
       background: linear-gradient(135deg, ${brand.gold} 0%, ${brand.goldLight} 100%);
       color: ${brand.navy};
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
+    }
+    .badge-gray {
+      background: ${brand.grayLight};
+      color: ${brand.gray};
     }
     .stat-grid { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 12px; 
+      display: table;
+      width: 100%;
       margin-top: 20px;
+      border-spacing: 8px;
+    }
+    .stat-row {
+      display: table-row;
     }
     .stat-item { 
-      flex: 1; 
-      min-width: 110px; 
+      display: table-cell;
       text-align: center; 
-      padding: 16px 12px; 
+      padding: 14px 8px; 
       background: ${brand.white}; 
-      border-radius: 12px;
+      border-radius: 10px;
       border: 1px solid rgba(0,0,0,0.06);
+      vertical-align: top;
     }
     .stat-value { 
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      font-size: 24px; 
-      font-weight: 600; 
+      font-size: 22px; 
+      font-weight: 700; 
       color: ${brand.navy}; 
       letter-spacing: -0.02em;
     }
-    .stat-value.highlight {
+    .stat-value.gold {
       color: ${brand.gold};
     }
+    .stat-value.green {
+      color: ${brand.green};
+    }
+    .stat-value.red {
+      color: ${brand.red};
+    }
     .stat-label { 
-      font-size: 11px; 
+      font-size: 10px; 
       color: ${brand.gray}; 
       text-transform: uppercase; 
       letter-spacing: 0.5px;
       margin-top: 4px;
     }
+    .property-links {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .property-link {
+      color: ${brand.gold};
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .property-link:hover {
+      text-decoration: underline;
+    }
+    .comps-section {
+      margin: 28px 0;
+      padding: 24px;
+      background: ${brand.offWhite};
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .comps-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .comps-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: ${brand.navy};
+    }
+    .comps-header .icon {
+      color: ${brand.green};
+      font-size: 18px;
+    }
+    .comps-subtitle {
+      font-size: 13px;
+      color: ${brand.gray};
+      margin: 0 0 16px;
+    }
+    .comp-card {
+      background: ${brand.white};
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .comp-card:last-child {
+      margin-bottom: 0;
+    }
+    .comp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .comp-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: ${brand.navy};
+      margin: 0;
+      flex: 1;
+      min-width: 150px;
+    }
+    .comp-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .comp-stat {
+      text-align: center;
+    }
+    .comp-stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: ${brand.navy};
+    }
+    .comp-stat-value.green {
+      color: ${brand.green};
+    }
+    .comp-stat-label {
+      font-size: 9px;
+      color: ${brand.gray};
+      text-transform: uppercase;
+    }
+    .comp-link {
+      font-size: 12px;
+      color: ${brand.gold};
+      text-decoration: none;
+    }
     .insight-box {
       background: linear-gradient(135deg, rgba(201, 169, 98, 0.08) 0%, rgba(201, 169, 98, 0.04) 100%);
       border-left: 3px solid ${brand.gold};
-      padding: 20px 24px;
-      border-radius: 0 12px 12px 0;
+      padding: 18px 20px;
+      border-radius: 0 10px 10px 0;
       margin: 24px 0;
     }
     .insight-box p {
       margin: 0;
-      font-size: 15px;
+      font-size: 14px;
       color: ${brand.navy};
-      line-height: 1.7;
+      line-height: 1.6;
     }
     .insight-box strong {
       color: ${brand.navy};
     }
+    .turnkey-section {
+      background: ${brand.navy};
+      border-radius: 12px;
+      padding: 24px;
+      margin: 28px 0;
+      color: ${brand.white};
+    }
+    .turnkey-section h3 {
+      color: ${brand.gold};
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .turnkey-section p {
+      margin: 0 0 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.9);
+    }
+    .turnkey-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .turnkey-list li {
+      padding: 6px 0 6px 24px;
+      position: relative;
+      font-size: 13px;
+      color: rgba(255,255,255,0.85);
+    }
+    .turnkey-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: ${brand.gold};
+      font-weight: bold;
+    }
     .cta-section {
       text-align: center;
-      margin: 36px 0 24px;
+      margin: 32px 0 24px;
     }
     .cta-button { 
       display: inline-block; 
       background: linear-gradient(135deg, ${brand.gold} 0%, ${brand.goldLight} 100%);
       color: ${brand.navy}; 
-      padding: 16px 36px; 
+      padding: 16px 40px; 
       border-radius: 50px; 
       text-decoration: none; 
       font-weight: 600; 
       font-size: 15px;
       letter-spacing: 0.02em;
-      box-shadow: 0 4px 16px rgba(201, 169, 98, 0.3);
-      transition: all 0.3s ease;
     }
     .secondary-link {
       display: block;
-      margin-top: 16px;
+      margin-top: 14px;
       color: ${brand.gray};
-      font-size: 14px;
+      font-size: 13px;
       text-decoration: none;
     }
     .secondary-link a {
@@ -264,55 +480,60 @@ function generateEmailHTML(params: {
     }
     .footer { 
       background: ${brand.navy}; 
-      padding: 32px 40px; 
+      padding: 28px 32px; 
       text-align: center; 
     }
     .footer-logo {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       color: ${brand.gold};
       font-size: 18px;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .footer p { 
       color: rgba(255,255,255,0.7); 
-      font-size: 13px; 
-      margin: 8px 0;
+      font-size: 12px; 
+      margin: 6px 0;
     }
     .footer a { 
       color: ${brand.gold}; 
       text-decoration: none; 
     }
     .footer-links {
-      margin: 16px 0;
+      margin: 14px 0;
     }
     .footer-links a {
-      margin: 0 12px;
-      font-size: 13px;
+      margin: 0 10px;
+      font-size: 12px;
     }
     .unsubscribe { 
-      margin-top: 20px; 
-      padding-top: 20px;
+      margin-top: 18px; 
+      padding-top: 18px;
       border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 11px; 
+      font-size: 10px; 
       color: rgba(255,255,255,0.5); 
     }
     .unsubscribe a {
       color: rgba(255,255,255,0.5);
     }
     @media (max-width: 600px) {
-      .content { padding: 28px 24px; }
-      .header { padding: 36px 24px; }
-      .header h1 { font-size: 24px; }
-      .stat-grid { flex-direction: column; }
-      .stat-item { min-width: 100%; }
-      .property-card { padding: 20px; }
-      .footer { padding: 28px 24px; }
+      .content { padding: 24px 20px; }
+      .header { padding: 32px 20px; }
+      .header h1 { font-size: 22px; }
+      .stat-grid { display: block; }
+      .stat-row { display: block; }
+      .stat-item { display: block; width: 100% !important; margin-bottom: 8px; }
+      .property-card { padding: 18px; }
+      .property-header { flex-direction: column; }
+      .property-image, .property-image-placeholder { width: 100%; height: 120px; }
+      .footer { padding: 24px 20px; }
+      .comp-row { flex-direction: column; align-items: flex-start; }
+      .comp-stats { width: 100%; justify-content: space-between; margin-top: 8px; }
+      .turnkey-section { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div style="padding: 20px 16px;">
+  <div style="padding: 16px 12px;">
     <div class="container">
       <div class="header">
         <h1>${headerTitle[type]}</h1>
@@ -343,7 +564,7 @@ function generateEmailHTML(params: {
         <p>Helping you build wealth through short-term rentals</p>
         <div class="footer-links">
           <a href="${WEBSITE_URL}">Analyze Properties</a>
-          <a href="${VSL_URL}">Apply for Turnkey Program</a>
+          <a href="${VSL_URL}">Turnkey Program</a>
         </div>
         <div class="unsubscribe">
           <a href="{{unsubscribe_link}}">Unsubscribe</a> · 
@@ -358,53 +579,144 @@ function generateEmailHTML(params: {
 }
 
 /**
- * Send email via HubSpot Transactional Email API
+ * Send email via HubSpot SMTP (primary) with HubSpot CRM logging
  */
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-  if (!HUBSPOT_API_KEY) {
-    return { success: false, error: 'HUBSPOT_API_KEY is not configured' };
+  const sendId = `send_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Use HubSpot SMTP for actual email delivery
+  if (smtpTransporter) {
+    try {
+      console.log(`[Newsletter] Sending email via HubSpot SMTP to ${params.recipient.email}`);
+      
+      const mailOptions = {
+        from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+        to: params.recipient.email,
+        replyTo: REPLY_TO,
+        subject: params.subject,
+        html: params.htmlContent,
+        text: params.textContent || ''
+      };
+      
+      const info = await smtpTransporter.sendMail(mailOptions);
+      console.log(`[Newsletter] Email sent via HubSpot SMTP to ${params.recipient.email}, messageId: ${info.messageId}`);
+      
+      // Log to HubSpot CRM for tracking (non-blocking)
+      logToHubSpot(params, sendId).catch(err => {
+        console.warn('[Newsletter] Failed to log to HubSpot CRM:', err);
+      });
+      
+      return { success: true, sendId: info.messageId || sendId };
+    } catch (error: any) {
+      console.error('[Newsletter] HubSpot SMTP error:', error?.message || error);
+      // Fall through to alternative methods
+    }
+  } else {
+    console.warn('[Newsletter] HubSpot SMTP not configured (missing HUBSPOT_SMTP_USER or HUBSPOT_SMTP_PASS)');
   }
   
-  const sendId = `newsletter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Fallback to Zapier webhook if SMTP fails
+  if (ZAPIER_WEBHOOK_URL) {
+    try {
+      console.log(`[Newsletter] Trying Zapier webhook fallback to ${params.recipient.email}`);
+      
+      const response = await fetch(ZAPIER_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'send_email',
+          to: params.recipient.email,
+          toName: `${params.recipient.firstName} ${params.recipient.lastName}`.trim(),
+          from: FROM_EMAIL,
+          fromName: FROM_NAME,
+          replyTo: REPLY_TO,
+          subject: params.subject,
+          htmlContent: params.htmlContent,
+          textContent: params.textContent || '',
+          sendId: sendId,
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        console.log(`[Newsletter] Email sent via Zapier to ${params.recipient.email}`);
+        logToHubSpot(params, sendId).catch(err => {
+          console.warn('[Newsletter] Failed to log to HubSpot:', err);
+        });
+        return { success: true, sendId };
+      }
+    } catch (error) {
+      console.error('[Newsletter] Zapier webhook error:', error);
+    }
+  }
+  
+  // Final fallback: log to HubSpot CRM only (email won't be delivered)
+  console.warn('[Newsletter] No email delivery method available, logging to HubSpot CRM only');
+  await logToHubSpot(params, sendId).catch(() => {});
+  return { success: false, error: 'No email delivery method configured (HUBSPOT_SMTP or ZAPIER_WEBHOOK required)' };
+}
+
+/**
+ * Log email to HubSpot for CRM tracking (non-blocking)
+ */
+async function logToHubSpot(params: SendEmailParams, sendId: string): Promise<void> {
+  if (!HUBSPOT_API_KEY) return;
   
   try {
-    const response = await fetch(`${HUBSPOT_API_BASE}/marketing/v3/transactional/single-email/send`, {
+    // Find or create contact
+    const contactResponse = await fetch(`${HUBSPOT_API_BASE}/crm/v3/objects/contacts/search`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        emailId: 0,
-        message: {
-          to: params.recipient.email,
-          from: FROM_EMAIL,
-          sendId: sendId
-        },
-        contactProperties: {
-          firstname: params.recipient.firstName,
-          lastname: params.recipient.lastName
-        },
-        customProperties: {
-          subject: params.subject,
-          htmlContent: params.htmlContent,
-          ...params.customProperties
-        }
+        filterGroups: [{
+          filters: [{
+            propertyName: 'email',
+            operator: 'EQ',
+            value: params.recipient.email
+          }]
+        }]
       })
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Newsletter] HubSpot API error:`, errorText);
-      return await sendViaAlternativeMethod(params, sendId);
+    let contactId: string | null = null;
+    
+    if (contactResponse.ok) {
+      const contactData = await contactResponse.json();
+      if (contactData.results && contactData.results.length > 0) {
+        contactId = contactData.results[0].id;
+      }
     }
     
-    console.log(`[Newsletter] Email sent successfully to ${params.recipient.email}`);
-    return { success: true, sendId };
-    
+    if (contactId) {
+      // Log email engagement
+      await fetch(`${HUBSPOT_API_BASE}/crm/v3/objects/emails`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          properties: {
+            hs_timestamp: new Date().toISOString(),
+            hs_email_direction: 'EMAIL',
+            hs_email_status: 'SENT',
+            hs_email_subject: params.subject,
+            hs_email_text: params.textContent || 'Newsletter email'
+          },
+          associations: [{
+            to: { id: contactId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 198 }]
+          }]
+        })
+      });
+    }
   } catch (error) {
-    console.error(`[Newsletter] Error sending email to ${params.recipient.email}:`, error);
-    return await sendViaAlternativeMethod(params, sendId);
+    console.warn('[Newsletter] HubSpot logging error:', error);
   }
 }
 
@@ -536,22 +848,24 @@ export async function sendWeeklyMarketEmail(params: {
     </p>
     
     <div class="property-card">
-      <span class="opportunity-badge">Market Snapshot</span>
-      <h2>${city}, ${state}</h2>
+      <span class="badge badge-gold">Market Snapshot</span>
+      <h2 style="margin-top: 12px;">${city}, ${state}</h2>
       <p class="address">${marketData.activeListings.toLocaleString()} active short-term rentals</p>
       
       <div class="stat-grid">
-        <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(marketData.averageDailyRate)}</div>
-          <div class="stat-label">Avg Nightly Rate</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">${formatPercent(marketData.occupancyRate)}</div>
-          <div class="stat-label">Occupancy</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(marketData.annualRevenue)}</div>
-          <div class="stat-label">Avg Annual Revenue</div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="stat-value gold">${formatCurrency(marketData.averageDailyRate)}</div>
+            <div class="stat-label">Avg Nightly Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${formatPercent(marketData.occupancyRate)}</div>
+            <div class="stat-label">Occupancy</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value gold">${formatCurrency(marketData.annualRevenue)}</div>
+            <div class="stat-label">Avg Annual Revenue</div>
+          </div>
         </div>
       </div>
     </div>
@@ -572,8 +886,8 @@ export async function sendWeeklyMarketEmail(params: {
     subject,
     mainContent,
     city: `${city}, ${state}`,
-    ctaUrl: VSL_URL,
-    ctaText: 'Book a Strategy Call',
+    ctaUrl: BOOKING_URL,
+    ctaText: 'Book a Call with Our Team',
     secondaryCtaUrl: `${WEBSITE_URL}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`,
     secondaryCtaText: 'explore properties in this market'
   });
@@ -586,7 +900,8 @@ export async function sendWeeklyMarketEmail(params: {
 }
 
 /**
- * Send deal alert email with improved narrative
+ * Send deal alert email with rich property data and comparable properties
+ * This is the premium email format with Zillow-like property cards
  */
 export async function sendDealAlertEmail(params: {
   recipient: EmailRecipient;
@@ -596,17 +911,21 @@ export async function sendDealAlertEmail(params: {
     address: string;
     bedrooms: number;
     bathrooms: number;
+    propertyType?: string;
     monthlyRevenue: number;
     annualRevenue: number;
     occupancyRate: number;
     averageDailyRate: number;
     dealScore: number;
-    monthlyRent?: number; // Monthly rent from Zillow/source
+    monthlyRent?: number;
     propertyUrl?: string;
     zillowUrl?: string;
+    imageUrl?: string;
   };
+  comparables?: ComparableProperty[];
+  aiNarrative?: string;
 }): Promise<SendEmailResult> {
-  const { recipient, city, state, deal } = params;
+  const { recipient, city, state, deal, comparables = [], aiNarrative } = params;
   
   const formatCurrency = (n: number) => `$${n.toLocaleString()}`;
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
@@ -614,67 +933,160 @@ export async function sendDealAlertEmail(params: {
   // Calculate profit if we have rent data
   const hasRentData = deal.monthlyRent && deal.monthlyRent > 0;
   const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! : 0;
+  const annualProfit = monthlyProfit * 12;
   const profitMargin = hasRentData && deal.monthlyRevenue > 0 ? (monthlyProfit / deal.monthlyRevenue) * 100 : 0;
   
-  // Build narrative based on deal characteristics - more engaging and specific
-  let narrative = `I just found a property in ${city} that caught my attention, and I wanted to share it with you right away.`;
-  
-  if (deal.dealScore >= 80) {
-    narrative += ` This one has strong numbers – we're projecting ${formatCurrency(deal.monthlyRevenue)}/month in revenue based on how similar properties are performing in the area.`;
-    if (hasRentData) {
-      narrative += ` With rent at ${formatCurrency(deal.monthlyRent!)}, that's a potential profit of ${formatCurrency(monthlyProfit)}/month (${Math.round(profitMargin)}% margin).`;
-    }
-  } else if (deal.dealScore >= 60) {
-    narrative += ` It's showing solid potential with an estimated ${formatCurrency(deal.monthlyRevenue)}/month in revenue.`;
-    if (hasRentData) {
-      narrative += ` At ${formatCurrency(deal.monthlyRent!)}/month rent, you're looking at roughly ${formatCurrency(monthlyProfit)}/month profit.`;
-    }
-  } else {
-    narrative += ` The ${formatCurrency(deal.monthlyRevenue)}/month revenue potential could work depending on your criteria.`;
-    if (hasRentData) {
-      narrative += ` Rent is ${formatCurrency(deal.monthlyRent!)}/month.`;
+  // Build narrative - use AI narrative if provided, otherwise generate
+  let narrative = aiNarrative || '';
+  if (!narrative) {
+    narrative = `I just found a property in ${city} that caught my attention, and I wanted to share it with you right away.`;
+    
+    if (deal.dealScore >= 80) {
+      narrative += ` This one has strong numbers – we're projecting ${formatCurrency(deal.monthlyRevenue)}/month in revenue based on how similar properties are performing in the area.`;
+      if (hasRentData) {
+        narrative += ` With rent at ${formatCurrency(deal.monthlyRent!)}, that's a potential profit of <strong>${formatCurrency(monthlyProfit)}/month</strong>.`;
+      }
+    } else if (deal.dealScore >= 60) {
+      narrative += ` It's showing solid potential with an estimated ${formatCurrency(deal.monthlyRevenue)}/month in revenue.`;
+      if (hasRentData) {
+        narrative += ` At ${formatCurrency(deal.monthlyRent!)}/month rent, you're looking at roughly <strong>${formatCurrency(monthlyProfit)}/month profit</strong>.`;
+      }
+    } else {
+      narrative += ` The ${formatCurrency(deal.monthlyRevenue)}/month revenue potential could work depending on your criteria.`;
+      if (hasRentData) {
+        narrative += ` Rent is ${formatCurrency(deal.monthlyRent!)}/month.`;
+      }
     }
   }
   
-  // Add context about why this matters
-  const contextNote = deal.occupancyRate >= 0.7 
-    ? `Properties like this in ${city} are averaging ${formatPercent(deal.occupancyRate)} occupancy, which means consistent bookings throughout the year.`
-    : `The ${formatPercent(deal.occupancyRate)} occupancy rate is typical for this area – with the right setup and pricing strategy, there's room to outperform.`;
-  
-  // Build property-specific analysis URL that goes directly to Step 5 with this property
+  // Build property-specific analysis URL
   const propertyAnalysisUrl = `${WEBSITE_URL}?step=5&address=${encodeURIComponent(deal.address)}&bedrooms=${deal.bedrooms}&bathrooms=${deal.bathrooms}${hasRentData ? `&rent=${deal.monthlyRent}` : ''}&autoAnalyze=true`;
   
-  // Build stat grid - include rent if available
-  const statItems = hasRentData ? `
+  // Property image or placeholder
+  const propertyImageHtml = deal.imageUrl 
+    ? `<img src="${deal.imageUrl}" alt="Property" class="property-image" />`
+    : `<div class="property-image-placeholder"><span>🏠</span></div>`;
+  
+  // Property type badge
+  const propertyTypeBadge = deal.propertyType 
+    ? `<span class="badge badge-gray">${deal.propertyType}</span>` 
+    : '';
+  
+  // Build stat grid - always show 4 stats
+  const statGridHtml = hasRentData ? `
+    <div class="stat-grid">
+      <div class="stat-row">
         <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(deal.monthlyRevenue)}</div>
-          <div class="stat-label">Est. Monthly Revenue</div>
+          <div class="stat-value gold">${formatCurrency(deal.monthlyRevenue)}</div>
+          <div class="stat-label">Est. Revenue/Mo</div>
         </div>
         <div class="stat-item">
           <div class="stat-value">${formatCurrency(deal.monthlyRent!)}</div>
           <div class="stat-label">Monthly Rent</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value" style="color: ${monthlyProfit > 0 ? '#22c55e' : '#ef4444'};">${formatCurrency(monthlyProfit)}</div>
-          <div class="stat-label">Est. Monthly Profit</div>
+          <div class="stat-value ${monthlyProfit > 0 ? 'green' : 'red'}">${formatCurrency(monthlyProfit)}</div>
+          <div class="stat-label">Est. Profit/Mo</div>
         </div>
         <div class="stat-item">
           <div class="stat-value">${formatPercent(deal.occupancyRate)}</div>
-          <div class="stat-label">Market Occupancy</div>
+          <div class="stat-label">Occupancy</div>
         </div>
+      </div>
+    </div>
   ` : `
+    <div class="stat-grid">
+      <div class="stat-row">
         <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(deal.monthlyRevenue)}</div>
-          <div class="stat-label">Est. Monthly Revenue</div>
+          <div class="stat-value gold">${formatCurrency(deal.monthlyRevenue)}</div>
+          <div class="stat-label">Est. Revenue/Mo</div>
         </div>
         <div class="stat-item">
           <div class="stat-value">${formatPercent(deal.occupancyRate)}</div>
-          <div class="stat-label">Market Occupancy</div>
+          <div class="stat-label">Occupancy</div>
         </div>
         <div class="stat-item">
           <div class="stat-value">${formatCurrency(deal.averageDailyRate)}</div>
           <div class="stat-label">Avg Nightly Rate</div>
         </div>
+        <div class="stat-item">
+          <div class="stat-value gold">${formatCurrency(deal.annualRevenue)}</div>
+          <div class="stat-label">Annual Revenue</div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Property links
+  const propertyLinksHtml = `
+    <div class="property-links">
+      <a href="${propertyAnalysisUrl}" class="property-link">📊 Full Analysis</a>
+      ${deal.zillowUrl ? `<a href="${deal.zillowUrl}" class="property-link">🏠 View on Zillow</a>` : ''}
+    </div>
+  `;
+  
+  // Comparables section - only show if we have comps
+  let compsHtml = '';
+  if (comparables.length > 0) {
+    const compCardsHtml = comparables.slice(0, 5).map(comp => {
+      const compMonthlyRevenue = comp.monthlyRevenue || Math.round(comp.annualRevenue / 12);
+      const distanceText = comp.distance ? `${(comp.distance / 1609.34).toFixed(1)} mi away` : '';
+      const ratingText = comp.rating ? `★ ${comp.rating.toFixed(1)}` : '';
+      
+      return `
+        <div class="comp-card">
+          <div class="comp-row">
+            <p class="comp-title">${comp.bedrooms}BR · ${comp.title.substring(0, 40)}${comp.title.length > 40 ? '...' : ''}</p>
+            <div class="comp-stats">
+              <div class="comp-stat">
+                <div class="comp-stat-value green">${formatCurrency(compMonthlyRevenue)}/mo</div>
+                <div class="comp-stat-label">Revenue</div>
+              </div>
+              <div class="comp-stat">
+                <div class="comp-stat-value">${Math.round(comp.occupancy * 100)}%</div>
+                <div class="comp-stat-label">Occupancy</div>
+              </div>
+              ${comp.airbnbUrl ? `<a href="${comp.airbnbUrl}" class="comp-link" target="_blank">View →</a>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Calculate average revenue from comps
+    const avgCompRevenue = comparables.reduce((sum, c) => sum + (c.monthlyRevenue || c.annualRevenue / 12), 0) / comparables.length;
+    
+    compsHtml = `
+      <div class="comps-section">
+        <div class="comps-header">
+          <span class="icon">✓</span>
+          <h3>Properties Nearby Already Making Money</h3>
+        </div>
+        <p class="comps-subtitle">${comparables.length} similar properties within 1 mile are averaging <strong>${formatCurrency(Math.round(avgCompRevenue))}/mo</strong></p>
+        ${compCardsHtml}
+      </div>
+    `;
+  }
+  
+  // Context insight
+  const contextNote = deal.occupancyRate >= 0.7 
+    ? `Properties like this in ${city} are averaging ${formatPercent(deal.occupancyRate)} occupancy, which means consistent bookings throughout the year.`
+    : `The ${formatPercent(deal.occupancyRate)} occupancy rate is typical for this area – with the right setup and pricing strategy, there's room to outperform.`;
+  
+  // Turnkey services section
+  const turnkeyHtml = `
+    <div class="turnkey-section">
+      <h3>What We Do For You (Turnkey Program)</h3>
+      <p>If you're interested in this opportunity, my team handles everything:</p>
+      <ul class="turnkey-list">
+        <li>Run the full numbers and validate the deal</li>
+        <li>Reach out to the landlord and negotiate terms</li>
+        <li>Set up the property from scratch</li>
+        <li>Design and furnish it for maximum bookings</li>
+        <li>Automate your operations so you can be hands-off</li>
+        <li>Ongoing support to optimize your revenue</li>
+      </ul>
+    </div>
   `;
   
   const mainContent = `
@@ -683,35 +1095,35 @@ export async function sendDealAlertEmail(params: {
     </p>
     
     <div class="property-card">
-      <span class="opportunity-badge">New Opportunity</span>
-      <h2>📍 ${deal.address}</h2>
-      <p class="address">${deal.bedrooms} bedroom · ${deal.bathrooms} bath · ${city}, ${state}</p>
-      <p style="margin: 12px 0 0; font-size: 14px;">
-        <a href="${propertyAnalysisUrl}" style="color: #C9A962; text-decoration: none; font-weight: 500;">📊 View Full Property Analysis →</a>
-      </p>
-      
-      <div class="stat-grid">
-        ${statItems}
+      <div class="property-header">
+        ${propertyImageHtml}
+        <div class="property-info">
+          <h2>${deal.address}</h2>
+          <p class="address">${city}, ${state}</p>
+          <div class="property-badges">
+            <span class="badge badge-gold">${deal.bedrooms} Bed · ${deal.bathrooms} Bath</span>
+            ${propertyTypeBadge}
+          </div>
+        </div>
       </div>
+      
+      ${statGridHtml}
+      ${propertyLinksHtml}
     </div>
+    
+    ${compsHtml}
     
     <div class="insight-box">
       <p><strong>Why we flagged this:</strong> ${contextNote}</p>
     </div>
     
-    <p class="narrative">
-      If you're interested in exploring this opportunity, my team can help you with everything – running the full numbers, reaching out to the landlord, negotiating terms, setting up the property, designing and furnishing it, and automating your operations. That's exactly what we do in the <strong>Turnkey Program</strong> – we handle the entire process so you can start earning without the headache.
-    </p>
+    ${turnkeyHtml}
   `;
   
   // Subject line - include profit if available
   const subject = hasRentData && monthlyProfit > 0
-    ? `New opportunity in ${city} – ${formatCurrency(monthlyProfit)}/mo profit potential`
-    : `New opportunity in ${city} – ${formatCurrency(deal.monthlyRevenue)}/mo potential`;
-  
-  // Build URLs for the Turnkey Tool
-  // Step 5 (Validate the Deal) - shows full revenue analysis with autoAnalyze
-  const analysisUrl = propertyAnalysisUrl;
+    ? `New ${city} opportunity – ${formatCurrency(monthlyProfit)}/mo profit potential`
+    : `New ${city} opportunity – ${formatCurrency(deal.monthlyRevenue)}/mo potential`;
   
   const htmlContent = generateEmailHTML({
     type: 'deal',
@@ -719,9 +1131,9 @@ export async function sendDealAlertEmail(params: {
     subject,
     mainContent,
     city: `${city}, ${state}`,
-    ctaUrl: VSL_URL,
-    ctaText: 'Book a Strategy Call',
-    secondaryCtaUrl: analysisUrl,
+    ctaUrl: BOOKING_URL,
+    ctaText: 'Book a Call with Our Team',
+    secondaryCtaUrl: propertyAnalysisUrl,
     secondaryCtaText: 'view full property analysis'
   });
   
@@ -776,26 +1188,28 @@ export async function sendMonthlyReportEmail(params: {
     </p>
     
     <div class="property-card">
-      <span class="opportunity-badge">${monthYear} Report</span>
-      <h2>${trendEmoji[reportData.marketTrend]} ${city}, ${state}</h2>
+      <span class="badge badge-gold">${monthYear} Report</span>
+      <h2 style="margin-top: 12px;">${trendEmoji[reportData.marketTrend]} ${city}, ${state}</h2>
       <p class="address">Market trend: ${reportData.marketTrend.charAt(0).toUpperCase() + reportData.marketTrend.slice(1)}</p>
       
       <div class="stat-grid">
-        <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(reportData.averageDailyRate)}</div>
-          <div class="stat-label">Avg Nightly Rate</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">${formatPercent(reportData.occupancyRate)}</div>
-          <div class="stat-label">Occupancy</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value highlight">${formatCurrency(reportData.annualRevenue)}</div>
-          <div class="stat-label">Avg Annual Revenue</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">${formatTrend(reportData.monthOverMonthChange)}</div>
-          <div class="stat-label">vs Last Month</div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="stat-value gold">${formatCurrency(reportData.averageDailyRate)}</div>
+            <div class="stat-label">Avg Nightly Rate</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${formatPercent(reportData.occupancyRate)}</div>
+            <div class="stat-label">Occupancy</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value gold">${formatCurrency(reportData.annualRevenue)}</div>
+            <div class="stat-label">Avg Annual Revenue</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${formatTrend(reportData.monthOverMonthChange)}</div>
+            <div class="stat-label">vs Last Month</div>
+          </div>
         </div>
       </div>
     </div>
@@ -814,7 +1228,7 @@ export async function sendMonthlyReportEmail(params: {
     
     ${reportData.dealsFound > 0 ? `
     <p class="narrative">
-      We found <strong>${reportData.dealsFound} potential opportunities</strong> in ${city} this month. If you'd like us to send you the details, just reply to this email or book a call below.
+      We found <strong>${reportData.dealsFound} potential opportunities</strong> in ${city} this month. Book a call below to get the details.
     </p>
     ` : ''}
   `;
@@ -827,8 +1241,8 @@ export async function sendMonthlyReportEmail(params: {
     subject,
     mainContent,
     city: `${city}, ${state}`,
-    ctaUrl: VSL_URL,
-    ctaText: 'Book a Strategy Call',
+    ctaUrl: BOOKING_URL,
+    ctaText: 'Book a Call with Our Team',
     secondaryCtaUrl: `${WEBSITE_URL}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`,
     secondaryCtaText: 'explore the market yourself'
   });

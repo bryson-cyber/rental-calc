@@ -18,7 +18,8 @@ import {
 } from "./newsletter-orchestrator";
 import { getUniqueCities, getContactsByCity } from "./hubspot";
 import { getMarketSnapshotForCity, batchGetMarketSnapshots } from "./newsletter-market-data";
-import { getSendStats, unsubscribeContact } from "./newsletter-email-sender";
+import { getSendStats, unsubscribeContact } from './newsletter-email-sender';
+import { sendTestDealAlert } from './test-deal-alert';
 
 export const newsletterRouter = router({
   // Get dashboard stats
@@ -298,6 +299,34 @@ export const newsletterRouter = router({
       geminiConfigured: !!process.env.GEMINI_API_KEY
     };
   }),
+  
+  // Send a full test deal alert (email + SMS) with sample data
+  sendTestDealAlertFull: protectedProcedure
+    .input(z.object({
+      email: z.string().email(),
+      firstName: z.string(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      bedrooms: z.number().optional(),
+      bathrooms: z.number().optional(),
+      monthlyRent: z.number().optional(),
+      monthlyRevenue: z.number().optional(),
+      sendEmail: z.boolean().optional(),
+      sendSms: z.boolean().optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== 'admin') {
+        throw new Error('Admin access required');
+      }
+      
+      console.log(`[Newsletter] Sending full test deal alert to ${input.email}`);
+      
+      const result = await sendTestDealAlert(input);
+      
+      return result;
+    }),
   
   // Preview newsletter content without sending
   previewContent: protectedProcedure
