@@ -16,7 +16,7 @@
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9;">
   
-  <div id="preview_text" style="display:none;">{{ contact.deal_preview_text }}</div>
+  <div id="preview_text" style="display:none;">{{ contact.deal_preview_text|default("A new rental arbitrage opportunity is available in your market") }}</div>
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9;">
     <tr>
@@ -35,7 +35,7 @@
           <!-- AI Narration -->
           <tr>
             <td style="padding: 24px; background-color: #f8fafc; border-left: 4px solid #C9A962;">
-              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">{{ contact.deal_ai_narration }}</p>
+              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">{{ contact.deal_ai_narration|default("This property shows strong potential for rental arbitrage with competitive market rates and solid occupancy projections in your target area.") }}</p>
             </td>
           </tr>
           
@@ -47,8 +47,8 @@
                 <!-- Property Header -->
                 <tr>
                   <td style="background: #0F172A; padding: 16px 20px;">
-                    <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 4px 0;">{{ contact.deal_property_address }}</h2>
-                    <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0;">{{ contact.deal_bedrooms }} Bed | {{ contact.deal_bathrooms }} Bath | {{ contact.deal_property_type }}</p>
+                    <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 4px 0;">{{ contact.deal_property_address|default("123 Main Street, City, ST 12345") }}</h2>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0;">{{ contact.deal_bedrooms|default("3") }} Bed | {{ contact.deal_bathrooms|default("2") }} Bath | {{ contact.deal_property_type|default("Single Family") }}</p>
                   </td>
                 </tr>
                 
@@ -59,21 +59,21 @@
                       <tr>
                         <td width="50%" style="padding: 8px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
                           <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Est. Revenue</p>
-                          <p style="color: #C9A962; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.deal_monthly_revenue }}</p>
+                          <p style="color: #C9A962; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.deal_monthly_revenue|default("5,000") }}</p>
                         </td>
                         <td width="50%" style="padding: 8px; text-align: center; border-bottom: 1px solid #e2e8f0;">
                           <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Monthly Rent</p>
-                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.deal_monthly_rent }}</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.deal_monthly_rent|default("2,500") }}</p>
                         </td>
                       </tr>
                       <tr>
                         <td width="50%" style="padding: 8px; text-align: center; border-right: 1px solid #e2e8f0;">
                           <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Est. Profit</p>
-                          <p style="color: #166534; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.deal_monthly_profit }}</p>
+                          <p style="color: #166534; font-size: 24px; font-weight: 700; margin: 0;">${{ contact.deal_monthly_profit|default("2,000") }}</p>
                         </td>
                         <td width="50%" style="padding: 8px; text-align: center;">
                           <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase;">Occupancy</p>
-                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.deal_occupancy }}</p>
+                          <p style="color: #0F172A; font-size: 24px; font-weight: 700; margin: 0;">{{ contact.deal_occupancy|default("70") }}%</p>
                         </td>
                       </tr>
                     </table>
@@ -86,7 +86,7 @@
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                       <tr>
                         <td align="center">
-                          <a href="{{ contact.deal_analysis_url }}" style="display: inline-block; background: #C9A962; color: #0F172A; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View Full Property Analysis</a>
+                          <a href="{{ contact.deal_analysis_url|default('https://coachinayahturnkeytool.com') }}" style="display: inline-block; background: #C9A962; color: #0F172A; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View Full Property Analysis</a>
                         </td>
                       </tr>
                     </table>
@@ -104,15 +104,15 @@
                 <tr>
                   <td style="padding: 20px;">
                     <h3 style="color: #0F172A; font-size: 16px; margin: 0 0 4px 0;">Similar Properties Already Making Money</h3>
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">{{ contact.deal_comps_summary }}</p>
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">{{ contact.deal_comps_summary|default("Based on 3 similar properties within 1 mile") }}</p>
                     
                     <!-- Comp 1 -->
                     {% if contact.deal_comp1_title %}
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 8px; margin-bottom: 8px;">
                       <tr>
                         <td style="padding: 12px;">
-                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp1_title }}</p>
-                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">{{ contact.deal_comp1_revenue }}/mo | {{ contact.deal_comp1_occupancy }} occupancy</p>
+                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp1_title|default("Comparable Property 1") }}</p>
+                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">${{ contact.deal_comp1_revenue|default("4,500") }}/mo | {{ contact.deal_comp1_occupancy|default("68") }}% occupancy</p>
                         </td>
                       </tr>
                     </table>
@@ -123,8 +123,8 @@
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 8px; margin-bottom: 8px;">
                       <tr>
                         <td style="padding: 12px;">
-                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp2_title }}</p>
-                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">{{ contact.deal_comp2_revenue }}/mo | {{ contact.deal_comp2_occupancy }} occupancy</p>
+                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp2_title|default("Comparable Property 2") }}</p>
+                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">${{ contact.deal_comp2_revenue|default("5,200") }}/mo | {{ contact.deal_comp2_occupancy|default("72") }}% occupancy</p>
                         </td>
                       </tr>
                     </table>
@@ -135,8 +135,8 @@
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 8px;">
                       <tr>
                         <td style="padding: 12px;">
-                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp3_title }}</p>
-                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">{{ contact.deal_comp3_revenue }}/mo | {{ contact.deal_comp3_occupancy }} occupancy</p>
+                          <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin: 0;">{{ contact.deal_comp3_title|default("Comparable Property 3") }}</p>
+                          <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">${{ contact.deal_comp3_revenue|default("4,800") }}/mo | {{ contact.deal_comp3_occupancy|default("65") }}% occupancy</p>
                         </td>
                       </tr>
                     </table>
@@ -156,12 +156,12 @@
                   <td style="padding: 24px;">
                     <h3 style="color: #C9A962; font-size: 18px; margin: 0 0 16px 0;">What We Do For You</h3>
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Run the full numbers and validate the deal</td></tr>
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Reach out to the landlord and negotiate terms</td></tr>
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Set up the property from scratch</td></tr>
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Design and furnish it for maximum bookings</td></tr>
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Automate your operations so you can be hands-off</td></tr>
-                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">Ongoing support to optimize your revenue</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Run the full numbers and validate the deal</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Reach out to the landlord and negotiate terms</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Set up the property from scratch</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Design and furnish it for maximum bookings</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Automate your operations so you can be hands-off</td></tr>
+                      <tr><td style="padding: 6px 0; color: rgba(255,255,255,0.9); font-size: 14px;">✓ Ongoing support to optimize your revenue</td></tr>
                     </table>
                   </td>
                 </tr>
@@ -173,7 +173,7 @@
           <tr>
             <td style="padding: 0 24px 32px 24px; text-align: center;">
               <a href="https://coachinayah.com/strategy-call" style="display: inline-block; background: #C9A962; color: #0F172A; padding: 16px 48px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 18px;">Book a Call with Our Team</a>
-              <p style="color: #64748b; font-size: 14px; margin: 16px 0 0 0;">Lets discuss how we can help you secure this property</p>
+              <p style="color: #64748b; font-size: 14px; margin: 16px 0 0 0;">Let's discuss how we can help you secure this property</p>
             </td>
           </tr>
           

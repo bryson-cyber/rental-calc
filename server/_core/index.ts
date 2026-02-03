@@ -556,6 +556,132 @@ async function startServer() {
     }
   });
 
+  // ============================================================================
+  // NURTURE SEQUENCE WEBHOOKS
+  // These endpoints are called by HubSpot workflows to fetch live market data
+  // before sending each email in the 7-day nurture sequence
+  // ============================================================================
+  
+  // Import nurture service dynamically to avoid circular dependencies
+  app.post('/api/webhooks/nurture/:day', async (req, res) => {
+    try {
+      const { day } = req.params;
+      const { contactId } = req.body;
+      
+      if (!contactId) {
+        return res.status(400).json({ success: false, error: 'contactId is required' });
+      }
+      
+      const dayNumber = parseInt(day, 10);
+      if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 7) {
+        return res.status(400).json({ success: false, error: 'Invalid day (must be 1-7)' });
+      }
+      
+      console.log(`[Nurture Webhook] Processing Day ${dayNumber} for contact ${contactId}`);
+      
+      // Import the nurture service
+      const { handleNurtureWebhook } = await import('../nurture-sequence-service');
+      
+      const result = await handleNurtureWebhook(contactId, dayNumber as 1|2|3|4|5|6|7);
+      
+      if (result.success) {
+        res.json({ success: true, message: result.message });
+      } else {
+        res.status(500).json({ success: false, error: result.message });
+      }
+    } catch (error) {
+      console.error('[Nurture Webhook] Error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+  
+  // Convenience endpoint to test nurture data fetching
+  app.get('/api/webhooks/nurture/test/:day/:contactId', async (req, res) => {
+    try {
+      const { day, contactId } = req.params;
+      
+      const dayNumber = parseInt(day, 10);
+      if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 7) {
+        return res.status(400).json({ success: false, error: 'Invalid day (must be 1-7)' });
+      }
+      
+      console.log(`[Nurture Webhook Test] Processing Day ${dayNumber} for contact ${contactId}`);
+      
+      const { handleNurtureWebhook, getContactData } = await import('../nurture-sequence-service');
+      
+      // First get contact data to show what we're working with
+      const contact = await getContactData(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ success: false, error: 'Contact not found' });
+      }
+      
+      const result = await handleNurtureWebhook(contactId, dayNumber as 1|2|3|4|5|6|7);
+      
+      res.json({ 
+        success: result.success, 
+        message: result.message,
+        contact: {
+          email: contact.email,
+          firstName: contact.firstName,
+          city: contact.city,
+          state: contact.state
+        }
+      });
+    } catch (error) {
+      console.error('[Nurture Webhook Test] Error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+  
+  // Endpoint to get market data preview (for testing without updating HubSpot)
+  app.get('/api/nurture/preview/:city/:state', async (req, res) => {
+    try {
+      const { city, state } = req.params;
+      
+      console.log(`[Nurture Preview] Fetching data for ${city}, ${state}`);
+      
+      const { 
+        getMarketSnapshot, 
+        getRegulationInfo, 
+        findDealOpportunity, 
+        getTopPerformers,
+        getMarketDeepDive
+      } = await import('../nurture-sequence-service');
+      
+      const [marketData, regulations, deal, topPerformers, deepDive] = await Promise.all([
+        getMarketSnapshot(city, state),
+        getRegulationInfo(city, state),
+        findDealOpportunity(city, state),
+        getTopPerformers(city, state, 3),
+        getMarketDeepDive(city, state)
+      ]);
+      
+      res.json({
+        success: true,
+        data: {
+          marketSnapshot: marketData,
+          regulations,
+          dealOpportunity: deal,
+          topPerformers,
+          marketDeepDive: deepDive
+        }
+      });
+    } catch (error) {
+      console.error('[Nurture Preview] Error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

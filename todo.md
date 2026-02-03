@@ -9517,3 +9517,54 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Deploy to production (SMTP blocked in sandbox)
 - [ ] Send test deal alert email to bryson@coachinayah.com
 - [ ] Send test SMS to bryson@coachinayah.com
+
+## 7-Day Webinar Nurture Email Sequence
+
+- [ ] Design 7-day email content strategy with varied content types
+- [ ] Create data pipeline to fetch market data for contact's data_perfection_city/state
+- [ ] Build HubSpot contact properties for nurture sequence data
+- [ ] Create Day 1 email template: Welcome + Market Snapshot
+- [ ] Create Day 2 email template: Regulation Update
+- [ ] Create Day 3 email template: Deal Alert
+- [ ] Create Day 4 email template: Market Deep Dive
+- [ ] Create Day 5 email template: New Listings Alert
+- [ ] Create Day 6 email template: Competitor Analysis
+- [ ] Create Day 7 email template: Webinar Reminder + Opportunity Summary
+- [ ] Set up HubSpot workflow with 7-day timing sequence
+- [ ] Test complete nurture flow end-to-end
+
+
+## 7-Day Webinar Nurture Email Sequence (Feb 3, 2026) - COMPLETE
+
+### Live Data Pipeline:
+- [x] Design 7-day email content strategy with varied content types
+- [x] Create data pipeline to fetch market data for contact's data_perfection_city/state
+- [x] Build webhook endpoints for each nurture day (/api/webhooks/nurture/1-7)
+- [x] Add fallback market search for cities not found in API
+- [x] Test data fetching for Denver, Austin, Phoenix, Miami, Nashville
+
+### HubSpot Integration:
+- [x] Build HubSpot contact properties for nurture sequence data (58 properties created)
+- [x] Create property group: nurture_sequence
+- [x] Properties include: market snapshot, regulations, deal opportunity, top performers, seasonality
+
+### Email Templates:
+- [x] Create Day 1 email template: Welcome + Market Snapshot
+- [x] Create Day 2 email template: Regulation Update
+- [x] Create Day 3 email template: Deal Alert
+- [x] Create Day 4 email template: Market Deep Dive
+- [x] Create Day 5 email template: New Listings Alert
+- [x] Create Day 6 email template: Competitor Analysis
+- [x] Create Day 7 email template: Webinar Reminder + Opportunity Summary
+
+### Workflow Documentation:
+- [x] Set up HubSpot workflow guide with 7-day timing sequence
+- [x] Document webhook integration for each email day
+- [x] Test complete nurture flow end-to-end
+
+### Files Created:
+- server/nurture-sequence-service.ts - Data fetching service
+- scripts/create-nurture-properties.mjs - HubSpot property creation script
+- scripts/test-nurture-data.mjs - Data pipeline test script
+- docs/nurture-email-templates.md - 7 email templates with personalization
+- docs/hubspot-workflow-setup.md - Complete workflow setup guide
