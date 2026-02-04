@@ -9693,3 +9693,25 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Implement user usage limits (5 analyses/day, 3 markets/day)
 - [x] Add admin bypass for usage limits
 - [ ] Add "remaining analyses" display in UI (frontend integration pending)
+
+
+## Remaining Analyses UI Display (Feb 4, 2026)
+- [ ] Create tRPC endpoint to fetch user usage status
+- [ ] Build UsageLimitBadge UI component
+- [ ] Integrate into One Home tab
+- [ ] Integrate into Market Research tab
+- [ ] Test with different usage levels
+
+
+## Admin User Management Portal (Feb 4, 2026) - COMPLETE
+- [x] Create admin users page with user list
+- [x] Show user usage stats (analyses used today, total)
+- [x] Add toggle to grant/revoke admin permissions
+- [x] Add search/filter for users
+- [x] Add route to admin navigation at /admin/users
+
+## Required Login Gate (Feb 4, 2026) - COMPLETE
+- [x] Require login before running property analysis
+- [x] Show login prompt on Home page for non-authenticated users
+- [x] LoginGate component wraps LeadMagnet page
+- [x] Keep the tool free but gated behind authentication

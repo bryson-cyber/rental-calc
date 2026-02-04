@@ -36,6 +36,7 @@ import ShareRedirect from "./pages/ShareRedirect";
 import NotificationAnalytics from "./pages/NotificationAnalytics";
 import NewsletterDashboard from "./pages/admin/NewsletterDashboard";
 import ApiUsageDashboard from "./pages/ApiUsage";
+import AdminUsers from "./pages/AdminUsers";
 
 function Router() {
   return (
@@ -109,6 +110,7 @@ function Router() {
       <Route path={"/admin/notifications"} component={NotificationAnalytics} />
       <Route path={"/admin/newsletter"} component={NewsletterDashboard} />
       <Route path={"/admin/api-usage"} component={ApiUsageDashboard} />
+      <Route path={"/admin/users"} component={AdminUsers} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

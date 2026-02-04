@@ -3,7 +3,8 @@ import { router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
 import { users, activityLogs, userSessions, analysisReports, leads } from "../drizzle/schema";
-import { eq, desc, gte, lte, and, count, sql } from "drizzle-orm";
+import { eq, desc, gte, lte, and, count, sql, like, or } from "drizzle-orm";
+import { userUsage } from "../drizzle/schema";
 import { getActivityLogs, getActivityStats, getRecentSessions } from "./activity";
 import { getApiUsageStats, getRecentApiCalls, getTodayCallCount, checkDailyLimit } from "./api-logger";
 
@@ -91,48 +92,6 @@ export const adminRouter = router({
       });
     }
   }),
-
-  // Get all users with activity summary
-  getUsers: adminProcedure
-    .input(
-      z.object({
-        limit: z.number().int().min(1).max(100).default(50),
-        offset: z.number().int().min(0).default(0),
-      })
-    )
-    .query(async ({ input }) => {
-      try {
-        const db = await getDb();
-        if (!db) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Database not available",
-          });
-        }
-
-        const userList = await db
-          .select()
-          .from(users)
-          .orderBy(desc(users.lastSignedIn))
-          .limit(input.limit)
-          .offset(input.offset);
-
-        const [totalResult] = await db.select({ count: count() }).from(users);
-
-        return {
-          users: userList,
-          total: totalResult.count,
-          limit: input.limit,
-          offset: input.offset,
-        };
-      } catch (error) {
-        console.error("[Admin] Error getting users:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to get users",
-        });
-      }
-    }),
 
   // Get activity logs with filtering
   getActivityLogs: adminProcedure
@@ -448,6 +407,214 @@ export const adminRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to get recent API calls",
+        });
+      }
+    }),
+
+  // ==================== USER MANAGEMENT ====================
+  
+  // Get all users with their usage stats
+  getUsers: adminProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        role: z.enum(['all', 'user', 'admin']).default('all'),
+        limit: z.number().int().min(1).max(100).default(50),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        // Build where conditions
+        const conditions = [];
+        
+        if (input.search) {
+          conditions.push(
+            or(
+              like(users.name, `%${input.search}%`),
+              like(users.email, `%${input.search}%`)
+            )
+          );
+        }
+        
+        if (input.role !== 'all') {
+          conditions.push(eq(users.role, input.role));
+        }
+
+        // Get total count
+        const [totalResult] = await db
+          .select({ count: count() })
+          .from(users)
+          .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+        // Get users with usage stats
+        const today = new Date().toISOString().split('T')[0];
+        
+        const userList = await db
+          .select({
+            id: users.id,
+            openId: users.openId,
+            name: users.name,
+            email: users.email,
+            phone: users.phone,
+            role: users.role,
+            createdAt: users.createdAt,
+            lastSignedIn: users.lastSignedIn,
+          })
+          .from(users)
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .orderBy(desc(users.lastSignedIn))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        // Get usage stats for each user
+        const usersWithStats = await Promise.all(
+          userList.map(async (user) => {
+            const [usageToday] = await db
+              .select({
+                propertyAnalyses: userUsage.propertyAnalyses,
+                marketResearches: userUsage.marketResearches,
+                apiCalls: userUsage.apiCallsCount,
+              })
+              .from(userUsage)
+              .where(
+                and(
+                  eq(userUsage.userId, user.id),
+                  eq(userUsage.date, today)
+                )
+              );
+
+            return {
+              ...user,
+              usageToday: usageToday || { propertyAnalyses: 0, marketResearches: 0, apiCalls: 0 },
+            };
+          })
+        );
+
+        return {
+          users: usersWithStats,
+          total: totalResult?.count || 0,
+          limit: input.limit,
+          offset: input.offset,
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting users:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get users",
+        });
+      }
+    }),
+
+  // Toggle user admin status
+  toggleUserAdmin: adminProcedure
+    .input(
+      z.object({
+        userId: z.number().int(),
+        makeAdmin: z.boolean(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        // Prevent removing own admin status
+        if (input.userId === ctx.user.id && !input.makeAdmin) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You cannot remove your own admin status",
+          });
+        }
+
+        // Update user role
+        await db
+          .update(users)
+          .set({ role: input.makeAdmin ? 'admin' : 'user' })
+          .where(eq(users.id, input.userId));
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error("[Admin] Error toggling user admin:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update user role",
+        });
+      }
+    }),
+
+  // Get single user details with full usage history
+  getUserDetails: adminProcedure
+    .input(
+      z.object({
+        userId: z.number().int(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        // Get user
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, input.userId));
+
+        if (!user) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "User not found",
+          });
+        }
+
+        // Get usage history (last 30 days)
+        const usageHistory = await db
+          .select()
+          .from(userUsage)
+          .where(eq(userUsage.userId, input.userId))
+          .orderBy(desc(userUsage.date))
+          .limit(30);
+
+        // Calculate totals
+        const totalAnalyses = usageHistory.reduce((sum, u) => sum + (u.propertyAnalyses || 0), 0);
+        const totalMarketResearches = usageHistory.reduce((sum, u) => sum + (u.marketResearches || 0), 0);
+        const totalApiCalls = usageHistory.reduce((sum, u) => sum + (u.apiCallsCount || 0), 0);
+
+        return {
+          user,
+          usageHistory,
+          totals: {
+            analyses: totalAnalyses,
+            marketResearches: totalMarketResearches,
+            apiCalls: totalApiCalls,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error("[Admin] Error getting user details:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get user details",
         });
       }
     }),

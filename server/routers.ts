@@ -55,6 +55,7 @@ import { getLocationQuality, type LocationQualityResult } from "./location-quali
 import { adminRouter } from "./admin-router";
 import { newsletterRouter } from "./newsletter-router";
 import { logActivity, ActionCategory, ActionType } from "./activity";
+import { getUsageStatus, canPerformAnalysis, canPerformMarketResearch, recordAnalysisUsage, recordMarketResearchUsage } from "./usage-limits";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
@@ -132,6 +133,20 @@ const smartSearchInputSchema = z.object({
 export const appRouter = router({
   system: systemRouter,
   newsletter: newsletterRouter,
+  
+  // Usage limits - get current user's remaining analyses
+  usage: router({
+    getStatus: publicProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user?.id;
+      // Generate a session ID from request if no user
+      const sessionId = !userId ? (ctx.req.headers['x-session-id'] as string || ctx.req.ip || 'anonymous') : undefined;
+      const ipAddress = ctx.req.ip || ctx.req.headers['x-forwarded-for'] as string;
+      
+      const status = await getUsageStatus(userId, sessionId, ipAddress);
+      return status;
+    }),
+  }),
+  
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

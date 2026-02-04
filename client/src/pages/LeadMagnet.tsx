@@ -113,6 +113,7 @@ import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { InteractiveTour, useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTour';
 import { ContextualAIChat } from '@/components/ContextualAIChat';
+import { LoginGate } from '@/components/LoginGate';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -2016,7 +2017,7 @@ export default function LeadMagnet() {
   // ============================================
   
   return (
-    <>
+    <LoginGate>
       <SEOHead
         title="Free Property Analysis Tools"
         description="Analyze rental properties with our free tools. Get revenue estimates, market insights, regulation checks, and AI-powered investment advice for Airbnb & VRBO."
@@ -6411,6 +6412,6 @@ export default function LeadMagnet() {
         }}
       />
     </div>
-    </>
+    </LoginGate>
   );
 }

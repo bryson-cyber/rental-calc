@@ -46,6 +46,7 @@ import AnalysisProgress from '@/components/AnalysisProgress';
 import EnhancedInsights, { type EnhancedNarrativeReport } from '@/components/EnhancedInsights';
 import { useAnalysisProgress } from '@/hooks/useAnalysisProgress';
 import { SEOHead, calculatorSchema, organizationSchema } from '@/components/SEOHead';
+import { UsageLimitBadge } from '@/components/UsageLimitBadge';
 
 // Type definitions based on API response
 interface MonthlyForecast {
@@ -571,6 +572,9 @@ export default function RentalEstimator() {
               <p className="text-lg text-white/70 font-sans max-w-lg mx-auto">
                 See what your property could earn as a short-term rental
               </p>
+              <div className="mt-4">
+                <UsageLimitBadge type="property" />
+              </div>
             </motion.div>
             
             {/* Form Card */}

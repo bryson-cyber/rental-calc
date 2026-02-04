@@ -22,6 +22,7 @@ import {
   Heart
 } from 'lucide-react';
 import { SharePageButton } from '@/components/SharePageButton';
+import { UsageLimitBadge } from '@/components/UsageLimitBadge';
 import { Link, useSearch } from 'wouter';
 
 type MarketType = 'all' | 'coastal' | 'urban_metro' | 'mountains_lakes' | 'suburban' | 'rural' | 'mid_size_city';
@@ -155,7 +156,10 @@ export default function MarketDiscoveryPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">US Market Discovery</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-bold text-slate-900">US Market Discovery</h1>
+                  <UsageLimitBadge type="market" />
+                </div>
                 <p className="text-sm text-slate-500">Explore {marketsQuery.data?.total || 0} short-term rental markets</p>
               </div>
             </div>
