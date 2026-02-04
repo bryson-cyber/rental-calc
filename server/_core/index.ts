@@ -562,7 +562,50 @@ async function startServer() {
   // before sending each email in the 7-day nurture sequence
   // ============================================================================
   
-  // Import nurture service dynamically to avoid circular dependencies
+  // ============================================================================
+  // SINGLE-TRIGGER: Populate ALL nurture data at once on webinar registration
+  // This is the RECOMMENDED approach - call this once when contact registers
+  // and all 7 emails will have their personalization data ready.
+  // IMPORTANT: This route must be defined BEFORE the :day route to match first
+  // ============================================================================
+  app.post('/api/webhooks/nurture/populate-all', async (req, res) => {
+    try {
+      const { contactId } = req.body;
+      
+      if (!contactId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'contactId is required',
+          usage: 'POST /api/webhooks/nurture/populate-all with { "contactId": "12345" }'
+        });
+      }
+      
+      console.log(`[Nurture Webhook] Populating ALL data for contact ${contactId}`);
+      
+      // Import the nurture service
+      const { prepareAllNurtureData } = await import('../nurture-sequence-service');
+      
+      const result = await prepareAllNurtureData(contactId);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: result.message,
+          data: result.data
+        });
+      } else {
+        res.status(500).json({ success: false, error: result.message });
+      }
+    } catch (error) {
+      console.error('[Nurture Webhook] Error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      });
+    }
+  });
+
+  // Individual day webhooks (legacy - use populate-all instead)
   app.post('/api/webhooks/nurture/:day', async (req, res) => {
     try {
       const { day } = req.params;

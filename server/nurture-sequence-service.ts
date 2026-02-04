@@ -642,7 +642,7 @@ export async function getMarketDeepDive(city: string, state: string): Promise<Ma
  */
 export async function updateNurtureProperties(
   contactId: string,
-  emailType: 'day1' | 'day2' | 'day3' | 'day4' | 'day5' | 'day6' | 'day7',
+  emailType: 'day1' | 'day2' | 'day3' | 'day4' | 'day5' | 'day6' | 'day7' | 'all',
   data: Record<string, string | number>
 ): Promise<boolean> {
   if (!HUBSPOT_API_KEY) {
@@ -650,14 +650,20 @@ export async function updateNurtureProperties(
     return false;
   }
 
-  // Prefix all properties with nurture_ and the email type
+  // Prefix all properties with nurture_
   const properties: Record<string, string> = {};
   for (const [key, value] of Object.entries(data)) {
     properties[`nurture_${key}`] = String(value);
   }
 
-  // Add trigger property for the workflow
-  properties[`nurture_${emailType}_trigger`] = 'send';
+  // Add trigger property for the workflow (skip for 'all' type)
+  if (emailType !== 'all') {
+    properties[`nurture_${emailType}_trigger`] = 'send';
+  } else {
+    // For 'all' type, mark data as ready
+    properties['nurture_data_ready'] = 'true';
+    properties['nurture_data_populated_at'] = new Date().toISOString();
+  }
 
   try {
     const response = await fetch(`${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}`, {
@@ -900,6 +906,141 @@ export async function handleNurtureWebhook(
     };
   } catch (error) {
     console.error(`[NurtureService] Error processing Day ${emailDay}:`, error);
+    return { success: false, message: `Error: ${error}` };
+  }
+}
+
+
+/**
+ * SINGLE-TRIGGER: Populate ALL nurture data at once when contact registers
+ * This is the recommended approach - call this once on webinar registration
+ * and all 7 emails will have their personalization data ready.
+ */
+export async function prepareAllNurtureData(contactId: string): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    city: string;
+    state: string;
+    propertiesUpdated: number;
+  };
+}> {
+  console.log(`[NurtureService] Preparing ALL nurture data for contact ${contactId}`);
+  
+  const contact = await getContactData(contactId);
+  if (!contact || !contact.city) {
+    console.error('[NurtureService] Contact not found or missing city');
+    return { success: false, message: 'Contact not found or missing city/state data' };
+  }
+
+  const { city, state } = contact;
+  console.log(`[NurtureService] Fetching data for ${city}, ${state}`);
+
+  try {
+    // Fetch all data in parallel for speed
+    const [marketData, regulations, deal, deepDive, topPerformers] = await Promise.all([
+      getMarketSnapshot(city, state),
+      getRegulationInfo(city, state),
+      findDealOpportunity(city, state),
+      getMarketDeepDive(city, state),
+      getTopPerformers(city, state, 5)
+    ]);
+
+    if (!marketData) {
+      return { success: false, message: `Could not fetch market data for ${city}, ${state}` };
+    }
+
+    // Build all properties in one object
+    const allProperties: Record<string, string | number> = {
+      // Core location data
+      city: city,
+      state: state,
+      market_name: marketData.marketName,
+
+      // Day 1: Market Snapshot
+      listing_count: marketData.listingCount,
+      avg_annual_revenue: marketData.avgAnnualRevenue,
+      avg_monthly_revenue: Math.round(marketData.avgAnnualRevenue / 12),
+      avg_occupancy: Math.round(marketData.avgOccupancy),
+      avg_adr: Math.round(marketData.avgAdr),
+      revenue_trend: marketData.revenueTrend,
+
+      // Day 2: Regulations
+      regulation_status: regulations.status,
+      permit_required: regulations.permitRequired ? 'Yes' : 'No',
+      regulation_notes: regulations.notes,
+      arbitrage_friendly: regulations.arbitrageFriendly ? 'Yes' : 'No',
+
+      // Day 3: Deal Alert
+      deal_address: deal?.address || `${city}, ${state}`,
+      deal_bedrooms: deal?.bedrooms || 3,
+      deal_bathrooms: deal?.bathrooms || 2,
+      deal_monthly_revenue: deal?.monthlyRevenue || 0,
+      deal_monthly_rent: deal?.monthlyRent || 0,
+      deal_monthly_profit: deal?.monthlyProfit || 0,
+      deal_occupancy: Math.round(deal?.occupancy || 0),
+      deal_adr: Math.round(deal?.adr || 0),
+      deal_analysis_url: deal?.analysisUrl || '',
+
+      // Day 4: Seasonality Deep Dive
+      revenue_by_bedroom: deepDive?.revenueByBedroom
+        ?.map(r => `${r.bedrooms}BR: $${r.avgRevenue.toLocaleString()}`)
+        .join(' | ') || '',
+      peak_season: deepDive?.peakSeason || '',
+      low_season: deepDive?.lowSeason || '',
+      yoy_growth: deepDive?.yearOverYearGrowth || 0,
+      '1br_revenue': deepDive?.revenueByBedroom?.[0]?.avgRevenue || 0,
+      '2br_revenue': deepDive?.revenueByBedroom?.[1]?.avgRevenue || 0,
+      '3br_revenue': deepDive?.revenueByBedroom?.[2]?.avgRevenue || 0,
+      '4br_revenue': deepDive?.revenueByBedroom?.[3]?.avgRevenue || 0,
+
+      // Day 5: New Listings (placeholder data)
+      new_listings_count: 5,
+      sample_listing_address: deal?.address || `${city}, ${state}`,
+      sample_listing_revenue: deal?.monthlyRevenue || 0,
+      sample_listing_profit: deal?.monthlyProfit || 0,
+
+      // Day 6: Top Performers
+      top_performers_count: topPerformers.length,
+
+      // Day 7: Summary
+      market_avg_revenue: marketData.avgAnnualRevenue,
+      market_avg_occupancy: Math.round(marketData.avgOccupancy),
+      best_deal_profit: deal?.monthlyProfit || 0,
+      best_deal_url: deal?.analysisUrl || '',
+      webinar_date: 'Sunday',
+      webinar_time: '2:00 PM EST'
+    };
+
+    // Add individual performer data (up to 3)
+    topPerformers.slice(0, 3).forEach((performer, i) => {
+      const idx = i + 1;
+      allProperties[`performer_${idx}_title`] = performer.title;
+      allProperties[`performer_${idx}_revenue`] = performer.monthlyRevenue;
+      allProperties[`performer_${idx}_occupancy`] = Math.round(performer.occupancy);
+      allProperties[`performer_${idx}_rating`] = performer.rating || 0;
+    });
+
+    // Update all properties at once using the 'all' prefix
+    const success = await updateNurtureProperties(contactId, 'all', allProperties);
+
+    if (success) {
+      console.log(`[NurtureService] Successfully populated ${Object.keys(allProperties).length} properties for ${city}, ${state}`);
+      return {
+        success: true,
+        message: `All nurture data prepared for ${city}, ${state}`,
+        data: {
+          city,
+          state,
+          propertiesUpdated: Object.keys(allProperties).length
+        }
+      };
+    } else {
+      return { success: false, message: 'Failed to update HubSpot properties' };
+    }
+
+  } catch (error) {
+    console.error(`[NurtureService] Error preparing all nurture data:`, error);
     return { success: false, message: `Error: ${error}` };
   }
 }

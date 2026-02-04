@@ -9595,3 +9595,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - Listing Count: 64,069 ✓
 - Occupancy: 61% ✓
 - ADR: $237 ✓
+
+
+## Single-Trigger Nurture Webhook (Feb 4, 2026)
+- [x] Create prepareAllNurtureData function to populate all 53 properties at once
+- [x] Add /api/webhooks/nurture/populate-all endpoint
+- [x] Create missing HubSpot properties (nurture_data_ready, nurture_data_populated_at)
+- [x] Test endpoint with Orlando contact - 53 properties populated successfully
+- [x] Create setup documentation for Zapier/HubSpot integration (docs/nurture-webhook-setup.md)
