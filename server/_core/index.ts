@@ -563,82 +563,29 @@ async function startServer() {
   // ============================================================================
   
   // ============================================================================
-  // SINGLE-TRIGGER: Populate ALL nurture data at once on webinar registration
-  // This is the RECOMMENDED approach - call this once when contact registers
-  // and all 7 emails will have their personalization data ready.
-  // IMPORTANT: This route must be defined BEFORE the :day route to match first
+  // DEPRECATED: Data-heavy nurture webhooks are disabled to prevent API overuse
+  // The simplified CTA-focused approach uses HubSpot tokens only (no AirDNA calls)
+  // See docs/nurture-email-templates-simplified.md for the new approach
   // ============================================================================
+  
+  // Disabled: populate-all endpoint (was making 20+ API calls per contact)
   app.post('/api/webhooks/nurture/populate-all', async (req, res) => {
-    try {
-      const { contactId } = req.body;
-      
-      if (!contactId) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'contactId is required',
-          usage: 'POST /api/webhooks/nurture/populate-all with { "contactId": "12345" }'
-        });
-      }
-      
-      console.log(`[Nurture Webhook] Populating ALL data for contact ${contactId}`);
-      
-      // Import the nurture service
-      const { prepareAllNurtureData } = await import('../nurture-sequence-service');
-      
-      const result = await prepareAllNurtureData(contactId);
-      
-      if (result.success) {
-        res.json({ 
-          success: true, 
-          message: result.message,
-          data: result.data
-        });
-      } else {
-        res.status(500).json({ success: false, error: result.message });
-      }
-    } catch (error) {
-      console.error('[Nurture Webhook] Error:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      });
-    }
+    return res.status(410).json({ 
+      success: false, 
+      error: 'DEPRECATED: This endpoint has been disabled to prevent API overuse.',
+      message: 'Use the simplified CTA-focused email templates instead. See docs/nurture-email-templates-simplified.md',
+      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without AirDNA data pulls.'
+    });
   });
 
-  // Individual day webhooks (legacy - use populate-all instead)
+  // Disabled: Individual day webhooks (legacy)
   app.post('/api/webhooks/nurture/:day', async (req, res) => {
-    try {
-      const { day } = req.params;
-      const { contactId } = req.body;
-      
-      if (!contactId) {
-        return res.status(400).json({ success: false, error: 'contactId is required' });
-      }
-      
-      const dayNumber = parseInt(day, 10);
-      if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 7) {
-        return res.status(400).json({ success: false, error: 'Invalid day (must be 1-7)' });
-      }
-      
-      console.log(`[Nurture Webhook] Processing Day ${dayNumber} for contact ${contactId}`);
-      
-      // Import the nurture service
-      const { handleNurtureWebhook } = await import('../nurture-sequence-service');
-      
-      const result = await handleNurtureWebhook(contactId, dayNumber as 1|2|3|4|5|6|7);
-      
-      if (result.success) {
-        res.json({ success: true, message: result.message });
-      } else {
-        res.status(500).json({ success: false, error: result.message });
-      }
-    } catch (error) {
-      console.error('[Nurture Webhook] Error:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
-      });
-    }
+    return res.status(410).json({ 
+      success: false, 
+      error: 'DEPRECATED: This endpoint has been disabled to prevent API overuse.',
+      message: 'Use the simplified CTA-focused email templates instead. See docs/nurture-email-templates-simplified.md',
+      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without AirDNA data pulls.'
+    });
   });
   
   // Convenience endpoint to test nurture data fetching

@@ -1752,3 +1752,60 @@ export const apiUsageSummary = mysqlTable("api_usage_summary", {
 
 export type ApiUsageSummary = typeof apiUsageSummary.$inferSelect;
 export type InsertApiUsageSummary = typeof apiUsageSummary.$inferInsert;
+
+
+/**
+ * User Usage Tracking table for enforcing daily limits
+ * Tracks property analyses, market research, and API calls per user per day
+ * Admins bypass all limits
+ */
+export const userUsage = mysqlTable("user_usage", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User identification (can be userId for logged-in, or sessionId for anonymous)
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  
+  // Date for this usage record (YYYY-MM-DD)
+  date: varchar("date", { length: 10 }).notNull(),
+  
+  // Usage counts
+  propertyAnalyses: int("propertyAnalyses").default(0).notNull(),
+  marketResearches: int("marketResearches").default(0).notNull(),
+  apiCallsCount: int("apiCallsCount").default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserUsage = typeof userUsage.$inferSelect;
+export type InsertUserUsage = typeof userUsage.$inferInsert;
+
+/**
+ * Usage Limits Configuration table for storing configurable limits
+ * Allows admins to adjust limits without code changes
+ */
+export const usageLimitsConfig = mysqlTable("usage_limits_config", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Limit type
+  limitType: varchar("limitType", { length: 50 }).notNull().unique(),
+  
+  // Limit value
+  dailyLimit: int("dailyLimit").notNull(),
+  
+  // Description
+  description: text("description"),
+  
+  // Status
+  isActive: int("isActive").default(1).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UsageLimitsConfig = typeof usageLimitsConfig.$inferSelect;
+export type InsertUsageLimitsConfig = typeof usageLimitsConfig.$inferInsert;

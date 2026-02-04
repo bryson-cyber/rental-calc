@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS user_usage (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NULL,\n  sessionId VARCHAR(64) NULL,\n  ipAddress VARCHAR(45) NULL,\n  date VARCHAR(10) NOT NULL,\n  propertyAnalyses INT NOT NULL DEFAULT 0,\n  marketResearches INT NOT NULL DEFAULT 0,\n  apiCallsCount INT NOT NULL DEFAULT 0,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_user_date (userId, date),\n  INDEX idx_session_date (sessionId, date),\n  INDEX idx_ip_date (ipAddress, date)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute CREATE TABLE IF NOT EXISTS user_usage (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NULL,\n  sessionId VARCHAR(64) NULL,\n  ipAddress VARCHAR(45) NULL,\n  date VARCHAR(10) NOT NULL,\n  propertyAnalyses INT NOT NULL DEFAULT 0,\n  marketResearches INT NOT NULL DEFAULT 0,\n  apiCallsCount INT NOT NULL DEFAULT 0,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_user_date (userId, date),\n  INDEX idx_session_date (sessionId, date),\n  INDEX idx_ip_date (ipAddress, date)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 560
+}

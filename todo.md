@@ -9667,3 +9667,29 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Route at /admin/api-usage
 - [ ] Display cache statistics
 - [ ] Add route and navigation entry
+
+
+## User Usage Limits System (Feb 4, 2026) - COMPLETE
+- [x] Create user_usage table in database schema
+- [x] Build usage tracking service with daily limits
+- [x] Add admin bypass (admins have unlimited access)
+- [ ] Integrate limit checks into property analysis endpoint
+- [ ] Integrate limit checks into market research endpoint
+- [ ] Add "remaining analyses" display in UI
+- [ ] Add admin management in admin panel
+- [x] Test with regular user and admin accounts
+
+### Limits Structure:
+- Property Analyses: 5/day (free users)
+- Market Research: 3 markets/day (free users)
+- Daily API Cap: 100 calls/user (hard stop)
+- Admins: No limits
+
+
+## Simplified Nurture System (Feb 4, 2026) - COMPLETE
+- [x] Update nurture email templates to CTA-focused (no AirDNA data)
+- [x] Update SMS messages to simple personalized CTAs
+- [x] Remove/disable data-heavy webhook endpoints
+- [x] Implement user usage limits (5 analyses/day, 3 markets/day)
+- [x] Add admin bypass for usage limits
+- [ ] Add "remaining analyses" display in UI (frontend integration pending)
