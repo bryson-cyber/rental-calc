@@ -1,10 +1,11 @@
 /**
  * Unified Admin Dashboard
  * 
- * Consolidates all admin features into one place:
+ * Consolidates all admin features into one place with Coach Inayah branding:
+ * - Dark navy (#0F172A) background with gold (#C9A962) accents
  * - Overview: Dashboard stats (users, reports, leads, activity)
  * - Users: User management with admin toggle
- * - API Usage: AirDNA API monitoring and limits
+ * - API Usage: Market data API monitoring and limits
  * - HubSpot: Personalized links, email opt-ins, tool usage
  * - Notifications: Shareable report analytics
  * - Newsletter: Deal Flow Machine management
@@ -18,7 +19,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,9 +38,7 @@ import {
   Users, 
   Activity, 
   FileText, 
-  UserPlus, 
   TrendingUp,
-  TrendingDown,
   Clock,
   BarChart3,
   RefreshCw,
@@ -58,15 +56,12 @@ import {
   MousePointer,
   Send,
   MapPin,
-  Plus,
-  Copy,
   ExternalLink,
   Eye,
   MessageSquare,
   Play,
-  Settings,
-  Home,
-  ArrowLeft
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -99,7 +94,7 @@ export default function UnifiedAdmin() {
       toast.success('User permissions updated');
       usersQuery.refetch();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (err) => toast.error(err.message)
   });
   
   // ============================================
@@ -107,7 +102,7 @@ export default function UnifiedAdmin() {
   // ============================================
   const { data: apiUsageData, isLoading: apiUsageLoading, refetch: refetchApiUsage } = trpc.admin.getApiUsage.useQuery(
     {},
-    { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'api-usage', refetchInterval: 30000 }
+    { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'api-usage' }
   );
   
   const { data: apiCallsData } = trpc.admin.getRecentApiCalls.useQuery(
@@ -129,7 +124,7 @@ export default function UnifiedAdmin() {
   );
   
   const { data: emailOptins, isLoading: optinsLoading } = trpc.emailOptin.list.useQuery(
-    { limit: 10, activeOnly: true },
+    { limit: 10 },
     { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'hubspot' }
   );
   
@@ -142,26 +137,27 @@ export default function UnifiedAdmin() {
   );
   
   // ============================================
-  // NEWSLETTER TAB QUERIES
+  // NEWSLETTER TAB QUERIES & MUTATIONS
   // ============================================
   const { data: newsletterStats, refetch: refetchNewsletter } = trpc.newsletter.getDashboardStats.useQuery(
     undefined,
     { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'newsletter' }
   );
   
-  const { data: newsletterCities } = trpc.newsletter.getCities.useQuery(
-    undefined,
-    { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'newsletter' }
-  );
-  
   const triggerWeekly = trpc.newsletter.triggerWeeklyJob.useMutation({
-    onSuccess: () => toast.success('Weekly Newsletter Job Started'),
-    onError: (error) => toast.error(error.message),
+    onSuccess: () => {
+      toast.success('Weekly newsletter job started');
+      refetchNewsletter();
+    },
+    onError: (err: any) => toast.error(err.message)
   });
   
   const triggerDealAlert = trpc.newsletter.triggerDealAlertJob.useMutation({
-    onSuccess: () => toast.success('Deal Alert Job Started'),
-    onError: (error) => toast.error(error.message),
+    onSuccess: () => {
+      toast.success('Deal alert scan started');
+      refetchNewsletter();
+    },
+    onError: (err) => toast.error(err.message)
   });
 
   // ============================================
@@ -169,46 +165,47 @@ export default function UnifiedAdmin() {
   // ============================================
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#C9A962] mx-auto mb-4" />
+          <p className="text-white/60">Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <Shield className="w-12 h-12 text-amber-600 mx-auto mb-4" />
-            <CardTitle>Admin Access Required</CardTitle>
-            <CardDescription>Please log in to access the admin dashboard.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/">
-              <Button className="w-full bg-amber-600 hover:bg-amber-700">Go to Home</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+        <div className="bg-[#1e293b] rounded-2xl border border-white/10 p-8 max-w-md w-full text-center">
+          <AlertCircle className="w-12 h-12 text-[#C9A962] mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Authentication Required</h2>
+          <p className="text-white/60 mb-6">Please sign in to access the admin dashboard.</p>
+          <Link href="/">
+            <Button className="bg-[#C9A962] hover:bg-[#b8954f] text-[#0F172A] w-full">
+              <Home className="w-4 h-4 mr-2" />
+              Go to Home
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (user?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <CardTitle>Access Denied</CardTitle>
-            <CardDescription>You don't have permission to access the admin dashboard.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/">
-              <Button className="w-full">Go to Home</Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+        <div className="bg-[#1e293b] rounded-2xl border border-white/10 p-8 max-w-md w-full text-center">
+          <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-white mb-2">Access Denied</h2>
+          <p className="text-white/60 mb-6">You don't have permission to access the admin dashboard.</p>
+          <Link href="/">
+            <Button className="bg-[#C9A962] hover:bg-[#b8954f] text-[#0F172A] w-full">
+              <Home className="w-4 h-4 mr-2" />
+              Go to Home
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -226,9 +223,9 @@ export default function UnifiedAdmin() {
   const formatNumber = (num: number) => num?.toLocaleString() || '0';
   
   const getUsageColor = (percent: number) => {
-    if (percent >= 90) return 'text-red-500';
-    if (percent >= 70) return 'text-amber-500';
-    return 'text-green-500';
+    if (percent >= 90) return 'text-red-400';
+    if (percent >= 70) return 'text-amber-400';
+    return 'text-emerald-400';
   };
 
   const dailyUsagePercent = apiUsageData?.airdnaStatus?.currentCount 
@@ -242,31 +239,34 @@ export default function UnifiedAdmin() {
   const totalUserPages = Math.ceil((usersQuery.data?.total || 0) / userLimit);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#0F172A]">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-[#0F172A] border-b border-white/10 sticky top-0 z-50">
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/">
-                <Button variant="ghost" size="sm" className="gap-2">
+                <Button variant="ghost" size="sm" className="gap-2 text-white/70 hover:text-white hover:bg-white/10">
                   <ArrowLeft className="w-4 h-4" />
                   Back to App
                 </Button>
               </Link>
-              <div className="h-6 w-px bg-slate-200" />
+              <div className="h-6 w-px bg-white/20" />
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-amber-600" />
-                <h1 className="text-xl font-bold text-slate-900">Admin Dashboard</h1>
+                <div className="w-8 h-8 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-[#C9A962]" />
+                </div>
+                <h1 className="text-xl font-semibold text-white">Admin Dashboard</h1>
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-500">
-                Logged in as <span className="font-medium text-amber-600">{user?.name || user?.email}</span>
+              <span className="text-sm text-white/50">
+                Logged in as <span className="font-medium text-[#C9A962]">{user?.name || user?.email}</span>
               </span>
               <Button 
                 variant="outline" 
                 size="sm"
+                className="border-white/20 text-white/70 hover:text-white hover:bg-white/10"
                 onClick={() => {
                   refetchStats();
                   if (activeTab === 'api-usage') refetchApiUsage();
@@ -285,28 +285,28 @@ export default function UnifiedAdmin() {
       {/* Main Content */}
       <main className="container py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white border border-slate-200 p-1 flex-wrap h-auto">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+          <TabsList className="bg-[#1e293b] border border-white/10 p-1 flex-wrap h-auto">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <BarChart3 className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="users" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <Users className="w-4 h-4 mr-2" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="api-usage" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="api-usage" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <Zap className="w-4 h-4 mr-2" />
               API Usage
             </TabsTrigger>
-            <TabsTrigger value="hubspot" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="hubspot" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <Link2 className="w-4 h-4 mr-2" />
               HubSpot
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <MessageSquare className="w-4 h-4 mr-2" />
               Notifications
             </TabsTrigger>
-            <TabsTrigger value="newsletter" className="data-[state=active]:bg-amber-100 data-[state=active]:text-amber-800">
+            <TabsTrigger value="newsletter" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <Mail className="w-4 h-4 mr-2" />
               Newsletter
             </TabsTrigger>
@@ -318,112 +318,88 @@ export default function UnifiedAdmin() {
           <TabsContent value="overview" className="space-y-6">
             {statsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
               </div>
             ) : (
               <>
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Users</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold">{statsData?.users?.total || 0}</span>
-                        <div className="flex items-center text-green-600 text-sm">
-                          <TrendingUp className="w-4 h-4 mr-1" />
-                          +{statsData?.users?.newThisWeek || 0} this week
-                        </div>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Total Users</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xl font-bold text-white">{statsData?.users?.total || 0}</span>
+                      <div className="flex items-center text-emerald-400 text-sm">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        +{statsData?.users?.newThisWeek || 0} this week
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Reports</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold">{statsData?.reports?.total || 0}</span>
-                        <div className="flex items-center text-green-600 text-sm">
-                          <TrendingUp className="w-4 h-4 mr-1" />
-                          +{statsData?.reports?.thisWeek || 0} this week
-                        </div>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Total Reports</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xl font-bold text-white">{statsData?.reports?.total || 0}</span>
+                      <div className="flex items-center text-emerald-400 text-sm">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        +{statsData?.reports?.thisWeek || 0} this week
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Leads</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold">{statsData?.leads?.total || 0}</span>
-                        <div className="flex items-center text-green-600 text-sm">
-                          <TrendingUp className="w-4 h-4 mr-1" />
-                          +{statsData?.leads?.thisWeek || 0} this week
-                        </div>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Total Leads</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xl font-bold text-white">{statsData?.leads?.total || 0}</span>
+                      <div className="flex items-center text-emerald-400 text-sm">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        +{statsData?.leads?.thisWeek || 0} this week
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Actions Today</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold">{statsData?.activity?.today?.totalActions || 0}</span>
-                        <div className="flex items-center text-amber-600 text-sm">
-                          <Activity className="w-4 h-4 mr-1" />
-                          {statsData?.activity?.today?.uniqueSessions || 0} sessions
-                        </div>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Actions Today</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xl font-bold text-white">{statsData?.activity?.today?.totalActions || 0}</span>
+                      <div className="flex items-center text-[#C9A962] text-sm">
+                        <Activity className="w-4 h-4 mr-1" />
+                        {statsData?.activity?.today?.uniqueSessions || 0} sessions
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Activity by Category */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Activity This Week</CardTitle>
-                    <CardDescription>Breakdown of user actions by category</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {statsData?.activity?.thisWeek?.actionsByCategory?.map((cat: any) => (
-                        <div key={cat.category} className="bg-slate-50 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-amber-600">{cat.count}</div>
-                          <div className="text-sm text-slate-500 capitalize">{cat.category}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                  <h3 className="text-lg font-semibold text-white mb-2">Activity This Week</h3>
+                  <p className="text-white/50 text-sm mb-4">Breakdown of user actions by category</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {statsData?.activity?.thisWeek?.actionsByCategory?.map((cat: any) => (
+                      <div key={cat.category} className="bg-[#0F172A] rounded-lg p-4 text-center border border-white/5">
+                        <div className="text-2xl font-bold text-[#C9A962]">{cat.count}</div>
+                        <div className="text-sm text-white/50 capitalize">{cat.category}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Top Actions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Top Actions This Week</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {statsData?.activity?.thisWeek?.topActions?.map((action: any, idx: number) => (
-                        <div key={action.action} className="flex items-center justify-between py-2 border-b last:border-0">
-                          <div className="flex items-center gap-3">
-                            <span className="text-slate-400 text-sm w-6">#{idx + 1}</span>
-                            <span className="text-slate-700">{action.action.replace(/_/g, ' ')}</span>
-                          </div>
-                          <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                            {action.count}
-                          </Badge>
+                <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Top Actions This Week</h3>
+                  <div className="space-y-3">
+                    {statsData?.activity?.thisWeek?.topActions?.map((action: any, idx: number) => (
+                      <div key={action.action} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/30 text-sm w-6">#{idx + 1}</span>
+                          <span className="text-white/80">{action.action.replace(/_/g, ' ')}</span>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        <Badge className="bg-[#C9A962]/20 text-[#C9A962] border-0">
+                          {action.count}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
           </TabsContent>
@@ -433,82 +409,81 @@ export default function UnifiedAdmin() {
           {/* ============================================ */}
           <TabsContent value="users" className="space-y-6">
             {/* Filters */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      placeholder="Search by name or email..."
-                      value={userSearch}
-                      onChange={(e) => { setUserSearch(e.target.value); setUserPage(0); }}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={roleFilter} onValueChange={(v: 'all' | 'user' | 'admin') => { setRoleFilter(v); setUserPage(0); }}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Users</SelectItem>
-                      <SelectItem value="user">Regular Users</SelectItem>
-                      <SelectItem value="admin">Admins Only</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={userSearch}
+                    onChange={(e) => { setUserSearch(e.target.value); setUserPage(0); }}
+                    className="pl-10 bg-[#0F172A] border-white/10 text-white placeholder:text-white/40"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <Select value={roleFilter} onValueChange={(v: 'all' | 'user' | 'admin') => { setRoleFilter(v); setUserPage(0); }}>
+                  <SelectTrigger className="w-[180px] bg-[#0F172A] border-white/10 text-white">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1e293b] border-white/10">
+                    <SelectItem value="all" className="text-white">All Users</SelectItem>
+                    <SelectItem value="user" className="text-white">Regular Users</SelectItem>
+                    <SelectItem value="admin" className="text-white">Admins Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Users Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>{usersQuery.data?.total || 0} total users</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {usersQuery.isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-600" />
-                  </div>
-                ) : (
+            <div className="bg-[#1e293b] rounded-xl border border-white/10 overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h3 className="text-lg font-semibold text-white">User Management</h3>
+                <p className="text-white/50 text-sm">{usersQuery.data?.total || 0} total users</p>
+              </div>
+              
+              {usersQuery.isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#C9A962]" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Today's Usage</TableHead>
-                        <TableHead>Last Active</TableHead>
-                        <TableHead className="text-right">Admin Toggle</TableHead>
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableHead className="text-white/50">User</TableHead>
+                        <TableHead className="text-white/50">Email</TableHead>
+                        <TableHead className="text-white/50">Role</TableHead>
+                        <TableHead className="text-white/50">Today's Usage</TableHead>
+                        <TableHead className="text-white/50">Last Active</TableHead>
+                        <TableHead className="text-right text-white/50">Admin Toggle</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {usersQuery.data?.users?.map((u: any) => (
-                        <TableRow key={u.id}>
+                        <TableRow key={u.id} className="border-white/5 hover:bg-white/5">
                           <TableCell>
-                            <p className="font-medium">{u.name || 'Unnamed User'}</p>
-                            <p className="text-xs text-slate-500">ID: {u.id}</p>
+                            <p className="font-medium text-white">{u.name || 'Unnamed User'}</p>
+                            <p className="text-xs text-white/40">ID: {u.id}</p>
                           </TableCell>
-                          <TableCell className="text-slate-600">{u.email || '—'}</TableCell>
+                          <TableCell className="text-white/60">{u.email || '—'}</TableCell>
                           <TableCell>
                             {u.role === 'admin' ? (
-                              <Badge className="bg-amber-100 text-amber-800">
+                              <Badge className="bg-[#C9A962]/20 text-[#C9A962] border-0">
                                 <ShieldCheck className="w-3 h-3 mr-1" />Admin
                               </Badge>
                             ) : (
-                              <Badge variant="secondary">
+                              <Badge variant="secondary" className="bg-white/10 text-white/60 border-0">
                                 <Shield className="w-3 h-3 mr-1" />User
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm">{u.usageToday?.propertyAnalyses || 0} analyses</p>
-                            <p className="text-xs text-slate-400">{u.usageToday?.marketResearches || 0} market searches</p>
+                            <p className="text-sm text-white/70">{u.usageToday?.propertyAnalyses || 0} analyses</p>
+                            <p className="text-xs text-white/40">{u.usageToday?.marketResearches || 0} market searches</p>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-500">{formatDate(u.lastSignedIn)}</TableCell>
+                          <TableCell className="text-sm text-white/50">{formatDate(u.lastSignedIn)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <span className="text-xs text-slate-500">Admin</span>
+                              <span className="text-xs text-white/40">Admin</span>
                               <Switch
                                 checked={u.role === 'admin'}
                                 onCheckedChange={() => toggleAdminMutation.mutate({ userId: u.id, makeAdmin: u.role !== 'admin' })}
@@ -520,26 +495,38 @@ export default function UnifiedAdmin() {
                       ))}
                     </TableBody>
                   </Table>
-                )}
-              </CardContent>
+                </div>
+              )}
               
               {/* Pagination */}
               {totalUserPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-4 border-t">
-                  <p className="text-sm text-slate-500">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-white/10">
+                  <p className="text-sm text-white/50">
                     Page {userPage + 1} of {totalUserPages}
                   </p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setUserPage(p => Math.max(0, p - 1))} disabled={userPage === 0}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setUserPage(p => Math.max(0, p - 1))} 
+                      disabled={userPage === 0}
+                      className="border-white/20 text-white/70 hover:bg-white/10"
+                    >
                       Previous
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setUserPage(p => Math.min(totalUserPages - 1, p + 1))} disabled={userPage >= totalUserPages - 1}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setUserPage(p => Math.min(totalUserPages - 1, p + 1))} 
+                      disabled={userPage >= totalUserPages - 1}
+                      className="border-white/20 text-white/70 hover:bg-white/10"
+                    >
                       Next
                     </Button>
                   </div>
                 </div>
               )}
-            </Card>
+            </div>
           </TabsContent>
 
           {/* ============================================ */}
@@ -548,20 +535,20 @@ export default function UnifiedAdmin() {
           <TabsContent value="api-usage" className="space-y-6">
             {apiUsageLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
               </div>
             ) : (
               <>
                 {/* Alert Banner */}
                 {dailyUsagePercent >= 80 && (
-                  <div className={`p-4 rounded-lg border ${dailyUsagePercent >= 90 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className={`p-4 rounded-xl border ${dailyUsagePercent >= 90 ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
                     <div className="flex items-center gap-3">
-                      <AlertTriangle className={`w-5 h-5 ${dailyUsagePercent >= 90 ? 'text-red-500' : 'text-amber-500'}`} />
+                      <AlertTriangle className={`w-5 h-5 ${dailyUsagePercent >= 90 ? 'text-red-400' : 'text-amber-400'}`} />
                       <div>
-                        <p className={`font-medium ${dailyUsagePercent >= 90 ? 'text-red-700' : 'text-amber-700'}`}>
+                        <p className={`font-medium ${dailyUsagePercent >= 90 ? 'text-red-400' : 'text-amber-400'}`}>
                           {dailyUsagePercent >= 90 ? 'Critical: Daily API limit almost reached!' : 'Warning: Approaching daily API limit'}
                         </p>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-white/60">
                           {apiUsageData?.airdnaStatus?.currentCount || 0} of {apiUsageData?.dailyLimit || 700} calls used today.
                         </p>
                       </div>
@@ -571,135 +558,117 @@ export default function UnifiedAdmin() {
 
                 {/* Usage Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />Today's API Calls
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-3xl font-bold ${getUsageColor(dailyUsagePercent)}`}>
-                            {apiUsageData?.airdnaStatus?.currentCount || 0}
-                          </span>
-                          <span className="text-slate-400 text-sm">/ {apiUsageData?.dailyLimit || 700}</span>
-                        </div>
-                        <Progress value={dailyUsagePercent} className="h-2" />
-                        <p className="text-slate-400 text-xs">{Math.round(dailyUsagePercent)}% of daily limit</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />Monthly API Calls
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-3xl font-bold ${getUsageColor(monthlyUsagePercent)}`}>
-                            {formatNumber(apiUsageData?.totals?.totalCalls || 0)}
-                          </span>
-                          <span className="text-slate-400 text-sm">/ {formatNumber(apiUsageData?.monthlyLimit || 24000)}</span>
-                        </div>
-                        <Progress value={monthlyUsagePercent} className="h-2" />
-                        <p className="text-slate-400 text-xs">{Math.round(monthlyUsagePercent)}% of monthly limit</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription className="flex items-center gap-2">
-                        <Database className="w-4 h-4" />Cache Performance
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-3xl font-bold text-green-500">
-                            {apiUsageData?.totals?.totalCalls ? Math.round((apiUsageData.totals.cacheHits / apiUsageData.totals.totalCalls) * 100) : 0}%
-                          </span>
-                          <span className="text-slate-400 text-sm">hit rate</span>
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {formatNumber(apiUsageData?.totals?.cacheHits || 0)} cache hits
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" />Estimated Cost
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <span className="text-3xl font-bold text-slate-700">
-                          ${(apiUsageData?.totals?.estimatedCost || 0).toFixed(2)}
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                      <Clock className="w-4 h-4" />Today's API Calls
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-3xl font-bold ${getUsageColor(dailyUsagePercent)}`}>
+                          {apiUsageData?.airdnaStatus?.currentCount || 0}
                         </span>
-                        <p className="text-sm text-slate-500">
-                          @ $0.35/call overage
-                        </p>
+                        <span className="text-white/40 text-sm">/ {apiUsageData?.dailyLimit || 700}</span>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <Progress value={dailyUsagePercent} className="h-2 bg-white/10" />
+                      <p className="text-white/40 text-xs">{Math.round(dailyUsagePercent)}% of daily limit</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                      <Calendar className="w-4 h-4" />Monthly API Calls
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-3xl font-bold ${getUsageColor(monthlyUsagePercent)}`}>
+                          {formatNumber(apiUsageData?.totals?.totalCalls || 0)}
+                        </span>
+                        <span className="text-white/40 text-sm">/ {formatNumber(apiUsageData?.monthlyLimit || 24000)}</span>
+                      </div>
+                      <Progress value={monthlyUsagePercent} className="h-2 bg-white/10" />
+                      <p className="text-white/40 text-xs">{Math.round(monthlyUsagePercent)}% of monthly limit</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                      <Database className="w-4 h-4" />Cache Performance
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-3xl font-bold text-emerald-400">
+                          {apiUsageData?.totals?.totalCalls ? Math.round((apiUsageData.totals.cacheHits / apiUsageData.totals.totalCalls) * 100) : 0}%
+                        </span>
+                        <span className="text-white/40 text-sm">hit rate</span>
+                      </div>
+                      <div className="text-sm text-white/50">
+                        {formatNumber(apiUsageData?.totals?.cacheHits || 0)} cache hits
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                      <DollarSign className="w-4 h-4" />Estimated Cost
+                    </div>
+                    <div className="space-y-3">
+                      <span className="text-3xl font-bold text-white">
+                        ${(apiUsageData?.totals?.estimatedCost || 0).toFixed(2)}
+                      </span>
+                      <p className="text-sm text-white/50">
+                        @ $0.35/call overage
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Recent API Calls */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent API Calls</CardTitle>
-                    <CardDescription>Last 50 API requests</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="max-h-[400px] overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Endpoint</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Response Time</TableHead>
-                            <TableHead>Cached</TableHead>
+                <div className="bg-[#1e293b] rounded-xl border border-white/10 overflow-hidden">
+                  <div className="p-6 border-b border-white/10">
+                    <h3 className="text-lg font-semibold text-white">Recent API Calls</h3>
+                    <p className="text-white/50 text-sm">Last 50 API requests</p>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-white/10 hover:bg-transparent">
+                          <TableHead className="text-white/50">Time</TableHead>
+                          <TableHead className="text-white/50">Endpoint</TableHead>
+                          <TableHead className="text-white/50">Status</TableHead>
+                          <TableHead className="text-white/50">Response Time</TableHead>
+                          <TableHead className="text-white/50">Cached</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {apiCallsData?.calls?.map((call: any, idx: number) => (
+                          <TableRow key={idx} className="border-white/5 hover:bg-white/5">
+                            <TableCell className="text-sm text-white/50">
+                              {new Date(call.createdAt).toLocaleTimeString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-white/70 max-w-[200px] truncate">
+                              {call.endpoint}
+                            </TableCell>
+                            <TableCell>
+                              {call.success ? (
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-0">Success</Badge>
+                              ) : (
+                                <Badge className="bg-red-500/20 text-red-400 border-0">Failed</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-white/60">{call.responseTimeMs}ms</TableCell>
+                            <TableCell>
+                              {call.cacheHit ? (
+                                <Badge variant="secondary" className="bg-white/10 text-white/60 border-0">Cached</Badge>
+                              ) : (
+                                <span className="text-white/30">—</span>
+                              )}
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {apiCallsData?.calls?.map((call: any, idx: number) => (
-                            <TableRow key={idx}>
-                              <TableCell className="text-sm text-slate-500">
-                                {new Date(call.createdAt).toLocaleTimeString()}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs max-w-[200px] truncate">
-                                {call.endpoint}
-                              </TableCell>
-                              <TableCell>
-                                {call.success ? (
-                                  <Badge className="bg-green-100 text-green-700">Success</Badge>
-                                ) : (
-                                  <Badge variant="destructive">Failed</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-sm">{call.responseTimeMs}ms</TableCell>
-                              <TableCell>
-                                {call.cacheHit ? (
-                                  <Badge variant="secondary">Cached</Badge>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </>
             )}
           </TabsContent>
@@ -710,142 +679,122 @@ export default function UnifiedAdmin() {
           <TabsContent value="hubspot" className="space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{hubspotSummary?.totalOptins || 0}</p>
-                      <p className="text-sm text-slate-600">Email Opt-ins</p>
-                    </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{hubspotSummary?.totalOptins || 0}</p>
+                    <p className="text-sm text-white/50">Email Opt-ins</p>
+                  </div>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Link2 className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{hubspotSummary?.totalLinks || 0}</p>
-                      <p className="text-sm text-slate-600">Links Created</p>
-                    </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                    <Link2 className="w-5 h-5 text-emerald-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{hubspotSummary?.totalLinks || 0}</p>
+                    <p className="text-sm text-white/50">Links Created</p>
+                  </div>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <MousePointer className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{hubspotSummary?.totalClicks || 0}</p>
-                      <p className="text-sm text-slate-600">Total Clicks</p>
-                    </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <MousePointer className="w-5 h-5 text-purple-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{hubspotSummary?.totalClicks || 0}</p>
+                    <p className="text-sm text-white/50">Total Clicks</p>
+                  </div>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <Send className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{hubspotSummary?.totalPromotions || 0}</p>
-                      <p className="text-sm text-slate-600">Promotions</p>
-                    </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                    <Send className="w-5 h-5 text-orange-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{hubspotSummary?.totalPromotions || 0}</p>
+                    <p className="text-sm text-white/50">Promotions</p>
+                  </div>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{hubspotSummary?.totalToolUsageEvents || 0}</p>
-                      <p className="text-sm text-slate-600">Tool Events</p>
-                    </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#C9A962]/20 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-[#C9A962]" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{hubspotSummary?.totalToolUsageEvents || 0}</p>
+                    <p className="text-sm text-white/50">Tool Events</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Recent Links & Opt-ins */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Personalized Links</CardTitle>
-                  <CardDescription>Latest links created for HubSpot contacts</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {linksLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-600 mx-auto" />
-                  ) : (
-                    <div className="space-y-3">
-                      {hubspotLinks?.slice(0, 5).map((link: any) => (
-                        <div key={link.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                          <div>
-                            <p className="font-medium text-sm">{link.targetCity}, {link.targetState}</p>
-                            <p className="text-xs text-slate-500">{link.email || 'No email'}</p>
-                          </div>
-                          <div className="text-right">
-                            <Badge variant="secondary">{link.clicks || 0} clicks</Badge>
-                          </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Recent Personalized Links</h3>
+                <p className="text-white/50 text-sm mb-4">Latest links created for HubSpot contacts</p>
+                {linksLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-[#C9A962] mx-auto" />
+                ) : (
+                  <div className="space-y-3">
+                    {hubspotLinks?.slice(0, 5).map((link: any) => (
+                      <div key={link.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                        <div>
+                          <p className="font-medium text-sm text-white">{link.targetCity}, {link.targetState}</p>
+                          <p className="text-xs text-white/40">{link.email || 'No email'}</p>
                         </div>
-                      ))}
-                      {(!hubspotLinks || hubspotLinks.length === 0) && (
-                        <p className="text-slate-500 text-center py-4">No links created yet</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <Badge variant="secondary" className="bg-white/10 text-white/60 border-0">{link.clicks || 0} clicks</Badge>
+                      </div>
+                    ))}
+                    {(!hubspotLinks || hubspotLinks.length === 0) && (
+                      <p className="text-white/40 text-center py-4">No links created yet</p>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Email Opt-ins</CardTitle>
-                  <CardDescription>Latest email subscriptions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {optinsLoading ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-600 mx-auto" />
-                  ) : (
-                    <div className="space-y-3">
-                      {emailOptins?.slice(0, 5).map((optin: any) => (
-                        <div key={optin.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                          <div>
-                            <p className="font-medium text-sm">{optin.email}</p>
-                            <p className="text-xs text-slate-500">{optin.source || 'Direct'}</p>
-                          </div>
-                          <div className="text-right text-xs text-slate-500">
-                            {formatDate(optin.createdAt)}
-                          </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Recent Email Opt-ins</h3>
+                <p className="text-white/50 text-sm mb-4">Latest email subscriptions</p>
+                {optinsLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-[#C9A962] mx-auto" />
+                ) : (
+                  <div className="space-y-3">
+                    {emailOptins?.slice(0, 5).map((optin: any) => (
+                      <div key={optin.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                        <div>
+                          <p className="font-medium text-sm text-white">{optin.email}</p>
+                          <p className="text-xs text-white/40">{optin.source || 'Direct'}</p>
                         </div>
-                      ))}
-                      {(!emailOptins || emailOptins.length === 0) && (
-                        <p className="text-slate-500 text-center py-4">No opt-ins yet</p>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <div className="text-right text-xs text-white/40">
+                          {formatDate(optin.createdAt)}
+                        </div>
+                      </div>
+                    ))}
+                    {(!emailOptins || emailOptins.length === 0) && (
+                      <p className="text-white/40 text-center py-4">No opt-ins yet</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Link to full HubSpot portal */}
             <div className="text-center">
               <Link href="/admin/hubspot">
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 border-white/20 text-white/70 hover:bg-white/10">
                   <ExternalLink className="w-4 h-4" />
                   Open Full HubSpot Portal
                 </Button>
@@ -859,77 +808,61 @@ export default function UnifiedAdmin() {
           <TabsContent value="notifications" className="space-y-6">
             {notificationsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
               </div>
             ) : (
               <>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Reports</CardDescription>
-                      <CardTitle className="text-3xl">{formatNumber(notificationAnalytics?.totalReports || 0)}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <FileText className="w-4 h-4" />
-                        <span>All shareable reports</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Total Reports</p>
+                    <p className="text-3xl font-bold text-white mb-2">{formatNumber(notificationAnalytics?.totalReports || 0)}</p>
+                    <div className="flex items-center gap-2 text-sm text-white/40">
+                      <FileText className="w-4 h-4" />
+                      <span>All shareable reports</span>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Views</CardDescription>
-                      <CardTitle className="text-3xl">{formatNumber(notificationAnalytics?.totalViews || 0)}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Eye className="w-4 h-4" />
-                        <span>Report page views</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Total Views</p>
+                    <p className="text-3xl font-bold text-white mb-2">{formatNumber(notificationAnalytics?.totalViews || 0)}</p>
+                    <div className="flex items-center gap-2 text-sm text-white/40">
+                      <Eye className="w-4 h-4" />
+                      <span>Report page views</span>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>SMS Sent</CardDescription>
-                      <CardTitle className="text-3xl">{formatNumber(notificationAnalytics?.totalSmsSent || 0)}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>
-                          {(notificationAnalytics?.smsSuccessRate || 0) > 0 
-                            ? `${((notificationAnalytics?.smsSuccessRate || 0) * 100).toFixed(1)}% success`
-                            : 'No SMS sent yet'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">SMS Sent</p>
+                    <p className="text-3xl font-bold text-white mb-2">{formatNumber(notificationAnalytics?.totalSmsSent || 0)}</p>
+                    <div className="flex items-center gap-2 text-sm text-white/40">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>
+                        {(notificationAnalytics?.smsSuccessRate || 0) > 0 
+                          ? `${((notificationAnalytics?.smsSuccessRate || 0) * 100).toFixed(1)}% success`
+                          : 'No SMS sent yet'}
+                      </span>
+                    </div>
+                  </div>
 
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Emails Sent</CardDescription>
-                      <CardTitle className="text-3xl">{formatNumber(notificationAnalytics?.totalEmailsSent || 0)}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Mail className="w-4 h-4" />
-                        <span>
-                          {(notificationAnalytics?.emailSuccessRate || 0) > 0 
-                            ? `${((notificationAnalytics?.emailSuccessRate || 0) * 100).toFixed(1)}% success`
-                            : 'No emails sent yet'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                    <p className="text-white/50 text-sm mb-2">Emails Sent</p>
+                    <p className="text-3xl font-bold text-white mb-2">{formatNumber(notificationAnalytics?.totalEmailsSent || 0)}</p>
+                    <div className="flex items-center gap-2 text-sm text-white/40">
+                      <Mail className="w-4 h-4" />
+                      <span>
+                        {(notificationAnalytics?.emailSuccessRate || 0) > 0 
+                          ? `${((notificationAnalytics?.emailSuccessRate || 0) * 100).toFixed(1)}% success`
+                          : 'No emails sent yet'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Link to full notifications page */}
                 <div className="text-center">
                   <Link href="/admin/notifications">
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 border-white/20 text-white/70 hover:bg-white/10">
                       <ExternalLink className="w-4 h-4" />
                       Open Full Notifications Dashboard
                     </Button>
@@ -945,71 +878,53 @@ export default function UnifiedAdmin() {
           <TabsContent value="newsletter" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />Emails Sent (30d)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{newsletterStats?.last30Days?.total || 0}</div>
-                  <p className="text-xs text-slate-500">
-                    {newsletterStats?.last30Days?.successful || 0} successful, {newsletterStats?.last30Days?.failed || 0} failed
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                  <Mail className="w-4 h-4" />Emails Sent (30d)
+                </div>
+                <div className="text-2xl font-bold text-white">{newsletterStats?.last30Days?.total || 0}</div>
+                <p className="text-xs text-white/40">
+                  {newsletterStats?.last30Days?.successful || 0} successful, {newsletterStats?.last30Days?.failed || 0} failed
+                </p>
+              </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />Success Rate
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {newsletterStats?.last30Days?.total 
-                      ? Math.round((newsletterStats.last30Days.successful / newsletterStats.last30Days.total) * 100) 
-                      : 0}%
-                  </div>
-                  <p className="text-xs text-slate-500">Email delivery rate</p>
-                </CardContent>
-              </Card>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                  <CheckCircle className="w-4 h-4" />Success Rate
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {newsletterStats?.last30Days?.total 
+                    ? Math.round((newsletterStats.last30Days.successful / newsletterStats.last30Days.total) * 100) 
+                    : 0}%
+                </div>
+                <p className="text-xs text-white/40">Email delivery rate</p>
+              </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />Active Cities
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{newsletterStats?.totalCities || 0}</div>
-                  <p className="text-xs text-slate-500">Cities with contacts</p>
-                </CardContent>
-              </Card>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                  <MapPin className="w-4 h-4" />Active Cities
+                </div>
+                <div className="text-2xl font-bold text-white">{newsletterStats?.totalCities || 0}</div>
+                <p className="text-xs text-white/40">Cities with contacts</p>
+              </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />Recent Jobs
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{newsletterStats?.recentJobs?.length || 0}</div>
-                  <p className="text-xs text-slate-500">Jobs in last 7 days</p>
-                </CardContent>
-              </Card>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <div className="flex items-center gap-2 text-white/50 text-sm mb-3">
+                  <Clock className="w-4 h-4" />Recent Jobs
+                </div>
+                <div className="text-2xl font-bold text-white">{newsletterStats?.recentJobs?.length || 0}</div>
+                <p className="text-xs text-white/40">Jobs in last 7 days</p>
+              </div>
             </div>
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Manually trigger newsletter jobs</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Quick Actions</h3>
+                <p className="text-white/50 text-sm mb-4">Manually trigger newsletter jobs</p>
+                <div className="space-y-4">
                   <Button 
-                    className="w-full justify-start bg-amber-600 hover:bg-amber-700"
+                    className="w-full justify-start bg-[#C9A962] hover:bg-[#b8954f] text-[#0F172A]"
                     onClick={() => triggerWeekly.mutate()}
                     disabled={triggerWeekly.isPending}
                   >
@@ -1018,53 +933,49 @@ export default function UnifiedAdmin() {
                   </Button>
                   <Button 
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start border-white/20 text-white/70 hover:bg-white/10"
                     onClick={() => triggerDealAlert.mutate({})}
                     disabled={triggerDealAlert.isPending}
                   >
                     <TrendingUp className="w-4 h-4 mr-2" />
                     Run Deal Alert Scan
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Jobs</CardTitle>
-                  <CardDescription>Latest newsletter job runs</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {newsletterStats?.recentJobs?.slice(0, 5).map((job: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={job.type === 'weekly_market' ? 'default' : 'secondary'}>
-                            {job.type === 'weekly_market' ? 'Weekly' : 'Deal Alert'}
-                          </Badge>
-                          <span className="text-sm text-slate-500">
-                            {new Date(job.startedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{job.emailsSent} sent</span>
-                          {job.emailsFailed > 0 && (
-                            <Badge variant="destructive">{job.emailsFailed} failed</Badge>
-                          )}
-                        </div>
+              <div className="bg-[#1e293b] rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Recent Jobs</h3>
+                <p className="text-white/50 text-sm mb-4">Latest newsletter job runs</p>
+                <div className="space-y-3">
+                  {newsletterStats?.recentJobs?.slice(0, 5).map((job: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge className={job.type === 'weekly_market' ? 'bg-[#C9A962]/20 text-[#C9A962] border-0' : 'bg-white/10 text-white/60 border-0'}>
+                          {job.type === 'weekly_market' ? 'Weekly' : 'Deal Alert'}
+                        </Badge>
+                        <span className="text-sm text-white/40">
+                          {new Date(job.startedAt).toLocaleDateString()}
+                        </span>
                       </div>
-                    ))}
-                    {(!newsletterStats?.recentJobs || newsletterStats.recentJobs.length === 0) && (
-                      <p className="text-sm text-slate-500">No recent jobs</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">{job.emailsSent} sent</span>
+                        {job.emailsFailed > 0 && (
+                          <Badge className="bg-red-500/20 text-red-400 border-0">{job.emailsFailed} failed</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {(!newsletterStats?.recentJobs || newsletterStats.recentJobs.length === 0) && (
+                    <p className="text-sm text-white/40">No recent jobs</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Link to full newsletter dashboard */}
             <div className="text-center">
               <Link href="/admin/newsletter">
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 border-white/20 text-white/70 hover:bg-white/10">
                   <ExternalLink className="w-4 h-4" />
                   Open Full Newsletter Dashboard
                 </Button>

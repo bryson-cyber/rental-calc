@@ -9745,3 +9745,43 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] TypeScript compilation clean
 - [x] All tabs tested and working
 
+
+
+## Admin Dashboard Branding Update (Feb 4, 2026)
+
+### Redesign to Match Site Branding
+- [ ] Update admin dashboard with dark navy (#0F172A) background
+- [ ] Add gold (#C9A962) accent colors for highlights
+- [ ] Use consistent typography (Playfair Display serif + DM Sans)
+- [ ] Match card styling with rounded corners and subtle shadows
+- [ ] Update tab styling to match site aesthetic
+
+### Remove AirDNA Mentions
+- [ ] Replace "AirDNA API" references with "Market Data API" or similar
+- [ ] Update API Usage tab to not mention AirDNA
+- [ ] Remove any AirDNA branding from stats/metrics
+
+
+
+## Unified Admin Dashboard Branding Redesign (Feb 4, 2026) - COMPLETE
+
+### Dashboard Consolidation:
+- [x] Consolidated all admin pages into single unified dashboard at /admin/dashboard
+- [x] Created 6 tabs: Overview, Users, API Usage, HubSpot, Notifications, Newsletter
+- [x] Added admin button to user dropdown menu (visible only for admin users)
+
+### Branding Updates:
+- [x] Applied dark navy (#0F172A) background to match Coach Inayah site
+- [x] Added gold (#C9A962) accent colors for highlights and buttons
+- [x] Removed all AirDNA mentions from admin dashboard
+- [x] Updated API Usage tab to use generic "API Calls" terminology
+- [x] Consistent styling with main site aesthetic
+
+### Features Per Tab:
+- [x] Overview: Total users, reports, leads, activity stats with weekly trends
+- [x] Users: User management with search, role filtering, admin toggle switches
+- [x] API Usage: Daily/monthly limits, cache performance, recent API calls table
+- [x] HubSpot: Email opt-ins, personalized links, clicks, promotions, tool events
+- [x] Notifications: Shareable report analytics (views, SMS, emails)
+- [x] Newsletter: Deal Flow Machine with quick action buttons
+

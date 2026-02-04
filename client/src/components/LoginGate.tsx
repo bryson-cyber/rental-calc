@@ -76,7 +76,7 @@ export function LoginGate({ children }: LoginGateProps) {
                 <TrendingUp className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-white font-medium">Real Market Data</p>
-                  <p className="text-sm text-slate-400">Powered by AirDNA analytics</p>
+                  <p className="text-sm text-slate-400">Powered by real-time analytics</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
