@@ -37,6 +37,7 @@ import NotificationAnalytics from "./pages/NotificationAnalytics";
 import NewsletterDashboard from "./pages/admin/NewsletterDashboard";
 import ApiUsageDashboard from "./pages/ApiUsage";
 import AdminUsers from "./pages/AdminUsers";
+import UnifiedAdmin from "./pages/UnifiedAdmin";
 
 function Router() {
   return (
@@ -111,6 +112,7 @@ function Router() {
       <Route path={"/admin/newsletter"} component={NewsletterDashboard} />
       <Route path={"/admin/api-usage"} component={ApiUsageDashboard} />
       <Route path={"/admin/users"} component={AdminUsers} />
+      <Route path={"/admin/dashboard"} component={UnifiedAdmin} />
       
       {/* 404 */}
       <Route path={"/404"} component={NotFound} />

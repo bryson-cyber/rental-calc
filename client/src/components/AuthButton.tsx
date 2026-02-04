@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator } from 'lucide-react';
+import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator, Shield } from 'lucide-react';
 import { Link } from 'wouter';
 
 export function AuthButton() {
@@ -78,6 +78,17 @@ export function AuthButton() {
             <span>Investment Calculator</span>
           </DropdownMenuItem>
         </Link>
+        {user.role === 'admin' && (
+          <>
+            <DropdownMenuSeparator />
+            <Link href="/admin/dashboard">
+              <DropdownMenuItem className="gap-2 cursor-pointer min-h-[44px] bg-amber-50 text-amber-800 hover:bg-amber-100">
+                <Shield className="w-4 h-4" />
+                <span>Admin Dashboard</span>
+              </DropdownMenuItem>
+            </Link>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 min-h-[44px]"

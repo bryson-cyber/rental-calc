@@ -9715,3 +9715,33 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Show login prompt on Home page for non-authenticated users
 - [x] LoginGate component wraps LeadMagnet page
 - [x] Keep the tool free but gated behind authentication
+
+
+## Unified Admin Dashboard (Feb 4, 2026)
+- [ ] Consolidate all admin features into one dashboard with tabs
+- [ ] Add User Management tab
+- [ ] Add API Usage tab
+- [ ] Add HubSpot tab
+- [ ] Add Notifications tab
+- [ ] Add Newsletter tab
+- [ ] Add admin button to main UI header for easy access
+- [ ] Only show admin button to users with admin role
+
+
+## Unified Admin Dashboard (Feb 4, 2026) - COMPLETE
+
+### Consolidation
+- [x] Create UnifiedAdmin.tsx with all admin features in one page
+- [x] Add tabbed interface with 6 sections:
+  - [x] Overview - Dashboard stats (users, reports, leads, activity)
+  - [x] Users - User management with admin toggle
+  - [x] API Usage - AirDNA API monitoring and limits
+  - [x] HubSpot - Personalized links, email opt-ins, tool usage
+  - [x] Notifications - Shareable report analytics
+  - [x] Newsletter - Deal Flow Machine management
+- [x] Add admin button to AuthButton dropdown (visible only for admin users)
+- [x] Route /admin/dashboard for unified dashboard
+- [x] Keep links to full individual dashboards for detailed views
+- [x] TypeScript compilation clean
+- [x] All tabs tested and working
+
