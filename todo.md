@@ -9568,3 +9568,30 @@ This makes the grading more optimistic - properties now get better grades at low
 - scripts/test-nurture-data.mjs - Data pipeline test script
 - docs/nurture-email-templates.md - 7 email templates with personalization
 - docs/hubspot-workflow-setup.md - Complete workflow setup guide
+
+
+## Nurture Email Sequence Bug Fix (Feb 4, 2026)
+
+### Critical Bug Fix
+- [x] Fix getMarketSnapshot function to use correct revenue data source
+  - Was using historical monthly average ($3,949) instead of annual revenue ($52,881)
+  - Now correctly uses `marketDetails.metrics.revenue` for annual revenue
+  - Now correctly uses `marketDetails.metrics.booked` for occupancy (converted to percentage)
+  - Now correctly uses `marketDetails.metrics.daily_rate` for ADR
+- [x] Fix listing count extraction - now uses search result `listing_count` (64,069 for Orlando)
+- [x] Fix HubSpot property names - changed from single underscore to double underscore (data_perfection__city)
+
+### Webhook Testing Results
+- [x] Day 1 (Market Snapshot): Working - $52,881 annual, 64,069 listings, 61% occupancy, $237 ADR
+- [x] Day 2 (Regulations): Working
+- [x] Day 3 (Deal Alert): Working
+- [x] Day 4 (Seasonality): Working
+- [x] Day 5 (New Listings): Working
+- [x] Day 6 (Top Performers): Working
+- [x] Day 7 (Market Summary): Working
+
+### Data Verification (Orlando, FL - Contact ID 199260420871)
+- Annual Revenue: $52,881 ✓
+- Listing Count: 64,069 ✓
+- Occupancy: 61% ✓
+- ADR: $237 ✓

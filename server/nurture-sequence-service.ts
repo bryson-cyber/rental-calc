@@ -93,7 +93,7 @@ export async function getContactData(contactId: string): Promise<NurtureContactD
 
   try {
     const response = await fetch(
-      `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,data_perfection_city,data_perfection_state`,
+      `${HUBSPOT_API_BASE}/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,data_perfection__city,data_perfection__state`,
       {
         headers: {
           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
@@ -115,8 +115,8 @@ export async function getContactData(contactId: string): Promise<NurtureContactD
       email: props.email || '',
       firstName: props.firstname || '',
       lastName: props.lastname || '',
-      city: props.data_perfection_city || '',
-      state: props.data_perfection_state || ''
+      city: props.data_perfection__city || '',
+      state: props.data_perfection__state || ''
     };
   } catch (error) {
     console.error('[NurtureService] Error fetching contact:', error);
@@ -143,7 +143,7 @@ import {
  * Search for market ID by city name using existing AirDNA service
  * Uses API search first, then falls back to local market search
  */
-async function searchMarket(city: string, state?: string): Promise<{ marketId: string; marketName: string } | null> {
+async function searchMarket(city: string, state?: string): Promise<{ marketId: string; marketName: string; listingCount: number } | null> {
   const searchTerm = state ? `${city}, ${state}` : city;
 
   try {
@@ -152,10 +152,11 @@ async function searchMarket(city: string, state?: string): Promise<{ marketId: s
     
     if (results && results.length > 0) {
       const market = results[0];
-      console.log(`[NurtureService] Found market via API: ${market.name} (${market.id})`);
+      console.log(`[NurtureService] Found market via API: ${market.name} (${market.id}) - ${market.listing_count} listings`);
       return {
         marketId: market.id,
-        marketName: market.name
+        marketName: market.name,
+        listingCount: market.listing_count || 0
       };
     }
   } catch (error) {
@@ -171,7 +172,8 @@ async function searchMarket(city: string, state?: string): Promise<{ marketId: s
       console.log(`[NurtureService] Found market via local search: ${market.name} (${market.id})`);
       return {
         marketId: market.id,
-        marketName: market.name
+        marketName: market.name,
+        listingCount: market.listing_count || 0
       };
     }
   } catch (error) {
@@ -530,27 +532,25 @@ export async function getMarketSnapshot(city: string, state: string): Promise<Ma
       else if (secondAvg < firstAvg * 0.95) revenueTrend = 'down';
     }
     
-    // Calculate averages from historical data
-    const avgOccupancy = historicalData?.occupancy?.length 
-      ? historicalData.occupancy.reduce((a, b) => a + b.value, 0) / historicalData.occupancy.length 
-      : (marketDetails?.metrics?.booked || 0);
+    // Use market details metrics directly (they are annual/average values)
+    // The historical data is monthly, so we use market details for the snapshot
+    const avgOccupancy = marketDetails?.metrics?.booked 
+      ? Math.round(marketDetails.metrics.booked * 100) // Convert decimal to percentage
+      : 0;
     
-    const avgAdr = historicalData?.adr?.length
-      ? historicalData.adr.reduce((a, b) => a + b.value, 0) / historicalData.adr.length
-      : (marketDetails?.metrics?.daily_rate || 0);
+    const avgAdr = marketDetails?.metrics?.daily_rate || 0;
     
-    const avgRevenue = historicalData?.revenue?.length
-      ? historicalData.revenue.reduce((a, b) => a + b.value, 0) / historicalData.revenue.length
-      : (marketDetails?.metrics?.revenue || 0);
+    // Revenue from market details is annual revenue
+    const avgRevenue = marketDetails?.metrics?.revenue || 0;
 
     return {
       marketId: market.marketId,
       marketName: market.marketName,
       city,
       state,
-      listingCount: marketDetails?.listing_count || 0,
+      listingCount: market.listingCount, // Use listing count from search result
       avgAnnualRevenue: Math.round(avgRevenue),
-      avgOccupancy: Math.round(avgOccupancy),
+      avgOccupancy: avgOccupancy,
       avgAdr: Math.round(avgAdr),
       revenueTrend,
       topPropertyType: 'Entire Home'
