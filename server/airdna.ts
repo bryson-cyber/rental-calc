@@ -1,5 +1,6 @@
 import { ENV } from "./_core/env";
 import { apiCache } from './cache';
+import { logApiCall, getDbCache, setDbCache, checkDailyLimit } from './api-logger';
 
 const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 
@@ -257,13 +258,37 @@ export interface ComprehensiveMarketReport {
 // API HELPER FUNCTIONS
 // ============================================
 
+// Daily API call limit (AirDNA allows 24,000/month = ~800/day)
+// We set a conservative limit to prevent overages
+const DAILY_AIRDNA_LIMIT = 700;
+
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" = "POST",
   body?: Record<string, unknown>,
-  retries: number = 3
+  retries: number = 3,
+  source?: string
 ): Promise<T> {
   const url = `${AIRDNA_API_BASE}${endpoint}`;
+  const startTime = Date.now();
+  
+  // Check daily rate limit before making the call
+  try {
+    const limitStatus = await checkDailyLimit('airdna', DAILY_AIRDNA_LIMIT);
+    if (limitStatus.isOverLimit) {
+      console.error(`[AirDNA] RATE LIMIT EXCEEDED: ${limitStatus.currentCount}/${limitStatus.limit} calls today`);
+      throw new Error(`AirDNA daily rate limit exceeded (${limitStatus.currentCount}/${limitStatus.limit}). Please try again tomorrow.`);
+    }
+    if (limitStatus.isNearLimit) {
+      console.warn(`[AirDNA] WARNING: Approaching daily limit (${limitStatus.currentCount}/${limitStatus.limit} - ${limitStatus.percentUsed.toFixed(1)}% used)`);
+    }
+  } catch (error) {
+    // If rate limit check fails, log but continue (fail open)
+    if ((error as Error).message.includes('rate limit exceeded')) {
+      throw error;
+    }
+    console.warn('[AirDNA] Rate limit check failed, continuing anyway:', error);
+  }
   
   const options: RequestInit = {
     method,
@@ -300,10 +325,37 @@ async function makeApiRequest<T>(
           continue;
         }
         
+        // Log failed API call
+        logApiCall({
+          provider: 'airdna',
+          endpoint,
+          params: body,
+          statusCode,
+          success: false,
+          errorMessage: errorText,
+          responseTimeMs: Date.now() - startTime,
+          cacheHit: false,
+          source,
+        });
+        
         throw new Error(`AirDNA API error (${statusCode}): ${errorText}`);
       }
       
-      return response.json();
+      const data = await response.json();
+      
+      // Log successful API call
+      logApiCall({
+        provider: 'airdna',
+        endpoint,
+        params: body,
+        statusCode: response.status,
+        success: true,
+        responseTimeMs: Date.now() - startTime,
+        cacheHit: false,
+        source,
+      });
+      
+      return data;
     } catch (error) {
       lastError = error as Error;
       
@@ -345,12 +397,23 @@ let usMarketsCache: Array<{
   };
 }> | null = null;
 let usMarketsCacheTime: number = 0;
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
+const CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days cache (markets don't change often)
 
 async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
-  // Return cached data if still valid
-  if (usMarketsCache && Date.now() - usMarketsCacheTime < CACHE_TTL) {
+  // Return memory cached data if still valid
+  if (usMarketsCache && usMarketsCache.length > 0 && Date.now() - usMarketsCacheTime < CACHE_TTL) {
+    console.log(`[getAllUSMarkets] Using memory cache (${usMarketsCache.length} markets)`);
     return usMarketsCache;
+  }
+  
+  // Check database cache
+  const dbCacheKey = 'all_us_markets';
+  const dbCached = apiCache.get<typeof usMarketsCache>(dbCacheKey);
+  if (dbCached && dbCached.length > 0) {
+    console.log(`[getAllUSMarkets] Using database cache (${dbCached.length} markets)`);
+    usMarketsCache = dbCached;
+    usMarketsCacheTime = Date.now();
+    return dbCached;
   }
   
   console.log('[getAllUSMarkets] Fetching all US markets...');
@@ -393,6 +456,8 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
   console.log(`[getAllUSMarkets] Loaded ${allMarkets.length} US markets`);
   if (allMarkets.length > 0) {
     console.log(`[getAllUSMarkets] Sample markets:`, allMarkets.slice(0, 10).map(m => m.name));
+    // Save to database cache for persistence across restarts
+    apiCache.set('all_us_markets', allMarkets, 'search_markets');
   }
   usMarketsCache = allMarkets;
   usMarketsCacheTime = Date.now();
@@ -1264,6 +1329,20 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
   revpar: HistoricalDataPoint[];
   active_listings: HistoricalDataPoint[];
 }> {
+  // Check cache first - historical data is expensive (5 API calls)
+  const cacheKey = apiCache.generateKey('market_historical', { marketId, numMonths });
+  const cached = apiCache.get<{
+    occupancy: HistoricalDataPoint[];
+    adr: HistoricalDataPoint[];
+    revenue: HistoricalDataPoint[];
+    revpar: HistoricalDataPoint[];
+    active_listings: HistoricalDataPoint[];
+  }>(cacheKey);
+  if (cached) {
+    console.log(`[AirDNA] Historical data CACHE HIT for market ${marketId}`);
+    return cached;
+  }
+  
   console.log(`[AirDNA] Fetching ${numMonths} months of historical data for market ${marketId}`);
   
   // Serialize requests to avoid overwhelming the API
@@ -1284,7 +1363,12 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
   
   console.log(`[AirDNA] Historical data results: occupancy=${occupancy.length}, adr=${adr.length}, revenue=${revenue.length}`);
   
-  return { occupancy, adr, revenue, revpar, active_listings };
+  const result = { occupancy, adr, revenue, revpar, active_listings };
+  
+  // Cache for 30 days (market historical data changes slowly)
+  apiCache.set(cacheKey, result, 'market_historical');
+  
+  return result;
 }
 
 // ============================================

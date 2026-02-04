@@ -5,6 +5,7 @@ import { getDb } from "./db";
 import { users, activityLogs, userSessions, analysisReports, leads } from "../drizzle/schema";
 import { eq, desc, gte, lte, and, count, sql } from "drizzle-orm";
 import { getActivityLogs, getActivityStats, getRecentSessions } from "./activity";
+import { getApiUsageStats, getRecentApiCalls, getTodayCallCount, checkDailyLimit } from "./api-logger";
 
 /**
  * Admin-only procedure that checks if the user has admin role
@@ -387,6 +388,92 @@ export const adminRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update user role",
+        });
+      }
+    }),
+
+  // ============================================
+  // API USAGE MONITORING
+  // ============================================
+
+  // Get API usage statistics
+  getApiUsage: adminProcedure
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        provider: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        // Default to last 30 days
+        const endDate = input.endDate || new Date().toISOString().split('T')[0];
+        const startDate = input.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        const stats = await getApiUsageStats(startDate, endDate, input.provider);
+        
+        // Get current day status for AirDNA
+        const airdnaLimit = await checkDailyLimit('airdna', 700);
+        
+        return {
+          ...stats,
+          airdnaStatus: airdnaLimit,
+          monthlyLimit: 24000,
+          dailyLimit: 700,
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting API usage:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get API usage stats",
+        });
+      }
+    }),
+
+  // Get recent API calls for debugging
+  getRecentApiCalls: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(500).default(100),
+        provider: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const calls = await getRecentApiCalls(input.limit, input.provider);
+        return { calls };
+      } catch (error) {
+        console.error("[Admin] Error getting recent API calls:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get recent API calls",
+        });
+      }
+    }),
+
+  // Get today's API call count
+  getTodayApiCount: adminProcedure
+    .input(
+      z.object({
+        provider: z.string().default('airdna'),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const count = await getTodayCallCount(input.provider);
+        const limitStatus = await checkDailyLimit(input.provider, 700);
+        
+        return {
+          provider: input.provider,
+          todayCount: count,
+          ...limitStatus,
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting today's API count:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get today's API count",
         });
       }
     }),

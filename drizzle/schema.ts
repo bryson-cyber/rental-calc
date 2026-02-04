@@ -1648,3 +1648,107 @@ export const newsletterJobs = mysqlTable("newsletter_jobs", {
 
 export type NewsletterJob = typeof newsletterJobs.$inferSelect;
 export type InsertNewsletterJob = typeof newsletterJobs.$inferInsert;
+
+
+/**
+ * API Call Logs table for tracking all external API calls
+ * Critical for monitoring AirDNA usage and preventing overages
+ */
+export const apiCallLogs = mysqlTable("api_call_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // API provider (e.g., 'airdna', 'hubspot', 'simpletexting')
+  provider: varchar("provider", { length: 50 }).notNull(),
+  
+  // Endpoint called (e.g., '/rentalizer', '/market/search')
+  endpoint: varchar("endpoint", { length: 255 }).notNull(),
+  
+  // Request parameters (JSON blob)
+  params: json("params"),
+  
+  // Response status
+  statusCode: int("statusCode"),
+  success: int("success").default(1).notNull(), // 1 = success, 0 = failure
+  errorMessage: text("errorMessage"),
+  
+  // Performance
+  responseTimeMs: int("responseTimeMs"),
+  
+  // Cache status
+  cacheHit: int("cacheHit").default(0).notNull(), // 1 = served from cache, 0 = fresh API call
+  
+  // Source tracking (what triggered this call)
+  source: varchar("source", { length: 100 }), // e.g., 'rentalizer', 'market_advisor', 'nurture_webhook'
+  
+  // User/session tracking
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  contactId: varchar("contactId", { length: 64 }), // For HubSpot contact-triggered calls
+  
+  // Timestamp
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ApiCallLog = typeof apiCallLogs.$inferSelect;
+export type InsertApiCallLog = typeof apiCallLogs.$inferInsert;
+
+/**
+ * API Cache table for persistent caching across server restarts
+ * Stores expensive API responses to reduce redundant calls
+ */
+export const apiCache = mysqlTable("api_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Cache key (unique identifier for this cached data)
+  cacheKey: varchar("cacheKey", { length: 500 }).notNull().unique(),
+  
+  // Cache type (e.g., 'market_details', 'rentalizer', 'search_markets')
+  cacheType: varchar("cacheType", { length: 100 }).notNull(),
+  
+  // Cached data (JSON blob)
+  data: json("data").notNull(),
+  
+  // TTL tracking
+  expiresAt: timestamp("expiresAt").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApiCacheEntry = typeof apiCache.$inferSelect;
+export type InsertApiCacheEntry = typeof apiCache.$inferInsert;
+
+/**
+ * API Usage Summary table for daily aggregated stats
+ * Used for monitoring and alerting on API usage
+ */
+export const apiUsageSummary = mysqlTable("api_usage_summary", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Date for this summary (YYYY-MM-DD)
+  date: varchar("date", { length: 10 }).notNull(),
+  
+  // Provider
+  provider: varchar("provider", { length: 50 }).notNull(),
+  
+  // Daily counts
+  totalCalls: int("totalCalls").default(0).notNull(),
+  successfulCalls: int("successfulCalls").default(0).notNull(),
+  failedCalls: int("failedCalls").default(0).notNull(),
+  cacheHits: int("cacheHits").default(0).notNull(),
+  
+  // Unique counts
+  uniqueEndpoints: int("uniqueEndpoints").default(0),
+  uniqueUsers: int("uniqueUsers").default(0),
+  
+  // Cost tracking (if applicable)
+  estimatedCost: decimal("estimatedCost", { precision: 10, scale: 2 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApiUsageSummary = typeof apiUsageSummary.$inferSelect;
+export type InsertApiUsageSummary = typeof apiUsageSummary.$inferInsert;

@@ -9603,3 +9603,57 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Create missing HubSpot properties (nurture_data_ready, nurture_data_populated_at)
 - [x] Test endpoint with Orlando contact - 53 properties populated successfully
 - [x] Create setup documentation for Zapier/HubSpot integration (docs/nurture-webhook-setup.md)
+
+
+## SimpleTexting SMS Integration (Feb 4, 2026)
+- [ ] Build SimpleTexting SMS service with scheduled messages
+- [ ] Day 1: Welcome SMS with revenue + tool link
+- [ ] Day 3: Deal alert SMS with tool link
+- [ ] Day 5: Social proof SMS with tool link
+- [ ] Day 6: Webinar reminder SMS with tool link
+- [ ] Day 7: Day-of reminder SMS with webinar link
+- [ ] Integrate SMS scheduling into populate-all webhook
+- [ ] Test SMS delivery with real contact
+
+
+## AirDNA API Usage Fix (CRITICAL - Feb 2026)
+- [ ] Add API call logging to database to track all AirDNA requests
+- [ ] Implement 24-48 hour caching for market data
+- [ ] Add rate limiting per contact (max 1 full data pull per contact per 24h)
+- [ ] Create usage monitoring dashboard for admin
+- [ ] Identify and fix any loops or repeated calls
+- [ ] Test and verify API call reduction
+
+
+## AirDNA API Usage Fix (Feb 4, 2026) - COMPLETE
+
+### Problem
+- 113,565 API calls in January (vs 24,000/month limit)
+- Would have resulted in $31,347 overage charges
+- AirDNA waived the charges but flagged for review
+
+### Root Causes Identified
+1. In-memory cache resets on every server restart/deployment
+2. No database persistence for cached API responses
+3. `getAllUSMarkets` function makes ~16 paginated API calls per search
+4. `getMarketHistoricalData` makes 5 API calls per market (occupancy, adr, revenue, revpar, listings)
+
+### Fixes Implemented
+- [x] Created `api_call_logs` table to track every AirDNA API call
+- [x] Created `api_cache` table for database-backed cache persistence
+- [x] Created `api_usage_summary` table for daily usage aggregation
+- [x] Added API call logging to `makeApiRequest` function
+- [x] Updated cache.ts to persist to database on every `set()` call
+- [x] Added `getAsync()` method to check database cache on memory miss
+- [x] Added caching to `getMarketHistoricalData` (saves 5 calls per market)
+- [x] Extended `getAllUSMarkets` cache TTL from 1 hour to 7 days
+- [x] Added database persistence for `getAllUSMarkets` cache
+- [x] Added daily rate limiting (700 calls/day = ~21,000/month)
+- [x] Added admin endpoints for API usage monitoring
+
+### Expected Impact
+- First request for a market: ~20-25 API calls
+- Subsequent requests for same market: 0 API calls (cached for 7-30 days)
+- Daily limit prevents runaway usage
+- Database cache survives deployments
+

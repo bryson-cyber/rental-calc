@@ -1,8 +1,12 @@
 /**
  * API Response Caching Layer
  * 
- * Provides in-memory caching for AirDNA API responses to reduce
- * redundant API calls and improve response times.
+ * Provides HYBRID caching for AirDNA API responses:
+ * 1. In-memory cache for fast access
+ * 2. Database-backed cache for persistence across server restarts
+ * 
+ * This prevents the ~113k API calls/month issue by ensuring cache
+ * survives deployments and server restarts.
  */
 
 interface CacheEntry<T> {
@@ -94,7 +98,7 @@ class APICache {
   }
   
   /**
-   * Get a value from cache
+   * Get a value from cache (checks memory first, then database)
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
@@ -119,12 +123,47 @@ class APICache {
   }
   
   /**
-   * Set a value in cache
+   * Get a value from cache with async database fallback
+   * Use this when you need to check database cache on miss
+   */
+  async getAsync<T>(key: string): Promise<T | null> {
+    // Check memory first
+    const memResult = this.get<T>(key);
+    if (memResult !== null) {
+      return memResult;
+    }
+    
+    // Check database cache
+    try {
+      const { getDbCache } = await import('./api-logger');
+      const dbResult = await getDbCache<T>(key);
+      if (dbResult !== null) {
+        // Restore to memory cache
+        this.cache.set(key, {
+          data: dbResult,
+          timestamp: Date.now(),
+          ttl: this.DEFAULT_TTL
+        });
+        this.stats.size = this.cache.size;
+        this.stats.hits++;
+        console.log(`[Cache] DB HIT: ${key.substring(0, 50)}...`);
+        return dbResult;
+      }
+    } catch (error) {
+      console.warn('[Cache] DB check failed:', error);
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Set a value in cache (memory + database for persistence)
    */
   set<T>(key: string, data: T, cacheType?: string): void {
     const ttl = cacheType ? this.getTTL(cacheType) : this.DEFAULT_TTL;
     const timestamp = Date.now();
     
+    // Set in memory cache
     this.cache.set(key, {
       data,
       timestamp,
@@ -139,6 +178,23 @@ class APICache {
     this.stats.newestEntry = timestamp;
     
     console.log(`[Cache] SET: ${key.substring(0, 50)}... (TTL: ${ttl / 1000}s)`);
+    
+    // Also persist to database (async, don't block)
+    this.persistToDb(key, cacheType || 'default', data, ttl).catch(err => {
+      console.warn('[Cache] DB persist failed:', err);
+    });
+  }
+  
+  /**
+   * Persist cache entry to database for cross-restart persistence
+   */
+  private async persistToDb<T>(key: string, cacheType: string, data: T, ttl: number): Promise<void> {
+    try {
+      const { setDbCache } = await import('./api-logger');
+      await setDbCache(key, cacheType, data, ttl);
+    } catch (error) {
+      // Silently fail - memory cache still works
+    }
   }
   
   /**
@@ -217,24 +273,59 @@ class APICache {
   
   /**
    * Wrapper function to cache API calls
+   * Uses hybrid approach: check memory -> check DB -> fetch fresh
    */
   async cached<T>(
     key: string,
     cacheType: string,
     fetchFn: () => Promise<T>
   ): Promise<T> {
-    // Check cache first
-    const cached = this.get<T>(key);
-    if (cached !== null) {
-      return cached;
+    // 1. Check in-memory cache first (fastest)
+    const memCached = this.get<T>(key);
+    if (memCached !== null) {
+      return memCached;
     }
     
-    // Fetch fresh data
+    // 2. Check database cache (survives restarts)
+    try {
+      const { getDbCache, setDbCache, logApiCall } = await import('./api-logger');
+      const dbCached = await getDbCache<T>(key);
+      if (dbCached !== null) {
+        // Restore to memory cache for faster subsequent access
+        this.set(key, dbCached, cacheType);
+        console.log(`[Cache] DB HIT: ${key.substring(0, 50)}...`);
+        
+        // Log as cache hit
+        logApiCall({
+          provider: 'airdna',
+          endpoint: cacheType,
+          success: true,
+          cacheHit: true,
+          source: 'db_cache',
+        });
+        
+        return dbCached;
+      }
+    } catch (error) {
+      console.warn('[Cache] DB cache check failed:', error);
+    }
+    
+    // 3. Fetch fresh data
     const data = await fetchFn();
     
-    // Cache the result (only if not null/undefined)
+    // 4. Cache the result in both memory and database
     if (data !== null && data !== undefined) {
       this.set(key, data, cacheType);
+      
+      // Also save to database for persistence
+      try {
+        const { setDbCache } = await import('./api-logger');
+        const ttl = this.getTTL(cacheType);
+        await setDbCache(key, cacheType, data, ttl);
+        console.log(`[Cache] DB SET: ${key.substring(0, 50)}...`);
+      } catch (error) {
+        console.warn('[Cache] DB cache set failed:', error);
+      }
     }
     
     return data;
