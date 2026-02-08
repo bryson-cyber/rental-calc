@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import ChapterPropertyReport from '@/components/ChapterPropertyReport';
 import ChapterMarketReport from '@/components/ChapterMarketReport';
 import { SharedMarketReport } from '@/components/SharedMarketReport';
+import FullPropertyReport from '@/components/FullPropertyReport';
 
 export default function SharedReportPage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -183,6 +184,17 @@ export default function SharedReportPage() {
   }
 
   // Render the appropriate report type
+  if (reportInfo.reportType === 'full') {
+    return (
+      <FullPropertyReport
+        data={reportData}
+        onBack={() => setLocation('/')}
+        shareId={shareId}
+        isSharedView={true}
+      />
+    );
+  }
+
   if (reportInfo.reportType === 'property') {
     return (
       <ChapterPropertyReport

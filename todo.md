@@ -9785,3 +9785,19 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Notifications: Shareable report analytics (views, SMS, emails)
 - [x] Newsletter: Deal Flow Machine with quick action buttons
 
+
+
+## Full Property Report - Shareable Combined Report (Feb 8, 2026)
+
+- [x] Analyze existing shareable report infrastructure and data flow
+- [x] Extended existing sharedReports table with 'full' report type
+- [x] Updated sharedReports.create procedure to accept 'full' report type
+- [x] Built FullPropertyReport component with comprehensive client-facing layout
+- [x] Added BuildFullReportButton to Step 5 results section
+- [x] Included all sections: property overview, revenue estimates, comps, market insights, break-even, AI summary
+- [x] Included map features: property location map, comps on map, Street View
+- [x] Included monthly forecast chart and comp comparison data
+- [x] Generated single shareable link via existing sharedReports system
+- [x] Branded as Coach Inayah throughout (no AirDNA mentions)
+- [x] Non-prescriptive data presentation (no investment advice)
+- [x] Tests passing (15 vitest tests), TypeScript 0 errors

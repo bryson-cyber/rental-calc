@@ -5306,7 +5306,7 @@ export const appRouter = router({
     // Create a new shared report
     create: publicProcedure
       .input(z.object({
-        reportType: z.enum(['property', 'market']),
+        reportType: z.enum(['property', 'market', 'full']),
         // Property fields
         address: z.string().optional(),
         latitude: z.number().optional(),

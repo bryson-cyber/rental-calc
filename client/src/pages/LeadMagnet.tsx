@@ -114,6 +114,7 @@ import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { InteractiveTour, useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTour';
 import { ContextualAIChat } from '@/components/ContextualAIChat';
 import { LoginGate } from '@/components/LoginGate';
+import { BuildFullReportButton } from '@/components/BuildFullReportButton';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -5504,9 +5505,58 @@ export default function LeadMagnet() {
               interestRate={myProperty?.interestRate}
             />
             
-            {/* Next Step CTA */}
-            <div className="text-center mt-8">
-              <p className="text-slate-500 mb-4">Have multiple properties to compare? Find the best one.</p>
+            {/* Build Full Report + Next Step CTA */}
+            <div className="flex flex-col items-center gap-4 mt-8">
+              {/* Build Full Report Button */}
+              <div className="w-full max-w-md mx-auto bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-2xl p-6 text-center">
+                <p className="text-white/90 font-serif text-lg font-semibold mb-2">Share With Your Client</p>
+                <p className="text-white/60 text-sm mb-4">Generate a comprehensive, branded report combining all analysis data.</p>
+                <BuildFullReportButton
+                  address={address}
+                  city={myProperty?.city}
+                  state={myProperty?.state}
+                  zipCode={myProperty?.zipCode}
+                  bedrooms={parseInt(bedrooms)}
+                  bathrooms={parseFloat(bathrooms)}
+                  accommodates={parseInt(bedrooms) * 2}
+                  latitude={myProperty?.latitude}
+                  longitude={myProperty?.longitude}
+                  annualRevenue={result.revenue.projected}
+                  monthlyRevenue={result.cashFlow.monthlyRevenue}
+                  nightlyRate={result.metrics.adr}
+                  occupancyRate={result.metrics.occupancy / 100}
+                  revenueLow={result.revenue.low}
+                  revenueHigh={result.revenue.high}
+                  monthlyForecast={result.forecast?.map(f => ({
+                    month: f.month,
+                    revenue: f.revenue,
+                    occupancy: f.occupancy / 100,
+                    adr: f.adr,
+                  }))}
+                  comps={result.comparables}
+                  marketData={result.marketInsights ? {
+                    name: myProperty?.city || address.split(',')[0],
+                    metrics: {
+                      occupancy: result.metrics.occupancy / 100,
+                      adr: result.metrics.adr,
+                      revenue: result.revenue.projected,
+                      revpar: result.metrics.adr * (result.metrics.occupancy / 100),
+                      active_listings: result.marketInsights.totalListings || 0,
+                    },
+                    listing_count: result.marketInsights.totalListings || 0,
+                  } : undefined}
+                  historicalData={result.historicalData}
+                  monthlyRent={globalMode === 'rent' ? (parseFloat(monthlyRent) || undefined) : undefined}
+                  purchasePrice={globalMode === 'purchase' ? myProperty?.purchasePrice : undefined}
+                  downPaymentPercent={myProperty?.downPaymentPercent}
+                  interestRate={myProperty?.interestRate}
+                  loanType={myProperty?.loanType}
+                  className="bg-[#C9A962] hover:bg-[#b8963f] text-white font-semibold px-8 py-3 text-base"
+                  size="lg"
+                />
+              </div>
+              
+              <p className="text-slate-500">Have multiple properties to compare? Find the best one.</p>
               <Button
                 onClick={() => {
                   setBulkProperties([

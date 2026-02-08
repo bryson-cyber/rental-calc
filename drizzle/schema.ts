@@ -575,7 +575,7 @@ export const sharedReports = mysqlTable("shared_reports", {
   shareId: varchar("shareId", { length: 32 }).notNull().unique(),
   
   // Report type and reference
-  reportType: mysqlEnum("reportType", ["property", "market"]).notNull(),
+  reportType: mysqlEnum("reportType", ["property", "market", "full"]).notNull(),
   
   // For property reports
   address: text("address"),
