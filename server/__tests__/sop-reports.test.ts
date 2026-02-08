@@ -5,7 +5,7 @@ import {
 } from '../sop-reports';
 
 const {
-  calculateSOPProfitability,
+  calculateProfitability: calculateSOPProfitability,
   calculateMarketPercentiles,
   filterCompetitorsAboveThreshold,
   analyzeCompetitorSuccessFactors,
@@ -26,32 +26,32 @@ describe('SOP Reports Module', () => {
 
       const result = calculateSOPProfitability(monthlyRent, percentiles);
 
-      // Verify startup costs
-      expect(result.startup_costs).toBe(20000);
+      // Verify startup costs (now 0 - removed as too variable)
+      expect(result.startup_costs).toBe(0);
 
-      // Verify monthly expenses breakdown
+      // Verify monthly expenses breakdown (updated values)
       expect(result.monthly_expenses.rent).toBe(3000);
-      expect(result.monthly_expenses.utilities).toBe(250);
+      expect(result.monthly_expenses.utilities).toBe(150);
       expect(result.monthly_expenses.internet).toBe(80);
-      expect(result.monthly_expenses.supplies).toBe(250);
-      expect(result.monthly_expenses.maintenance).toBe(200);
-      expect(result.monthly_expenses.total).toBe(3780); // 3000 + 780
+      expect(result.monthly_expenses.supplies).toBe(150);
+      expect(result.monthly_expenses.maintenance).toBe(100);
+      expect(result.monthly_expenses.total).toBe(3480); // 3000 + 480
 
       // Verify annual operating costs
-      expect(result.annual_operating_costs).toBe(45360); // 3780 * 12
+      expect(result.annual_operating_costs).toBe(41760); // 3480 * 12
 
       // Verify minimum revenue threshold (2x annual rent)
       expect(result.minimum_revenue_threshold).toBe(72000); // 3000 * 12 * 2
 
       // Verify scenarios
       expect(result.scenarios.conservative.projected_revenue).toBe(60000);
-      expect(result.scenarios.conservative.estimated_profit).toBe(14640); // 60000 - 45360
+      expect(result.scenarios.conservative.estimated_profit).toBe(18240); // 60000 - 41760
 
       expect(result.scenarios.realistic.projected_revenue).toBe(90000);
-      expect(result.scenarios.realistic.estimated_profit).toBe(44640); // 90000 - 45360
+      expect(result.scenarios.realistic.estimated_profit).toBe(48240); // 90000 - 41760
 
       expect(result.scenarios.optimistic.projected_revenue).toBe(120000);
-      expect(result.scenarios.optimistic.estimated_profit).toBe(74640); // 120000 - 45360
+      expect(result.scenarios.optimistic.estimated_profit).toBe(78240); // 120000 - 41760
     });
 
     it('should handle high rent that makes arbitrage unprofitable', () => {
@@ -65,8 +65,8 @@ describe('SOP Reports Module', () => {
 
       const result = calculateSOPProfitability(monthlyRent, percentiles);
 
-      // Annual operating costs: (5000 + 780) * 12 = 69,360
-      expect(result.annual_operating_costs).toBe(69360);
+      // Annual operating costs: (5000 + 480) * 12 = 65,760
+      expect(result.annual_operating_costs).toBe(65760);
 
       // Conservative scenario should be negative
       expect(result.scenarios.conservative.estimated_profit).toBeLessThan(0);

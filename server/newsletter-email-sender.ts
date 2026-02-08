@@ -1282,11 +1282,11 @@ export async function getSendStats(timeframe: 'day' | 'week' | 'month' = 'week')
         COUNT(*) as total,
         SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as successful,
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
-        email_type,
+        emailType,
         COUNT(*) as type_count
       FROM newsletter_sends
-      WHERE sent_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
-      GROUP BY email_type
+      WHERE sentAt >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+      GROUP BY emailType
     `);
     
     const rows = (result as any)[0] as any[];
@@ -1297,7 +1297,7 @@ export async function getSendStats(timeframe: 'day' | 'week' | 'month' = 'week')
     let failed = 0;
     
     for (const row of rows) {
-      byType[row.email_type] = Number(row.type_count);
+      byType[row.emailType] = Number(row.type_count);
       total += Number(row.total);
       successful += Number(row.successful);
       failed += Number(row.failed);
@@ -1319,9 +1319,9 @@ export async function unsubscribeContact(email: string): Promise<boolean> {
   
   try {
     await db.execute(sql`
-      INSERT INTO newsletter_preferences (email, subscribed, updated_at)
-      VALUES (${email}, false, NOW())
-      ON DUPLICATE KEY UPDATE subscribed = false, updated_at = NOW()
+      INSERT INTO newsletter_preferences (hubspotContactId, email, unsubscribedAt, updatedAt)
+      VALUES (${email}, ${email}, NOW(), NOW())
+      ON DUPLICATE KEY UPDATE unsubscribedAt = NOW(), updatedAt = NOW()
     `);
     
     return true;
@@ -1340,12 +1340,12 @@ export async function isSubscribed(email: string): Promise<boolean> {
   
   try {
     const result = await db.execute(sql`
-      SELECT subscribed FROM newsletter_preferences WHERE email = ${email}
+      SELECT unsubscribedAt FROM newsletter_preferences WHERE email = ${email}
     `);
     
     const rows = (result as any)[0] as any[];
     if (rows.length === 0) return true; // Default to subscribed
-    return rows[0].subscribed === 1 || rows[0].subscribed === true;
+    return rows[0].unsubscribedAt === null;
   } catch (error) {
     console.error('[Newsletter] Error checking subscription:', error);
     return true;
@@ -1373,11 +1373,11 @@ export async function logNewsletterSend(params: {
   try {
     await db.execute(sql`
       INSERT INTO newsletter_sends (
-        contact_email, contact_id, city, state, email_type, 
-        subject, status, error_message, hubspot_send_id, sent_at
+        email, hubspotContactId, city, state, emailType, 
+        status, errorMessage, hubspotSendId, sentAt
       ) VALUES (
         ${params.contactEmail}, ${params.contactId}, ${params.city}, ${params.state},
-        ${params.newsletterType}, ${params.subject}, 
+        ${params.newsletterType}, 
         ${params.success ? 'sent' : 'failed'}, ${params.errorMessage || null},
         ${params.hubspotSendId || null}, NOW()
       )

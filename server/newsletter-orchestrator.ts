@@ -349,8 +349,8 @@ async function getCachedDealsForCity(city: string, state: string): Promise<Renta
       SELECT * FROM newsletter_deals
       WHERE city = ${city}
       AND state = ${state}
-      AND analyzed_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
-      ORDER BY deal_score DESC
+      AND discoveredAt > DATE_SUB(NOW(), INTERVAL 7 DAY)
+      ORDER BY dealScore DESC
       LIMIT 10
     `);
     
@@ -358,26 +358,26 @@ async function getCachedDealsForCity(city: string, state: string): Promise<Renta
       address: row.address,
       city: row.city,
       state: row.state,
-      zipCode: row.zip_code,
+      zipCode: row.zipCode,
       bedrooms: row.bedrooms,
       bathrooms: row.bathrooms,
-      monthlyRent: row.monthly_rent,
-      propertyType: row.property_type,
-      sourceUrl: row.source_url,
-      sourcePlatform: row.source_platform,
-      imageUrl: row.image_url,
-      projectedAnnualRevenue: row.projected_annual_revenue,
-      projectedMonthlyRevenue: row.projected_monthly_revenue,
-      projectedAdr: row.projected_adr,
-      projectedOccupancy: row.projected_occupancy,
-      monthlyProfit: row.monthly_profit,
-      annualProfit: row.annual_profit,
-      profitMargin: row.profit_margin,
-      breakEvenOccupancy: row.break_even_occupancy,
-      dealScore: row.deal_score,
-      dealGrade: row.deal_grade,
+      monthlyRent: row.monthlyRent,
+      propertyType: row.propertyType,
+      sourceUrl: row.sourceUrl,
+      sourcePlatform: row.sourcePlatform,
+      imageUrl: row.imageUrl,
+      projectedAnnualRevenue: row.projectedRevenue,
+      projectedMonthlyRevenue: Math.round((row.projectedRevenue || 0) / 12),
+      projectedAdr: row.projectedAdr,
+      projectedOccupancy: row.projectedOccupancy,
+      monthlyProfit: row.projectedProfit ? Math.round(row.projectedProfit / 12) : 0,
+      annualProfit: row.projectedProfit || 0,
+      profitMargin: row.profitMargin,
+      breakEvenOccupancy: 0,
+      dealScore: row.dealScore,
+      dealGrade: row.dealScore >= 80 ? 'A' : row.dealScore >= 60 ? 'B' : 'C',
       topComps: [],
-      analyzedAt: new Date(row.analyzed_at)
+      analyzedAt: new Date(row.discoveredAt)
     }));
   } catch (error) {
     console.error('[Newsletter] Error fetching cached deals:', error);
@@ -395,9 +395,9 @@ async function logJobResult(result: NewsletterJobResult): Promise<void> {
     
     await db.execute(sql`
       INSERT INTO newsletter_jobs (
-        job_type, started_at, completed_at,
-        cities_processed, contacts_processed,
-        emails_sent, emails_failed, errors
+        jobType, startedAt, completedAt,
+        citiesProcessed, contactsProcessed,
+        emailsSent, errorCount, errors
       ) VALUES (
         ${result.jobType},
         ${result.startedAt},
@@ -405,7 +405,7 @@ async function logJobResult(result: NewsletterJobResult): Promise<void> {
         ${result.citiesProcessed},
         ${result.contactsProcessed},
         ${result.emailsSent},
-        ${result.emailsFailed},
+        ${result.emailsFailed || 0},
         ${JSON.stringify(result.errors)}
       )
     `);
@@ -424,18 +424,18 @@ export async function getJobHistory(limit: number = 20): Promise<NewsletterJobRe
     
     const result = await db.execute(sql`
       SELECT * FROM newsletter_jobs
-      ORDER BY started_at DESC
+      ORDER BY startedAt DESC
       LIMIT ${limit}
     `);
     
     return ((result as any).rows || []).map((row: any) => ({
-      jobType: row.job_type,
-      startedAt: new Date(row.started_at),
-      completedAt: new Date(row.completed_at),
-      citiesProcessed: row.cities_processed,
-      contactsProcessed: row.contacts_processed,
-      emailsSent: row.emails_sent,
-      emailsFailed: row.emails_failed,
+      jobType: row.jobType,
+      startedAt: new Date(row.startedAt),
+      completedAt: row.completedAt ? new Date(row.completedAt) : new Date(),
+      citiesProcessed: row.citiesProcessed,
+      contactsProcessed: row.contactsProcessed,
+      emailsSent: row.emailsSent,
+      emailsFailed: row.errorCount || 0,
       errors: JSON.parse(row.errors || '[]')
     }));
   } catch (error) {

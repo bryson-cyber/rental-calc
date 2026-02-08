@@ -254,24 +254,24 @@ export const newsletterRouter = router({
       
       const result = await db.execute(sql`
         SELECT * FROM newsletter_sends
-        WHERE sent_at >= ${startDate}
-        AND sent_at <= ${endDate}
+        WHERE sentAt >= ${startDate}
+        AND sentAt <= ${endDate}
         ${input?.city ? sql`AND city = ${input.city}` : sql``}
-        ${input?.type ? sql`AND newsletter_type = ${input.type}` : sql``}
-        ORDER BY sent_at DESC
+        ${input?.type ? sql`AND emailType = ${input.type}` : sql``}
+        ORDER BY sentAt DESC
         LIMIT ${input?.limit || 100}
       `);
       
       return ((result as any).rows || []).map((row: any) => ({
         id: row.id,
-        contactEmail: row.contact_email,
+        contactEmail: row.email,
         city: row.city,
         state: row.state,
-        type: row.newsletter_type,
-        subject: row.subject,
-        success: row.success,
-        errorMessage: row.error_message,
-        sentAt: row.sent_at
+        type: row.emailType,
+        subject: '',
+        success: row.status === 'sent',
+        errorMessage: row.errorMessage,
+        sentAt: row.sentAt
       }));
     }),
   

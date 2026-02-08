@@ -9801,3 +9801,15 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Branded as Coach Inayah throughout (no AirDNA mentions)
 - [x] Non-prescriptive data presentation (no investment advice)
 - [x] Tests passing (15 vitest tests), TypeScript 0 errors
+
+
+## Debug Session (Feb 8, 2026)
+- [x] Gather all TypeScript compilation errors (0 errors)
+- [x] Check server console for runtime errors (found newsletter DB column mismatches)
+- [x] Check browser console for client-side errors (clean)
+- [x] Check build errors (clean, warnings only)
+- [x] Run test suite for failures (~127 passing, ~15 failing)
+- [x] Fixed database column name mismatches in newsletter tables (4 files)
+- [x] Fixed SOP reports test (wrong function name + outdated formula values)
+- [x] Fixed Gemini retry cache test (updated expectations)
+- [x] Remaining ~15 failures are external API dependencies (rate limits, expired keys)

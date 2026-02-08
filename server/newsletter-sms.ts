@@ -279,12 +279,12 @@ export async function isContactOptedOutSMS(contactId: string): Promise<boolean> 
   
   try {
     const result = await db.execute(sql`
-      SELECT sms_opted_out FROM newsletter_preferences 
-      WHERE contact_id = ${contactId}
+      SELECT smsAlertsEnabled FROM newsletter_preferences 
+      WHERE hubspotContactId = ${contactId}
     `);
     
     const rows = (result as any)[0] as any[];
-    return rows.length > 0 && (rows[0].sms_opted_out === 1 || rows[0].sms_opted_out === true);
+    return rows.length > 0 && (rows[0].smsAlertsEnabled === 0 || rows[0].smsAlertsEnabled === false);
   } catch (error) {
     console.error('[SMS] Error checking opt-out status:', error);
     return false;
@@ -303,12 +303,12 @@ export async function isPhoneOptedOut(phone: string): Promise<boolean> {
   
   try {
     const result = await db.execute(sql`
-      SELECT sms_opted_out FROM newsletter_preferences 
-      WHERE phone = ${cleanPhone} OR phone = ${phone}
+      SELECT smsAlertsEnabled FROM newsletter_preferences 
+      WHERE email LIKE CONCAT('%', ${cleanPhone}, '%')
     `);
     
     const rows = (result as any)[0] as any[];
-    return rows.length > 0 && (rows[0].sms_opted_out === 1 || rows[0].sms_opted_out === true);
+    return rows.length > 0 && (rows[0].smsAlertsEnabled === 0 || rows[0].smsAlertsEnabled === false);
   } catch (error) {
     console.error('[SMS] Error checking phone opt-out:', error);
     return false;
@@ -324,9 +324,9 @@ export async function optOutSMS(contactId: string, phone?: string): Promise<void
   
   try {
     await db.execute(sql`
-      INSERT INTO newsletter_preferences (contact_id, phone, sms_opted_out, updated_at)
-      VALUES (${contactId}, ${phone || null}, 1, NOW())
-      ON DUPLICATE KEY UPDATE sms_opted_out = 1, updated_at = NOW()
+      INSERT INTO newsletter_preferences (hubspotContactId, email, smsAlertsEnabled, updatedAt)
+      VALUES (${contactId}, ${phone || ''}, 0, NOW())
+      ON DUPLICATE KEY UPDATE smsAlertsEnabled = 0, updatedAt = NOW()
     `);
     console.log(`[SMS] Opted out contact ${contactId}`);
   } catch (error) {
@@ -350,18 +350,16 @@ async function logSMSSend(params: {
   try {
     await db.execute(sql`
       INSERT INTO newsletter_sends (
-        contact_id, 
-        contact_email,
-        email_type, 
-        subject, 
+        hubspotContactId, 
+        email,
+        emailType, 
         status, 
-        error_message, 
-        sent_at
+        errorMessage, 
+        sentAt
       ) VALUES (
         ${params.contactId || 'unknown'},
         ${params.phone},
-        'sms_deal_alert',
-        ${`SMS to ${params.phone}`},
+        'weekly_market',
         ${params.success ? 'sent' : 'failed'},
         ${params.error || null},
         NOW()
@@ -390,8 +388,8 @@ export async function getSMSStats(days: number = 30): Promise<{
         SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as successful,
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
       FROM newsletter_sends 
-      WHERE email_type LIKE 'sms_%'
-      AND sent_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
+      WHERE emailType LIKE 'sms_%'
+      AND sentAt >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
     `);
     
     const rows = (result as any)[0] as any[];
