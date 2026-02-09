@@ -944,7 +944,7 @@ export default function LeadMagnet() {
   // VALIDATE THE DEAL STATE (formerly Single Property)
   // ============================================
   const [address, setAddress] = useState('');
-  const [monthlyRent, setMonthlyRent] = useState('');
+  const [monthlyRent, setMonthlyRent] = useState('2000');
   const [bedrooms, setBedrooms] = useState('2');
   const [bathrooms, setBathrooms] = useState('1');
   const [furnitureCost, setFurnitureCost] = useState('15000');
@@ -2705,7 +2705,7 @@ export default function LeadMagnet() {
                             setRentometerData(null);
                           }
                         }}
-                        placeholder="2000"
+                        placeholder="Enter monthly rent"
                         className="input-apple h-12"
                       />
                       {isLoadingRentometer && (

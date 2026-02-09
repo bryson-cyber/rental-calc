@@ -9835,12 +9835,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify all tests pass with mocks (50 files, 598 tests, 0 failures)
 
 ### Step 3 Not Returning Data (Feb 9, 2026)
-- [ ] Debug Step 3 not returning data
-- [ ] Identify root cause (API, routing, or frontend issue)
-- [ ] Fix and verify end-to-end
+- [x] Debug Step 3 not returning data (rate limit was blocking all API calls)
+- [x] Identify root cause (checkDailyLimit throwing error at 700 calls)
+- [x] Fix and verify end-to-end (63116 Bevo Mill loads correctly)
 
 
 ### Critical: Rate Limit Blocking App & Inaccurate Call Counts (Feb 9, 2026)
 - [x] Change rate limit from blocking (throw error) to warn-only (notify owner, continue working)
 - [x] Fix inaccurate API call counts (reset inflated counts, tests now use mocks)
 - [x] Verify Step 3 works end-to-end after fix (63116 Bevo Mill - all data loads correctly)
+
+### Step 5 (Validate the Deal) Not Working (Feb 9, 2026)
+- [x] Reproduce Step 5 bug (button disabled due to empty monthlyRent state)
+- [x] Diagnose root cause (placeholder '2000' not same as actual value)
+- [x] Fix and verify end-to-end (initialized monthlyRent to '2000', full results load for Denver)
