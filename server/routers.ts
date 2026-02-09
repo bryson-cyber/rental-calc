@@ -39,7 +39,7 @@ import {
   getMarketFutureDailyData,
   getSubmarketsInMarket,
 } from "./airdna";
-import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput } from "./gemini";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport, generateMarketTrendNarrative, generateComprehensivePropertyAdvice, generateMaxPropertyAdvice, generateMaxMarketAdvice, generateFullReportSummary, type PropertyAdvisorInput, type MaxPropertyAdvisorInput, type MaxMarketAdvisorInput, type FullReportSummaryInput } from "./gemini";
 import { getAIAdvisorResponse, type ChatMessage } from "./ai-advisor";
 import { batchScrapeAirbnbImages } from "./airbnb-scraper";
 import { generateFullArbitrageAnalysis } from "./sop-reports";
@@ -5343,44 +5343,52 @@ export const appRouter = router({
         let reportData = typeof input.reportData === 'object' ? input.reportData : (typeof input.reportData === 'string' ? JSON.parse(input.reportData) : input.reportData);
         if (input.reportType === 'full' && reportData && !reportData.ai_summary) {
           try {
-            console.log('[SharedReport] Generating AI summary for report...');
-            const aiSummary = await generateEnhancedPropertyReport(
-              input.address || reportData.property?.address || 'Unknown Address',
-              {
-                property: {
-                  address: input.address || reportData.property?.address,
-                  bedrooms: input.bedrooms || reportData.property?.bedrooms,
-                  bathrooms: input.bathrooms || reportData.property?.bathrooms,
-                  accommodates: input.accommodates || reportData.property?.accommodates,
-                },
-                revenue: {
-                  annual: reportData.revenue_estimate?.annual || 0,
-                  monthly: reportData.revenue_estimate?.monthly || 0,
-                  nightly: reportData.revenue_estimate?.nightly || 0,
-                  occupancy: reportData.revenue_estimate?.occupancy || 0,
-                  range: reportData.revenue_estimate?.range,
-                },
-                marketData: {
-                  name: reportData.market_data?.name || 'Local Market',
-                  occupancy: reportData.market_data?.metrics?.occupancy || 0,
-                  adr: reportData.market_data?.metrics?.adr || 0,
-                  revenue: reportData.market_data?.metrics?.revenue || 0,
-                  listingCount: reportData.market_data?.listing_count || 0,
-                },
-                competitors: (reportData.comps || []).slice(0, 10).map((c: any) => ({
-                  name: c.title || 'Competitor',
-                  revenue: c.annual_revenue || 0,
-                  adr: c.adr || 0,
-                  occupancy: c.occupancy || 0,
-                  rating: c.rating ?? undefined,
-                })),
-                rentalArbitrage: reportData.rental_arbitrage,
-                purchase: reportData.purchase,
-              }
-            );
-            if (aiSummary && aiSummary !== 'Unable to generate property report at this time.') {
+            console.log('[SharedReport] Generating comprehensive AI summary via Gemini 3 Pro...');
+            const summaryInput: FullReportSummaryInput = {
+              property: {
+                address: input.address || reportData.property?.address || 'Unknown Address',
+                city: reportData.property?.city,
+                state: reportData.property?.state,
+                bedrooms: input.bedrooms || reportData.property?.bedrooms || 0,
+                bathrooms: input.bathrooms || reportData.property?.bathrooms || 0,
+                accommodates: input.accommodates || reportData.property?.accommodates || 0,
+              },
+              revenue: {
+                annual: reportData.revenue_estimate?.annual || 0,
+                monthly: reportData.revenue_estimate?.monthly || 0,
+                nightly: reportData.revenue_estimate?.nightly || 0,
+                occupancy: reportData.revenue_estimate?.occupancy || 0,
+                range: reportData.revenue_estimate?.range,
+              },
+              monthlyForecast: reportData.monthly_forecast,
+              marketData: reportData.market_data ? {
+                name: reportData.market_data.name || 'Local Market',
+                occupancy: reportData.market_data.metrics?.occupancy || 0,
+                adr: reportData.market_data.metrics?.adr || 0,
+                revenue: reportData.market_data.metrics?.revenue || 0,
+                listingCount: reportData.market_data.listing_count || 0,
+                marketScore: reportData.market_data.metrics?.market_score,
+              } : undefined,
+              bedroomPerformance: reportData.bedroom_performance,
+              competitors: (reportData.comps || []).slice(0, 15).map((c: any) => ({
+                name: c.title || 'Competitor',
+                revenue: c.annual_revenue || 0,
+                adr: c.adr || 0,
+                occupancy: c.occupancy || 0,
+                rating: c.rating ?? undefined,
+                reviews: c.reviews || 0,
+                bedrooms: c.bedrooms,
+              })),
+              revenuePercentiles: reportData.revenue_percentiles,
+              historicalData: reportData.historical_data,
+              rentalArbitrage: reportData.rental_arbitrage,
+              purchase: reportData.purchase,
+              preparedFor: reportData.prepared_for || input.creatorName,
+            };
+            const aiSummary = await generateFullReportSummary(summaryInput);
+            if (aiSummary && aiSummary.length > 100) {
               reportData = { ...reportData, ai_summary: aiSummary };
-              console.log('[SharedReport] AI summary generated successfully');
+              console.log('[SharedReport] Comprehensive AI summary generated successfully (' + aiSummary.length + ' chars)');
             }
           } catch (e) {
             console.error('[SharedReport] Failed to generate AI summary:', e);
@@ -5511,6 +5519,222 @@ export const appRouter = router({
             createdAt: r.createdAt,
           })),
         };
+      }),
+
+    // Regenerate a shared report with fresh data from AirDNA + Gemini 3
+    regenerate: protectedProcedure
+      .input(z.object({
+        shareId: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Fetch existing report
+        const results = await db
+          .select()
+          .from(sharedReports)
+          .where(eq(sharedReports.shareId, input.shareId))
+          .limit(1);
+        
+        if (results.length === 0) {
+          return { success: false, error: 'Report not found' };
+        }
+        
+        const report = results[0];
+        
+        // Only owner or admin can regenerate
+        const isOwner = (ctx.user?.id && report.createdByUserId === ctx.user.id);
+        const isAdmin = ctx.user?.role === 'admin';
+        if (!isOwner && !isAdmin) {
+          return { success: false, error: 'Not authorized to regenerate this report' };
+        }
+        
+        if (report.reportType !== 'full') {
+          return { success: false, error: 'Only full property reports can be regenerated' };
+        }
+        
+        const address = report.address;
+        if (!address) {
+          return { success: false, error: 'No address found for this report' };
+        }
+        
+        const bedrooms = report.bedrooms || 3;
+        const bathrooms = report.bathrooms ? parseFloat(report.bathrooms) : 2;
+        const accommodates = report.accommodates || bedrooms * 2;
+        
+        // Parse existing report data to preserve purchase/arbitrage settings
+        let existingData: any = {};
+        try {
+          existingData = typeof report.reportData === 'string' ? JSON.parse(report.reportData) : report.reportData || {};
+        } catch { existingData = {}; }
+        
+        console.log(`[Regenerate] Starting regeneration for ${address} (${bedrooms}BR/${bathrooms}BA)...`);
+        
+        try {
+          // Step 1: Re-run the comprehensive property report from AirDNA
+          const freshReport = await getComprehensivePropertyReport(
+            address,
+            bedrooms,
+            bathrooms,
+            accommodates
+          );
+          
+          if (!freshReport) {
+            return { success: false, error: 'Failed to fetch fresh data from AirDNA' };
+          }
+          
+          const prop = freshReport.property as any;
+          const market = freshReport.market as any;
+          const comps = (prop?.comps || []) as any[];
+          const sameBedComps = (freshReport.same_bedroom_comps || []) as any[];
+          const bedroomPerf = (freshReport.bedroom_performance || []) as any[];
+          const historical = freshReport.market?.historical as any;
+          
+          // Step 2: Build the new report data structure
+          const occRate = prop?.estimates?.occupancy_rate || 0;
+          const adr = prop?.estimates?.average_daily_rate || 0;
+          const annualRev = prop?.estimates?.annual_revenue || 0;
+          
+          // Calculate revenue percentiles from comps
+          const compRevenues = [...comps, ...sameBedComps]
+            .filter((c: any) => c.annual_revenue > 0)
+            .map((c: any) => c.annual_revenue)
+            .sort((a: number, b: number) => a - b);
+          const uniqueRevenues = Array.from(new Set(compRevenues));
+          let revenuePercentiles = undefined;
+          if (uniqueRevenues.length >= 5) {
+            revenuePercentiles = {
+              p10: uniqueRevenues[Math.floor(uniqueRevenues.length * 10 / 100)],
+              p25: uniqueRevenues[Math.floor(uniqueRevenues.length * 25 / 100)],
+              p50: uniqueRevenues[Math.floor(uniqueRevenues.length * 50 / 100)],
+              p75: uniqueRevenues[Math.floor(uniqueRevenues.length * 75 / 100)],
+              p90: uniqueRevenues[Math.floor(uniqueRevenues.length * 90 / 100)],
+            };
+          }
+          
+          // Build new report data, preserving purchase/arbitrage from existing
+          let newReportData: any = {
+            property: {
+              address: address,
+              city: prop?.location?.city || market?.name || '',
+              state: prop?.location?.state || '',
+              bedrooms: bedrooms,
+              bathrooms: bathrooms,
+              accommodates: accommodates,
+              latitude: prop?.location?.latitude,
+              longitude: prop?.location?.longitude,
+            },
+            revenue_estimate: {
+              annual: annualRev,
+              monthly: Math.round(annualRev / 12),
+              nightly: adr,
+              occupancy: occRate,
+              range: {
+                low: prop?.estimates?.annual_revenue_low || Math.round(annualRev * 0.9),
+                high: prop?.estimates?.annual_revenue_high || Math.round(annualRev * 1.1),
+              },
+            },
+            monthly_forecast: prop?.monthly_forecast || existingData.monthly_forecast || [],
+            market_data: market ? {
+              name: market.name || 'Local Market',
+              listing_count: market.listing_count || market.metrics?.active_listings || 0,
+              metrics: {
+                occupancy: market.metrics?.occupancy || occRate,
+                adr: market.metrics?.adr || adr,
+                revenue: market.metrics?.revenue || annualRev,
+                active_listings: market.metrics?.active_listings || market.listing_count || 0,
+                market_score: market.metrics?.market_score,
+              },
+            } : existingData.market_data,
+            bedroom_performance: bedroomPerf.length > 0 ? bedroomPerf : existingData.bedroom_performance || [],
+            revenue_percentiles: revenuePercentiles,
+            historical_data: historical || existingData.historical_data,
+            comps: comps.map((c: any) => ({
+              title: c.title || c.name || 'Competitor',
+              bedrooms: c.bedrooms,
+              bathrooms: c.bathrooms,
+              annual_revenue: c.annual_revenue || 0,
+              adr: c.adr || 0,
+              occupancy: c.occupancy || 0,
+              rating: c.rating,
+              reviews: c.reviews || 0,
+              distance_meters: c.distance_meters,
+              airbnb_url: c.airbnb_url || c.url,
+              image_url: c.image_url,
+            })),
+            // Preserve existing purchase and rental arbitrage settings
+            purchase: existingData.purchase,
+            rental_arbitrage: existingData.rental_arbitrage,
+            prepared_for: existingData.prepared_for,
+          };
+          
+          // Step 3: Generate comprehensive AI summary via Gemini 3 Pro
+          console.log('[Regenerate] Generating AI summary via Gemini 3 Pro...');
+          try {
+            const summaryInput: FullReportSummaryInput = {
+              property: newReportData.property,
+              revenue: newReportData.revenue_estimate,
+              monthlyForecast: newReportData.monthly_forecast,
+              marketData: newReportData.market_data ? {
+                name: newReportData.market_data.name,
+                occupancy: newReportData.market_data.metrics?.occupancy || 0,
+                adr: newReportData.market_data.metrics?.adr || 0,
+                revenue: newReportData.market_data.metrics?.revenue || 0,
+                listingCount: newReportData.market_data.listing_count || 0,
+                marketScore: newReportData.market_data.metrics?.market_score,
+              } : undefined,
+              bedroomPerformance: newReportData.bedroom_performance,
+              competitors: newReportData.comps.slice(0, 15).map((c: any) => ({
+                name: c.title,
+                revenue: c.annual_revenue,
+                adr: c.adr,
+                occupancy: c.occupancy,
+                rating: c.rating,
+                reviews: c.reviews,
+                bedrooms: c.bedrooms,
+              })),
+              revenuePercentiles: newReportData.revenue_percentiles,
+              historicalData: newReportData.historical_data,
+              rentalArbitrage: newReportData.rental_arbitrage,
+              purchase: newReportData.purchase,
+              preparedFor: newReportData.prepared_for,
+            };
+            const aiSummary = await generateFullReportSummary(summaryInput);
+            if (aiSummary && aiSummary.length > 100) {
+              newReportData.ai_summary = aiSummary;
+              console.log(`[Regenerate] AI summary generated (${aiSummary.length} chars)`);
+            }
+          } catch (aiErr) {
+            console.error('[Regenerate] AI summary generation failed:', aiErr);
+          }
+          
+          // Step 4: Update the database
+          const newReportDataStr = JSON.stringify(newReportData);
+          await db.update(sharedReports)
+            .set({
+              reportData: newReportDataStr,
+              latitude: prop?.location?.latitude?.toString(),
+              longitude: prop?.location?.longitude?.toString(),
+            })
+            .where(eq(sharedReports.shareId, input.shareId));
+          
+          console.log(`[Regenerate] Report ${input.shareId} regenerated successfully`);
+          
+          return {
+            success: true,
+            message: 'Report regenerated with fresh data',
+            hasAiSummary: !!newReportData.ai_summary,
+            hasMarketData: !!market,
+            hasBedroomPerf: bedroomPerf.length > 0,
+            hasHistorical: !!historical,
+            compCount: comps.length,
+          };
+        } catch (error) {
+          console.error('[Regenerate] Error:', error);
+          const message = error instanceof Error ? error.message : 'Failed to regenerate report';
+          return { success: false, error: message };
+        }
       }),
 
     // Delete a shared report

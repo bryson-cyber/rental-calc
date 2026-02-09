@@ -2653,6 +2653,53 @@ export async function getComprehensivePropertyReport(
     return null;
   }
   
+  // Step 1b: Geocode address to get lat/lng and city/state if not in rentalizer response
+  if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
+    try {
+      const { makeRequest: makeGeoRequest } = await import('./_core/map');
+      const geocodeResult = await makeGeoRequest<{
+        status: string;
+        results: Array<{
+          geometry: { location: { lat: number; lng: number } };
+          formatted_address: string;
+          address_components: Array<{
+            long_name: string;
+            short_name: string;
+            types: string[];
+          }>;
+        }>;
+      }>('/maps/api/geocode/json', { address });
+      
+      if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
+        const result = geocodeResult.results[0];
+        const cityComp = result.address_components.find(c => c.types.includes('locality'));
+        const stateComp = result.address_components.find(c => c.types.includes('administrative_area_level_1'));
+        
+        // Inject location into propertyEstimate so downstream code can use it
+        (propertyEstimate.property as any).latitude = result.geometry.location.lat;
+        (propertyEstimate.property as any).longitude = result.geometry.location.lng;
+        // Store city/state as extra fields for report building
+        (propertyEstimate.property as any)._geocoded_city = cityComp?.long_name || '';
+        (propertyEstimate.property as any)._geocoded_state = stateComp?.short_name || '';
+        
+        // Also set address_lookup if missing
+        if (!propertyEstimate.property.address_lookup) {
+          (propertyEstimate.property as any).address_lookup = 
+            `${cityComp?.long_name || ''}, ${stateComp?.short_name || ''}`;
+        }
+        
+        console.log('[Property Report] Geocoded address:', {
+          lat: result.geometry.location.lat,
+          lng: result.geometry.location.lng,
+          city: cityComp?.long_name,
+          state: stateComp?.short_name,
+        });
+      }
+    } catch (geoErr) {
+      console.log('[Property Report] Geocoding failed:', (geoErr as Error).message);
+    }
+  }
+  
   const propertyBedrooms = bedrooms || propertyEstimate.property.bedrooms;
   
   // Step 2: Find market ID
@@ -2777,6 +2824,107 @@ export async function getComprehensivePropertyReport(
         }
       }
     }
+    
+    // Step 2b: Fallback market search when local fuzzy search fails
+    // Try AirDNA's /market/search API directly, then zip code, then state
+    if (!marketId) {
+      console.log('[Market Search] Local fuzzy search failed. Trying AirDNA API fallback...');
+      
+      // Fallback 1: Try searchMarketsAPI with the city name
+      if (searchTerm) {
+        try {
+          const apiResults = await searchMarketsAPI(searchTerm, 25);
+          console.log(`[Market Search Fallback] API search for "${searchTerm}" returned ${apiResults.length} results`);
+          if (apiResults.length > 0) {
+            // First, try to find a market-type result matching the state
+            const stateMatchResult = apiResults.find(m => 
+              m.type === 'market' && state && (
+                m.state?.toUpperCase() === state.toUpperCase() ||
+                m.location_name?.toUpperCase().includes(`, ${state.toUpperCase()}`) ||
+                m.name?.toUpperCase().includes(`, ${state.toUpperCase()}`)
+              )
+            );
+            
+            if (stateMatchResult) {
+              marketId = stateMatchResult.id;
+              marketListingCount = stateMatchResult.listing_count;
+              console.log('[Market Search Fallback] Found market via API:', stateMatchResult.name, stateMatchResult.id);
+            } else {
+              // No market-type result found — check if there's a submarket with a parent_market
+              const submarketWithParent = apiResults.find(m => 
+                m.type === 'submarket' && m.parent_market?.id
+              );
+              if (submarketWithParent?.parent_market) {
+                // Use the parent market ID (e.g., Richardson → Dallas)
+                marketId = submarketWithParent.parent_market.id;
+                // We don't have listing count for parent, will get from market details
+                marketListingCount = 0;
+                console.log(`[Market Search Fallback] Found submarket "${submarketWithParent.name}" → using parent market "${submarketWithParent.parent_market.name}" (${submarketWithParent.parent_market.id})`);
+              } else {
+                // Last resort: use any market-type result
+                const anyMarket = apiResults.find(m => m.type === 'market') || apiResults[0];
+                if (anyMarket) {
+                  marketId = anyMarket.id;
+                  marketListingCount = anyMarket.listing_count;
+                  console.log('[Market Search Fallback] Using fallback market:', anyMarket.name, anyMarket.id);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log('[Market Search Fallback] API search failed:', (e as Error).message);
+        }
+      }
+      
+      // Fallback 2: Try zip code from address
+      if (!marketId) {
+        const zipMatch = address.match(/(\d{5})/);
+        if (zipMatch) {
+          try {
+            const zipResults = await searchMarketsAPI(zipMatch[1], 10);
+            console.log(`[Market Search Fallback] Zip code "${zipMatch[1]}" returned ${zipResults.length} results`);
+            if (zipResults.length > 0) {
+              const fallbackMarket2 = zipResults.find(m => m.type === 'market') || zipResults[0];
+              if (fallbackMarket2) {
+                marketId = fallbackMarket2.id;
+                marketListingCount = fallbackMarket2.listing_count;
+                console.log('[Market Search Fallback] Found market via zip code:', fallbackMarket2.name, fallbackMarket2.id);
+              }
+            }
+          } catch (e) {
+            console.log('[Market Search Fallback] Zip code search failed:', (e as Error).message);
+          }
+        }
+      }
+      
+      // Fallback 3: Try address_lookup from rentalizer
+      if (!marketId && propertyEstimate.property.address_lookup) {
+        const lookupTerm = propertyEstimate.property.address_lookup;
+        try {
+          const lookupResults = await searchMarketsAPI(lookupTerm, 10);
+          console.log(`[Market Search Fallback] address_lookup "${lookupTerm}" returned ${lookupResults.length} results`);
+          if (lookupResults.length > 0) {
+            // Prefer market-type results
+            const marketResult = lookupResults.find(m => m.type === 'market');
+            if (marketResult) {
+              marketId = marketResult.id;
+              marketListingCount = marketResult.listing_count;
+              console.log('[Market Search Fallback] Found market via address_lookup:', marketResult.name, marketResult.id);
+            } else {
+              // Check for submarket with parent
+              const subWithParent = lookupResults.find(m => m.type === 'submarket' && m.parent_market?.id);
+              if (subWithParent?.parent_market) {
+                marketId = subWithParent.parent_market.id;
+                marketListingCount = 0;
+                console.log(`[Market Search Fallback] Found submarket "${subWithParent.name}" via address_lookup → using parent "${subWithParent.parent_market.name}" (${subWithParent.parent_market.id})`);
+              }
+            }
+          }
+        } catch (e) {
+          console.log('[Market Search Fallback] address_lookup search failed:', (e as Error).message);
+        }
+      }
+    }
   }
   
   // Step 3: Get market data (if market_id available)
@@ -2785,11 +2933,50 @@ export async function getComprehensivePropertyReport(
   let marketInsights: MarketInsights | undefined;
   
   if (marketId) {
-    const [marketDetails, historicalData, submarketList] = await Promise.all([
-      getMarketDetails(marketId),
-      getMarketHistoricalData(marketId, 24), // 24 months for YoY comparison
-      getSubmarketsInMarket(marketId),
-    ]);
+    let marketDetails = null;
+    let historicalData = { occupancy: [] as any[], adr: [] as any[], revenue: [] as any[], revpar: [] as any[], active_listings: [] as any[] };
+    let submarketList: SubmarketData[] = [];
+    
+    try {
+      const results = await Promise.all([
+        getMarketDetails(marketId),
+        getMarketHistoricalData(marketId, 24), // 24 months for YoY comparison
+        getSubmarketsInMarket(marketId),
+      ]);
+      marketDetails = results[0];
+      historicalData = results[1];
+      submarketList = results[2];
+    } catch (marketErr) {
+      console.log(`[Market Data] Failed to fetch market ${marketId}, may be a submarket. Trying parent market...`);
+      // The marketId might be a submarket ID - try to find the parent market
+      try {
+        const searchResults = await searchMarketsAPI(marketId.replace('airdna-', ''), 5);
+        // If that doesn't work, search by the address city
+        const addressLookup = propertyEstimate.property.address_lookup;
+        const cityFromLookup = addressLookup?.split(',').length >= 2 
+          ? addressLookup.split(',')[addressLookup.split(',').length - 2]?.trim()
+          : addressLookup?.split(',')[0]?.trim();
+        
+        if (cityFromLookup) {
+          const cityResults = await searchMarketsAPI(cityFromLookup, 10);
+          const parentResult = cityResults.find(m => m.type === 'submarket' && m.parent_market?.id);
+          if (parentResult?.parent_market) {
+            marketId = parentResult.parent_market.id;
+            console.log(`[Market Data] Found parent market: ${parentResult.parent_market.name} (${marketId})`);
+            const parentResults = await Promise.all([
+              getMarketDetails(marketId),
+              getMarketHistoricalData(marketId, 24),
+              getSubmarketsInMarket(marketId),
+            ]);
+            marketDetails = parentResults[0];
+            historicalData = parentResults[1];
+            submarketList = parentResults[2];
+          }
+        }
+      } catch (parentErr) {
+        console.log('[Market Data] Parent market search also failed:', (parentErr as Error).message);
+      }
+    }
     
     if (marketDetails) {
       // Calculate current metrics from historical data, fall back to market details metrics

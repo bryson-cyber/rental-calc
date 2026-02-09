@@ -1994,3 +1994,282 @@ IMPORTANT NOTE ABOUT MARKET GRADES: Even if a market has a lower overall grade (
     return 'Unable to generate comprehensive market analysis at this time. Please try again.';
   }
 }
+
+
+/**
+ * Generate a comprehensive AI executive summary for the Full Property Report
+ * Uses Gemini 3 Pro with maximum output tokens for thorough analysis
+ * 
+ * This is specifically for the shared Full Property Report — it should be
+ * a polished, professional summary that synthesizes ALL data points into
+ * a compelling, non-prescriptive narrative.
+ */
+export interface FullReportSummaryInput {
+  property: {
+    address: string;
+    city?: string;
+    state?: string;
+    bedrooms: number;
+    bathrooms: number;
+    accommodates: number;
+  };
+  revenue: {
+    annual: number;
+    monthly: number;
+    nightly: number;
+    occupancy: number;
+    range?: { low: number; high: number };
+  };
+  monthlyForecast?: Array<{ month: string; revenue: number; occupancy?: number; adr?: number }>;
+  marketData?: {
+    name: string;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    listingCount: number;
+    marketScore?: number;
+  };
+  bedroomPerformance?: Array<{
+    bedrooms: number;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    count?: number;
+  }>;
+  competitors?: Array<{
+    name: string;
+    revenue: number;
+    adr: number;
+    occupancy: number;
+    rating?: number;
+    reviews?: number;
+    bedrooms?: number;
+  }>;
+  revenuePercentiles?: {
+    p10: number; p25: number; p50: number; p75: number; p90: number;
+  };
+  historicalData?: {
+    summary: { yearly_pct_change?: number; yoy_revenue_change?: number; trend?: string };
+  };
+  rentalArbitrage?: {
+    monthlyRent: number;
+    startupCosts?: number;
+  };
+  purchase?: {
+    purchasePrice: number;
+    downPaymentPercent?: number;
+    interestRate?: number;
+    loanTerm?: number;
+    loanType?: string;
+  };
+  preparedFor?: string;
+}
+
+export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
+  const { property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor } = input;
+
+  // Calculate derived metrics for the prompt
+  const occRate = revenue.occupancy > 1 ? revenue.occupancy / 100 : revenue.occupancy;
+  const revpar = revenue.nightly * occRate;
+
+  // Comp stats
+  const compCount = competitors?.length || 0;
+  const topCompRevenue = competitors && competitors.length > 0 ? Math.max(...competitors.map(c => c.revenue)) : 0;
+  const avgCompRevenue = competitors && competitors.length > 0 ? competitors.reduce((s, c) => s + c.revenue, 0) / competitors.length : 0;
+  const avgCompRating = competitors && competitors.length > 0
+    ? competitors.filter(c => c.rating && c.rating > 0).reduce((s, c) => s + (c.rating || 0), 0) / competitors.filter(c => c.rating && c.rating > 0).length
+    : 0;
+
+  // Rental arbitrage calcs
+  let rentalSection = '';
+  if (rentalArbitrage?.monthlyRent) {
+    const rent = rentalArbitrage.monthlyRent;
+    const startup = rentalArbitrage.startupCosts || (8000 + property.bedrooms * 4000);
+    const monthlyProfit = revenue.monthly - rent;
+    const annualProfit = monthlyProfit * 12;
+    const breakEvenOcc = rent / (revenue.nightly * 30);
+    const monthsToRecoup = monthlyProfit > 0 ? Math.ceil(startup / monthlyProfit) : -1;
+    rentalSection = `
+RENTAL ARBITRAGE SCENARIO:
+- Monthly Rent: $${rent.toLocaleString()}
+- Estimated Startup Costs: $${startup.toLocaleString()}
+- Projected Monthly Profit: $${monthlyProfit.toLocaleString()}
+- Projected Annual Profit: $${annualProfit.toLocaleString()}
+- Break-Even Occupancy: ${(breakEvenOcc * 100).toFixed(0)}%
+- Months to Recoup Startup: ${monthsToRecoup > 0 ? monthsToRecoup : 'N/A (negative cash flow)'}
+- Occupancy Cushion: ${((occRate - breakEvenOcc) * 100).toFixed(0)} percentage points above break-even`;
+  }
+
+  // Purchase calcs
+  let purchaseSection = '';
+  if (purchase?.purchasePrice) {
+    const price = purchase.purchasePrice;
+    const downPct = (purchase.downPaymentPercent || 20) / 100;
+    const downPayment = price * downPct;
+    const loanAmount = price - downPayment;
+    const rate = (purchase.interestRate || 7) / 100 / 12;
+    const term = (purchase.loanTerm || 30) * 12;
+    const monthlyMortgage = purchase.loanType === 'cash' ? 0 :
+      loanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
+    const operatingExpenses = revenue.annual * 0.35;
+    const propertyTax = price * 0.012;
+    const insurance = price * 0.005;
+    const noi = revenue.annual - operatingExpenses - propertyTax - insurance;
+    const capRate = (noi / price) * 100;
+    const annualCashFlow = revenue.annual - (monthlyMortgage * 12) - operatingExpenses - propertyTax - insurance;
+    const totalCashNeeded = downPayment + price * 0.03;
+    const cashOnCash = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded) * 100 : 0;
+    const dscr = (monthlyMortgage * 12) > 0 ? noi / (monthlyMortgage * 12) : Infinity;
+
+    purchaseSection = `
+PURCHASE INVESTMENT SCENARIO:
+- Purchase Price: $${price.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${(downPct * 100).toFixed(0)}%)
+- Total Cash Needed: $${totalCashNeeded.toLocaleString()}
+- Monthly Mortgage: $${monthlyMortgage.toFixed(0)}
+- Net Operating Income (NOI): $${noi.toFixed(0)}
+- Cap Rate: ${capRate.toFixed(1)}%
+- Cash-on-Cash Return: ${cashOnCash.toFixed(1)}%
+- DSCR: ${dscr === Infinity ? 'N/A (cash purchase)' : dscr.toFixed(2)}
+- Annual Cash Flow: $${annualCashFlow.toFixed(0)}`;
+  }
+
+  // Monthly forecast summary
+  let forecastSection = '';
+  if (monthlyForecast && monthlyForecast.length > 0) {
+    const best = monthlyForecast.reduce((b, c) => c.revenue > b.revenue ? c : b, monthlyForecast[0]);
+    const worst = monthlyForecast.reduce((w, c) => c.revenue < w.revenue ? c : w, monthlyForecast[0]);
+    forecastSection = `
+MONTHLY FORECAST:
+- Peak Month: ${best.month} at $${best.revenue.toLocaleString()} revenue
+- Slowest Month: ${worst.month} at $${worst.revenue.toLocaleString()} revenue
+- Revenue Spread: $${(best.revenue - worst.revenue).toLocaleString()} between peak and trough`;
+  }
+
+  // Bedroom performance
+  let bedroomSection = '';
+  if (bedroomPerformance && bedroomPerformance.length > 0) {
+    bedroomSection = `
+BEDROOM PERFORMANCE IN MARKET:
+${bedroomPerformance.map(bp => `- ${bp.bedrooms}BR: Revenue $${bp.revenue.toLocaleString()}, ADR $${bp.adr.toLocaleString()}, Occupancy ${(bp.occupancy > 1 ? bp.occupancy : bp.occupancy * 100).toFixed(0)}%, Count: ${bp.count || 'N/A'}`).join('\n')}`;
+  }
+
+  // Revenue percentiles
+  let percentilesSection = '';
+  if (revenuePercentiles) {
+    percentilesSection = `
+REVENUE DISTRIBUTION (PERCENTILES):
+- 10th: $${revenuePercentiles.p10.toLocaleString()}
+- 25th: $${revenuePercentiles.p25.toLocaleString()}
+- 50th (Median): $${revenuePercentiles.p50.toLocaleString()}
+- 75th: $${revenuePercentiles.p75.toLocaleString()}
+- 90th: $${revenuePercentiles.p90.toLocaleString()}
+- This property's projected revenue of $${revenue.annual.toLocaleString()} falls at approximately the ${revenue.annual >= revenuePercentiles.p75 ? '75th+' : revenue.annual >= revenuePercentiles.p50 ? '50th-75th' : revenue.annual >= revenuePercentiles.p25 ? '25th-50th' : '10th-25th'} percentile range`;
+  }
+
+  // Historical trends
+  let historicalSection = '';
+  if (historicalData?.summary) {
+    const yoyChange = historicalData.summary.yoy_revenue_change ?? historicalData.summary.yearly_pct_change ?? 0;
+    const trend = historicalData.summary.trend || (yoyChange > 2 ? 'Growing' : yoyChange < -2 ? 'Declining' : 'Stable');
+    historicalSection = `
+HISTORICAL TRENDS:
+- Year-over-Year Revenue Change: ${yoyChange > 0 ? '+' : ''}${yoyChange.toFixed(1)}%
+- Market Trend: ${trend}`;
+  }
+
+  const prompt = `<PERSONA>
+You are a senior real estate investment analyst specializing in short-term rental (Airbnb/VRBO) properties. You write polished, professional executive summaries that synthesize complex data into clear, accessible insights. Your tone is warm but authoritative — like a trusted advisor explaining findings to a client over coffee. You never give prescriptive investment advice or tell the reader what to do.
+</PERSONA>
+
+<TASK>
+Write a comprehensive Executive Summary for a Full Property Investment Analysis Report.${preparedFor ? ` This report is prepared for ${preparedFor}.` : ''}
+
+The summary must synthesize ALL of the following data into a cohesive, professional narrative. Cover every section that has data available. Do NOT skip any section.
+</TASK>
+
+<CONTEXT>
+SUBJECT PROPERTY:
+- Address: ${property.address}
+- City: ${property.city || 'Unknown'}, ${property.state || ''}
+- Configuration: ${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, sleeps ${property.accommodates}
+
+REVENUE PROJECTIONS:
+- Projected Annual Revenue: $${revenue.annual.toLocaleString()}
+${revenue.range ? `- Revenue Range: $${revenue.range.low.toLocaleString()} – $${revenue.range.high.toLocaleString()}` : ''}
+- Average Nightly Rate (ADR): $${revenue.nightly.toLocaleString()}
+- Projected Occupancy Rate: ${(occRate * 100).toFixed(0)}%
+- Revenue Per Available Night (RevPAR): $${revpar.toFixed(0)}
+- Monthly Average: $${revenue.monthly.toLocaleString()}
+${forecastSection}
+
+MARKET DATA:
+- Market: ${marketData?.name || 'Local Market'}
+- Active Listings: ${marketData?.listingCount?.toLocaleString() || 'N/A'}
+- Market Avg Revenue: $${marketData?.revenue?.toLocaleString() || 'N/A'}
+- Market Avg Occupancy: ${marketData ? (marketData.occupancy > 1 ? marketData.occupancy : marketData.occupancy * 100).toFixed(0) + '%' : 'N/A'}
+- Market Avg ADR: $${marketData?.adr?.toLocaleString() || 'N/A'}
+${marketData?.marketScore ? `- Market Score: ${marketData.marketScore}/100` : ''}
+${historicalSection}
+${bedroomSection}
+${percentilesSection}
+
+COMPETITION:
+- ${compCount} comparable properties analyzed
+${compCount > 0 ? `- Top Performer Revenue: $${topCompRevenue.toLocaleString()}
+- Average Comp Revenue: $${Math.round(avgCompRevenue).toLocaleString()}
+- Average Comp Rating: ${avgCompRating.toFixed(1)} stars` : ''}
+${rentalSection}
+${purchaseSection}
+</CONTEXT>
+
+<FORMAT>
+Write the summary in Markdown format with the following structure:
+
+## Executive Summary
+
+Start with a brief overview paragraph that introduces the property and the key finding.
+
+### Revenue Outlook
+Discuss the revenue projections, how they compare to the market, where the property falls in the revenue distribution, and the seasonality pattern.
+
+### Market Position
+Analyze the market context — how healthy is the market, how does this property compare to the market averages, and what the bedroom performance data shows about demand for this property type.
+
+### Competitive Landscape
+Summarize the competition — how many comps were analyzed, how this property compares to the top performers and the average, and what the ratings tell us.
+
+${rentalArbitrage?.monthlyRent ? `### Rental Arbitrage Analysis
+Discuss the rental arbitrage scenario — monthly profit potential, break-even occupancy, startup cost recovery timeline, and the occupancy cushion.` : ''}
+
+${purchase?.purchasePrice ? `### Purchase Investment Analysis
+Discuss the purchase scenario — cap rate, cash-on-cash return, DSCR, monthly cash flow, and what these metrics indicate about the investment.` : ''}
+
+### Key Takeaways
+End with 3-4 bullet points summarizing the most important findings. These should be factual observations, NOT recommendations.
+
+CRITICAL RULES:
+- Do NOT give investment advice or tell the reader what to do
+- Do NOT use phrases like "I recommend", "you should", "this is a good/bad investment"
+- Present data and observations only — let the reader draw their own conclusions
+- Use simple, beginner-friendly language — explain any financial terms
+- Be specific with numbers — always cite the actual data
+- Write in a warm, professional tone
+- Use bold for key numbers and metrics
+</FORMAT>`;
+
+  try {
+    const response = await callGeminiMax(prompt);
+    return response.trim();
+  } catch (error) {
+    console.error('Error generating full report summary:', error);
+    // Fallback to the simpler function
+    try {
+      const fallbackResponse = await callGemini(prompt, { maxTokens: 4096, thinkingLevel: 'medium' });
+      return fallbackResponse.trim();
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      return '';
+    }
+  }
+}

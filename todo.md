@@ -9878,3 +9878,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Replace all #1A1A1A with #0F172A to match main app navy color (89 instances)
 - [x] Ensure font-serif and font-sans usage matches rest of app
 - [x] Verify InsightBox, StatCard, DataRow colors match brand palette (updated to navy/gold)
+
+### AI Summary - Switch to Gemini 3 API
+- [x] Audit current AI summary generation in sharedReports.create (already uses Gemini 3 Pro)
+- [x] Enhanced AI summary with comprehensive generateFullReportSummary using Gemini 3 Pro (callGeminiMax)
+- [x] Verify report accuracy end-to-end with Richardson TX address
+
+### Report Regeneration Feature
+- [x] Build server-side sharedReports.regenerate endpoint
+- [ ] Add regenerate button to report UI (admin only) — deferred
+- [x] Regenerate existing client report (l6984fncmlf7nhnx)
+- [x] Test new report generation end-to-end

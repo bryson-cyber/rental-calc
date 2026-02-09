@@ -153,11 +153,20 @@ interface PurchaseScenario {
 
 interface HistoricalData {
   summary: {
-    monthly_pct_change: number;
-    yearly_pct_change: number;
-    trend: 'up' | 'down' | 'stable';
+    monthly_pct_change?: number;
+    yearly_pct_change?: number;
+    yoy_revenue_change?: number;
+    yoy_occupancy_change?: number;
+    yoy_adr_change?: number;
+    trend?: 'up' | 'down' | 'stable' | string;
   };
-  months: Array<{
+  months?: Array<{
+    date: string;
+    revenue: number;
+    occupancy?: number;
+    adr?: number;
+  }>;
+  monthly?: Array<{
     date: string;
     revenue: number;
     occupancy?: number;
@@ -690,13 +699,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
                   label="YoY Revenue Change"
-                  value={`${historical_data.summary.yearly_pct_change > 0 ? '+' : ''}${historical_data.summary.yearly_pct_change.toFixed(1)}%`}
-                  icon={historical_data.summary.trend === 'up' ? TrendingUp : historical_data.summary.trend === 'down' ? TrendingDown : BarChart3}
-                  highlight={historical_data.summary.trend === 'up'}
+                  value={`${(historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0) > 0 ? '+' : ''}${(historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0).toFixed(1)}%`}
+                  icon={(() => { const change = historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0; const trend = historical_data.summary.trend || (change > 2 ? 'up' : change < -2 ? 'down' : 'stable'); return trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : BarChart3; })()}
+                  highlight={(() => { const change = historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0; return (historical_data.summary.trend || (change > 2 ? 'up' : 'stable')) === 'up'; })()}
                 />
                 <StatCard
                   label="Market Trend"
-                  value={historical_data.summary.trend === 'up' ? 'Growing' : historical_data.summary.trend === 'down' ? 'Declining' : 'Stable'}
+                  value={(() => { const change = historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0; const trend = historical_data.summary.trend || (change > 2 ? 'up' : change < -2 ? 'down' : 'stable'); return trend === 'up' ? 'Growing' : trend === 'down' ? 'Declining' : 'Stable'; })()}
                   icon={BarChart3}
                 />
               </div>
