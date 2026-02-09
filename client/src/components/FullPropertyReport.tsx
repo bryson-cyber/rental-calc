@@ -886,25 +886,41 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     <tr key={comp.id || i} className="border-b border-[#e2e8f0] hover:bg-[#C9A962]/5 transition-colors">
                       <td className="p-4 text-[#94a3b8] font-medium">{i + 1}</td>
                       <td className="p-4">
-                        <div>
-                          <p className="font-medium text-[#1e293b] truncate max-w-[200px]">
-                            {comp.title}
-                          </p>
-                          <p className="text-xs text-[#94a3b8] mt-0.5">
-                            {comp.bedrooms}BR / {comp.bathrooms}BA
-                            {comp.distance_meters && ` · ${(comp.distance_meters / 1609.34).toFixed(1)} mi away`}
-                          </p>
-                          {comp.airbnb_url && (
-                            <a
-                              href={comp.airbnb_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#C9A962]/10 text-[#C9A962] hover:bg-[#C9A962]/20 transition-colors border border-[#C9A962]/20"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              View Listing
-                            </a>
+                        <div className="flex items-start gap-3">
+                          {comp.image_url ? (
+                            <img
+                              src={comp.image_url}
+                              alt={comp.title}
+                              className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-[#e2e8f0]"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-12 rounded-lg bg-[#f1f5f9] flex items-center justify-center flex-shrink-0 border border-[#e2e8f0]">
+                              <Building className="w-5 h-5 text-[#94a3b8]" />
+                            </div>
                           )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-[#1e293b] truncate max-w-[200px]">
+                              {comp.title}
+                            </p>
+                            <p className="text-xs text-[#94a3b8] mt-0.5">
+                              {comp.bedrooms}BR / {comp.bathrooms}BA
+                              {comp.distance_meters && ` · ${(comp.distance_meters / 1609.34).toFixed(1)} mi away`}
+                            </p>
+                            {comp.airbnb_url && (
+                              <a
+                                href={comp.airbnb_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#C9A962]/10 text-[#C9A962] hover:bg-[#C9A962]/20 transition-colors border border-[#C9A962]/20"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                View Listing
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 text-right font-semibold text-[#1e293b]">{formatCurrency(comp.annual_revenue)}</td>

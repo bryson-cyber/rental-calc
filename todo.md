@@ -9971,3 +9971,9 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Bug Fix (Feb 9, 2026) - Map View Not Showing Comps
 - [x] Debug: Map view on report page not displaying comparable property markers
 - [x] Fix CompsMapView to properly render comp markers with coordinates (root cause: production report data had null lat/lng, regenerated with fresh data)
+
+## Comp Photo Thumbnails (Feb 9, 2026)
+- [x] Add property photo thumbnails to competition table comp rows
+- [x] Display thumbnail next to comp title in the competition section
+- [x] Handle missing/broken images gracefully with Building icon fallback
+- [x] Ensure thumbnails are responsive and don't break table layout
