@@ -49,14 +49,19 @@ import {
   ChevronDown,
   ChevronUp,
   Award,
-  Eye
+  Eye,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart } from './RevenueCharts';
 import { CompsMapView } from './CompsMapView';
 import { MapView } from './Map';
+import { StreetViewPanorama } from './StreetViewPanorama';
 import { toast } from 'sonner';
 import { Streamdown } from 'streamdown';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
 
 // ============================================================
 // TYPES
@@ -336,6 +341,32 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   const [activeSection, setActiveSection] = useState('overview');
   const [copied, setCopied] = useState(false);
   const [showStreetView, setShowStreetView] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
+
+  const regenerateMutation = trpc.sharedReports.regenerate.useMutation({
+    onSuccess: (result) => {
+      setIsRegenerating(false);
+      if (result.success) {
+        toast.success('Report regenerated with fresh data. Reloading...');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast.error(result.error || 'Failed to regenerate report');
+      }
+    },
+    onError: (err) => {
+      setIsRegenerating(false);
+      toast.error(err.message || 'Failed to regenerate report');
+    },
+  });
+
+  const handleRegenerate = () => {
+    if (!shareId || isRegenerating) return;
+    setIsRegenerating(true);
+    regenerateMutation.mutate({ shareId });
+  };
 
   const {
     property,
@@ -457,15 +488,33 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </button>
             )}
             {!onBack && <div />}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyLink}
-              className="gap-2 border-[#C9A962]/40 text-[#C9A962] hover:bg-[#C9A962]/10"
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy Link'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && shareId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating}
+                  className="gap-2 border-[#1e293b]/20 text-[#1e293b] hover:bg-[#1e293b]/5"
+                >
+                  {isRegenerating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyLink}
+                className="gap-2 border-[#C9A962]/40 text-[#C9A962] hover:bg-[#C9A962]/10"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied!' : 'Copy Link'}
+              </Button>
+            </div>
           </div>
 
           {/* Branding */}
@@ -582,24 +631,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <div className="h-[350px]">
                 {property.latitude && property.longitude ? (
                   showStreetView ? (
-                    <MapView
-                      className="w-full h-full"
-                      onMapReady={(map) => {
-                        const panorama = new google.maps.StreetViewPanorama(
-                          map.getDiv(),
-                          {
-                            position: { lat: property.latitude!, lng: property.longitude! },
-                            pov: { heading: 0, pitch: 0 },
-                            zoom: 1,
-                            addressControl: false,
-                            fullscreenControl: true,
-                          }
-                        );
-                        map.setStreetView(panorama);
-                      }}
+                    <StreetViewPanorama
+                      lat={property.latitude!}
+                      lng={property.longitude!}
                     />
                   ) : (
                     <MapView
+                      key="property-map"
                       className="w-full h-full"
                       onMapReady={(map) => {
                         map.setCenter({ lat: property.latitude!, lng: property.longitude! });

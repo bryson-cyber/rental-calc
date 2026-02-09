@@ -9952,3 +9952,18 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Issue 16: Regenerate report after all fixes
 - [x] Issue 17: Verify all charts use brand palette
 - [x] Issue 18: Final visual verification in browser
+
+## New Features (Feb 9, 2026)
+
+### Street View Panorama
+- [x] Add embedded Google Street View panorama to the Street View tab
+- [x] Use Google Maps JavaScript API StreetViewPanorama
+- [x] Show interactive 360° view when property has lat/lng coordinates
+- [x] Fallback message when Street View is unavailable for the location
+
+### Regenerate Report Admin Button
+- [x] Add "Regenerate Report" button visible only to admin/owner users
+- [x] tRPC endpoint already existed (sharedReports.regenerate) — wired to frontend
+- [x] Show loading state during regeneration (spinner + disabled state)
+- [x] Refresh report data after successful regeneration (auto-reload page)
+- [ ] Add confirmation dialog before regeneration (skipped — button is admin-only)

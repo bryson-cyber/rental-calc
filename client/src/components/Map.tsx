@@ -95,7 +95,7 @@ const FORGE_BASE_URL =
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
-async function loadMapScript(): Promise<void> {
+export async function loadMapScript(): Promise<void> {
   // If already loaded, return immediately
   if (window.__googleMapsLoaded && window.google?.maps) {
     // Ensure libraries are also loaded
