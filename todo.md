@@ -9849,3 +9849,32 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Reproduce Step 5 bug (button disabled due to empty monthlyRent state)
 - [x] Diagnose root cause (placeholder '2000' not same as actual value)
 - [x] Fix and verify end-to-end (initialized monthlyRent to '2000', full results load for Denver)
+
+### Report Page Bugs (Feb 9, 2026) - Client Report l6984fncmlf7nhnx
+- [ ] Fix Location showing "TX 75082, TX 75082" instead of proper city/state
+- [ ] Fix Market showing "Local Market" placeholder instead of actual market name
+- [ ] Fix Active Listings showing "0" - market data not being stored/fetched
+- [ ] Fix "Your Property vs Market Average" showing identical values (copies property data)
+- [ ] Fix Map showing "Map not available" on report page
+- [ ] Fix chart X-axis labels truncated to "202" instead of full month names
+- [ ] Fix Competition table showing 4BR comps for 5BR property
+- [ ] Fix Executive Summary echoing bad data ("Local Market", "0 listings")
+- [ ] Fix UI inconsistency: report page white theme vs app dark navy theme
+- [ ] Fix competition table missing property images/thumbnails
+- [ ] Fix chart colors to match app palette (gold/navy/teal)
+- [ ] Fix footer branding icons unclear
+
+## Report Data & UI Fixes (Feb 9, 2026)
+
+### Data Pipeline - Ensure all report fields are always populated
+- [x] Fix market_data: must always have real market name, listing_count, and actual market metrics (not property metrics)
+- [x] Fix bedroom_performance: must always be populated from AirDNA bedroom data
+- [x] Fix historical_data: must always be populated from AirDNA historical endpoint
+- [x] Fix ai_summary: must always be populated from Gemini AI
+- [x] Fix revenue_percentiles: must always be populated from market data
+- [x] Trace full data flow: server → LeadMagnet.tsx → BuildFullReportButton → stored report
+
+### UI Consistency - Match main app design system
+- [x] Replace all #1A1A1A with #0F172A to match main app navy color (89 instances)
+- [x] Ensure font-serif and font-sans usage matches rest of app
+- [x] Verify InsightBox, StatCard, DataRow colors match brand palette (updated to navy/gold)

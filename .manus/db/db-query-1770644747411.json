@@ -1,0 +1,14 @@
+{
+  "query": "SELECT shareId, LEFT(reportData, 500) as data_preview FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, LEFT(reportData, 500) as data_preview FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "rows": [
+    {
+      "shareId": "l6984fncmlf7nhnx",
+      "data_preview": "{\"property\":{\"address\":\"2680 Carnation Dr Richardson, TX 75082\",\"city\":\"TX 75082\",\"state\":\"TX\",\"zipCode\":\"75082\",\"bedrooms\":5,\"bathrooms\":4,\"accommodates\":10},\"revenue_estimate\":{\"annual\":74337,\"monthly\":6194.75,\"nightly\":349,\"occupancy\":0.58,\"range\":{\"low\":70790,\"high\":77883}},\"monthly_forecast\":[{\"month\":\"2026-02\",\"revenue\":4486,\"occupancy\":0.61,\"adr\":263.92},{\"month\":\"2026-03\",\"revenue\":8579,\"occupancy\":0.83,\"adr\":334.71},{\"month\":\"2026-04\",\"revenue\":6932,\"occupancy\":0.64,\"adr\":362.09},{\"mont"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\tdata_preview\nl6984fncmlf7nhnx\t{\"property\":{\"address\":\"2680 Carnation Dr Richardson, TX 75082\",\"city\":\"TX 75082\",\"state\":\"TX\",\"zipCode\":\"75082\",\"bedrooms\":5,\"bathrooms\":4,\"accommodates\":10},\"revenue_estimate\":{\"annual\":74337,\"monthly\":6194.75,\"nightly\":349,\"occupancy\":0.58,\"range\":{\"low\":70790,\"high\":77883}},\"monthly_forecast\":[{\"month\":\"2026-02\",\"revenue\":4486,\"occupancy\":0.61,\"adr\":263.92},{\"month\":\"2026-03\",\"revenue\":8579,\"occupancy\":0.83,\"adr\":334.71},{\"month\":\"2026-04\",\"revenue\":6932,\"occupancy\":0.64,\"adr\":362.09},{\"mont\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

@@ -157,8 +157,23 @@ export function BuildFullReportButton({
       const fullReportData: FullReportData = {
         property: {
           address,
-          city: city || address.split(',')[1]?.trim() || 'Unknown',
-          state: state || address.split(',').slice(-1)[0]?.trim().split(' ')[0] || '',
+          city: city || (() => {
+            // Handle addresses like "123 Main St Richardson, TX 75082" (single comma)
+            const parts = address.split(',');
+            if (parts.length >= 3) return parts[1]?.trim();
+            // Single comma: the state part is after comma, city is the last word before comma
+            const beforeComma = parts[0]?.trim() || '';
+            const words = beforeComma.split(/\s+/);
+            // For "2680 Carnation Dr Richardson" -> "Richardson"
+            return words.length > 2 ? words[words.length - 1] : 'Unknown';
+          })(),
+          state: state || (() => {
+            const parts = address.split(',');
+            const lastPart = parts[parts.length - 1]?.trim() || '';
+            // Extract state abbreviation (2 uppercase letters)
+            const stateMatch = lastPart.match(/\b([A-Z]{2})\b/);
+            return stateMatch ? stateMatch[1] : lastPart.split(' ')[0] || '';
+          })(),
           zipCode: zipCode || address.match(/\d{5}/)?.[0] || '',
           bedrooms,
           bathrooms,

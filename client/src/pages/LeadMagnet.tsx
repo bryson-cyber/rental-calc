@@ -193,6 +193,29 @@ interface AnalysisResult {
     marketScore?: number;
   };
   marketId?: string | number;  // For MarketInsightsPanel
+  // Raw server data for full report generation
+  rawMarketData?: {
+    name: string;
+    metrics: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      active_listings: number;
+      market_score?: number;
+    };
+    listing_count: number;
+  };
+  bedroomPerformance?: Array<{
+    bedrooms: number;
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    listing_count: number;
+  }>;
+  revenuePercentiles?: {
+    p10: number; p25: number; p50: number; p75: number; p90: number;
+  };
 }
 
 interface BulkPropertyInput {
@@ -1425,6 +1448,37 @@ export default function LeadMagnet() {
               trend: yoyChange > 2 ? 'up' as const : yoyChange < -2 ? 'down' as const : 'stable' as const,
             },
             months,
+          };
+        })(),
+        // Raw market data for full report (actual market averages, not property metrics)
+        rawMarketData: data.market ? {
+          name: data.market.name || 'Local Market',
+          metrics: {
+            occupancy: data.market.metrics?.occupancy || 0,
+            adr: data.market.metrics?.adr || 0,
+            revenue: data.market.metrics?.revenue || 0,
+            revpar: data.market.metrics?.revpar || 0,
+            active_listings: data.market.metrics?.active_listings || data.market.listing_count || 0,
+            market_score: data.market.metrics?.market_score,
+          },
+          listing_count: data.market.listing_count || 0,
+        } : undefined,
+        // Bedroom performance data from server
+        bedroomPerformance: data.bedroom_performance || [],
+        // Revenue percentiles from comps (use same_bedroom_comps first, fall back to rentalizer comps)
+        revenuePercentiles: (() => {
+          const sameComps = data.same_bedroom_comps || [];
+          const allComps = sameComps.length >= 5 ? sameComps : (data.property?.comps || []);
+          if (allComps.length < 5) return undefined;
+          const revenues = allComps.map((c: any) => c.annual_revenue || 0).filter((r: number) => r > 0).sort((a: number, b: number) => a - b);
+          if (revenues.length < 5) return undefined;
+          const percentile = (arr: number[], p: number) => arr[Math.floor(arr.length * p / 100)] || 0;
+          return {
+            p10: percentile(revenues, 10),
+            p25: percentile(revenues, 25),
+            p50: percentile(revenues, 50),
+            p75: percentile(revenues, 75),
+            p90: percentile(revenues, 90),
           };
         })(),
       });
@@ -5534,17 +5588,30 @@ export default function LeadMagnet() {
                     adr: f.adr,
                   }))}
                   comps={result.comparables}
-                  marketData={result.marketInsights ? {
-                    name: myProperty?.city || address.split(',')[0],
+                  sameBedComps={result.comparables}
+                  marketData={result.rawMarketData || (result.marketInsights ? {
+                    name: myProperty?.city || (() => {
+                      // Better city extraction: handle "123 Main St City, ST 12345" format
+                      const parts = address.split(',');
+                      if (parts.length >= 3) return parts[1]?.trim();
+                      // Single comma: extract from before comma, removing street prefix
+                      const beforeComma = parts[0]?.trim() || '';
+                      const words = beforeComma.split(/\s+/);
+                      // Last word before comma is usually the city (after street name)
+                      return words.length > 3 ? words.slice(-1)[0] : 'Local Market';
+                    })(),
                     metrics: {
                       occupancy: result.metrics.occupancy / 100,
                       adr: result.metrics.adr,
                       revenue: result.revenue.projected,
                       revpar: result.metrics.adr * (result.metrics.occupancy / 100),
                       active_listings: result.marketInsights.totalListings || 0,
+                      market_score: result.marketInsights.marketScore,
                     },
                     listing_count: result.marketInsights.totalListings || 0,
-                  } : undefined}
+                  } : undefined)}
+                  bedroomPerformance={result.bedroomPerformance}
+                  revenuePercentiles={result.revenuePercentiles}
                   historicalData={result.historicalData}
                   monthlyRent={globalMode === 'rent' ? (parseFloat(monthlyRent) || undefined) : undefined}
                   purchasePrice={globalMode === 'purchase' ? myProperty?.purchasePrice : undefined}

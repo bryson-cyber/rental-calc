@@ -1,0 +1,8 @@
+{
+  "query": "SELECT shareId, JSON_EXTRACT(report_data, '$.market_data') as market_data, JSON_EXTRACT(report_data, '$.bedroom_performance') as bedroom_perf, JSON_EXTRACT(report_data, '$.ai_summary') as ai_summary FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, JSON_EXTRACT(report_data, '$.market_data') as market_data, JSON_EXTRACT(report_data, '$.bedroom_performance') as bedroom_perf, JSON_EXTRACT(report_data, '$.ai_summary') as ai_summary FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'report_data' in 'field list'"
+  ]
+}

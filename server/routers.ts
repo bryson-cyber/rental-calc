@@ -5339,10 +5339,59 @@ export const appRouter = router({
           ? new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000)
           : null;
         
+        // Generate AI summary if not provided and this is a full property report
+        let reportData = typeof input.reportData === 'object' ? input.reportData : (typeof input.reportData === 'string' ? JSON.parse(input.reportData) : input.reportData);
+        if (input.reportType === 'full' && reportData && !reportData.ai_summary) {
+          try {
+            console.log('[SharedReport] Generating AI summary for report...');
+            const aiSummary = await generateEnhancedPropertyReport(
+              input.address || reportData.property?.address || 'Unknown Address',
+              {
+                property: {
+                  address: input.address || reportData.property?.address,
+                  bedrooms: input.bedrooms || reportData.property?.bedrooms,
+                  bathrooms: input.bathrooms || reportData.property?.bathrooms,
+                  accommodates: input.accommodates || reportData.property?.accommodates,
+                },
+                revenue: {
+                  annual: reportData.revenue_estimate?.annual || 0,
+                  monthly: reportData.revenue_estimate?.monthly || 0,
+                  nightly: reportData.revenue_estimate?.nightly || 0,
+                  occupancy: reportData.revenue_estimate?.occupancy || 0,
+                  range: reportData.revenue_estimate?.range,
+                },
+                marketData: {
+                  name: reportData.market_data?.name || 'Local Market',
+                  occupancy: reportData.market_data?.metrics?.occupancy || 0,
+                  adr: reportData.market_data?.metrics?.adr || 0,
+                  revenue: reportData.market_data?.metrics?.revenue || 0,
+                  listingCount: reportData.market_data?.listing_count || 0,
+                },
+                competitors: (reportData.comps || []).slice(0, 10).map((c: any) => ({
+                  name: c.title || 'Competitor',
+                  revenue: c.annual_revenue || 0,
+                  adr: c.adr || 0,
+                  occupancy: c.occupancy || 0,
+                  rating: c.rating ?? undefined,
+                })),
+                rentalArbitrage: reportData.rental_arbitrage,
+                purchase: reportData.purchase,
+              }
+            );
+            if (aiSummary && aiSummary !== 'Unable to generate property report at this time.') {
+              reportData = { ...reportData, ai_summary: aiSummary };
+              console.log('[SharedReport] AI summary generated successfully');
+            }
+          } catch (e) {
+            console.error('[SharedReport] Failed to generate AI summary:', e);
+            // Continue without AI summary - the report will use the auto-generated fallback
+          }
+        }
+        
         // Serialize reportData to JSON string for text column
-        const reportDataStr = typeof input.reportData === 'string' 
-          ? input.reportData 
-          : JSON.stringify(input.reportData);
+        const reportDataStr = typeof reportData === 'string' 
+          ? reportData 
+          : JSON.stringify(reportData);
         
         await db.insert(sharedReports).values({
           shareId,

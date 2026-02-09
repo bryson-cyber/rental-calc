@@ -2662,13 +2662,49 @@ export async function getComprehensivePropertyReport(
   // If no market_id from rentalizer, search for it
   if (!marketId) {
     // Try to extract city and state from address for market search
+    // Handles multiple formats:
+    //   "123 Main St, City, ST 12345" (standard Google Places)
+    //   "123 Main St City, ST 12345" (single comma before state)
+    //   "123 Main St, City, State, USA"
     const cityMatch = address.match(/,\s*([^,]+),\s*([A-Z]{2})/);
-    const searchTerm = cityMatch ? cityMatch[1].trim() : address.split(',')[1]?.trim() || address;
-    const stateFromAddress = cityMatch ? cityMatch[2] : null;
     
-    // Also try to extract state from zip code pattern
+    // Also try to extract state from zip code pattern (handles "City, ST 12345")
     const stateFromZip = address.match(/,\s*([A-Z]{2})\s*\d{5}/)?.[1];
+    const stateFromAddress = cityMatch ? cityMatch[2] : null;
     const state = stateFromAddress || stateFromZip;
+    
+    let searchTerm: string;
+    if (cityMatch) {
+      // Standard format: "..., City, ST ..."
+      searchTerm = cityMatch[1].trim();
+    } else if (stateFromZip) {
+      // Single comma format: "123 Main St City, ST 12345"
+      // Extract city name from the part before the comma
+      const beforeComma = address.split(',')[0]?.trim() || '';
+      // Try to extract city: it's usually the last word(s) before the comma
+      // Remove street number and street name patterns
+      const cityFromStreet = beforeComma
+        .replace(/^\d+\s+/, '') // Remove leading street number
+        .replace(/^(N|S|E|W|NE|NW|SE|SW)\.?\s+/i, '') // Remove direction prefix
+        .replace(/^\S+\s+(St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Rd|Road|Ln|Lane|Way|Ct|Court|Pl|Place|Cir|Circle|Pkwy|Parkway|Hwy|Highway|Ter|Terrace)\.?\s+/i, '') // Remove "StreetName St" pattern
+        .trim();
+      // If we got something reasonable, use it; otherwise fall back to address_lookup from rentalizer
+      searchTerm = cityFromStreet || address.split(',')[1]?.trim()?.replace(/\s*\d{5}.*/, '').replace(/^[A-Z]{2}\s*/, '') || address;
+      console.log('[Market Search] Single-comma format detected. Extracted city from street:', cityFromStreet);
+    } else {
+      searchTerm = address.split(',')[1]?.trim() || address;
+    }
+    
+    // Also try using address_lookup from rentalizer (usually has normalized city name)
+    const addressLookup = propertyEstimate.property.address_lookup;
+    if (addressLookup && (!searchTerm || searchTerm.match(/^[A-Z]{2}\s*\d{5}/))) {
+      // address_lookup is usually like "Richardson, TX" or "Richardson, Texas"
+      const lookupCity = addressLookup.split(',')[0]?.trim();
+      if (lookupCity && lookupCity.length > 2) {
+        searchTerm = lookupCity;
+        console.log('[Market Search] Using address_lookup city:', searchTerm);
+      }
+    }
     
     console.log('[Market Search] Extracted city:', searchTerm, 'state:', state);
     
@@ -2884,7 +2920,7 @@ export async function getComprehensivePropertyReport(
   sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 10);
   
   // Step 5: Get bedroom performance data from comps in radius
-  const bedroomPerformance: Array<{
+  let bedroomPerformance: Array<{
     bedrooms: number;
     occupancy: number;
     adr: number;
@@ -2894,19 +2930,101 @@ export async function getComprehensivePropertyReport(
   
   // Get listings for different bedroom counts from radius comps
   for (let br = 1; br <= 5; br++) {
-    const listings = await exploreListingsInRadius(address, 5000, { bedrooms: br }, 100);
-    if (listings.length > 0) {
-      const avgRevenue = listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length;
-      const avgAdr = listings.reduce((sum, l) => sum + l.adr, 0) / listings.length;
-      const avgOccupancy = listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length;
-      
-      bedroomPerformance.push({
-        bedrooms: br,
-        occupancy: Math.round(avgOccupancy),
-        adr: Math.round(avgAdr),
-        revenue: Math.round(avgRevenue),
-        listing_count: listings.length,
+    try {
+      const listings = await exploreListingsInRadius(address, 5000, { bedrooms: br }, 100);
+      if (listings.length > 0) {
+        const avgRevenue = listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length;
+        const avgAdr = listings.reduce((sum, l) => sum + l.adr, 0) / listings.length;
+        const avgOccupancy = listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length;
+        
+        bedroomPerformance.push({
+          bedrooms: br,
+          occupancy: Math.round(avgOccupancy),
+          adr: Math.round(avgAdr),
+          revenue: Math.round(avgRevenue),
+          listing_count: listings.length,
+        });
+      }
+    } catch (e) {
+      console.log(`[Bedroom Performance] Radius search failed for ${br}BR, will use fallback`);
+    }
+  }
+  
+  // Fallback: If radius search returned no bedroom performance data, calculate from available comps
+  if (bedroomPerformance.length === 0) {
+    console.log('[Bedroom Performance] Radius search returned no data, using rentalizer comps + market listings fallback');
+    
+    // Combine all available comps (rentalizer + radius)
+    const allComps = [...rentalizerComps, ...sameBedroomComps];
+    
+    // Also try market listings if we have a market ID
+    if (marketId) {
+      try {
+        const { listings: marketListings } = await getMarketListings(marketId, { 
+          limit: 500, 
+          orderBy: 'revenue', 
+          orderDirection: 'desc' 
+        });
+        if (marketListings.length > 0) {
+          // Group market listings by bedroom count
+          const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
+          marketListings.forEach(l => {
+            const br = l.bedrooms;
+            if (br >= 1 && br <= 8) {
+              const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
+              brMap.set(br, {
+                count: existing.count + 1,
+                totalRev: existing.totalRev + l.annual_revenue,
+                totalAdr: existing.totalAdr + l.adr,
+                totalOcc: existing.totalOcc + l.occupancy,
+              });
+            }
+          });
+          
+          bedroomPerformance = Array.from(brMap.entries())
+            .map(([br, data]) => ({
+              bedrooms: br,
+              occupancy: Math.round(data.totalOcc / data.count),
+              adr: Math.round(data.totalAdr / data.count),
+              revenue: Math.round(data.totalRev / data.count),
+              listing_count: data.count,
+            }))
+            .sort((a, b) => a.bedrooms - b.bedrooms);
+          
+          console.log(`[Bedroom Performance] Calculated from ${marketListings.length} market listings: ${bedroomPerformance.length} bedroom types`);
+        }
+      } catch (e) {
+        console.log('[Bedroom Performance] Market listings fallback also failed');
+      }
+    }
+    
+    // Last resort: calculate from all available comps
+    if (bedroomPerformance.length === 0 && allComps.length > 0) {
+      const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
+      allComps.forEach(l => {
+        const br = l.bedrooms;
+        if (br >= 1 && br <= 8) {
+          const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
+          brMap.set(br, {
+            count: existing.count + 1,
+            totalRev: existing.totalRev + l.annual_revenue,
+            totalAdr: existing.totalAdr + l.adr,
+            totalOcc: existing.totalOcc + l.occupancy,
+          });
+        }
       });
+      
+      bedroomPerformance = Array.from(brMap.entries())
+        .map(([br, data]) => ({
+          bedrooms: br,
+          occupancy: Math.round(data.totalOcc / data.count),
+          adr: Math.round(data.totalAdr / data.count),
+          revenue: Math.round(data.totalRev / data.count),
+          listing_count: data.count,
+        }))
+        .sort((a, b) => a.bedrooms - b.bedrooms);
+      
+      console.log(`[Bedroom Performance] Calculated from ${allComps.length} available comps: ${bedroomPerformance.length} bedroom types`);
     }
   }
   

@@ -1,0 +1,20 @@
+{
+  "query": "SELECT shareId, reportType, address, bedrooms, bathrooms, LENGTH(reportData) as dataLength, createdAt, viewCount FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, reportType, address, bedrooms, bathrooms, LENGTH(reportData) as dataLength, createdAt, viewCount FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx' LIMIT 1;",
+  "rows": [
+    {
+      "shareId": "l6984fncmlf7nhnx",
+      "reportType": "full",
+      "address": "2680 Carnation Dr Richardson, TX 75082",
+      "bedrooms": "5",
+      "bathrooms": "4.0",
+      "dataLength": "7812",
+      "createdAt": "2026-02-09 13:31:25",
+      "viewCount": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\treportType\taddress\tbedrooms\tbathrooms\tdataLength\tcreatedAt\tviewCount\nl6984fncmlf7nhnx\tfull\t2680 Carnation Dr Richardson, TX 75082\t5\t4.0\t7812\t2026-02-09 13:31:25\t3\n",
+  "stderr": "",
+  "execution_time_ms": 872
+}

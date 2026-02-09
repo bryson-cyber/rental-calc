@@ -1,0 +1,26 @@
+{
+  "query": "SELECT shareId, reportType, address, marketId, marketName, submarketId, submarketName, bedrooms, bathrooms, latitude, longitude, LENGTH(reportData) as data_length, viewCount, createdAt FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, reportType, address, marketId, marketName, submarketId, submarketName, bedrooms, bathrooms, latitude, longitude, LENGTH(reportData) as data_length, viewCount, createdAt FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx';",
+  "rows": [
+    {
+      "shareId": "l6984fncmlf7nhnx",
+      "reportType": "full",
+      "address": "2680 Carnation Dr Richardson, TX 75082",
+      "marketId": "NULL",
+      "marketName": "NULL",
+      "submarketId": "NULL",
+      "submarketName": "NULL",
+      "bedrooms": "5",
+      "bathrooms": "4.0",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "data_length": "7812",
+      "viewCount": "3",
+      "createdAt": "2026-02-09 13:31:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\treportType\taddress\tmarketId\tmarketName\tsubmarketId\tsubmarketName\tbedrooms\tbathrooms\tlatitude\tlongitude\tdata_length\tviewCount\tcreatedAt\nl6984fncmlf7nhnx\tfull\t2680 Carnation Dr Richardson, TX 75082\tNULL\tNULL\tNULL\tNULL\t5\t4.0\tNULL\tNULL\t7812\t3\t2026-02-09 13:31:25\n",
+  "stderr": "",
+  "execution_time_ms": 140
+}
