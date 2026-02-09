@@ -9920,3 +9920,35 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Regenerate client report l6984fncmlf7nhnx with correct data (11/12 comps with coordinates)
 - [x] Verify map shows 11 numbered comp markers + YOUR PROPERTY marker
 - [x] Verify all 615 tests pass after fix
+
+## Report UI Overhaul (Feb 9, 2026)
+
+### Theme & Branding
+- [x] Issue 1: Replace dark navy header with light brand theme
+- [x] Issue 2: Restyle tab navigation to light theme with gold accents
+- [x] Issue 3: Fix footer branding — white-label "Coach Inayah market data"
+
+### Maps
+- [x] Issue 4: Fix Map View not rendering (deploy geocoding fix)
+- [x] Issue 5: Fix Comps map not visible (regenerate after deploy)
+
+### Chart Colors
+- [x] Issue 6: Monthly Revenue chart — replace green/orange/blue with brand colors
+- [x] Issue 7: Seasonality chart — replace green/orange/blue with brand colors
+- [x] Issue 8: Bedroom Performance chart — replace blue with brand colors
+- [x] Issue 9: Revenue Distribution chart — replace traffic-light with gold gradient
+
+### Data Accuracy
+- [x] Issue 10: Fix YoY Revenue Change showing 0% — map historical_valuation to historical_data
+- [x] Issue 11: Round Market Score to clean integer
+- [x] Issue 12: Fix AI summary echoing bad 0% YoY
+- [x] Issue 13: Fix AI summary showing unrounded market score
+
+### Competition UX
+- [x] Issue 14: Add dedicated "View Listing" button under comp titles
+- [x] Issue 15: Remove emoji from seasonality tooltips
+
+### Final Steps
+- [ ] Issue 16: Regenerate report after all fixes
+- [x] Issue 17: Verify all charts use brand palette
+- [ ] Issue 18: Final visual verification in browser

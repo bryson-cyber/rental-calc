@@ -12,6 +12,8 @@
  * 
  * Designed to be NON-PRESCRIPTIVE — presents data only, no investment advice.
  * Branded as Coach Inayah throughout.
+ * 
+ * LIGHT THEME — warm white backgrounds, gold (#C9A962) accents, navy text.
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -224,19 +226,19 @@ const formatMonth = (dateStr: string) => {
 };
 
 // ============================================================
-// SUB-COMPONENTS
+// SUB-COMPONENTS (Light Theme)
 // ============================================================
 
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-[#C9A962]/20 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-[#C9A962]/15 flex items-center justify-center">
           <Icon className="w-5 h-5 text-[#C9A962]" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#0F172A]">{title}</h2>
+        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#1e293b]">{title}</h2>
       </div>
-      {subtitle && <p className="text-[#0F172A]/60 ml-[52px]">{subtitle}</p>}
+      {subtitle && <p className="text-[#64748b] ml-[52px]">{subtitle}</p>}
     </div>
   );
 }
@@ -245,29 +247,29 @@ function StatCard({ label, value, sublabel, icon: Icon, highlight }: {
   label: string; value: string; sublabel?: string; icon?: any; highlight?: boolean;
 }) {
   return (
-    <div className={`rounded-xl p-5 ${highlight ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-white border border-[#0F172A]/10'}`}>
-      {Icon && <Icon className={`w-5 h-5 mb-2 ${highlight ? 'text-[#C9A962]' : 'text-[#0F172A]/40'}`} />}
-      <p className={`text-2xl font-serif font-bold ${highlight ? 'text-[#C9A962]' : 'text-[#0F172A]'}`}>{value}</p>
-      <p className="text-sm text-[#0F172A]/60 mt-1">{label}</p>
-      {sublabel && <p className="text-xs text-[#0F172A]/40 mt-0.5">{sublabel}</p>}
+    <div className={`rounded-xl p-5 ${highlight ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-white border border-[#e2e8f0]'}`}>
+      {Icon && <Icon className={`w-5 h-5 mb-2 ${highlight ? 'text-[#C9A962]' : 'text-[#94a3b8]'}`} />}
+      <p className={`text-2xl font-serif font-bold ${highlight ? 'text-[#C9A962]' : 'text-[#1e293b]'}`}>{value}</p>
+      <p className="text-sm text-[#64748b] mt-1">{label}</p>
+      {sublabel && <p className="text-xs text-[#94a3b8] mt-0.5">{sublabel}</p>}
     </div>
   );
 }
 
 function DataRow({ label, value, highlight }: { label: string; value: string | React.ReactNode; highlight?: boolean }) {
   return (
-    <div className={`flex justify-between items-center py-3 px-4 ${highlight ? 'bg-[#C9A962]/5' : ''} border-b border-[#0F172A]/5 last:border-0`}>
-      <span className="text-[#0F172A]/70 text-sm">{label}</span>
-      <span className={`font-medium ${highlight ? 'text-[#C9A962] font-bold' : 'text-[#0F172A]'}`}>{value}</span>
+    <div className={`flex justify-between items-center py-3 px-4 ${highlight ? 'bg-[#C9A962]/5' : ''} border-b border-[#e2e8f0] last:border-0`}>
+      <span className="text-[#64748b] text-sm">{label}</span>
+      <span className={`font-medium ${highlight ? 'text-[#C9A962] font-bold' : 'text-[#1e293b]'}`}>{value}</span>
     </div>
   );
 }
 
 function InsightBox({ children, type = 'info' }: { children: React.ReactNode; type?: 'info' | 'success' | 'warning' }) {
   const styles = {
-    info: 'bg-[#0F172A]/5 border-[#0F172A]/15 text-[#0F172A]',
-    success: 'bg-[#C9A962]/10 border-[#C9A962]/30 text-[#0F172A]',
-    warning: 'bg-amber-50/80 border-amber-200 text-[#0F172A]',
+    info: 'bg-[#f8fafc] border-[#e2e8f0] text-[#1e293b]',
+    success: 'bg-[#C9A962]/8 border-[#C9A962]/25 text-[#1e293b]',
+    warning: 'bg-amber-50/80 border-amber-200 text-[#1e293b]',
   };
   return (
     <div className={`rounded-xl p-4 border ${styles[type]} text-sm`}>
@@ -277,7 +279,7 @@ function InsightBox({ children, type = 'info' }: { children: React.ReactNode; ty
 }
 
 // ============================================================
-// SECTION NAVIGATION
+// SECTION NAVIGATION (Light Theme — pill tabs with gold active)
 // ============================================================
 
 const SECTIONS = [
@@ -303,7 +305,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase }: {
   });
 
   return (
-    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#0F172A]/10 py-3">
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#e2e8f0] py-3">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {visibleSections.map((section) => (
@@ -312,8 +314,8 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase }: {
               onClick={() => onSectionClick(section.id)}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                 activeSection === section.id
-                  ? 'bg-[#0F172A] text-white'
-                  : 'bg-[#0F172A]/5 text-[#0F172A]/70 hover:bg-[#0F172A]/10'
+                  ? 'bg-[#C9A962] text-white shadow-sm'
+                  : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#1e293b]'
               }`}
             >
               <section.icon className="w-4 h-4" />
@@ -442,14 +444,14 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
       {/* ============================================================ */}
-      {/* HEADER / TITLE PAGE */}
+      {/* HEADER / TITLE PAGE — LIGHT THEME */}
       {/* ============================================================ */}
-      <div className="bg-[#0F172A] text-white">
+      <div className="bg-white border-b border-[#e2e8f0]">
         <div className="max-w-5xl mx-auto px-4 py-12">
           {/* Top Bar */}
           <div className="flex items-center justify-between mb-10">
             {onBack && (
-              <button onClick={onBack} className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm">
+              <button onClick={onBack} className="inline-flex items-center gap-2 text-[#64748b] hover:text-[#1e293b] transition-colors text-sm">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
@@ -459,7 +461,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
-              className="gap-2 bg-transparent border-white/20 text-white hover:bg-white/10"
+              className="gap-2 border-[#C9A962]/40 text-[#C9A962] hover:bg-[#C9A962]/10"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied!' : 'Copy Link'}
@@ -468,56 +470,56 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Branding */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
               <Home className="w-5 h-5 text-[#C9A962]" />
             </div>
             <div>
               <span className="text-sm font-medium text-[#C9A962] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
-              <span className="text-white/40 text-sm ml-3">Full Property Report</span>
+              <span className="text-[#94a3b8] text-sm ml-3">Full Property Report</span>
             </div>
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4 leading-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-[#1e293b] mb-4 leading-tight">
             Comprehensive Investment Analysis
           </h1>
-          <p className="text-white/60 text-lg mb-2">
+          <p className="text-[#64748b] text-lg mb-2">
             {property.address}
           </p>
-          <div className="flex flex-wrap gap-4 text-sm text-white/50 mb-8">
+          <div className="flex flex-wrap gap-4 text-sm text-[#94a3b8] mb-8">
             <span>{property.bedrooms} BR / {property.bathrooms} BA / Sleeps {property.accommodates}</span>
-            <span>•</span>
+            <span>·</span>
             <span>Report generated {reportDate}</span>
             {prepared_for && (
               <>
-                <span>•</span>
-                <span>Prepared for: <strong className="text-white/70">{prepared_for}</strong></span>
+                <span>·</span>
+                <span>Prepared for: <strong className="text-[#64748b]">{prepared_for}</strong></span>
               </>
             )}
           </div>
 
-          {/* Hero Stats */}
+          {/* Hero Stats — light cards with gold accent */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Est. Annual Revenue</p>
+            <div className="bg-[#C9A962]/8 rounded-xl p-4 border border-[#C9A962]/20">
+              <p className="text-[#94a3b8] text-xs uppercase tracking-wider mb-1">Est. Annual Revenue</p>
               <p className="text-2xl font-serif font-bold text-[#C9A962]">{formatCurrency(revenue_estimate.annual)}</p>
               {revenue_estimate.range && (
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-xs text-[#94a3b8] mt-1">
                   {formatCurrency(revenue_estimate.range.low)} – {formatCurrency(revenue_estimate.range.high)}
                 </p>
               )}
             </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Avg. Nightly Rate</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(revenue_estimate.nightly)}</p>
+            <div className="bg-white rounded-xl p-4 border border-[#e2e8f0]">
+              <p className="text-[#94a3b8] text-xs uppercase tracking-wider mb-1">Avg. Nightly Rate</p>
+              <p className="text-2xl font-serif font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.nightly)}</p>
             </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Occupancy Rate</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatPercent(revenue_estimate.occupancy)}</p>
+            <div className="bg-white rounded-xl p-4 border border-[#e2e8f0]">
+              <p className="text-[#94a3b8] text-xs uppercase tracking-wider mb-1">Occupancy Rate</p>
+              <p className="text-2xl font-serif font-bold text-[#1e293b]">{formatPercent(revenue_estimate.occupancy)}</p>
             </div>
-            <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Monthly Average</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(revenue_estimate.monthly)}</p>
+            <div className="bg-white rounded-xl p-4 border border-[#e2e8f0]">
+              <p className="text-[#94a3b8] text-xs uppercase tracking-wider mb-1">Monthly Average</p>
+              <p className="text-2xl font-serif font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.monthly)}</p>
             </div>
           </div>
         </div>
@@ -544,12 +546,12 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {/* Property Details Card */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-[#0F172A] p-4">
-                <p className="text-white/60 text-sm">Subject Property</p>
-                <p className="text-white font-semibold">{property.address}</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+              <div className="bg-[#C9A962]/10 border-b border-[#C9A962]/20 p-4">
+                <p className="text-[#94a3b8] text-sm">Subject Property</p>
+                <p className="text-[#1e293b] font-semibold">{property.address}</p>
               </div>
-              <div className="divide-y divide-[#0F172A]/5">
+              <div className="divide-y divide-[#e2e8f0]">
                 <DataRow label="Location" value={[property.city, property.state].filter(Boolean).join(', ') + (property.zipCode ? ` ${property.zipCode}` : '')} />
                 <DataRow label="Property Type" value={property.propertyType || 'Residential'} />
                 <DataRow label="Bedrooms" value={`${property.bedrooms}`} />
@@ -562,17 +564,17 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
 
             {/* Map / Street View */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="flex border-b border-[#0F172A]/10">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+              <div className="flex border-b border-[#e2e8f0]">
                 <button
                   onClick={() => setShowStreetView(false)}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors ${!showStreetView ? 'bg-[#0F172A] text-white' : 'text-[#0F172A]/60 hover:bg-[#0F172A]/5'}`}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors ${!showStreetView ? 'bg-[#C9A962] text-white' : 'text-[#64748b] hover:bg-[#f8fafc]'}`}
                 >
                   <MapPin className="w-4 h-4 inline mr-2" />Map View
                 </button>
                 <button
                   onClick={() => setShowStreetView(true)}
-                  className={`flex-1 py-3 text-sm font-medium transition-colors ${showStreetView ? 'bg-[#0F172A] text-white' : 'text-[#0F172A]/60 hover:bg-[#0F172A]/5'}`}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors ${showStreetView ? 'bg-[#C9A962] text-white' : 'text-[#64748b] hover:bg-[#f8fafc]'}`}
                 >
                   <Eye className="w-4 h-4 inline mr-2" />Street View
                 </button>
@@ -611,8 +613,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     />
                   )
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-[#0F172A]/5">
-                    <p className="text-[#0F172A]/40">Map not available</p>
+                  <div className="w-full h-full flex items-center justify-center bg-[#f8fafc]">
+                    <p className="text-[#94a3b8]">Map not available</p>
                   </div>
                 )}
               </div>
@@ -627,8 +629,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <SectionHeader icon={DollarSign} title="Revenue Projections" subtitle="Estimated earnings based on market data and comparable properties" />
 
           {/* Revenue Range */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Annual Revenue Estimate</h3>
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+            <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Annual Revenue Estimate</h3>
             <div className="grid grid-cols-3 gap-4 mb-6">
               <StatCard
                 label="Conservative"
@@ -661,8 +663,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Monthly Forecast Chart */}
           {monthly_forecast.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Monthly Revenue Forecast</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Revenue Forecast</h3>
               <MonthlyForecastChart data={monthly_forecast.map(m => ({
                 ...m,
                 occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100,
@@ -683,8 +685,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Seasonality */}
           {monthly_forecast.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Seasonality Pattern</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Seasonality Pattern</h3>
               <SeasonalityChart data={monthly_forecast.map(m => ({
                 ...m,
                 occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100,
@@ -694,8 +696,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Historical Trends */}
           {historical_data && historical_data.summary && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Year-over-Year Trend</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Year-over-Year Trend</h3>
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
                   label="YoY Revenue Change"
@@ -720,8 +722,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <SectionHeader icon={BarChart3} title="Market Analysis" subtitle="Overall market health, performance by bedroom count, and competitive landscape" />
 
           {/* Market Overview */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">{market_data.name} Market Overview</h3>
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+            <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">{market_data.name} Market Overview</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="Active Listings" value={market_data.listing_count.toLocaleString()} icon={Building} />
               <StatCard label="Market Avg. Monthly Revenue" value={formatCurrency(market_data.metrics.revenue)} icon={DollarSign} />
@@ -731,17 +733,17 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             {market_data.metrics.market_score && (
               <div className="mt-4">
                 <InsightBox type="info">
-                  <strong>Market Score:</strong> {Math.round(market_data.metrics.market_score * 10) / 10}/100 — This score reflects the overall investment attractiveness of the market based on supply, demand, and revenue trends.
+                  <strong>Market Score:</strong> {Math.round(market_data.metrics.market_score)}/100 — This score reflects the overall investment attractiveness of the market based on supply, demand, and revenue trends.
                 </InsightBox>
               </div>
             )}
           </div>
 
           {/* Your Property vs Market */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Your Property vs. Market Average</h3>
-            <div className="divide-y divide-[#0F172A]/5 rounded-xl border border-[#0F172A]/10 overflow-hidden">
-              <div className="grid grid-cols-3 bg-[#0F172A] text-white text-sm font-medium">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+            <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Your Property vs. Market Average</h3>
+            <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
+              <div className="grid grid-cols-3 bg-[#C9A962] text-white text-sm font-medium">
                 <div className="p-3">Metric</div>
                 <div className="p-3 text-center">Your Property</div>
                 <div className="p-3 text-center">Market Average</div>
@@ -753,9 +755,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 { label: 'RevPAR', yours: formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy)), market: formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))) },
               ].map((row, i) => (
                 <div key={i} className="grid grid-cols-3 text-sm">
-                  <div className="p-3 text-[#0F172A]/70">{row.label}</div>
-                  <div className="p-3 text-center font-semibold text-[#0F172A]">{row.yours}</div>
-                  <div className="p-3 text-center text-[#0F172A]/60">{row.market}</div>
+                  <div className="p-3 text-[#64748b]">{row.label}</div>
+                  <div className="p-3 text-center font-semibold text-[#1e293b]">{row.yours}</div>
+                  <div className="p-3 text-center text-[#64748b]">{row.market}</div>
                 </div>
               ))}
             </div>
@@ -763,8 +765,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Bedroom Performance */}
           {bedroom_performance.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Performance by Bedroom Count</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Performance by Bedroom Count</h3>
               <BedroomPerformanceChart
                 data={bedroom_performance.map(bp => ({
                   bedrooms: bp.bedrooms,
@@ -781,9 +783,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Revenue Percentiles */}
           {revenue_percentiles && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Revenue Distribution</h3>
-              <p className="text-sm text-[#0F172A]/60 mb-4">Where your property's projected revenue falls among all listings in this market:</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Revenue Distribution</h3>
+              <p className="text-sm text-[#64748b] mb-4">Where your property's projected revenue falls among all listings in this market:</p>
               <div className="grid grid-cols-5 gap-2">
                 {[
                   { label: 'Bottom 10%', value: revenue_percentiles.p10 },
@@ -793,10 +795,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   { label: 'Top 10%', value: revenue_percentiles.p90 },
                 ].map((p, i) => (
                   <div key={i} className={`text-center p-3 rounded-xl ${
-                    revenue_estimate.annual >= p.value ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-[#0F172A]/5'
+                    revenue_estimate.annual >= p.value ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-[#f8fafc] border border-[#e2e8f0]'
                   }`}>
-                    <p className="text-xs text-[#0F172A]/50 mb-1">{p.label}</p>
-                    <p className="text-sm font-bold text-[#0F172A]">{formatCurrency(p.value)}</p>
+                    <p className="text-xs text-[#94a3b8] mb-1">{p.label}</p>
+                    <p className="text-sm font-bold text-[#1e293b]">{formatCurrency(p.value)}</p>
                   </div>
                 ))}
               </div>
@@ -827,11 +829,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           )}
 
           {/* Comps Table */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden mb-8">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[#0F172A] text-white">
+                  <tr className="bg-[#C9A962] text-white">
                     <th className="text-left p-4 font-medium">#</th>
                     <th className="text-left p-4 font-medium">Property</th>
                     <th className="text-right p-4 font-medium">Revenue</th>
@@ -843,29 +845,33 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </thead>
                 <tbody>
                   {displayComps.slice(0, 15).map((comp, i) => (
-                    <tr key={comp.id || i} className="border-b border-[#0F172A]/5 hover:bg-[#C9A962]/5 transition-colors">
-                      <td className="p-4 text-[#0F172A]/40 font-medium">{i + 1}</td>
+                    <tr key={comp.id || i} className="border-b border-[#e2e8f0] hover:bg-[#C9A962]/5 transition-colors">
+                      <td className="p-4 text-[#94a3b8] font-medium">{i + 1}</td>
                       <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <p className="font-medium text-[#0F172A] truncate max-w-[200px]">
-                              {comp.airbnb_url ? (
-                                <a href={comp.airbnb_url} target="_blank" rel="noopener noreferrer" className="hover:text-[#C9A962] transition-colors">
-                                  {comp.title}
-                                  <ExternalLink className="w-3 h-3 inline ml-1" />
-                                </a>
-                              ) : comp.title}
-                            </p>
-                            <p className="text-xs text-[#0F172A]/40">
-                              {comp.bedrooms}BR / {comp.bathrooms}BA
-                              {comp.distance_meters && ` • ${(comp.distance_meters / 1609.34).toFixed(1)} mi away`}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="font-medium text-[#1e293b] truncate max-w-[200px]">
+                            {comp.title}
+                          </p>
+                          <p className="text-xs text-[#94a3b8] mt-0.5">
+                            {comp.bedrooms}BR / {comp.bathrooms}BA
+                            {comp.distance_meters && ` · ${(comp.distance_meters / 1609.34).toFixed(1)} mi away`}
+                          </p>
+                          {comp.airbnb_url && (
+                            <a
+                              href={comp.airbnb_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 mt-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#C9A962]/10 text-[#C9A962] hover:bg-[#C9A962]/20 transition-colors border border-[#C9A962]/20"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View Listing
+                            </a>
+                          )}
                         </div>
                       </td>
-                      <td className="p-4 text-right font-semibold text-[#0F172A]">{formatCurrency(comp.annual_revenue)}</td>
-                      <td className="p-4 text-right text-[#0F172A]/70">{formatCurrency(comp.adr)}</td>
-                      <td className="p-4 text-right text-[#0F172A]/70">{formatPercent(comp.occupancy)}</td>
+                      <td className="p-4 text-right font-semibold text-[#1e293b]">{formatCurrency(comp.annual_revenue)}</td>
+                      <td className="p-4 text-right text-[#64748b]">{formatCurrency(comp.adr)}</td>
+                      <td className="p-4 text-right text-[#64748b]">{formatPercent(comp.occupancy)}</td>
                       <td className="p-4 text-right">
                         {comp.rating ? (
                           <span className="inline-flex items-center gap-1">
@@ -874,7 +880,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="p-4 text-right text-[#0F172A]/60">{comp.reviews || '—'}</td>
+                      <td className="p-4 text-right text-[#64748b]">{comp.reviews || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -919,9 +925,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <section id="section-rental" className="scroll-mt-24 mb-16">
             <SectionHeader icon={Building} title="Rental Arbitrage Analysis" subtitle="Financial projections based on renting the property and subletting on Airbnb" />
 
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Monthly Cash Flow</h3>
-              <div className="divide-y divide-[#0F172A]/5 rounded-xl border border-[#0F172A]/10 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Cash Flow</h3>
+              <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
                 <DataRow label="Projected Monthly Revenue" value={formatCurrency(rentalCalcs.monthlyRevenue)} highlight />
                 <DataRow label="Monthly Rent" value={`- ${formatCurrency(rentalCalcs.rent)}`} />
                 <DataRow label="Monthly Profit" value={
@@ -934,37 +940,37 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               {/* Break-Even Analysis */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Break-Even Analysis</h3>
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Break-Even Analysis</h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-[#0F172A]/60 mb-1">Break-Even Occupancy</p>
+                    <p className="text-sm text-[#64748b] mb-1">Break-Even Occupancy</p>
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-[#0F172A]/5 rounded-full h-4 overflow-hidden">
+                      <div className="flex-1 bg-[#f1f5f9] rounded-full h-4 overflow-hidden">
                         <div
                           className={`h-full rounded-full ${rentalCalcs.breakEvenOccupancy < 0.5 ? 'bg-green-500' : rentalCalcs.breakEvenOccupancy < 0.7 ? 'bg-amber-500' : 'bg-red-500'}`}
                           style={{ width: `${Math.min(rentalCalcs.breakEvenOccupancy * 100, 100)}%` }}
                         />
                       </div>
-                      <span className="text-sm font-bold">{formatPercent(rentalCalcs.breakEvenOccupancy)}</span>
+                      <span className="text-sm font-bold text-[#1e293b]">{formatPercent(rentalCalcs.breakEvenOccupancy)}</span>
                     </div>
-                    <p className="text-xs text-[#0F172A]/40 mt-1">
+                    <p className="text-xs text-[#94a3b8] mt-1">
                       You need {formatPercent(rentalCalcs.breakEvenOccupancy)} occupancy to cover rent. Market projects {formatPercent(revenue_estimate.occupancy)}.
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-[#0F172A]/60 mb-1">Break-Even ADR</p>
-                    <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(rentalCalcs.breakEvenADR)}</p>
-                    <p className="text-xs text-[#0F172A]/40">
+                    <p className="text-sm text-[#64748b] mb-1">Break-Even ADR</p>
+                    <p className="text-xl font-bold text-[#1e293b]">{formatCurrency(rentalCalcs.breakEvenADR)}</p>
+                    <p className="text-xs text-[#94a3b8]">
                       Minimum nightly rate needed. Market projects {formatCurrency(revenue_estimate.nightly)}.
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-[#0F172A]/60 mb-1">Occupancy Cushion</p>
+                    <p className="text-sm text-[#64748b] mb-1">Occupancy Cushion</p>
                     <p className={`text-xl font-bold ${rentalCalcs.occupancyCushion > 0.15 ? 'text-green-600' : rentalCalcs.occupancyCushion > 0.05 ? 'text-amber-600' : 'text-red-600'}`}>
                       {rentalCalcs.occupancyCushion > 0 ? '+' : ''}{formatPercent(rentalCalcs.occupancyCushion)}
                     </p>
-                    <p className="text-xs text-[#0F172A]/40">
+                    <p className="text-xs text-[#94a3b8]">
                       Room between projected and break-even occupancy
                     </p>
                   </div>
@@ -972,10 +978,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
 
               {/* Investment Returns */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Investment Returns</h3>
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Investment Returns</h3>
                 <div className="space-y-4">
-                  <div className="divide-y divide-[#0F172A]/5 rounded-xl border border-[#0F172A]/10 overflow-hidden">
+                  <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
                     <DataRow label="Estimated Startup Costs" value={formatCurrency(rentalCalcs.startup)} />
                     <DataRow label="Annual Profit" value={formatCurrency(rentalCalcs.annualProfit)} highlight />
                     <DataRow label="ROI (First Year)" value={`${rentalCalcs.roi.toFixed(0)}%`} highlight />
@@ -988,8 +994,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
 
             {/* Scenario Analysis */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Scenario Analysis</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Scenario Analysis</h3>
               <div className="grid grid-cols-3 gap-4">
                 {[
                   {
@@ -1013,11 +1019,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 ].map((scenario, i) => {
                   const annualProfit = scenario.revenue - rentalCalcs.rent * 12;
                   return (
-                    <div key={i} className={`rounded-xl p-4 border ${i === 1 ? 'border-[#C9A962] bg-[#C9A962]/5' : 'border-[#0F172A]/10'}`}>
-                      <p className="font-semibold text-[#0F172A] text-sm">{scenario.label}</p>
-                      <p className="text-xs text-[#0F172A]/50 mb-3">{scenario.sublabel}</p>
-                      <p className="text-lg font-bold text-[#0F172A]">{formatCurrency(scenario.revenue)}/yr</p>
-                      <p className="text-xs text-[#0F172A]/50">at {formatPercent(scenario.occupancy)} occupancy</p>
+                    <div key={i} className={`rounded-xl p-4 border ${i === 1 ? 'border-[#C9A962] bg-[#C9A962]/5' : 'border-[#e2e8f0]'}`}>
+                      <p className="font-semibold text-[#1e293b] text-sm">{scenario.label}</p>
+                      <p className="text-xs text-[#94a3b8] mb-3">{scenario.sublabel}</p>
+                      <p className="text-lg font-bold text-[#1e293b]">{formatCurrency(scenario.revenue)}/yr</p>
+                      <p className="text-xs text-[#94a3b8]">at {formatPercent(scenario.occupancy)} occupancy</p>
                       <p className={`text-sm font-bold mt-2 ${annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(annualProfit)} profit
                       </p>
@@ -1037,8 +1043,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <SectionHeader icon={Landmark} title="Purchase Investment Analysis" subtitle="Financial projections based on purchasing the property" />
 
             {/* Purchase Overview */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Investment Summary</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Investment Summary</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <StatCard label="Purchase Price" value={formatCurrency(purchaseCalcs.price)} icon={Home} />
                 <StatCard label="Down Payment" value={formatCurrency(purchaseCalcs.downPayment)} sublabel={`${(purchaseCalcs.downPct * 100).toFixed(0)}%`} icon={Wallet} />
@@ -1049,9 +1055,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Key Investment Metrics */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Key Metrics</h3>
-                <div className="divide-y divide-[#0F172A]/5 rounded-xl border border-[#0F172A]/10 overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Key Metrics</h3>
+                <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
                   <DataRow label="Net Operating Income (NOI)" value={formatCurrency(purchaseCalcs.noi)} highlight />
                   <DataRow label="Cap Rate" value={`${purchaseCalcs.capRate.toFixed(1)}%`} highlight />
                   <DataRow label="Cash-on-Cash Return" value={`${purchaseCalcs.cashOnCash.toFixed(1)}%`} highlight />
@@ -1062,9 +1068,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Annual Cash Flow</h3>
-                <div className="divide-y divide-[#0F172A]/5 rounded-xl border border-[#0F172A]/10 overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Annual Cash Flow</h3>
+                <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
                   <DataRow label="Gross Revenue" value={formatCurrency(revenue_estimate.annual)} highlight />
                   <DataRow label="Operating Expenses (35%)" value={`- ${formatCurrency(purchaseCalcs.operatingExpenses)}`} />
                   <DataRow label="Property Tax" value={`- ${formatCurrency(purchaseCalcs.propertyTax)}`} />
@@ -1100,22 +1106,22 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <SectionHeader icon={Sparkles} title="Executive Summary" subtitle="AI-synthesized analysis of all data points" />
 
           {ai_summary ? (
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="prose prose-sm max-w-none text-[#0F172A]/80">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
+              <div className="prose prose-sm max-w-none text-[#334155]">
                 <Streamdown>{ai_summary}</Streamdown>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
               <div className="space-y-6">
                 {/* Auto-generated summary from data */}
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Property at a Glance</h3>
-                  <p className="text-[#0F172A]/70 leading-relaxed">
-                    This {property.bedrooms}-bedroom, {property.bathrooms}-bathroom property at <strong>{property.address}</strong> is
-                    projected to generate <strong>{formatCurrency(revenue_estimate.annual)}</strong> in annual revenue
-                    with a <strong>{formatPercent(revenue_estimate.occupancy)}</strong> occupancy rate
-                    and an average nightly rate of <strong>{formatCurrency(revenue_estimate.nightly)}</strong>.
+                  <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Property at a Glance</h3>
+                  <p className="text-[#64748b] leading-relaxed">
+                    This {property.bedrooms}-bedroom, {property.bathrooms}-bathroom property at <strong className="text-[#1e293b]">{property.address}</strong> is
+                    projected to generate <strong className="text-[#1e293b]">{formatCurrency(revenue_estimate.annual)}</strong> in annual revenue
+                    with a <strong className="text-[#1e293b]">{formatPercent(revenue_estimate.occupancy)}</strong> occupancy rate
+                    and an average nightly rate of <strong className="text-[#1e293b]">{formatCurrency(revenue_estimate.nightly)}</strong>.
                     {revenue_estimate.range && (
                       <> The revenue range spans from {formatCurrency(revenue_estimate.range.low)} to {formatCurrency(revenue_estimate.range.high)}.</>
                     )}
@@ -1123,9 +1129,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Market Context</h3>
-                  <p className="text-[#0F172A]/70 leading-relaxed">
-                    The <strong>{market_data.name}</strong> market has <strong>{market_data.listing_count.toLocaleString()}</strong> active
+                  <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Market Context</h3>
+                  <p className="text-[#64748b] leading-relaxed">
+                    The <strong className="text-[#1e293b]">{market_data.name}</strong> market has <strong className="text-[#1e293b]">{market_data.listing_count.toLocaleString()}</strong> active
                     short-term rental listings. The market average annual revenue is {formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)} with
                     an average occupancy of {formatPercent(market_data.metrics.occupancy)} and ADR of {formatCurrency(market_data.metrics.adr)}.
                     {revenue_estimate.annual > (market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)
@@ -1135,12 +1141,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Competition Landscape</h3>
-                  <p className="text-[#0F172A]/70 leading-relaxed">
+                  <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Competition Landscape</h3>
+                  <p className="text-[#64748b] leading-relaxed">
                     {displayComps.length} comparable {property.bedrooms}-bedroom properties were analyzed.
                     {displayComps.length > 0 && (
                       <> The top performer generates {formatCurrency(displayComps[0].annual_revenue)} annually.
-                      The average comparable revenue is {formatCurrency(displayComps.reduce((s, c) => s + c.annual_revenue, 0) / displayComps.length)}.
                       {(() => {
                         const rated = displayComps.filter(c => c.rating && c.rating > 0);
                         if (rated.length > 0) {
@@ -1156,8 +1161,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
                 {hasRental && rentalCalcs && (
                   <div>
-                    <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Rental Arbitrage Scenario</h3>
-                    <p className="text-[#0F172A]/70 leading-relaxed">
+                    <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Rental Arbitrage Scenario</h3>
+                    <p className="text-[#64748b] leading-relaxed">
                       At a monthly rent of {formatCurrency(rentalCalcs.rent)}, the projected monthly profit
                       is <strong className={rentalCalcs.monthlyProfit >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(rentalCalcs.monthlyProfit)}</strong>.
                       The break-even occupancy is {formatPercent(rentalCalcs.breakEvenOccupancy)}, which
@@ -1172,12 +1177,12 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
                 {hasPurchase && purchaseCalcs && (
                   <div>
-                    <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Purchase Investment Scenario</h3>
-                    <p className="text-[#0F172A]/70 leading-relaxed">
+                    <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Purchase Investment Scenario</h3>
+                    <p className="text-[#64748b] leading-relaxed">
                       At a purchase price of {formatCurrency(purchaseCalcs.price)} with {(purchaseCalcs.downPct * 100).toFixed(0)}% down,
                       the total cash needed is {formatCurrency(purchaseCalcs.totalCashNeeded)}.
-                      The property shows a cap rate of <strong>{purchaseCalcs.capRate.toFixed(1)}%</strong> and
-                      a cash-on-cash return of <strong>{purchaseCalcs.cashOnCash.toFixed(1)}%</strong>.
+                      The property shows a cap rate of <strong className="text-[#1e293b]">{purchaseCalcs.capRate.toFixed(1)}%</strong> and
+                      a cash-on-cash return of <strong className="text-[#1e293b]">{purchaseCalcs.cashOnCash.toFixed(1)}%</strong>.
                       {purchaseCalcs.annualCashFlow >= 0
                         ? ` Annual cash flow is projected at ${formatCurrency(purchaseCalcs.annualCashFlow)}.`
                         : ` The property is projected to have negative cash flow of ${formatCurrency(purchaseCalcs.annualCashFlow)} annually.`}
@@ -1190,29 +1195,29 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         </section>
 
         {/* ============================================================ */}
-        {/* FOOTER */}
+        {/* FOOTER — Coach Inayah branded */}
         {/* ============================================================ */}
-        <div className="mt-12 pt-8 border-t border-[#0F172A]/10">
+        <div className="mt-12 pt-8 border-t border-[#e2e8f0]">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
                 <Home className="w-4 h-4 text-[#C9A962]" />
               </div>
-              <span className="text-sm font-medium text-[#0F172A]/60">Coach Inayah's Turnkey Tool</span>
+              <span className="text-sm font-medium text-[#64748b]">Coach Inayah's Turnkey Tool</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
-              className="gap-2"
+              className="gap-2 border-[#C9A962]/30 text-[#C9A962] hover:bg-[#C9A962]/10"
             >
               {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
               {copied ? 'Copied!' : 'Share Report'}
             </Button>
           </div>
-          <p className="text-xs text-[#0F172A]/40 text-center italic">
+          <p className="text-xs text-[#94a3b8] text-center italic">
             This report presents market data and projections for informational purposes only.
-            All data is based on trailing 12-month performance of comparable properties.
+            All data is sourced from Coach Inayah market data based on trailing 12-month performance of comparable properties.
             Actual results may vary based on property condition, management quality, and market conditions.
             This is not investment advice.
           </p>

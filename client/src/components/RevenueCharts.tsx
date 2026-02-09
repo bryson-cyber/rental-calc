@@ -1,6 +1,7 @@
 /**
  * Revenue Charts Component
- * Proper chart rendering using Recharts
+ * Brand-aligned chart rendering using Recharts
+ * Coach Inayah palette: Gold (#C9A962), Navy (#1e293b), warm grays
  */
 
 import { useMemo } from 'react';
@@ -20,6 +21,28 @@ import {
   Cell,
   ComposedChart,
 } from 'recharts';
+
+// ── Brand Color Palette ──────────────────────────────────────
+const BRAND = {
+  gold:        '#C9A962',
+  goldLight:   '#D4BC82',
+  goldMuted:   '#E2D4B0',
+  goldPale:    '#F0E8D4',
+  navy:        '#1e293b',
+  navyLight:   '#334155',
+  warmGray:    '#94a3b8',
+  warmGrayLt:  '#cbd5e1',
+  gridLine:    '#e2e8f0',
+  axisText:    '#64748b',
+  labelDark:   '#0f172a',
+  white:       '#ffffff',
+  // Percentile gradient (gold scale)
+  pctBottom:   '#E8D5A8',
+  pctLow:      '#D4BC82',
+  pctMid:      '#C9A962',
+  pctHigh:     '#B89A4F',
+  pctTop:      '#A68A3C',
+};
 
 // Format currency
 const formatCurrency = (value: number) => {
@@ -100,30 +123,29 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
     });
   }, [data]);
 
-  const maxRevenue = Math.max(...chartData.map(d => d.revenue));
   const avgRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length;
 
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis 
             dataKey="shortMonth" 
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            axisLine={{ stroke: '#d1d5db' }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
           />
           <YAxis 
             yAxisId="revenue"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            axisLine={{ stroke: '#d1d5db' }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
             tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
           />
           <YAxis 
             yAxisId="occupancy"
             orientation="right"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
-            axisLine={{ stroke: '#d1d5db' }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
             tickFormatter={(value) => `${value}%`}
             domain={[0, 100]}
           />
@@ -138,7 +160,7 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
-                fill={entry.revenue >= avgRevenue ? '#22c55e' : '#f59e0b'}
+                fill={entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted}
               />
             ))}
           </Bar>
@@ -147,9 +169,9 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
             type="monotone" 
             dataKey="occupancyPct" 
             name="Occupancy"
-            stroke="#3b82f6" 
+            stroke={BRAND.navy} 
             strokeWidth={2}
-            dot={{ fill: '#3b82f6', strokeWidth: 2 }}
+            dot={{ fill: BRAND.navy, strokeWidth: 2 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -174,36 +196,36 @@ interface RevenuePercentileChartProps {
 
 export function RevenuePercentileChart({ data, yourRevenue, height = 200 }: RevenuePercentileChartProps) {
   const chartData = [
-    { name: 'Bottom 10%', revenue: data.p10, fill: '#ef4444' },
-    { name: 'Bottom 25%', revenue: data.p25, fill: '#f97316' },
-    { name: 'Median', revenue: data.p50, fill: '#eab308' },
-    { name: 'Top 25%', revenue: data.p75, fill: '#22c55e' },
-    { name: 'Top 10%', revenue: data.p90, fill: '#10b981' },
+    { name: 'Bottom 10%', revenue: data.p10, fill: BRAND.pctBottom },
+    { name: 'Bottom 25%', revenue: data.p25, fill: BRAND.pctLow },
+    { name: 'Median',     revenue: data.p50, fill: BRAND.pctMid },
+    { name: 'Top 25%',    revenue: data.p75, fill: BRAND.pctHigh },
+    { name: 'Top 10%',    revenue: data.p90, fill: BRAND.pctTop },
   ];
 
   if (yourRevenue) {
-    chartData.push({ name: 'Your Estimate', revenue: yourRevenue, fill: '#C9A962' });
+    chartData.push({ name: 'Your Estimate', revenue: yourRevenue, fill: BRAND.navy });
   }
 
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} horizontal={false} />
           <XAxis 
             type="number"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
             tickFormatter={(value) => formatCurrency(value)}
           />
           <YAxis 
             type="category"
             dataKey="name"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
             width={75}
           />
           <Tooltip 
             formatter={(value: number) => formatCurrency(value)}
-            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            labelStyle={{ color: BRAND.labelDark, fontWeight: 600 }}
           />
           <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
             {chartData.map((entry, index) => (
@@ -245,20 +267,20 @@ export function BedroomPerformanceChart({ data, highlightBedroom, height = 250 }
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis 
             dataKey="name" 
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
           />
           <YAxis 
             yAxisId="revenue"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
             tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
           />
           <YAxis 
             yAxisId="occupancy"
             orientation="right"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
             tickFormatter={(value) => `${value}%`}
             domain={[0, 100]}
           />
@@ -273,8 +295,8 @@ export function BedroomPerformanceChart({ data, highlightBedroom, height = 250 }
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
-                fill={entry.isHighlighted ? '#C9A962' : '#3b82f6'}
-                stroke={entry.isHighlighted ? '#a08840' : 'none'}
+                fill={entry.isHighlighted ? BRAND.gold : BRAND.warmGrayLt}
+                stroke={entry.isHighlighted ? BRAND.pctTop : 'none'}
                 strokeWidth={entry.isHighlighted ? 2 : 0}
               />
             ))}
@@ -284,9 +306,9 @@ export function BedroomPerformanceChart({ data, highlightBedroom, height = 250 }
             type="monotone" 
             dataKey="occupancyPct" 
             name="Occupancy"
-            stroke="#10b981" 
+            stroke={BRAND.gold} 
             strokeWidth={2}
-            dot={{ fill: '#10b981', strokeWidth: 2 }}
+            dot={{ fill: BRAND.gold, strokeWidth: 2 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -310,7 +332,7 @@ interface HistoricalTrendChartProps {
 
 export function HistoricalTrendChart({ 
   data, 
-  color = '#3b82f6', 
+  color = BRAND.gold, 
   valueType = 'currency',
   height = 200,
   title
@@ -347,15 +369,15 @@ export function HistoricalTrendChart({
               <stop offset="95%" stopColor={color} stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
           <XAxis 
             dataKey="shortDate" 
-            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            tick={{ fill: BRAND.warmGray, fontSize: 10 }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis 
-            tick={{ fill: '#9ca3af', fontSize: 10 }}
+            tick={{ fill: BRAND.warmGray, fontSize: 10 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(value) => {
@@ -367,10 +389,10 @@ export function HistoricalTrendChart({
           />
           <Tooltip 
             formatter={(value: number) => [formatValue(value), title || 'Value']}
-            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            labelStyle={{ color: BRAND.labelDark, fontWeight: 600 }}
             contentStyle={{ 
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              border: '1px solid #e5e7eb',
+              border: `1px solid ${BRAND.gridLine}`,
               borderRadius: '8px',
             }}
           />
@@ -423,10 +445,10 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
           <XAxis 
             dataKey="shortMonth" 
-            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tick={{ fill: BRAND.axisText, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
           />
@@ -434,18 +456,18 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
           <Tooltip 
             formatter={(value: number, name: string, props: any) => [
               formatCurrency(props.payload.revenue),
-              props.payload.season === 'peak' ? '🔥 Peak Season' : 
-              props.payload.season === 'off' ? '❄️ Off Season' : '📊 Shoulder Season'
+              props.payload.season === 'peak' ? 'Peak Season' : 
+              props.payload.season === 'off' ? 'Off-Season' : 'Shoulder Season'
             ]}
-            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            labelStyle={{ color: BRAND.labelDark, fontWeight: 600 }}
           />
           <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
                 fill={
-                  entry.season === 'peak' ? '#22c55e' : 
-                  entry.season === 'off' ? '#f59e0b' : '#3b82f6'
+                  entry.season === 'peak' ? BRAND.gold : 
+                  entry.season === 'off' ? BRAND.goldPale : BRAND.goldMuted
                 }
               />
             ))}
@@ -473,7 +495,7 @@ interface CompetitorDistributionChartProps {
 export function CompetitorDistributionChart({ data, threshold, height = 200 }: CompetitorDistributionChartProps) {
   const chartData = useMemo(() => {
     return data
-      .slice(0, 15) // Increased from 10 to show more comps
+      .slice(0, 15) // Show up to 15 comps
       .sort((a, b) => b.annual_revenue - a.annual_revenue)
       .map((item, index) => ({
         ...item,
@@ -486,26 +508,19 @@ export function CompetitorDistributionChart({ data, threshold, height = 200 }: C
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
           <XAxis 
             dataKey="name" 
-            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tick={{ fill: BRAND.axisText, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis 
-            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tick={{ fill: BRAND.axisText, fontSize: 11 }}
             tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
             axisLine={false}
             tickLine={false}
           />
-          {threshold && (
-            <CartesianGrid 
-              strokeDasharray="5 5" 
-              stroke="#ef4444" 
-              horizontal={false}
-            />
-          )}
           <Tooltip 
             formatter={(value: number) => formatCurrency(value)}
             labelFormatter={(label) => `Competitor ${label}`}
@@ -514,7 +529,7 @@ export function CompetitorDistributionChart({ data, threshold, height = 200 }: C
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
-                fill={entry.meetsThreshold ? '#22c55e' : '#ef4444'}
+                fill={entry.meetsThreshold ? BRAND.gold : BRAND.warmGrayLt}
               />
             ))}
           </Bar>
