@@ -5617,13 +5617,14 @@ export const appRouter = router({
           let newReportData: any = {
             property: {
               address: address,
-              city: prop?.location?.city || market?.name || '',
-              state: prop?.location?.state || '',
+              city: prop?.property?._geocoded_city || prop?.property?.address_lookup?.split(',')[0]?.trim() || market?.name || '',
+              state: prop?.property?._geocoded_state || prop?.property?.address_lookup?.split(',')[1]?.trim() || '',
+              zipCode: prop?.property?.zipcode || '',
               bedrooms: bedrooms,
               bathrooms: bathrooms,
               accommodates: accommodates,
-              latitude: prop?.location?.latitude,
-              longitude: prop?.location?.longitude,
+              latitude: prop?.property?.latitude,
+              longitude: prop?.property?.longitude,
             },
             revenue_estimate: {
               annual: annualRev,
@@ -5650,7 +5651,31 @@ export const appRouter = router({
             bedroom_performance: bedroomPerf.length > 0 ? bedroomPerf : existingData.bedroom_performance || [],
             revenue_percentiles: revenuePercentiles,
             historical_data: historical || existingData.historical_data,
-            comps: comps.map((c: any) => ({
+            comps: comps.map((c: any) => {
+              // Try to enrich with lat/lng from same_bedroom_comps by matching airbnb listing ID
+              const listingId = c.airbnb_listing_id || c.id?.replace('abnb_', '') || '';
+              const matchingSbc = sameBedComps.find((sbc: any) => {
+                const sbcId = sbc.airbnb_listing_id || sbc.id?.replace('abnb_', '') || '';
+                return sbcId && listingId && sbcId === listingId;
+              });
+              return {
+                title: c.title || c.name || 'Competitor',
+                bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
+                annual_revenue: c.annual_revenue || 0,
+                adr: c.adr || 0,
+                occupancy: c.occupancy || 0,
+                rating: c.rating,
+                reviews: c.reviews || 0,
+                distance_meters: c.distance_meters,
+                airbnb_url: c.airbnb_url || c.url,
+                airbnb_listing_id: c.airbnb_listing_id || c.id?.replace('abnb_', ''),
+                image_url: c.image_url,
+                latitude: c.latitude || matchingSbc?.latitude || null,
+                longitude: c.longitude || matchingSbc?.longitude || null,
+              };
+            }),
+            same_bedroom_comps: sameBedComps.map((c: any) => ({
               title: c.title || c.name || 'Competitor',
               bedrooms: c.bedrooms,
               bathrooms: c.bathrooms,
@@ -5659,9 +5684,11 @@ export const appRouter = router({
               occupancy: c.occupancy || 0,
               rating: c.rating,
               reviews: c.reviews || 0,
-              distance_meters: c.distance_meters,
               airbnb_url: c.airbnb_url || c.url,
+              airbnb_listing_id: c.airbnb_listing_id || c.id?.replace('abnb_', ''),
               image_url: c.image_url,
+              latitude: c.latitude || null,
+              longitude: c.longitude || null,
             })),
             // Preserve existing purchase and rental arbitrage settings
             purchase: existingData.purchase,
@@ -5714,8 +5741,8 @@ export const appRouter = router({
           await db.update(sharedReports)
             .set({
               reportData: newReportDataStr,
-              latitude: prop?.location?.latitude?.toString(),
-              longitude: prop?.location?.longitude?.toString(),
+              latitude: prop?.property?.latitude?.toString(),
+              longitude: prop?.property?.longitude?.toString(),
             })
             .where(eq(sharedReports.shareId, input.shareId));
           

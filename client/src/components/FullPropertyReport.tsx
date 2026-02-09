@@ -811,7 +811,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <SectionHeader icon={Target} title="Competition Analysis" subtitle={`${displayComps.length} comparable ${property.bedrooms}-bedroom properties ranked by revenue`} />
 
           {/* Comps Map */}
-          {property.latitude && property.longitude && displayComps.some(c => c.latitude && c.longitude) && (
+          {property.latitude && property.longitude && (
             <div className="mb-8">
               <CompsMapView
                 comps={displayComps}

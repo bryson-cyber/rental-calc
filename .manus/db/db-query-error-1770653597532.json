@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, share_id, type, JSON_EXTRACT(report_data, '$.comps[0].latitude') as comp0_lat, JSON_EXTRACT(report_data, '$.comps[0].longitude') as comp0_lng, JSON_EXTRACT(report_data, '$.comps[0].title') as comp0_title, JSON_LENGTH(report_data, '$.comps') as num_comps, JSON_EXTRACT(report_data, '$.property.latitude') as prop_lat, JSON_EXTRACT(report_data, '$.property.longitude') as prop_lng FROM shared_reports WHERE share_id = 'l6984fncmlf7nhnx'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, share_id, type, JSON_EXTRACT(report_data, '$.comps[0].latitude') as comp0_lat, JSON_EXTRACT(report_data, '$.comps[0].longitude') as comp0_lng, JSON_EXTRACT(report_data, '$.comps[0].title') as comp0_title, JSON_LENGTH(report_data, '$.comps') as num_comps, JSON_EXTRACT(report_data, '$.property.latitude') as prop_lat, JSON_EXTRACT(report_data, '$.property.longitude') as prop_lng FROM shared_reports WHERE share_id = 'l6984fncmlf7nhnx'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'share_id' in 'where clause'"
+  ]
+}

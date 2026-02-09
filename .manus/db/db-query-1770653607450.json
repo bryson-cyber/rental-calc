@@ -1,0 +1,21 @@
+{
+  "query": "SELECT id, shareId, reportType, JSON_EXTRACT(reportData, '$.comps[0].latitude') as comp0_lat, JSON_EXTRACT(reportData, '$.comps[0].longitude') as comp0_lng, JSON_EXTRACT(reportData, '$.comps[0].title') as comp0_title, JSON_LENGTH(reportData, '$.comps') as num_comps, JSON_EXTRACT(reportData, '$.property.latitude') as prop_lat, JSON_EXTRACT(reportData, '$.property.longitude') as prop_lng FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareId, reportType, JSON_EXTRACT(reportData, '$.comps[0].latitude') as comp0_lat, JSON_EXTRACT(reportData, '$.comps[0].longitude') as comp0_lng, JSON_EXTRACT(reportData, '$.comps[0].title') as comp0_title, JSON_LENGTH(reportData, '$.comps') as num_comps, JSON_EXTRACT(reportData, '$.property.latitude') as prop_lat, JSON_EXTRACT(reportData, '$.property.longitude') as prop_lng FROM shared_reports WHERE shareId = 'l6984fncmlf7nhnx'",
+  "rows": [
+    {
+      "id": "90001",
+      "shareId": "l6984fncmlf7nhnx",
+      "reportType": "full",
+      "comp0_lat": "NULL",
+      "comp0_lng": "NULL",
+      "comp0_title": "\"Amazing Luxury 5 Bedrooms Home with Private Pool\"",
+      "num_comps": "12",
+      "prop_lat": "32.986465",
+      "prop_lng": "-96.670815"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareId\treportType\tcomp0_lat\tcomp0_lng\tcomp0_title\tnum_comps\tprop_lat\tprop_lng\n90001\tl6984fncmlf7nhnx\tfull\tNULL\tNULL\t\"Amazing Luxury 5 Bedrooms Home with Private Pool\"\t12\t32.986465\t-96.670815\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

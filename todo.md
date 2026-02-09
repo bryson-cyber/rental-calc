@@ -9898,3 +9898,25 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix market revenue display — annualize monthly average for Annual Revenue comparison
 - [x] Fix Location "undefined" zipCode display
 - [x] Fix historical data field compatibility (yoy_revenue_change vs yearly_pct_change)
+
+
+## Report Map & UI Redesign (Feb 9)
+- [x] Debug: Map not showing property markers on report page
+- [x] Fix map to display subject property and comparable properties
+- [ ] Redesign FullPropertyReport UI to match Coach Inayah brand design system
+- [ ] Replace navy (#0F172A) header with light theme + gold accents per frontend-design skill
+- [ ] Use OKLCH color format per design system
+- [ ] Apply apple-card styling to metric cards
+- [ ] Use pill-shaped gold buttons per design system
+- [ ] Apply proper typography scale (Playfair Display + DM Sans)
+- [ ] Add hover-lift effects and 300ms transitions
+- [ ] Ensure section navigation matches tab-nav pattern from design system
+
+### Map Fix Details (Feb 9)
+- [x] Root cause: regeneration endpoint accessed prop?.location?.latitude instead of prop?.property?.latitude
+- [x] Fix regeneration endpoint property lat/lng access paths in routers.ts
+- [x] Fix regeneration endpoint city/state/zipCode extraction from rentalizer response
+- [x] Fix regeneration endpoint DB update lat/lng access paths
+- [x] Regenerate client report l6984fncmlf7nhnx with correct data (11/12 comps with coordinates)
+- [x] Verify map shows 11 numbered comp markers + YOUR PROPERTY marker
+- [x] Verify all 615 tests pass after fix

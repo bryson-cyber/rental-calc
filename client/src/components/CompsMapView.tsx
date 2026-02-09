@@ -181,21 +181,8 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
     if (mapRef.current) handleMapReady(mapRef.current);
   }, [comps, subjectProperty]);
 
-  if (compsWithCoords.length === 0) {
-    return (
-      <Card className={className}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            Comparable Properties Map
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No comparable properties with location data available.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Always show the map when subject property has coordinates
+  // Even if no comps have coordinates, the subject property marker is valuable
 
   return (
     <Card className={className}>
@@ -204,7 +191,11 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
           <CardTitle className="text-base flex items-center gap-2">
             <MapPin className="w-4 h-4" />
             Comparable Properties Map
-            <Badge variant="secondary" className="ml-2">{compsWithCoords.length} comps</Badge>
+            {compsWithCoords.length > 0 ? (
+              <Badge variant="secondary" className="ml-2">{compsWithCoords.length} comps</Badge>
+            ) : (
+              <Badge variant="outline" className="ml-2">Subject Property</Badge>
+            )}
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)}>
             {isExpanded ? <Minimize className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
