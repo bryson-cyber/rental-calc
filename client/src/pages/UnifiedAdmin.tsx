@@ -61,7 +61,10 @@ import {
   MessageSquare,
   Play,
   ArrowLeft,
-  Home
+  Home,
+  Building,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function UnifiedAdmin() {
@@ -136,6 +139,19 @@ export default function UnifiedAdmin() {
     { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'notifications' }
   );
   
+  // ============================================
+  // PROPERTIES TAB STATE & QUERIES
+  // ============================================
+  const [reportPage, setReportPage] = useState(0);
+  const reportLimit = 20;
+  
+  const reportsQuery = trpc.admin.getReports.useQuery(
+    { limit: reportLimit, offset: reportPage * reportLimit },
+    { enabled: isAuthenticated && user?.role === 'admin' && activeTab === 'properties' }
+  );
+  
+  const totalReportPages = Math.ceil((reportsQuery.data?.total || 0) / reportLimit);
+
   // ============================================
   // NEWSLETTER TAB QUERIES & MUTATIONS
   // ============================================
@@ -270,6 +286,7 @@ export default function UnifiedAdmin() {
                 onClick={() => {
                   refetchStats();
                   if (activeTab === 'api-usage') refetchApiUsage();
+                  if (activeTab === 'properties') reportsQuery.refetch();
                   if (activeTab === 'notifications') refetchNotifications();
                   if (activeTab === 'newsletter') refetchNewsletter();
                 }}
@@ -305,6 +322,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="notifications" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <MessageSquare className="w-4 h-4 mr-2" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="properties" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
+              <Building className="w-4 h-4 mr-2" />
+              Properties
             </TabsTrigger>
             <TabsTrigger value="newsletter" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A] text-white/70">
               <Mail className="w-4 h-4 mr-2" />
@@ -870,6 +891,151 @@ export default function UnifiedAdmin() {
                 </div>
               </>
             )}
+          </TabsContent>
+
+          {/* ============================================ */}
+          {/* PROPERTIES TAB */}
+          {/* ============================================ */}
+          <TabsContent value="properties" className="space-y-6">
+            <Card className="bg-[#1e293b] border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Building className="w-5 h-5 text-[#C9A962]" />
+                      Analyzed Properties
+                    </CardTitle>
+                    <CardDescription className="text-white/50">
+                      All properties that have been analyzed through the tool ({reportsQuery.data?.total || 0} total)
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white/70 hover:bg-white/10"
+                    onClick={() => reportsQuery.refetch()}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {reportsQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-white/10 hover:bg-transparent">
+                            <TableHead className="text-white/50">Address</TableHead>
+                            <TableHead className="text-white/50">City/State</TableHead>
+                            <TableHead className="text-white/50">BR</TableHead>
+                            <TableHead className="text-white/50">Rent</TableHead>
+                            <TableHead className="text-white/50">Est. Revenue</TableHead>
+                            <TableHead className="text-white/50">Verdict</TableHead>
+                            <TableHead className="text-white/50">Lead</TableHead>
+                            <TableHead className="text-white/50">Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {reportsQuery.data?.reports?.map((report: any) => (
+                            <TableRow key={report.id} className="border-white/10 hover:bg-white/5">
+                              <TableCell className="text-white font-medium max-w-[200px] truncate">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="w-3.5 h-3.5 text-[#C9A962] flex-shrink-0" />
+                                  <span className="truncate">{report.address || 'N/A'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-white/70">
+                                {[report.city, report.state].filter(Boolean).join(', ') || '—'}
+                              </TableCell>
+                              <TableCell className="text-white/70">{report.bedrooms || '—'}</TableCell>
+                              <TableCell className="text-white/70">
+                                {report.monthlyRent ? `$${report.monthlyRent.toLocaleString()}` : '—'}
+                              </TableCell>
+                              <TableCell className="text-white font-medium">
+                                {report.annualRevenueRealistic
+                                  ? `$${report.annualRevenueRealistic.toLocaleString()}/yr`
+                                  : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {report.verdict ? (
+                                  <Badge className={
+                                    report.verdict === 'GO' ? 'bg-emerald-500/20 text-emerald-400 border-0' :
+                                    report.verdict === 'CAUTION' ? 'bg-amber-500/20 text-amber-400 border-0' :
+                                    'bg-red-500/20 text-red-400 border-0'
+                                  }>
+                                    {report.verdict}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-white/40">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-white/70">
+                                {report.leadName || report.leadEmail ? (
+                                  <div className="text-xs">
+                                    {report.leadName && <div className="font-medium text-white">{report.leadName}</div>}
+                                    {report.leadEmail && <div className="text-white/50">{report.leadEmail}</div>}
+                                  </div>
+                                ) : (
+                                  <span className="text-white/40">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-white/50 text-xs whitespace-nowrap">
+                                {formatDate(report.createdAt)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {(!reportsQuery.data?.reports || reportsQuery.data.reports.length === 0) && (
+                            <TableRow className="border-white/10">
+                              <TableCell colSpan={8} className="text-center text-white/40 py-8">
+                                No properties analyzed yet
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Pagination */}
+                    {totalReportPages > 1 && (
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                        <p className="text-sm text-white/50">
+                          Showing {reportPage * reportLimit + 1}–{Math.min((reportPage + 1) * reportLimit, reportsQuery.data?.total || 0)} of {reportsQuery.data?.total || 0}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={reportPage === 0}
+                            onClick={() => setReportPage(p => Math.max(0, p - 1))}
+                            className="border-white/20 text-white/70 hover:bg-white/10 disabled:opacity-30"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <span className="text-sm text-white/50">
+                            Page {reportPage + 1} of {totalReportPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={reportPage >= totalReportPages - 1}
+                            onClick={() => setReportPage(p => p + 1)}
+                            className="border-white/20 text-white/70 hover:bg-white/10 disabled:opacity-30"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* ============================================ */}

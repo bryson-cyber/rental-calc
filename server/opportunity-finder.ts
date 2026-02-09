@@ -12,12 +12,11 @@ import { z } from 'zod';
 import { router, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { ENV } from './_core/env';
-import { 
-  createSession, 
-  createTask, 
-  getTask, 
-  stopSession,
-} from './browser-use';
+// Browser Use removed - stub functions for compilation
+const createSession = async (_opts: any): Promise<any> => ({ id: '', liveUrl: '' });
+const createTask = async (_opts: any): Promise<any> => ({ id: '' });
+const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps: [], output: '' });
+const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
 
 // ============================================

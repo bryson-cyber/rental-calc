@@ -1,9 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { MOCK_SAN_DIEGO_ESTIMATE, MOCK_DENVER_ESTIMATE } from './fixtures/mock-rentalizer-data';
+
+/**
+ * Market Report By Location Tests
+ * Uses mocked data to avoid burning API calls during testing.
+ * The app runs on the live AirDNA API in production.
+ */
+
+const mockGetRentalizerEstimate = vi.fn()
+  .mockImplementation(async (params: any) => {
+    if (params.address?.includes('San Diego')) return MOCK_SAN_DIEGO_ESTIMATE;
+    if (params.address?.includes('Denver')) return MOCK_DENVER_ESTIMATE;
+    return MOCK_SAN_DIEGO_ESTIMATE; // default
+  });
+
+vi.mock('../airdna', () => ({
+  getRentalizerEstimate: (...args: any[]) => mockGetRentalizerEstimate(...args),
+}));
+
 import { getRentalizerEstimate } from '../airdna';
 
 describe('Market Report By Location', () => {
   it('should get market data for San Diego using Rentalizer', async () => {
-    // Test the core functionality - getting Rentalizer data for San Diego
     const estimate = await getRentalizerEstimate({
       address: '123 Main St, San Diego, CA',
       bedrooms: 2,
@@ -46,7 +64,7 @@ describe('Market Report By Location', () => {
     console.log('Total comps collected:', allComps.length);
     
     // Remove duplicates
-    const uniqueComps = allComps.filter((comp, index, self) =>
+    const uniqueComps = allComps.filter((comp: any, index: number, self: any[]) =>
       index === self.findIndex(c => c.title === comp.title)
     );
     

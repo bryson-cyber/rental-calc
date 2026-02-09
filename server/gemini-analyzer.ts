@@ -915,12 +915,10 @@ Return ONLY the JSON object, no other text.`;
 }
 
 /**
- * Analyze listing photos using Poe Gemini 3 Vision
- * (Updated to use Poe API instead of direct Gemini API for better reliability)
+ * Analyze listing photos using AI Vision
  */
 export async function analyzeListingPhoto(imageUrl: string, listingName: string): Promise<PhotoAnalysis> {
-  // Import Poe vision function dynamically to avoid circular dependencies
-  const { analyzeImageWithPoe } = await import('./poe-ai');
+  const { invokeLLM } = await import('./_core/llm');
   
   const prompt = `You are an expert Airbnb listing photographer and interior designer. Analyze this listing photo and provide insights.
 
@@ -946,19 +944,24 @@ Consider:
 Return ONLY the JSON object, no other text.`;
 
   try {
-    console.log(`[GeminiAnalyzer] Analyzing photo via Poe Gemini 3: ${listingName}`);
-    const response = await analyzeImageWithPoe(imageUrl, prompt, {
-      systemPrompt: 'You are an expert Airbnb listing photographer and interior designer. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.',
-      maxTokens: 1024,
-      timeoutMs: 30000,
+    console.log(`[GeminiAnalyzer] Analyzing photo via AI: ${listingName}`);
+    const response = await invokeLLM({
+      messages: [
+        { role: 'system', content: 'You are an expert Airbnb listing photographer and interior designer. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.' },
+        { role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ] }
+      ],
     });
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const text = String(response.choices?.[0]?.message?.content || '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
     throw new Error('Could not parse photo analysis JSON');
   } catch (error) {
-    console.error('[GeminiAnalyzer] Error analyzing photo via Poe:', error);
+    console.error('[GeminiAnalyzer] Error analyzing photo:', error);
     return {
       design_theme: "Unable to analyze",
       quality_score: 0,

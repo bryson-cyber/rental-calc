@@ -9,8 +9,6 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   airdnaApiKey: process.env.AIRDNA_API_KEY ?? "",
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
-  poeApiKey: process.env.POE_API_KEY ?? "",
-  browserUseApiKey: process.env.BROWSER_USE_API_KEY ?? "",
   coachinayahEmail: process.env.COACHINAYAH_EMAIL ?? "",
   coachinayahPassword: process.env.COACHINAYAH_PASSWORD ?? "",
   hasdataApiKey: process.env.HASDATA_API_KEY ?? "",

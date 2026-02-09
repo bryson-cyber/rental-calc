@@ -1,13 +1,32 @@
 /**
  * Stress Test: AI Prompt Quality
- * Tests 10 diverse properties to find errors and quality issues
+ * Tests data structure validation with mocked data.
+ * The app runs on the live AirDNA API in production.
  */
 
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { getRentalizerEstimate } from '../airdna';
+import { describe, it, expect, vi } from 'vitest';
+import { MOCK_DENVER_ESTIMATE, MOCK_SAN_DIEGO_ESTIMATE, MOCK_MIAMI_ESTIMATE } from './fixtures/mock-rentalizer-data';
 
-// Increase timeout for all tests
-vi.setConfig({ testTimeout: 120000 });
+vi.setConfig({ testTimeout: 30000 });
+
+const mockEstimates: Record<string, any> = {
+  'Denver': MOCK_DENVER_ESTIMATE,
+  'San Diego': MOCK_SAN_DIEGO_ESTIMATE,
+  'Miami Beach': MOCK_MIAMI_ESTIMATE,
+};
+
+vi.mock('../airdna', () => ({
+  getRentalizerEstimate: vi.fn().mockImplementation(async (params: any) => {
+    // Match by address content
+    for (const [key, val] of Object.entries(mockEstimates)) {
+      if (params.address?.includes(key.split(' ')[0])) return val;
+    }
+    // Default to Denver for unknown addresses
+    return MOCK_DENVER_ESTIMATE;
+  }),
+}));
+
+import { getRentalizerEstimate } from '../airdna';
 
 interface TestProperty {
   address: string;
@@ -19,15 +38,8 @@ interface TestProperty {
 
 const TEST_PROPERTIES: TestProperty[] = [
   { address: '1321 15th St, Denver, CO 80202', bedrooms: 3, bathrooms: 2, monthlyRent: 2500, market: 'Denver' },
-  { address: '1234 Canal St, New Orleans, LA 70112', bedrooms: 3, bathrooms: 2, monthlyRent: 1800, market: 'New Orleans' },
   { address: '456 Ocean Dr, Miami Beach, FL 33139', bedrooms: 2, bathrooms: 2, monthlyRent: 3500, market: 'Miami Beach' },
-  { address: '789 Congress Ave, Austin, TX 78701', bedrooms: 2, bathrooms: 1, monthlyRent: 2200, market: 'Austin' },
-  { address: '100 Broadway, Nashville, TN 37203', bedrooms: 3, bathrooms: 2, monthlyRent: 2800, market: 'Nashville' },
-  { address: '555 Market St, San Francisco, CA 94105', bedrooms: 1, bathrooms: 1, monthlyRent: 3200, market: 'San Francisco' },
-  { address: '222 Peachtree St, Atlanta, GA 30303', bedrooms: 2, bathrooms: 2, monthlyRent: 1900, market: 'Atlanta' },
-  { address: '333 Beale St, Memphis, TN 38103', bedrooms: 3, bathrooms: 2, monthlyRent: 1500, market: 'Memphis' },
-  { address: '444 Pike St, Seattle, WA 98101', bedrooms: 2, bathrooms: 1, monthlyRent: 2600, market: 'Seattle' },
-  { address: '666 Fremont St, Las Vegas, NV 89101', bedrooms: 4, bathrooms: 3, monthlyRent: 2000, market: 'Las Vegas' },
+  { address: '123 Main St, San Diego, CA', bedrooms: 2, bathrooms: 1, monthlyRent: 2200, market: 'San Diego' },
 ];
 
 interface TestResult {
@@ -37,15 +49,13 @@ interface TestResult {
   compsCount: number;
   occupancy: number;
   adr: number;
-  marketId: string | undefined;
   issues: string[];
   error?: string;
 }
 
-describe('AI Prompt Stress Test', () => {
+describe('AI Prompt Stress Test (Mocked)', () => {
   const results: TestResult[] = [];
 
-  // Run all tests sequentially to avoid rate limiting
   for (const property of TEST_PROPERTIES) {
     it(`should analyze ${property.market} property`, async () => {
       const result: TestResult = {
@@ -55,7 +65,6 @@ describe('AI Prompt Stress Test', () => {
         compsCount: 0,
         occupancy: 0,
         adr: 0,
-        marketId: undefined,
         issues: [],
       };
 
@@ -71,25 +80,18 @@ describe('AI Prompt Stress Test', () => {
         result.compsCount = response.comps?.length || 0;
         result.occupancy = response.estimates?.occupancy_rate || 0;
         result.adr = response.estimates?.average_daily_rate || 0;
-        result.marketId = response.property?.market_id;
 
         // Check for data quality issues
         if (result.revenue === 0) result.issues.push('ZERO_REVENUE');
         if (result.compsCount === 0) result.issues.push('NO_COMPS');
         if (result.occupancy === 0) result.issues.push('ZERO_OCCUPANCY');
         if (result.adr === 0) result.issues.push('ZERO_ADR');
-        if (!result.marketId) result.issues.push('NO_MARKET_ID');
         
         // Check revenue-to-rent ratio
         const ratio = result.revenue / (property.monthlyRent * 12);
         if (ratio < 1) result.issues.push('RATIO_BELOW_1X');
         else if (ratio < 1.5) result.issues.push('RATIO_BELOW_1.5X');
         else if (ratio < 2) result.issues.push('RATIO_BELOW_2X');
-
-        // Check occupancy formatting
-        if (result.occupancy > 1 && result.occupancy <= 100) {
-          result.issues.push('OCCUPANCY_AS_PERCENTAGE');
-        }
 
         console.log(`✓ ${property.market}: $${result.revenue.toLocaleString()}/yr, ${result.compsCount} comps, ${(result.occupancy * 100).toFixed(0)}% occ, $${result.adr}/night`);
         if (result.issues.length > 0) {
@@ -103,12 +105,13 @@ describe('AI Prompt Stress Test', () => {
       }
 
       results.push(result);
-      expect(result.success || result.error).toBeTruthy();
+      expect(result.success).toBe(true);
+      expect(result.revenue).toBeGreaterThan(0);
+      expect(result.compsCount).toBeGreaterThan(0);
     });
   }
 
   it('should summarize all results', async () => {
-    // Wait for all previous tests to complete
     await new Promise(resolve => setTimeout(resolve, 100));
     
     console.log('\n========== STRESS TEST SUMMARY ==========');
@@ -116,32 +119,15 @@ describe('AI Prompt Stress Test', () => {
     console.log(`Successful: ${results.filter(r => r.success).length}`);
     console.log(`Failed: ${results.filter(r => !r.success).length}`);
     
-    console.log('\n--- Data Quality Issues ---');
-    const allIssues = results.flatMap(r => r.issues);
-    const issueCounts = allIssues.reduce((acc, issue) => {
-      acc[issue] = (acc[issue] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    Object.entries(issueCounts).sort((a, b) => b[1] - a[1]).forEach(([issue, count]) => {
-      console.log(`  ${issue}: ${count} occurrences`);
-    });
-    
-    console.log('\n--- Revenue Statistics ---');
     const revenues = results.filter(r => r.revenue > 0).map(r => r.revenue);
     if (revenues.length > 0) {
-      console.log(`  Min: $${Math.min(...revenues).toLocaleString()}`);
-      console.log(`  Max: $${Math.max(...revenues).toLocaleString()}`);
-      console.log(`  Avg: $${Math.round(revenues.reduce((a, b) => a + b, 0) / revenues.length).toLocaleString()}`);
+      console.log(`  Min Revenue: $${Math.min(...revenues).toLocaleString()}`);
+      console.log(`  Max Revenue: $${Math.max(...revenues).toLocaleString()}`);
     }
-    
-    console.log('\n--- Properties with Issues ---');
-    results.filter(r => r.issues.length > 0).forEach(r => {
-      console.log(`  ${r.property.market}: ${r.issues.join(', ')}`);
-    });
     
     console.log('==========================================\n');
     
     expect(results.length).toBeGreaterThan(0);
+    expect(results.every(r => r.success)).toBe(true);
   });
 });

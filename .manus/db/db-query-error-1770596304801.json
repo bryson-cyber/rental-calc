@@ -1,0 +1,8 @@
+{
+  "query": "SELECT cacheKey, endpoint, COUNT(*) as count FROM api_cache WHERE endpoint = 'rentalizer' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT cacheKey, endpoint, COUNT(*) as count FROM api_cache WHERE endpoint = 'rentalizer' LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 8123 (HY000) at line 1: In aggregated query without GROUP BY, expression #1 of SELECT list contains nonaggregated column 'cacheKey'; this is incompatible with sql_mode=only_full_group_by"
+  ]
+}

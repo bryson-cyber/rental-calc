@@ -12,12 +12,11 @@ import { ENV } from './_core/env';
 import { getDb } from './db';
 import { marketResearchReports } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
-import { 
-  createSession, 
-  createTask, 
-  getTask, 
-  stopSession,
-} from './browser-use';
+// Browser Use removed - stub functions for compilation
+const createSession = async (_opts: any): Promise<any> => ({ id: '', liveUrl: '' });
+const createTask = async (_opts: any): Promise<any> => ({ id: '' });
+const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps: [], output: '' });
+const stopSession = async (_id: string): Promise<void> => {};
 
 // ============================================
 // TYPES

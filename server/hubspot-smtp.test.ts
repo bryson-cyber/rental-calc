@@ -26,7 +26,7 @@ describe('HubSpot SMTP Configuration', () => {
     }
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.hubspot.net',
+      host: 'smtp.hubapi.com',
       port: 587,
       secure: false,
       auth: {

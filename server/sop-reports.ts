@@ -95,7 +95,6 @@ import {
   type EnhancedNarrativeReport
 } from './gemini-analyzer-enhanced';
 
-import { generateEnhancedNarrativeWithPoe } from './poe-narrative';
 import { generateEnhancedNarrativeWithFallback } from './ai-fallback';
 
 import { scrapeAirbnbImages, batchScrapeAirbnbImages, batchCheckAirbnbListingsActive } from './airbnb-scraper';

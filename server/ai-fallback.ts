@@ -2,22 +2,19 @@
  * Multi-Provider AI Fallback Service
  * 
  * Provides robust AI narrative generation with automatic fallback between providers:
- * 1. Poe AI (Claude Opus) - Primary, highest quality
- * 2. Forge API (Gemini Flash) - Fast fallback
- * 3. Gemini Direct - Secondary fallback
- * 4. Template-based - Guaranteed fallback (no AI)
+ * 1. Forge API (Gemini Flash) - Primary, fast and reliable
+ * 2. Gemini Direct - Secondary fallback
+ * 3. Template-based - Guaranteed fallback (no AI)
  * 
  * Each provider has a short timeout to fail fast and try the next one.
  */
 
-import { generateNarrativeWithPoe } from './poe-ai';
 import { invokeLLM } from './_core/llm';
 import type { EnhancedNarrativeReport, EnhancedNarrativeReportInput } from './gemini-analyzer-enhanced';
 
 // Timeout for each provider - strict 15s each for fast fallback
 const FORGE_TIMEOUT_MS = 15000;  // 15 seconds - primary provider
 const GEMINI_TIMEOUT_MS = 15000;  // 15 seconds - backup
-const POE_TIMEOUT_MS = 15000;  // 15 seconds - external fallback
 
 // Maximum total time for all AI attempts before falling back to template
 const MAX_TOTAL_AI_TIME_MS = 40000; // 40 seconds total max
@@ -27,8 +24,7 @@ const MAX_TOTAL_AI_TIME_MS = 40000; // 40 seconds total max
  * Tries AI providers in sequence with strict timeouts:
  * 1. Forge API (15s) - Built-in, most reliable
  * 2. Gemini Direct (15s) - Fast backup
- * 3. Poe AI (15s) - External fallback
- * 4. Template - Guaranteed fallback
+ * 3. Template - Guaranteed fallback
  */
 export async function generateEnhancedNarrativeWithFallback(
   input: EnhancedNarrativeReportInput,
@@ -42,25 +38,48 @@ export async function generateEnhancedNarrativeWithFallback(
   
   console.log('[AIFallback] Starting multi-provider AI generation...');
   
-  // Try all AI providers with strict timeouts, fall back to template if all fail
-  return tryAllAIProviders(prompt, input, metrics, notify);
-}
-
-/**
- * Try all AI providers in sequence
- */
-async function tryAllAIProviders(
-  prompt: string,
-  input: EnhancedNarrativeReportInput,
-  metrics: Metrics,
-  notify: (provider: string, status: 'trying' | 'success' | 'failed') => void
-): Promise<EnhancedNarrativeReport> {
+  const totalStart = Date.now();
   
-  // TEMPORARY: Skip all AI providers and use template directly
-  // This guarantees fast, reliable results while we debug the AI timeout issues
-  // TODO: Re-enable AI providers once timeout handling is fixed
+  // Provider 1: Forge API
+  try {
+    if (Date.now() - totalStart < MAX_TOTAL_AI_TIME_MS) {
+      notify('forge', 'trying');
+      console.log('[AIFallback] Trying Forge API...');
+      const report = await withTimeout(
+        generateWithForge(prompt, input, metrics),
+        FORGE_TIMEOUT_MS,
+        'Forge API timeout'
+      );
+      notify('forge', 'success');
+      console.log('[AIFallback] Forge API succeeded');
+      return report;
+    }
+  } catch (err: any) {
+    console.log(`[AIFallback] Forge API failed: ${err.message}`);
+    notify('forge', 'failed');
+  }
   
-  console.log('[AIFallback] Using template-based generation (AI providers disabled for reliability)');
+  // Provider 2: Gemini Direct
+  try {
+    if (Date.now() - totalStart < MAX_TOTAL_AI_TIME_MS) {
+      notify('gemini', 'trying');
+      console.log('[AIFallback] Trying Gemini Direct...');
+      const report = await withTimeout(
+        generateWithGeminiDirect(prompt, input, metrics),
+        GEMINI_TIMEOUT_MS,
+        'Gemini Direct timeout'
+      );
+      notify('gemini', 'success');
+      console.log('[AIFallback] Gemini Direct succeeded');
+      return report;
+    }
+  } catch (err: any) {
+    console.log(`[AIFallback] Gemini Direct failed: ${err.message}`);
+    notify('gemini', 'failed');
+  }
+  
+  // Provider 3: Template (guaranteed)
+  console.log('[AIFallback] All AI providers failed, using template');
   notify('template', 'trying');
   const report = generateTemplateReport(input, metrics);
   notify('template', 'success');
@@ -176,57 +195,7 @@ SEASONALITY: ${metrics.seasonalSwingPct}% swing between peak and off-peak
 Write a professional summary covering: revenue potential, profit projections, market comparison, and cash flow timing. Use **bold** for key terms. DO NOT give investment advice or recommendations like "GO" or "sign the lease". Just summarize the data objectively.`;
 }
 
-// Provider 1: Poe AI (NO RETRIES - fail fast)
-async function generateWithPoe(
-  prompt: string, 
-  input: EnhancedNarrativeReportInput, 
-  metrics: Metrics
-): Promise<EnhancedNarrativeReport> {
-  // Call Poe directly with very short timeout and NO retries
-  const { ENV } = await import('./_core/env');
-  const POE_API_URL = 'https://api.poe.com/v1/chat/completions';
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), POE_TIMEOUT_MS - 2000);
-  
-  try {
-    const response = await fetch(POE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ENV.poeApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'Claude-Opus-4.5',
-        messages: [
-          { role: 'system', content: 'You are a senior STR investment analyst. Write clear, specific analysis.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-        stream: false,
-      }),
-      signal: controller.signal,
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Poe API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    
-    if (!text) {
-      throw new Error('Empty response from Poe');
-    }
-    
-    return buildReport(text.trim(), input, metrics);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Provider 2: Forge API (Gemini Flash) - with proper timeout
+// Provider 1: Forge API (Gemini Flash) - with proper timeout
 async function generateWithForge(
   prompt: string, 
   input: EnhancedNarrativeReportInput, 
@@ -278,16 +247,15 @@ async function generateWithForge(
   }
 }
 
-// Provider 3: Gemini Direct (using existing gemini.ts)
+// Provider 2: Gemini Direct
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
 async function generateWithGeminiDirect(
   prompt: string, 
   input: EnhancedNarrativeReportInput, 
   metrics: Metrics
 ): Promise<EnhancedNarrativeReport> {
-  // Call Gemini API directly
   const { ENV } = await import('./_core/env');
-  
-  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS - 5000);
@@ -320,7 +288,7 @@ async function generateWithGeminiDirect(
   }
 }
 
-// Provider 4: Template-based (no AI)
+// Provider 3: Template-based (no AI)
 function generateTemplateReport(
   input: EnhancedNarrativeReportInput, 
   metrics: Metrics

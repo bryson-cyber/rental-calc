@@ -18,7 +18,7 @@ import { getDb } from './db';
 import { deepAnalysis, analysisReports } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { ENV } from './_core/env';
-import { generateNarrativeWithPoe } from './poe-ai';
+import { invokeLLM } from './_core/llm';
 
 // AI provider timeout - reduced for faster failure
 const AI_TIMEOUT_MS = 45000; // 45 seconds per call (reduced from 120s)
@@ -358,7 +358,7 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
         marketNarrative,
         actionPlan,
         processingTimeMs,
-        aiProvider: 'poe',
+        aiProvider: 'forge',
         completedAt: new Date(),
         completedSteps: JSON.stringify(['executiveSummary', 'marketScenarios', 'historicalContext', 'riskAssessment', 'pricingData', 'marketDeepDive']),
       })
@@ -383,23 +383,24 @@ async function processDeepAnalysis(deepAnalysisId: number, reportId: number): Pr
 }
 
 /**
- * Call AI using Poe API (Claude Opus for high-quality narratives)
+ * Call AI using Forge/LLM API for high-quality narratives
  */
 async function callAI(prompt: string, systemPrompt: string = ''): Promise<string> {
-  console.log('[DeepAnalysis] Calling Poe AI...');
+  console.log('[DeepAnalysis] Calling AI via Forge...');
   
   try {
-    const response = await generateNarrativeWithPoe(prompt, {
-      systemPrompt: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.',
-      model: 'Claude-Opus-4.5',
-      maxTokens: 4096,
-      timeoutMs: AI_TIMEOUT_MS,
+    const response = await invokeLLM({
+      messages: [
+        { role: 'system', content: systemPrompt || 'You are a market data analyst for Coach Inayah. Present data and insights clearly and objectively.' },
+        { role: 'user', content: prompt }
+      ],
     });
     
-    console.log(`[DeepAnalysis] Poe response received: ${response.length} chars`);
-    return response;
+    const text = String(response.choices?.[0]?.message?.content || '');
+    console.log(`[DeepAnalysis] AI response received: ${text.length} chars`);
+    return text;
   } catch (error: any) {
-    console.error('[DeepAnalysis] Poe AI error:', error.message);
+    console.error('[DeepAnalysis] AI error:', error.message);
     throw error;
   }
 }
