@@ -9967,3 +9967,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Show loading state during regeneration (spinner + disabled state)
 - [x] Refresh report data after successful regeneration (auto-reload page)
 - [ ] Add confirmation dialog before regeneration (skipped — button is admin-only)
+
+## Bug Fix (Feb 9, 2026) - Map View Not Showing Comps
+- [x] Debug: Map view on report page not displaying comparable property markers
+- [x] Fix CompsMapView to properly render comp markers with coordinates (root cause: production report data had null lat/lng, regenerated with fresh data)

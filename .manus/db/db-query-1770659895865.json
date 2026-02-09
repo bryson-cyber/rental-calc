@@ -1,0 +1,17 @@
+{
+  "query": "SELECT shareId, latitude, longitude, JSON_EXTRACT(reportData, '$.property.latitude') as prop_lat, JSON_EXTRACT(reportData, '$.property.longitude') as prop_lng FROM shared_reports WHERE shareId = '6x7847e1mlfebp33'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, latitude, longitude, JSON_EXTRACT(reportData, '$.property.latitude') as prop_lat, JSON_EXTRACT(reportData, '$.property.longitude') as prop_lng FROM shared_reports WHERE shareId = '6x7847e1mlfebp33'",
+  "rows": [
+    {
+      "shareId": "6x7847e1mlfebp33",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "prop_lat": "NULL",
+      "prop_lng": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\tlatitude\tlongitude\tprop_lat\tprop_lng\n6x7847e1mlfebp33\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}
