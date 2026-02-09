@@ -128,7 +128,7 @@ interface MarketData {
     occupancy: number;
     adr: number;
     revenue: number;
-    revpar: number;
+    revpar?: number;
     active_listings: number;
     market_score?: number;
   };
@@ -550,7 +550,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <p className="text-white font-semibold">{property.address}</p>
               </div>
               <div className="divide-y divide-[#0F172A]/5">
-                <DataRow label="Location" value={`${property.city}, ${property.state} ${property.zipCode}`} />
+                <DataRow label="Location" value={[property.city, property.state].filter(Boolean).join(', ') + (property.zipCode ? ` ${property.zipCode}` : '')} />
                 <DataRow label="Property Type" value={property.propertyType || 'Residential'} />
                 <DataRow label="Bedrooms" value={`${property.bedrooms}`} />
                 <DataRow label="Bathrooms" value={`${property.bathrooms}`} />
@@ -724,7 +724,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">{market_data.name} Market Overview</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="Active Listings" value={market_data.listing_count.toLocaleString()} icon={Building} />
-              <StatCard label="Market Avg. Revenue" value={formatCurrency(market_data.metrics.revenue)} icon={DollarSign} />
+              <StatCard label="Market Avg. Monthly Revenue" value={formatCurrency(market_data.metrics.revenue)} icon={DollarSign} />
               <StatCard label="Market Avg. Occupancy" value={formatPercent(market_data.metrics.occupancy)} icon={Percent} />
               <StatCard label="Market Avg. ADR" value={formatCurrency(market_data.metrics.adr)} icon={DollarSign} />
             </div>
@@ -747,10 +747,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <div className="p-3 text-center">Market Average</div>
               </div>
               {[
-                { label: 'Annual Revenue', yours: formatCurrency(revenue_estimate.annual), market: formatCurrency(market_data.metrics.revenue) },
+                { label: 'Annual Revenue', yours: formatCurrency(revenue_estimate.annual), market: formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue) },
                 { label: 'Nightly Rate (ADR)', yours: formatCurrency(revenue_estimate.nightly), market: formatCurrency(market_data.metrics.adr) },
                 { label: 'Occupancy Rate', yours: formatPercent(revenue_estimate.occupancy), market: formatPercent(market_data.metrics.occupancy) },
-                { label: 'RevPAR', yours: formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy)), market: formatCurrency(market_data.metrics.revpar) },
+                { label: 'RevPAR', yours: formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy)), market: formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))) },
               ].map((row, i) => (
                 <div key={i} className="grid grid-cols-3 text-sm">
                   <div className="p-3 text-[#0F172A]/70">{row.label}</div>
@@ -1126,9 +1126,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Market Context</h3>
                   <p className="text-[#0F172A]/70 leading-relaxed">
                     The <strong>{market_data.name}</strong> market has <strong>{market_data.listing_count.toLocaleString()}</strong> active
-                    short-term rental listings. The market average revenue is {formatCurrency(market_data.metrics.revenue)} with
+                    short-term rental listings. The market average annual revenue is {formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)} with
                     an average occupancy of {formatPercent(market_data.metrics.occupancy)} and ADR of {formatCurrency(market_data.metrics.adr)}.
-                    {revenue_estimate.annual > market_data.metrics.revenue
+                    {revenue_estimate.annual > (market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)
                       ? ' This property is projected to perform above the market average.'
                       : ' This property is projected to perform near the market average.'}
                   </p>

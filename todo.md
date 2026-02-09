@@ -9889,3 +9889,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Add regenerate button to report UI (admin only) — deferred
 - [x] Regenerate existing client report (l6984fncmlf7nhnx)
 - [x] Test new report generation end-to-end
+
+### Additional Fixes (Feb 9)
+- [x] Fix market search for submarkets — use parent market ID when submarket returns 404
+- [x] Fix city/state extraction from address_lookup for single-comma addresses
+- [x] Add geocoding fallback using Google Maps proxy when rentalizer doesn't return location
+- [x] Fix RevPAR $NaN — calculate from ADR * occupancy when revpar field is missing
+- [x] Fix market revenue display — annualize monthly average for Annual Revenue comparison
+- [x] Fix Location "undefined" zipCode display
+- [x] Fix historical data field compatibility (yoy_revenue_change vs yearly_pct_change)
