@@ -76,11 +76,28 @@ interface MonthlyForecastChartProps {
 export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChartProps) {
   // Format month labels to be shorter
   const chartData = useMemo(() => {
-    return data.slice(0, 12).map(item => ({
-      ...item,
-      shortMonth: item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3),
-      occupancyPct: item.occupancy > 1 ? item.occupancy : item.occupancy * 100,
-    }));
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return data.slice(0, 12).map(item => {
+      // Parse month from various formats: "2025-05", "May 2025", "May", etc.
+      let shortMonth = item.month;
+      const dashParts = item.month.split('-');
+      if (dashParts.length >= 2) {
+        // Format: "2025-05" or "2025-05-01"
+        const monthIdx = parseInt(dashParts[1]) - 1;
+        const year = dashParts[0].slice(2); // "25"
+        shortMonth = monthIdx >= 0 && monthIdx < 12 ? `${monthNames[monthIdx]} '${year}` : item.month.slice(0, 3);
+      } else if (item.month.includes(' ')) {
+        // Format: "May 2025"
+        shortMonth = item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3);
+      } else if (item.month.length > 3) {
+        shortMonth = item.month.slice(0, 3);
+      }
+      return {
+        ...item,
+        shortMonth,
+        occupancyPct: item.occupancy > 1 ? item.occupancy : item.occupancy * 100,
+      };
+    });
   }, [data]);
 
   const maxRevenue = Math.max(...chartData.map(d => d.revenue));
@@ -378,12 +395,24 @@ interface SeasonalityChartProps {
 
 export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) {
   const chartData = useMemo(() => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const avgRevenue = data.reduce((sum, d) => sum + d.revenue, 0) / data.length;
     return data.slice(0, 12).map(item => {
       const variance = ((item.revenue - avgRevenue) / avgRevenue) * 100;
+      // Parse month from various formats: "2025-05", "May 2025", "May", etc.
+      let shortMonth = item.month;
+      const dashParts = item.month.split('-');
+      if (dashParts.length >= 2) {
+        const monthIdx = parseInt(dashParts[1]) - 1;
+        shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : item.month.slice(0, 3);
+      } else if (item.month.includes(' ')) {
+        shortMonth = item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3);
+      } else if (item.month.length > 3) {
+        shortMonth = item.month.slice(0, 3);
+      }
       return {
         ...item,
-        shortMonth: item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3),
+        shortMonth,
         variance,
         season: variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder',
       };

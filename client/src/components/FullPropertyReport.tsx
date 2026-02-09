@@ -731,7 +731,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             {market_data.metrics.market_score && (
               <div className="mt-4">
                 <InsightBox type="info">
-                  <strong>Market Score:</strong> {market_data.metrics.market_score}/100 — This score reflects the overall investment attractiveness of the market based on supply, demand, and revenue trends.
+                  <strong>Market Score:</strong> {Math.round(market_data.metrics.market_score * 10) / 10}/100 — This score reflects the overall investment attractiveness of the market based on supply, demand, and revenue trends.
                 </InsightBox>
               </div>
             )}
