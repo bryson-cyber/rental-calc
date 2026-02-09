@@ -14,7 +14,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
-    exclude: ["server/__tests__/integration/**"],
+    include: ["server/__tests__/integration/**/*.test.ts"],
+    testTimeout: 120000,
   },
 });

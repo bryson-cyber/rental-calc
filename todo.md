@@ -9824,3 +9824,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Removed poeApiKey and browserUseApiKey from env.ts
 - [ ] Update AirDNA tests to use mocked cached data instead of live API
 - [ ] Add Property Cache viewer to admin dashboard (see all analyzed properties)
+
+## Debug Sweep (Feb 9, 2026)
+
+### Critical Bug Fixes
+- [x] Fix 20 test files making live API calls (moved 28 to server/__tests__/integration/)
+- [x] Fix full-narrative-stress-test.test.ts comprehensive mock (all 53 AirDNA functions + gemini + ai-fallback + scraper)
+- [x] Fix test suite timeout (>5 min → 7.86 sec with 50 files, 598 tests)
+- [x] Fix cache hit rate showing 0% (added logCacheHit to all 15 cache hit points in airdna.ts)
+- [x] Verify all tests pass with mocks (50 files, 598 tests, 0 failures)

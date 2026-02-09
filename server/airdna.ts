@@ -4,6 +4,19 @@ import { logApiCall, getDbCache, setDbCache, checkDailyLimit } from './api-logge
 
 const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 
+// Helper to log cache hits to the API usage tracker
+function logCacheHit(endpoint: string, source?: string): void {
+  logApiCall({
+    provider: 'airdna',
+    endpoint,
+    statusCode: 200,
+    success: true,
+    responseTimeMs: 0,
+    cacheHit: true,
+    source: source || 'cache',
+  });
+}
+
 // ============================================
 // TYPE DEFINITIONS
 // ============================================
@@ -403,6 +416,7 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
   // Return memory cached data if still valid
   if (usMarketsCache && usMarketsCache.length > 0 && Date.now() - usMarketsCacheTime < CACHE_TTL) {
     console.log(`[getAllUSMarkets] Using memory cache (${usMarketsCache.length} markets)`);
+    logCacheHit('all_us_markets');
     return usMarketsCache;
   }
   
@@ -411,6 +425,7 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
   const dbCached = apiCache.get<typeof usMarketsCache>(dbCacheKey);
   if (dbCached && dbCached.length > 0) {
     console.log(`[getAllUSMarkets] Using database cache (${dbCached.length} markets)`);
+    logCacheHit('all_us_markets');
     usMarketsCache = dbCached;
     usMarketsCacheTime = Date.now();
     return dbCached;
@@ -467,7 +482,7 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
 export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
   const cacheKey = apiCache.generateKey('search_markets', { searchTerm, limit });
   const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) { logCacheHit('search_markets'); return cached; }
   
   try {
     // Get all US markets from cache or API
@@ -572,7 +587,7 @@ function extractStateFromLocation(location: string): string | undefined {
 export async function searchMarketsAPI(searchTerm: string, limit: number = 15): Promise<MarketSearchResult[]> {
   const cacheKey = apiCache.generateKey('search_markets_api', { searchTerm, limit });
   const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) { logCacheHit('search_markets_api'); return cached; }
   
   try {
     console.log(`[searchMarketsAPI] Searching AirDNA for: "${searchTerm}"`);
@@ -994,7 +1009,7 @@ export async function getMarketDetails(marketId: string): Promise<{
     market_type?: string;
     metrics?: { market_score: number; revenue: number; booked: number; daily_rate: number; revpar: number; };
   }>(cacheKey);
-  if (cached) return cached;
+  if (cached) { logCacheHit('market_details'); return cached; }
   
   try {
     const response = await makeApiRequest<{
@@ -1233,6 +1248,7 @@ export async function getSubmarketSeasonality(
   const cacheKey = `submarket_seasonality:${submarketId}`;
   const cached = apiCache.get<SeasonalityData[]>(cacheKey);
   if (cached) {
+    logCacheHit('submarket_seasonality');
     return cached;
   }
 
@@ -1340,6 +1356,7 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
   }>(cacheKey);
   if (cached) {
     console.log(`[AirDNA] Historical data CACHE HIT for market ${marketId}`);
+    logCacheHit('market_historical');
     return cached;
   }
   
@@ -1997,6 +2014,7 @@ export async function getAllSubmarketListings(
   const cached = apiCache.get<ListingData[]>(cacheKey);
   if (cached) {
     console.log(`[getAllSubmarketListings] CACHE HIT for ${submarketId}, bedrooms: ${options?.bedrooms}, ${cached.length} listings`);
+    logCacheHit('all_submarket_listings');
     // Apply only minRevenue filter (bedroom already filtered via API)
     let filtered = cached;
     if (options?.minRevenue !== undefined) {
@@ -2353,6 +2371,7 @@ export async function getRentalizerEstimate(
   // Check cache first
   const cached = apiCache.get<RentalizerResponse>(cacheKey);
   if (cached) {
+    logCacheHit('rentalizer');
     return cached;
   }
   
@@ -2928,6 +2947,7 @@ export async function getComprehensiveMarketReport(
   const cacheKey = `market_comprehensive:${marketId}`;
   const cached = apiCache.get<ComprehensiveMarketReport>(cacheKey);
   if (cached) {
+    logCacheHit('market_comprehensive');
     return cached;
   }
 
@@ -3047,6 +3067,7 @@ export async function getComprehensiveSubmarketReport(
     // Check if cached data has valid metrics (not all zeros)
     const hasValidMetrics = cached.submarket.metrics.revenue > 0 || cached.submarket.metrics.occupancy > 0;
     if (hasValidMetrics) {
+      logCacheHit('submarket_comprehensive');
       console.log(`[getComprehensiveSubmarketReport] CACHE HIT for ${submarketId}:`, JSON.stringify(cached.submarket.metrics, null, 2));
       return cached;
     } else {
@@ -4270,6 +4291,7 @@ export async function getMarketSeasonality(
   const cacheKey = `market_seasonality:${marketId}`;
   const cached = apiCache.get<SeasonalityData[]>(cacheKey);
   if (cached) {
+    logCacheHit('market_seasonality');
     return cached;
   }
 
@@ -6066,6 +6088,7 @@ export async function getListingsByArea(
   const cached = apiCache.get(cacheKey);
   if (cached) {
     console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
+    logCacheHit('listings_by_area');
     return cached as ListingsByAreaResponse;
   }
   console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
@@ -6267,6 +6290,7 @@ export async function getRentalizerBulkSummary(
   const cached = apiCache.get(cacheKey);
   if (cached) {
     console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
+    logCacheHit('bulk_summary');
     return cached as BulkSummaryResponse;
   }
   console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
@@ -7119,6 +7143,7 @@ export async function getBulkListings(
     const cacheKey = `bulk_listing:${id}:${currency}`;
     const cached = apiCache.get<BulkListingResult>(cacheKey);
     if (cached) {
+      logCacheHit('bulk_listing');
       cachedListings.push(cached);
     } else {
       uncachedIds.push(id);
