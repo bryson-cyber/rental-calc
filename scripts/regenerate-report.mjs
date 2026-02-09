@@ -65,8 +65,30 @@ async function main() {
   const comps = (propEstimate?.comps || []);
   const sameBedComps = (freshReport.same_bedroom_comps || []);
   const bedroomPerf = (freshReport.bedroom_performance || []);
-  const historical = freshReport.market?.historical;
+  const rawHistorical = freshReport.market?.historical;
+  const historicalValuation = freshReport.historical_valuation;
   const prop = propEstimate?.property; // The property sub-object with lat/lng, city, etc.
+  
+  // Build historical_data with both summary (YoY) and monthly data
+  const historical = {
+    summary: {
+      yoy_revenue_change: historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0,
+      yoy_occupancy_change: rawHistorical?.summary?.occupancy_valuation?.yearly_pct_change ?? 0,
+      yoy_adr_change: rawHistorical?.summary?.adr_valuation?.yearly_pct_change ?? 0,
+      yearly_pct_change: historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0,
+      monthly_pct_change: rawHistorical?.summary?.revenue_valuation?.monthly_pct_change ?? 0,
+      trend: (() => {
+        const change = historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0;
+        return change > 2 ? 'up' : change < -2 ? 'down' : 'stable';
+      })(),
+    },
+    months: rawHistorical?.revenue?.map((r, idx) => ({
+      date: r.date || r.month || '',
+      revenue: r.value || r.revenue || 0,
+      occupancy: rawHistorical?.occupancy?.[idx]?.value,
+      adr: rawHistorical?.adr?.[idx]?.value,
+    })) || [],
+  };
   
   console.log(`[Regenerate Script] Got ${comps.length} rentalizer comps, ${sameBedComps.length} same-bedroom comps`);
   
@@ -153,7 +175,7 @@ async function main() {
     } : existingData.market_data,
     bedroom_performance: bedroomPerf.length > 0 ? bedroomPerf : existingData.bedroom_performance || [],
     revenue_percentiles: revenuePercentiles,
-    historical_data: historical || existingData.historical_data,
+    historical_data: (historical.summary.yoy_revenue_change !== 0 || historical.months.length > 0) ? historical : existingData.historical_data,
     comps: comps.map(c => {
       const listingId = c.airbnb_listing_id || c.id?.replace('abnb_', '') || '';
       const matchingSbc = sameBedComps.find(sbc => {
@@ -217,7 +239,7 @@ async function main() {
         adr: newReportData.market_data.metrics?.adr || 0,
         revenue: newReportData.market_data.metrics?.revenue || 0,
         listingCount: newReportData.market_data.listing_count || 0,
-        marketScore: newReportData.market_data.metrics?.market_score,
+        marketScore: newReportData.market_data.metrics?.market_score ? Math.round(newReportData.market_data.metrics.market_score) : undefined,
       } : undefined,
       bedroomPerformance: newReportData.bedroom_performance,
       competitors: newReportData.comps.slice(0, 15).map(c => ({

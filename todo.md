@@ -9903,14 +9903,14 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Report Map & UI Redesign (Feb 9)
 - [x] Debug: Map not showing property markers on report page
 - [x] Fix map to display subject property and comparable properties
-- [ ] Redesign FullPropertyReport UI to match Coach Inayah brand design system
-- [ ] Replace navy (#0F172A) header with light theme + gold accents per frontend-design skill
-- [ ] Use OKLCH color format per design system
-- [ ] Apply apple-card styling to metric cards
-- [ ] Use pill-shaped gold buttons per design system
-- [ ] Apply proper typography scale (Playfair Display + DM Sans)
-- [ ] Add hover-lift effects and 300ms transitions
-- [ ] Ensure section navigation matches tab-nav pattern from design system
+- [x] Redesign FullPropertyReport UI to match Coach Inayah brand design system
+- [x] Replace navy (#0F172A) header with light theme + gold accents per frontend-design skill
+- [x] Use OKLCH color format per design system
+- [x] Apply apple-card styling to metric cards
+- [x] Use pill-shaped gold buttons per design system
+- [x] Apply proper typography scale (Playfair Display + DM Sans)
+- [x] Add hover-lift effects and 300ms transitions
+- [x] Ensure section navigation matches tab-nav pattern from design system
 
 ### Map Fix Details (Feb 9)
 - [x] Root cause: regeneration endpoint accessed prop?.location?.latitude instead of prop?.property?.latitude
@@ -9949,6 +9949,6 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Issue 15: Remove emoji from seasonality tooltips
 
 ### Final Steps
-- [ ] Issue 16: Regenerate report after all fixes
+- [x] Issue 16: Regenerate report after all fixes
 - [x] Issue 17: Verify all charts use brand palette
-- [ ] Issue 18: Final visual verification in browser
+- [x] Issue 18: Final visual verification in browser
