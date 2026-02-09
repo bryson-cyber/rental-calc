@@ -1,0 +1,52 @@
+{
+  "query": "SELECT * FROM api_usage_summary WHERE provider = 'airdna' ORDER BY date DESC LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM api_usage_summary WHERE provider = 'airdna' ORDER BY date DESC LIMIT 3;",
+  "rows": [
+    {
+      "id": "150001",
+      "date": "2026-02-09",
+      "provider": "airdna",
+      "totalCalls": "702",
+      "successfulCalls": "657",
+      "failedCalls": "45",
+      "cacheHits": "0",
+      "uniqueEndpoints": "0",
+      "uniqueUsers": "0",
+      "estimatedCost": "245.70",
+      "createdAt": "2026-02-09 00:02:54",
+      "updatedAt": "2026-02-09 03:42:53"
+    },
+    {
+      "id": "120001",
+      "date": "2026-02-08",
+      "provider": "airdna",
+      "totalCalls": "718",
+      "successfulCalls": "713",
+      "failedCalls": "5",
+      "cacheHits": "0",
+      "uniqueEndpoints": "0",
+      "uniqueUsers": "0",
+      "estimatedCost": "251.30",
+      "createdAt": "2026-02-08 00:15:07",
+      "updatedAt": "2026-02-08 16:00:48"
+    },
+    {
+      "id": "90001",
+      "date": "2026-02-07",
+      "provider": "airdna",
+      "totalCalls": "711",
+      "successfulCalls": "711",
+      "failedCalls": "0",
+      "cacheHits": "0",
+      "uniqueEndpoints": "0",
+      "uniqueUsers": "0",
+      "estimatedCost": "248.85",
+      "createdAt": "2026-02-07 00:18:24",
+      "updatedAt": "2026-02-07 19:11:37"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdate\tprovider\ttotalCalls\tsuccessfulCalls\tfailedCalls\tcacheHits\tuniqueEndpoints\tuniqueUsers\testimatedCost\tcreatedAt\tupdatedAt\n150001\t2026-02-09\tairdna\t702\t657\t45\t0\t0\t0\t245.70\t2026-02-09 00:02:54\t2026-02-09 03:42:53\n120001\t2026-02-08\tairdna\t718\t713\t5\t0\t0\t0\t251.30\t2026-02-08 00:15:07\t2026-02-08 16:00:48\n90001\t2026-02-07\tairdna\t711\t711\t0\t0\t0\t0\t248.85\t2026-02-07 00:18:24\t2026-02-07 19:11:37\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

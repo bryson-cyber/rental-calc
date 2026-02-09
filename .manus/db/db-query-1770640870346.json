@@ -1,0 +1,19 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%api%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%api%';",
+  "rows": [
+    {
+      "TABLE_NAME": "api_call_logs"
+    },
+    {
+      "TABLE_NAME": "api_cache"
+    },
+    {
+      "TABLE_NAME": "api_usage_summary"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\napi_call_logs\napi_cache\napi_usage_summary\n",
+  "stderr": "",
+  "execution_time_ms": 68
+}

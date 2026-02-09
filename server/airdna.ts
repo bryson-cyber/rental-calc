@@ -1,6 +1,7 @@
 import { ENV } from "./_core/env";
 import { apiCache } from './cache';
 import { logApiCall, getDbCache, setDbCache, checkDailyLimit } from './api-logger';
+import { notifyOwner } from './_core/notification';
 
 const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
 
@@ -285,21 +286,21 @@ async function makeApiRequest<T>(
   const url = `${AIRDNA_API_BASE}${endpoint}`;
   const startTime = Date.now();
   
-  // Check daily rate limit before making the call
+  // Check daily rate limit - WARN ONLY, never block the app
   try {
     const limitStatus = await checkDailyLimit('airdna', DAILY_AIRDNA_LIMIT);
     if (limitStatus.isOverLimit) {
-      console.error(`[AirDNA] RATE LIMIT EXCEEDED: ${limitStatus.currentCount}/${limitStatus.limit} calls today`);
-      throw new Error(`AirDNA daily rate limit exceeded (${limitStatus.currentCount}/${limitStatus.limit}). Please try again tomorrow.`);
-    }
-    if (limitStatus.isNearLimit) {
+      console.warn(`[AirDNA] RATE LIMIT WARNING: ${limitStatus.currentCount}/${limitStatus.limit} calls today - continuing anyway`);
+      // Notify owner but DO NOT block the request
+      notifyOwner({
+        title: 'AirDNA Daily Limit Warning',
+        content: `AirDNA API has reached ${limitStatus.currentCount}/${limitStatus.limit} calls today. The app continues to work normally. Consider reviewing usage if this persists.`,
+      }).catch(() => {}); // fire-and-forget, don't block on notification
+    } else if (limitStatus.isNearLimit) {
       console.warn(`[AirDNA] WARNING: Approaching daily limit (${limitStatus.currentCount}/${limitStatus.limit} - ${limitStatus.percentUsed.toFixed(1)}% used)`);
     }
   } catch (error) {
-    // If rate limit check fails, log but continue (fail open)
-    if ((error as Error).message.includes('rate limit exceeded')) {
-      throw error;
-    }
+    // Rate limit check failed - continue anyway (fail open)
     console.warn('[AirDNA] Rate limit check failed, continuing anyway:', error);
   }
   

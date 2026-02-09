@@ -9833,3 +9833,14 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix test suite timeout (>5 min → 7.86 sec with 50 files, 598 tests)
 - [x] Fix cache hit rate showing 0% (added logCacheHit to all 15 cache hit points in airdna.ts)
 - [x] Verify all tests pass with mocks (50 files, 598 tests, 0 failures)
+
+### Step 3 Not Returning Data (Feb 9, 2026)
+- [ ] Debug Step 3 not returning data
+- [ ] Identify root cause (API, routing, or frontend issue)
+- [ ] Fix and verify end-to-end
+
+
+### Critical: Rate Limit Blocking App & Inaccurate Call Counts (Feb 9, 2026)
+- [x] Change rate limit from blocking (throw error) to warn-only (notify owner, continue working)
+- [x] Fix inaccurate API call counts (reset inflated counts, tests now use mocks)
+- [x] Verify Step 3 works end-to-end after fix (63116 Bevo Mill - all data loads correctly)
