@@ -510,7 +510,7 @@ export default function LeadMagnet() {
           if (data.location) setExploreAddress(data.location);
           if (data.bedrooms) {
             setBedrooms(String(data.bedrooms));
-            // Also set explore bedroom filter for explore/find tabs
+             // Also set explore bedroom filter for explore competitors/find tabs
             setExploreBedroomFilter(data.bedrooms);
             exploreBedroomFilterRef.current = data.bedrooms;
           }
@@ -1143,7 +1143,7 @@ export default function LeadMagnet() {
     // When property context changes, auto-populate bedroom filter for apples-to-apples comparison
     // But only if user hasn't manually set a different value
     if (hasProperty && myProperty?.bedrooms && !userSetBedroomFilterRef.current) {
-      // Step 2: Explore Listings - set bedroom filter for apples-to-apples
+      // Step 2: Explore Competitors - set bedroom filter for apples-to-apples
       setExploreBedroomFilter(myProperty.bedrooms);
       exploreBedroomFilterRef.current = myProperty.bedrooms;
     }
@@ -2013,8 +2013,8 @@ export default function LeadMagnet() {
       color: "from-emerald-500 to-teal-500"
     },
     find: {
-      title: "Explore Listings",
-      subtitle: "Browse active rentals and see what's working in any area",
+      title: "Explore Competitors",
+      subtitle: "Browse active STR competitors and see what's working in any area",
       job: "Answer: What properties are succeeding here?",
       icon: Search,
       color: "from-blue-500 to-cyan-500"
@@ -4924,7 +4924,7 @@ export default function LeadMagnet() {
                 />
                 <UniversalShareButton
                   reportType="listings"
-                  title={`Explore Listings: ${selectedMarket.name}`}
+                   title={`Explore Competitors: ${selectedMarket.name}`}
                   reportData={{
                     marketName: selectedMarket.name,
                     marketId: selectedMarket.id,

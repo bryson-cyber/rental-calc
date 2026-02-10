@@ -3,6 +3,12 @@
  * 
  * One-click comprehensive market evaluation — the "Evaluate This Market" agent.
  * Chains: market discovery → revenue analysis → trends → comps → AI memo
+ * 
+ * UI aligned with the main app design system:
+ * - White/off-white backgrounds with amber/gold accents
+ * - oklch color tokens from index.css
+ * - Coach Inayah branding ("Powered by Coach Inayah market data")
+ * - Consistent typography (system fonts, serif for headlines)
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,6 +16,7 @@ import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CityAutocomplete from '@/components/CityAutocomplete';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Streamdown } from 'streamdown';
@@ -70,7 +77,7 @@ function ScoreGauge({ score }: { score: number }) {
     <div className="flex flex-col items-center">
       <div className="relative w-32 h-32">
         <svg className="w-32 h-32 -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+          <circle cx="50" cy="50" r="45" fill="none" stroke="oklch(0.92 0 0)" strokeWidth="8" />
           <circle
             cx="50" cy="50" r="45" fill="none"
             stroke={color} strokeWidth="8"
@@ -109,10 +116,7 @@ export default function MarketEvaluationPage() {
   
   const evaluateMutation = trpc.dealAlerts.evaluateMarket.useMutation({
     onSuccess: (data) => {
-      // The mutation now returns immediately with just the evaluationId.
-      // The evaluation runs in the background; we poll via getEvaluation.
       setEvaluationId(data.evaluationId);
-      // Keep isRunning true — the polling query will show progress
     },
     onError: () => {
       setIsRunning(false);
@@ -126,7 +130,7 @@ export default function MarketEvaluationPage() {
       refetchInterval: (query) => {
         const data = query.state.data;
         if (data && (data.status === 'completed' || data.status === 'failed')) return false;
-        return 2000; // Poll every 2s while running
+        return 2000;
       },
     }
   );
@@ -136,7 +140,6 @@ export default function MarketEvaluationPage() {
   const isComplete = evaluation?.status === 'completed';
   const isFailed = evaluation?.status === 'failed';
   
-  // Auto-start if city/state provided via URL params
   useEffect(() => {
     if (params.get('autoStart') === 'true' && city && state && !evaluationId && !isRunning) {
       handleStart();
@@ -156,69 +159,48 @@ export default function MarketEvaluationPage() {
     });
   };
   
-  // Input form
+  // Input form — aligned with main app design
   if (!evaluationId && !isRunning) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0F172A] via-[#1e293b] to-[#0F172A]">
+      <div className="min-h-screen bg-background">
         <div className="max-w-2xl mx-auto px-4 py-12">
           {/* Header */}
           <div className="text-center mb-10">
             <button
               onClick={() => navigate('/')}
-              className="inline-flex items-center gap-1.5 text-white/50 hover:text-white/80 text-sm mb-6 transition-colors"
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Calculator
             </button>
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#C9A962]/20 rounded-xl mb-6 backdrop-blur-sm border border-[#C9A962]/30">
-              <Sparkles className="w-8 h-8 text-[#C9A962]" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-xl mb-6 border border-primary/20">
+              <Sparkles className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-white mb-3">
+            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-foreground mb-3">
               One-Click Market Evaluation
             </h1>
-            <p className="text-white/60 font-sans max-w-lg mx-auto">
+            <p className="text-muted-foreground max-w-lg mx-auto">
               Enter a city and get a comprehensive STR market analysis — revenue potential, competition, 
               seasonality, top performers, and an AI-generated investment memo. All in one click.
             </p>
           </div>
           
           {/* Form */}
-          <Card className="bg-white/95 backdrop-blur-md border-0 shadow-2xl">
+          <Card className="border border-border shadow-lg">
             <CardContent className="p-8">
               <div className="space-y-6">
-                {/* City & State */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 uppercase tracking-wider">
-                      City
-                    </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C9A962]" />
-                      <Input
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="e.g., Las Vegas"
-                        className="pl-10 py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962]"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 uppercase tracking-wider">
-                      State
-                    </label>
-                    <Input
-                      value={state}
-                      onChange={(e) => setState(e.target.value.toUpperCase())}
-                      placeholder="NV"
-                      maxLength={2}
-                      className="py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962] text-center uppercase"
-                    />
-                  </div>
-                </div>
+                {/* City & State - Autocomplete */}
+                <CityAutocomplete
+                  initialCity={city}
+                  initialState={state}
+                  onCitySelect={(c, s) => { setCity(c); setState(s); }}
+                  placeholder="Search for a city (e.g., Las Vegas, NV)"
+                  label="City"
+                />
                 
                 {/* Bedrooms */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 uppercase tracking-wider">
+                  <label className="block text-sm font-medium text-foreground/70 mb-2 uppercase tracking-wider">
                     <BedDouble className="inline w-4 h-4 mr-1" />
                     Target Bedrooms
                   </label>
@@ -229,8 +211,8 @@ export default function MarketEvaluationPage() {
                         onClick={() => setBedrooms(br)}
                         className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                           bedrooms === br
-                            ? 'bg-[#0F172A] text-white shadow-md'
-                            : 'bg-[#0F172A]/5 text-[#0F172A]/60 hover:bg-[#0F172A]/10'
+                            ? 'bg-primary text-primary-foreground shadow-md'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
                         }`}
                       >
                         {br} BR
@@ -241,7 +223,7 @@ export default function MarketEvaluationPage() {
                 
                 {/* Analysis Type */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 uppercase tracking-wider">
+                  <label className="block text-sm font-medium text-foreground/70 mb-2 uppercase tracking-wider">
                     Analysis Focus
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -255,12 +237,12 @@ export default function MarketEvaluationPage() {
                         onClick={() => setAnalysisType(opt.value as any)}
                         className={`p-3 rounded-lg text-left transition-all border-2 ${
                           analysisType === opt.value
-                            ? 'border-[#C9A962] bg-[#C9A962]/5'
-                            : 'border-[#0F172A]/10 hover:border-[#0F172A]/20'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/30'
                         }`}
                       >
-                        <div className="text-sm font-medium text-[#0F172A]">{opt.label}</div>
-                        <div className="text-xs text-[#0F172A]/50 mt-0.5">{opt.desc}</div>
+                        <div className="text-sm font-medium text-foreground">{opt.label}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{opt.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -268,15 +250,15 @@ export default function MarketEvaluationPage() {
                 
                 {/* Email (optional) */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0F172A]/70 mb-2 uppercase tracking-wider">
-                    Email <span className="text-[#0F172A]/40 normal-case">(optional — get a copy)</span>
+                  <label className="block text-sm font-medium text-foreground/70 mb-2 uppercase tracking-wider">
+                    Email <span className="text-muted-foreground normal-case">(optional — get a copy)</span>
                   </label>
                   <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="py-3 border-2 border-[#0F172A]/10 rounded-xl focus:ring-2 focus:ring-[#C9A962]/50 focus:border-[#C9A962]"
+                    className="py-3 rounded-xl"
                   />
                 </div>
                 
@@ -284,14 +266,14 @@ export default function MarketEvaluationPage() {
                 <Button
                   onClick={handleStart}
                   disabled={!city || !state}
-                  className="w-full bg-[#0F172A] hover:bg-[#1e293b] text-white py-6 rounded-xl text-lg font-semibold group"
+                  className="w-full py-6 rounded-xl text-lg font-semibold group"
                 >
                   <Sparkles className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                   Evaluate This Market
                 </Button>
                 
-                <p className="text-center text-[#0F172A]/40 text-xs">
-                  Takes 30-60 seconds. Powered by AirDNA market data + AI analysis.
+                <p className="text-center text-muted-foreground text-xs">
+                  Takes 30-60 seconds. Powered by Coach Inayah market data + AI analysis.
                 </p>
               </div>
             </CardContent>
@@ -303,7 +285,7 @@ export default function MarketEvaluationPage() {
   
   // Running / Results view
   return (
-    <div className="min-h-screen bg-[#faf9f7]">
+    <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -312,7 +294,7 @@ export default function MarketEvaluationPage() {
               setEvaluationId(null);
               setIsRunning(false);
             }}
-            className="inline-flex items-center gap-1.5 text-[#0F172A]/50 hover:text-[#0F172A]/80 text-sm transition-colors"
+            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             New Evaluation
@@ -333,17 +315,17 @@ export default function MarketEvaluationPage() {
         
         {/* Market Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-serif font-semibold text-[#0F172A]">
+          <h1 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">
             {evaluation?.marketName || `${city}, ${state}`}
           </h1>
-          <p className="text-[#0F172A]/50 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             {bedrooms} Bedroom • {analysisType === 'both' ? 'Full Analysis' : analysisType === 'arbitrage' ? 'Rental Arbitrage' : 'Investment'}
           </p>
         </div>
         
         {/* Progress Steps */}
         {!isComplete && (
-          <Card className="mb-8 border-[#0F172A]/10">
+          <Card className="mb-8 border-border">
             <CardContent className="p-6">
               <div className="space-y-3">
                 {EVALUATION_STEPS.map((step, idx) => {
@@ -356,14 +338,14 @@ export default function MarketEvaluationPage() {
                     <div
                       key={step.id}
                       className={`flex items-center gap-4 p-3 rounded-lg transition-all ${
-                        isActive ? 'bg-[#C9A962]/10 border border-[#C9A962]/20' :
+                        isActive ? 'bg-primary/10 border border-primary/20' :
                         isDone ? 'bg-green-50/50' : 'opacity-40'
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         isDone ? 'bg-green-100 text-green-600' :
-                        isActive ? 'bg-[#C9A962]/20 text-[#C9A962]' :
-                        'bg-[#0F172A]/5 text-[#0F172A]/30'
+                        isActive ? 'bg-primary/20 text-primary' :
+                        'bg-muted text-muted-foreground'
                       }`}>
                         {isDone ? (
                           <CheckCircle2 className="w-4 h-4" />
@@ -375,27 +357,27 @@ export default function MarketEvaluationPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`text-sm font-medium ${
-                          isActive ? 'text-[#0F172A]' : isDone ? 'text-green-700' : 'text-[#0F172A]/40'
+                          isActive ? 'text-foreground' : isDone ? 'text-green-700' : 'text-muted-foreground'
                         }`}>
                           {step.label}
                         </div>
-                        <div className="text-xs text-[#0F172A]/40">{step.description}</div>
+                        <div className="text-xs text-muted-foreground">{step.description}</div>
                       </div>
                       {isDone && <span className="text-xs text-green-600 font-medium">Done</span>}
-                      {isActive && <span className="text-xs text-[#C9A962] font-medium">Running...</span>}
+                      {isActive && <span className="text-xs text-primary font-medium">Running...</span>}
                     </div>
                   );
                 })}
               </div>
               
               {/* Progress bar */}
-              <div className="mt-4 h-2 bg-[#0F172A]/5 rounded-full overflow-hidden">
+              <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#C9A962] to-[#d4b96f] rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-gradient-to-r from-primary to-gold-light rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${evaluation?.progress || 0}%` }}
                 />
               </div>
-              <p className="text-center text-xs text-[#0F172A]/40 mt-2">
+              <p className="text-center text-xs text-muted-foreground mt-2">
                 {evaluation?.progress || 0}% complete
               </p>
             </CardContent>
@@ -406,12 +388,12 @@ export default function MarketEvaluationPage() {
         {isComplete && evaluation && (
           <div className="space-y-6">
             {/* Score Card */}
-            <Card className="border-[#0F172A]/10 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] p-6">
+            <Card className="border-border overflow-hidden">
+              <div className="bg-gradient-to-r from-foreground to-foreground/80 p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-serif text-white/90">Market Score</h2>
-                    <p className="text-white/50 text-sm mt-1">
+                    <h2 className="text-lg font-serif text-background/90">Market Score</h2>
+                    <p className="text-background/50 text-sm mt-1">
                       Based on revenue, occupancy, ADR, competition, and seasonality
                     </p>
                   </div>
@@ -422,110 +404,110 @@ export default function MarketEvaluationPage() {
               {/* Key Metrics */}
               <CardContent className="p-6">
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-[#0F172A]/3 rounded-xl">
-                    <DollarSign className="w-5 h-5 text-[#C9A962] mx-auto mb-1" />
-                    <div className="text-xl font-bold text-[#0F172A] font-serif">
+                  <div className="text-center p-4 bg-muted/50 rounded-xl">
+                    <DollarSign className="w-5 h-5 text-primary mx-auto mb-1" />
+                    <div className="text-xl font-bold text-foreground font-serif">
                       ${(evaluation.averageRevenue || 0).toLocaleString()}
                     </div>
-                    <div className="text-xs text-[#0F172A]/50 mt-0.5">Avg Annual Revenue</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Avg Annual Revenue</div>
                   </div>
-                  <div className="text-center p-4 bg-[#0F172A]/3 rounded-xl">
-                    <BarChart3 className="w-5 h-5 text-[#C9A962] mx-auto mb-1" />
-                    <div className="text-xl font-bold text-[#0F172A] font-serif">
+                  <div className="text-center p-4 bg-muted/50 rounded-xl">
+                    <BarChart3 className="w-5 h-5 text-primary mx-auto mb-1" />
+                    <div className="text-xl font-bold text-foreground font-serif">
                       {Math.round(parseFloat(evaluation.averageOccupancy || '0') * 100)}%
                     </div>
-                    <div className="text-xs text-[#0F172A]/50 mt-0.5">Avg Occupancy</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Avg Occupancy</div>
                   </div>
-                  <div className="text-center p-4 bg-[#0F172A]/3 rounded-xl">
-                    <TrendingUp className="w-5 h-5 text-[#C9A962] mx-auto mb-1" />
-                    <div className="text-xl font-bold text-[#0F172A] font-serif">
+                  <div className="text-center p-4 bg-muted/50 rounded-xl">
+                    <TrendingUp className="w-5 h-5 text-primary mx-auto mb-1" />
+                    <div className="text-xl font-bold text-foreground font-serif">
                       ${evaluation.averageAdr || 0}
                     </div>
-                    <div className="text-xs text-[#0F172A]/50 mt-0.5">Avg Nightly Rate</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Avg Nightly Rate</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             {/* AI Investment Memo */}
-            <Card className="border-[#0F172A]/10">
+            <Card className="border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-serif">
-                  <Brain className="w-5 h-5 text-[#C9A962]" />
+                  <Brain className="w-5 h-5 text-primary" />
                   AI Investment Memo
                 </CardTitle>
                 <CardDescription>
-                  Comprehensive analysis powered by AirDNA market data
+                  Comprehensive analysis powered by Coach Inayah market data
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none prose-headings:font-serif prose-headings:text-[#0F172A] prose-p:text-[#0F172A]/70 prose-li:text-[#0F172A]/70 prose-strong:text-[#0F172A]">
+                <div className="prose prose-sm max-w-none prose-headings:font-serif prose-headings:text-foreground prose-p:text-foreground/70 prose-li:text-foreground/70 prose-strong:text-foreground">
                   <Streamdown>{evaluation.aiMemo || ''}</Streamdown>
                 </div>
               </CardContent>
             </Card>
             
             {/* Next Steps CTA */}
-            <Card className="border-[#C9A962]/30 bg-[#C9A962]/5">
+            <Card className="border-primary/30 bg-primary/5">
               <CardContent className="p-6">
-                <h3 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">
+                <h3 className="text-lg font-serif font-semibold text-foreground mb-4">
                   Ready to Take Action?
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <button
                     onClick={() => navigate(`/?tab=prove&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&autoAnalyze=true`)}
-                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#0F172A]/10 hover:border-[#C9A962]/50 transition-all text-left group"
+                    className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all text-left group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center group-hover:bg-[#C9A962]/10 transition-colors">
-                      <Search className="w-5 h-5 text-[#0F172A]/60" />
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <Search className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-[#0F172A]">Research Properties</div>
-                      <div className="text-xs text-[#0F172A]/50">Find specific deals in {city}</div>
+                      <div className="text-sm font-medium text-foreground">Research Properties</div>
+                      <div className="text-xs text-muted-foreground">Find specific deals in {city}</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#0F172A]/30" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                   
                   <button
                     onClick={() => navigate(`/deal-alerts?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&bedrooms=${bedrooms}`)}
-                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#0F172A]/10 hover:border-[#C9A962]/50 transition-all text-left group"
+                    className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all text-left group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center group-hover:bg-[#C9A962]/10 transition-colors">
-                      <Target className="w-5 h-5 text-[#0F172A]/60" />
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <Target className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-[#0F172A]">Set Up Deal Alerts</div>
-                      <div className="text-xs text-[#0F172A]/50">Get notified when deals match</div>
+                      <div className="text-sm font-medium text-foreground">Set Up Deal Alerts</div>
+                      <div className="text-xs text-muted-foreground">Get notified when deals match</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#0F172A]/30" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                   
                   <button
                     onClick={() => navigate(`/?tab=advisor&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&autoAnalyze=true`)}
-                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#0F172A]/10 hover:border-[#C9A962]/50 transition-all text-left group"
+                    className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all text-left group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center group-hover:bg-[#C9A962]/10 transition-colors">
-                      <Brain className="w-5 h-5 text-[#0F172A]/60" />
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <Brain className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-[#0F172A]">Chat with AI Advisor</div>
-                      <div className="text-xs text-[#0F172A]/50">Ask questions about {city}</div>
+                      <div className="text-sm font-medium text-foreground">Chat with AI Advisor</div>
+                      <div className="text-xs text-muted-foreground">Ask questions about {city}</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#0F172A]/30" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                   
                   <button
                     onClick={() => navigate(`/?tab=regulations&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&autoAnalyze=true`)}
-                    className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#0F172A]/10 hover:border-[#C9A962]/50 transition-all text-left group"
+                    className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all text-left group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#0F172A]/5 flex items-center justify-center group-hover:bg-[#C9A962]/10 transition-colors">
-                      <AlertCircle className="w-5 h-5 text-[#0F172A]/60" />
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <AlertCircle className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-[#0F172A]">Check Regulations</div>
-                      <div className="text-xs text-[#0F172A]/50">STR rules in {city}, {state}</div>
+                      <div className="text-sm font-medium text-foreground">Check Regulations</div>
+                      <div className="text-xs text-muted-foreground">STR rules in {city}, {state}</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#0F172A]/30" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
               </CardContent>

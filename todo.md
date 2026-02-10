@@ -10100,3 +10100,18 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add contextual CTAs after market research (prove tab) results — AI Market Evaluation + Set Deal Alerts buttons
 - [x] Add URL param support to DealAlertsPage for city/state pre-fill from contextual links
 - [x] Test all navigation links work correctly (both cards navigate to correct pages)
+
+## Homepage Consolidation & UI Alignment Audit - Feb 10, 2026
+- [x] Audit all tools/tabs/sections on homepage for redundancy
+- [x] Identify tools that can be combined to reduce clutter (Step 5+9, Step 8+MarketEval)
+- [x] Produce cc-prompt-optimized implementation plan
+
+## UI Fixes: City Autocomplete, Design Alignment, Rename Step 4 - Feb 10, 2026
+- [x] Create CityAutocomplete component using Google Maps proxy
+- [x] Integrate CityAutocomplete into Market Evaluation page (replace plain text inputs)
+- [x] Integrate CityAutocomplete into Deal Alerts page (replace plain text inputs)
+- [x] Align Market Evaluation page UI to main page design (white bg, amber/gold accents, Coach Inayah branding)
+- [x] Align Deal Alerts page UI to main page design (add header, branding, consistent card styles)
+- [x] Rename Step 4 from "Explore Listings" to "Explore Competitors"
+- [x] Test all changes in browser
+- [x] Run full test suite

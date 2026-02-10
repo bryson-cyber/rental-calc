@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import CityAutocomplete from '@/components/CityAutocomplete';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -167,22 +168,22 @@ export default function DealAlertsPage() {
   const alerts = alertsQuery.data || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FAFAF8] to-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-[#0F172A] text-white">
+      <div className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm mb-4 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Calculator
           </Link>
           
           <div className="flex items-center gap-4 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-[#C9A962]/20 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-[#C9A962]" />
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Zap className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-semibold">Deal Alert Agent</h1>
-              <p className="text-white/60 text-sm font-sans">Your autonomous STR deal scanner — finds deals while you sleep</p>
+              <h1 className="text-2xl md:text-3xl font-serif font-semibold text-foreground">Deal Alert Agent</h1>
+              <p className="text-muted-foreground text-sm">Your autonomous STR deal scanner — finds deals while you sleep</p>
             </div>
           </div>
           
@@ -191,8 +192,8 @@ export default function DealAlertsPage() {
               onClick={() => setActiveTab('alerts')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'alerts' 
-                  ? 'bg-white/20 text-white' 
-                  : 'text-white/50 hover:text-white hover:bg-white/10'
+                  ? 'bg-primary/10 text-primary border border-primary/20' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <Bell className="w-4 h-4 inline mr-2" />
@@ -202,8 +203,8 @@ export default function DealAlertsPage() {
               onClick={() => setActiveTab('create')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'create' 
-                  ? 'bg-[#C9A962]/30 text-[#C9A962]' 
-                  : 'text-white/50 hover:text-white hover:bg-white/10'
+                  ? 'bg-primary/10 text-primary border border-primary/20' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <Plus className="w-4 h-4 inline mr-2" />
@@ -214,8 +215,8 @@ export default function DealAlertsPage() {
                 onClick={() => setActiveTab('matches')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === 'matches' 
-                    ? 'bg-white/20 text-white' 
-                    : 'text-white/50 hover:text-white hover:bg-white/10'
+                    ? 'bg-primary/10 text-primary border border-primary/20' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Target className="w-4 h-4 inline mr-2" />
@@ -230,10 +231,10 @@ export default function DealAlertsPage() {
         {/* Create Alert Form */}
         {activeTab === 'create' && (
           <div className="space-y-6">
-            <Card className="border-[#C9A962]/20">
+            <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-serif">
-                  <Sparkles className="w-5 h-5 text-[#C9A962]" />
+                  <Sparkles className="w-5 h-5 text-primary" />
                   Set Your Deal Criteria
                 </CardTitle>
                 <CardDescription>
@@ -267,31 +268,18 @@ export default function DealAlertsPage() {
                 {/* Location */}
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#C9A962]" />
+                    <MapPin className="w-4 h-4 text-primary" />
                     Target Market
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-1">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">City *</Label>
-                      <Input
-                        placeholder="e.g., Denver"
-                        value={form.city}
-                        onChange={(e) => setForm({ ...form, city: e.target.value })}
-                        className="mt-1"
+                    <div className="md:col-span-2">
+                      <CityAutocomplete
+                        initialCity={form.city}
+                        initialState={form.state}
+                        onCitySelect={(c, s) => setForm({ ...form, city: c, state: s })}
+                        placeholder="Search for a city (e.g., Denver, CO)"
+                        label="City *"
                       />
-                    </div>
-                    <div>
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">State *</Label>
-                      <Select value={form.state} onValueChange={(v) => setForm({ ...form, state: v })}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {US_STATES.map(s => (
-                            <SelectItem key={s} value={s}>{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">Zip Code</Label>
@@ -308,7 +296,7 @@ export default function DealAlertsPage() {
                 {/* Analysis Type */}
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Home className="w-4 h-4 text-[#C9A962]" />
+                    <Home className="w-4 h-4 text-primary" />
                     Strategy
                   </h3>
                   <div className="grid grid-cols-3 gap-2">
@@ -322,8 +310,8 @@ export default function DealAlertsPage() {
                         onClick={() => setForm({ ...form, analysisType: opt.value as any })}
                         className={`p-3 rounded-xl border-2 text-left transition-all ${
                           form.analysisType === opt.value
-                            ? 'border-[#C9A962] bg-[#C9A962]/5'
-                            : 'border-border hover:border-[#C9A962]/50'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
                         }`}
                       >
                         <div className="text-sm font-medium">{opt.label}</div>
@@ -336,7 +324,7 @@ export default function DealAlertsPage() {
                 {/* Property Criteria */}
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <BedDouble className="w-4 h-4 text-[#C9A962]" />
+                    <BedDouble className="w-4 h-4 text-primary" />
                     Property Criteria
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +389,7 @@ export default function DealAlertsPage() {
                 {/* Profitability Thresholds */}
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-[#C9A962]" />
+                    <TrendingUp className="w-4 h-4 text-primary" />
                     Minimum Profitability
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -445,7 +433,7 @@ export default function DealAlertsPage() {
                 {/* Notification Preferences */}
                 <div className="border-t pt-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-[#C9A962]" />
+                    <Bell className="w-4 h-4 text-primary" />
                     Notification Preferences
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -485,7 +473,7 @@ export default function DealAlertsPage() {
                 <Button
                   onClick={handleCreate}
                   disabled={createMutation.isPending || !form.email || !form.city || !form.state}
-                  className="w-full bg-[#0F172A] hover:bg-[#1e293b] text-white py-6 text-lg font-semibold"
+                  className="w-full bg-foreground hover:bg-foreground/90 text-white py-6 text-lg font-semibold"
                 >
                   {createMutation.isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -508,19 +496,19 @@ export default function DealAlertsPage() {
           <div className="space-y-4">
             {alertsQuery.isLoading ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-[#C9A962]" />
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : alerts.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-[#C9A962]/10 flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-[#C9A962]" />
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-serif font-semibold mb-2">No Deal Alerts Yet</h3>
                   <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
                     Set up your first deal alert and let the agent find profitable STR opportunities for you automatically.
                   </p>
-                  <Button onClick={() => setActiveTab('create')} className="bg-[#0F172A]">
+                  <Button onClick={() => setActiveTab('create')} className="bg-foreground">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Your First Alert
                   </Button>
@@ -540,17 +528,17 @@ export default function DealAlertsPage() {
                   <Card 
                     key={alert.id} 
                     className={`transition-all hover:shadow-md ${
-                      alert.isActive === 1 ? 'border-[#C9A962]/20' : 'opacity-60 border-muted'
+                      alert.isActive === 1 ? 'border-primary/20' : 'opacity-60 border-muted'
                     }`}
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            alert.isActive === 1 ? 'bg-[#C9A962]/10' : 'bg-muted'
+                            alert.isActive === 1 ? 'bg-primary/10' : 'bg-muted'
                           }`}>
                             {alert.isActive === 1 ? (
-                              <Bell className="w-5 h-5 text-[#C9A962]" />
+                              <Bell className="w-5 h-5 text-primary" />
                             ) : (
                               <BellOff className="w-5 h-5 text-muted-foreground" />
                             )}
@@ -686,7 +674,7 @@ export default function DealAlertsPage() {
 
             {matchesQuery.isLoading ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-[#C9A962]" />
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : !matchesQuery.data?.length ? (
               <Card className="border-dashed">
@@ -699,7 +687,7 @@ export default function DealAlertsPage() {
                   <Button
                     onClick={() => scanMutation.mutate({ criteriaId: selectedCriteriaId })}
                     disabled={scanMutation.isPending}
-                    className="bg-[#0F172A]"
+                    className="bg-foreground"
                   >
                     {scanMutation.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -716,7 +704,7 @@ export default function DealAlertsPage() {
                   <Card 
                     key={match.id} 
                     className={`transition-all hover:shadow-md ${
-                      match.status === 'new' ? 'border-[#C9A962]/30 bg-[#C9A962]/[0.02]' : ''
+                      match.status === 'new' ? 'border-primary/30 bg-primary/[0.02]' : ''
                     }`}
                   >
                     <CardContent className="p-5">
@@ -724,7 +712,7 @@ export default function DealAlertsPage() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             {match.status === 'new' && (
-                              <Badge className="bg-[#C9A962] text-white text-xs">New</Badge>
+                              <Badge className="bg-primary text-white text-xs">New</Badge>
                             )}
                             {match.dealGrade && (
                               <Badge variant={
@@ -757,7 +745,7 @@ export default function DealAlertsPage() {
                             onClick={() => updateMatchMutation.mutate({ matchId: match.id, status: 'saved' })}
                             title="Save"
                           >
-                            <Bookmark className={`w-4 h-4 ${match.status === 'saved' ? 'fill-[#C9A962] text-[#C9A962]' : ''}`} />
+                            <Bookmark className={`w-4 h-4 ${match.status === 'saved' ? 'fill-primary text-primary' : ''}`} />
                           </Button>
                           <Button
                             variant="ghost"
@@ -782,13 +770,13 @@ export default function DealAlertsPage() {
                         {match.projectedRevenue && (
                           <div>
                             <div className="text-xs text-muted-foreground">Projected Revenue</div>
-                            <div className="font-semibold text-[#166534]">{formatCurrency(Math.round(match.projectedRevenue / 12))}/mo</div>
+                            <div className="font-semibold text-green-700">{formatCurrency(Math.round(match.projectedRevenue / 12))}/mo</div>
                           </div>
                         )}
                         {match.projectedMonthlyProfit && (
                           <div>
                             <div className="text-xs text-muted-foreground">Monthly Profit</div>
-                            <div className={`font-semibold ${match.projectedMonthlyProfit > 0 ? 'text-[#166534]' : 'text-red-600'}`}>
+                            <div className={`font-semibold ${match.projectedMonthlyProfit > 0 ? 'text-green-700' : 'text-red-600'}`}>
                               {formatCurrency(match.projectedMonthlyProfit)}
                             </div>
                           </div>
@@ -805,7 +793,7 @@ export default function DealAlertsPage() {
                       <div className="mt-3 pt-3 border-t">
                         <Link 
                           href={`/?tab=prove&address=${encodeURIComponent(match.address)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
-                          className="text-sm text-[#C9A962] hover:underline font-medium"
+                          className="text-sm text-primary hover:underline font-medium"
                         >
                           Analyze this deal in detail →
                         </Link>
