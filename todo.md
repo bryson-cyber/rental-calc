@@ -10094,3 +10094,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Note: cc-optimize claimed 20+ indexes were added but schema has zero index definitions — indexes were never actually created
 - [x] Write 30 unit tests for agentic tools (all passing)
 - [x] Verify all 678 tests pass across 54 test files
+
+## Add Navigation to New Agentic Tools - Feb 10, 2026
+- [x] Add "Go Deeper with Advanced Analysis" Power Tools section with Market Evaluation and Deal Alert Agent cards
+- [x] Add contextual CTAs after market research (prove tab) results — AI Market Evaluation + Set Deal Alerts buttons
+- [x] Add URL param support to DealAlertsPage for city/state pre-fill from contextual links
+- [x] Test all navigation links work correctly (both cards navigate to correct pages)

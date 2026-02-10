@@ -81,7 +81,9 @@ import {
   Calculator,
   Award,
   Share2,
-  FileText
+  FileText,
+  Bell,
+  Brain
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
@@ -4804,6 +4806,7 @@ export default function LeadMagnet() {
             <div className="mt-8 bg-white border border-slate-200 rounded-xl p-6 text-center">
               <h4 className="text-lg font-semibold text-slate-900 mb-2">Ready for the Next Step?</h4>
               <p className="text-slate-500 mb-4">Find specific opportunities in this market</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 onClick={() => {
                   setExploreAddress(researchResult.marketName);
@@ -4814,6 +4817,30 @@ export default function LeadMagnet() {
                 <Search className="w-4 h-4 mr-2" />
                 Find Opportunities in {researchResult.marketName}
               </Button>
+              <Button
+                onClick={() => {
+                  const city = researchResult.marketName.split(',')[0]?.trim();
+                  const state = researchResult.marketName.split(',')[1]?.trim() || '';
+                  window.location.href = `/evaluate-market?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&autoStart=true`;
+                }}
+                className="bg-gradient-to-r from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.14_75)] hover:opacity-90"
+              >
+                <Brain className="w-4 h-4 mr-2" />
+                AI Market Evaluation
+              </Button>
+              <Button
+                onClick={() => {
+                  const city = researchResult.marketName.split(',')[0]?.trim();
+                  const state = researchResult.marketName.split(',')[1]?.trim() || '';
+                  window.location.href = `/deal-alerts?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`;
+                }}
+                variant="outline"
+                className="border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Set Deal Alerts
+              </Button>
+              </div>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -6311,6 +6338,98 @@ export default function LeadMagnet() {
           </div>
         </section>
       )}
+
+      {/* ============================================ */}
+      {/* POWER TOOLS - Deal Alerts & Market Evaluation */}
+      {/* ============================================ */}
+      <section className="py-16 bg-gradient-to-b from-[oklch(0.97_0_0)] to-white border-t border-[oklch(0.92_0_0)]">
+        <div className="container max-w-4xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[oklch(0.55_0.14_75)]/10 rounded-full text-[oklch(0.55_0.14_75)] text-sm font-medium mb-4">
+              <Zap className="w-4 h-4" />
+              AI-Powered Tools
+            </div>
+            <h2 className="text-2xl md:text-3xl font-semibold text-[oklch(0.15_0_0)] mb-3 tracking-tight">
+              Go Deeper with Advanced Analysis
+            </h2>
+            <p className="text-[oklch(0.45_0_0)] text-lg max-w-xl mx-auto">
+              Let AI do the heavy lifting — evaluate entire markets in one click or get automatic deal alerts.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Market Evaluation Card */}
+            <button
+              onClick={() => window.location.href = '/evaluate-market'}
+              className="group text-left apple-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-[oklch(0.55_0.14_75)]/20"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.14_75)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Brain className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-1 group-hover:text-[oklch(0.55_0.14_75)] transition-colors">
+                    One-Click Market Evaluation
+                  </h3>
+                  <p className="text-sm text-[oklch(0.50_0_0)]">
+                    AI Investment Memo in 60 seconds
+                  </p>
+                </div>
+              </div>
+              <p className="text-[oklch(0.40_0_0)] text-sm leading-relaxed mb-5">
+                Enter a city and get a comprehensive analysis — revenue potential across bedroom types, 
+                seasonality trends, competitive landscape, top performers, and an AI-generated investment memo 
+                with a market score. All powered by Coach Inayah market data.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-5">
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Revenue Analysis</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Market Score</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">AI Memo</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Top Performers</span>
+              </div>
+              <div className="flex items-center gap-2 text-[oklch(0.55_0.14_75)] font-medium text-sm group-hover:gap-3 transition-all">
+                Evaluate a Market
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </button>
+            
+            {/* Deal Alerts Card */}
+            <button
+              onClick={() => window.location.href = '/deal-alerts'}
+              className="group text-left apple-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-[oklch(0.55_0.14_75)]/20"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Bell className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-1 group-hover:text-emerald-600 transition-colors">
+                    Deal Alert Agent
+                  </h3>
+                  <p className="text-sm text-[oklch(0.50_0_0)]">
+                    Never miss a profitable deal
+                  </p>
+                </div>
+              </div>
+              <p className="text-[oklch(0.40_0_0)] text-sm leading-relaxed mb-5">
+                Set your criteria — city, bedroom count, minimum profit — and our AI agent scans for 
+                matching deals automatically. Get notified when properties meet your investment 
+                thresholds for rental arbitrage or traditional investment.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-5">
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Auto Scanning</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Profit Filtering</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Daily/Weekly</span>
+                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Arbitrage + Investment</span>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm group-hover:gap-3 transition-all">
+                Set Up Deal Alerts
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* ============================================ */}
       {/* FOOTER CTA */}

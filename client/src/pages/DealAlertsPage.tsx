@@ -5,7 +5,7 @@
  * Users set criteria, the agent scans for matching deals while they sleep.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,7 @@ import {
   BarChart3,
   Shield,
 } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import { toast } from 'sonner';
 
 // US States for dropdown
@@ -58,6 +58,9 @@ const US_STATES = [
 ];
 
 export default function DealAlertsPage() {
+  const searchString = useSearch();
+  const urlParams = useMemo(() => new URLSearchParams(searchString), [searchString]);
+  
   const [sessionId] = useState(() => {
     let id = localStorage.getItem('favoriteSessionId');
     if (!id) {
@@ -67,7 +70,10 @@ export default function DealAlertsPage() {
     return id;
   });
 
-  const [activeTab, setActiveTab] = useState<'alerts' | 'matches' | 'create'>('alerts');
+  // If city/state provided via URL, start on create tab
+  const [activeTab, setActiveTab] = useState<'alerts' | 'matches' | 'create'>(
+    urlParams.get('city') && urlParams.get('state') ? 'create' : 'alerts'
+  );
   const [selectedCriteriaId, setSelectedCriteriaId] = useState<number | null>(null);
   const [expandedCriteria, setExpandedCriteria] = useState<number | null>(null);
   
@@ -76,8 +82,8 @@ export default function DealAlertsPage() {
     email: localStorage.getItem('userEmail') || '',
     firstName: localStorage.getItem('userName') || '',
     phone: '',
-    city: '',
-    state: '',
+    city: urlParams.get('city') || '',
+    state: urlParams.get('state') || '',
     zipCode: '',
     analysisType: 'arbitrage' as 'arbitrage' | 'investment' | 'both',
     minBedrooms: 1,
