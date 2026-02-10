@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, city, state, status, currentStep, progress, errorMessage, createdAt FROM market_evaluations ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, city, state, status, currentStep, progress, errorMessage, createdAt FROM market_evaluations ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "city": "Denver",
+      "state": "CO",
+      "status": "failed",
+      "currentStep": "ai_memo",
+      "progress": "75",
+      "errorMessage": "TypeError: topPerformers?.slice is not a function",
+      "createdAt": "2026-02-10 07:17:01"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcity\tstate\tstatus\tcurrentStep\tprogress\terrorMessage\tcreatedAt\n1\tDenver\tCO\tfailed\tai_memo\t75\tTypeError: topPerformers?.slice is not a function\t2026-02-10 07:17:01\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

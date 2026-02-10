@@ -7979,6 +7979,7 @@ export const appRouter = router({
       }),
 
     // Run a one-click market evaluation
+    // Returns evaluationId immediately and runs the evaluation asynchronously
     evaluateMarket: publicProcedure
       .input(z.object({
         city: z.string(),
@@ -7989,8 +7990,8 @@ export const appRouter = router({
         email: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { runMarketEvaluation } = await import('./deal-alert-agent');
-        return runMarketEvaluation(input);
+        const { startMarketEvaluation } = await import('./deal-alert-agent');
+        return startMarketEvaluation(input);
       }),
 
     // Get a market evaluation by ID

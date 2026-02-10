@@ -109,8 +109,10 @@ export default function MarketEvaluationPage() {
   
   const evaluateMutation = trpc.dealAlerts.evaluateMarket.useMutation({
     onSuccess: (data) => {
+      // The mutation now returns immediately with just the evaluationId.
+      // The evaluation runs in the background; we poll via getEvaluation.
       setEvaluationId(data.evaluationId);
-      setIsRunning(false);
+      // Keep isRunning true — the polling query will show progress
     },
     onError: () => {
       setIsRunning(false);

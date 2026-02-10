@@ -639,6 +639,7 @@ export async function runMarketEvaluation(params: {
   userId?: number;
   email?: string;
   onProgress?: (step: string, progress: number) => void;
+  _evaluationId?: number; // If provided, reuse existing DB record instead of creating new one
 }): Promise<{
   evaluationId: number;
   marketScore: number;
@@ -649,22 +650,31 @@ export async function runMarketEvaluation(params: {
   
   const { marketEvaluations } = await import('../drizzle/schema');
   
-  // Create evaluation record
-  const [insertResult] = await db.insert(marketEvaluations).values({
-    city: params.city,
-    state: params.state,
-    analysisType: params.analysisType ?? 'both',
-    bedrooms: params.bedrooms ?? 3,
-    sessionId: params.sessionId,
-    userId: params.userId,
-    email: params.email,
-    status: 'running',
-    startedAt: new Date(),
-    currentStep: 'market_overview',
-    progress: 0,
-  }) as any;
+  let evaluationId: number;
   
-  const evaluationId = Number(insertResult?.insertId ?? insertResult);
+  if (params._evaluationId) {
+    // Reuse existing record (created by startMarketEvaluation)
+    evaluationId = params._evaluationId;
+    await db.update(marketEvaluations)
+      .set({ status: 'running', startedAt: new Date(), currentStep: 'market_overview', progress: 0 })
+      .where(eq(marketEvaluations.id, evaluationId));
+  } else {
+    // Create new evaluation record
+    const [insertResult] = await db.insert(marketEvaluations).values({
+      city: params.city,
+      state: params.state,
+      analysisType: params.analysisType ?? 'both',
+      bedrooms: params.bedrooms ?? 3,
+      sessionId: params.sessionId,
+      userId: params.userId,
+      email: params.email,
+      status: 'running',
+      startedAt: new Date(),
+      currentStep: 'market_overview',
+      progress: 0,
+    }) as any;
+    evaluationId = Number(insertResult?.insertId ?? insertResult);
+  }
   
   try {
     // ============================================================
@@ -778,13 +788,14 @@ export async function runMarketEvaluation(params: {
       .set({ currentStep: 'competitive_landscape', progress: 50 })
       .where(eq(marketEvaluations.id, evaluationId));
     
-    let topPerformers: any = null;
+    let topPerformers: any[] = [];
     let marketListings: any = null;
     let marketInsights: any = null;
     
     if (marketId) {
       try {
-        topPerformers = await getTopPerformers({ marketId, limit: 10, filters: { bedrooms: targetBR } });
+        const topPerformersResult = await getTopPerformers({ marketId, limit: 10, filters: { bedrooms: targetBR } });
+        topPerformers = topPerformersResult?.listings || [];
       } catch (err) {
         console.error('[MarketEval] Top performers failed:', err);
       }
@@ -917,7 +928,7 @@ export async function runMarketEvaluation(params: {
       if (topPerformers?.length) {
         dataContext.push('', '## Top Performers (what success looks like):');
         topPerformers.slice(0, 5).forEach((p: any, i: number) => {
-          dataContext.push(`${i + 1}. ${p.title || 'Listing'}: $${Math.round(p.revenue || 0).toLocaleString()}/yr, ${p.rating || 'N/A'} stars, ${p.reviews || 0} reviews`);
+          dataContext.push(`${i + 1}. ${p.title || 'Listing'}: $${Math.round(p.annual_revenue || p.revenue || 0).toLocaleString()}/yr, ${p.rating || 'N/A'} stars, ${p.reviews || 0} reviews`);
         });
       }
       
@@ -999,7 +1010,7 @@ Keep it under 800 words. Be specific with numbers. Write for a beginner who's ev
         revenueData,
         marketOverviewData: marketDetails ? { details: marketDetails, historical: historicalData, seasonality: seasonalityData } : null,
         compsData: marketInsights ? { insights: marketInsights, listings: marketListings } : null,
-        topPropertiesData: topPerformers?.slice(0, 10) ?? null,
+        topPropertiesData: topPerformers.length > 0 ? topPerformers.slice(0, 10) : null,
         completedAt: new Date(),
       })
       .where(eq(marketEvaluations.id, evaluationId));
@@ -1021,4 +1032,53 @@ Keep it under 800 words. Be specific with numbers. Write for a beginner who's ev
     
     throw err;
   }
+}
+
+/**
+ * Starts a market evaluation asynchronously.
+ * Creates the DB record and returns the evaluationId immediately,
+ * then runs the full evaluation in the background.
+ * The frontend polls via getEvaluation to track progress.
+ */
+export async function startMarketEvaluation(params: {
+  city: string;
+  state: string;
+  analysisType?: 'arbitrage' | 'investment' | 'both';
+  bedrooms?: number;
+  sessionId?: string;
+  userId?: number;
+  email?: string;
+}): Promise<{ evaluationId: number }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  const { marketEvaluations } = await import('../drizzle/schema');
+  
+  // Create evaluation record immediately
+  const [insertResult] = await db.insert(marketEvaluations).values({
+    city: params.city,
+    state: params.state,
+    analysisType: params.analysisType ?? 'both',
+    bedrooms: params.bedrooms ?? 3,
+    sessionId: params.sessionId,
+    userId: params.userId,
+    email: params.email,
+    status: 'pending',
+    startedAt: new Date(),
+    currentStep: 'market_overview',
+    progress: 0,
+  }) as any;
+  
+  const evaluationId = Number(insertResult?.insertId ?? insertResult);
+  
+  // Run the full evaluation in the background (fire-and-forget)
+  // The frontend will poll via getEvaluation to track progress
+  runMarketEvaluation({
+    ...params,
+    _evaluationId: evaluationId,
+  }).catch(err => {
+    console.error(`[MarketEval] Background evaluation ${evaluationId} failed:`, err);
+  });
+  
+  return { evaluationId };
 }
