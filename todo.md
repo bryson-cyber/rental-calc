@@ -10195,3 +10195,13 @@ This makes the grading more optimistic - properties now get better grades at low
   - Also handled legacy expense_breakdown alias for older reports
   - Backend: both report generation paths now provide fallback market_data object
   - Frontend: defensive defaults for market_data + expense_breakdown alias
+
+## Bug Fix - AirDNA Submarket ID Resolution (Feb 10, 2026)
+- [x] Fix AirDNA market lookup returning 404 for submarket IDs (e.g., airdna-3577 for Richardson, TX)
+  - Root cause: Rentalizer API returns submarket IDs as market_id; getMarketDetails() returns 404 for these
+  - Fix 1: Enhanced proactive submarket detection with searchMarketsAPI fallback when getSubmarketDetails fails
+  - Fix 2: Fixed Fallback 1 (city search) to retry without state suffix when "City, TX" returns 404
+  - Fix 3: Fixed Fallback 2 (zip code search) to check parent_market on submarket results instead of using submarket ID directly
+  - Result: Richardson (airdna-3577) now correctly resolves to Dallas (airdna-403) with real market data
+  - Added 15 unit tests for submarket resolution logic
+  - All 741 tests pass across 58 test files

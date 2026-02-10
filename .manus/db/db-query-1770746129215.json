@@ -1,0 +1,17 @@
+{
+  "query": "SELECT JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_EXTRACT(reportData, '$.market_data.metrics.adr') as adr, JSON_EXTRACT(reportData, '$.submarkets[0].name') as first_sub, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as sub_count, JSON_LENGTH(JSON_EXTRACT(reportData, '$.supply_trend')) as supply_count FROM shared_reports WHERE shareId = '42hlanogmlgw837r'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_EXTRACT(reportData, '$.market_data.metrics.adr') as adr, JSON_EXTRACT(reportData, '$.submarkets[0].name') as first_sub, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as sub_count, JSON_LENGTH(JSON_EXTRACT(reportData, '$.supply_trend')) as supply_count FROM shared_reports WHERE shareId = '42hlanogmlgw837r'",
+  "rows": [
+    {
+      "market_name": "\"Richardson, TX\"",
+      "adr": "424",
+      "first_sub": "NULL",
+      "sub_count": "0",
+      "supply_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "market_name\tadr\tfirst_sub\tsub_count\tsupply_count\n\"Richardson, TX\"\t424\tNULL\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

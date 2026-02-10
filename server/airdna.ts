@@ -2743,7 +2743,64 @@ export async function getComprehensivePropertyReport(
   
   // Step 2: Find market ID
   let marketId = propertyEstimate.property.market_id;
+  let submarketIdFromRentalizer: string | null = null;
   let marketListingCount = 0;
+  
+  // The rentalizer sometimes returns a submarket ID instead of a market ID.
+  // We proactively check by trying getSubmarketDetails first. If it succeeds,
+  // we use the parent market ID instead, avoiding a 404 later.
+  if (marketId) {
+    try {
+      const submarketCheck = await getSubmarketDetails(marketId);
+      if (submarketCheck && submarketCheck.market_id && submarketCheck.market_id !== marketId) {
+        console.log(`[Market ID Fix] Rentalizer returned submarket ${marketId} (${submarketCheck.name}). Using parent market ${submarketCheck.market_id} (${submarketCheck.parent_market_name}) instead.`);
+        submarketIdFromRentalizer = marketId;
+        marketId = submarketCheck.market_id;
+      }
+    } catch {
+      // getSubmarketDetails failed (404) — but the search API might still identify this as a submarket
+      // Use searchMarketsAPI to look up the ID and check for parent_market
+      console.log(`[Market ID Fix] getSubmarketDetails failed for ${marketId}. Trying searchMarketsAPI fallback...`);
+      try {
+        // Extract city name from the address for search
+        const cityForSearch = address.match(/,\s*([^,]+),\s*[A-Z]{2}/)?.[1]?.trim()
+          || propertyEstimate.property.address_lookup?.split(',')[0]?.trim();
+        if (cityForSearch) {
+          const searchResults = await searchMarketsAPI(cityForSearch, 25);
+          // Check if any result matches our market_id and has a parent_market
+          const matchingSubmarket = searchResults.find(
+            (m: any) => m.id === marketId && m.type === 'submarket' && m.parent_market?.id
+          );
+          if (matchingSubmarket?.parent_market) {
+            console.log(`[Market ID Fix] searchMarketsAPI confirmed ${marketId} (${matchingSubmarket.name}) is a submarket of ${matchingSubmarket.parent_market.name} (${matchingSubmarket.parent_market.id})`);
+            submarketIdFromRentalizer = marketId;
+            marketId = matchingSubmarket.parent_market.id;
+          } else {
+            // Check if there's ANY submarket result with a parent market (might be a different name)
+            const anySubmarket = searchResults.find(
+              (m: any) => m.type === 'submarket' && m.parent_market?.id
+            );
+            if (anySubmarket?.parent_market) {
+              console.log(`[Market ID Fix] searchMarketsAPI found related submarket ${anySubmarket.name} → parent ${anySubmarket.parent_market.name} (${anySubmarket.parent_market.id})`);
+              submarketIdFromRentalizer = marketId;
+              marketId = anySubmarket.parent_market.id;
+            } else {
+              // Check if there's a market-type result we can use directly
+              const marketResult = searchResults.find((m: any) => m.type === 'market');
+              if (marketResult) {
+                console.log(`[Market ID Fix] searchMarketsAPI found market ${marketResult.name} (${marketResult.id}) for city ${cityForSearch}`);
+                marketId = marketResult.id;
+              } else {
+                console.log(`[Market ID Fix] ${marketId} not found in searchMarketsAPI either, proceeding as-is.`);
+              }
+            }
+          }
+        }
+      } catch (searchErr) {
+        console.log(`[Market ID Fix] searchMarketsAPI fallback also failed:`, searchErr);
+      }
+    }
+  }
   
   // If no market_id from rentalizer, search for it
   if (!marketId) {
@@ -2877,7 +2934,12 @@ export async function getComprehensivePropertyReport(
       if (searchTerm) {
         try {
           const apiSearchTerm = state ? `${searchTerm}, ${state}` : searchTerm;
-          const apiResults = await searchMarketsAPI(apiSearchTerm, 25);
+          let apiResults = await searchMarketsAPI(apiSearchTerm, 25);
+          // If search with state suffix returns nothing, try without the state
+          if (apiResults.length === 0 && state && searchTerm !== apiSearchTerm) {
+            console.log(`[Market Search Fallback] API search for "${apiSearchTerm}" returned 0 results, retrying with just "${searchTerm}"...`);
+            apiResults = await searchMarketsAPI(searchTerm, 25);
+          }
           console.log(`[Market Search Fallback] API search for "${searchTerm}" returned ${apiResults.length} results`);
           if (apiResults.length > 0) {
             // First, try to find a market-type result matching the state
@@ -2928,11 +2990,59 @@ export async function getComprehensivePropertyReport(
             const zipResults = await searchMarketsAPI(zipMatch[1], 10);
             console.log(`[Market Search Fallback] Zip code "${zipMatch[1]}" returned ${zipResults.length} results`);
             if (zipResults.length > 0) {
-              const fallbackMarket2 = zipResults.find(m => m.type === 'market') || zipResults[0];
-              if (fallbackMarket2) {
-                marketId = fallbackMarket2.id;
-                marketListingCount = fallbackMarket2.listing_count;
-                console.log('[Market Search Fallback] Found market via zip code:', fallbackMarket2.name, fallbackMarket2.id);
+              // Priority 1: Direct market-type result
+              const directMarket = zipResults.find(m => m.type === 'market');
+              if (directMarket) {
+                marketId = directMarket.id;
+                marketListingCount = directMarket.listing_count;
+                console.log('[Market Search Fallback] Found market via zip code:', directMarket.name, directMarket.id);
+              } else {
+                // Priority 2: Submarket with parent_market → use parent
+                const subWithParent = zipResults.find(m => m.type === 'submarket' && m.parent_market?.id);
+                if (subWithParent?.parent_market) {
+                  submarketIdFromRentalizer = subWithParent.id;
+                  marketId = subWithParent.parent_market.id;
+                  marketListingCount = 0; // Will get from market details
+                  console.log(`[Market Search Fallback] Zip code found submarket "${subWithParent.name}" (${subWithParent.id}) → using parent market "${subWithParent.parent_market.name}" (${subWithParent.parent_market.id})`);
+                } else {
+                  // Priority 3: Submarket without parent_market → need to resolve parent
+                  const anySubmarket = zipResults.find(m => m.type === 'submarket');
+                  if (anySubmarket) {
+                    console.log(`[Market Search Fallback] Zip code found submarket "${anySubmarket.name}" (${anySubmarket.id}) without parent_market. Searching for parent...`);
+                    // Search for the parent market by doing a broader search
+                    try {
+                      const parentSearchTerm = anySubmarket.name.split(',')[0]?.trim() || anySubmarket.name;
+                      const parentResults = await searchMarketsAPI(parentSearchTerm, 25);
+                      const parentMarket = parentResults.find(m => m.type === 'submarket' && m.parent_market?.id && m.id === anySubmarket.id);
+                      if (parentMarket?.parent_market) {
+                        submarketIdFromRentalizer = anySubmarket.id;
+                        marketId = parentMarket.parent_market.id;
+                        marketListingCount = 0;
+                        console.log(`[Market Search Fallback] Resolved parent: "${parentMarket.parent_market.name}" (${parentMarket.parent_market.id})`);
+                      } else {
+                        // Try finding any market in the same state
+                        const stateFromResult = anySubmarket.state || extractStateFromLocation(anySubmarket.location_name || anySubmarket.name);
+                        const anyParent = parentResults.find(m => m.type === 'market');
+                        if (anyParent) {
+                          submarketIdFromRentalizer = anySubmarket.id;
+                          marketId = anyParent.id;
+                          marketListingCount = anyParent.listing_count;
+                          console.log(`[Market Search Fallback] Using nearest market: "${anyParent.name}" (${anyParent.id})`);
+                        } else {
+                          // Last resort: use the submarket ID directly (will fail at getMarketDetails but catch block handles it)
+                          marketId = anySubmarket.id;
+                          marketListingCount = anySubmarket.listing_count;
+                          console.log(`[Market Search Fallback] No parent found, using submarket directly: ${anySubmarket.name} ${anySubmarket.id}`);
+                        }
+                      }
+                    } catch (parentErr) {
+                      // If parent search fails, use the submarket ID directly
+                      marketId = anySubmarket.id;
+                      marketListingCount = anySubmarket.listing_count;
+                      console.log(`[Market Search Fallback] Parent search failed, using submarket: ${anySubmarket.name} ${anySubmarket.id}`);
+                    }
+                  }
+                }
               }
             }
           } catch (e) {
@@ -2991,22 +3101,32 @@ export async function getComprehensivePropertyReport(
       historicalData = results[1];
       submarketList = results[2];
     } catch (marketErr) {
-      console.log(`[Market Data] Failed to fetch market ${marketId}, may be a submarket. Trying parent market...`);
-      // The marketId might be a submarket ID - try to find the parent market
+      console.log(`[Market Data] Failed to fetch market ${marketId}, may be a submarket. Trying submarket endpoint first...`);
+      
+      // Strategy 1: Try getSubmarketDetails - if the ID is actually a submarket, this will work
+      // and give us the parent market ID directly
       try {
-        const searchResults = await searchMarketsAPI(marketId.replace('airdna-', ''), 5);
-        // If that doesn't work, search by the address city
-        const addressLookup = propertyEstimate.property.address_lookup;
-        const cityFromLookup = addressLookup?.split(',').length >= 2 
-          ? addressLookup.split(',')[addressLookup.split(',').length - 2]?.trim()
-          : addressLookup?.split(',')[0]?.trim();
-        
-        if (cityFromLookup) {
-          const cityResults = await searchMarketsAPI(cityFromLookup, 10);
-          const parentResult = cityResults.find(m => m.type === 'submarket' && m.parent_market?.id);
-          if (parentResult?.parent_market) {
-            marketId = parentResult.parent_market.id;
-            console.log(`[Market Data] Found parent market: ${parentResult.parent_market.name} (${marketId})`);
+        const submarketDetails = await getSubmarketDetails(marketId);
+        if (submarketDetails && submarketDetails.market_id) {
+          const parentMarketId = submarketDetails.market_id;
+          console.log(`[Market Data] Confirmed ${marketId} (${submarketDetails.name}) is a submarket of parent market ${parentMarketId}`);
+          marketId = parentMarketId;
+          const parentResults = await Promise.all([
+            getMarketDetails(marketId),
+            getMarketHistoricalData(marketId, 24),
+            getSubmarketsInMarket(marketId),
+          ]);
+          marketDetails = parentResults[0];
+          historicalData = parentResults[1];
+          submarketList = parentResults[2];
+        } else if (submarketDetails && submarketDetails.parent_market_name) {
+          // Has parent name but no market_id - search for the parent by name
+          console.log(`[Market Data] Submarket found but no market_id. Searching for parent: ${submarketDetails.parent_market_name}`);
+          const parentSearch = await searchMarketsAPI(submarketDetails.parent_market_name, 10);
+          const parentMarket = parentSearch.find(m => m.type === 'market');
+          if (parentMarket) {
+            marketId = parentMarket.id;
+            console.log(`[Market Data] Found parent market via name search: ${parentMarket.name} (${marketId})`);
             const parentResults = await Promise.all([
               getMarketDetails(marketId),
               getMarketHistoricalData(marketId, 24),
@@ -3017,8 +3137,54 @@ export async function getComprehensivePropertyReport(
             submarketList = parentResults[2];
           }
         }
-      } catch (parentErr) {
-        console.log('[Market Data] Parent market search also failed:', (parentErr as Error).message);
+      } catch (submarketErr) {
+        console.log(`[Market Data] Submarket lookup for ${marketId} also failed:`, (submarketErr as Error).message);
+      }
+      
+      // Strategy 2: If submarket lookup didn't work, fall back to city-based search
+      if (!marketDetails) {
+        try {
+          const addressLookup = propertyEstimate.property.address_lookup;
+          const cityFromLookup = addressLookup?.split(',').length >= 2 
+            ? addressLookup.split(',')[addressLookup.split(',').length - 2]?.trim()
+            : addressLookup?.split(',')[0]?.trim();
+          
+          if (cityFromLookup) {
+            console.log(`[Market Data] Trying city-based search for: ${cityFromLookup}`);
+            const cityResults = await searchMarketsAPI(cityFromLookup, 10);
+            // First try to find a submarket matching this city with a parent market
+            const parentResult = cityResults.find(m => m.type === 'submarket' && m.parent_market?.id);
+            if (parentResult?.parent_market) {
+              marketId = parentResult.parent_market.id;
+              console.log(`[Market Data] Found parent market via city search: ${parentResult.parent_market.name} (${marketId})`);
+              const parentResults = await Promise.all([
+                getMarketDetails(marketId),
+                getMarketHistoricalData(marketId, 24),
+                getSubmarketsInMarket(marketId),
+              ]);
+              marketDetails = parentResults[0];
+              historicalData = parentResults[1];
+              submarketList = parentResults[2];
+            } else {
+              // Try a direct market match
+              const directMarket = cityResults.find(m => m.type === 'market');
+              if (directMarket) {
+                marketId = directMarket.id;
+                console.log(`[Market Data] Found direct market via city search: ${directMarket.name} (${marketId})`);
+                const directResults = await Promise.all([
+                  getMarketDetails(marketId),
+                  getMarketHistoricalData(marketId, 24),
+                  getSubmarketsInMarket(marketId),
+                ]);
+                marketDetails = directResults[0];
+                historicalData = directResults[1];
+                submarketList = directResults[2];
+              }
+            }
+          }
+        } catch (cityErr) {
+          console.log('[Market Data] City-based search also failed:', (cityErr as Error).message);
+        }
       }
     }
     
