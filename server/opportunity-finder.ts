@@ -838,4 +838,174 @@ export const opportunityFinderRouter = router({
         });
       }
     }),
+
+  /**
+   * Batch Analyze All Properties
+   * Runs AirDNA Rentalizer on up to 20 properties concurrently
+   * and returns results ranked by profitability
+   */
+  batchValidateProperties: publicProcedure
+    .input(z.object({
+      properties: z.array(z.object({
+        id: z.string(),
+        address: z.string().min(1),
+        rent: z.number().min(0),
+        bedrooms: z.number().min(1),
+        bathrooms: z.number().min(0.5),
+        zillowUrl: z.string().optional(),
+        image: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+      })).min(1).max(20),
+    }))
+    .mutation(async ({ input }) => {
+      const { properties } = input;
+      console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties`);
+      const startTime = Date.now();
+
+      // Run all AirDNA estimates concurrently with a concurrency limit of 5
+      const CONCURRENCY = 5;
+      const results: Array<{
+        id: string;
+        success: boolean;
+        property: {
+          address: string;
+          rent: number;
+          bedrooms: number;
+          bathrooms: number;
+          zillowUrl?: string;
+          image?: string;
+          city?: string;
+          state?: string;
+          zipCode?: string;
+        };
+        projection?: {
+          annualRevenue: number;
+          monthlyRevenue: number;
+          occupancy: number;
+          adr: number;
+          operatingCosts: number;
+          monthlyProfit: number;
+          annualProfit: number;
+          roi: number;
+        };
+        verdict?: string;
+        isGoodDeal?: boolean;
+        error?: string;
+      }> = [];
+
+      // Process in batches of CONCURRENCY
+      for (let i = 0; i < properties.length; i += CONCURRENCY) {
+        const batch = properties.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(
+          batch.map(async (prop) => {
+            try {
+              const estimate = await getAirDNAEstimate(
+                `${prop.address}, ${prop.city || ''}, ${prop.state || ''} ${prop.zipCode || ''}`.trim(),
+                prop.bedrooms,
+                prop.bathrooms
+              );
+
+              if (!estimate || estimate.revenue === 0) {
+                return {
+                  id: prop.id,
+                  success: false as const,
+                  property: prop,
+                  error: 'Could not get revenue estimate',
+                };
+              }
+
+              const monthlyRevenue = estimate.revenue / 12;
+              const operatingCosts = prop.rent * 0.20;
+              const monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
+              const annualProfit = monthlyProfit * 12;
+              const roi = (annualProfit / (prop.rent * 12)) * 100;
+              const isGoodDeal = monthlyProfit > 500 && estimate.occupancy > 50;
+              const verdict = monthlyProfit > 1000 ? 'Excellent Opportunity' :
+                              monthlyProfit > 500 ? 'Good Opportunity' :
+                              monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :
+                              'Not Recommended';
+
+              return {
+                id: prop.id,
+                success: true as const,
+                property: prop,
+                projection: {
+                  annualRevenue: Math.round(estimate.revenue),
+                  monthlyRevenue: Math.round(monthlyRevenue),
+                  occupancy: estimate.occupancy,
+                  adr: estimate.adr,
+                  operatingCosts: Math.round(operatingCosts),
+                  monthlyProfit: Math.round(monthlyProfit),
+                  annualProfit: Math.round(annualProfit),
+                  roi: Math.round(roi),
+                },
+                verdict,
+                isGoodDeal,
+              };
+            } catch (err) {
+              console.error(`[Batch Analyze] Error for ${prop.address}:`, err);
+              return {
+                id: prop.id,
+                success: false as const,
+                property: prop,
+                error: 'Analysis failed',
+              };
+            }
+          })
+        );
+
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled') {
+            results.push(result.value);
+          } else {
+            // This shouldn't happen since we catch inside, but just in case
+            results.push({
+              id: 'unknown',
+              success: false,
+              property: { address: 'Unknown', rent: 0, bedrooms: 0, bathrooms: 0 },
+              error: 'Unexpected error',
+            });
+          }
+        }
+      }
+
+      // Sort by monthly profit descending (successful ones first)
+      const successful = results.filter(r => r.success && r.projection);
+      const failed = results.filter(r => !r.success);
+      successful.sort((a, b) => (b.projection?.monthlyProfit || 0) - (a.projection?.monthlyProfit || 0));
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[Batch Analyze] Complete: ${successful.length} succeeded, ${failed.length} failed in ${elapsed}s`);
+
+      return {
+        success: true,
+        totalAnalyzed: properties.length,
+        successCount: successful.length,
+        failedCount: failed.length,
+        elapsedSeconds: parseFloat(elapsed),
+        // Ranked results: profitable first, then marginal, then failed
+        results: [...successful, ...failed],
+        // Top deals summary
+        topDeals: successful
+          .filter(r => r.isGoodDeal)
+          .slice(0, 5)
+          .map(r => ({
+            id: r.id,
+            address: r.property.address,
+            city: r.property.city,
+            state: r.property.state,
+            rent: r.property.rent,
+            monthlyProfit: r.projection!.monthlyProfit,
+            annualProfit: r.projection!.annualProfit,
+            roi: r.projection!.roi,
+            occupancy: r.projection!.occupancy,
+            adr: r.projection!.adr,
+            verdict: r.verdict!,
+            image: r.property.image,
+            zillowUrl: r.property.zillowUrl,
+          })),
+      };
+    }),
 });

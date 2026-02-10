@@ -77,7 +77,12 @@ import {
   Brain,
   Microscope,
   X,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  Trophy,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -491,8 +496,35 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
   const getContacts = trpc.opportunityFinder.getPropertyContacts.useMutation();
   const addFavorite = trpc.favorites.add.useMutation();
   const removeFavorite = trpc.favorites.remove.useMutation();
+  const batchValidate = trpc.opportunityFinder.batchValidateProperties.useMutation();
   
   const isSearching = searchRentals.isPending || searchForSale.isPending;
+  
+  // Batch analysis state
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchResults, setBatchResults] = useState<{
+    totalAnalyzed: number;
+    successCount: number;
+    failedCount: number;
+    elapsedSeconds: number;
+    topDeals: Array<{
+      id: string;
+      address: string;
+      city?: string;
+      state?: string;
+      rent: number;
+      monthlyProfit: number;
+      annualProfit: number;
+      roi: number;
+      occupancy: number;
+      adr: number;
+      verdict: string;
+      image?: string;
+      zillowUrl?: string;
+    }>;
+  } | null>(null);
+  const [showBatchResults, setShowBatchResults] = useState(false);
   
   // Sort properties client-side
   const sortProperties = (props: ZillowProperty[]): ZillowProperty[] => {
@@ -669,6 +701,84 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       }));
     } finally {
       setValidatingId(null);
+    }
+  };
+  
+  // Handle batch analysis of all visible properties
+  const handleBatchAnalyze = async () => {
+    if (displayedProperties.length === 0) return;
+    
+    setIsBatchAnalyzing(true);
+    setBatchProgress(0);
+    setBatchResults(null);
+    setShowBatchResults(false);
+    
+    // Simulate progress while waiting for API
+    const progressInterval = setInterval(() => {
+      setBatchProgress(prev => {
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 8;
+      });
+    }, 500);
+    
+    try {
+      const propsToAnalyze = displayedProperties.slice(0, 20).map(p => ({
+        id: p.id,
+        address: p.address,
+        rent: p.price,
+        bedrooms: p.bedrooms || 2,
+        bathrooms: p.bathrooms || 1,
+        zillowUrl: p.url,
+        image: p.image,
+        city: p.city,
+        state: p.state,
+        zipCode: p.zipCode,
+      }));
+      
+      const result = await batchValidate.mutateAsync({
+        properties: propsToAnalyze,
+      });
+      
+      clearInterval(progressInterval);
+      setBatchProgress(100);
+      
+      // Also update individual validation results so cards show inline
+      if (result.results) {
+        const newValidations: Record<string, ValidationResult> = {};
+        for (const r of result.results) {
+          newValidations[r.id] = {
+            success: r.success,
+            property: {
+              address: r.property.address,
+              rent: r.property.rent,
+              bedrooms: r.property.bedrooms,
+              bathrooms: r.property.bathrooms,
+            },
+            projection: r.projection,
+            verdict: r.verdict,
+            isGoodDeal: r.isGoodDeal,
+            error: r.error,
+          };
+        }
+        setValidationResults(prev => ({ ...prev, ...newValidations }));
+      }
+      
+      setBatchResults({
+        totalAnalyzed: result.totalAnalyzed,
+        successCount: result.successCount,
+        failedCount: result.failedCount,
+        elapsedSeconds: result.elapsedSeconds,
+        topDeals: result.topDeals,
+      });
+      setShowBatchResults(true);
+      
+      toast.success(`Analyzed ${result.successCount} of ${result.totalAnalyzed} properties!`);
+    } catch (error) {
+      console.error('Batch analysis error:', error);
+      clearInterval(progressInterval);
+      toast.error('Batch analysis failed. Please try again.');
+    } finally {
+      setIsBatchAnalyzing(false);
     }
   };
   
@@ -1132,6 +1242,236 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
               </div>
             )}
           </div>
+          
+          {/* Batch Analyze All Button */}
+          {displayedProperties.length > 0 && !isSearching && (
+            <div className="mt-4">
+              {/* Analyze All Button */}
+              {!isBatchAnalyzing && !showBatchResults && (
+                <motion.button
+                  onClick={handleBatchAnalyze}
+                  className="w-full py-4 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg"
+                  style={{ 
+                    background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.40 0.12 160))',
+                    boxShadow: '0 4px 14px oklch(0.45 0.15 145 / 0.3)',
+                  }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <Zap className="w-5 h-5" />
+                  <span>Analyze All {Math.min(displayedProperties.length, 20)} Properties</span>
+                  <span className="text-sm opacity-80">— Find the Top Deals Instantly</span>
+                </motion.button>
+              )}
+              
+              {/* Progress Bar */}
+              {isBatchAnalyzing && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl p-6"
+                  style={{ backgroundColor: 'oklch(0.97 0.01 145)', border: '1px solid oklch(0.90 0.03 145)' }}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'oklch(0.45 0.15 145 / 0.15)' }}>
+                      <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'oklch(0.45 0.15 145)' }} />
+                    </div>
+                    <div>
+                      <p className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>Analyzing Properties...</p>
+                      <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>Running AirDNA Rentalizer on {Math.min(displayedProperties.length, 20)} properties</p>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'oklch(0.90 0.03 145)' }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: 'linear-gradient(90deg, oklch(0.45 0.15 145), oklch(0.55 0.14 75))' }}
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${batchProgress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                  <p className="text-xs mt-2 text-center" style={{ color: 'oklch(0.55 0 0)' }}>
+                    {Math.round(batchProgress)}% complete — this may take 30-60 seconds
+                  </p>
+                </motion.div>
+              )}
+              
+              {/* Batch Results Panel */}
+              <AnimatePresence>
+                {showBatchResults && batchResults && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="rounded-xl overflow-hidden"
+                    style={{ border: '2px solid oklch(0.55 0.14 75)', boxShadow: '0 8px 30px oklch(0.55 0.14 75 / 0.15)' }}
+                  >
+                    {/* Results Header */}
+                    <div className="p-5" style={{ background: 'linear-gradient(135deg, oklch(0.20 0.02 75), oklch(0.25 0.03 75))' }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'oklch(0.55 0.14 75 / 0.2)' }}>
+                            <Trophy className="w-5 h-5" style={{ color: 'oklch(0.75 0.14 75)' }} />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-white">Batch Analysis Complete</h3>
+                            <p className="text-sm" style={{ color: 'oklch(0.80 0 0)' }}>
+                              {batchResults.successCount} of {batchResults.totalAnalyzed} analyzed in {batchResults.elapsedSeconds}s
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setShowBatchResults(false); setBatchResults(null); }}
+                          className="p-2 rounded-lg transition-colors hover:bg-white/10"
+                        >
+                          <X className="w-5 h-5 text-white/70" />
+                        </button>
+                      </div>
+                      
+                      {/* Summary Stats */}
+                      <div className="grid grid-cols-3 gap-3 mt-4">
+                        <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'oklch(0.30 0.04 145 / 0.5)' }}>
+                          <CheckCircle2 className="w-5 h-5 mx-auto mb-1" style={{ color: 'oklch(0.70 0.15 145)' }} />
+                          <p className="text-xl font-bold text-white">{batchResults.topDeals.length}</p>
+                          <p className="text-xs" style={{ color: 'oklch(0.75 0 0)' }}>Top Deals</p>
+                        </div>
+                        <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'oklch(0.30 0.04 75 / 0.5)' }}>
+                          <TrendingUp className="w-5 h-5 mx-auto mb-1" style={{ color: 'oklch(0.75 0.14 75)' }} />
+                          <p className="text-xl font-bold text-white">{batchResults.successCount}</p>
+                          <p className="text-xs" style={{ color: 'oklch(0.75 0 0)' }}>Analyzed</p>
+                        </div>
+                        <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'oklch(0.30 0.04 25 / 0.5)' }}>
+                          {batchResults.failedCount > 0 ? (
+                            <><AlertTriangle className="w-5 h-5 mx-auto mb-1" style={{ color: 'oklch(0.75 0.12 60)' }} />
+                            <p className="text-xl font-bold text-white">{batchResults.failedCount}</p>
+                            <p className="text-xs" style={{ color: 'oklch(0.75 0 0)' }}>Failed</p></>
+                          ) : (
+                            <><CheckCircle2 className="w-5 h-5 mx-auto mb-1" style={{ color: 'oklch(0.70 0.15 145)' }} />
+                            <p className="text-xl font-bold text-white">0</p>
+                            <p className="text-xs" style={{ color: 'oklch(0.75 0 0)' }}>Failed</p></>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Top Deals List */}
+                    {batchResults.topDeals.length > 0 ? (
+                      <div className="p-4" style={{ backgroundColor: 'oklch(0.99 0 0)' }}>
+                        <h4 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'oklch(0.45 0 0)' }}>
+                          Top Deals — Ranked by Monthly Profit
+                        </h4>
+                        <div className="space-y-3">
+                          {batchResults.topDeals.map((deal, idx) => (
+                            <motion.div
+                              key={deal.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:shadow-md"
+                              style={{ 
+                                backgroundColor: 'white',
+                                border: idx === 0 ? '2px solid oklch(0.55 0.14 75)' : '1px solid oklch(0.92 0 0)',
+                              }}
+                            >
+                              {/* Rank Badge */}
+                              <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm"
+                                style={{ 
+                                  backgroundColor: idx === 0 ? 'oklch(0.55 0.14 75)' : idx === 1 ? 'oklch(0.65 0.05 0)' : 'oklch(0.80 0.03 55)',
+                                  color: idx <= 1 ? 'white' : 'oklch(0.30 0 0)',
+                                }}
+                              >
+                                #{idx + 1}
+                              </div>
+                              
+                              {/* Property Image */}
+                              {deal.image && (
+                                <div className="w-16 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                  <img src={deal.image} alt="" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              
+                              {/* Property Info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate" style={{ color: 'oklch(0.15 0 0)' }}>
+                                  {deal.address}
+                                </p>
+                                <p className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>
+                                  {deal.city}{deal.state ? `, ${deal.state}` : ''} • Rent: {formatCurrency(deal.rent)}/mo
+                                </p>
+                              </div>
+                              
+                              {/* Profit Info */}
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-bold text-lg" style={{ color: deal.monthlyProfit > 1000 ? 'oklch(0.45 0.15 145)' : 'oklch(0.55 0.12 85)' }}>
+                                  +{formatCurrency(deal.monthlyProfit)}/mo
+                                </p>
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
+                                    backgroundColor: deal.occupancy >= 65 ? 'oklch(0.92 0.03 145)' : 'oklch(0.92 0.03 60)',
+                                    color: deal.occupancy >= 65 ? 'oklch(0.35 0.12 145)' : 'oklch(0.40 0.10 60)',
+                                  }}>
+                                    {deal.occupancy}% occ
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
+                                    backgroundColor: 'oklch(0.92 0.03 75)',
+                                    color: 'oklch(0.40 0.10 75)',
+                                  }}>
+                                    {deal.roi}% ROI
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Link */}
+                              {deal.zillowUrl && (
+                                <a
+                                  href={deal.zillowUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 rounded-lg transition-colors flex-shrink-0"
+                                  style={{ backgroundColor: 'oklch(0.96 0 0)' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <ExternalLink className="w-4 h-4" style={{ color: 'oklch(0.45 0 0)' }} />
+                                </a>
+                              )}
+                            </motion.div>
+                          ))}
+                        </div>
+                        
+                        {/* Re-analyze button */}
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            onClick={() => { setShowBatchResults(false); setBatchResults(null); }}
+                            className="text-sm px-4 py-2 rounded-lg transition-colors"
+                            style={{ color: 'oklch(0.45 0 0)', backgroundColor: 'oklch(0.96 0 0)' }}
+                          >
+                            <RotateCcw className="w-4 h-4 inline mr-2" />
+                            Analyze Again
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center" style={{ backgroundColor: 'oklch(0.99 0 0)' }}>
+                        <AlertTriangle className="w-10 h-10 mx-auto mb-3" style={{ color: 'oklch(0.60 0.12 60)' }} />
+                        <p className="font-medium" style={{ color: 'oklch(0.25 0 0)' }}>No Strong Deals Found</p>
+                        <p className="text-sm mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
+                          None of the {batchResults.totalAnalyzed} properties met the profitability threshold. Try a different market or adjust your filters.
+                        </p>
+                        <button
+                          onClick={() => { setShowBatchResults(false); setBatchResults(null); }}
+                          className="mt-3 text-sm px-4 py-2 rounded-lg transition-colors"
+                          style={{ color: 'oklch(0.45 0 0)', backgroundColor: 'oklch(0.96 0 0)' }}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
           
           {/* Property Grid */}
           {isSearching ? (

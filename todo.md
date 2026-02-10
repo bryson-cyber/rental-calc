@@ -10131,3 +10131,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add indexes to frequently queried tables (82 indexes across 28 tables including tool_usage_events, deal_alert_criteria, market_evaluations, api_call_logs, etc.)
 - [x] Run pnpm db:push to apply schema changes (migration 0019_lean_venom.sql applied)
 - [x] Verify all tests still pass (54 test files, 678 tests passed)
+
+## Batch Analyze All Agent - Feb 10, 2026
+- [x] Build backend batch analysis tRPC endpoint (batchValidateProperties - accepts array of up to 20 properties, runs AirDNA Rentalizer on all concurrently with 3-at-a-time rate limiting)
+- [x] Build frontend "Analyze All" button in Step 2 property listings (green gradient button with Zap icon)
+- [x] Build batch results leaderboard UI showing top deals ranked by profitability (gold-themed panel with rank badges, profit/occupancy/ROI tags)
+- [x] Handle loading states, progress indicator, and error handling for batch analysis (animated progress bar with percentage)
+- [x] Write vitest tests for batch analysis endpoint (12 tests covering input validation, profit calculation, sorting, topDeals filtering, API failures)
