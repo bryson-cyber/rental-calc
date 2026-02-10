@@ -10216,3 +10216,31 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Ensure stress test uses valid AirDNA-sourced occupancy and ADR values
   - Also fixed Gemini AI summary mapping: stress_test.scenarios now properly transformed to flat array for AI prompt
   - All 741 tests pass across 58 test files
+
+## Bug Fix - Map Not Loading Properties on Report Page (Feb 10, 2026)
+- [x] Fix map on /report/ page not displaying property markers (subject property + comparable properties)
+  - Added latitude/longitude mapping to rentalizer comp data
+  - Increased comp slice from 10 to 25
+
+## Report Page Improvements (Feb 10, 2026)
+- [x] Fix comp map showing only 2-3 comps - need to fetch and display more comparable properties
+  - Added pagination to exploreListingsInRadius (up to 3 pages = 75 listings)
+  - Expanded search radius for high-BR properties (6BR+: 15km vs default 5km)
+  - Also searches adjacent BR counts (e.g., 5BR and 7BR for a 6BR property)
+- [x] Add comprehensive tooltips on every metric/section for beginner users who know nothing about STR investing
+  - Created reusable InfoTip component with HelpCircle icon + Tooltip
+  - Added tooltips to all hero stats, section headers, comp table headers, DataRow items, and financial metrics
+  - Updated StatCard and DataRow components to support optional tooltip prop
+- [x] Fix bedroom performance section to dynamically include the subject property's actual bedroom count
+  - Changed hard-coded `for (let br = 1; br <= 5; br++)` to dynamic `maxBr = Math.max(propBedrooms + 1, 5)`
+  - New reports will include the property's BR count; existing reports show old data until regenerated
+- [x] Distinguish overall market data vs property-specific data clearly in the UI
+  - Created DataSourceBadge component with "YOUR PROPERTY" (gold) and "MARKET DATA" (gray) badges
+  - Applied to hero stats, bedroom performance, revenue distribution, supply trend, and comparison table
+- [x] Fix comp list visibility/UI issues - comps table hard to see or truncated
+  - Replaced hard-coded slice(0, 15) with show-all toggle button
+  - Shows first 10 by default with "Show all X comps" button to expand
+- [x] Performance optimization while maintaining UI quality (cc-optimize audit)
+  - Added manual chunks in vite.config.ts to split vendor libraries (react, trpc, charts, pdf, maps, ui)
+  - All pages already lazy-loaded with React.lazy + Suspense
+  - All 741 tests pass across 58 test files

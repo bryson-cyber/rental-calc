@@ -47,6 +47,8 @@ interface Comp {
   adr: number;
   occupancy: number;
   distance_meters: number;
+  latitude?: number | null;
+  longitude?: number | null;
   airbnb_listing_id?: string;
   airbnb_url?: string;
   image_url?: string;
@@ -2312,47 +2314,63 @@ export async function exploreListingsInRadius(
       });
     }
     
-    const response = await makeApiRequest<{
-      payload: {
-        listings?: Array<{
-          property_id: string;
-          title: string;
-          airbnb_property_id?: string;
-          airbnb_property_url?: string;
-          bedrooms: number;
-          bathrooms: number;
-          accommodates: number;
-          property_type: string;
-          rating: number | null;
-          reviews: number;
-          revenue_ltm?: number;
-          average_daily_rate_ltm?: number;
-          occupancy_rate_ltm?: number;
-          last_scraped_date?: string;
-          superhost?: boolean;
-          professionally_managed?: boolean;
-          host_size?: string;
-          location?: { lat?: number; lng?: number };
-          zipcode?: string;
-          market_name?: string;
-          images?: string[];
-        }>;
-      };
-    }>("/listing/comps/area", "POST", {
-      address,
-      radius: radiusMeters,
-      filters: filterArray.length > 0 ? filterArray : undefined,
-      pagination: {
-        page_size: Math.min(limit, 25), // API max is 25
-        offset: 0,
-      },
-      sort_order: "revenue",
-      sort_direction: "descending",
-    });
+    type CompsAreaListing = {
+      property_id: string;
+      title: string;
+      airbnb_property_id?: string;
+      airbnb_property_url?: string;
+      bedrooms: number;
+      bathrooms: number;
+      accommodates: number;
+      property_type: string;
+      rating: number | null;
+      reviews: number;
+      revenue_ltm?: number;
+      average_daily_rate_ltm?: number;
+      occupancy_rate_ltm?: number;
+      last_scraped_date?: string;
+      superhost?: boolean;
+      professionally_managed?: boolean;
+      host_size?: string;
+      location?: { lat?: number; lng?: number };
+      zipcode?: string;
+      market_name?: string;
+      images?: string[];
+    };
     
-    let listings: ListingData[] = (response.payload.listings || []).map((r) => {
-      // Get image from API response if available
-      // Note: radius search endpoint doesn't return images, so we'll enrich later via getSinglePropertyDetails
+    // Paginate to fetch up to `limit` listings (API max page_size is 25)
+    const pageSize = 25;
+    const maxPages = Math.ceil(limit / pageSize);
+    let allRawListings: CompsAreaListing[] = [];
+    
+    for (let page = 0; page < maxPages; page++) {
+      const response = await makeApiRequest<{
+        payload: {
+          listings?: CompsAreaListing[];
+          page_info?: { total_count: number };
+        };
+      }>("/listing/comps/area", "POST", {
+        address,
+        radius: radiusMeters,
+        filters: filterArray.length > 0 ? filterArray : undefined,
+        pagination: {
+          page_size: pageSize,
+          offset: page * pageSize,
+        },
+        sort_order: "revenue",
+        sort_direction: "descending",
+      });
+      
+      const pageListings = response.payload.listings || [];
+      allRawListings = [...allRawListings, ...pageListings];
+      
+      // Stop if we got fewer results than page size (no more pages)
+      if (pageListings.length < pageSize) break;
+      // Stop if we have enough
+      if (allRawListings.length >= limit) break;
+    }
+    
+    let listings: ListingData[] = allRawListings.slice(0, limit).map((r) => {
       const imageUrl = r.images?.[0] || '';
       return {
         id: r.property_id || '',
@@ -2560,7 +2578,7 @@ async function tryRentalizerRequest(
         platforms: firstComp.platforms,
       });
     }
-    const comps: Comp[] = (payload.comps || []).slice(0, 10).map((comp) => ({
+    const comps: Comp[] = (payload.comps || []).slice(0, 25).map((comp) => ({
       title: comp.details.title,
       bedrooms: comp.details.bedrooms,
       bathrooms: comp.details.bathrooms,
@@ -2570,6 +2588,8 @@ async function tryRentalizerRequest(
       adr: comp.stats.summary.adr,
       occupancy: comp.stats.summary.occupancy,
       distance_meters: comp.distance_meters,
+      latitude: (comp as any).latitude || (comp.details as any)?.latitude || (comp as any).location?.latitude,
+      longitude: (comp as any).longitude || (comp.details as any)?.longitude || (comp as any).location?.longitude,
       airbnb_listing_id: comp.platforms?.airbnb_property_id,
       airbnb_url: comp.platforms?.airbnb_property_url || 
         (comp.platforms?.airbnb_property_id ? `https://www.airbnb.com/rooms/${comp.platforms.airbnb_property_id}` : undefined),
@@ -3278,10 +3298,31 @@ export async function getComprehensivePropertyReport(
   const sameBedroomRentalizerComps = rentalizerComps.filter(c => c.bedrooms === propertyBedrooms);
   
   // Get additional comps from radius search (these don't have images but may have more listings)
-  const radiusComps = await exploreListingsInRadius(address, 3000, {
+  // For high-BR properties (5+), expand radius since they're rarer
+  const compSearchRadius = propertyBedrooms >= 5 ? 8000 : propertyBedrooms >= 4 ? 5000 : 3000;
+  const radiusComps = await exploreListingsInRadius(address, compSearchRadius, {
     bedrooms: propertyBedrooms,
-    minRevenue: 10000, // Filter out very low performers
-  }, 30);
+    minRevenue: 5000, // Lower threshold to find more comps
+  }, 50);
+  
+  // For high-BR properties, also search for adjacent bedroom counts to supplement
+  let adjacentBrComps: ListingData[] = [];
+  if (propertyBedrooms >= 4 && radiusComps.length < 10) {
+    // Search for BR-1 and BR+1 to supplement sparse results
+    const adjacentBrs = [propertyBedrooms - 1, propertyBedrooms + 1].filter(br => br >= 1);
+    for (const adjBr of adjacentBrs) {
+      try {
+        const adjComps = await exploreListingsInRadius(address, compSearchRadius, {
+          bedrooms: adjBr,
+          minRevenue: 5000,
+        }, 15);
+        adjacentBrComps = [...adjacentBrComps, ...adjComps];
+      } catch (e) {
+        console.log(`[Comps] Adjacent BR search failed for ${adjBr}BR`);
+      }
+    }
+    console.log(`[Comps] Found ${adjacentBrComps.length} adjacent BR comps to supplement ${radiusComps.length} same-BR comps`);
+  }
   
   // Merge: prioritize rentalizer comps (with images), then add radius comps that aren't duplicates
   // Use multiple identifiers for deduplication: ID, title, and Airbnb URL
@@ -3289,7 +3330,13 @@ export async function getComprehensivePropertyReport(
   const seenTitles = new Set(sameBedroomRentalizerComps.map(c => c.title.toLowerCase().trim()));
   const seenUrls = new Set(sameBedroomRentalizerComps.map(c => c.airbnb_url).filter(Boolean));
   
-  const additionalRadiusComps = radiusComps.filter(c => {
+  // Combine same-BR radius comps with adjacent-BR comps (tagged)
+  const allRadiusComps = [
+    ...radiusComps,
+    ...adjacentBrComps.map(c => ({ ...c, title: c.title })), // Keep adjacent BR comps identifiable
+  ];
+  
+  const additionalRadiusComps = allRadiusComps.filter(c => {
     // Check if this listing is a duplicate by ID, title, or URL
     const isDuplicateById = seenIds.has(c.id);
     const isDuplicateByTitle = seenTitles.has(c.title.toLowerCase().trim());
@@ -3326,7 +3373,9 @@ export async function getComprehensivePropertyReport(
   }> = [];
   
   // Get listings for different bedroom counts from radius comps
-  for (let br = 1; br <= 5; br++) {
+  // Dynamically include the subject property's bedroom count (and one above)
+  const maxBr = Math.max(5, propertyBedrooms + 1);
+  for (let br = 1; br <= maxBr; br++) {
     try {
       const listings = await exploreListingsInRadius(address, 5000, { bedrooms: br }, 100);
       if (listings.length > 0) {
