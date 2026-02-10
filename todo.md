@@ -9986,3 +9986,37 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Created server endpoint sharedReports.generateFromAddress with full AirDNA data pipeline
 - [x] Wired up route in App.tsx
 - [x] All 615 tests passing
+
+## Bug Fix: Wrong State Resolution (Feb 10, 2026) - COMPLETE
+- [x] Fix: Fayetteville NC address resolving to Fayetteville AR in the report
+- [x] Reproduce bug with Zillow address: 7544 Decatur Dr, Fayetteville, NC 28303
+- [x] Diagnose root cause: searchMarkets function only did fuzzy name matching without state priority
+- [x] Fix the state resolution logic (added state bonus scoring + state extraction from address)
+- [x] Verify fix with unit tests (636 tests passing)
+
+## Feature: Google Places Autocomplete on Full Report (Feb 10, 2026) - COMPLETE
+- [x] Add Google Places autocomplete to the Full Report address input (SmartAddressInput)
+- [x] Ensure address suggestions include full state info to prevent ambiguity
+- [x] Also supports Zillow/Redfin URL paste with auto-fill of property details
+
+## Feature: Loading Progress Indicator (Feb 10, 2026) - COMPLETE
+- [x] Add step-by-step progress indicator during Full Report generation
+- [x] Show 6 visual steps with animated checkmarks, spinner, and progress bar
+
+## Feature: Pre-fill Full Report from Main Page (Feb 10, 2026) - COMPLETE
+- [x] Pre-fill Full Report form when user clicks CTA from main page with property already entered
+- [x] Carry over address, bedrooms, bathrooms, rent data via URL parameters
+
+
+## Bug Fixes & Features (Feb 10, 2026) - COMPLETE
+
+### Critical Bug: Fayetteville NC→AR State Disambiguation
+- [x] Fix searchMarkets function to incorporate state matching in scoring
+- [x] Fix getComprehensivePropertyReport market resolution to prioritize state-matched results
+- [x] Add zip code fallback when city name search returns wrong state
+- [x] Test with "7544 Decatur Dr, Fayetteville, NC 28303"
+
+### Full Report Generator Enhancements
+- [x] Add Google Places autocomplete to Full Report address input (SmartAddressInput with Zillow/Redfin URL support)
+- [x] Add loading progress indicator during 20-40 second report generation (6-step visual tracker)
+- [x] Pre-fill Full Report form with property data from main page if already entered (URL params)

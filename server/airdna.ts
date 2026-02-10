@@ -490,22 +490,48 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
     const allMarkets = await getAllUSMarkets();
     if (!allMarkets) return [];
     
-    // Normalize search term
-    const searchLower = searchTerm.toLowerCase().replace(/,\s*/g, ' ').trim();
-    const searchParts = searchLower.split(/\s+/);
-    const mainSearch = searchParts[0];
+    // Normalize search term and extract state if present
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    // Extract state abbreviation from search term (e.g., "Fayetteville, NC" or "Fayetteville NC")
+    const stateMatch = searchTerm.match(/,\s*([A-Z]{2})\b/i) || searchTerm.match(/\s+([A-Z]{2})\s*$/i);
+    const searchState = stateMatch ? stateMatch[1].toUpperCase() : undefined;
+    
+    // Remove state and commas from search term to get the city name
+    const citySearch = searchLower
+      .replace(/,\s*/g, ' ')
+      .replace(/\b[a-z]{2}\b$/i, '') // Remove trailing 2-letter state
+      .replace(/\s+\d{5}.*$/, '') // Remove zip code
+      .trim()
+      .split(/\s+/)[0]; // Take first word as primary city name
+    
+    console.log(`[searchMarkets] Searching for city="${citySearch}", state="${searchState}" from term="${searchTerm}"`);
     
     // Score each market based on how well it matches
     const scoredMarkets = allMarkets.map((m) => {
       const nameLower = m.name.toLowerCase();
+      // Extract state from market name (e.g., "Fayetteville, AR" -> "AR")
+      const marketState = m.name.includes(',') ? m.name.split(',')[1].trim().toUpperCase() : undefined;
       
       let score = 0;
       // Exact name match gets highest score
-      if (nameLower === mainSearch) score += 100;
+      if (nameLower === citySearch) score += 100;
       // Name starts with search term
-      else if (nameLower.startsWith(mainSearch)) score += 75;
+      else if (nameLower.startsWith(citySearch)) score += 75;
       // Name contains search term
-      else if (nameLower.includes(mainSearch)) score += 50;
+      else if (nameLower.includes(citySearch)) score += 50;
+      
+      // STATE MATCHING BONUS: If we know the desired state, boost matching markets
+      // and penalize non-matching ones. This prevents Fayetteville, AR from winning
+      // over Fayetteville, NC when user specifies NC.
+      if (score > 0 && searchState) {
+        if (marketState === searchState) {
+          score += 200; // Strong bonus for correct state match
+        } else if (marketState && marketState !== searchState) {
+          score -= 50; // Penalty for wrong state (but don't go below 1)
+          score = Math.max(score, 1);
+        }
+      }
       
       return { ...m, score };
     });
@@ -527,7 +553,7 @@ export async function searchMarkets(searchTerm: string, limit: number = 10): Pro
       type: 'market' as const,
       listing_count: m.listing_count || 0,
       location_name: `${m.name}, United States`,
-      // Try to extract state from market name (e.g., "Phoenix, AZ" -> "Arizona")
+      // Try to extract state from market name (e.g., "Phoenix, AZ" -> "AZ")
       state: m.name.includes(',') ? m.name.split(',')[1].trim() : undefined,
     }));
     
@@ -676,6 +702,19 @@ export async function searchMarketsAPI(searchTerm: string, limit: number = 15): 
         return searchWords.every(word => combinedText.includes(word));
       })
       .sort((a, b) => {
+        // Extract state from search term for disambiguation (e.g., "Fayetteville, NC")
+        const searchStateMatch = searchTerm.match(/,\s*([A-Z]{2})\b/i) || searchTerm.match(/\s+([A-Z]{2})\s*$/i);
+        const desiredState = searchStateMatch ? searchStateMatch[1].toUpperCase() : undefined;
+        
+        // STATE PRIORITY: If a state is specified, prioritize matching state
+        if (desiredState) {
+          const aState = a.location?.state?.toUpperCase() || extractStateFromLocation(a.location_name || a.name)?.toUpperCase();
+          const bState = b.location?.state?.toUpperCase() || extractStateFromLocation(b.location_name || b.name)?.toUpperCase();
+          const aStateMatch = aState === desiredState ? 1 : 0;
+          const bStateMatch = bState === desiredState ? 1 : 0;
+          if (aStateMatch !== bStateMatch) return bStateMatch - aStateMatch;
+        }
+        
         // Prioritize exact name matches
         const aExact = a.name.toLowerCase() === searchTerm.toLowerCase() ? 1 : 0;
         const bExact = b.name.toLowerCase() === searchTerm.toLowerCase() ? 1 : 0;
@@ -2756,7 +2795,11 @@ export async function getComprehensivePropertyReport(
     console.log('[Market Search] Extracted city:', searchTerm, 'state:', state);
     
     if (searchTerm) {
-      const markets = await searchMarkets(searchTerm, 20); // Increased limit for better matching
+      // Pass state with city name so searchMarkets can prioritize state-matched results
+      // This fixes the Fayetteville NC vs AR disambiguation bug
+      const searchWithState = state ? `${searchTerm}, ${state}` : searchTerm;
+      console.log('[Market Search] Searching with state-aware term:', searchWithState);
+      const markets = await searchMarkets(searchWithState, 20); // Increased limit for better matching
       if (markets.length > 0) {
         console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
         console.log('[Market Search] Looking for state:', state);
@@ -2830,10 +2873,11 @@ export async function getComprehensivePropertyReport(
     if (!marketId) {
       console.log('[Market Search] Local fuzzy search failed. Trying AirDNA API fallback...');
       
-      // Fallback 1: Try searchMarketsAPI with the city name
+      // Fallback 1: Try searchMarketsAPI with the city name (include state for disambiguation)
       if (searchTerm) {
         try {
-          const apiResults = await searchMarketsAPI(searchTerm, 25);
+          const apiSearchTerm = state ? `${searchTerm}, ${state}` : searchTerm;
+          const apiResults = await searchMarketsAPI(apiSearchTerm, 25);
           console.log(`[Market Search Fallback] API search for "${searchTerm}" returned ${apiResults.length} results`);
           if (apiResults.length > 0) {
             // First, try to find a market-type result matching the state

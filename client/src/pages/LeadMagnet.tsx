@@ -2207,7 +2207,14 @@ export default function LeadMagnet() {
           <div className="mb-12">
             <button
               onClick={() => {
-                window.location.href = '/full-report';
+                // Build URL with pre-filled data from the main page
+                const params = new URLSearchParams();
+                if (address) params.set('address', address);
+                if (bedrooms) params.set('bedrooms', bedrooms);
+                if (bathrooms) params.set('bathrooms', bathrooms);
+                if (monthlyRent) params.set('rent', monthlyRent);
+                const queryString = params.toString();
+                window.location.href = `/full-report${queryString ? `?${queryString}` : ''}`;
               }}
               className="w-full group relative overflow-hidden rounded-2xl border-2 border-[oklch(0.78_0.12_75)]/30 bg-gradient-to-br from-[oklch(0.78_0.12_75)]/5 via-white to-[oklch(0.78_0.12_75)]/10 p-6 md:p-8 text-left hover:border-[oklch(0.78_0.12_75)]/50 hover:shadow-lg transition-all duration-300"
             >
