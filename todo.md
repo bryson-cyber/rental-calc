@@ -10188,3 +10188,10 @@ This makes the grading more optimistic - properties now get better grades at low
   - [x] Dead code removal: 10 unused pages, 5 unused components, 8 temp test scripts
   - [x] Database audit: indexes already well-implemented across all tables
   - [x] 36 tests passing (20 supply/submarket/tax + 16 AI advisor/optimization)
+
+## Bug Fix - Feb 10, 2026
+- [x] Fix TypeError: Cannot read properties of undefined (reading 'name') in FullPropertyReport on /report/ pages
+  - Root cause: market_data was undefined when market search returned no results (fallback was `undefined`)
+  - Also handled legacy expense_breakdown alias for older reports
+  - Backend: both report generation paths now provide fallback market_data object
+  - Frontend: defensive defaults for market_data + expense_breakdown alias

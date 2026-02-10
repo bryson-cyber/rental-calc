@@ -1,0 +1,16 @@
+{
+  "query": "SELECT JSON_EXTRACT(reportData, '$.market_data') IS NOT NULL as has_market_data, JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_EXTRACT(reportData, '$.submarkets') IS NOT NULL as has_submarkets, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as submarket_count FROM shared_reports WHERE shareId = 'co2vppoamlgrw8e6';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT JSON_EXTRACT(reportData, '$.market_data') IS NOT NULL as has_market_data, JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_EXTRACT(reportData, '$.submarkets') IS NOT NULL as has_submarkets, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as submarket_count FROM shared_reports WHERE shareId = 'co2vppoamlgrw8e6';",
+  "rows": [
+    {
+      "has_market_data": "0",
+      "market_name": "NULL",
+      "has_submarkets": "1",
+      "submarket_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "has_market_data\tmarket_name\thas_submarkets\tsubmarket_count\n0\tNULL\t1\t0\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

@@ -200,7 +200,7 @@ export interface FullReportData {
   monthly_forecast: MonthlyForecast[];
   comps: Comparable[];
   same_bedroom_comps?: Comparable[];
-  market_data: MarketData;
+  market_data?: MarketData;
   bedroom_performance: BedroomPerformance[];
   revenue_percentiles?: {
     p10: number; p25: number; p50: number; p75: number; p90: number;
@@ -474,7 +474,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     monthly_forecast = [],
     comps = [],
     same_bedroom_comps,
-    market_data,
+    market_data: rawMarketData,
     bedroom_performance = [],
     revenue_percentiles,
     rental_arbitrage,
@@ -491,12 +491,28 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     submarkets,
   } = data;
 
+  // Defensive fallback for market_data (older reports may not have it)
+  const market_data = rawMarketData || {
+    name: 'Local Market',
+    listing_count: 0,
+    metrics: {
+      occupancy: revenue_estimate?.occupancy || 0,
+      adr: revenue_estimate?.nightly || 0,
+      revenue: revenue_estimate?.annual || 0,
+      revpar: (revenue_estimate?.nightly || 0) * ((revenue_estimate?.occupancy || 0) > 1 ? (revenue_estimate?.occupancy || 0) / 100 : (revenue_estimate?.occupancy || 0)),
+      active_listings: 0,
+    },
+  };
+
+  // Handle legacy expense_breakdown alias
+  const expenses = itemized_expenses || (data as any).expense_breakdown;
+
   const displayComps = (same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps)
     .sort((a, b) => b.annual_revenue - a.annual_revenue);
 
   const hasRental = !!rental_arbitrage?.monthlyRent;
   const hasPurchase = !!purchase?.purchasePrice;
-  const hasExpenses = !!itemized_expenses?.items?.length;
+  const hasExpenses = !!expenses?.items?.length;
   const hasRegulation = !!regulation?.status;
   const hasStressTest = !!stress_test?.scenarios?.length;
   const hasSales = !!comparable_sales?.length;
@@ -871,14 +887,14 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         {/* ---------------------------------------------------------- */}
         {/* SECTION: ITEMIZED EXPENSES */}
         {/* ---------------------------------------------------------- */}
-        {hasExpenses && itemized_expenses && (
+        {hasExpenses && expenses && (
           <section id="section-expenses" className="scroll-mt-24 mb-16">
             <SectionHeader icon={Wallet} title="Expense Breakdown" subtitle="Itemized operating costs based on property size and market data" />
 
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
               <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Operating Expenses</h3>
               <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
-                {itemized_expenses.items.map((item, i) => (
+                {expenses.items.map((item: any, i: number) => (
                   <DataRow
                     key={i}
                     label={item.category}
@@ -893,7 +909,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <DataRow
                   label="Total Operating Expenses"
                   value={
-                    <span className="font-bold text-red-600">{formatCurrency(itemized_expenses.total_monthly)}/mo</span>
+                    <span className="font-bold text-red-600">{formatCurrency(expenses.total_monthly)}/mo</span>
                   }
                   highlight
                 />
@@ -908,20 +924,20 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
                 <p className="text-sm text-[#64748b] mb-1">Total Annual Expenses</p>
-                <p className="text-2xl font-bold text-red-600">- {formatCurrency(itemized_expenses.total_annual)}</p>
+                <p className="text-2xl font-bold text-red-600">- {formatCurrency(expenses.total_annual)}</p>
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
                 <p className="text-sm text-[#64748b] mb-1">Net Annual Revenue</p>
-                <p className={`text-2xl font-bold ${itemized_expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(itemized_expenses.net_annual_revenue)}
+                <p className={`text-2xl font-bold ${expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(expenses.net_annual_revenue)}
                 </p>
               </div>
             </div>
 
             <InsightBox type="info">
-              <strong>Expense Ratio:</strong> Total operating expenses represent {itemized_expenses.total_percentage.toFixed(1)}% of gross revenue.
-              {itemized_expenses.total_percentage < 30 ? ' This is below the typical 30-40% range — verify that all costs are accounted for.' :
-               itemized_expenses.total_percentage > 45 ? ' This is above the typical 30-40% range — look for opportunities to reduce costs.' :
+              <strong>Expense Ratio:</strong> Total operating expenses represent {expenses.total_percentage.toFixed(1)}% of gross revenue.
+              {expenses.total_percentage < 30 ? ' This is below the typical 30-40% range — verify that all costs are accounted for.' :
+               expenses.total_percentage > 45 ? ' This is above the typical 30-40% range — look for opportunities to reduce costs.' :
                ' This is within the typical 30-40% range for short-term rentals.'}
             </InsightBox>
           </section>

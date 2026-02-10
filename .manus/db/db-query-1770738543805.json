@@ -1,0 +1,16 @@
+{
+  "query": "SELECT shareId, reportType, address, LEFT(reportData, 500) as reportDataPreview FROM shared_reports WHERE shareId = 'co2vppoamlgrw8e6' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, reportType, address, LEFT(reportData, 500) as reportDataPreview FROM shared_reports WHERE shareId = 'co2vppoamlgrw8e6' LIMIT 1;",
+  "rows": [
+    {
+      "shareId": "co2vppoamlgrw8e6",
+      "reportType": "full",
+      "address": "2680 Carnation Dr, Richardson, TX 75082, USA",
+      "reportDataPreview": "{\"property\":{\"address\":\"2680 Carnation Dr, Richardson, TX 75082, USA\",\"city\":\"2680 CARNATION DR\",\"state\":\"RICHARDSON\",\"zipCode\":\"75082\",\"bedrooms\":6,\"bathrooms\":5,\"accommodates\":12,\"latitude\":32.986465,\"longitude\":-96.670815},\"revenue_estimate\":{\"annual\":76054,\"monthly\":6338,\"nightly\":424,\"occupancy\":0.49,\"range\":{\"low\":71442,\"high\":80665}},\"monthly_forecast\":[{\"month\":\"2026-02\",\"revenue\":3285,\"adr\":290.2,\"occupancy\":0.4},{\"month\":\"2026-03\",\"revenue\":5860,\"adr\":401.04,\"occupancy\":0.47},{\"month\":"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\treportType\taddress\treportDataPreview\nco2vppoamlgrw8e6\tfull\t2680 Carnation Dr, Richardson, TX 75082, USA\t{\"property\":{\"address\":\"2680 Carnation Dr, Richardson, TX 75082, USA\",\"city\":\"2680 CARNATION DR\",\"state\":\"RICHARDSON\",\"zipCode\":\"75082\",\"bedrooms\":6,\"bathrooms\":5,\"accommodates\":12,\"latitude\":32.986465,\"longitude\":-96.670815},\"revenue_estimate\":{\"annual\":76054,\"monthly\":6338,\"nightly\":424,\"occupancy\":0.49,\"range\":{\"low\":71442,\"high\":80665}},\"monthly_forecast\":[{\"month\":\"2026-02\",\"revenue\":3285,\"adr\":290.2,\"occupancy\":0.4},{\"month\":\"2026-03\",\"revenue\":5860,\"adr\":401.04,\"occupancy\":0.47},{\"month\":\n",
+  "stderr": "",
+  "execution_time_ms": 97
+}
