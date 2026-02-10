@@ -3246,6 +3246,40 @@ export default function LeadMagnet() {
                   closingCosts: myProperty.purchasePrice * 0.03,
                   totalCashNeeded: myProperty.purchasePrice * ((myProperty.downPaymentPercent || 20) / 100) + myProperty.purchasePrice * 0.03,
                 } : undefined}
+                supplyTrend={(() => {
+                  // Compute supply trend from historical data if available
+                  const months = result?.historicalData?.months || [];
+                  if (months.length < 2) return undefined;
+                  const withListings = months.filter((m: any) => m.listingCount && m.listingCount > 0);
+                  if (withListings.length < 2) return undefined;
+                  const sorted = [...withListings].sort((a: any, b: any) => a.date.localeCompare(b.date));
+                  const current = sorted[sorted.length - 1];
+                  // Find ~12 months ago
+                  const targetIdx = Math.max(0, sorted.length - 13);
+                  const past = sorted[targetIdx];
+                  const netChange = (current as any).listingCount - (past as any).listingCount;
+                  const percentChange = (past as any).listingCount > 0 ? (netChange / (past as any).listingCount) * 100 : 0;
+                  const trend = percentChange > 5 ? 'growing' as const : percentChange < -5 ? 'declining' as const : 'stable' as const;
+                  return {
+                    currentListings: (current as any).listingCount,
+                    listings12MonthsAgo: (past as any).listingCount,
+                    netChange,
+                    percentChange: Math.round(percentChange * 10) / 10,
+                    trend,
+                    insight: `Market supply has ${trend === 'growing' ? 'grown' : trend === 'declining' ? 'declined' : 'remained stable'} with ${netChange > 0 ? '+' : ''}${netChange} listings over the past year.`,
+                  };
+                })()}
+                submarkets={((result as any)?.submarkets || researchResult?.submarkets || []).map((s: any) => ({
+                  id: s.id || s.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+                  name: s.name,
+                  listingCount: s.listingCount || 0,
+                  metrics: s.avgRevenue ? {
+                    occupancy: s.avgOccupancy || 0,
+                    adr: Math.round((s.avgRevenue || 0) / 365 / ((s.avgOccupancy || 50) / 100)),
+                    revenue: s.avgRevenue || 0,
+                    revpar: Math.round((s.avgRevenue || 0) / 365),
+                  } : undefined,
+                }))}
               />
             )}
 

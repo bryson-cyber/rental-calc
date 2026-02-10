@@ -2732,6 +2732,33 @@ export const appRouter = router({
           closingCosts: z.number(),
           totalCashNeeded: z.number(),
         }).optional(),
+        // Supply Trend Data
+        supplyTrend: z.object({
+          currentListings: z.number(),
+          listings12MonthsAgo: z.number(),
+          netChange: z.number(),
+          percentChange: z.number(),
+          trend: z.enum(['growing', 'declining', 'stable']),
+          insight: z.string(),
+          monthlyData: z.array(z.object({
+            month: z.string(),
+            activeListings: z.number(),
+            changeFromPrevious: z.number(),
+          })).optional(),
+        }).optional(),
+        // Submarket/Neighborhood Data
+        submarkets: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          listingCount: z.number(),
+          metrics: z.object({
+            occupancy: z.number(),
+            adr: z.number(),
+            revenue: z.number(),
+            revpar: z.number(),
+            marketScore: z.number().optional(),
+          }).optional(),
+        })).optional(),
       }))
       .mutation(async ({ input }) => {
         try {

@@ -183,6 +183,33 @@ interface AIAdvisorStepProps {
       isProfessionallyManaged: boolean;
     }>;
   };
+  // Supply Trend Data
+  supplyTrend?: {
+    currentListings: number;
+    listings12MonthsAgo: number;
+    netChange: number;
+    percentChange: number;
+    trend: 'growing' | 'declining' | 'stable';
+    insight: string;
+    monthlyData?: Array<{
+      month: string;
+      activeListings: number;
+      changeFromPrevious: number;
+    }>;
+  };
+  // Submarket/Neighborhood Data
+  submarkets?: Array<{
+    id: string;
+    name: string;
+    listingCount: number;
+    metrics?: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      marketScore?: number;
+    };
+  }>;
 }
 
 export function AIAdvisorStep(props: AIAdvisorStepProps) {
@@ -260,6 +287,8 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
         marketPosition: props.marketPosition,
         mode: props.mode,
         purchaseData: props.purchaseData,
+        supplyTrend: props.supplyTrend,
+        submarkets: props.submarkets,
       });
       
       clearInterval(elapsedInterval);

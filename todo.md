@@ -10179,3 +10179,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Verify batch analyze uses existing API cache layer (cache.ts already exists with 7-30 day TTLs)
 - [x] Research and build tax implications section (depreciation, cost segregation, property tax)
 - [x] Write tests for all new report sections (20 tests: supply trend, submarket, tax calculations)
+
+## AI Advisor + Submarket Fix + Optimization - Feb 10, 2026
+- [x] Pass live submarket/supply data to AI Advisor chat for richer market-specific answers
+- [x] Fix booking patterns/supply trend to use submarket endpoints when analyzing a specific submarket (already implemented)
+- [x] Speed & code optimization audit (cc-optimize AUDIT → CLEAN → PREVENT)
+  - [x] Code splitting: React.lazy + Suspense for 35 pages (44% bundle reduction: 7.3MB → 4.1MB)
+  - [x] Dead code removal: 10 unused pages, 5 unused components, 8 temp test scripts
+  - [x] Database audit: indexes already well-implemented across all tables
+  - [x] 36 tests passing (20 supply/submarket/tax + 16 AI advisor/optimization)

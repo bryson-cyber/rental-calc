@@ -1019,6 +1019,35 @@ export interface MaxPropertyAdvisorInput {
     rentAdvantagePercent?: number;
     percentilePosition?: string;
   };
+  
+  // Supply Trend Data (from market historical active_listings)
+  supplyTrend?: {
+    currentListings: number;
+    listings12MonthsAgo: number;
+    netChange: number;
+    percentChange: number;
+    trend: 'growing' | 'declining' | 'stable';
+    insight: string;
+    monthlyData?: Array<{
+      month: string;
+      activeListings: number;
+      changeFromPrevious: number;
+    }>;
+  };
+  
+  // Submarket/Neighborhood Data
+  submarkets?: Array<{
+    id: string;
+    name: string;
+    listingCount: number;
+    metrics?: {
+      occupancy: number;
+      adr: number;
+      revenue: number;
+      revpar: number;
+      marketScore?: number;
+    };
+  }>;
 }
 
 /**
@@ -1036,7 +1065,7 @@ export interface MaxPropertyAdvisorInput {
 export async function generateMaxPropertyAdvice(
   input: MaxPropertyAdvisorInput
 ): Promise<string> {
-  const { mode = 'rent', purchaseData, property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData } = input;
+  const { mode = 'rent', purchaseData, property, revenue, cashFlow, comparables, marketInsights, historicalData, seasonality, marketGrade, marketPosition, rentometerData, supplyTrend, submarkets } = input;
   
   // Determine if this is purchase mode analysis
   const isPurchaseMode = mode === 'purchase' && purchaseData;
@@ -1380,6 +1409,31 @@ ARBITRAGE OPPORTUNITY ANALYSIS
 - How does this affect the arbitrage opportunity?
 
 ` : ''}
+
+${supplyTrend ? `
+SECTION: SUPPLY TREND ANALYSIS
+
+Current Active Listings: ${supplyTrend.currentListings.toLocaleString()}
+Listings 12 Months Ago: ${supplyTrend.listings12MonthsAgo.toLocaleString()}
+Net Change: ${supplyTrend.netChange > 0 ? '+' : ''}${supplyTrend.netChange.toLocaleString()} listings
+Percent Change: ${supplyTrend.percentChange > 0 ? '+' : ''}${supplyTrend.percentChange.toFixed(1)}%
+Trend: ${supplyTrend.trend}
+Insight: ${supplyTrend.insight}
+
+Analyze what the supply trend means for a new entrant:
+- Is the market getting more competitive or less?
+- How does supply growth compare to demand indicators (occupancy, ADR trends)?
+- What's the risk of oversaturation?
+` : ''}
+
+${submarkets && submarkets.length > 0 ? `
+SECTION: NEIGHBORHOOD/SUBMARKET COMPARISON
+
+${submarkets.map(s => `${s.name}: ${s.listingCount} listings${s.metrics ? ` | Revenue: $${s.metrics.revenue.toLocaleString()} | ADR: $${s.metrics.adr.toLocaleString()} | Occupancy: ${s.metrics.occupancy}% | RevPAR: $${s.metrics.revpar.toLocaleString()}${s.metrics.marketScore ? ` | Score: ${s.metrics.marketScore}` : ''}` : ''}`).join('\n')}
+
+Analyze which neighborhoods are strongest for this property type and why.
+Identify the best-performing submarket and explain what makes it stand out.
+` : ''}
 </CONTEXT>
 
 <FORMAT>
@@ -1413,6 +1467,10 @@ Market Position: Describe how this property compares to competitors. Explain wha
 Seasonality Strategy: Discuss when the best and worst months are. Explain how to plan for slow seasons and what the revenue variance impact means.
 
 Competitive Landscape: Describe what top performers are doing differently. Discuss how saturated the market is and the balance between professional and individual hosts.
+
+Supply Dynamics: If supply trend data is available, explain whether the market is getting more or less competitive. Discuss what the listing growth rate means for new entrants and whether demand is keeping up with supply.
+
+Neighborhood Insights: If submarket data is available, identify which neighborhoods perform best and why. Explain how the property's location compares to top-performing submarkets in the area.
 
 KEY METRICS SUMMARY
 
