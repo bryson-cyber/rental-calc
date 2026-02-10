@@ -39,6 +39,8 @@ import ApiUsageDashboard from "./pages/ApiUsage";
 import AdminUsers from "./pages/AdminUsers";
 import UnifiedAdmin from "./pages/UnifiedAdmin";
 import FullReportGenerator from "./pages/FullReportGenerator";
+import DealAlertsPage from "./pages/DealAlertsPage";
+import MarketEvaluationPage from "./pages/MarketEvaluationPage";
 
 function Router() {
   return (
@@ -105,6 +107,12 @@ function Router() {
       
       {/* Full Report Generator - Standalone report from address */}
       <Route path="/full-report" component={FullReportGenerator} />
+      
+      {/* Deal Alert Agent - Automated deal scanning */}
+      <Route path="/deal-alerts" component={DealAlertsPage} />
+      
+      {/* One-Click Market Evaluation */}
+      <Route path="/evaluate-market" component={MarketEvaluationPage} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />

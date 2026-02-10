@@ -10048,3 +10048,38 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added pre-encoded link generator tool for sales emails/sequences
 - [x] Test Las Vegas AI Advisor link: https://coachinayahturnkeytool.com/?tab=advisor&city=Las+Vegas&state=NV works correctly
 - [ ] ACTION REQUIRED: Manually update HubSpot email templates to use |urlencode filter (cannot be done via API - missing content scope)
+
+## Agentic STR Assistant - "Claude Code for Short-Term Rentals" (Feb 10, 2026)
+
+### Feature 1: Automated Deal Alerts - COMPLETE
+- [x] Create deal_alert_criteria + deal_alert_matches schema tables
+- [x] Build DealAlertsPage UI (create/edit/delete criteria, view matches)
+- [x] Build Deal Alert Agent service (scanForDeals, evaluateProperty, matchesCriteria)
+- [x] Integrate with AirDNA rentalizer + market data for automated analysis
+- [x] Build notification delivery (email via existing sendDealAlertEmail)
+- [x] Add AI-generated deal summaries for matched properties
+- [x] Add tRPC endpoints (create, list, delete, scan, getMatches)
+
+### Feature 3: One-Click Market Evaluation Agent - COMPLETE
+- [x] Build "Evaluate This Market" endpoint chaining: market discovery → revenue analysis (multi-bedroom) → trends/seasonality → competitive landscape → scoring → AI investment memo
+- [x] Create MarketEvaluationPage UI with 7-step progress tracker and real-time status
+- [x] Generate comprehensive AI-synthesized investment memo with market scoring
+- [x] Store completed evaluations in market_evaluations table
+- [x] Add tRPC endpoints (evaluateMarket, getEvaluations, getEvaluation)
+
+### Feature 4: Behavior-Adaptive Smart Follow-ups - COMPLETE
+- [x] Built behavior-engine.ts with user profiling from toolUsageEvents
+- [x] Build behavior scoring/profiling system (cold/warm/hot/power_user + journey stages)
+- [x] Create 10 dynamic email strategies based on user behavior patterns
+- [x] AI-generated adaptive email content using LLM with Coach Inayah voice
+- [x] Strategy selection engine: win_back, deal_alert_setup, report_upsell, advisor_intro, etc.
+- [x] Engagement analytics endpoint for admin dashboard
+- [x] 12 unit tests for strategy selection logic (all passing)
+- [x] tRPC endpoints (getUserProfile, previewAdaptiveEmail, getEngagementAnalytics, processFollowUps)
+
+### cc-optimize Audit - COMPLETE
+- [x] Run speed audit: 7.1MB main bundle identified (needs code splitting - long-term)
+- [x] Run code audit: Large files identified (routers.ts 8K+ lines, LeadMagnet.tsx 8K+ lines - needs splitting)
+- [x] Run database audit: Zero indexes found → Added 20+ indexes across all critical tables
+- [x] Run dependency audit: depcheck unavailable but no obvious unused deps
+- [x] Applied quick win: 20+ database indexes on tool_usage_events, saved_searches, ai_advisor_cache, favorites, deal_alerts, market_evaluations, etc.

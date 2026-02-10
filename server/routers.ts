@@ -7875,6 +7875,193 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // Deal Alert Agent router - automated deal scanning and notifications
+  dealAlerts: router({
+    // Create a new deal alert criteria
+    create: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        firstName: z.string().optional(),
+        phone: z.string().optional(),
+        sessionId: z.string().optional(),
+        city: z.string(),
+        state: z.string(),
+        zipCode: z.string().optional(),
+        marketId: z.string().optional(),
+        marketName: z.string().optional(),
+        analysisType: z.enum(['arbitrage', 'investment', 'both']).default('arbitrage'),
+        minBedrooms: z.number().min(1).max(10).optional(),
+        maxBedrooms: z.number().min(1).max(10).optional(),
+        minBathrooms: z.number().optional(),
+        maxRent: z.number().optional(),
+        maxPurchasePrice: z.number().optional(),
+        propertyTypes: z.array(z.string()).optional(),
+        minMonthlyProfit: z.number().optional(),
+        minProfitMargin: z.number().optional(),
+        minDealScore: z.number().min(0).max(100).optional(),
+        minOccupancy: z.number().optional(),
+        notifyEmail: z.boolean().optional(),
+        notifySms: z.boolean().optional(),
+        notifyInApp: z.boolean().optional(),
+        frequency: z.enum(['instant', 'daily', 'weekly']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { createDealAlertCriteria } = await import('./deal-alert-agent');
+        return createDealAlertCriteria(input);
+      }),
+
+    // List user's deal alert criteria
+    list: publicProcedure
+      .input(z.object({
+        email: z.string().optional(),
+        sessionId: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { listDealAlertCriteria } = await import('./deal-alert-agent');
+        return listDealAlertCriteria(input);
+      }),
+
+    // Get matches for a criteria
+    getMatches: publicProcedure
+      .input(z.object({
+        criteriaId: z.number(),
+        status: z.enum(['new', 'notified', 'viewed', 'saved', 'dismissed']).optional(),
+        limit: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { getDealAlertMatches } = await import('./deal-alert-agent');
+        return getDealAlertMatches(input.criteriaId, { status: input.status, limit: input.limit });
+      }),
+
+    // Update match status
+    updateMatchStatus: publicProcedure
+      .input(z.object({
+        matchId: z.number(),
+        status: z.enum(['viewed', 'saved', 'dismissed']),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateMatchStatus } = await import('./deal-alert-agent');
+        await updateMatchStatus(input.matchId, input.status);
+        return { success: true };
+      }),
+
+    // Toggle criteria active/inactive
+    toggle: publicProcedure
+      .input(z.object({ criteriaId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { toggleCriteriaActive } = await import('./deal-alert-agent');
+        return toggleCriteriaActive(input.criteriaId);
+      }),
+
+    // Delete a criteria
+    delete: publicProcedure
+      .input(z.object({ criteriaId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { deleteDealAlertCriteria } = await import('./deal-alert-agent');
+        await deleteDealAlertCriteria(input.criteriaId);
+        return { success: true };
+      }),
+
+    // Manually trigger a scan for a criteria
+    scan: publicProcedure
+      .input(z.object({ criteriaId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { scanForCriteria } = await import('./deal-alert-agent');
+        return scanForCriteria(input.criteriaId);
+      }),
+
+    // Run the full scan job (admin)
+    runScanJob: publicProcedure
+      .mutation(async () => {
+        const { runDealAlertScanJob } = await import('./deal-alert-agent');
+        return runDealAlertScanJob();
+      }),
+
+    // Run a one-click market evaluation
+    evaluateMarket: publicProcedure
+      .input(z.object({
+        city: z.string(),
+        state: z.string(),
+        analysisType: z.enum(['arbitrage', 'investment', 'both']).optional(),
+        bedrooms: z.number().optional(),
+        sessionId: z.string().optional(),
+        email: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { runMarketEvaluation } = await import('./deal-alert-agent');
+        return runMarketEvaluation(input);
+      }),
+
+    // Get a market evaluation by ID
+    getEvaluation: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const { marketEvaluations } = await import('../drizzle/schema');
+        const [evaluation] = await db
+          .select()
+          .from(marketEvaluations)
+          .where(eq(marketEvaluations.id, input.id))
+          .limit(1);
+        return evaluation || null;
+      }),
+  }),
+
+  // ============================================================
+  // Behavior-Adaptive Follow-Up Engine
+  // ============================================================
+  behaviorEngine: router({
+    // Get a user's behavior profile
+    getUserProfile: protectedProcedure
+      .input(z.object({ email: z.string().email() }))
+      .query(async ({ input }) => {
+        const { buildUserBehaviorProfile } = await import('./behavior-engine');
+        return buildUserBehaviorProfile(input.email);
+      }),
+
+    // Preview what adaptive email would be sent to a user
+    previewAdaptiveEmail: protectedProcedure
+      .input(z.object({
+        email: z.string().email(),
+        strategy: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { buildUserBehaviorProfile, generateAdaptiveEmail, selectEmailStrategy } = await import('./behavior-engine');
+        const profile = await buildUserBehaviorProfile(input.email);
+        if (!profile) throw new Error('User not found');
+        const strategy = (input.strategy || selectEmailStrategy(profile)) as any;
+        const email = await generateAdaptiveEmail(profile, strategy);
+        return { profile, email };
+      }),
+
+    // Get engagement analytics for the admin dashboard
+    getEngagementAnalytics: protectedProcedure
+      .query(async () => {
+        const { getEngagementAnalytics } = await import('./behavior-engine');
+        return getEngagementAnalytics();
+      }),
+
+    // Process adaptive follow-ups for a batch of users
+    processFollowUps: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }))
+      .mutation(async ({ input }) => {
+        const { processAdaptiveFollowUps } = await import('./behavior-engine');
+        return processAdaptiveFollowUps(input.limit);
+      }),
+
+    // Get strategy recommendation for a specific user
+    getStrategy: protectedProcedure
+      .input(z.object({ email: z.string().email() }))
+      .query(async ({ input }) => {
+        const { buildUserBehaviorProfile, selectEmailStrategy } = await import('./behavior-engine');
+        const profile = await buildUserBehaviorProfile(input.email);
+        if (!profile) return null;
+        const strategy = selectEmailStrategy(profile);
+        return { profile, strategy };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

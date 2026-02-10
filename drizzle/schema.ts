@@ -1809,3 +1809,168 @@ export const usageLimitsConfig = mysqlTable("usage_limits_config", {
 
 export type UsageLimitsConfig = typeof usageLimitsConfig.$inferSelect;
 export type InsertUsageLimitsConfig = typeof usageLimitsConfig.$inferInsert;
+
+
+/**
+ * Deal Alert Criteria table for automated deal scanning
+ * Users set criteria (city, min profit, max rent, bedrooms) and the system
+ * automatically scans for matching properties and sends notifications.
+ * This is the "agent that works while you sleep" feature.
+ */
+export const dealAlertCriteria = mysqlTable("deal_alert_criteria", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  email: varchar("email", { length: 320 }).notNull(),
+  firstName: varchar("firstName", { length: 100 }),
+  phone: varchar("phone", { length: 20 }),
+  
+  // Target location
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  zipCode: varchar("zipCode", { length: 20 }),
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Analysis type
+  analysisType: mysqlEnum("analysisType", ["arbitrage", "investment", "both"]).default("arbitrage").notNull(),
+  
+  // Property criteria
+  minBedrooms: int("minBedrooms").default(1),
+  maxBedrooms: int("maxBedrooms").default(5),
+  minBathrooms: decimal("minBathrooms", { precision: 3, scale: 1 }).default("1"),
+  maxRent: int("maxRent"), // Max monthly rent for arbitrage
+  maxPurchasePrice: int("maxPurchasePrice"), // Max purchase price for investment
+  propertyTypes: json("propertyTypes"), // ["apartment", "house", "condo", "townhouse"]
+  
+  // Profitability criteria
+  minMonthlyProfit: int("minMonthlyProfit").default(500),
+  minProfitMargin: decimal("minProfitMargin", { precision: 5, scale: 2 }).default("0.15"), // 15%
+  minDealScore: int("minDealScore").default(50),
+  minOccupancy: decimal("minOccupancy", { precision: 5, scale: 2 }),
+  
+  // Notification preferences
+  notifyEmail: int("notifyEmail").default(1).notNull(), // 0 = off, 1 = on
+  notifySms: int("notifySms").default(0).notNull(),
+  notifyInApp: int("notifyInApp").default(1).notNull(),
+  frequency: mysqlEnum("frequency", ["instant", "daily", "weekly"]).default("daily").notNull(),
+  
+  // Status
+  isActive: int("isActive").default(1).notNull(),
+  lastScannedAt: timestamp("lastScannedAt"),
+  lastMatchFoundAt: timestamp("lastMatchFoundAt"),
+  totalMatchesFound: int("totalMatchesFound").default(0).notNull(),
+  totalAlertsSent: int("totalAlertsSent").default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DealAlertCriteria = typeof dealAlertCriteria.$inferSelect;
+export type InsertDealAlertCriteria = typeof dealAlertCriteria.$inferInsert;
+
+/**
+ * Deal Alert Matches table for storing properties that matched user criteria
+ * Each match links a deal alert criteria to a specific property found
+ */
+export const dealAlertMatches = mysqlTable("deal_alert_matches", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Link to criteria
+  criteriaId: int("criteriaId").notNull(),
+  
+  // Property information
+  address: text("address").notNull(),
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  zipCode: varchar("zipCode", { length: 20 }),
+  
+  // Property details
+  bedrooms: int("bedrooms"),
+  bathrooms: decimal("bathrooms", { precision: 3, scale: 1 }),
+  monthlyRent: int("monthlyRent"),
+  purchasePrice: int("purchasePrice"),
+  propertyType: varchar("propertyType", { length: 100 }),
+  
+  // Source
+  sourceUrl: text("sourceUrl"),
+  sourcePlatform: varchar("sourcePlatform", { length: 50 }),
+  imageUrl: text("imageUrl"),
+  
+  // AirDNA projections
+  projectedRevenue: int("projectedRevenue"),
+  projectedAdr: int("projectedAdr"),
+  projectedOccupancy: decimal("projectedOccupancy", { precision: 5, scale: 2 }),
+  projectedMonthlyProfit: int("projectedMonthlyProfit"),
+  projectedAnnualProfit: int("projectedAnnualProfit"),
+  profitMargin: decimal("profitMargin", { precision: 5, scale: 2 }),
+  
+  // Deal scoring
+  dealScore: int("dealScore"),
+  dealGrade: varchar("dealGrade", { length: 2 }),
+  
+  // Status
+  status: mysqlEnum("status", ["new", "notified", "viewed", "saved", "dismissed"]).default("new").notNull(),
+  notifiedAt: timestamp("notifiedAt"),
+  viewedAt: timestamp("viewedAt"),
+  
+  // Timestamps
+  discoveredAt: timestamp("discoveredAt").defaultNow().notNull(),
+});
+export type DealAlertMatch = typeof dealAlertMatches.$inferSelect;
+export type InsertDealAlertMatch = typeof dealAlertMatches.$inferInsert;
+
+/**
+ * Market Evaluations table for storing one-click market evaluation results
+ * Each evaluation chains: regulations → comps → revenue → top properties → AI memo
+ */
+export const marketEvaluations = mysqlTable("market_evaluations", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User reference
+  userId: int("userId"),
+  sessionId: varchar("sessionId", { length: 64 }),
+  email: varchar("email", { length: 320 }),
+  
+  // Market information
+  city: varchar("city", { length: 255 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  marketId: varchar("marketId", { length: 64 }),
+  marketName: varchar("marketName", { length: 255 }),
+  
+  // Evaluation parameters
+  analysisType: mysqlEnum("analysisType", ["arbitrage", "investment", "both"]).default("both").notNull(),
+  bedrooms: int("bedrooms").default(3),
+  
+  // Status tracking
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed"]).default("pending").notNull(),
+  currentStep: varchar("currentStep", { length: 100 }),
+  progress: int("progress").default(0), // 0-100
+  
+  // Results (stored as JSON for flexibility)
+  regulationsData: json("regulationsData"),
+  marketOverviewData: json("marketOverviewData"),
+  revenueData: json("revenueData"),
+  compsData: json("compsData"),
+  topPropertiesData: json("topPropertiesData"),
+  aiMemo: text("aiMemo"), // AI-synthesized investment memo
+  
+  // Summary metrics
+  marketScore: int("marketScore"),
+  averageRevenue: int("averageRevenue"),
+  averageOccupancy: decimal("averageOccupancy", { precision: 5, scale: 2 }),
+  averageAdr: int("averageAdr"),
+  regulationRisk: varchar("regulationRisk", { length: 20 }), // low, medium, high
+  
+  // Error handling
+  errorMessage: text("errorMessage"),
+  
+  // Timestamps
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MarketEvaluation = typeof marketEvaluations.$inferSelect;
+export type InsertMarketEvaluation = typeof marketEvaluations.$inferInsert;
