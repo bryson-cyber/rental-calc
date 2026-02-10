@@ -507,6 +507,25 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   // Handle legacy expense_breakdown alias
   const expenses = itemized_expenses || (data as any).expense_breakdown;
 
+  // Normalize stress_test for backward compatibility:
+  // Old reports use 'occupancy' (integer 0-100), new reports use 'occupancy_pct' (decimal 0-1)
+  if (stress_test?.scenarios) {
+    stress_test.scenarios = stress_test.scenarios.map((s: any) => {
+      if (s.occupancy_pct == null && s.occupancy != null) {
+        // Old format: occupancy is integer 0-100, convert to decimal 0-1
+        return { ...s, occupancy_pct: s.occupancy > 1 ? s.occupancy / 100 : s.occupancy, cash_flow_positive: (s.monthly_profit ?? 0) >= 0 };
+      }
+      if (s.occupancy_pct != null && s.cash_flow_positive == null) {
+        return { ...s, cash_flow_positive: (s.monthly_profit ?? 0) >= 0 };
+      }
+      return s;
+    });
+    // Normalize base_occupancy: if > 1, it's old integer format
+    if (stress_test.base_occupancy > 1) {
+      stress_test.base_occupancy = stress_test.base_occupancy / 100;
+    }
+  }
+
   const displayComps = (same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps)
     .sort((a, b) => b.annual_revenue - a.annual_revenue);
 
@@ -1427,9 +1446,17 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
               {/* Build matrix from scenarios */}
               {(() => {
-                const occupancies = Array.from(new Set(stress_test.scenarios.map(s => s.occupancy_pct))).sort((a, b) => a - b);
-                const adrs = Array.from(new Set(stress_test.scenarios.map(s => s.adr))).sort((a, b) => a - b);
+                const occupancies = Array.from(new Set(stress_test.scenarios.map(s => s.occupancy_pct))).filter(v => v != null && !isNaN(v)).sort((a, b) => a - b);
+                const adrs = Array.from(new Set(stress_test.scenarios.map(s => s.adr))).filter(v => v != null && !isNaN(v)).sort((a, b) => a - b);
                 const getScenario = (occ: number, adr: number) => stress_test.scenarios.find(s => s.occupancy_pct === occ && s.adr === adr);
+
+                if (occupancies.length === 0 || adrs.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-[#94a3b8]">
+                      <p>Stress test data is not available for this property.</p>
+                    </div>
+                  );
+                }
 
                 return (
                   <div className="overflow-x-auto">
@@ -1437,8 +1464,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       <thead>
                         <tr>
                           <th className="p-3 text-left text-[#64748b] font-medium bg-[#f8fafc] rounded-tl-lg">Occ \ ADR</th>
-                          {adrs.map(adr => (
-                            <th key={adr} className={`p-3 text-center font-medium bg-[#f8fafc] ${adr === stress_test.base_adr ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
+                          {adrs.map((adr, adrIdx) => (
+                            <th key={`adr-${adrIdx}-${adr}`} className={`p-3 text-center font-medium bg-[#f8fafc] ${adr === stress_test.base_adr ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
                               {formatCurrency(adr)}
                               {adr === stress_test.base_adr && <div className="text-[10px]">base</div>}
                             </th>
@@ -1446,18 +1473,18 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                         </tr>
                       </thead>
                       <tbody>
-                        {occupancies.map(occ => (
-                          <tr key={occ} className="border-t border-[#e2e8f0]">
+                        {occupancies.map((occ, occIdx) => (
+                          <tr key={`occ-${occIdx}-${occ}`} className="border-t border-[#e2e8f0]">
                             <td className={`p-3 font-medium ${occ === stress_test.base_occupancy ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
                               {Math.round(occ * 100)}%
                               {occ === stress_test.base_occupancy && <span className="text-[10px] ml-1">base</span>}
                             </td>
-                            {adrs.map(adr => {
+                            {adrs.map((adr, adrIdx) => {
                               const scenario = getScenario(occ, adr);
                               const profit = scenario?.monthly_profit ?? scenario?.monthly_revenue ?? 0;
                               const isBase = occ === stress_test.base_occupancy && adr === stress_test.base_adr;
                               return (
-                                <td key={adr} className={`p-3 text-center font-medium ${
+                                <td key={`cell-${occIdx}-${adrIdx}`} className={`p-3 text-center font-medium ${
                                   isBase ? 'bg-[#C9A962]/10 ring-2 ring-[#C9A962] rounded' :
                                   profit >= 0 ? 'text-green-700' : 'text-red-600'
                                 }`}>

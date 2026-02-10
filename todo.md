@@ -10205,3 +10205,14 @@ This makes the grading more optimistic - properties now get better grades at low
   - Result: Richardson (airdna-3577) now correctly resolves to Dallas (airdna-403) with real market data
   - Added 15 unit tests for submarket resolution logic
   - All 741 tests pass across 58 test files
+
+## Bug Fix - Missing React Key Props in FullPropertyReport (Feb 10, 2026)
+- [x] Fix "Each child in a list should have a unique key prop" warning in FullPropertyReport component on /report/ pages
+  - Root cause: Backend sent `occupancy` (integer 0-100) but frontend expected `occupancy_pct` (decimal 0-1) → field was undefined → NaN used as key
+- [x] Fix NaN% values in stress test matrix (root cause: occupancy_pct is NaN in generated scenarios)
+  - Fixed backend to send `occupancy_pct` (decimal 0-1) and `cash_flow_positive` fields matching frontend interface
+- [x] Fix React key warning caused by NaN values used as keys in stress test table
+  - Added backward compatibility normalization in FullPropertyReport for old reports stored in DB
+- [x] Ensure stress test uses valid AirDNA-sourced occupancy and ADR values
+  - Also fixed Gemini AI summary mapping: stress_test.scenarios now properly transformed to flat array for AI prompt
+  - All 741 tests pass across 58 test files

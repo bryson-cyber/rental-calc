@@ -5412,7 +5412,14 @@ export const appRouter = router({
               rentalArbitrage: reportData.rental_arbitrage,
               purchase: reportData.purchase,
               preparedFor: reportData.prepared_for || input.creatorName,
-              stressTest: reportData.stress_test,
+              stressTest: reportData.stress_test?.scenarios?.map((s: any) => ({
+                occupancyRate: s.occupancy_pct ?? s.occupancy ?? 0,
+                adrMultiplier: reportData.stress_test?.base_adr ? s.adr / reportData.stress_test.base_adr : 1,
+                monthlyRevenue: s.monthly_revenue || 0,
+                monthlyProfit: s.monthly_profit || 0,
+                annualProfit: (s.monthly_profit || 0) * 12,
+                cashFlow: (s.monthly_profit || 0) >= 0 ? 'positive' : 'negative',
+              })),
               itemizedExpenses: reportData.itemized_expenses,
               regulation: reportData.regulation,
               comparableSales: reportData.comparable_sales,
@@ -5811,7 +5818,14 @@ export const appRouter = router({
               rentalArbitrage: newReportData.rental_arbitrage,
               purchase: newReportData.purchase,
               preparedFor: newReportData.prepared_for,
-              stressTest: newReportData.stress_test,
+              stressTest: newReportData.stress_test?.scenarios?.map((s: any) => ({
+                occupancyRate: s.occupancy_pct ?? s.occupancy ?? 0,
+                adrMultiplier: newReportData.stress_test?.base_adr ? s.adr / newReportData.stress_test.base_adr : 1,
+                monthlyRevenue: s.monthly_revenue || 0,
+                monthlyProfit: s.monthly_profit || 0,
+                annualProfit: (s.monthly_profit || 0) * 12,
+                cashFlow: (s.monthly_profit || 0) >= 0 ? 'positive' : 'negative',
+              })),
               itemizedExpenses: newReportData.itemized_expenses,
               regulation: newReportData.regulation,
               comparableSales: newReportData.comparable_sales,
@@ -6092,28 +6106,30 @@ export const appRouter = router({
             Math.round(baseAdr * 1.10),
           ];
           
-          const stressTestMatrix: Array<{ occupancy: number; adr: number; annual_revenue: number; monthly_revenue: number; monthly_profit: number; }> = [];
+          const stressTestMatrix: Array<{ occupancy_pct: number; adr: number; annual_revenue: number; monthly_revenue: number; monthly_profit: number; cash_flow_positive: boolean; }> = [];
           for (const occ of occScenarios) {
             for (const testAdr of adrScenarios) {
               const testAnnualRev = Math.round(occ * testAdr * 365);
               const testMonthlyRev = Math.round(testAnnualRev / 12);
               // Use proportional expenses (scale with revenue)
               const testExpenses = Math.round(testMonthlyRev * (expensePercent / 100));
+              const monthlyProfit = testMonthlyRev - testExpenses;
               stressTestMatrix.push({
-                occupancy: Math.round(occ * 100),
+                occupancy_pct: occ, // decimal 0-1 (e.g., 0.55 for 55%)
                 adr: testAdr,
                 annual_revenue: testAnnualRev,
                 monthly_revenue: testMonthlyRev,
-                monthly_profit: testMonthlyRev - testExpenses,
+                monthly_profit: monthlyProfit,
+                cash_flow_positive: monthlyProfit >= 0,
               });
             }
           }
           
           reportData.stress_test = {
-            base_occupancy: Math.round(baseOcc * 100),
+            base_occupancy: baseOcc, // decimal 0-1 to match frontend expectations
             base_adr: baseAdr,
             scenarios: stressTestMatrix,
-            occupancy_levels: occScenarios.map(o => Math.round(o * 100)),
+            occupancy_levels: occScenarios,
             adr_levels: adrScenarios,
             breakeven_note: 'Green cells indicate positive cash flow. The breakeven point is where monthly profit crosses $0.',
           };
@@ -6264,7 +6280,14 @@ export const appRouter = router({
               rentalArbitrage: reportData.rental_arbitrage,
               purchase: reportData.purchase,
               preparedFor: reportData.prepared_for,
-              stressTest: reportData.stress_test,
+              stressTest: reportData.stress_test?.scenarios?.map((s: any) => ({
+                occupancyRate: s.occupancy_pct ?? s.occupancy ?? 0,
+                adrMultiplier: reportData.stress_test?.base_adr ? s.adr / reportData.stress_test.base_adr : 1,
+                monthlyRevenue: s.monthly_revenue || 0,
+                monthlyProfit: s.monthly_profit || 0,
+                annualProfit: (s.monthly_profit || 0) * 12,
+                cashFlow: (s.monthly_profit || 0) >= 0 ? 'positive' : 'negative',
+              })),
               itemizedExpenses: reportData.itemized_expenses,
               regulation: reportData.regulation ? {
                 status: reportData.regulation.status || 'Unknown',
