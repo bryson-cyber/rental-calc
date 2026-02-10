@@ -74,6 +74,7 @@ export default function FullReportGenerator() {
   const [bathrooms, setBathrooms] = useState('2');
   const [accommodates, setAccommodates] = useState('6');
   const [showFinancials, setShowFinancials] = useState(false);
+  const [analysisType, setAnalysisType] = useState<'arbitrage' | 'investment'>('arbitrage');
   const [monthlyRent, setMonthlyRent] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [downPayment, setDownPayment] = useState('20');
@@ -104,10 +105,12 @@ export default function FullReportGenerator() {
     if (urlAccommodates) setAccommodates(urlAccommodates);
     if (urlRent) {
       setMonthlyRent(urlRent);
+      setAnalysisType('arbitrage');
       setShowFinancials(true);
     }
     if (urlPrice) {
       setPurchasePrice(urlPrice);
+      setAnalysisType('investment');
       setShowFinancials(true);
     }
     if (urlPreparedFor) setPreparedFor(decodeURIComponent(urlPreparedFor));
@@ -337,9 +340,11 @@ export default function FullReportGenerator() {
                     if (details.price !== null) {
                       if (details.priceType === 'rent') {
                         setMonthlyRent(String(details.price));
+                        setAnalysisType('arbitrage');
                         setShowFinancials(true);
                       } else if (details.priceType === 'sale') {
                         setPurchasePrice(String(details.price));
+                        setAnalysisType('investment');
                         setShowFinancials(true);
                       }
                     }
@@ -442,82 +447,122 @@ export default function FullReportGenerator() {
               
               {showFinancials && (
                 <div className="bg-[#FAFAF8] rounded-xl border border-[#E8E4DC] p-5 mb-6 space-y-4">
-                  {/* Rental Arbitrage */}
-                  <div>
-                    <Label className="block text-sm font-medium text-[#374151] mb-2 font-sans">
-                      Monthly Rent <span className="text-[#9CA3AF] font-normal">(for rental arbitrage analysis)</span>
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]">$</span>
-                      <Input
-                        type="number"
-                        placeholder="2,500"
-                        value={monthlyRent}
-                        onChange={(e) => setMonthlyRent(e.target.value)}
-                        className="pl-7 h-11 border-[#E8E4DC] rounded-xl font-sans"
-                        disabled={generating}
-                      />
-                    </div>
+                  {/* Analysis Type Toggle */}
+                  <div className="flex rounded-xl bg-[#E8E4DC]/50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAnalysisType('arbitrage');
+                        setPurchasePrice('');
+                      }}
+                      disabled={generating}
+                      className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+                        analysisType === 'arbitrage'
+                          ? 'bg-white text-[#0F172A] shadow-sm'
+                          : 'text-[#6B7280] hover:text-[#374151]'
+                      }`}
+                    >
+                      Rental Arbitrage
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAnalysisType('investment');
+                        setMonthlyRent('');
+                      }}
+                      disabled={generating}
+                      className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium font-sans transition-all duration-200 ${
+                        analysisType === 'investment'
+                          ? 'bg-white text-[#0F172A] shadow-sm'
+                          : 'text-[#6B7280] hover:text-[#374151]'
+                      }`}
+                    >
+                      Investment Purchase
+                    </button>
                   </div>
                   
-                  <div className="h-px bg-[#E8E4DC]" />
-                  
-                  {/* Purchase */}
-                  <div>
-                    <Label className="block text-sm font-medium text-[#374151] mb-2 font-sans">
-                      Purchase Price <span className="text-[#9CA3AF] font-normal">(for investment analysis)</span>
-                    </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]">$</span>
-                      <Input
-                        type="number"
-                        placeholder="350,000"
-                        value={purchasePrice}
-                        onChange={(e) => setPurchasePrice(e.target.value)}
-                        className="pl-7 h-11 border-[#E8E4DC] rounded-xl font-sans"
-                        disabled={generating}
-                      />
-                    </div>
-                  </div>
-                  
-                  {purchasePrice && (
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Down Payment %</Label>
+                  {/* Rental Arbitrage Fields */}
+                  {analysisType === 'arbitrage' && (
+                    <div>
+                      <Label className="block text-sm font-medium text-[#374151] mb-2 font-sans">
+                        Monthly Rent
+                      </Label>
+                      <p className="text-xs text-[#9CA3AF] mb-2 font-sans">How much is the monthly rent you'd pay the landlord?</p>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]">$</span>
                         <Input
                           type="number"
-                          value={downPayment}
-                          onChange={(e) => setDownPayment(e.target.value)}
-                          className="h-10 border-[#E8E4DC] rounded-lg text-sm font-sans"
+                          placeholder="2,500"
+                          value={monthlyRent}
+                          onChange={(e) => setMonthlyRent(e.target.value)}
+                          className="pl-7 h-11 border-[#E8E4DC] rounded-xl font-sans"
                           disabled={generating}
                         />
                       </div>
-                      <div>
-                        <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Interest Rate %</Label>
-                        <Input
-                          type="number"
-                          step="0.125"
-                          value={interestRate}
-                          onChange={(e) => setInterestRate(e.target.value)}
-                          className="h-10 border-[#E8E4DC] rounded-lg text-sm font-sans"
-                          disabled={generating}
-                        />
-                      </div>
-                      <div>
-                        <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Loan Type</Label>
-                        <Select value={loanType} onValueChange={setLoanType} disabled={generating}>
-                          <SelectTrigger className="h-10 border-[#E8E4DC] rounded-lg text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="conventional">Conventional</SelectItem>
-                            <SelectItem value="dscr">DSCR</SelectItem>
-                            <SelectItem value="fha">FHA</SelectItem>
-                            <SelectItem value="cash">Cash</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
+                  )}
+                  
+                  {/* Investment Purchase Fields */}
+                  {analysisType === 'investment' && (
+                    <>
+                      <div>
+                        <Label className="block text-sm font-medium text-[#374151] mb-2 font-sans">
+                          Purchase Price
+                        </Label>
+                        <p className="text-xs text-[#9CA3AF] mb-2 font-sans">What is the property's purchase price?</p>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]">$</span>
+                          <Input
+                            type="number"
+                            placeholder="350,000"
+                            value={purchasePrice}
+                            onChange={(e) => setPurchasePrice(e.target.value)}
+                            className="pl-7 h-11 border-[#E8E4DC] rounded-xl font-sans"
+                            disabled={generating}
+                          />
+                        </div>
+                      </div>
+                      
+                      {purchasePrice && (
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Down Payment %</Label>
+                            <Input
+                              type="number"
+                              value={downPayment}
+                              onChange={(e) => setDownPayment(e.target.value)}
+                              className="h-10 border-[#E8E4DC] rounded-lg text-sm font-sans"
+                              disabled={generating}
+                            />
+                          </div>
+                          <div>
+                            <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Interest Rate %</Label>
+                            <Input
+                              type="number"
+                              step="0.125"
+                              value={interestRate}
+                              onChange={(e) => setInterestRate(e.target.value)}
+                              className="h-10 border-[#E8E4DC] rounded-lg text-sm font-sans"
+                              disabled={generating}
+                            />
+                          </div>
+                          <div>
+                            <Label className="block text-xs text-[#6B7280] mb-1 font-sans">Loan Type</Label>
+                            <Select value={loanType} onValueChange={setLoanType} disabled={generating}>
+                              <SelectTrigger className="h-10 border-[#E8E4DC] rounded-lg text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="conventional">Conventional</SelectItem>
+                                <SelectItem value="dscr">DSCR</SelectItem>
+                                <SelectItem value="fha">FHA</SelectItem>
+                                <SelectItem value="cash">Cash</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

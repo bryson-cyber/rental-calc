@@ -10020,3 +10020,8 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Add Google Places autocomplete to Full Report address input (SmartAddressInput with Zillow/Redfin URL support)
 - [x] Add loading progress indicator during 20-40 second report generation (6-step visual tracker)
 - [x] Pre-fill Full Report form with property data from main page if already entered (URL params)
+
+## UI Fix: Monthly Rent vs Purchase Price Toggle (Feb 10, 2026)
+- [x] Make Monthly Rent and Purchase Price fields mutually exclusive (either/or)
+- [x] Add toggle/tab selector for analysis type: Rental Arbitrage vs Investment
+- [x] Only show the relevant input field based on selection
