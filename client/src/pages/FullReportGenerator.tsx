@@ -481,6 +481,19 @@ export default function FullReportGenerator() {
                     </button>
                   </div>
                   
+                  {/* Explainer text for selected analysis type */}
+                  <div className="bg-white/80 rounded-lg px-4 py-2.5 border border-[#E8E4DC]/60">
+                    {analysisType === 'arbitrage' ? (
+                      <p className="text-xs text-[#6B7280] font-sans leading-relaxed">
+                        <span className="font-medium text-[#374151]">Rental Arbitrage</span> — You rent a property from a landlord and list it on Airbnb/VRBO. Your profit is the difference between short-term rental income and your monthly lease payment.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-[#6B7280] font-sans leading-relaxed">
+                        <span className="font-medium text-[#374151]">Investment Purchase</span> — You buy the property outright (or with a mortgage) and list it as a short-term rental. Your return is measured by cash-on-cash yield and cap rate.
+                      </p>
+                    )}
+                  </div>
+                  
                   {/* Rental Arbitrage Fields */}
                   {analysisType === 'arbitrage' && (
                     <div>

@@ -165,16 +165,17 @@ export function useWebhook() {
 /**
  * Example HubSpot Email Template Variables:
  * 
- * Use these in your HubSpot email templates to create personalized links:
+ * IMPORTANT: City names with spaces (e.g., "Las Vegas") MUST be URL-encoded
+ * in email links, otherwise the link will break at the space character.
  * 
- * Revenue Calculator: {{contact.personalized_tool_link}}
- * Or build manually: https://coachinayahturnkeytool.com/?tab=prove&city={{contact.city}}&state={{contact.state}}&autoAnalyze=true
+ * For HubSpot MARKETING emails (HubL templates), use the |urlencode filter:
  * 
- * Market Advisor: https://coachinayahturnkeytool.com/?tab=market&city={{contact.city}}&state={{contact.state}}&autoAnalyze=true
+ * Revenue Calculator: https://coachinayahturnkeytool.com/?tab=prove&city={{ contact.data_perfection__city|urlencode }}&state={{ contact.data_perfection__state|urlencode }}&autoAnalyze=true
  * 
- * Regulation Tracker: https://coachinayahturnkeytool.com/?tab=regulations&city={{contact.city}}&state={{contact.state}}
+ * Market Advisor: https://coachinayahturnkeytool.com/?tab=market&city={{ contact.data_perfection__city|urlencode }}&state={{ contact.data_perfection__state|urlencode }}&autoAnalyze=true
  * 
- * Property Analyzer: https://coachinayahturnkeytool.com/?tab=validate&city={{contact.city}}&state={{contact.state}}
+ * AI Advisor: https://coachinayahturnkeytool.com/?tab=advisor&city={{ contact.data_perfection__city|urlencode }}&state={{ contact.data_perfection__state|urlencode }}&autoAnalyze=true
  * 
- * Comps Explorer: https://coachinayahturnkeytool.com/?tab=explore&city={{contact.city}}&state={{contact.state}}&autoAnalyze=true
+ * For SALES emails/sequences (no HubL), generate pre-encoded links
+ * using the Admin Portal > HubSpot Templates > "Generate Pre-Encoded Links" tool.
  */

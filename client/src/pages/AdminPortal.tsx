@@ -498,10 +498,30 @@ export default function AdminPortal() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* URL Encoding Warning */}
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                    <span>⚠️</span> Important: URL Encoding for City Names
+                  </h4>
+                  <p className="text-sm text-amber-700 mb-2">
+                    City names with spaces (e.g., "Las Vegas", "San Antonio", "New York") will <strong>break email links</strong> if not URL-encoded. 
+                    The link will cut off at the space, showing a broken URL.
+                  </p>
+                  <p className="text-sm text-amber-700 mb-1">
+                    <strong>Fix:</strong> In HubSpot marketing emails (HubL templates), use the <code className="bg-amber-100 px-1 rounded">|urlencode</code> filter:
+                  </p>
+                  <code className="text-xs text-amber-800 bg-amber-100 px-2 py-1 rounded block mb-2">
+                    {`{{ contact.data_perfection__city|urlencode }}`}
+                  </code>
+                  <p className="text-sm text-amber-700">
+                    <strong>For sales emails / sequences:</strong> HubL filters are not available. Use the "Generate Pre-Encoded Links" section below to create ready-to-paste links for specific cities.
+                  </p>
+                </div>
+
                 <div>
-                  <h3 className="font-semibold mb-3">Personalized Tool Links</h3>
+                  <h3 className="font-semibold mb-3">Personalized Tool Links (Marketing Emails with HubL)</h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    Use these links in your HubSpot emails. Replace the tokens with your actual HubSpot property internal names.
+                    Use these in HubSpot <strong>marketing email templates</strong> (supports HubL). The <code className="bg-gray-100 px-1 rounded">|urlencode</code> filter ensures city names with spaces work correctly.
                   </p>
                   <div className="space-y-3">
                     {[
@@ -511,6 +531,7 @@ export default function AdminPortal() {
                       { name: 'Comps Explorer', tab: 'explore' },
                       { name: 'Property Analyzer', tab: 'validate' },
                       { name: 'Opportunity Finder', tab: 'opportunity' },
+                      { name: 'AI Advisor', tab: 'advisor' },
                     ].map((tool) => (
                       <div key={tool.tab} className="p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
@@ -519,7 +540,7 @@ export default function AdminPortal() {
                             variant="outline"
                             size="sm"
                             onClick={() => copyToClipboard(
-                              `https://coachinayahturnkeytool.com/?tab=${tool.tab}&city={{contact.data_perfection__city}}&state={{contact.data_perfection__state}}&zip={{contact.data_perfection__postal_code}}&autoAnalyze=true`
+                              `https://coachinayahturnkeytool.com/?tab=${tool.tab}&city={{ contact.data_perfection__city|urlencode }}&state={{ contact.data_perfection__state|urlencode }}&zip={{ contact.data_perfection__postal_code|urlencode }}&autoAnalyze=true`
                             )}
                           >
                             <Copy className="w-4 h-4 mr-1" />
@@ -527,10 +548,90 @@ export default function AdminPortal() {
                           </Button>
                         </div>
                         <code className="text-xs text-gray-600 break-all">
-                          https://coachinayahturnkeytool.com/?tab={tool.tab}&city={`{{contact.data_perfection__city}}`}&state={`{{contact.data_perfection__state}}`}&zip={`{{contact.data_perfection__postal_code}}`}&autoAnalyze=true
+                          {'https://coachinayahturnkeytool.com/?tab='}{tool.tab}{'&city={{ contact.data_perfection__city|urlencode }}&state={{ contact.data_perfection__state|urlencode }}&zip={{ contact.data_perfection__postal_code|urlencode }}&autoAnalyze=true'}
                         </code>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Pre-Encoded Link Generator for Sales Emails */}
+                <div>
+                  <h3 className="font-semibold mb-3">Generate Pre-Encoded Links (for Sales Emails)</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    For sales emails and sequences where HubL filters aren't available, generate a properly encoded link for a specific city here.
+                  </p>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1 block">City</label>
+                        <Input
+                          placeholder="Las Vegas"
+                          value={newLinkForm.targetCity}
+                          onChange={(e) => setNewLinkForm({ ...newLinkForm, targetCity: e.target.value })}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1 block">State</label>
+                        <Input
+                          placeholder="NV"
+                          value={newLinkForm.targetState}
+                          onChange={(e) => setNewLinkForm({ ...newLinkForm, targetState: e.target.value })}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1 block">Tool</label>
+                        <select
+                          className="w-full h-9 text-sm border rounded-md px-2 bg-white"
+                          value={newLinkForm.targetTab}
+                          onChange={(e) => setNewLinkForm({ ...newLinkForm, targetTab: e.target.value })}
+                        >
+                          <option value="prove">Revenue Calculator</option>
+                          <option value="regulations">Regulation Tracker</option>
+                          <option value="market">Market Advisor</option>
+                          <option value="explore">Comps Explorer</option>
+                          <option value="validate">Property Analyzer</option>
+                          <option value="opportunity">Opportunity Finder</option>
+                          <option value="advisor">AI Advisor</option>
+                        </select>
+                      </div>
+                    </div>
+                    {newLinkForm.targetCity && newLinkForm.targetState && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600">Generated Link (safe for emails):</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              params.set('tab', newLinkForm.targetTab);
+                              params.set('city', newLinkForm.targetCity);
+                              params.set('state', newLinkForm.targetState);
+                              if (newLinkForm.targetZip) params.set('zip', newLinkForm.targetZip);
+                              params.set('autoAnalyze', 'true');
+                              copyToClipboard(`https://coachinayahturnkeytool.com/?${params.toString()}`);
+                            }}
+                          >
+                            <Copy className="w-4 h-4 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <code className="text-xs text-blue-700 bg-blue-100 px-2 py-1.5 rounded block break-all">
+                          {(() => {
+                            const params = new URLSearchParams();
+                            params.set('tab', newLinkForm.targetTab);
+                            params.set('city', newLinkForm.targetCity);
+                            params.set('state', newLinkForm.targetState);
+                            if (newLinkForm.targetZip) params.set('zip', newLinkForm.targetZip);
+                            params.set('autoAnalyze', 'true');
+                            return `https://coachinayahturnkeytool.com/?${params.toString()}`;
+                          })()}
+                        </code>
+                      </div>
+                    )}
                   </div>
                 </div>
 

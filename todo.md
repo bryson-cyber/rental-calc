@@ -10025,3 +10025,16 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Make Monthly Rent and Purchase Price fields mutually exclusive (either/or)
 - [x] Add toggle/tab selector for analysis type: Rental Arbitrage vs Investment
 - [x] Only show the relevant input field based on selection
+
+## UI: Add Explainer Text Under Toggle (Feb 10, 2026) - COMPLETE
+- [x] Add brief description under Rental Arbitrage toggle explaining the concept for beginners
+- [x] Add brief description under Investment Purchase toggle explaining the concept for beginners
+- [x] Descriptions change dynamically based on selected toggle option
+
+## Bug Fix: Broken Email Links for Cities with Spaces (Feb 10, 2026) - COMPLETE
+- [x] Diagnosed root cause: HubSpot template variables insert raw city names (e.g., "Las Vegas") into URLs, breaking the link at the space
+- [x] Updated AdminPortal HubSpot template section to use |urlencode filter for marketing emails
+- [x] Added prominent warning about URL encoding for city names with spaces
+- [x] Added "Generate Pre-Encoded Links" tool in AdminPortal for sales emails/sequences (where HubL is unavailable)
+- [x] Updated useWebhook.ts documentation comments with urlencode instructions
+- [x] Added AI Advisor to the list of copyable tool links
