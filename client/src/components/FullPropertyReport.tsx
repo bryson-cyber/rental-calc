@@ -198,6 +198,75 @@ export interface FullReportData {
   ai_summary?: string;
   generated_at?: string;
   prepared_for?: string;
+  // New investor-grade sections
+  stress_test?: StressTestMatrix;
+  itemized_expenses?: ItemizedExpenses;
+  regulation?: RegulationData;
+  comparable_sales?: ComparableSale[];
+}
+
+interface StressTestScenario {
+  occupancy_pct: number;
+  adr: number;
+  monthly_revenue: number;
+  annual_revenue: number;
+  monthly_profit?: number;
+  annual_profit?: number;
+  cash_flow_positive: boolean;
+}
+
+interface StressTestMatrix {
+  base_occupancy: number;
+  base_adr: number;
+  base_monthly_rent?: number;
+  scenarios: StressTestScenario[];
+}
+
+interface ExpenseItem {
+  category: string;
+  monthly: number;
+  annual: number;
+  percentage: number;
+}
+
+interface ItemizedExpenses {
+  items: ExpenseItem[];
+  total_monthly: number;
+  total_annual: number;
+  total_percentage: number;
+  net_monthly_revenue: number;
+  net_annual_revenue: number;
+}
+
+interface RegulationData {
+  status: string;
+  summary: string;
+  simplified_summary: string;
+  key_requirements: string[];
+  permit_required: boolean;
+  primary_residence_only: boolean;
+  max_nights_per_year?: number;
+  registration_fee?: string;
+  occupancy_tax?: string;
+  zoning_restrictions?: string;
+  confidence: string;
+  warnings: string[];
+  sources: Array<{ title: string; url: string; type: string; isOfficial: boolean }>;
+}
+
+interface ComparableSale {
+  address: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  sqft?: number;
+  lot_size?: string;
+  year_built?: number;
+  days_on_market?: number;
+  status: string;
+  url?: string;
+  image_url?: string;
+  price_per_sqft?: number;
 }
 
 interface FullPropertyReportProps {
@@ -290,22 +359,34 @@ function InsightBox({ children, type = 'info' }: { children: React.ReactNode; ty
 const SECTIONS = [
   { id: 'overview', label: 'Overview', icon: Home },
   { id: 'revenue', label: 'Revenue', icon: DollarSign },
+  { id: 'expenses', label: 'Expenses', icon: Wallet },
   { id: 'market', label: 'Market', icon: BarChart3 },
   { id: 'competition', label: 'Competition', icon: Target },
+  { id: 'regulation', label: 'Regulations', icon: BookOpen },
+  { id: 'stress', label: 'Stress Test', icon: AlertTriangle },
+  { id: 'sales', label: 'Comp Sales', icon: Landmark },
   { id: 'rental', label: 'Rental Arbitrage', icon: Building },
   { id: 'purchase', label: 'Purchase', icon: Landmark },
   { id: 'summary', label: 'Summary', icon: Sparkles },
 ];
 
-function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase }: {
+function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, hasExpenses, hasRegulation, hasStressTest, hasSales }: {
   activeSection: string;
   onSectionClick: (id: string) => void;
   hasRental: boolean;
   hasPurchase: boolean;
+  hasExpenses?: boolean;
+  hasRegulation?: boolean;
+  hasStressTest?: boolean;
+  hasSales?: boolean;
 }) {
   const visibleSections = SECTIONS.filter(s => {
     if (s.id === 'rental' && !hasRental) return false;
     if (s.id === 'purchase' && !hasPurchase) return false;
+    if (s.id === 'expenses' && !hasExpenses) return false;
+    if (s.id === 'regulation' && !hasRegulation) return false;
+    if (s.id === 'stress' && !hasStressTest) return false;
+    if (s.id === 'sales' && !hasSales) return false;
     return true;
   });
 
@@ -383,6 +464,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     ai_summary,
     generated_at,
     prepared_for,
+    stress_test,
+    itemized_expenses,
+    regulation,
+    comparable_sales,
   } = data;
 
   const displayComps = (same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps)
@@ -390,6 +475,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
   const hasRental = !!rental_arbitrage?.monthlyRent;
   const hasPurchase = !!purchase?.purchasePrice;
+  const hasExpenses = !!itemized_expenses?.items?.length;
+  const hasRegulation = !!regulation?.status;
+  const hasStressTest = !!stress_test?.scenarios?.length;
+  const hasSales = !!comparable_sales?.length;
 
   // Rental arbitrage calculations
   const rentalCalcs = useMemo(() => {
@@ -580,6 +669,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         onSectionClick={scrollToSection}
         hasRental={hasRental}
         hasPurchase={hasPurchase}
+        hasExpenses={hasExpenses}
+        hasRegulation={hasRegulation}
+        hasStressTest={hasStressTest}
+        hasSales={hasSales}
       />
 
       {/* ============================================================ */}
@@ -752,6 +845,65 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
           )}
         </section>
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: ITEMIZED EXPENSES */}
+        {/* ---------------------------------------------------------- */}
+        {hasExpenses && itemized_expenses && (
+          <section id="section-expenses" className="scroll-mt-24 mb-16">
+            <SectionHeader icon={Wallet} title="Expense Breakdown" subtitle="Itemized operating costs based on property size and market data" />
+
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Operating Expenses</h3>
+              <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
+                {itemized_expenses.items.map((item, i) => (
+                  <DataRow
+                    key={i}
+                    label={item.category}
+                    value={
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-[#1e293b]">{formatCurrency(item.monthly)}/mo</span>
+                        <span className="text-xs text-[#94a3b8]">({item.percentage.toFixed(1)}%)</span>
+                      </div>
+                    }
+                  />
+                ))}
+                <DataRow
+                  label="Total Operating Expenses"
+                  value={
+                    <span className="font-bold text-red-600">{formatCurrency(itemized_expenses.total_monthly)}/mo</span>
+                  }
+                  highlight
+                />
+              </div>
+            </div>
+
+            {/* Net Revenue After Expenses */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
+                <p className="text-sm text-[#64748b] mb-1">Gross Annual Revenue</p>
+                <p className="text-2xl font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.annual)}</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
+                <p className="text-sm text-[#64748b] mb-1">Total Annual Expenses</p>
+                <p className="text-2xl font-bold text-red-600">- {formatCurrency(itemized_expenses.total_annual)}</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
+                <p className="text-sm text-[#64748b] mb-1">Net Annual Revenue</p>
+                <p className={`text-2xl font-bold ${itemized_expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(itemized_expenses.net_annual_revenue)}
+                </p>
+              </div>
+            </div>
+
+            <InsightBox type="info">
+              <strong>Expense Ratio:</strong> Total operating expenses represent {itemized_expenses.total_percentage.toFixed(1)}% of gross revenue.
+              {itemized_expenses.total_percentage < 30 ? ' This is below the typical 30-40% range — verify that all costs are accounted for.' :
+               itemized_expenses.total_percentage > 45 ? ' This is above the typical 30-40% range — look for opportunities to reduce costs.' :
+               ' This is within the typical 30-40% range for short-term rentals.'}
+            </InsightBox>
+          </section>
+        )}
 
         {/* ---------------------------------------------------------- */}
         {/* SECTION 3: MARKET ANALYSIS */}
@@ -971,6 +1123,255 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
           )}
         </section>
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: REGULATORY STATUS */}
+        {/* ---------------------------------------------------------- */}
+        {hasRegulation && regulation && (
+          <section id="section-regulation" className="scroll-mt-24 mb-16">
+            <SectionHeader icon={BookOpen} title="Regulatory Status" subtitle="Short-term rental regulations for this location" />
+
+            {/* Status Badge */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider ${
+                  regulation.status === 'allowed' ? 'bg-green-100 text-green-800' :
+                  regulation.status === 'allowed_with_permit' ? 'bg-yellow-100 text-yellow-800' :
+                  regulation.status === 'restricted' || regulation.status === 'limited' ? 'bg-orange-100 text-orange-800' :
+                  regulation.status === 'banned' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {regulation.status.replace(/_/g, ' ')}
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  regulation.confidence === 'high' ? 'bg-green-50 text-green-700' :
+                  regulation.confidence === 'medium' ? 'bg-yellow-50 text-yellow-700' :
+                  'bg-gray-50 text-gray-700'
+                }`}>
+                  {regulation.confidence} confidence
+                </div>
+              </div>
+
+              <p className="text-[#334155] leading-relaxed mb-6">{regulation.simplified_summary || regulation.summary}</p>
+
+              {/* Key Requirements */}
+              {regulation.key_requirements?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-3">Key Requirements</h3>
+                  <ul className="space-y-2">
+                    {regulation.key_requirements.map((req, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#C9A962] mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-[#334155]">{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Quick Facts */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#64748b] mb-1">Permit Required</p>
+                  <p className={`text-sm font-bold ${regulation.permit_required ? 'text-orange-600' : 'text-green-600'}`}>
+                    {regulation.permit_required ? 'Yes' : 'No'}
+                  </p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#64748b] mb-1">Primary Residence Only</p>
+                  <p className={`text-sm font-bold ${regulation.primary_residence_only ? 'text-red-600' : 'text-green-600'}`}>
+                    {regulation.primary_residence_only ? 'Yes' : 'No'}
+                  </p>
+                </div>
+                {regulation.max_nights_per_year && (
+                  <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                    <p className="text-xs text-[#64748b] mb-1">Max Nights/Year</p>
+                    <p className="text-sm font-bold text-[#1e293b]">{regulation.max_nights_per_year}</p>
+                  </div>
+                )}
+                {regulation.occupancy_tax && (
+                  <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                    <p className="text-xs text-[#64748b] mb-1">Occupancy Tax</p>
+                    <p className="text-sm font-bold text-[#1e293b]">{regulation.occupancy_tax}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Warnings */}
+            {regulation.warnings?.length > 0 && (
+              <div className="mb-8">
+                {regulation.warnings.map((warning, i) => (
+                  <InsightBox key={i} type="warning">
+                    {warning}
+                  </InsightBox>
+                ))}
+              </div>
+            )}
+
+            {/* Sources */}
+            {regulation.sources?.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                <h3 className="text-sm font-semibold text-[#64748b] mb-3 uppercase tracking-wider">Sources</h3>
+                <div className="space-y-2">
+                  {regulation.sources.map((src, i) => (
+                    <a key={i} href={src.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[#C9A962] hover:underline">
+                      <ExternalLink className="w-3 h-3" />
+                      {src.title}
+                      {src.isOfficial && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Official</span>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: STRESS TEST / SENSITIVITY ANALYSIS */}
+        {/* ---------------------------------------------------------- */}
+        {hasStressTest && stress_test && (
+          <section id="section-stress" className="scroll-mt-24 mb-16">
+            <SectionHeader icon={AlertTriangle} title="Stress Test" subtitle="What happens to your cash flow when occupancy or nightly rate changes?" />
+
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-2">Sensitivity Matrix</h3>
+              <p className="text-sm text-[#64748b] mb-6">Monthly profit at different occupancy and ADR combinations{stress_test.base_monthly_rent ? ` (rent: ${formatCurrency(stress_test.base_monthly_rent)}/mo)` : ''}</p>
+
+              {/* Build matrix from scenarios */}
+              {(() => {
+                const occupancies = Array.from(new Set(stress_test.scenarios.map(s => s.occupancy_pct))).sort((a, b) => a - b);
+                const adrs = Array.from(new Set(stress_test.scenarios.map(s => s.adr))).sort((a, b) => a - b);
+                const getScenario = (occ: number, adr: number) => stress_test.scenarios.find(s => s.occupancy_pct === occ && s.adr === adr);
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th className="p-3 text-left text-[#64748b] font-medium bg-[#f8fafc] rounded-tl-lg">Occ \ ADR</th>
+                          {adrs.map(adr => (
+                            <th key={adr} className={`p-3 text-center font-medium bg-[#f8fafc] ${adr === stress_test.base_adr ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
+                              {formatCurrency(adr)}
+                              {adr === stress_test.base_adr && <div className="text-[10px]">base</div>}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {occupancies.map(occ => (
+                          <tr key={occ} className="border-t border-[#e2e8f0]">
+                            <td className={`p-3 font-medium ${occ === stress_test.base_occupancy ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
+                              {Math.round(occ * 100)}%
+                              {occ === stress_test.base_occupancy && <span className="text-[10px] ml-1">base</span>}
+                            </td>
+                            {adrs.map(adr => {
+                              const scenario = getScenario(occ, adr);
+                              const profit = scenario?.monthly_profit ?? scenario?.monthly_revenue ?? 0;
+                              const isBase = occ === stress_test.base_occupancy && adr === stress_test.base_adr;
+                              return (
+                                <td key={adr} className={`p-3 text-center font-medium ${
+                                  isBase ? 'bg-[#C9A962]/10 ring-2 ring-[#C9A962] rounded' :
+                                  profit >= 0 ? 'text-green-700' : 'text-red-600'
+                                }`}>
+                                  {formatCurrency(profit)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Break-even insight */}
+            {(() => {
+              const breakEvenScenarios = stress_test.scenarios.filter(s => s.cash_flow_positive);
+              const worstCase = stress_test.scenarios.reduce((min, s) => (s.monthly_profit ?? s.monthly_revenue) < (min.monthly_profit ?? min.monthly_revenue) ? s : min);
+              return (
+                <InsightBox type={breakEvenScenarios.length > stress_test.scenarios.length / 2 ? 'info' : 'warning'}>
+                  <strong>Stress Test Result:</strong> {breakEvenScenarios.length} of {stress_test.scenarios.length} scenarios are cash-flow positive.
+                  {' '}Worst case scenario ({Math.round(worstCase.occupancy_pct * 100)}% occupancy, {formatCurrency(worstCase.adr)} ADR) yields {formatCurrency(worstCase.monthly_profit ?? worstCase.monthly_revenue)}/mo.
+                </InsightBox>
+              );
+            })()}
+          </section>
+        )}
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: COMPARABLE SALES */}
+        {/* ---------------------------------------------------------- */}
+        {hasSales && comparable_sales && (
+          <section id="section-sales" className="scroll-mt-24 mb-16">
+            <SectionHeader icon={Landmark} title="Comparable Sales" subtitle="Recently sold properties in the area for purchase price context" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              {comparable_sales.map((sale, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+                  {sale.image_url && (
+                    <div className="h-40 bg-cover bg-center" style={{ backgroundImage: `url(${sale.image_url})` }} />
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-serif font-semibold text-[#1e293b] text-sm leading-tight flex-1">{sale.address}</h4>
+                      <span className="text-lg font-bold text-[#C9A962] ml-3">{formatCurrency(sale.price)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className="text-xs bg-[#f1f5f9] text-[#64748b] px-2 py-1 rounded-full">{sale.bedrooms} BR / {sale.bathrooms} BA</span>
+                      {sale.sqft && <span className="text-xs bg-[#f1f5f9] text-[#64748b] px-2 py-1 rounded-full">{sale.sqft.toLocaleString()} sqft</span>}
+                      {sale.year_built && <span className="text-xs bg-[#f1f5f9] text-[#64748b] px-2 py-1 rounded-full">Built {sale.year_built}</span>}
+                      {sale.price_per_sqft && <span className="text-xs bg-[#C9A962]/10 text-[#C9A962] px-2 py-1 rounded-full font-medium">{formatCurrency(sale.price_per_sqft)}/sqft</span>}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        sale.status === 'sold' ? 'bg-green-100 text-green-700' :
+                        sale.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>{sale.status}</span>
+                      {sale.days_on_market !== undefined && (
+                        <span className="text-xs text-[#64748b]">{sale.days_on_market} days on market</span>
+                      )}
+                    </div>
+                    {sale.url && (
+                      <a href={sale.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs text-[#C9A962] hover:underline">
+                        <ExternalLink className="w-3 h-3" /> View Listing
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary Stats */}
+            {comparable_sales.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard
+                  label="Median Sale Price"
+                  value={formatCurrency(comparable_sales.map(s => s.price).sort((a, b) => a - b)[Math.floor(comparable_sales.length / 2)])}
+                  icon={DollarSign}
+                />
+                <StatCard
+                  label="Price Range"
+                  value={`${formatCurrency(Math.min(...comparable_sales.map(s => s.price)))} - ${formatCurrency(Math.max(...comparable_sales.map(s => s.price)))}`}
+                  icon={TrendingUp}
+                />
+                <StatCard
+                  label="Avg Bedrooms"
+                  value={(comparable_sales.reduce((s, c) => s + c.bedrooms, 0) / comparable_sales.length).toFixed(1)}
+                  icon={Bed}
+                />
+                <StatCard
+                  label="Properties Analyzed"
+                  value={comparable_sales.length.toString()}
+                  icon={Building}
+                />
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ---------------------------------------------------------- */}
         {/* SECTION 5: RENTAL ARBITRAGE SCENARIO */}

@@ -2063,10 +2063,43 @@ export interface FullReportSummaryInput {
     loanType?: string;
   };
   preparedFor?: string;
+  stressTest?: Array<{
+    occupancyRate: number;
+    adrMultiplier: number;
+    monthlyRevenue: number;
+    monthlyProfit: number;
+    annualProfit: number;
+    cashFlow: string;
+  }>;
+  itemizedExpenses?: {
+    cleaning: number;
+    propertyManagement: number;
+    platformFees: number;
+    utilities: number;
+    supplies: number;
+    maintenance: number;
+    insurance: number;
+    licensePermits: number;
+    totalMonthly: number;
+    totalAnnual: number;
+    effectiveRate: number;
+  };
+  regulation?: {
+    status: string;
+    permitRequired: boolean;
+    summary: string;
+  };
+  comparableSales?: Array<{
+    address: string;
+    price: number;
+    bedrooms: number;
+    bathrooms: number;
+    sqft?: number;
+  }>;
 }
 
 export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
-  const { property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor } = input;
+  const { property, revenue, monthlyForecast, marketData, bedroomPerformance, competitors, revenuePercentiles, historicalData, rentalArbitrage, purchase, preparedFor, stressTest, itemizedExpenses, regulation, comparableSales } = input;
 
   // Calculate derived metrics for the prompt
   const occRate = revenue.occupancy > 1 ? revenue.occupancy / 100 : revenue.occupancy;
@@ -2221,6 +2254,35 @@ ${compCount > 0 ? `- Top Performer Revenue: $${topCompRevenue.toLocaleString()}
 - Average Comp Rating: ${avgCompRating.toFixed(1)} stars` : ''}
 ${rentalSection}
 ${purchaseSection}
+${itemizedExpenses ? `
+ITEMIZED EXPENSE BREAKDOWN:
+- Cleaning: $${itemizedExpenses.cleaning.toLocaleString()}/mo
+- Property Management: $${itemizedExpenses.propertyManagement.toLocaleString()}/mo
+- Platform Fees: $${itemizedExpenses.platformFees.toLocaleString()}/mo
+- Utilities: $${itemizedExpenses.utilities.toLocaleString()}/mo
+- Supplies: $${itemizedExpenses.supplies.toLocaleString()}/mo
+- Maintenance: $${itemizedExpenses.maintenance.toLocaleString()}/mo
+- Insurance: $${itemizedExpenses.insurance.toLocaleString()}/mo
+- License/Permits: $${itemizedExpenses.licensePermits.toLocaleString()}/mo
+- Total Monthly Expenses: $${itemizedExpenses.totalMonthly.toLocaleString()}
+- Total Annual Expenses: $${itemizedExpenses.totalAnnual.toLocaleString()}
+- Effective Expense Rate: ${itemizedExpenses.effectiveRate.toFixed(1)}% of revenue` : ''}
+${stressTest && stressTest.length > 0 ? `
+STRESS TEST SCENARIOS:
+${stressTest.filter(s => s.cashFlow === 'negative').length > 0 ? `- ${stressTest.filter(s => s.cashFlow === 'negative').length} of ${stressTest.length} scenarios result in negative cash flow` : `- All ${stressTest.length} scenarios remain cash flow positive`}
+- Best case: $${Math.max(...stressTest.map(s => s.monthlyProfit)).toLocaleString()}/mo profit
+- Worst case: $${Math.min(...stressTest.map(s => s.monthlyProfit)).toLocaleString()}/mo ${Math.min(...stressTest.map(s => s.monthlyProfit)) < 0 ? 'loss' : 'profit'}
+- Break-even scenarios: occupancy/ADR combinations where profit approaches $0` : ''}
+${regulation ? `
+REGULATORY STATUS:
+- Status: ${regulation.status}
+- Permit Required: ${regulation.permitRequired ? 'Yes' : 'No'}
+- Summary: ${regulation.summary}` : ''}
+${comparableSales && comparableSales.length > 0 ? `
+COMPARABLE SALES:
+- ${comparableSales.length} recently sold properties analyzed
+- Price Range: $${Math.min(...comparableSales.map(s => s.price)).toLocaleString()} – $${Math.max(...comparableSales.map(s => s.price)).toLocaleString()}
+- Average Sale Price: $${Math.round(comparableSales.reduce((s, c) => s + c.price, 0) / comparableSales.length).toLocaleString()}` : ''}
 </CONTEXT>
 
 <FORMAT>
@@ -2239,11 +2301,23 @@ Analyze the market context — how healthy is the market, how does this property
 ### Competitive Landscape
 Summarize the competition — how many comps were analyzed, how this property compares to the top performers and the average, and what the ratings tell us.
 
+${itemizedExpenses ? `### Expense Analysis
+Discuss the itemized expense breakdown — how the effective expense rate compares to the industry standard 35%, which categories are the largest cost drivers, and what this means for net income projections.` : ''}
+
+${stressTest && stressTest.length > 0 ? `### Risk & Stress Test
+Discuss the stress test results — how many scenarios remain profitable, what the worst-case scenario looks like, and how much cushion exists before the property becomes cash-flow negative. This is critical for investor confidence.` : ''}
+
+${regulation ? `### Regulatory Environment
+Discuss the regulatory status — whether STR is permitted, what permits are required, and any key regulatory considerations for this location.` : ''}
+
 ${rentalArbitrage?.monthlyRent ? `### Rental Arbitrage Analysis
 Discuss the rental arbitrage scenario — monthly profit potential, break-even occupancy, startup cost recovery timeline, and the occupancy cushion.` : ''}
 
 ${purchase?.purchasePrice ? `### Purchase Investment Analysis
 Discuss the purchase scenario — cap rate, cash-on-cash return, DSCR, monthly cash flow, and what these metrics indicate about the investment.` : ''}
+
+${comparableSales && comparableSales.length > 0 ? `### Comparable Sales
+Discuss the comparable sales data — how the asking/purchase price compares to recently sold properties in the area, and what this suggests about market value.` : ''}
 
 ### Key Takeaways
 End with 3-4 bullet points summarizing the most important findings. These should be factual observations, NOT recommendations.

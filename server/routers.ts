@@ -58,6 +58,7 @@ import { logActivity, ActionCategory, ActionType } from "./activity";
 import { getUsageStatus, canPerformAnalysis, canPerformMarketResearch, recordAnalysisUsage, recordMarketResearchUsage } from "./usage-limits";
 import { notifyOwnerPropertyReport, notifyOwnerMarketReport } from "./notification-service";
 import { getZillowPropertyDetails, isZillowUrl, type ZillowPropertyData } from "./hasdata-zillow";
+import { searchZillowListings } from "./hasdata";
 import { getRedfinPropertyDetails, isRedfinUrl, type RedfinPropertyData } from "./hasdata-redfin";
 import { getRegulationInfo, parseLocation } from "./regulation-tracker";
 import { generateShareCode, sendSMSNotification, sendEmailNotification } from "./sms-email-notifications";
@@ -5384,6 +5385,10 @@ export const appRouter = router({
               rentalArbitrage: reportData.rental_arbitrage,
               purchase: reportData.purchase,
               preparedFor: reportData.prepared_for || input.creatorName,
+              stressTest: reportData.stress_test,
+              itemizedExpenses: reportData.itemized_expenses,
+              regulation: reportData.regulation,
+              comparableSales: reportData.comparable_sales,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {
@@ -5748,6 +5753,10 @@ export const appRouter = router({
               rentalArbitrage: newReportData.rental_arbitrage,
               purchase: newReportData.purchase,
               preparedFor: newReportData.prepared_for,
+              stressTest: newReportData.stress_test,
+              itemizedExpenses: newReportData.itemized_expenses,
+              regulation: newReportData.regulation,
+              comparableSales: newReportData.comparable_sales,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {
@@ -5951,21 +5960,89 @@ export const appRouter = router({
             prepared_for: preparedFor || ctx.user?.name || undefined,
           };
           
-          // Add rental arbitrage if monthly rent provided
+          // === ITEMIZED EXPENSE BREAKDOWN ===
+          // Replace flat 30-35% with realistic itemized expenses
+          const monthlyRevBase = Math.round(annualRev / 12);
+          const nightsPerMonth = Math.round(occRate * 30);
+          const itemizedExpenses = {
+            cleaning: Math.round(nightsPerMonth * 0.33 * (bedrooms <= 1 ? 75 : bedrooms <= 2 ? 100 : bedrooms <= 3 ? 140 : 180)), // per turnover (avg 3-night stay)
+            platform_fees: Math.round(monthlyRevBase * 0.14), // Airbnb host fee ~14%
+            property_management: Math.round(monthlyRevBase * 0.15), // 15% if using PM
+            supplies: Math.round(bedrooms * 40 + 60), // toiletries, linens replacement, coffee, etc.
+            utilities: Math.round(bedrooms * 75 + 100), // electric, water, gas, internet, trash
+            maintenance: Math.round(monthlyRevBase * 0.05), // 5% for repairs/upkeep
+            insurance: Math.round(bedrooms <= 2 ? 150 : bedrooms <= 4 ? 225 : 300), // STR insurance
+            licenses_taxes: Math.round(monthlyRevBase * 0.08), // local occupancy tax + license fees
+          };
+          const totalMonthlyExpenses = Object.values(itemizedExpenses).reduce((a, b) => a + b, 0);
+          const expensePercent = monthlyRevBase > 0 ? Math.round((totalMonthlyExpenses / monthlyRevBase) * 100) : 0;
+          
+          reportData.expense_breakdown = {
+            items: itemizedExpenses,
+            total_monthly: totalMonthlyExpenses,
+            total_annual: totalMonthlyExpenses * 12,
+            percent_of_revenue: expensePercent,
+            note: 'Estimates based on market averages. Property management fee included — remove if self-managing to increase profit.',
+          };
+          
+          // === STRESS TEST / SENSITIVITY ANALYSIS ===
+          // Show cash flow at different occupancy x ADR combinations
+          const baseOcc = occRate;
+          const baseAdr = adr;
+          const occScenarios = [
+            Math.max(0.25, baseOcc - 0.20),
+            Math.max(0.30, baseOcc - 0.10),
+            baseOcc,
+            Math.min(0.95, baseOcc + 0.10),
+          ];
+          const adrScenarios = [
+            Math.round(baseAdr * 0.75),
+            Math.round(baseAdr * 0.90),
+            baseAdr,
+            Math.round(baseAdr * 1.10),
+          ];
+          
+          const stressTestMatrix: Array<{ occupancy: number; adr: number; annual_revenue: number; monthly_revenue: number; monthly_profit: number; }> = [];
+          for (const occ of occScenarios) {
+            for (const testAdr of adrScenarios) {
+              const testAnnualRev = Math.round(occ * testAdr * 365);
+              const testMonthlyRev = Math.round(testAnnualRev / 12);
+              // Use proportional expenses (scale with revenue)
+              const testExpenses = Math.round(testMonthlyRev * (expensePercent / 100));
+              stressTestMatrix.push({
+                occupancy: Math.round(occ * 100),
+                adr: testAdr,
+                annual_revenue: testAnnualRev,
+                monthly_revenue: testMonthlyRev,
+                monthly_profit: testMonthlyRev - testExpenses,
+              });
+            }
+          }
+          
+          reportData.stress_test = {
+            base_occupancy: Math.round(baseOcc * 100),
+            base_adr: baseAdr,
+            scenarios: stressTestMatrix,
+            occupancy_levels: occScenarios.map(o => Math.round(o * 100)),
+            adr_levels: adrScenarios,
+            breakeven_note: 'Green cells indicate positive cash flow. The breakeven point is where monthly profit crosses $0.',
+          };
+          
+          // Add rental arbitrage if monthly rent provided (now with itemized expenses)
           if (input.monthlyRent && input.monthlyRent > 0) {
             const monthlyRev = Math.round(annualRev / 12);
-            const expenses = Math.round(monthlyRev * 0.30);
             reportData.rental_arbitrage = {
               monthly_rent: input.monthlyRent,
               monthly_revenue: monthlyRev,
-              monthly_expenses: expenses,
-              monthly_profit: monthlyRev - input.monthlyRent - expenses,
-              annual_profit: (monthlyRev - input.monthlyRent - expenses) * 12,
-              roi_percent: ((monthlyRev - input.monthlyRent - expenses) / input.monthlyRent) * 100,
+              monthly_expenses: totalMonthlyExpenses,
+              expense_breakdown: itemizedExpenses,
+              monthly_profit: monthlyRev - input.monthlyRent - totalMonthlyExpenses,
+              annual_profit: (monthlyRev - input.monthlyRent - totalMonthlyExpenses) * 12,
+              roi_percent: ((monthlyRev - input.monthlyRent - totalMonthlyExpenses) / input.monthlyRent) * 100,
             };
           }
           
-          // Add purchase scenario if purchase price provided
+          // Add purchase scenario if purchase price provided (now with itemized expenses)
           if (input.purchasePrice && input.purchasePrice > 0) {
             const downPct = input.downPaymentPercent || 20;
             const rate = input.interestRate || 7;
@@ -5975,7 +6052,6 @@ export const appRouter = router({
             const numPayments = 360;
             const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
             const monthlyRev = Math.round(annualRev / 12);
-            const expenses = Math.round(monthlyRev * 0.30);
             reportData.purchase = {
               purchase_price: input.purchasePrice,
               down_payment: downPayment,
@@ -5985,12 +6061,87 @@ export const appRouter = router({
               loan_type: input.loanType || 'conventional',
               monthly_mortgage: Math.round(monthlyMortgage),
               monthly_revenue: monthlyRev,
-              monthly_expenses: expenses,
-              monthly_cash_flow: monthlyRev - Math.round(monthlyMortgage) - expenses,
-              annual_cash_flow: (monthlyRev - Math.round(monthlyMortgage) - expenses) * 12,
-              cap_rate: (annualRev * 0.70) / input.purchasePrice * 100,
-              cash_on_cash: ((monthlyRev - Math.round(monthlyMortgage) - expenses) * 12) / downPayment * 100,
+              monthly_expenses: totalMonthlyExpenses,
+              monthly_cash_flow: monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses,
+              annual_cash_flow: (monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12,
+              cap_rate: (annualRev - totalMonthlyExpenses * 12) / input.purchasePrice * 100,
+              cash_on_cash: ((monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12) / downPayment * 100,
             };
+          }
+          
+          // === FETCH REGULATORY DATA ===
+          // Pull regulation info from the same source as Step 1
+          try {
+            const city = reportData.property.city;
+            const state = reportData.property.state;
+            if (city && state) {
+              console.log(`[GenerateFromAddress] Fetching regulation data for ${city}, ${state}...`);
+              const regData = await getRegulationInfo(city, state);
+              if (regData && regData.status !== 'unknown') {
+                reportData.regulation = {
+                  status: regData.status,
+                  summary: regData.simplifiedSummary || regData.summary,
+                  key_requirements: regData.keyRequirements || [],
+                  permit_required: regData.permitRequired,
+                  primary_residence_only: regData.primaryResidenceOnly,
+                  max_nights_per_year: regData.maxNightsPerYear,
+                  registration_fee: regData.registrationFee,
+                  occupancy_tax: regData.occupancyTax,
+                  zoning_restrictions: regData.zoningRestrictions,
+                  confidence: regData.confidence,
+                  warnings: regData.warnings || [],
+                  sources: regData.sources?.slice(0, 3) || [],
+                };
+                console.log(`[GenerateFromAddress] Regulation status: ${regData.status}`);
+              }
+            }
+          } catch (regErr) {
+            console.error('[GenerateFromAddress] Regulation fetch failed (non-fatal):', regErr);
+          }
+          
+          // === FETCH COMPARABLE SALES ===
+          // Pull recently sold properties in the same area
+          try {
+            const searchLocation = reportData.property.zipCode || `${reportData.property.city}, ${reportData.property.state}`;
+            if (searchLocation) {
+              console.log(`[GenerateFromAddress] Fetching comparable sales for ${searchLocation}...`);
+              const salesResult = await searchZillowListings({
+                keyword: searchLocation,
+                type: 'recentlySold',
+                bedsMin: Math.max(1, bedrooms - 1),
+                bedsMax: bedrooms + 1,
+              });
+              if (salesResult.success && salesResult.properties.length > 0) {
+                // Take top 10 most relevant comps sorted by recency
+                const saleComps = salesResult.properties.slice(0, 10).map(p => ({
+                  address: p.address,
+                  price: p.price,
+                  bedrooms: p.bedrooms,
+                  bathrooms: p.bathrooms,
+                  sqft: p.squareFeet,
+                  url: p.url,
+                  image: p.image,
+                  days_on_market: p.daysOnZillow,
+                }));
+                const avgSalePrice = Math.round(saleComps.reduce((sum, c) => sum + c.price, 0) / saleComps.length);
+                const medianSalePrice = saleComps.sort((a, b) => a.price - b.price)[Math.floor(saleComps.length / 2)]?.price || avgSalePrice;
+                
+                reportData.comparable_sales = {
+                  properties: saleComps,
+                  average_price: avgSalePrice,
+                  median_price: medianSalePrice,
+                  count: saleComps.length,
+                  price_per_sqft: saleComps.filter(c => c.sqft && c.sqft > 0).length > 0
+                    ? Math.round(saleComps.filter(c => c.sqft && c.sqft > 0).reduce((sum, c) => sum + (c.price / (c.sqft || 1)), 0) / saleComps.filter(c => c.sqft && c.sqft > 0).length)
+                    : undefined,
+                  // Calculate gross rent multiplier (GRM) = Sale Price / Annual Rent
+                  grm: annualRev > 0 ? Math.round((avgSalePrice / annualRev) * 10) / 10 : undefined,
+                };
+                console.log(`[GenerateFromAddress] Found ${saleComps.length} comparable sales, avg: $${avgSalePrice}`);
+              }
+            }
+          } catch (salesErr) {
+            console.error('[GenerateFromAddress] Comparable sales fetch failed (non-fatal):', salesErr);
           }
           
           // Step 3: Generate AI summary
@@ -6023,6 +6174,20 @@ export const appRouter = router({
               rentalArbitrage: reportData.rental_arbitrage,
               purchase: reportData.purchase,
               preparedFor: reportData.prepared_for,
+              stressTest: reportData.stress_test,
+              itemizedExpenses: reportData.itemized_expenses,
+              regulation: reportData.regulation ? {
+                status: reportData.regulation.status || 'Unknown',
+                permitRequired: reportData.regulation.permitRequired || false,
+                summary: reportData.regulation.summary || '',
+              } : undefined,
+              comparableSales: reportData.comparable_sales?.properties?.slice(0, 10).map((c: any) => ({
+                address: c.address || 'Unknown',
+                price: c.price || 0,
+                bedrooms: c.bedrooms || 0,
+                bathrooms: c.bathrooms || 0,
+                sqft: c.sqft,
+              })),
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {

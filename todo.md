@@ -10140,15 +10140,35 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Write vitest tests for batch analysis endpoint (12 tests covering input validation, profit calculation, sorting, topDeals filtering, API failures)
 
 ## Save Top Deals + Auto-Paginate + Full Report Improvements - Feb 10, 2026
-- [ ] Save Top Deals action — let users save batch analysis results to favorites from the leaderboard
-- [ ] Auto-paginate & Analyze — "Load More & Analyze" button that fetches next 20 listings and runs batch analysis, building cumulative leaderboard
-- [ ] Audit Full Report feature — understand current client experience end-to-end
-- [ ] Improve Full Report for better client experience (comprehensive, non-technical, polished)
-- [ ] Write vitest tests for Save Top Deals and Auto-paginate features
-- [ ] Browser test all features end-to-end (happy path, edge cases, mobile)
+- [x] Save Top Deals action — "Save All X Top Deals" button saves all profitable properties to favorites in one click
+- [x] Auto-paginate & Analyze — "Load More & Auto-Analyze" button fetches next page and runs batch analysis
+- [x] Audit Full Report feature — identified 5 critical gaps for investor-grade quality
+- [x] Improve Full Report — added 4 new sections (Expenses, Regulations, Stress Test, Comparable Sales)
+- [x] Write vitest tests for Save Top Deals and Auto-paginate features (all 690 tests pass)
+- [x] Browser test all features end-to-end
 
 ## User-Configurable Profit Threshold - Feb 10, 2026
 - [x] Add minimum profit threshold input field before the Analyze All button (gold-themed with $ prefix and /mo suffix)
 - [x] Pass threshold to backend batchValidateProperties endpoint (minProfitThreshold parameter with default 500)
 - [x] Filter top deals based on user's custom threshold instead of hardcoded value
 - [x] Update batch results leaderboard to reflect the user's chosen bar (header shows "$X+/mo Profit")
+
+## Preset Threshold Buttons + Cumulative Leaderboard + Report Audit - Feb 10, 2026
+- [x] Add preset threshold quick-select buttons ($500, $1K, $2K, $3K) — verified: clicking $2K updates input to 2000 and button text to "Show deals above $2,000/mo"
+- [x] Build cumulative leaderboard that merges top deals across multiple Load More & Auto-Analyze pages — deduplicates by address, re-sorts by profit, keeps running total
+- [ ] Audit API call costs and add caching to reduce waste during testing
+- [x] Deep audit Full Report for investor-grade quality — identified missing stress test, itemized expenses, regulations, comp sales
+- [x] Implement Full Report improvements based on audit findings
+
+## Full Report Investor-Grade Upgrade - Feb 10, 2026
+- [x] Preset threshold buttons ($500, $1K, $2K, $3K) next to profit threshold input
+- [x] Cumulative leaderboard across Load More pages (merge top deals instead of replacing)
+- [x] Stress test / sensitivity analysis section (4x4 occupancy x ADR matrix showing monthly cash flow with color-coded cells)
+- [x] Itemized expense calculator (8 categories: cleaning, management, platform fees, utilities, supplies, maintenance, insurance, misc)
+- [ ] Supply trend chart (historical active listings from data already fetched)
+- [ ] Submarket comparison section (data already available from API)
+- [x] Integrate regulatory data from Step 1 into Full Report (status badge, permit requirements, restrictions)
+- [x] Integrate comparable sale prices from HasData API (recently sold properties with price/sqft, beds, baths)
+- [ ] Research and implement tax implications section (depreciation, cost segregation)
+- [x] Update AI summary prompt to cover all new report sections (Expense Analysis, Risk & Stress Test, Regulatory Environment, Comparable Sales)
+- [ ] Write tests for new report features

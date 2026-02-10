@@ -911,7 +911,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       
       setIsBatchAnalyzing(true);
       setBatchProgress(0);
-      setBatchResults(null);
+      // Don't reset batchResults — we want cumulative merging
       setShowBatchResults(false);
       
       const progressInterval = setInterval(() => {
@@ -964,16 +964,35 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           setValidationResults(prev => ({ ...prev, ...newValidations }));
         }
         
-        setBatchResults({
-          totalAnalyzed: batchResult.totalAnalyzed,
-          successCount: batchResult.successCount,
-          failedCount: batchResult.failedCount,
-          elapsedSeconds: batchResult.elapsedSeconds,
-          topDeals: batchResult.topDeals,
+        // Cumulative leaderboard: merge new top deals with existing ones
+        setBatchResults(prev => {
+          if (!prev) {
+            return {
+              totalAnalyzed: batchResult.totalAnalyzed,
+              successCount: batchResult.successCount,
+              failedCount: batchResult.failedCount,
+              elapsedSeconds: batchResult.elapsedSeconds,
+              topDeals: batchResult.topDeals,
+            };
+          }
+          // Merge: combine existing + new top deals, deduplicate by id, re-sort by profit
+          const existingIds = new Set(prev.topDeals.map(d => d.id));
+          const newDeals = batchResult.topDeals.filter(d => !existingIds.has(d.id));
+          const mergedDeals = [...prev.topDeals, ...newDeals]
+            .sort((a, b) => b.monthlyProfit - a.monthlyProfit);
+          
+          return {
+            totalAnalyzed: prev.totalAnalyzed + batchResult.totalAnalyzed,
+            successCount: prev.successCount + batchResult.successCount,
+            failedCount: prev.failedCount + batchResult.failedCount,
+            elapsedSeconds: prev.elapsedSeconds + batchResult.elapsedSeconds,
+            topDeals: mergedDeals,
+          };
         });
         setShowBatchResults(true);
         
-        toast.success(`Loaded & analyzed ${batchResult.successCount} new properties!`);
+        const newDealsFound = batchResult.topDeals.length;
+        toast.success(`Loaded & analyzed ${batchResult.successCount} new properties! ${newDealsFound > 0 ? `Found ${newDealsFound} new deal${newDealsFound > 1 ? 's' : ''} above your bar.` : 'No new deals above your bar.'}`);
       } catch (error) {
         console.error('Auto-analyze error:', error);
         clearInterval(progressInterval);
@@ -1462,23 +1481,41 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                       <label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'oklch(0.50 0.05 85)' }}>Minimum Monthly Profit</label>
                       <p className="text-xs mt-0.5" style={{ color: 'oklch(0.60 0 0)' }}>Only show deals that meet your profit bar</p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium" style={{ color: 'oklch(0.40 0 0)' }}>$</span>
-                      <input
-                        type="number"
-                        value={profitThreshold}
-                        onChange={(e) => setProfitThreshold(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="w-24 px-3 py-2 rounded-lg text-sm font-semibold text-right"
-                        style={{ 
-                          background: 'white',
-                          border: '1px solid oklch(0.80 0.04 85)',
-                          color: 'oklch(0.30 0 0)',
-                        }}
-                        min={0}
-                        step={100}
-                        placeholder="500"
-                      />
-                      <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>/mo</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Preset buttons */}
+                      {[500, 1000, 2000, 3000].map((preset) => (
+                        <button
+                          key={preset}
+                          onClick={() => setProfitThreshold(preset)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+                          style={{
+                            background: profitThreshold === preset ? 'oklch(0.55 0.12 85)' : 'white',
+                            color: profitThreshold === preset ? 'white' : 'oklch(0.40 0.05 85)',
+                            border: `1px solid ${profitThreshold === preset ? 'oklch(0.55 0.12 85)' : 'oklch(0.80 0.04 85)'}`,
+                          }}
+                        >
+                          ${preset >= 1000 ? `${preset / 1000}K` : preset}
+                        </button>
+                      ))}
+                      {/* Custom input */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-medium" style={{ color: 'oklch(0.40 0 0)' }}>$</span>
+                        <input
+                          type="number"
+                          value={profitThreshold}
+                          onChange={(e) => setProfitThreshold(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-20 px-2 py-1.5 rounded-lg text-sm font-semibold text-right"
+                          style={{ 
+                            background: 'white',
+                            border: '1px solid oklch(0.80 0.04 85)',
+                            color: 'oklch(0.30 0 0)',
+                          }}
+                          min={0}
+                          step={100}
+                          placeholder="500"
+                        />
+                        <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>/mo</span>
+                      </div>
                     </div>
                   </div>
                   
@@ -1549,9 +1586,11 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                             <Trophy className="w-5 h-5" style={{ color: 'oklch(0.75 0.14 75)' }} />
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-white">Batch Analysis Complete</h3>
+                            <h3 className="text-lg font-semibold text-white">
+                              {batchResults.totalAnalyzed > 20 ? 'Cumulative Analysis' : 'Batch Analysis Complete'}
+                            </h3>
                             <p className="text-sm" style={{ color: 'oklch(0.80 0 0)' }}>
-                              {batchResults.successCount} of {batchResults.totalAnalyzed} analyzed in {batchResults.elapsedSeconds}s
+                              {batchResults.successCount} of {batchResults.totalAnalyzed} analyzed{batchResults.totalAnalyzed > 20 ? ' across multiple pages' : ''} in {batchResults.elapsedSeconds}s
                             </p>
                           </div>
                         </div>
