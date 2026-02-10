@@ -858,9 +858,10 @@ export const opportunityFinderRouter = router({
         state: z.string().optional(),
         zipCode: z.string().optional(),
       })).min(1).max(20),
+      minProfitThreshold: z.number().min(0).default(500),
     }))
     .mutation(async ({ input }) => {
-      const { properties } = input;
+      const { properties, minProfitThreshold } = input;
       console.log(`[Batch Analyze] Starting batch analysis of ${properties.length} properties`);
       const startTime = Date.now();
 
@@ -921,7 +922,7 @@ export const opportunityFinderRouter = router({
               const monthlyProfit = monthlyRevenue - prop.rent - operatingCosts;
               const annualProfit = monthlyProfit * 12;
               const roi = (annualProfit / (prop.rent * 12)) * 100;
-              const isGoodDeal = monthlyProfit > 500 && estimate.occupancy > 50;
+              const isGoodDeal = monthlyProfit >= minProfitThreshold;
               const verdict = monthlyProfit > 1000 ? 'Excellent Opportunity' :
                               monthlyProfit > 500 ? 'Good Opportunity' :
                               monthlyProfit > 0 ? 'Marginal - Proceed with Caution' :

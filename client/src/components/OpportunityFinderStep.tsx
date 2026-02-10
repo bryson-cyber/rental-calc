@@ -82,7 +82,8 @@ import {
   Trophy,
   CheckCircle2,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Bookmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -525,6 +526,9 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     }>;
   } | null>(null);
   const [showBatchResults, setShowBatchResults] = useState(false);
+  const [isSavingTopDeals, setIsSavingTopDeals] = useState(false);
+  const [profitThreshold, setProfitThreshold] = useState(500);
+  const [savedTopDealsCount, setSavedTopDealsCount] = useState(0);
   
   // Sort properties client-side
   const sortProperties = (props: ZillowProperty[]): ZillowProperty[] => {
@@ -737,6 +741,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       
       const result = await batchValidate.mutateAsync({
         properties: propsToAnalyze,
+        minProfitThreshold: profitThreshold,
       });
       
       clearInterval(progressInterval);
@@ -779,6 +784,207 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
       toast.error('Batch analysis failed. Please try again.');
     } finally {
       setIsBatchAnalyzing(false);
+    }
+  };
+  
+  // Handle saving all top deals to favorites in one click
+  const handleSaveTopDeals = async () => {
+    if (!batchResults?.topDeals?.length) return;
+    
+    setIsSavingTopDeals(true);
+    setSavedTopDealsCount(0);
+    let savedCount = 0;
+    
+    for (const deal of batchResults.topDeals) {
+      // Skip if already in favorites
+      if (favorites.has(deal.id)) {
+        savedCount++;
+        setSavedTopDealsCount(savedCount);
+        continue;
+      }
+      
+      try {
+        const result = await addFavorite.mutateAsync({
+          sessionId: getSessionId(),
+          address: deal.address,
+          city: deal.city,
+          state: deal.state,
+          bedrooms: undefined, // Not available in topDeals summary
+          bathrooms: undefined,
+          monthlyRent: deal.rent,
+          zillowUrl: deal.zillowUrl,
+          imageUrl: deal.image,
+          annualRevenue: deal.annualProfit + deal.rent * 12, // Approximate from profit
+          monthlyRevenue: Math.round((deal.annualProfit + deal.rent * 12) / 12),
+          occupancyRate: deal.occupancy,
+          averageDailyRate: deal.adr,
+          estimatedProfit: deal.annualProfit,
+        });
+        
+        if (result.success && result.data?.id) {
+          // Update favorites state
+          setFavorites(prev => {
+            const newFavorites = new Set(prev);
+            newFavorites.add(deal.id);
+            localStorage.setItem('opportunityFinder_favorites', JSON.stringify(Array.from(newFavorites)));
+            return newFavorites;
+          });
+          setFavoritesDbIds(prev => {
+            const newMap = new Map(prev);
+            newMap.set(deal.id, result.data!.id);
+            return newMap;
+          });
+          savedCount++;
+          setSavedTopDealsCount(savedCount);
+        }
+      } catch (error) {
+        console.error(`Error saving deal ${deal.address}:`, error);
+      }
+    }
+    
+    setIsSavingTopDeals(false);
+    if (savedCount > 0) {
+      toast.success(`Saved ${savedCount} top deal${savedCount > 1 ? 's' : ''} to favorites!`);
+    } else {
+      toast.info('All top deals are already in your favorites.');
+    }
+  };
+  
+  // Handle Load More & Auto-Analyze: fetches next page then batch-analyzes the new properties
+  const handleLoadMoreAndAnalyze = async () => {
+    if (!hasMore || isLoadingMore || isBatchAnalyzing) return;
+    
+    // Step 1: Load more properties
+    setIsLoadingMore(true);
+    const nextPage = currentPage + 1;
+    
+    try {
+      const params = {
+        location: location.trim(),
+        priceMin: priceMin ? parseInt(priceMin) : undefined,
+        priceMax: priceMax ? parseInt(priceMax) : undefined,
+        bedsMin: bedsMin ? parseInt(bedsMin) : undefined,
+        bedsMax: bedsMax ? parseInt(bedsMax) : undefined,
+        bathsMin: bathsMin ? parseFloat(bathsMin) : undefined,
+        bathsMax: bathsMax ? parseFloat(bathsMax) : undefined,
+        homeTypes: homeType ? [homeType] : undefined,
+        page: nextPage,
+        loadMore: true,
+      };
+      
+      const result = searchType === 'forRent'
+        ? await searchRentals.mutateAsync(params)
+        : await searchForSale.mutateAsync(params);
+      
+      const newProperties = result.properties;
+      
+      // Append to existing properties
+      setProperties(prev => [...prev, ...newProperties]);
+      setTotalResults(prev => result.totalResults > 0 ? result.totalResults : prev);
+      setHasMore(result.hasMore || false);
+      setCurrentPage(nextPage);
+      setIsLoadingMore(false);
+      
+      // Save state
+      const allProperties = [...properties, ...newProperties];
+      const savedTotalResults = result.totalResults === 0 ? totalResults : result.totalResults;
+      saveState({
+        location: location.trim(),
+        searchType,
+        properties: allProperties,
+        totalResults: savedTotalResults,
+        hasMore: result.hasMore || false,
+        hasSearched: true,
+      });
+      
+      if (newProperties.length === 0) {
+        toast.info('No more properties to load.');
+        return;
+      }
+      
+      // Step 2: Auto-navigate to the last page to show new properties
+      const newTotalPages = Math.ceil(allProperties.length / pageSize);
+      setDisplayPage(newTotalPages);
+      
+      // Step 3: Auto-run batch analysis on the newly loaded properties
+      toast.info(`Loaded ${newProperties.length} new properties. Running analysis...`);
+      
+      setIsBatchAnalyzing(true);
+      setBatchProgress(0);
+      setBatchResults(null);
+      setShowBatchResults(false);
+      
+      const progressInterval = setInterval(() => {
+        setBatchProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 8;
+        });
+      }, 500);
+      
+      try {
+        const propsToAnalyze = newProperties.slice(0, 20).map(p => ({
+          id: p.id,
+          address: p.address,
+          rent: p.price,
+          bedrooms: p.bedrooms || 2,
+          bathrooms: p.bathrooms || 1,
+          zillowUrl: p.url,
+          image: p.image,
+          city: p.city,
+          state: p.state,
+          zipCode: p.zipCode,
+        }));
+        
+        const batchResult = await batchValidate.mutateAsync({
+          properties: propsToAnalyze,
+          minProfitThreshold: profitThreshold,
+        });
+        
+        clearInterval(progressInterval);
+        setBatchProgress(100);
+        
+        // Update individual validation results
+        if (batchResult.results) {
+          const newValidations: Record<string, ValidationResult> = {};
+          for (const r of batchResult.results) {
+            newValidations[r.id] = {
+              success: r.success,
+              property: {
+                address: r.property.address,
+                rent: r.property.rent,
+                bedrooms: r.property.bedrooms,
+                bathrooms: r.property.bathrooms,
+              },
+              projection: r.projection,
+              verdict: r.verdict,
+              isGoodDeal: r.isGoodDeal,
+              error: r.error,
+            };
+          }
+          setValidationResults(prev => ({ ...prev, ...newValidations }));
+        }
+        
+        setBatchResults({
+          totalAnalyzed: batchResult.totalAnalyzed,
+          successCount: batchResult.successCount,
+          failedCount: batchResult.failedCount,
+          elapsedSeconds: batchResult.elapsedSeconds,
+          topDeals: batchResult.topDeals,
+        });
+        setShowBatchResults(true);
+        
+        toast.success(`Loaded & analyzed ${batchResult.successCount} new properties!`);
+      } catch (error) {
+        console.error('Auto-analyze error:', error);
+        clearInterval(progressInterval);
+        toast.error('Analysis failed, but properties were loaded.');
+      } finally {
+        setIsBatchAnalyzing(false);
+      }
+    } catch (error) {
+      console.error('Load more error:', error);
+      setIsLoadingMore(false);
+      toast.error('Failed to load more properties.');
     }
   };
   
@@ -1246,22 +1452,51 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
           {/* Batch Analyze All Button */}
           {displayedProperties.length > 0 && !isSearching && (
             <div className="mt-4">
-              {/* Analyze All Button */}
+              {/* Profit Threshold + Analyze All Button */}
               {!isBatchAnalyzing && !showBatchResults && (
-                <motion.button
-                  onClick={handleBatchAnalyze}
-                  className="w-full py-4 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg"
-                  style={{ 
-                    background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.40 0.12 160))',
-                    boxShadow: '0 4px 14px oklch(0.45 0.15 145 / 0.3)',
-                  }}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <Zap className="w-5 h-5" />
-                  <span>Analyze All {Math.min(displayedProperties.length, 20)} Properties</span>
-                  <span className="text-sm opacity-80">— Find the Top Deals Instantly</span>
-                </motion.button>
+                <div className="space-y-3">
+                  {/* Minimum Profit Threshold Input */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'oklch(0.97 0.005 85)', border: '1px solid oklch(0.85 0.04 85)' }}>
+                    <DollarSign className="w-5 h-5 flex-shrink-0" style={{ color: 'oklch(0.55 0.12 85)' }} />
+                    <div className="flex-1">
+                      <label className="text-xs font-medium uppercase tracking-wider" style={{ color: 'oklch(0.50 0.05 85)' }}>Minimum Monthly Profit</label>
+                      <p className="text-xs mt-0.5" style={{ color: 'oklch(0.60 0 0)' }}>Only show deals that meet your profit bar</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-medium" style={{ color: 'oklch(0.40 0 0)' }}>$</span>
+                      <input
+                        type="number"
+                        value={profitThreshold}
+                        onChange={(e) => setProfitThreshold(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-24 px-3 py-2 rounded-lg text-sm font-semibold text-right"
+                        style={{ 
+                          background: 'white',
+                          border: '1px solid oklch(0.80 0.04 85)',
+                          color: 'oklch(0.30 0 0)',
+                        }}
+                        min={0}
+                        step={100}
+                        placeholder="500"
+                      />
+                      <span className="text-xs" style={{ color: 'oklch(0.55 0 0)' }}>/mo</span>
+                    </div>
+                  </div>
+                  
+                  <motion.button
+                    onClick={handleBatchAnalyze}
+                    className="w-full py-4 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg"
+                    style={{ 
+                      background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.40 0.12 160))',
+                      boxShadow: '0 4px 14px oklch(0.45 0.15 145 / 0.3)',
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <Zap className="w-5 h-5" />
+                    <span>Analyze All {Math.min(displayedProperties.length, 20)} Properties</span>
+                    <span className="text-sm opacity-80">— Show deals above ${profitThreshold.toLocaleString()}/mo</span>
+                  </motion.button>
+                </div>
               )}
               
               {/* Progress Bar */}
@@ -1358,7 +1593,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     {batchResults.topDeals.length > 0 ? (
                       <div className="p-4" style={{ backgroundColor: 'oklch(0.99 0 0)' }}>
                         <h4 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'oklch(0.45 0 0)' }}>
-                          Top Deals — Ranked by Monthly Profit
+                          Top Deals — ${profitThreshold.toLocaleString()}+/mo Profit
                         </h4>
                         <div className="space-y-3">
                           {batchResults.topDeals.map((deal, idx) => (
@@ -1439,14 +1674,40 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                           ))}
                         </div>
                         
-                        {/* Re-analyze button */}
-                        <div className="mt-4 flex justify-center">
+                        {/* Action buttons: Save Top Deals + Re-analyze */}
+                        <div className="mt-4 flex flex-wrap justify-center gap-3">
                           <button
-                            onClick={() => { setShowBatchResults(false); setBatchResults(null); }}
-                            className="text-sm px-4 py-2 rounded-lg transition-colors"
+                            onClick={handleSaveTopDeals}
+                            disabled={isSavingTopDeals || batchResults.topDeals.every(d => favorites.has(d.id))}
+                            className="text-sm px-5 py-2.5 rounded-lg transition-all font-medium flex items-center gap-2 disabled:opacity-50"
+                            style={{ 
+                              backgroundColor: batchResults.topDeals.every(d => favorites.has(d.id)) ? 'oklch(0.92 0.03 145)' : 'oklch(0.55 0.14 75)',
+                              color: batchResults.topDeals.every(d => favorites.has(d.id)) ? 'oklch(0.35 0.12 145)' : 'white',
+                            }}
+                          >
+                            {isSavingTopDeals ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Saving {savedTopDealsCount}/{batchResults.topDeals.length}...
+                              </>
+                            ) : batchResults.topDeals.every(d => favorites.has(d.id)) ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                All Saved to Favorites
+                              </>
+                            ) : (
+                              <>
+                                <Bookmark className="w-4 h-4" />
+                                Save All {batchResults.topDeals.length} Top Deals
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => { setShowBatchResults(false); setBatchResults(null); setSavedTopDealsCount(0); }}
+                            className="text-sm px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2"
                             style={{ color: 'oklch(0.45 0 0)', backgroundColor: 'oklch(0.96 0 0)' }}
                           >
-                            <RotateCcw className="w-4 h-4 inline mr-2" />
+                            <RotateCcw className="w-4 h-4" />
                             Analyze Again
                           </button>
                         </div>
@@ -1456,7 +1717,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                         <AlertTriangle className="w-10 h-10 mx-auto mb-3" style={{ color: 'oklch(0.60 0.12 60)' }} />
                         <p className="font-medium" style={{ color: 'oklch(0.25 0 0)' }}>No Strong Deals Found</p>
                         <p className="text-sm mt-1" style={{ color: 'oklch(0.55 0 0)' }}>
-                          None of the {batchResults.totalAnalyzed} properties met the profitability threshold. Try a different market or adjust your filters.
+                          None of the {batchResults.totalAnalyzed} properties hit your ${profitThreshold.toLocaleString()}/mo profit bar. Try lowering your threshold or searching a different market.
                         </p>
                         <button
                           onClick={() => { setShowBatchResults(false); setBatchResults(null); }}
@@ -2300,7 +2561,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                 })}
               </div>
               
-              {/* Load More Button - Prominent display when more properties available */}
+              {/* Load More Buttons - Prominent display when more properties available */}
               {hasMore && (
                 <div className="mt-8 text-center">
                   <div className="mb-3">
@@ -2308,27 +2569,51 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                       Showing {sortedProperties.length} of {totalResults} properties
                     </p>
                   </div>
-                  <Button
-                    onClick={handleLoadMore}
-                    disabled={isLoadingMore}
-                    className="px-8 py-3 text-base font-semibold"
-                    style={{
-                      backgroundColor: 'oklch(0.55 0.14 75)',
-                      borderRadius: '980px',
-                    }}
-                  >
-                    {isLoadingMore ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        Loading More Properties...
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-5 h-5 mr-2" />
-                        Load More Properties ({totalResults - sortedProperties.length} remaining)
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <Button
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore || isBatchAnalyzing}
+                      className="px-8 py-3 text-base font-semibold"
+                      style={{
+                        backgroundColor: 'oklch(0.55 0.14 75)',
+                        borderRadius: '980px',
+                      }}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                          Loading More Properties...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-5 h-5 mr-2" />
+                          Load More ({totalResults - sortedProperties.length} remaining)
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleLoadMoreAndAnalyze}
+                      disabled={isLoadingMore || isBatchAnalyzing}
+                      className="px-8 py-3 text-base font-semibold"
+                      style={{
+                        background: 'linear-gradient(135deg, oklch(0.45 0.15 145), oklch(0.55 0.14 75))',
+                        borderRadius: '980px',
+                        color: 'white',
+                      }}
+                    >
+                      {isBatchAnalyzing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          Load More & Auto-Analyze
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
             </>

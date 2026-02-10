@@ -10138,3 +10138,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Build batch results leaderboard UI showing top deals ranked by profitability (gold-themed panel with rank badges, profit/occupancy/ROI tags)
 - [x] Handle loading states, progress indicator, and error handling for batch analysis (animated progress bar with percentage)
 - [x] Write vitest tests for batch analysis endpoint (12 tests covering input validation, profit calculation, sorting, topDeals filtering, API failures)
+
+## Save Top Deals + Auto-Paginate + Full Report Improvements - Feb 10, 2026
+- [ ] Save Top Deals action — let users save batch analysis results to favorites from the leaderboard
+- [ ] Auto-paginate & Analyze — "Load More & Analyze" button that fetches next 20 listings and runs batch analysis, building cumulative leaderboard
+- [ ] Audit Full Report feature — understand current client experience end-to-end
+- [ ] Improve Full Report for better client experience (comprehensive, non-technical, polished)
+- [ ] Write vitest tests for Save Top Deals and Auto-paginate features
+- [ ] Browser test all features end-to-end (happy path, edge cases, mobile)
+
+## User-Configurable Profit Threshold - Feb 10, 2026
+- [x] Add minimum profit threshold input field before the Analyze All button (gold-themed with $ prefix and /mo suffix)
+- [x] Pass threshold to backend batchValidateProperties endpoint (minProfitThreshold parameter with default 500)
+- [x] Filter top deals based on user's custom threshold instead of hardcoded value
+- [x] Update batch results leaderboard to reflect the user's chosen bar (header shows "$X+/mo Profit")
