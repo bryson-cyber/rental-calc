@@ -10038,3 +10038,13 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Added "Generate Pre-Encoded Links" tool in AdminPortal for sales emails/sequences (where HubL is unavailable)
 - [x] Updated useWebhook.ts documentation comments with urlencode instructions
 - [x] Added AI Advisor to the list of copyable tool links
+
+## Update HubSpot Email Templates with URL Encoding (Feb 10, 2026) - COMPLETE
+- [x] Find all places in codebase where HubSpot email links use raw city/state without encoding
+- [x] Confirmed: All server-side code already uses encodeURIComponent/URLSearchParams correctly
+- [x] Root cause: HubSpot email template uses raw {{contact.data_perfection__city}} without |urlencode filter
+- [x] Updated AdminPortal HubSpot templates section with |urlencode filter in all links
+- [x] Added URL encoding warning banner in AdminPortal
+- [x] Added pre-encoded link generator tool for sales emails/sequences
+- [x] Test Las Vegas AI Advisor link: https://coachinayahturnkeytool.com/?tab=advisor&city=Las+Vegas&state=NV works correctly
+- [ ] ACTION REQUIRED: Manually update HubSpot email templates to use |urlencode filter (cannot be done via API - missing content scope)
