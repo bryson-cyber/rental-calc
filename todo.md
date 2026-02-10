@@ -9977,3 +9977,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Display thumbnail next to comp title in the competition section
 - [x] Handle missing/broken images gracefully with Building icon fallback
 - [x] Ensure thumbnails are responsive and don't break table layout
+
+## Standalone Full Report Entry Point (Feb 10, 2026)
+- [x] Add standalone Full Report option accessible directly from the main page
+- [x] Allow users to generate a Full Report without going through Steps 1-4
+- [x] Created dedicated /full-report page with address + property details form
+- [x] Added prominent CTA card on main page between "Start with Your Property" and "Research Toolkit"
+- [x] Created server endpoint sharedReports.generateFromAddress with full AirDNA data pipeline
+- [x] Wired up route in App.tsx
+- [x] All 615 tests passing

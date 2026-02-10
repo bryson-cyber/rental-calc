@@ -5786,6 +5786,285 @@ export const appRouter = router({
         }
       }),
 
+    // Generate a full report from scratch using just address + property details
+    generateFromAddress: protectedProcedure
+      .input(z.object({
+        address: z.string().min(5),
+        bedrooms: z.number().int().min(1).max(10),
+        bathrooms: z.number().min(1).max(10),
+        accommodates: z.number().int().min(1).max(20).optional(),
+        monthlyRent: z.number().optional(),
+        purchasePrice: z.number().optional(),
+        downPaymentPercent: z.number().optional(),
+        interestRate: z.number().optional(),
+        loanType: z.string().optional(),
+        preparedFor: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        const { address, bedrooms, bathrooms, preparedFor } = input;
+        const accommodates = input.accommodates || bedrooms * 2;
+        
+        console.log(`[GenerateFromAddress] Starting full report for ${address} (${bedrooms}BR/${bathrooms}BA)...`);
+        
+        try {
+          // Step 1: Fetch comprehensive property data from AirDNA
+          const freshReport = await getComprehensivePropertyReport(
+            address,
+            bedrooms,
+            bathrooms,
+            accommodates
+          );
+          
+          if (!freshReport) {
+            return { success: false as const, error: 'Failed to fetch data from AirDNA. Please check the address and try again.' };
+          }
+          
+          const prop = freshReport.property as any;
+          const market = freshReport.market as any;
+          const comps = (prop?.comps || []) as any[];
+          const sameBedComps = (freshReport.same_bedroom_comps || []) as any[];
+          const bedroomPerf = (freshReport.bedroom_performance || []) as any[];
+          const rawHistorical = freshReport.market?.historical as any;
+          const historicalValuation = (freshReport as any).historical_valuation as any;
+          
+          // Build historical_data with both summary (YoY) and monthly data
+          const historical = {
+            summary: {
+              yoy_revenue_change: historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0,
+              yoy_occupancy_change: rawHistorical?.summary?.occupancy_valuation?.yearly_pct_change ?? 0,
+              yoy_adr_change: rawHistorical?.summary?.adr_valuation?.yearly_pct_change ?? 0,
+              yearly_pct_change: historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0,
+              monthly_pct_change: rawHistorical?.summary?.revenue_valuation?.monthly_pct_change ?? 0,
+              trend: (() => {
+                const change = historicalValuation?.yoy_perc_chg ?? rawHistorical?.summary?.revenue_valuation?.yearly_pct_change ?? 0;
+                return change > 2 ? 'up' : change < -2 ? 'down' : 'stable';
+              })(),
+            },
+            months: rawHistorical?.revenue?.map((r: any, idx: number) => ({
+              date: r.date || r.month || '',
+              revenue: r.value || r.revenue || 0,
+              occupancy: rawHistorical?.occupancy?.[idx]?.value,
+              adr: rawHistorical?.adr?.[idx]?.value,
+            })) || [],
+          };
+          
+          // Step 2: Build the report data structure
+          const occRate = prop?.estimates?.occupancy_rate || 0;
+          const adr = prop?.estimates?.average_daily_rate || 0;
+          const annualRev = prop?.estimates?.annual_revenue || 0;
+          
+          // Calculate revenue percentiles from comps
+          const compRevenues = [...comps, ...sameBedComps]
+            .filter((c: any) => c.annual_revenue > 0)
+            .map((c: any) => c.annual_revenue)
+            .sort((a: number, b: number) => a - b);
+          const uniqueRevenues = Array.from(new Set(compRevenues));
+          let revenuePercentiles = undefined;
+          if (uniqueRevenues.length >= 5) {
+            revenuePercentiles = {
+              p10: uniqueRevenues[Math.floor(uniqueRevenues.length * 10 / 100)],
+              p25: uniqueRevenues[Math.floor(uniqueRevenues.length * 25 / 100)],
+              p50: uniqueRevenues[Math.floor(uniqueRevenues.length * 50 / 100)],
+              p75: uniqueRevenues[Math.floor(uniqueRevenues.length * 75 / 100)],
+              p90: uniqueRevenues[Math.floor(uniqueRevenues.length * 90 / 100)],
+            };
+          }
+          
+          let reportData: any = {
+            property: {
+              address: address,
+              city: prop?.property?._geocoded_city || prop?.property?.address_lookup?.split(',')[0]?.trim() || market?.name || '',
+              state: prop?.property?._geocoded_state || prop?.property?.address_lookup?.split(',')[1]?.trim() || '',
+              zipCode: prop?.property?.zipcode || '',
+              bedrooms: bedrooms,
+              bathrooms: bathrooms,
+              accommodates: accommodates,
+              latitude: prop?.property?.latitude,
+              longitude: prop?.property?.longitude,
+            },
+            revenue_estimate: {
+              annual: annualRev,
+              monthly: Math.round(annualRev / 12),
+              nightly: adr,
+              occupancy: occRate,
+              range: {
+                low: prop?.estimates?.annual_revenue_low || Math.round(annualRev * 0.9),
+                high: prop?.estimates?.annual_revenue_high || Math.round(annualRev * 1.1),
+              },
+            },
+            monthly_forecast: prop?.monthly_forecast || [],
+            market_data: market ? {
+              name: market.name || 'Local Market',
+              listing_count: market.listing_count || market.metrics?.active_listings || 0,
+              metrics: {
+                occupancy: market.metrics?.occupancy || occRate,
+                adr: market.metrics?.adr || adr,
+                revenue: market.metrics?.revenue || annualRev,
+                active_listings: market.metrics?.active_listings || market.listing_count || 0,
+                market_score: market.metrics?.market_score,
+              },
+            } : undefined,
+            bedroom_performance: bedroomPerf,
+            revenue_percentiles: revenuePercentiles,
+            historical_data: historical,
+            comps: comps.map((c: any) => {
+              const listingId = c.airbnb_listing_id || c.id?.replace('abnb_', '') || '';
+              const matchingSbc = sameBedComps.find((sbc: any) => {
+                const sbcId = sbc.airbnb_listing_id || sbc.id?.replace('abnb_', '') || '';
+                return sbcId && listingId && sbcId === listingId;
+              });
+              return {
+                title: c.title || c.name || 'Competitor',
+                bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
+                annual_revenue: c.annual_revenue || 0,
+                adr: c.adr || 0,
+                occupancy: c.occupancy || 0,
+                rating: c.rating,
+                reviews: c.reviews || 0,
+                distance_meters: c.distance_meters,
+                airbnb_url: c.airbnb_url || c.url,
+                airbnb_listing_id: c.airbnb_listing_id || c.id?.replace('abnb_', ''),
+                image_url: c.image_url,
+                latitude: c.latitude || matchingSbc?.latitude || null,
+                longitude: c.longitude || matchingSbc?.longitude || null,
+              };
+            }),
+            same_bedroom_comps: sameBedComps.map((c: any) => ({
+              title: c.title || c.name || 'Competitor',
+              bedrooms: c.bedrooms,
+              bathrooms: c.bathrooms,
+              annual_revenue: c.annual_revenue || 0,
+              adr: c.adr || 0,
+              occupancy: c.occupancy || 0,
+              rating: c.rating,
+              reviews: c.reviews || 0,
+              airbnb_url: c.airbnb_url || c.url,
+              airbnb_listing_id: c.airbnb_listing_id || c.id?.replace('abnb_', ''),
+              image_url: c.image_url,
+              latitude: c.latitude || null,
+              longitude: c.longitude || null,
+            })),
+            prepared_for: preparedFor || ctx.user?.name || undefined,
+          };
+          
+          // Add rental arbitrage if monthly rent provided
+          if (input.monthlyRent && input.monthlyRent > 0) {
+            const monthlyRev = Math.round(annualRev / 12);
+            const expenses = Math.round(monthlyRev * 0.30);
+            reportData.rental_arbitrage = {
+              monthly_rent: input.monthlyRent,
+              monthly_revenue: monthlyRev,
+              monthly_expenses: expenses,
+              monthly_profit: monthlyRev - input.monthlyRent - expenses,
+              annual_profit: (monthlyRev - input.monthlyRent - expenses) * 12,
+              roi_percent: ((monthlyRev - input.monthlyRent - expenses) / input.monthlyRent) * 100,
+            };
+          }
+          
+          // Add purchase scenario if purchase price provided
+          if (input.purchasePrice && input.purchasePrice > 0) {
+            const downPct = input.downPaymentPercent || 20;
+            const rate = input.interestRate || 7;
+            const downPayment = input.purchasePrice * (downPct / 100);
+            const loanAmount = input.purchasePrice - downPayment;
+            const monthlyRate = rate / 100 / 12;
+            const numPayments = 360;
+            const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
+            const monthlyRev = Math.round(annualRev / 12);
+            const expenses = Math.round(monthlyRev * 0.30);
+            reportData.purchase = {
+              purchase_price: input.purchasePrice,
+              down_payment: downPayment,
+              down_payment_percent: downPct,
+              loan_amount: loanAmount,
+              interest_rate: rate,
+              loan_type: input.loanType || 'conventional',
+              monthly_mortgage: Math.round(monthlyMortgage),
+              monthly_revenue: monthlyRev,
+              monthly_expenses: expenses,
+              monthly_cash_flow: monthlyRev - Math.round(monthlyMortgage) - expenses,
+              annual_cash_flow: (monthlyRev - Math.round(monthlyMortgage) - expenses) * 12,
+              cap_rate: (annualRev * 0.70) / input.purchasePrice * 100,
+              cash_on_cash: ((monthlyRev - Math.round(monthlyMortgage) - expenses) * 12) / downPayment * 100,
+            };
+          }
+          
+          // Step 3: Generate AI summary
+          console.log('[GenerateFromAddress] Generating AI summary via Gemini 3 Pro...');
+          try {
+            const summaryInput: FullReportSummaryInput = {
+              property: reportData.property,
+              revenue: reportData.revenue_estimate,
+              monthlyForecast: reportData.monthly_forecast,
+              marketData: reportData.market_data ? {
+                name: reportData.market_data.name,
+                occupancy: reportData.market_data.metrics?.occupancy || 0,
+                adr: reportData.market_data.metrics?.adr || 0,
+                revenue: reportData.market_data.metrics?.revenue || 0,
+                listingCount: reportData.market_data.listing_count || 0,
+                marketScore: reportData.market_data.metrics?.market_score ? Math.round(reportData.market_data.metrics.market_score) : undefined,
+              } : undefined,
+              bedroomPerformance: reportData.bedroom_performance,
+              competitors: reportData.comps.slice(0, 15).map((c: any) => ({
+                name: c.title,
+                revenue: c.annual_revenue,
+                adr: c.adr,
+                occupancy: c.occupancy,
+                rating: c.rating,
+                reviews: c.reviews,
+                bedrooms: c.bedrooms,
+              })),
+              revenuePercentiles: reportData.revenue_percentiles,
+              historicalData: reportData.historical_data,
+              rentalArbitrage: reportData.rental_arbitrage,
+              purchase: reportData.purchase,
+              preparedFor: reportData.prepared_for,
+            };
+            const aiSummary = await generateFullReportSummary(summaryInput);
+            if (aiSummary && aiSummary.length > 100) {
+              reportData.ai_summary = aiSummary;
+              console.log(`[GenerateFromAddress] AI summary generated (${aiSummary.length} chars)`);
+            }
+          } catch (aiErr) {
+            console.error('[GenerateFromAddress] AI summary generation failed:', aiErr);
+          }
+          
+          // Step 4: Save to database
+          const shareId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+          const reportDataStr = JSON.stringify(reportData);
+          
+          await db.insert(sharedReports).values({
+            shareId,
+            reportType: 'full',
+            address: address,
+            latitude: prop?.property?.latitude?.toString(),
+            longitude: prop?.property?.longitude?.toString(),
+            bedrooms: bedrooms,
+            bathrooms: bathrooms.toString(),
+            accommodates: accommodates,
+            reportData: reportDataStr,
+            createdByUserId: ctx.user?.id,
+            createdByName: ctx.user?.name || 'Coach Inayah',
+          });
+          
+          console.log(`[GenerateFromAddress] Report created with shareId: ${shareId}`);
+          
+          return {
+            success: true as const,
+            shareId,
+            shareUrl: `/report/${shareId}`,
+          };
+        } catch (error) {
+          console.error('[GenerateFromAddress] Error:', error);
+          const message = error instanceof Error ? error.message : 'Failed to generate report';
+          return { success: false as const, error: message };
+        }
+      }),
+
     // Delete a shared report
     delete: publicProcedure
       .input(z.object({

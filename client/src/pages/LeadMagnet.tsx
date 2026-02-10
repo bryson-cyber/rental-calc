@@ -80,7 +80,8 @@ import {
   Building,
   Calculator,
   Award,
-  Share2
+  Share2,
+  FileText
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
 import { MapViewContent } from '@/components/MapViewContent';
@@ -2200,6 +2201,34 @@ export default function LeadMagnet() {
                 setActiveTab(step as TabType);
               }}
             />
+          </div>
+          
+          {/* Full Report CTA - Standalone Entry Point */}
+          <div className="mb-12">
+            <button
+              onClick={() => {
+                window.location.href = '/full-report';
+              }}
+              className="w-full group relative overflow-hidden rounded-2xl border-2 border-[oklch(0.78_0.12_75)]/30 bg-gradient-to-br from-[oklch(0.78_0.12_75)]/5 via-white to-[oklch(0.78_0.12_75)]/10 p-6 md:p-8 text-left hover:border-[oklch(0.78_0.12_75)]/50 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="flex items-start gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-[oklch(0.78_0.12_75)] flex items-center justify-center flex-shrink-0 shadow-md">
+                  <FileText className="w-7 h-7 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[oklch(0.55_0.12_75)] bg-[oklch(0.78_0.12_75)]/15 px-2.5 py-0.5 rounded-full">New</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-[oklch(0.15_0_0)] mb-1.5 group-hover:text-[oklch(0.55_0.12_75)] transition-colors">
+                    Generate a Full Property Report
+                  </h3>
+                  <p className="text-[oklch(0.45_0_0)] text-sm leading-relaxed">
+                    Enter any address and get a comprehensive report with revenue projections, market data, comparable properties, maps, and an AI executive summary — all in one step.
+                  </p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-[oklch(0.55_0.12_75)] flex-shrink-0 mt-2 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
           </div>
           
           {/* Section Header */}

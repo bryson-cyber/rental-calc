@@ -38,6 +38,7 @@ import NewsletterDashboard from "./pages/admin/NewsletterDashboard";
 import ApiUsageDashboard from "./pages/ApiUsage";
 import AdminUsers from "./pages/AdminUsers";
 import UnifiedAdmin from "./pages/UnifiedAdmin";
+import FullReportGenerator from "./pages/FullReportGenerator";
 
 function Router() {
   return (
@@ -101,6 +102,9 @@ function Router() {
       
       {/* Investment Calculator - For property buyers */}
       <Route path="/investment-calculator" component={InvestmentCalculator} />
+      
+      {/* Full Report Generator - Standalone report from address */}
+      <Route path="/full-report" component={FullReportGenerator} />
       
       {/* Legacy/admin routes */}
       <Route path={"/full-analysis"} component={PropertyAnalyzer} />
