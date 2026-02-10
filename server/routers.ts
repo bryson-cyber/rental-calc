@@ -5721,6 +5721,20 @@ export const appRouter = router({
             purchase: existingData.purchase,
             rental_arbitrage: existingData.rental_arbitrage,
             prepared_for: existingData.prepared_for,
+            // Supply trend and submarket data
+            supply_trend: (rawHistorical?.active_listings || []).map((d: any) => ({ date: d.date, value: d.value })),
+            submarkets: ((freshReport.submarkets || []) as any[]).map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              listing_count: s.listing_count || 0,
+              metrics: s.metrics ? {
+                occupancy: s.metrics.occupancy || 0,
+                adr: s.metrics.adr || 0,
+                revenue: s.metrics.revenue || 0,
+                revpar: s.metrics.revpar || 0,
+                market_score: s.metrics.market_score,
+              } : undefined,
+            })),
           };
           
           // Step 3: Generate comprehensive AI summary via Gemini 3 Pro
@@ -5958,6 +5972,20 @@ export const appRouter = router({
               longitude: c.longitude || null,
             })),
             prepared_for: preparedFor || ctx.user?.name || undefined,
+            // Supply trend and submarket data
+            supply_trend: (rawHistorical?.active_listings || []).map((d: any) => ({ date: d.date, value: d.value })),
+            submarkets: ((freshReport.submarkets || []) as any[]).map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              listing_count: s.listing_count || 0,
+              metrics: s.metrics ? {
+                occupancy: s.metrics.occupancy || 0,
+                adr: s.metrics.adr || 0,
+                revenue: s.metrics.revenue || 0,
+                revpar: s.metrics.revpar || 0,
+                market_score: s.metrics.market_score,
+              } : undefined,
+            })),
           };
           
           // === ITEMIZED EXPENSE BREAKDOWN ===
@@ -6188,6 +6216,14 @@ export const appRouter = router({
                 bathrooms: c.bathrooms || 0,
                 sqft: c.sqft,
               })),
+              supplyTrend: reportData.supply_trend?.length > 0 ? reportData.supply_trend : undefined,
+              submarkets: reportData.submarkets?.length > 0 ? reportData.submarkets.map((s: any) => ({
+                name: s.name,
+                listing_count: s.listing_count,
+                revenue: s.metrics?.revenue || 0,
+                occupancy: s.metrics?.occupancy || 0,
+                adr: s.metrics?.adr || 0,
+              })) : undefined,
             };
             const aiSummary = await generateFullReportSummary(summaryInput);
             if (aiSummary && aiSummary.length > 100) {

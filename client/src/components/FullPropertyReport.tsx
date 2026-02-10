@@ -181,6 +181,19 @@ interface HistoricalData {
   }>;
 }
 
+interface SubmarketInfo {
+  id: string;
+  name: string;
+  listing_count: number;
+  metrics?: {
+    occupancy: number;
+    adr: number;
+    revenue: number;
+    revpar: number;
+    market_score?: number;
+  };
+}
+
 export interface FullReportData {
   property: PropertyInfo;
   revenue_estimate: RevenueEstimate;
@@ -203,6 +216,9 @@ export interface FullReportData {
   itemized_expenses?: ItemizedExpenses;
   regulation?: RegulationData;
   comparable_sales?: ComparableSale[];
+  // Supply trend and submarket data
+  supply_trend?: Array<{ date: string; value: number }>;
+  submarkets?: SubmarketInfo[];
 }
 
 interface StressTestScenario {
@@ -367,10 +383,11 @@ const SECTIONS = [
   { id: 'sales', label: 'Comp Sales', icon: Landmark },
   { id: 'rental', label: 'Rental Arbitrage', icon: Building },
   { id: 'purchase', label: 'Purchase', icon: Landmark },
+  { id: 'tax', label: 'Tax Implications', icon: Calculator },
   { id: 'summary', label: 'Summary', icon: Sparkles },
 ];
 
-function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, hasExpenses, hasRegulation, hasStressTest, hasSales }: {
+function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, hasExpenses, hasRegulation, hasStressTest, hasSales, hasTax }: {
   activeSection: string;
   onSectionClick: (id: string) => void;
   hasRental: boolean;
@@ -379,6 +396,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
   hasRegulation?: boolean;
   hasStressTest?: boolean;
   hasSales?: boolean;
+  hasTax?: boolean;
 }) {
   const visibleSections = SECTIONS.filter(s => {
     if (s.id === 'rental' && !hasRental) return false;
@@ -387,6 +405,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
     if (s.id === 'regulation' && !hasRegulation) return false;
     if (s.id === 'stress' && !hasStressTest) return false;
     if (s.id === 'sales' && !hasSales) return false;
+    if (s.id === 'tax' && !hasTax) return false;
     return true;
   });
 
@@ -468,6 +487,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     itemized_expenses,
     regulation,
     comparable_sales,
+    supply_trend,
+    submarkets,
   } = data;
 
   const displayComps = (same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps)
@@ -673,6 +694,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         hasRegulation={hasRegulation}
         hasStressTest={hasStressTest}
         hasSales={hasSales}
+        hasTax={hasRental || hasPurchase}
       />
 
       {/* ============================================================ */}
@@ -973,7 +995,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Revenue Percentiles */}
           {revenue_percentiles && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
               <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Revenue Distribution</h3>
               <p className="text-sm text-[#64748b] mb-4">Where your property's projected revenue falls among all listings in this market:</p>
               <div className="grid grid-cols-5 gap-2">
@@ -992,6 +1014,155 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Supply Trend Chart */}
+          {supply_trend && supply_trend.length > 2 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-2">Supply Trend</h3>
+              <p className="text-sm text-[#64748b] mb-4">Active short-term rental listings over time in this market</p>
+              {(() => {
+                const sorted = [...supply_trend].sort((a, b) => a.date.localeCompare(b.date));
+                const maxVal = Math.max(...sorted.map(d => d.value));
+                const minVal = Math.min(...sorted.map(d => d.value));
+                const range = maxVal - minVal || 1;
+                const chartHeight = 180;
+                const first = sorted[0];
+                const last = sorted[sorted.length - 1];
+                const changePercent = first.value > 0 ? ((last.value - first.value) / first.value * 100) : 0;
+                const isGrowing = changePercent > 2;
+                const isShrinking = changePercent < -2;
+
+                // Build SVG path
+                const points = sorted.map((d, i) => {
+                  const x = (i / (sorted.length - 1)) * 100;
+                  const y = chartHeight - ((d.value - minVal) / range) * (chartHeight - 20) - 10;
+                  return `${x},${y}`;
+                });
+                const linePath = `M ${points.join(' L ')}`;
+                const areaPath = `${linePath} L 100,${chartHeight} L 0,${chartHeight} Z`;
+
+                return (
+                  <div>
+                    {/* Summary stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                        <p className="text-xs text-[#64748b] mb-1">Current Listings</p>
+                        <p className="text-lg font-bold text-[#1e293b]">{last.value.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                        <p className="text-xs text-[#64748b] mb-1">{sorted.length} Months Ago</p>
+                        <p className="text-lg font-bold text-[#1e293b]">{first.value.toLocaleString()}</p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${isGrowing ? 'bg-amber-50' : isShrinking ? 'bg-green-50' : 'bg-[#f8fafc]'}`}>
+                        <p className="text-xs text-[#64748b] mb-1">Change</p>
+                        <p className={`text-lg font-bold ${isGrowing ? 'text-amber-600' : isShrinking ? 'text-green-600' : 'text-[#1e293b]'}`}>
+                          {changePercent > 0 ? '+' : ''}{changePercent.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* SVG Chart */}
+                    <div className="relative">
+                      <svg viewBox={`0 0 100 ${chartHeight}`} className="w-full" preserveAspectRatio="none" style={{ height: '180px' }}>
+                        <defs>
+                          <linearGradient id="supplyGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#C9A962" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#C9A962" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+                        <path d={areaPath} fill="url(#supplyGradient)" />
+                        <path d={linePath} fill="none" stroke="#C9A962" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                      </svg>
+                      {/* X-axis labels */}
+                      <div className="flex justify-between mt-2">
+                        {sorted.filter((_, i) => i === 0 || i === Math.floor(sorted.length / 2) || i === sorted.length - 1).map((d, i) => (
+                          <span key={i} className="text-[10px] text-[#94a3b8]">{formatMonth(d.date)}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <InsightBox type={isGrowing ? 'warning' : isShrinking ? 'success' : 'info'}>
+                      <strong>Supply Trend:</strong>{' '}
+                      {isGrowing
+                        ? `Active listings have grown ${changePercent.toFixed(1)}% over the past ${sorted.length} months (from ${first.value.toLocaleString()} to ${last.value.toLocaleString()}). Increasing supply may put downward pressure on occupancy and rates.`
+                        : isShrinking
+                        ? `Active listings have decreased ${Math.abs(changePercent).toFixed(1)}% over the past ${sorted.length} months (from ${first.value.toLocaleString()} to ${last.value.toLocaleString()}). Decreasing supply is favorable for existing hosts.`
+                        : `Active listings have remained relatively stable over the past ${sorted.length} months (${first.value.toLocaleString()} → ${last.value.toLocaleString()}).`}
+                    </InsightBox>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Submarket Comparison */}
+          {submarkets && submarkets.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-2">Submarket Comparison</h3>
+              <p className="text-sm text-[#64748b] mb-4">How nearby neighborhoods and submarkets compare in key performance metrics</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#f8fafc]">
+                      <th className="p-3 text-left text-[#64748b] font-medium rounded-tl-lg">Submarket</th>
+                      <th className="p-3 text-right text-[#64748b] font-medium">Listings</th>
+                      <th className="p-3 text-right text-[#64748b] font-medium">Avg Revenue</th>
+                      <th className="p-3 text-right text-[#64748b] font-medium">Avg ADR</th>
+                      <th className="p-3 text-right text-[#64748b] font-medium">Occupancy</th>
+                      <th className="p-3 text-right text-[#64748b] font-medium">RevPAR</th>
+                      {submarkets.some(s => s.metrics?.market_score) && (
+                        <th className="p-3 text-right text-[#64748b] font-medium rounded-tr-lg">Score</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submarkets
+                      .filter(s => s.metrics)
+                      .sort((a, b) => (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0))
+                      .map((sub, i) => (
+                        <tr key={sub.id || i} className="border-t border-[#e2e8f0] hover:bg-[#f8fafc] transition-colors">
+                          <td className="p-3 font-medium text-[#1e293b]">{sub.name}</td>
+                          <td className="p-3 text-right text-[#64748b]">{sub.listing_count.toLocaleString()}</td>
+                          <td className="p-3 text-right font-semibold text-[#1e293b]">{formatCurrency(sub.metrics!.revenue)}</td>
+                          <td className="p-3 text-right text-[#64748b]">{formatCurrency(sub.metrics!.adr)}</td>
+                          <td className="p-3 text-right text-[#64748b]">{formatPercent(sub.metrics!.occupancy)}</td>
+                          <td className="p-3 text-right text-[#64748b]">{formatCurrency(sub.metrics!.revpar)}</td>
+                          {submarkets.some(s => s.metrics?.market_score) && (
+                            <td className="p-3 text-right">
+                              {sub.metrics!.market_score ? (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  sub.metrics!.market_score >= 70 ? 'bg-green-100 text-green-700' :
+                                  sub.metrics!.market_score >= 50 ? 'bg-amber-100 text-amber-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {Math.round(sub.metrics!.market_score)}
+                                </span>
+                              ) : '—'}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {(() => {
+                const withMetrics = submarkets.filter(s => s.metrics);
+                if (withMetrics.length < 2) return null;
+                const best = withMetrics.reduce((a, b) => (a.metrics!.revenue > b.metrics!.revenue ? a : b));
+                const worst = withMetrics.reduce((a, b) => (a.metrics!.revenue < b.metrics!.revenue ? a : b));
+                return (
+                  <div className="mt-4">
+                    <InsightBox type="info">
+                      <strong>Top Submarket:</strong> {best.name} leads with {formatCurrency(best.metrics!.revenue)} avg revenue and {formatPercent(best.metrics!.occupancy)} occupancy.
+                      {worst.name !== best.name && (
+                        <> The lowest performer is {worst.name} at {formatCurrency(worst.metrics!.revenue)} avg revenue.</>
+                      )}
+                    </InsightBox>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </section>
@@ -1550,6 +1721,221 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             {/* Cap Rate Context */}
             <InsightBox type="info">
               <strong>Cap Rate Context:</strong> A cap rate of {purchaseCalcs.capRate.toFixed(1)}% means the property generates {purchaseCalcs.capRate.toFixed(1)} cents of net operating income for every dollar of property value annually. Short-term rental properties in strong markets typically see cap rates between 5-12%.
+            </InsightBox>
+          </section>
+        )}
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: TAX IMPLICATIONS */}
+        {/* ---------------------------------------------------------- */}
+        {(hasRental || hasPurchase) && (
+          <section id="section-tax" className="scroll-mt-24 mb-16">
+            <SectionHeader icon={Calculator} title="Tax Implications" subtitle="Estimated tax deductions and benefits for this short-term rental investment" />
+
+            {/* Tax Deductions Breakdown */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Estimated Annual Tax Deductions</h3>
+              <p className="text-sm text-[#64748b] mb-6">Based on your projected revenue and property details, here are the estimated tax-deductible expenses you may be able to claim. Consult a tax professional for personalized advice.</p>
+
+              {(() => {
+                const annualRev = revenue_estimate.annual;
+                const occRate = revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy;
+                const nightlyRate = revenue_estimate.nightly;
+
+                // Calculate estimated deductions
+                const platformFees = Math.round(annualRev * 0.03); // ~3% Airbnb host fee
+                const cleaningCosts = Math.round(annualRev * 0.08); // ~8% cleaning
+                const utilitiesCost = Math.round(annualRev * 0.04); // ~4% utilities
+                const suppliesCost = Math.round(annualRev * 0.025); // ~2.5% supplies
+                const maintenanceCost = Math.round(annualRev * 0.04); // ~4% maintenance
+                const insuranceCost = Math.round(annualRev * 0.03); // ~3% STR insurance
+                const advertisingCost = Math.round(annualRev * 0.01); // ~1% marketing
+                const professionalCost = Math.round(annualRev * 0.02); // ~2% accounting/legal
+
+                // Purchase-specific deductions
+                const purchasePrice = purchase?.purchasePrice || 0;
+                const buildingValue = Math.round(purchasePrice * 0.80); // ~80% building, 20% land
+                const annualDepreciation = purchasePrice > 0 ? Math.round(buildingValue / 27.5) : 0;
+                const propertyTaxEst = purchasePrice > 0 ? Math.round(purchasePrice * 0.012) : 0; // ~1.2% avg
+                const mortgageInterest = (() => {
+                  if (!purchase?.purchasePrice) return 0;
+                  const price = purchase.purchasePrice;
+                  const downPct = (purchase.downPaymentPercent || 20) / 100;
+                  const loanAmount = price * (1 - downPct);
+                  const rate = (purchase.interestRate || 7) / 100;
+                  // First year interest is roughly the loan amount * rate
+                  return purchase.loanType === 'cash' ? 0 : Math.round(loanAmount * rate * 0.97);
+                })();
+
+                // Rental arbitrage specific
+                const monthlyRent = rental_arbitrage?.monthlyRent || 0;
+                const annualRent = monthlyRent * 12;
+
+                // Build deductions list
+                const deductions: Array<{ category: string; amount: number; note: string }> = [];
+
+                // Operating expenses (both scenarios)
+                deductions.push({ category: 'Platform Fees (Airbnb/VRBO)', amount: platformFees, note: '~3% of gross revenue' });
+                deductions.push({ category: 'Cleaning & Turnover', amount: cleaningCosts, note: '~8% of gross revenue' });
+                deductions.push({ category: 'Utilities (Electric, Water, Internet)', amount: utilitiesCost, note: '~4% of gross revenue' });
+                deductions.push({ category: 'Guest Supplies & Consumables', amount: suppliesCost, note: '~2.5% of gross revenue' });
+                deductions.push({ category: 'Maintenance & Repairs', amount: maintenanceCost, note: '~4% of gross revenue' });
+                deductions.push({ category: 'STR Insurance Premium', amount: insuranceCost, note: '~3% of gross revenue' });
+                deductions.push({ category: 'Advertising & Marketing', amount: advertisingCost, note: '~1% of gross revenue' });
+                deductions.push({ category: 'Professional Services (CPA, Legal)', amount: professionalCost, note: '~2% of gross revenue' });
+
+                // Purchase-specific
+                if (hasPurchase && purchasePrice > 0) {
+                  if (annualDepreciation > 0) {
+                    deductions.push({ category: 'Property Depreciation (27.5 yr)', amount: annualDepreciation, note: `${formatCurrency(buildingValue)} building value / 27.5 years` });
+                  }
+                  if (mortgageInterest > 0) {
+                    deductions.push({ category: 'Mortgage Interest', amount: mortgageInterest, note: 'Estimated first-year interest' });
+                  }
+                  if (propertyTaxEst > 0) {
+                    deductions.push({ category: 'Property Taxes', amount: propertyTaxEst, note: '~1.2% of property value' });
+                  }
+                }
+
+                // Rental arbitrage specific
+                if (hasRental && monthlyRent > 0) {
+                  deductions.push({ category: 'Lease Payments', amount: annualRent, note: `${formatCurrency(monthlyRent)}/mo x 12` });
+                }
+
+                const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
+                const taxableIncome = Math.max(0, annualRev - totalDeductions);
+
+                // Estimated tax savings at different brackets
+                const brackets = [
+                  { rate: 0.22, label: '22% bracket ($44k-$95k)' },
+                  { rate: 0.24, label: '24% bracket ($95k-$191k)' },
+                  { rate: 0.32, label: '32% bracket ($191k-$244k)' },
+                ];
+
+                return (
+                  <div>
+                    {/* Deductions Table */}
+                    <div className="overflow-x-auto mb-6">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#f8fafc]">
+                            <th className="p-3 text-left text-[#64748b] font-medium rounded-tl-lg">Deduction Category</th>
+                            <th className="p-3 text-right text-[#64748b] font-medium">Est. Annual Amount</th>
+                            <th className="p-3 text-right text-[#64748b] font-medium rounded-tr-lg">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {deductions.map((d, i) => (
+                            <tr key={i} className="border-t border-[#e2e8f0]">
+                              <td className="p-3 text-[#1e293b]">{d.category}</td>
+                              <td className="p-3 text-right font-semibold text-[#1e293b]">{formatCurrency(d.amount)}</td>
+                              <td className="p-3 text-right text-[#94a3b8] text-xs">{d.note}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t-2 border-[#C9A962] bg-[#C9A962]/5">
+                            <td className="p-3 font-bold text-[#1e293b]">Total Estimated Deductions</td>
+                            <td className="p-3 text-right font-bold text-[#C9A962] text-lg">{formatCurrency(totalDeductions)}</td>
+                            <td className="p-3"></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Taxable Income Summary */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-[#f8fafc] rounded-xl p-4 text-center">
+                        <p className="text-xs text-[#64748b] mb-1">Gross Revenue</p>
+                        <p className="text-lg font-bold text-[#1e293b]">{formatCurrency(annualRev)}</p>
+                      </div>
+                      <div className="bg-[#f8fafc] rounded-xl p-4 text-center">
+                        <p className="text-xs text-[#64748b] mb-1">Total Deductions</p>
+                        <p className="text-lg font-bold text-red-600">-{formatCurrency(totalDeductions)}</p>
+                      </div>
+                      <div className="bg-[#C9A962]/10 rounded-xl p-4 text-center border border-[#C9A962]/30">
+                        <p className="text-xs text-[#64748b] mb-1">Est. Taxable Income</p>
+                        <p className="text-lg font-bold text-[#C9A962]">{formatCurrency(taxableIncome)}</p>
+                      </div>
+                    </div>
+
+                    {/* Tax Savings by Bracket */}
+                    <div className="bg-white rounded-xl border border-[#e2e8f0] p-5 mb-6">
+                      <h4 className="text-sm font-semibold text-[#1e293b] mb-3">Estimated Tax Savings from Deductions</h4>
+                      <p className="text-xs text-[#64748b] mb-4">How much these deductions could save you depending on your federal tax bracket:</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {brackets.map((b, i) => (
+                          <div key={i} className="bg-[#f8fafc] rounded-lg p-3 text-center">
+                            <p className="text-[10px] text-[#94a3b8] mb-1">{b.label}</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(Math.round(totalDeductions * b.rate))}</p>
+                            <p className="text-[10px] text-[#94a3b8]">saved annually</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Depreciation Highlight (Purchase only) */}
+                    {hasPurchase && annualDepreciation > 0 && (
+                      <InsightBox type="success">
+                        <strong>Depreciation Advantage:</strong> Property depreciation of {formatCurrency(annualDepreciation)}/year is a "paper loss" that reduces taxable income without any cash outlay. Over 27.5 years, you can deduct the full {formatCurrency(buildingValue)} building value. A cost segregation study could accelerate this to front-load deductions in years 1-5.
+                      </InsightBox>
+                    )}
+
+                    {/* QBI Deduction Note */}
+                    <div className="mt-4">
+                      <InsightBox type="info">
+                        <strong>QBI Deduction (Section 199A):</strong> If your STR qualifies as an active business (250+ hours of material participation), you may be eligible for an additional 20% Qualified Business Income deduction on net rental income. This deduction is now permanent under the One Big Beautiful Bill Act.
+                      </InsightBox>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Key Tax Strategies */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Key Tax Strategies for STR Owners</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                      <Building className="w-4 h-4 text-[#C9A962]" />
+                    </div>
+                    <h4 className="font-semibold text-[#1e293b] text-sm">Cost Segregation Study</h4>
+                  </div>
+                  <p className="text-xs text-[#64748b]">Reclassify components (appliances, fixtures, landscaping) to 5-15 year schedules for accelerated depreciation. Can front-load significant deductions in years 1-5.</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-[#C9A962]" />
+                    </div>
+                    <h4 className="font-semibold text-[#1e293b] text-sm">14-Day Rule</h4>
+                  </div>
+                  <p className="text-xs text-[#64748b]">If you rent your property for 14 days or fewer per year, the rental income is completely tax-free. Useful for properties in high-demand event areas.</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-[#C9A962]" />
+                    </div>
+                    <h4 className="font-semibold text-[#1e293b] text-sm">Bonus Depreciation (100%)</h4>
+                  </div>
+                  <p className="text-xs text-[#64748b]">Under the One Big Beautiful Bill Act, qualifying property placed in service after Jan 19, 2025 is eligible for 100% first-year bonus depreciation on furniture, appliances, and equipment.</p>
+                </div>
+                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                      <Percent className="w-4 h-4 text-[#C9A962]" />
+                    </div>
+                    <h4 className="font-semibold text-[#1e293b] text-sm">Schedule C vs. E Filing</h4>
+                  </div>
+                  <p className="text-xs text-[#64748b]">Schedule C (active business) enables QBI deduction but may trigger self-employment tax. Schedule E (passive rental) avoids SE tax but limits loss deductions. Consult a CPA for optimal classification.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Disclaimer */}
+            <InsightBox type="warning">
+              <strong>Disclaimer:</strong> These are estimated deductions based on industry averages and your projected revenue. Actual deductions depend on your specific tax situation, filing status, and local regulations. This is not tax advice. Always consult with a qualified CPA or tax professional who specializes in short-term rental properties.
             </InsightBox>
           </section>
         )}

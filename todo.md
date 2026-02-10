@@ -10165,10 +10165,17 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Cumulative leaderboard across Load More pages (merge top deals instead of replacing)
 - [x] Stress test / sensitivity analysis section (4x4 occupancy x ADR matrix showing monthly cash flow with color-coded cells)
 - [x] Itemized expense calculator (8 categories: cleaning, management, platform fees, utilities, supplies, maintenance, insurance, misc)
-- [ ] Supply trend chart (historical active listings from data already fetched)
-- [ ] Submarket comparison section (data already available from API)
+- [x] Supply trend chart (historical active listings from data already fetched)
+- [x] Submarket comparison section (data already available from API)
 - [x] Integrate regulatory data from Step 1 into Full Report (status badge, permit requirements, restrictions)
 - [x] Integrate comparable sale prices from HasData API (recently sold properties with price/sqft, beds, baths)
-- [ ] Research and implement tax implications section (depreciation, cost segregation)
+- [x] Research and implement tax implications section (depreciation, cost segregation)
 - [x] Update AI summary prompt to cover all new report sections (Expense Analysis, Risk & Stress Test, Regulatory Environment, Comparable Sales)
-- [ ] Write tests for new report features
+- [x] Write tests for new report features
+
+## Supply Trend + Submarket + Caching Verification + Tax - Feb 10, 2026
+- [x] Build supply trend chart in Full Report (data already in market.historical.active_listings)
+- [x] Build submarket comparison table in Full Report (data already in submarkets[])
+- [x] Verify batch analyze uses existing API cache layer (cache.ts already exists with 7-30 day TTLs)
+- [x] Research and build tax implications section (depreciation, cost segregation, property tax)
+- [x] Write tests for all new report sections (20 tests: supply trend, submarket, tax calculations)

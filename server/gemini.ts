@@ -2096,6 +2096,14 @@ export interface FullReportSummaryInput {
     bathrooms: number;
     sqft?: number;
   }>;
+  supplyTrend?: Array<{ date: string; value: number }>;
+  submarkets?: Array<{
+    name: string;
+    listing_count: number;
+    revenue: number;
+    occupancy: number;
+    adr: number;
+  }>;
 }
 
 export async function generateFullReportSummary(input: FullReportSummaryInput): Promise<string> {
