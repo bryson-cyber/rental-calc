@@ -1411,13 +1411,13 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                     backgroundColor: deal.occupancy >= 65 ? 'oklch(0.92 0.03 145)' : 'oklch(0.92 0.03 60)',
                                     color: deal.occupancy >= 65 ? 'oklch(0.35 0.12 145)' : 'oklch(0.40 0.10 60)',
                                   }}>
-                                    {deal.occupancy}% occ
+                                    {Math.round(deal.occupancy)}% occ
                                   </span>
                                   <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                     backgroundColor: 'oklch(0.92 0.03 75)',
                                     color: 'oklch(0.40 0.10 75)',
                                   }}>
-                                    {deal.roi}% ROI
+                                    {Math.round(deal.roi)}% ROI
                                   </span>
                                 </div>
                               </div>
