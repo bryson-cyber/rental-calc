@@ -1,0 +1,16 @@
+{
+  "query": "SELECT JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_LENGTH(JSON_EXTRACT(reportData, '$.supply_trend')) as supply_count, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as submarket_count, JSON_EXTRACT(reportData, '$.market_data.metrics.average_daily_rate') as adr FROM shared_reports WHERE shareId = '0djlsrlmmlgsx7o8'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT JSON_EXTRACT(reportData, '$.market_data.name') as market_name, JSON_LENGTH(JSON_EXTRACT(reportData, '$.supply_trend')) as supply_count, JSON_LENGTH(JSON_EXTRACT(reportData, '$.submarkets')) as submarket_count, JSON_EXTRACT(reportData, '$.market_data.metrics.average_daily_rate') as adr FROM shared_reports WHERE shareId = '0djlsrlmmlgsx7o8'",
+  "rows": [
+    {
+      "market_name": "\"Local Market\"",
+      "supply_count": "0",
+      "submarket_count": "0",
+      "adr": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "market_name\tsupply_count\tsubmarket_count\tadr\n\"Local Market\"\t0\t0\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

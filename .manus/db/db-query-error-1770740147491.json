@@ -1,0 +1,8 @@
+{
+  "query": "SELECT JSON_EXTRACT(report_data, '$.market_data.name') as market_name, JSON_LENGTH(JSON_EXTRACT(report_data, '$.supply_trend')) as supply_count, JSON_LENGTH(JSON_EXTRACT(report_data, '$.submarkets')) as submarket_count, JSON_EXTRACT(report_data, '$.market_data.metrics.average_daily_rate') as adr FROM shared_reports WHERE share_id = '0djlsrlmmlgsx7o8'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT JSON_EXTRACT(report_data, '$.market_data.name') as market_name, JSON_LENGTH(JSON_EXTRACT(report_data, '$.supply_trend')) as supply_count, JSON_LENGTH(JSON_EXTRACT(report_data, '$.submarkets')) as submarket_count, JSON_EXTRACT(report_data, '$.market_data.metrics.average_daily_rate') as adr FROM shared_reports WHERE share_id = '0djlsrlmmlgsx7o8'",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'share_id' in 'where clause'"
+  ]
+}

@@ -5702,7 +5702,15 @@ export const appRouter = router({
                 market_score: market.metrics?.market_score,
               },
             } : (existingData.market_data || {
-              name: 'Local Market',
+              name: (() => {
+                const parts = address.split(',').map((s: string) => s.trim());
+                if (parts.length >= 2) {
+                  const city = parts[1];
+                  const stateZip = parts[2]?.split(' ')[0];
+                  return stateZip ? `${city}, ${stateZip}` : city;
+                }
+                return 'Local Market';
+              })(),
               listing_count: 0,
               metrics: {
                 occupancy: occRate,
@@ -5966,7 +5974,16 @@ export const appRouter = router({
                 market_score: market.metrics?.market_score,
               },
             } : {
-              name: 'Local Market',
+              name: (() => {
+                // Extract city from address like "2680 Carnation Dr, Richardson, TX 75082"
+                const parts = address.split(',').map((s: string) => s.trim());
+                if (parts.length >= 2) {
+                  const city = parts[1]; // e.g. "Richardson"
+                  const stateZip = parts[2]?.split(' ')[0]; // e.g. "TX"
+                  return stateZip ? `${city}, ${stateZip}` : city;
+                }
+                return 'Local Market';
+              })(),
               listing_count: 0,
               metrics: {
                 occupancy: occRate,
