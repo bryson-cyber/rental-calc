@@ -734,7 +734,7 @@ A: Yes, especially with one property. Expect 5-10 hours per week for guest commu
 ## Understanding the Data
 
 **Q: How accurate is the revenue data?**
-A: Our data comes from AirDNA, which tracks actual Airbnb and VRBO listings. It's based on real performance data, not estimates. However, your results depend on execution.
+A: Our data comes from industry-leading sources that track actual Airbnb and VRBO listings. It's based on real performance data, not estimates. However, your results depend on execution.
 
 **Q: What's a good profit margin to aim for?**
 A: 30%+ after all expenses is considered good. 40%+ is excellent. Below 20% is too risky.

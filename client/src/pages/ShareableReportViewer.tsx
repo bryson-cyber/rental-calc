@@ -534,7 +534,7 @@ export default function ShareableReportViewer() {
           <p className="text-[#0F172A]/60 text-sm mt-1">
             Views: {report.viewCount} • Created: {new Date(report.createdAt).toLocaleDateString()}
           </p>
-          <p className="text-[#C9A962] text-xs mt-3">Powered by AirDNA & VRBO performance data</p>
+          <p className="text-[#C9A962] text-xs mt-3">Powered by Coach Inayah market data</p>
         </div>
       </main>
     </div>

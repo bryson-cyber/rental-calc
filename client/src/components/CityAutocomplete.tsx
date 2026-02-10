@@ -3,7 +3,7 @@
  * 
  * Uses Google Maps Places Autocomplete (via the Manus proxy) to provide
  * city-level autocomplete. When a user selects a city, it parses the
- * city name and state abbreviation from the place result.
+ * city name, state abbreviation, and zip code from the place result.
  * 
  * Styled to match the main app design system (oklch tokens, rounded-xl, etc.)
  */
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 interface CityAutocompleteProps {
   /** Called when user selects a city from the dropdown */
-  onCitySelect: (city: string, state: string) => void;
+  onCitySelect: (city: string, state: string, zipCode?: string) => void;
   /** Initial city value */
   initialCity?: string;
   /** Initial state value */
@@ -69,6 +69,7 @@ export default function CityAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
 
   // Initialize Google Maps and Places service
@@ -87,6 +88,7 @@ export default function CityAutocomplete({
           // PlacesService needs a div element (doesn't need to be visible)
           const div = document.createElement('div');
           placesServiceRef.current = new google.maps.places.PlacesService(div);
+          geocoderRef.current = new google.maps.Geocoder();
           sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
           setIsReady(true);
         }
@@ -151,10 +153,11 @@ export default function CityAutocomplete({
     }
   };
 
-  // Parse city and state from place details
-  const parseCityState = (place: google.maps.places.PlaceResult): { city: string; state: string } => {
+  // Parse city, state, and zip code from place details
+  const parseCityStateZip = (place: google.maps.places.PlaceResult): { city: string; state: string; zipCode?: string } => {
     let city = '';
     let state = '';
+    let zipCode: string | undefined;
 
     if (place.address_components) {
       for (const component of place.address_components) {
@@ -165,10 +168,35 @@ export default function CityAutocomplete({
           // Try short_name first (e.g., "CO"), fall back to converting long_name
           state = component.short_name || STATE_ABBREV[component.long_name] || component.long_name;
         }
+        if (component.types.includes('postal_code')) {
+          zipCode = component.short_name || component.long_name;
+        }
       }
     }
 
-    return { city, state };
+    return { city, state, zipCode };
+  };
+
+  // Reverse geocode to get zip code from city coordinates
+  const getZipCodeFromLocation = async (location: google.maps.LatLng): Promise<string | undefined> => {
+    if (!geocoderRef.current) return undefined;
+    
+    try {
+      const response = await geocoderRef.current.geocode({ location });
+      if (response.results && response.results.length > 0) {
+        // Look through results for a postal code
+        for (const result of response.results) {
+          for (const component of result.address_components) {
+            if (component.types.includes('postal_code')) {
+              return component.short_name || component.long_name;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[CityAutocomplete] Geocode for zip failed:', err);
+    }
+    return undefined;
   };
 
   // Handle prediction selection
@@ -178,16 +206,23 @@ export default function CityAutocomplete({
     placesServiceRef.current.getDetails(
       {
         placeId: prediction.place_id,
-        fields: ['address_components', 'name'],
+        fields: ['address_components', 'name', 'geometry'],
         sessionToken: sessionTokenRef.current!,
       },
-      (place, status) => {
+      async (place, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-          const { city, state } = parseCityState(place);
+          const { city, state, zipCode } = parseCityStateZip(place);
           
           if (city && state) {
             setInputValue(`${city}, ${state}`);
-            onCitySelect(city, state);
+            
+            // If no zip code from place details, try reverse geocoding the city center
+            let finalZip = zipCode;
+            if (!finalZip && place.geometry?.location) {
+              finalZip = await getZipCodeFromLocation(place.geometry.location);
+            }
+            
+            onCitySelect(city, state, finalZip);
           } else {
             // Fallback: parse from the prediction description
             const parts = prediction.description.split(',').map(s => s.trim());

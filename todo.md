@@ -10115,3 +10115,10 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Rename Step 4 from "Explore Listings" to "Explore Competitors"
 - [x] Test all changes in browser
 - [x] Run full test suite
+
+## cc-debug: 5 Bugs Reported Feb 10, 2026
+- [x] Bug 1: Remove ALL AirDNA mentions from user-facing UI — fixed in 9 files (MarketEvaluationPage, InvestmentCalculator, MarketAlertsPage, ShareableReportViewer, OpportunityFinder, NewsletterDashboard, deal-alert-agent, gemini-analyzer, export-pdf, knowledgeBase)
+- [x] Bug 2: Zip code autofills when city is selected from CityAutocomplete — added postal_code extraction from Google Places
+- [x] Bug 3: Deal matches now show "Find properties in [city]" linking to Step 2 (Find a Property) + "See revenue estimate" linking to Step 3
+- [x] Bug 4: Improved AI market evaluation prompt — Coach Inayah voice, structured sections, revenue table, actionable next steps
+- [x] Bug 5: Fixed follow-up actions — "Research Properties" now links to Step 2 (tab=opportunity) instead of Step 3 (tab=prove)

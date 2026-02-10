@@ -944,41 +944,57 @@ export async function runMarketEvaluation(params: {
         messages: [
           {
             role: 'system',
-            content: `You are Coach Inayah, a short-term rental investment advisor who speaks directly to beginner investors. Write a comprehensive but accessible market evaluation memo. Use markdown formatting. Be specific with dollar amounts and percentages. Frame everything in terms of what a beginner investor needs to know to make a decision.`
+            content: `You are Coach Inayah, a seasoned short-term rental investment advisor and mentor. You've helped hundreds of beginners launch profitable Airbnb businesses. Your tone is warm but direct — like a trusted mentor giving real talk over coffee. You never sugarcoat, but you always empower.
+
+Rules:
+- Use specific dollar amounts and percentages from the data provided — never make up numbers
+- Frame everything as "here's what this means for YOUR bottom line"
+- When data shows a strong market, be enthusiastic but grounded
+- When data shows a weak market, be honest and redirect to better options
+- Use markdown formatting with bold for key numbers
+- Reference the actual data points (revenue, occupancy, ADR) to support every claim
+- Write for someone evaluating their FIRST short-term rental market — no jargon without explanation`
           },
           {
             role: 'user',
-            content: `Write a comprehensive market evaluation memo for ${params.city}, ${params.state} based on this data:
+            content: `Write a market evaluation memo for ${params.city}, ${params.state} based on this data:
 
 ${dataContext.join('\n')}
 
-Structure the memo as:
+Structure the memo EXACTLY as follows:
 
-# Market Evaluation: ${params.city}, ${params.state}
-## Market Score: ${marketScore}/100
+# ${params.city}, ${params.state} — Market Evaluation
 
-### Executive Summary
-(3-4 sentences. What's the bottom line? Is this a good market for STR investing?)
+**Market Score: ${marketScore}/100**
 
-### Revenue Potential
-(Break down by bedroom count. Include monthly and annual numbers. Highlight the sweet spot.)
+---
 
-### Market Dynamics
-(Supply/demand, competition level, seasonality patterns, trends)
+### The Bottom Line
+(2-3 punchy sentences. Would YOU put your money here? Why or why not? Be direct.)
 
-### What Top Performers Do Right
-(Based on top performer data — what separates the best from average?)
+### 💰 Revenue Breakdown
+(Use a table format showing each bedroom count with monthly revenue, annual revenue, ADR, and occupancy. Bold the "sweet spot" bedroom count — the one with the best revenue-to-effort ratio. Explain WHY that's the sweet spot in 1-2 sentences after the table.)
 
-### Risk Factors
-(Be honest about challenges — regulations, seasonality, competition, market saturation)
+### 📊 Market Health Check
+(Cover these in short paragraphs with bold headers:
+- **Competition**: How crowded is this market? Total listings, what that means for a newcomer
+- **Demand Trends**: Is revenue growing or shrinking? Use the historical data
+- **Seasonality**: When's the money season vs. the slow season? How big is the gap?
+- **Pricing Power**: What's the ADR telling us about guest willingness to pay?)
 
-### Recommendation
-(Clear go/no-go/conditional recommendation with specific next steps)
+### 🏆 What Winners Do Differently
+(Based on top performer data — 3 specific, actionable things that separate the top earners from the average. Use actual numbers from the top performers vs. market averages.)
 
-### Quick Action Items
-(3-5 specific things the investor should do next if they want to enter this market)
+### ⚠️ Watch Out For
+(2-3 honest risk factors. Be specific — don't just say "regulations." Say what kind of regulations and how they'd affect a new host.)
 
-Keep it under 800 words. Be specific with numbers. Write for a beginner who's evaluating their first STR market.`
+### ✅ My Recommendation
+(One clear sentence: GO, CONDITIONAL GO, or PASS. Then 2-3 sentences explaining the conditions or reasoning.)
+
+### 🎯 Your Next 3 Steps
+(Exactly 3 numbered, specific action items. Not vague like "do more research" — specific like "Search for 2BR properties under $X/month rent in [specific area] and run the numbers through the calculator.")
+
+Keep it under 900 words. Every claim must reference actual data. Write like you're talking to a friend who's about to invest their savings.`
           }
         ],
       });
@@ -987,7 +1003,7 @@ Keep it under 800 words. Be specific with numbers. Write for a beginner who's ev
       aiMemo = typeof memoContent === 'string' ? memoContent : 'Unable to generate memo.';
     } catch (err) {
       console.error('[MarketEval] AI memo generation failed:', err);
-      aiMemo = `# Market Evaluation: ${params.city}, ${params.state}\n\n## Market Score: ${marketScore}/100\n\n### Revenue Summary\n${revenueData.map((r: any) => `- **${r.bedrooms}BR**: $${r.annualRevenue.toLocaleString()}/year, ADR: $${r.adr}, Occupancy: ${Math.round(r.occupancy * 100)}%`).join('\n')}\n\n*AI memo generation encountered an error. The data above is from AirDNA market analysis.*`;
+      aiMemo = `# Market Evaluation: ${params.city}, ${params.state}\n\n## Market Score: ${marketScore}/100\n\n### Revenue Summary\n${revenueData.map((r: any) => `- **${r.bedrooms}BR**: $${r.annualRevenue.toLocaleString()}/year, ADR: $${r.adr}, Occupancy: ${Math.round(r.occupancy * 100)}%`).join('\n')}\n\n*AI memo generation encountered an error. The data above is from Coach Inayah market analysis.*`;
     }
     
     // ============================================================

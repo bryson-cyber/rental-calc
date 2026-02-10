@@ -276,7 +276,7 @@ export default function DealAlertsPage() {
                       <CityAutocomplete
                         initialCity={form.city}
                         initialState={form.state}
-                        onCitySelect={(c, s) => setForm({ ...form, city: c, state: s })}
+                        onCitySelect={(c, s, zip) => setForm({ ...form, city: c, state: s, ...(zip ? { zipCode: zip } : {}) })}
                         placeholder="Search for a city (e.g., Denver, CO)"
                         label="City *"
                       />
@@ -789,13 +789,21 @@ export default function DealAlertsPage() {
                         )}
                       </div>
                       
-                      {/* CTA */}
-                      <div className="mt-3 pt-3 border-t">
+                      {/* CTAs */}
+                      <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
+                        <Link 
+                          href={`/?tab=opportunity&city=${encodeURIComponent(match.city)}&state=${encodeURIComponent(match.state)}${match.zipCode ? `&zip=${encodeURIComponent(match.zipCode)}` : ''}&bedrooms=${match.bedrooms}`}
+                          className="text-sm text-primary hover:underline font-medium inline-flex items-center gap-1"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Find properties in {match.city} →
+                        </Link>
                         <Link 
                           href={`/?tab=prove&address=${encodeURIComponent(match.address)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
-                          className="text-sm text-primary hover:underline font-medium"
+                          className="text-sm text-muted-foreground hover:text-foreground hover:underline font-medium inline-flex items-center gap-1"
                         >
-                          Analyze this deal in detail →
+                          <BarChart3 className="w-3.5 h-3.5" />
+                          See revenue estimate
                         </Link>
                       </div>
                     </CardContent>

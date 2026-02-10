@@ -424,7 +424,7 @@ export default function MarketAlertsPage() {
                 <h4 className="font-medium text-blue-900">How Alerts Work</h4>
                 <p className="text-sm text-blue-700 mt-1">
                   We check market metrics daily and send you an email when changes exceed your threshold.
-                  Alerts are based on AirDNA market data and compare current metrics to your baseline.
+                  Alerts are based on Coach Inayah market data and compare current metrics to your baseline.
                 </p>
               </div>
             </div>

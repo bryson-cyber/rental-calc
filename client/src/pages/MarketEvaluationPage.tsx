@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 
 const EVALUATION_STEPS = [
-  { id: 'market_discovery', label: 'Discovering Market', icon: Search, description: 'Finding AirDNA market data' },
+  { id: 'market_discovery', label: 'Discovering Market', icon: Search, description: 'Analyzing market data' },
   { id: 'revenue_analysis', label: 'Revenue Analysis', icon: DollarSign, description: 'Estimating revenue for multiple property types' },
   { id: 'market_trends', label: 'Market Trends', icon: TrendingUp, description: 'Analyzing historical performance & seasonality' },
   { id: 'competitive_landscape', label: 'Competitive Landscape', icon: BarChart3, description: 'Reviewing top performers & listings' },
@@ -455,15 +455,15 @@ export default function MarketEvaluationPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <button
-                    onClick={() => navigate(`/?tab=prove&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&autoAnalyze=true`)}
+                    onClick={() => navigate(`/?tab=opportunity&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`)}
                     className="flex items-center gap-3 p-4 bg-card rounded-xl border border-border hover:border-primary/50 transition-all text-left group"
                   >
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                       <Search className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-foreground">Research Properties</div>
-                      <div className="text-xs text-muted-foreground">Find specific deals in {city}</div>
+                      <div className="text-sm font-medium text-foreground">Find Properties</div>
+                      <div className="text-xs text-muted-foreground">Browse listings for sale/rent in {city}</div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>

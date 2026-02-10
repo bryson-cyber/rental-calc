@@ -3440,8 +3440,8 @@ Market Average Revenue: $${sa.market_avg_revenue.toLocaleString()}/yr`;
       .join(', ');
     
     topPerformerCompsContext = `
-TOP PERFORMER'S COMPETITIVE SET (AirDNA Algorithm):
-These are the listings that AirDNA's algorithm identifies as most similar to the market's top performer:
+TOP PERFORMER'S COMPETITIVE SET:
+These are the listings identified as most similar to the market's top performer:
 ${comps.slice(0, 8).map((c, i) => 
   `${i + 1}. "${c.title}" (${c.property_type})
    ${c.bedrooms}BR/${c.bathrooms}BA | Revenue: $${c.annual_revenue.toLocaleString()}/yr | ADR: $${Math.round(c.adr)}
@@ -3695,12 +3695,12 @@ Recommendation: ${nm.recommendation}`;
     const af = input.airdna_feasibility;
     const riskFactors = af.risk_assessment.factors.map(f => `- ${f}`).join('\n');
     const matchStatus = af.comparison.assessment_match 
-      ? 'ALIGNED - Our analysis and AirDNA agree within 20%' 
+      ? 'ALIGNED - Our analysis and market data agree within 20%' 
       : `DIVERGENT - Difference of ${Math.abs(af.comparison.profit_difference_pct).toFixed(0)}%`;
     
     airdnaFeasibilityContext = `
-AIRDNA FEASIBILITY ASSESSMENT (Second Opinion):
-This is AirDNA's built-in arbitrage calculator providing an independent profitability assessment:
+MARKET DATA FEASIBILITY ASSESSMENT (Second Opinion):
+This is the market data arbitrage calculator providing an independent profitability assessment:
 
 Projections:
 - Annual Revenue: $${Math.round(af.projections.annual_revenue).toLocaleString()}
@@ -3718,11 +3718,11 @@ Risk Assessment:
 Risk Factors:
 ${riskFactors}
 
-AirDNA Recommendation: ${af.recommendation}
+Market Data Recommendation: ${af.recommendation}
 
 Comparison with Our Analysis:
 - Our Annual Profit Estimate: $${Math.round(af.comparison.our_annual_profit).toLocaleString()}
-- AirDNA Annual Profit Estimate: $${Math.round(af.comparison.airdna_annual_profit).toLocaleString()}
+- Market Data Annual Profit Estimate: $${Math.round(af.comparison.airdna_annual_profit).toLocaleString()}
 - Difference: $${Math.round(af.comparison.profit_difference).toLocaleString()} (${af.comparison.profit_difference_pct >= 0 ? '+' : ''}${af.comparison.profit_difference_pct.toFixed(0)}%)
 - Assessment Status: ${matchStatus}`;
   }

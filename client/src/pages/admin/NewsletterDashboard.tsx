@@ -536,7 +536,7 @@ export default function NewsletterDashboard() {
                     
                     <div className="p-4 rounded-lg border">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">AirDNA API</span>
+                        <span className="font-medium">Market Data API</span>
                         {config.data.airdnaConfigured ? (
                           <Badge variant="default" className="bg-green-500">Connected</Badge>
                         ) : (

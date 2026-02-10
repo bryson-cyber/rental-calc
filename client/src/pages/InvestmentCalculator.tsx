@@ -764,7 +764,7 @@ export default function InvestmentCalculator() {
       {/* Footer */}
       <footer className="bg-[#0F172A]/80 backdrop-blur-sm border-t border-white/10 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-white/40 text-sm">
-          <p>Investment Calculator by Coach Inayah • Data powered by AirDNA</p>
+          <p>Investment Calculator by Coach Inayah • Powered by Coach Inayah market data</p>
         </div>
       </footer>
     </div>
