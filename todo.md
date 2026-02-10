@@ -10122,3 +10122,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Bug 3: Deal matches now show "Find properties in [city]" linking to Step 2 (Find a Property) + "See revenue estimate" linking to Step 3
 - [x] Bug 4: Improved AI market evaluation prompt — Coach Inayah voice, structured sections, revenue table, actionable next steps
 - [x] Bug 5: Fixed follow-up actions — "Research Properties" now links to Step 2 (tab=opportunity) instead of Step 3 (tab=prove)
+
+## Bug: Market Search Dropdown Shows '0 listings' - Feb 10, 2026
+- [x] Verified listing counts display correctly — St. Louis shows 5,487 listings in both hierarchical and quick search flows
+- [x] Confirmed API returns correct listing_count data and frontend maps it properly
+
+## Add Missing Database Indexes - Feb 10, 2026
+- [x] Add indexes to frequently queried tables (82 indexes across 28 tables including tool_usage_events, deal_alert_criteria, market_evaluations, api_call_logs, etc.)
+- [x] Run pnpm db:push to apply schema changes (migration 0019_lean_venom.sql applied)
+- [x] Verify all tests still pass (54 test files, 678 tests passed)

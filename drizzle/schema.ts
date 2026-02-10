@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, json, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -60,7 +60,11 @@ export const leads = mysqlTable("leads", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("leads_email_idx").on(table.email),
+  index("leads_status_idx").on(table.status),
+  index("leads_created_at_idx").on(table.createdAt),
+]);
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
@@ -103,7 +107,11 @@ export const savedSearches = mysqlTable("saved_searches", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("saved_searches_user_id_idx").on(table.userId),
+  index("saved_searches_session_id_idx").on(table.sessionId),
+  index("saved_searches_search_type_idx").on(table.searchType),
+]);
 
 export type SavedSearch = typeof savedSearches.$inferSelect;
 export type InsertSavedSearch = typeof savedSearches.$inferInsert;
@@ -153,7 +161,11 @@ export const favoriteProperties = mysqlTable("favorite_properties", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("fav_props_user_id_idx").on(table.userId),
+  index("fav_props_session_id_idx").on(table.sessionId),
+  index("fav_props_market_id_idx").on(table.marketId),
+]);
 
 export type FavoriteProperty = typeof favoriteProperties.$inferSelect;
 export type InsertFavoriteProperty = typeof favoriteProperties.$inferInsert;
@@ -225,7 +237,11 @@ export const analysisReports = mysqlTable("analysis_reports", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("analysis_reports_session_id_idx").on(table.sessionId),
+  index("analysis_reports_market_id_idx").on(table.marketId),
+  index("analysis_reports_created_at_idx").on(table.createdAt),
+]);
 
 export type AnalysisReport = typeof analysisReports.$inferSelect;
 export type InsertAnalysisReport = typeof analysisReports.$inferInsert;
@@ -265,7 +281,10 @@ export const deepAnalysis = mysqlTable("deep_analysis", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   completedAt: timestamp("completedAt"),
-});
+}, (table) => [
+  index("deep_analysis_report_id_idx").on(table.reportId),
+  index("deep_analysis_status_idx").on(table.status),
+]);
 
 export type DeepAnalysis = typeof deepAnalysis.$inferSelect;
 export type InsertDeepAnalysis = typeof deepAnalysis.$inferInsert;
@@ -410,7 +429,12 @@ export const activityLogs = mysqlTable("activity_logs", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("activity_logs_user_id_idx").on(table.userId),
+  index("activity_logs_session_id_idx").on(table.sessionId),
+  index("activity_logs_action_idx").on(table.action),
+  index("activity_logs_created_at_idx").on(table.createdAt),
+]);
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = typeof activityLogs.$inferInsert;
@@ -515,7 +539,11 @@ export const favoriteMarkets = mysqlTable("favorite_markets", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("fav_markets_user_id_idx").on(table.userId),
+  index("fav_markets_session_id_idx").on(table.sessionId),
+  index("fav_markets_market_id_idx").on(table.marketId),
+]);
 
 export type FavoriteMarket = typeof favoriteMarkets.$inferSelect;
 export type InsertFavoriteMarket = typeof favoriteMarkets.$inferInsert;
@@ -556,7 +584,11 @@ export const marketAlerts = mysqlTable("market_alerts", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("market_alerts_user_id_idx").on(table.userId),
+  index("market_alerts_market_id_idx").on(table.marketId),
+  index("market_alerts_is_active_idx").on(table.isActive),
+]);
 
 export type MarketAlert = typeof marketAlerts.$inferSelect;
 export type InsertMarketAlert = typeof marketAlerts.$inferInsert;
@@ -655,7 +687,11 @@ export const aiAdvisorCache = mysqlTable("ai_advisor_cache", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("ai_advisor_cache_key_idx").on(table.cacheKey),
+  index("ai_advisor_cache_type_idx").on(table.cacheType),
+  index("ai_advisor_cache_expires_idx").on(table.expiresAt),
+]);
 
 export type AiAdvisorCache = typeof aiAdvisorCache.$inferSelect;
 export type InsertAiAdvisorCache = typeof aiAdvisorCache.$inferInsert;
@@ -687,7 +723,11 @@ export const notifications = mysqlTable("notifications", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("notifications_user_id_idx").on(table.userId),
+  index("notifications_is_read_idx").on(table.isRead),
+  index("notifications_created_at_idx").on(table.createdAt),
+]);
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
@@ -759,7 +799,11 @@ export const favoriteListings = mysqlTable("favorite_listings", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("fav_listings_user_id_idx").on(table.userId),
+  index("fav_listings_session_id_idx").on(table.sessionId),
+  index("fav_listings_listing_id_idx").on(table.listingId),
+]);
 
 export type FavoriteListing = typeof favoriteListings.$inferSelect;
 export type InsertFavoriteListing = typeof favoriteListings.$inferInsert;
@@ -846,7 +890,10 @@ export const savedRegulations = mysqlTable("saved_regulations", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("saved_regs_user_id_idx").on(table.userId),
+  index("saved_regs_location_key_idx").on(table.locationKey),
+]);
 
 export type SavedRegulation = typeof savedRegulations.$inferSelect;
 export type InsertSavedRegulation = typeof savedRegulations.$inferInsert;
@@ -881,7 +928,10 @@ export const regulationComments = mysqlTable("regulation_comments", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("reg_comments_user_id_idx").on(table.userId),
+  index("reg_comments_location_key_idx").on(table.locationKey),
+]);
 
 export type RegulationComment = typeof regulationComments.$inferSelect;
 export type InsertRegulationComment = typeof regulationComments.$inferInsert;
@@ -903,7 +953,9 @@ export const commentVotes = mysqlTable("comment_votes", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("comment_votes_user_comment_idx").on(table.userId, table.commentId),
+]);
 
 export type CommentVote = typeof commentVotes.$inferSelect;
 export type InsertCommentVote = typeof commentVotes.$inferInsert;
@@ -949,7 +1001,11 @@ export const emailOptins = mysqlTable("email_optins", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("email_optins_email_idx").on(table.email),
+  index("email_optins_is_active_idx").on(table.isActive),
+  index("email_optins_city_state_idx").on(table.city, table.state),
+]);
 
 export type EmailOptin = typeof emailOptins.$inferSelect;
 export type InsertEmailOptin = typeof emailOptins.$inferInsert;
@@ -1012,7 +1068,9 @@ export const linkClicks = mysqlTable("link_clicks", {
   clickCity: varchar("clickCity", { length: 255 }),
   clickState: varchar("clickState", { length: 100 }),
   clickCountry: varchar("clickCountry", { length: 100 }),
-});
+}, (table) => [
+  index("link_clicks_link_id_idx").on(table.linkId),
+]);
 
 export type LinkClick = typeof linkClicks.$inferSelect;
 export type InsertLinkClick = typeof linkClicks.$inferInsert;
@@ -1091,7 +1149,10 @@ export const promotionRecipients = mysqlTable("promotion_recipients", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("promo_recipients_promo_id_idx").on(table.promotionId),
+  index("promo_recipients_email_idx").on(table.email),
+]);
 
 export type PromotionRecipient = typeof promotionRecipients.$inferSelect;
 export type InsertPromotionRecipient = typeof promotionRecipients.$inferInsert;
@@ -1135,7 +1196,14 @@ export const toolUsageEvents = mysqlTable("tool_usage_events", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("tool_usage_email_idx").on(table.email),
+  index("tool_usage_session_id_idx").on(table.sessionId),
+  index("tool_usage_user_id_idx").on(table.userId),
+  index("tool_usage_event_type_idx").on(table.eventType),
+  index("tool_usage_created_at_idx").on(table.createdAt),
+  index("tool_usage_city_state_idx").on(table.city, table.state),
+]);
 
 export type ToolUsageEvent = typeof toolUsageEvents.$inferSelect;
 export type InsertToolUsageEvent = typeof toolUsageEvents.$inferInsert;
@@ -1194,7 +1262,10 @@ export const bugReports = mysqlTable("bug_reports", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("bug_reports_status_idx").on(table.status),
+  index("bug_reports_priority_idx").on(table.priority),
+]);
 
 export type BugReport = typeof bugReports.$inferSelect;
 export type InsertBugReport = typeof bugReports.$inferInsert;
@@ -1336,7 +1407,10 @@ export const universalShareableReports = mysqlTable("universal_shareable_reports
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt"),
-});
+}, (table) => [
+  index("universal_reports_type_idx").on(table.reportType),
+  index("universal_reports_created_at_idx").on(table.createdAt),
+]);
 
 export type UniversalShareableReport = typeof universalShareableReports.$inferSelect;
 export type InsertUniversalShareableReport = typeof universalShareableReports.$inferInsert;
@@ -1394,7 +1468,11 @@ export const notificationAnalytics = mysqlTable("notification_analytics", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   sentAt: timestamp("sentAt"),
-});
+}, (table) => [
+  index("notif_analytics_share_code_idx").on(table.shareCode),
+  index("notif_analytics_status_idx").on(table.status),
+  index("notif_analytics_created_at_idx").on(table.createdAt),
+]);
 
 export type NotificationAnalytic = typeof notificationAnalytics.$inferSelect;
 export type InsertNotificationAnalytic = typeof notificationAnalytics.$inferInsert;
@@ -1426,7 +1504,10 @@ export const aiConversations = mysqlTable("ai_conversations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("ai_conv_user_id_idx").on(table.userId),
+  index("ai_conv_session_id_idx").on(table.sessionId),
+]);
 
 export type AIConversation = typeof aiConversations.$inferSelect;
 export type InsertAIConversation = typeof aiConversations.$inferInsert;
@@ -1450,7 +1531,9 @@ export const aiMessages = mysqlTable("ai_messages", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("ai_messages_conversation_id_idx").on(table.conversationId),
+]);
 
 export type AIMessage = typeof aiMessages.$inferSelect;
 export type InsertAIMessage = typeof aiMessages.$inferInsert;
@@ -1488,7 +1571,9 @@ export const newsletterCities = mysqlTable("newsletter_cities", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("newsletter_cities_city_state_idx").on(table.city, table.state),
+]);
 
 export type NewsletterCity = typeof newsletterCities.$inferSelect;
 export type InsertNewsletterCity = typeof newsletterCities.$inferInsert;
@@ -1537,7 +1622,10 @@ export const newsletterDeals = mysqlTable("newsletter_deals", {
   discoveredAt: timestamp("discoveredAt").defaultNow().notNull(),
   sentAt: timestamp("sentAt"),
   expiresAt: timestamp("expiresAt"),
-});
+}, (table) => [
+  index("newsletter_deals_city_id_idx").on(table.cityId),
+  index("newsletter_deals_status_idx").on(table.status),
+]);
 
 export type NewsletterDeal = typeof newsletterDeals.$inferSelect;
 export type InsertNewsletterDeal = typeof newsletterDeals.$inferInsert;
@@ -1581,7 +1669,11 @@ export const newsletterSends = mysqlTable("newsletter_sends", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   sentAt: timestamp("sentAt"),
-});
+}, (table) => [
+  index("newsletter_sends_contact_id_idx").on(table.hubspotContactId),
+  index("newsletter_sends_email_idx").on(table.email),
+  index("newsletter_sends_status_idx").on(table.status),
+]);
 
 export type NewsletterSend = typeof newsletterSends.$inferSelect;
 export type InsertNewsletterSend = typeof newsletterSends.$inferInsert;
@@ -1687,7 +1779,11 @@ export const apiCallLogs = mysqlTable("api_call_logs", {
   
   // Timestamp
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("api_call_logs_provider_idx").on(table.provider),
+  index("api_call_logs_created_at_idx").on(table.createdAt),
+  index("api_call_logs_source_idx").on(table.source),
+]);
 
 export type ApiCallLog = typeof apiCallLogs.$inferSelect;
 export type InsertApiCallLog = typeof apiCallLogs.$inferInsert;
@@ -1714,7 +1810,10 @@ export const apiCache = mysqlTable("api_cache", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("api_cache_type_idx").on(table.cacheType),
+  index("api_cache_expires_idx").on(table.expiresAt),
+]);
 
 export type ApiCacheEntry = typeof apiCache.$inferSelect;
 export type InsertApiCacheEntry = typeof apiCache.$inferInsert;
@@ -1748,7 +1847,9 @@ export const apiUsageSummary = mysqlTable("api_usage_summary", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("api_usage_date_provider_idx").on(table.date, table.provider),
+]);
 
 export type ApiUsageSummary = typeof apiUsageSummary.$inferSelect;
 export type InsertApiUsageSummary = typeof apiUsageSummary.$inferInsert;
@@ -1778,7 +1879,11 @@ export const userUsage = mysqlTable("user_usage", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("user_usage_user_id_date_idx").on(table.userId, table.date),
+  index("user_usage_session_id_date_idx").on(table.sessionId, table.date),
+  index("user_usage_ip_date_idx").on(table.ipAddress, table.date),
+]);
 
 export type UserUsage = typeof userUsage.$inferSelect;
 export type InsertUserUsage = typeof userUsage.$inferInsert;
@@ -1867,7 +1972,12 @@ export const dealAlertCriteria = mysqlTable("deal_alert_criteria", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("deal_alert_user_id_idx").on(table.userId),
+  index("deal_alert_email_idx").on(table.email),
+  index("deal_alert_city_state_idx").on(table.city, table.state),
+  index("deal_alert_is_active_idx").on(table.isActive),
+]);
 export type DealAlertCriteria = typeof dealAlertCriteria.$inferSelect;
 export type InsertDealAlertCriteria = typeof dealAlertCriteria.$inferInsert;
 
@@ -1918,7 +2028,10 @@ export const dealAlertMatches = mysqlTable("deal_alert_matches", {
   
   // Timestamps
   discoveredAt: timestamp("discoveredAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("deal_matches_criteria_id_idx").on(table.criteriaId),
+  index("deal_matches_status_idx").on(table.status),
+]);
 export type DealAlertMatch = typeof dealAlertMatches.$inferSelect;
 export type InsertDealAlertMatch = typeof dealAlertMatches.$inferInsert;
 
@@ -1971,6 +2084,11 @@ export const marketEvaluations = mysqlTable("market_evaluations", {
   startedAt: timestamp("startedAt"),
   completedAt: timestamp("completedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("market_eval_user_id_idx").on(table.userId),
+  index("market_eval_session_id_idx").on(table.sessionId),
+  index("market_eval_city_state_idx").on(table.city, table.state),
+  index("market_eval_status_idx").on(table.status),
+]);
 export type MarketEvaluation = typeof marketEvaluations.$inferSelect;
 export type InsertMarketEvaluation = typeof marketEvaluations.$inferInsert;
