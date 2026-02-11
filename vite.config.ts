@@ -33,6 +33,7 @@ export default defineConfig({
           'vendor-charts': ['recharts'],
           'vendor-pdf': ['jspdf'],
           'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-tooltip', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs'],
+          'vendor-motion': ['framer-motion'],
         },
       },
     },

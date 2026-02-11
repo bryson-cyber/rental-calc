@@ -175,8 +175,8 @@ describe('Code Optimization - Lazy Loading', () => {
     expect(appContent).toContain('lazy(() => import');
     expect(appContent).toContain('Suspense');
     
-    // LeadMagnet should be eagerly loaded (it's the landing page)
-    expect(appContent).toContain('import LeadMagnet from');
+    // LeadMagnet should be lazy loaded (it's the heaviest page component)
+    expect(appContent).toContain('const LeadMagnet = lazy');
     
     // Other pages should be lazy loaded
     expect(appContent).toContain('const PropertyAnalyzer = lazy');

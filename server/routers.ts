@@ -3722,7 +3722,7 @@ export const appRouter = router({
           );
           
           // Generate Excel
-          const excelBuffer = generateExcelReport(analysis as any);
+          const excelBuffer = await generateExcelReport(analysis as any);
           const base64 = excelBuffer.toString('base64');
           
           return {
@@ -3783,7 +3783,7 @@ export const appRouter = router({
         try {
           console.log('[Export] Generating Excel from existing data');
           
-          const excelBuffer = generateExcelReport(input.analysisData);
+          const excelBuffer = await generateExcelReport(input.analysisData);
           const base64 = excelBuffer.toString('base64');
           const address = input.analysisData?.property_estimate?.property?.address || 'property';
           

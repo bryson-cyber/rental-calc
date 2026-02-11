@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import { trpc } from '@/lib/trpc';
 import {
   COACH_INAYAH_METHODOLOGY,
@@ -655,7 +655,7 @@ IMPORTANT: You have access to LIVE DATA from the user's current analysis. When a
                         >
                           {message.role === 'assistant' ? (
                             <div className="prose prose-sm max-w-none">
-                              <Streamdown>{message.content}</Streamdown>
+                              <LightMarkdown>{message.content}</LightMarkdown>
                             </div>
                           ) : (
                             <p className="text-sm">{message.content}</p>

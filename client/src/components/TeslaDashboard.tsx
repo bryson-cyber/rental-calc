@@ -10,7 +10,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import {
   TrendingUp,
   TrendingDown,
@@ -2351,7 +2351,7 @@ function AIPropertyAdvisor({
           ) : advice ? (
             <div className="p-6">
               <div className="prose prose-slate prose-sm max-w-none">
-                <Streamdown>{advice}</Streamdown>
+                <LightMarkdown>{advice}</LightMarkdown>
               </div>
             </div>
           ) : (

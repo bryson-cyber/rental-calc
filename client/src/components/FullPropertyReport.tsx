@@ -65,7 +65,7 @@ import { MapView } from './Map';
 import { StreetViewPanorama } from './StreetViewPanorama';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 
@@ -2248,7 +2248,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           {ai_summary ? (
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
               <div className="prose prose-sm max-w-none text-[#334155]">
-                <Streamdown>{ai_summary}</Streamdown>
+                <LightMarkdown>{ai_summary}</LightMarkdown>
               </div>
             </div>
           ) : (

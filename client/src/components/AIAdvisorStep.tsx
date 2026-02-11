@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import { trpc } from '@/lib/trpc';
 import { useProperty } from '@/contexts/PropertyContext';
 import { toast } from 'sonner';
@@ -495,7 +495,7 @@ export function AIAdvisorStep(props: AIAdvisorStepProps) {
               </div>
               
               <div className="prose prose-slate max-w-none bg-white rounded-lg border border-slate-200 p-6">
-                <Streamdown>{propertyAdvice}</Streamdown>
+                <LightMarkdown>{propertyAdvice}</LightMarkdown>
               </div>
 
               <Button

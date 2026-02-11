@@ -373,7 +373,7 @@ export default {
 // Deal Flow Machine - HubSpot Integration
 // ============================================
 
-import axios from 'axios';
+// axios removed — using native fetch for smaller bundle and fewer vulnerabilities
 
 // Data Perfection field names from HubSpot
 const DATA_PERFECTION_CITY = 'data_perfection__city';
@@ -427,41 +427,43 @@ export async function getAllContactsWithCity(): Promise<NewsletterContact[]> {
   let after: string | undefined;
   
   do {
-    const response = await axios.post<HubSpotSearchResponse>(
+    const res = await fetch(
       `${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/search`,
       {
-        filterGroups: [
-          {
-            filters: [
-              {
-                propertyName: DATA_PERFECTION_CITY,
-                operator: 'HAS_PROPERTY'
-              }
-            ]
-          }
-        ],
-        properties: [
-          'email',
-          'firstname',
-          'lastname',
-          'phone',
-          DATA_PERFECTION_CITY,
-          DATA_PERFECTION_STATE,
-          DATA_PERFECTION_POSTAL_CODE,
-          DATA_PERFECTION_PHONE
-        ],
-        limit: 100,
-        after
-      },
-      {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: DATA_PERFECTION_CITY,
+                  operator: 'HAS_PROPERTY'
+                }
+              ]
+            }
+          ],
+          properties: [
+            'email',
+            'firstname',
+            'lastname',
+            'phone',
+            DATA_PERFECTION_CITY,
+            DATA_PERFECTION_STATE,
+            DATA_PERFECTION_POSTAL_CODE,
+            DATA_PERFECTION_PHONE
+          ],
+          limit: 100,
+          after
+        })
       }
     );
+    const response: HubSpotSearchResponse = await res.json();
 
-    const contacts = response.data.results.map(contact => ({
+    const contacts = response.results.map(contact => ({
       hubspotId: contact.id,
       email: contact.properties.email || '',
       firstName: contact.properties.firstname || '',
@@ -473,7 +475,7 @@ export async function getAllContactsWithCity(): Promise<NewsletterContact[]> {
     }));
 
     allContacts.push(...contacts.filter(c => c.email && c.city));
-    after = response.data.paging?.next?.after;
+    after = response.paging?.next?.after;
   } while (after);
 
   return allContacts;
@@ -507,32 +509,34 @@ export async function getContactsByCity(city: string, state?: string): Promise<N
   let after: string | undefined;
 
   do {
-    const response = await axios.post<HubSpotSearchResponse>(
+    const res2 = await fetch(
       `${HUBSPOT_BASE_URL}/crm/v3/objects/contacts/search`,
       {
-        filterGroups: [{ filters }],
-        properties: [
-          'email',
-          'firstname',
-          'lastname',
-          'phone',
-          DATA_PERFECTION_CITY,
-          DATA_PERFECTION_STATE,
-          DATA_PERFECTION_POSTAL_CODE,
-          DATA_PERFECTION_PHONE
-        ],
-        limit: 100,
-        after
-      },
-      {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          filterGroups: [{ filters }],
+          properties: [
+            'email',
+            'firstname',
+            'lastname',
+            'phone',
+            DATA_PERFECTION_CITY,
+            DATA_PERFECTION_STATE,
+            DATA_PERFECTION_POSTAL_CODE,
+            DATA_PERFECTION_PHONE
+          ],
+          limit: 100,
+          after
+        })
       }
     );
+    const response2: HubSpotSearchResponse = await res2.json();
 
-    const contacts = response.data.results.map(contact => ({
+    const contacts = response2.results.map(contact => ({
       hubspotId: contact.id,
       email: contact.properties.email || '',
       firstName: contact.properties.firstname || '',
@@ -544,7 +548,7 @@ export async function getContactsByCity(city: string, state?: string): Promise<N
     }));
 
     allContacts.push(...contacts.filter(c => c.email));
-    after = response.data.paging?.next?.after;
+    after = response2.paging?.next?.after;
   } while (after);
 
   return allContacts;
@@ -609,22 +613,23 @@ export async function sendMarketingEmail(params: {
   try {
     const sendId = `deal-flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    await axios.post(
+    await fetch(
       `${HUBSPOT_BASE_URL}/marketing/v4/email/single-send`,
       {
-        emailId: params.emailId,
-        message: {
-          to: params.recipientEmail,
-          sendId
-        },
-        contactProperties: params.contactProperties || {},
-        customProperties: params.customProperties || {}
-      },
-      {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          emailId: params.emailId,
+          message: {
+            to: params.recipientEmail,
+            sendId
+          },
+          contactProperties: params.contactProperties || {},
+          customProperties: params.customProperties || {}
+        })
       }
     );
 

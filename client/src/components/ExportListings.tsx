@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Download, FileSpreadsheet, FileText, Loader2, CheckCircle2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 interface Listing {
@@ -128,36 +128,28 @@ export function ExportListings({
     setIsExporting(true);
     try {
       const data = prepareData();
+      const headers = Object.keys(data[0] || {});
       
-      // Create workbook and worksheet
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(data);
+      // Create workbook and worksheet using exceljs
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Listings');
       
-      // Set column widths
-      const colWidths = [
-        { wch: 5 },   // #
-        { wch: 40 },  // Title
-        { wch: 15 },  // Property Type
-        { wch: 10 },  // Bedrooms
-        { wch: 10 },  // Bathrooms
-        { wch: 15 },  // Annual Revenue
-        { wch: 12 },  // Occupancy
-        { wch: 10 },  // ADR
-        { wch: 8 },   // Rating
-        { wch: 10 },  // Reviews
-        { wch: 12 },  // Distance
-        { wch: 12 },  // Latitude
-        { wch: 12 },  // Longitude
-        { wch: 50 },  // URL
-      ];
-      ws['!cols'] = colWidths;
+      // Set column widths and headers
+      const colWidths = [5, 40, 15, 10, 10, 15, 12, 10, 8, 10, 12, 12, 12, 50];
+      ws.columns = headers.map((header, i) => ({
+        header,
+        key: header,
+        width: colWidths[i] || 15,
+      }));
       
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Listings');
+      // Add data rows
+      for (const row of data) {
+        ws.addRow(row);
+      }
       
       // Generate buffer and save
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const arrayBuffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       saveAs(blob, formatFilename('xlsx'));
       
       setExportSuccess(true);

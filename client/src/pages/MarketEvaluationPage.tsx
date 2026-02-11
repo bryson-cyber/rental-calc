@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import CityAutocomplete from '@/components/CityAutocomplete';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import {
   MapPin,
   Search,
@@ -442,7 +442,7 @@ export default function MarketEvaluationPage() {
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm max-w-none prose-headings:font-serif prose-headings:text-foreground prose-p:text-foreground/70 prose-li:text-foreground/70 prose-strong:text-foreground">
-                  <Streamdown>{evaluation.aiMemo || ''}</Streamdown>
+                  <LightMarkdown>{evaluation.aiMemo || ''}</LightMarkdown>
                 </div>
               </CardContent>
             </Card>

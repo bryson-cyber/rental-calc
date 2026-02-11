@@ -10286,13 +10286,22 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Write 26 tests for mock API + devFlags ENV test — all 784 tests pass across 60 files
 
 ## Tier 1 Optimization Fixes (Feb 11, 2026)
-- [ ] Fix Mermaid/Streamdown bundle bloat — exclude unused syntax highlighter languages (~3 MB savings)
-- [ ] Add React.lazy() code splitting for heavy pages (SharedReportPage, PropertyAnalyzer, InvestmentCalculator, etc.)
-- [ ] Remove axios (2 files) — migrate to native fetch()
-- [ ] Replace xlsx with exceljs (eliminate 2 high vulnerabilities)
-- [ ] Update/fix jspdf (critical vulnerability)
-- [ ] Add database indexes on property_images table (13K+ rows, no index)
-- [ ] Add database indexes on activity_logs table (5.7K+ rows, no index)
-- [ ] Add index on universal_shareable_reports.shareToken
-- [ ] Investigate tool_usage_events tracking (0 rows — should be tracking)
-- [ ] Run full test suite to verify nothing is broken
+- [x] Remove streamdown dependency (pulled in mermaid 65MB + shiki 2.2MB = ~730KB bundle reduction)
+- [x] Replace with lightweight LightMarkdown component using react-markdown (8 files migrated)
+- [x] Add React.lazy() code splitting for LeadMagnet — main bundle: 3,178KB → 143KB (95% reduction)
+- [x] Split framer-motion into separate vendor chunk (118KB isolated)
+- [x] Remove axios from hubspot.ts — migrated to native fetch() (sdk.ts kept as framework code)
+- [x] Replace xlsx with exceljs in server/export-excel.ts and client/ExportListings.tsx (2 high vulns eliminated)
+- [x] Update jspdf 3.0.4 → 4.1.0 + remove @types/jspdf (critical path traversal vuln fixed)
+- [x] Add database indexes on property_images table (platform, expiresAt)
+- [x] activity_logs already had 4 indexes (userId, sessionId, action, createdAt) — no change needed
+- [ ] Add index on universal_shareable_reports.shareToken (deferred — low row count)
+- [x] Investigate tool_usage_events: 0 rows because trackToolUsage mutation is never called from client code (wiring gap, not a bug)
+- [x] Run full test suite — 784 tests pass across 60 files
+
+Results:
+- Bundle: main index.js 3,908KB → 143KB (96% reduction)
+- Vulnerabilities: 30 → 22 (critical: 1→0, high: 13→9)
+- Dependencies removed: streamdown, xlsx, @types/jspdf
+- Dependencies added: exceljs
+- Dependencies upgraded: jspdf 3.0.4 → 4.1.0

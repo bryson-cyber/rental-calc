@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Streamdown } from 'streamdown';
+import { LightMarkdown } from '@/components/LightMarkdown';
 import { trpc } from '@/lib/trpc';
 import { useMarketAdvisorFilters, useProperty } from '@/contexts/PropertyContext';
 import { toast } from 'sonner';
@@ -640,7 +640,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   />
                 </div>
                 <div className="prose prose-slate max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground">
-                  <Streamdown>{marketAdvice}</Streamdown>
+                  <LightMarkdown>{marketAdvice}</LightMarkdown>
                 </div>
               </CardContent>
             </Card>

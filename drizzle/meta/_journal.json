@@ -141,6 +141,13 @@
       "when": 1770715611817,
       "tag": "0019_lean_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1770824990139,
+      "tag": "0020_mean_selene",
+      "breakpoints": true
     }
   ]
 }

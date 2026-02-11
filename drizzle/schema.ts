@@ -500,7 +500,10 @@ export const propertyImages = mysqlTable("property_images", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("property_images_platform_idx").on(table.platform),
+  index("property_images_expires_at_idx").on(table.expiresAt),
+]);
 
 export type PropertyImage = typeof propertyImages.$inferSelect;
 export type InsertPropertyImage = typeof propertyImages.$inferInsert;

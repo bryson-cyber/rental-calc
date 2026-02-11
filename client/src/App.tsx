@@ -9,8 +9,8 @@ import { MockModeBadge } from "./components/MockModeBadge";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-// Eagerly loaded: Landing page (critical path)
-import LeadMagnet from "./pages/LeadMagnet";
+// Lazy loaded: Landing page (was eagerly loaded but 6700+ lines causes 3MB main bundle)
+const LeadMagnet = lazy(() => import("./pages/LeadMagnet"));
 
 // Lazy loaded: All other pages (code-split into separate chunks)
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -65,7 +65,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        {/* Main lead magnet page - eagerly loaded */}
+        {/* Main lead magnet page - lazy loaded */}
         <Route path={"/"} component={LeadMagnet} />
         
         {/* Map View - Step 5 */}
