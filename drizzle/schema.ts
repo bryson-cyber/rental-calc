@@ -21,7 +21,11 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, (table) => [
+  index("users_email_idx").on(table.email),
+  index("users_role_idx").on(table.role),
+  index("users_created_at_idx").on(table.createdAt),
+]);
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -349,7 +353,11 @@ export const marketResearchReports = mysqlTable("market_research_reports", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   completedAt: timestamp("completedAt"),
-});
+}, (table) => [
+  index("market_research_status_idx").on(table.status),
+  index("market_research_user_id_idx").on(table.userId),
+  index("market_research_created_at_idx").on(table.createdAt),
+]);
 
 export type MarketResearchReport = typeof marketResearchReports.$inferSelect;
 export type InsertMarketResearchReport = typeof marketResearchReports.$inferInsert;
@@ -468,7 +476,10 @@ export const userSessions = mysqlTable("user_sessions", {
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   lastActivityAt: timestamp("lastActivityAt").defaultNow().notNull(),
   endedAt: timestamp("endedAt"),
-});
+}, (table) => [
+  index("user_sessions_user_id_idx").on(table.userId),
+  index("user_sessions_last_activity_idx").on(table.lastActivityAt),
+]);
 
 export type UserSession = typeof userSessions.$inferSelect;
 export type InsertUserSession = typeof userSessions.$inferInsert;
@@ -641,7 +652,11 @@ export const sharedReports = mysqlTable("shared_reports", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("shared_reports_user_id_idx").on(table.createdByUserId),
+  index("shared_reports_report_type_idx").on(table.reportType),
+  index("shared_reports_created_at_idx").on(table.createdAt),
+]);
 
 export type SharedReport = typeof sharedReports.$inferSelect;
 export type InsertSharedReport = typeof sharedReports.$inferInsert;
@@ -857,9 +872,12 @@ export const regulationCache = mysqlTable("regulation_cache", {
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => [
+  index("regulation_cache_expires_idx").on(table.expiresAt),
+  index("regulation_cache_status_idx").on(table.status),
+]);
 
-export type RegulationCache = typeof regulationCache.$inferSelect;
+export type RegulationCacheEntry = typeof regulationCache.$inferSelect;
 export type InsertRegulationCache = typeof regulationCache.$inferInsert;
 
 
@@ -1045,7 +1063,11 @@ export const personalizedLinks = mysqlTable("personalized_links", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("personalized_links_email_idx").on(table.email),
+  index("personalized_links_short_code_idx").on(table.shortCode),
+  index("personalized_links_campaign_idx").on(table.campaignType),
+]);
 
 export type PersonalizedLink = typeof personalizedLinks.$inferSelect;
 export type InsertPersonalizedLink = typeof personalizedLinks.$inferInsert;
@@ -1330,7 +1352,11 @@ export const shareableRegulationReports = mysqlTable("shareable_regulation_repor
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt"), // Optional expiration for temporary links
-});
+}, (table) => [
+  index("shareable_reg_location_idx").on(table.locationKey),
+  index("shareable_reg_creator_idx").on(table.creatorUserId),
+  index("shareable_reg_created_at_idx").on(table.createdAt),
+]);
 
 export type ShareableRegulationReport = typeof shareableRegulationReports.$inferSelect;
 export type InsertShareableRegulationReport = typeof shareableRegulationReports.$inferInsert;

@@ -94,24 +94,7 @@ describe('Mobile Enhancement Components', () => {
     });
   });
 
-  describe('usePullToRefresh Hook', () => {
-    it('should exist in hooks directory', () => {
-      const hookPath = path.join(clientSrcPath, 'hooks', 'usePullToRefresh.ts');
-      expect(fs.existsSync(hookPath)).toBe(true);
-    });
-
-    it('should export usePullToRefresh function', () => {
-      const hookPath = path.join(clientSrcPath, 'hooks', 'usePullToRefresh.ts');
-      const content = fs.readFileSync(hookPath, 'utf-8');
-      expect(content).toContain('export function usePullToRefresh');
-    });
-
-    it('should have onRefresh callback', () => {
-      const hookPath = path.join(clientSrcPath, 'hooks', 'usePullToRefresh.ts');
-      const content = fs.readFileSync(hookPath, 'utf-8');
-      expect(content).toContain('onRefresh');
-    });
-  });
+  // usePullToRefresh hook removed during dead code cleanup (was unused)
 
   describe('LeadMagnet Integration', () => {
     it('should import ScrollToTopButton', () => {

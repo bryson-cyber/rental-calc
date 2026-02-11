@@ -10378,3 +10378,38 @@ Results:
 - [x] Fixed non-null assertions for filtered optional properties
 - [x] Verified zero new TypeScript errors (0 total)
 - [x] All 784 tests pass across 60 test files
+
+## CC-Optimize: Full Audit & Cleanup (Feb 11, 2026)
+
+### AUDIT Phase
+- [x] Speed: Measured production bundle size (7.9MB total, LeadMagnet 2.5MB largest chunk)
+- [x] Speed: Checked for slow patterns — found 8 sequential await-in-loop patterns (N+1 risk)
+- [x] Dependencies: Ran depcheck — found 3 unused deps, 3 unused devDeps
+- [x] Dependencies: Ran npm audit — 0 critical/high vulnerabilities
+- [x] Dependencies: Checked heavy libraries — chart.js already removed in prior task
+- [x] Code: Found 1 unused component (VirtualizedTable 355 lines), 2 unused hooks (663 lines), 49 debug .mjs scripts (2,778 lines)
+- [x] Code: Found 1 unused server file (newsletter-sms, referenced only by test-deal-alert)
+- [x] Database: Found 14 tables without indexes across 48 total tables
+- [x] Database: Found 1 unused table (opportunitySearches — 0 references in server code)
+
+### CLEAN Phase
+- [x] Removed 3 unused dependencies: @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, @hookform/resolvers
+- [x] Removed 3 unused devDependencies: @types/testing-library__react, add, pnpm
+- [x] Removed VirtualizedTable.tsx (355 lines dead code)
+- [x] Removed usePullToRefresh.ts (127 lines) and useWebhook.ts (181 lines) — unused hooks
+- [x] Removed 49 root-level debug/test .mjs scripts (2,778 lines)
+- [x] Added indexes to 7 high-traffic tables: users (3), sharedReports (3), userSessions (2), marketResearchReports (3), regulationCache (2), personalizedLinks (3), shareableRegulationReports (3)
+- [x] Pushed database migration (0021_cheerful_surge.sql) with 19 new indexes
+- [x] Updated mobile-enhancements.test.ts to remove tests for deleted hook
+
+### PREVENT Phase
+- [x] TypeScript: 0 errors
+- [x] Build: Succeeds cleanly
+- [x] Tests: 60 files, 781 tests all pass
+- [x] Dev server: Running correctly
+
+### Remaining Opportunities (Future)
+- [ ] Split LeadMagnet chunk (2.5MB) — lazy-load sub-components or code-split ebook content
+- [ ] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport
+- [ ] Fix 8 sequential await-in-loop patterns to use Promise.all for parallel execution
+- [ ] Consider removing opportunitySearches table if feature is deprecated
