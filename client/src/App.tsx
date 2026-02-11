@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PropertyProvider } from "./contexts/PropertyContext";
 import { TrustBanner } from "./components/TrustBanner";
+import { MockModeBadge } from "./components/MockModeBadge";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -162,6 +163,7 @@ function App() {
             <Toaster />
             <Router />
             <TrustBanner />
+            <MockModeBadge />
           </TooltipProvider>
         </PropertyProvider>
       </ThemeProvider>

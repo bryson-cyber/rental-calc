@@ -10276,3 +10276,11 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Passthrough for: localhost, manus.computer, manus.im, forge.manus, tidbcloud.com (database)
 - [x] Support for recorded fixtures (load from server/fixtures/*.json) with fallback to inline defaults
 - [x] All 775 tests pass across 60 test files
+
+## Mock Mode Enhancements (Feb 11, 2026)
+- [x] Test full report generation end-to-end with DEV_MOCK_API=true — full report renders with all sections
+- [x] Fix response shape mismatches: rentalizer payload wrapper, market search payload, market details payload, market metrics payload, listing comps/area route, Rentometer full response fields
+- [x] Add MOCK MODE dev toolbar badge (MockModeBadge.tsx) — amber badge with flask icon, bottom-left corner
+- [x] Wire badge into App.tsx with system.devFlags tRPC endpoint — only shows when mockApi=true and isProduction=false
+- [x] Badge is dismissible with X button
+- [x] Write 26 tests for mock API + devFlags ENV test — all 784 tests pass across 60 files

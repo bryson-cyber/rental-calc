@@ -64,250 +64,292 @@ interface MockResponse {
 // Fixture Data - Pre-recorded responses for common API calls
 // ============================================================
 
+/**
+ * Raw AirDNA Rentalizer API response shape.
+ * This matches what `makeApiRequest` returns from the /rentalizer/estimate endpoint.
+ * The airdna.ts code then parses this into the internal RentalizerResponse type.
+ */
 const MOCK_RENTALIZER_RESPONSE = {
-  property: {
-    address: "1234 Mock St, Richardson, TX 75082",
-    address_lookup: "1234 Mock St, Richardson, TX 75082, USA",
-    zipcode: "75082",
-    bedrooms: 3,
-    bathrooms: 2,
-    accommodates: 6,
-    latitude: 32.9483,
-    longitude: -96.7299,
-    market_id: "airdna-403",
-    submarket_id: "airdna-3577",
+  payload: {
+    details: {
+      address: "1234 Mock St, Richardson, TX 75082",
+      address_lookup: "Richardson, TX",
+      zipcode: "75082",
+      bedrooms: 3,
+      bathrooms: 2,
+      accommodates: 6,
+    },
+    location: {
+      lat: 32.9483,
+      lng: -96.7299,
+      market_id: "airdna-403",
+      submarket_id: "airdna-3577",
+    },
+    stats: {
+      currency: "USD",
+      currency_symbol: "$",
+      future: {
+        summary: {
+          adr: 285,
+          occupancy: 0.68,
+          revenue: 85000,
+          revenue_upper: 98000,
+          revenue_lower: 72000,
+        },
+        metrics: [
+          { date: "2025-01", occupancy: 0.75, adr: 250, revenue: 5800 },
+          { date: "2025-02", occupancy: 0.78, adr: 260, revenue: 6200 },
+          { date: "2025-03", occupancy: 0.82, adr: 280, revenue: 7500 },
+          { date: "2025-04", occupancy: 0.80, adr: 290, revenue: 7800 },
+          { date: "2025-05", occupancy: 0.85, adr: 300, revenue: 8200 },
+          { date: "2025-06", occupancy: 0.88, adr: 320, revenue: 9000 },
+          { date: "2025-07", occupancy: 0.90, adr: 340, revenue: 9500 },
+          { date: "2025-08", occupancy: 0.86, adr: 310, revenue: 8800 },
+          { date: "2025-09", occupancy: 0.78, adr: 275, revenue: 7200 },
+          { date: "2025-10", occupancy: 0.72, adr: 265, revenue: 6500 },
+          { date: "2025-11", occupancy: 0.68, adr: 240, revenue: 5500 },
+          { date: "2025-12", occupancy: 0.65, adr: 235, revenue: 5200 },
+        ],
+      },
+      historical: {
+        summary: {
+          revenue_valuation: {
+            monthly_pct_change: 0.02,
+            yearly_pct_change: 0.08,
+          },
+        },
+        metrics: [
+          { date: "2024-01", revenue_valuation: 78000 },
+          { date: "2024-06", revenue_valuation: 82000 },
+          { date: "2024-12", revenue_valuation: 85000 },
+        ],
+      },
+    },
+    comps: [
+      {
+        property_id: "mock-comp-1",
+        details: {
+          title: "Mock Luxury Villa",
+          accommodates: 6,
+          bedrooms: 3,
+          bathrooms: 2,
+          reviews: 120,
+          rating: 4.9,
+          images: ["https://placehold.co/400x300/C9A962/0F172A?text=Mock+Villa"],
+          property_type: "Entire home/apt",
+        },
+        distance_meters: 500,
+        platforms: {
+          airbnb_property_id: "mock-1",
+          airbnb_property_url: "https://www.airbnb.com/rooms/mock-1",
+        },
+        stats: {
+          summary: {
+            occupancy: 0.72,
+            adr: 310,
+            revenue: 92000,
+          },
+          metrics: [
+            { date: "2025-01", occupancy: 0.70, adr: 290, revenue: 6200, revenue_potential: 8900 },
+            { date: "2025-02", occupancy: 0.75, adr: 305, revenue: 7000, revenue_potential: 9300 },
+            { date: "2025-03", occupancy: 0.80, adr: 320, revenue: 7800, revenue_potential: 9900 },
+          ],
+        },
+      },
+      {
+        property_id: "mock-comp-2",
+        details: {
+          title: "Mock Downtown Condo",
+          accommodates: 6,
+          bedrooms: 3,
+          bathrooms: 2.5,
+          reviews: 85,
+          rating: 4.7,
+          images: ["https://placehold.co/400x300/C9A962/0F172A?text=Mock+Condo"],
+          property_type: "Entire home/apt",
+        },
+        distance_meters: 800,
+        platforms: {
+          airbnb_property_id: "mock-2",
+          airbnb_property_url: "https://www.airbnb.com/rooms/mock-2",
+        },
+        stats: {
+          summary: {
+            occupancy: 0.70,
+            adr: 265,
+            revenue: 78000,
+          },
+          metrics: [
+            { date: "2025-01", occupancy: 0.68, adr: 250, revenue: 5200, revenue_potential: 7700 },
+            { date: "2025-02", occupancy: 0.72, adr: 260, revenue: 5700, revenue_potential: 7900 },
+            { date: "2025-03", occupancy: 0.75, adr: 275, revenue: 6300, revenue_potential: 8500 },
+          ],
+        },
+      },
+      {
+        property_id: "mock-comp-3",
+        details: {
+          title: "Mock Cozy Retreat",
+          accommodates: 5,
+          bedrooms: 3,
+          bathrooms: 2,
+          reviews: 60,
+          rating: 4.8,
+          images: ["https://placehold.co/400x300/C9A962/0F172A?text=Mock+Retreat"],
+          property_type: "Entire home/apt",
+        },
+        distance_meters: 1200,
+        platforms: {
+          airbnb_property_id: "mock-3",
+          airbnb_property_url: "https://www.airbnb.com/rooms/mock-3",
+        },
+        stats: {
+          summary: {
+            occupancy: 0.65,
+            adr: 245,
+            revenue: 68000,
+          },
+          metrics: [
+            { date: "2025-01", occupancy: 0.62, adr: 230, revenue: 4400, revenue_potential: 7100 },
+            { date: "2025-02", occupancy: 0.66, adr: 240, revenue: 4800, revenue_potential: 7400 },
+            { date: "2025-03", occupancy: 0.70, adr: 255, revenue: 5500, revenue_potential: 7900 },
+          ],
+        },
+      },
+      {
+        property_id: "mock-comp-4",
+        details: {
+          title: "Mock Family Home",
+          accommodates: 8,
+          bedrooms: 3,
+          bathrooms: 2,
+          reviews: 45,
+          rating: 4.6,
+          images: ["https://placehold.co/400x300/C9A962/0F172A?text=Mock+Family"],
+          property_type: "Entire home/apt",
+        },
+        distance_meters: 1500,
+        platforms: {
+          airbnb_property_id: "mock-4",
+          airbnb_property_url: "https://www.airbnb.com/rooms/mock-4",
+        },
+        stats: {
+          summary: {
+            occupancy: 0.68,
+            adr: 255,
+            revenue: 72000,
+          },
+          metrics: [
+            { date: "2025-01", occupancy: 0.65, adr: 240, revenue: 4800, revenue_potential: 7400 },
+            { date: "2025-02", occupancy: 0.70, adr: 250, revenue: 5400, revenue_potential: 7700 },
+            { date: "2025-03", occupancy: 0.72, adr: 265, revenue: 5800, revenue_potential: 8200 },
+          ],
+        },
+      },
+      {
+        property_id: "mock-comp-5",
+        details: {
+          title: "Mock Modern Apartment",
+          accommodates: 4,
+          bedrooms: 3,
+          bathrooms: 2,
+          reviews: 30,
+          rating: 4.5,
+          images: ["https://placehold.co/400x300/C9A962/0F172A?text=Mock+Modern"],
+          property_type: "Entire home/apt",
+        },
+        distance_meters: 2000,
+        platforms: {
+          airbnb_property_id: "mock-5",
+          airbnb_property_url: "https://www.airbnb.com/rooms/mock-5",
+        },
+        stats: {
+          summary: {
+            occupancy: 0.62,
+            adr: 230,
+            revenue: 65000,
+          },
+          metrics: [
+            { date: "2025-01", occupancy: 0.60, adr: 215, revenue: 3900, revenue_potential: 6600 },
+            { date: "2025-02", occupancy: 0.63, adr: 225, revenue: 4300, revenue_potential: 6900 },
+            { date: "2025-03", occupancy: 0.67, adr: 240, revenue: 4900, revenue_potential: 7400 },
+          ],
+        },
+      },
+    ],
   },
-  estimates: {
-    annual_revenue: 85000,
-    annual_revenue_low: 72000,
-    annual_revenue_high: 98000,
-    average_daily_rate: 285,
-    occupancy_rate: 0.68,
-    currency: "USD",
-    currency_symbol: "$",
-  },
-  monthly_forecast: [
-    { month: "2025-01", revenue: 5800, adr: 250, occupancy: 0.75 },
-    { month: "2025-02", revenue: 6200, adr: 260, occupancy: 0.78 },
-    { month: "2025-03", revenue: 7500, adr: 280, occupancy: 0.82 },
-    { month: "2025-04", revenue: 7800, adr: 290, occupancy: 0.80 },
-    { month: "2025-05", revenue: 8200, adr: 300, occupancy: 0.85 },
-    { month: "2025-06", revenue: 9000, adr: 320, occupancy: 0.88 },
-    { month: "2025-07", revenue: 9500, adr: 340, occupancy: 0.90 },
-    { month: "2025-08", revenue: 8800, adr: 310, occupancy: 0.86 },
-    { month: "2025-09", revenue: 7200, adr: 275, occupancy: 0.78 },
-    { month: "2025-10", revenue: 6500, adr: 265, occupancy: 0.72 },
-    { month: "2025-11", revenue: 5500, adr: 240, occupancy: 0.68 },
-    { month: "2025-12", revenue: 5200, adr: 235, occupancy: 0.65 },
-  ],
-  comps: [
-    {
-      title: "Mock Luxury Villa",
-      bedrooms: 3,
-      bathrooms: 2,
-      rating: 4.9,
-      reviews: 120,
-      annual_revenue: 92000,
-      adr: 310,
-      occupancy: 0.72,
-      distance_meters: 500,
-      latitude: 32.9490,
-      longitude: -96.7310,
-      airbnb_listing_id: "mock-1",
-    },
-    {
-      title: "Mock Downtown Condo",
-      bedrooms: 3,
-      bathrooms: 2.5,
-      rating: 4.7,
-      reviews: 85,
-      annual_revenue: 78000,
-      adr: 265,
-      occupancy: 0.70,
-      distance_meters: 800,
-      latitude: 32.9475,
-      longitude: -96.7280,
-      airbnb_listing_id: "mock-2",
-    },
-    {
-      title: "Mock Cozy Retreat",
-      bedrooms: 3,
-      bathrooms: 2,
-      rating: 4.8,
-      reviews: 60,
-      annual_revenue: 68000,
-      adr: 245,
-      occupancy: 0.65,
-      distance_meters: 1200,
-      latitude: 32.9500,
-      longitude: -96.7260,
-      airbnb_listing_id: "mock-3",
-    },
-    {
-      title: "Mock Family Home",
-      bedrooms: 3,
-      bathrooms: 2,
-      rating: 4.6,
-      reviews: 45,
-      annual_revenue: 72000,
-      adr: 255,
-      occupancy: 0.68,
-      distance_meters: 1500,
-      latitude: 32.9460,
-      longitude: -96.7320,
-      airbnb_listing_id: "mock-4",
-    },
-    {
-      title: "Mock Modern Apartment",
-      bedrooms: 3,
-      bathrooms: 2,
-      rating: 4.5,
-      reviews: 30,
-      annual_revenue: 65000,
-      adr: 230,
-      occupancy: 0.62,
-      distance_meters: 2000,
-      latitude: 32.9510,
-      longitude: -96.7340,
-      airbnb_listing_id: "mock-5",
-    },
-  ],
-  market_id: "airdna-403",
 };
 
 const MOCK_MARKET_SEARCH_RESPONSE = {
-  results: [
-    {
-      id: "airdna-403",
-      name: "Dallas",
-      type: "market",
-      listing_count: 11500,
-      location_name: "Dallas, Texas",
-      state: "Texas",
-      country: "US",
-    },
-  ],
+  payload: {
+    results: [
+      {
+        id: "airdna-403",
+        name: "Dallas",
+        type: "market",
+        listing_count: 11500,
+        location_name: "Dallas, Texas",
+        location: {
+          state: "Texas",
+          country: "US",
+        },
+        legacy_location: {
+          zipcodes: ["75001", "75080", "75081", "75082"],
+          neighborhoods: [],
+        },
+      },
+    ],
+  },
+  status: {
+    type: "success",
+    message: "OK",
+  },
 };
 
 const MOCK_MARKET_DETAILS_RESPONSE = {
-  market_id: "airdna-403",
-  market_name: "Dallas",
-  metrics: {
-    occupancy: 0.62,
-    adr: 195,
-    revenue: 44000,
-    revpar: 121,
-    active_listings: 11500,
-    market_score: 72,
-    average_los: 3.2,
-    booking_lead_time: 14,
+  payload: {
+    id: "airdna-403",
+    name: "Dallas",
+    listing_count: 11500,
+    location_name: "Dallas, Texas",
+    market_type: "market",
+    metrics: {
+      market_score: 72,
+      revenue: 44000,
+      booked: 0.62,
+      daily_rate: 195,
+      revpar: 121,
+    },
   },
-  listing_count: 11500,
-  historical: {
-    occupancy: [
-      { date: "2024-01", value: 0.58 },
-      { date: "2024-02", value: 0.60 },
-      { date: "2024-03", value: 0.63 },
-      { date: "2024-04", value: 0.65 },
-      { date: "2024-05", value: 0.68 },
-      { date: "2024-06", value: 0.72 },
-      { date: "2024-07", value: 0.70 },
-      { date: "2024-08", value: 0.67 },
-      { date: "2024-09", value: 0.64 },
-      { date: "2024-10", value: 0.61 },
-      { date: "2024-11", value: 0.58 },
-      { date: "2024-12", value: 0.55 },
-    ],
-    adr: [
-      { date: "2024-01", value: 175 },
-      { date: "2024-02", value: 180 },
-      { date: "2024-03", value: 190 },
-      { date: "2024-04", value: 195 },
-      { date: "2024-05", value: 205 },
-      { date: "2024-06", value: 220 },
-      { date: "2024-07", value: 215 },
-      { date: "2024-08", value: 200 },
-      { date: "2024-09", value: 190 },
-      { date: "2024-10", value: 185 },
-      { date: "2024-11", value: 178 },
-      { date: "2024-12", value: 170 },
-    ],
-    revenue: [
-      { date: "2024-01", value: 3100 },
-      { date: "2024-02", value: 3300 },
-      { date: "2024-03", value: 3700 },
-      { date: "2024-04", value: 3900 },
-      { date: "2024-05", value: 4300 },
-      { date: "2024-06", value: 4800 },
-      { date: "2024-07", value: 4600 },
-      { date: "2024-08", value: 4100 },
-      { date: "2024-09", value: 3700 },
-      { date: "2024-10", value: 3500 },
-      { date: "2024-11", value: 3200 },
-      { date: "2024-12", value: 2800 },
-    ],
-    revpar: [
-      { date: "2024-01", value: 101 },
-      { date: "2024-02", value: 108 },
-      { date: "2024-03", value: 120 },
-      { date: "2024-04", value: 127 },
-      { date: "2024-05", value: 139 },
-      { date: "2024-06", value: 158 },
-      { date: "2024-07", value: 151 },
-      { date: "2024-08", value: 134 },
-      { date: "2024-09", value: 122 },
-      { date: "2024-10", value: 113 },
-      { date: "2024-11", value: 103 },
-      { date: "2024-12", value: 94 },
-    ],
-    active_listings: [
-      { date: "2024-01", value: 10800 },
-      { date: "2024-02", value: 10900 },
-      { date: "2024-03", value: 11000 },
-      { date: "2024-04", value: 11100 },
-      { date: "2024-05", value: 11200 },
-      { date: "2024-06", value: 11300 },
-      { date: "2024-07", value: 11400 },
-      { date: "2024-08", value: 11500 },
-      { date: "2024-09", value: 11500 },
-      { date: "2024-10", value: 11400 },
-      { date: "2024-11", value: 11300 },
-      { date: "2024-12", value: 11200 },
-    ],
-  },
-  bedroom_performance: [
-    { bedrooms: 1, occupancy: 0.72, adr: 120, revenue: 31500, listing_count: 3200 },
-    { bedrooms: 2, occupancy: 0.68, adr: 165, revenue: 41000, listing_count: 4100 },
-    { bedrooms: 3, occupancy: 0.65, adr: 210, revenue: 49800, listing_count: 2800 },
-    { bedrooms: 4, occupancy: 0.60, adr: 280, revenue: 61300, listing_count: 900 },
-    { bedrooms: 5, occupancy: 0.55, adr: 350, revenue: 70200, listing_count: 350 },
-    { bedrooms: 6, occupancy: 0.50, adr: 420, revenue: 76600, listing_count: 150 },
-  ],
 };
 
-const MOCK_MARKET_SUPPLY_RESPONSE = {
-  data: [
-    { date: "2024-01", total_listings: 10800, entire_home: 7200, private_room: 3600 },
-    { date: "2024-02", total_listings: 10900, entire_home: 7300, private_room: 3600 },
-    { date: "2024-03", total_listings: 11000, entire_home: 7400, private_room: 3600 },
-    { date: "2024-04", total_listings: 11100, entire_home: 7500, private_room: 3600 },
-    { date: "2024-05", total_listings: 11200, entire_home: 7600, private_room: 3600 },
-    { date: "2024-06", total_listings: 11300, entire_home: 7700, private_room: 3600 },
-    { date: "2024-07", total_listings: 11400, entire_home: 7800, private_room: 3600 },
-    { date: "2024-08", total_listings: 11500, entire_home: 7900, private_room: 3600 },
-  ],
+/**
+ * Mock market metrics response (for /market/{id}/metrics/{type} endpoints).
+ * Each metric type returns payload.metrics array.
+ */
+const MOCK_MARKET_METRICS_RESPONSE = {
+  payload: {
+    metrics: [
+      { month: "2024-01", date: "2024-01", value: 0.58, occupancy: 0.58, occupancy_rate: 0.58, avg_revenue: 3100, revenue: 3100, adr: 175, revpar: 101, active_listings_count: 10800, active_listings: 10800, booking_lead_time: 14, los: 3.2 },
+      { month: "2024-02", date: "2024-02", value: 0.60, occupancy: 0.60, occupancy_rate: 0.60, avg_revenue: 3300, revenue: 3300, adr: 180, revpar: 108, active_listings_count: 10900, active_listings: 10900, booking_lead_time: 15, los: 3.1 },
+      { month: "2024-03", date: "2024-03", value: 0.63, occupancy: 0.63, occupancy_rate: 0.63, avg_revenue: 3700, revenue: 3700, adr: 190, revpar: 120, active_listings_count: 11000, active_listings: 11000, booking_lead_time: 16, los: 3.3 },
+      { month: "2024-04", date: "2024-04", value: 0.65, occupancy: 0.65, occupancy_rate: 0.65, avg_revenue: 3900, revenue: 3900, adr: 195, revpar: 127, active_listings_count: 11100, active_listings: 11100, booking_lead_time: 17, los: 3.4 },
+      { month: "2024-05", date: "2024-05", value: 0.68, occupancy: 0.68, occupancy_rate: 0.68, avg_revenue: 4300, revenue: 4300, adr: 205, revpar: 139, active_listings_count: 11200, active_listings: 11200, booking_lead_time: 18, los: 3.5 },
+      { month: "2024-06", date: "2024-06", value: 0.72, occupancy: 0.72, occupancy_rate: 0.72, avg_revenue: 4800, revenue: 4800, adr: 220, revpar: 158, active_listings_count: 11300, active_listings: 11300, booking_lead_time: 20, los: 3.6 },
+      { month: "2024-07", date: "2024-07", value: 0.70, occupancy: 0.70, occupancy_rate: 0.70, avg_revenue: 4600, revenue: 4600, adr: 215, revpar: 151, active_listings_count: 11400, active_listings: 11400, booking_lead_time: 19, los: 3.5 },
+      { month: "2024-08", date: "2024-08", value: 0.67, occupancy: 0.67, occupancy_rate: 0.67, avg_revenue: 4100, revenue: 4100, adr: 200, revpar: 134, active_listings_count: 11500, active_listings: 11500, booking_lead_time: 17, los: 3.3 },
+      { month: "2024-09", date: "2024-09", value: 0.64, occupancy: 0.64, occupancy_rate: 0.64, avg_revenue: 3700, revenue: 3700, adr: 190, revpar: 122, active_listings_count: 11500, active_listings: 11500, booking_lead_time: 15, los: 3.2 },
+      { month: "2024-10", date: "2024-10", value: 0.61, occupancy: 0.61, occupancy_rate: 0.61, avg_revenue: 3500, revenue: 3500, adr: 185, revpar: 113, active_listings_count: 11400, active_listings: 11400, booking_lead_time: 14, los: 3.1 },
+      { month: "2024-11", date: "2024-11", value: 0.58, occupancy: 0.58, occupancy_rate: 0.58, avg_revenue: 3200, revenue: 3200, adr: 178, revpar: 103, active_listings_count: 11300, active_listings: 11300, booking_lead_time: 13, los: 3.0 },
+      { month: "2024-12", date: "2024-12", value: 0.55, occupancy: 0.55, occupancy_rate: 0.55, avg_revenue: 2800, revenue: 2800, adr: 170, revpar: 94, active_listings_count: 11200, active_listings: 11200, booking_lead_time: 12, los: 2.9 },
+    ],
+  },
 };
 
-const MOCK_BEDROOM_PERFORMANCE = {
-  data: [
-    { bedrooms: 1, adr: 120, occupancy: 0.72, revenue: 31500 },
-    { bedrooms: 2, adr: 165, occupancy: 0.68, revenue: 41000 },
-    { bedrooms: 3, adr: 210, occupancy: 0.65, revenue: 49800 },
-    { bedrooms: 4, adr: 280, occupancy: 0.60, revenue: 61300 },
-    { bedrooms: 5, adr: 350, occupancy: 0.55, revenue: 70200 },
-    { bedrooms: 6, adr: 420, occupancy: 0.50, revenue: 76600 },
-  ],
-};
+// Supply trend uses the same /market/{id}/metrics/active_listings_count endpoint
+// which is handled by MOCK_MARKET_METRICS_RESPONSE above
+
+// Bedroom performance is calculated from comps/listings, not a separate API endpoint
 
 // Generate deterministic mock listings (seeded, not random)
 const MOCK_LISTINGS_DATA = [
@@ -324,26 +366,53 @@ const MOCK_LISTINGS_DATA = [
 ];
 
 const MOCK_LISTINGS_RESPONSE = {
-  listings: MOCK_LISTINGS_DATA.map((l) => ({
-    ...l,
-    airbnb_url: `https://www.airbnb.com/rooms/${l.id}`,
-    image_url: null,
-    zipcode: "75082",
-  })),
-  total_count: 10,
-  page: 1,
-  page_size: 25,
+  payload: {
+    listings: MOCK_LISTINGS_DATA.map((l) => ({
+      property_id: l.id,
+      title: l.title,
+      airbnb_property_id: l.id,
+      airbnb_property_url: `https://www.airbnb.com/rooms/${l.id}`,
+      bedrooms: l.bedrooms,
+      bathrooms: l.bathrooms,
+      accommodates: l.accommodates,
+      property_type: l.property_type,
+      rating: l.rating,
+      reviews: l.reviews,
+      revenue_ltm: l.annual_revenue,
+      average_daily_rate_ltm: l.adr,
+      occupancy_rate_ltm: l.occupancy,
+      location: { lat: l.latitude, lng: l.longitude },
+      zipcode: "75082",
+      images: [`https://placehold.co/400x300/C9A962/0F172A?text=${encodeURIComponent(l.title)}`],
+    })),
+    page_info: {
+      total_count: 10,
+      page_size: 25,
+      offset: 0,
+    },
+  },
 };
 
 const MOCK_RENTOMETER_RESPONSE = {
+  address: "1234 Mock St, Richardson, TX 75082",
+  latitude: "32.9483",
+  longitude: "-96.7299",
+  bedrooms: 3,
+  baths: "2",
+  building_type: "house",
+  look_back_days: 365,
   mean: 2200,
   median: 2100,
-  percentile_25: 1800,
-  percentile_75: 2600,
   min: 1200,
   max: 3500,
+  percentile_25: 1800,
+  percentile_75: 2600,
+  std_dev: 380,
   samples: 45,
-  address: "1234 Mock St, Richardson, TX 75082",
+  radius_miles: 1.5,
+  quickview_url: "https://www.rentometer.com/analysis/mock",
+  credits_remaining: 999,
+  token: "mock-token",
 };
 
 const MOCK_GEMINI_RESPONSE = {
@@ -352,19 +421,7 @@ const MOCK_GEMINI_RESPONSE = {
       content: {
         parts: [
           {
-            text: JSON.stringify({
-              summary: "This is a mock AI-generated summary for development purposes. The property shows strong rental potential based on comparable market data.",
-              highlights: [
-                "Strong occupancy rates in the area",
-                "Above-average daily rates for the bedroom count",
-                "Growing market with increasing supply",
-              ],
-              risks: [
-                "Seasonal fluctuations in demand",
-                "Increasing competition from new listings",
-              ],
-              recommendation: "The property appears to be a solid investment opportunity based on current market conditions.",
-            }),
+            text: `## Executive Summary\n\nThe subject property at **1234 Mock St, Richardson, TX 75082** presents a compelling short-term rental opportunity in the Dallas metropolitan area. This 3-bedroom, 2-bathroom property with capacity for 6 guests is projected to generate **$85,000 in annual revenue** with an average daily rate of **$285** and an occupancy rate of **68%**.\n\n### Revenue Outlook\n\nThe property's projected annual revenue of **$85,000** places it well above the market average of **$44,000**, suggesting strong earning potential. The revenue range spans from **$72,000** to **$98,000**, providing a reasonable confidence interval. Peak revenue months are projected for June-August, with the strongest month generating approximately **$9,500** in revenue at a **90% occupancy rate**.\n\n### Market Position\n\nThe Dallas market hosts approximately **11,500 active listings** with a market score of **72/100**. The market average occupancy of **62%** is notably lower than this property's projected **68%**, indicating above-average performance potential. The 3-bedroom segment in this market generates an average revenue of **$49,800**, making this property's **$85,000** projection approximately **71% above** the bedroom-type average.\n\n### Competitive Landscape\n\n**5 comparable properties** were analyzed within the immediate vicinity. The top performer generates **$92,000** annually, while the average comp revenue is **$75,000**. The subject property's projected revenue of **$85,000** positions it in the **upper quartile** of comparable properties. Average competitor ratings hover around **4.7 stars**, indicating a high-quality competitive environment.\n\n### Key Takeaways\n\n- The property's projected **$85,000 annual revenue** significantly outperforms the market average of **$44,000**\n- At **68% projected occupancy**, the property exceeds the market average of **62%** by 6 percentage points\n- The **$285 average daily rate** is competitive with top-performing comparables in the area\n- Seasonal variation shows a **$4,300 spread** between peak and trough months, suggesting manageable seasonality\n\n*Note: This is mock data generated for development purposes.*`,
           },
         ],
         role: "model",
@@ -398,31 +455,33 @@ const MOCK_HASDATA_RESPONSE = {
 };
 
 const MOCK_SUBMARKET_DETAILS_RESPONSE = {
-  id: "airdna-3577",
-  name: "Richardson",
-  listing_count: 450,
-  metrics: {
-    occupancy: 0.65,
-    adr: 210,
-    revenue: 49800,
-    revpar: 137,
-    market_score: 68,
-  },
-  zipcodes: ["75080", "75081", "75082"],
-  parent_market: {
-    id: "airdna-403",
-    name: "Dallas",
+  payload: {
+    id: "airdna-3577",
+    name: "Richardson",
+    listing_count: 450,
+    parent_market_name: "Dallas",
+    market_id: "airdna-403",
+    market_type: "submarket",
+    metrics: {
+      market_score: 68,
+      revenue: 49800,
+      booked: 0.65,
+      daily_rate: 210,
+      revpar: 137,
+    },
   },
 };
 
 const MOCK_SUBMARKETS_RESPONSE = {
-  submarkets: [
-    { id: "airdna-3577", name: "Richardson", listing_count: 450, metrics: { occupancy: 0.65, adr: 210, revenue: 49800, revpar: 137 } },
-    { id: "airdna-3578", name: "Plano", listing_count: 620, metrics: { occupancy: 0.63, adr: 225, revenue: 51700, revpar: 142 } },
-    { id: "airdna-3579", name: "Frisco", listing_count: 380, metrics: { occupancy: 0.67, adr: 240, revenue: 58700, revpar: 161 } },
-    { id: "airdna-3580", name: "McKinney", listing_count: 290, metrics: { occupancy: 0.61, adr: 195, revenue: 43400, revpar: 119 } },
-  ],
-  total: 4,
+  payload: {
+    submarkets: [
+      { id: "airdna-3577", name: "Richardson", listing_count: 450, metrics: { occupancy: 0.65, adr: 210, revenue: 49800, revpar: 137 } },
+      { id: "airdna-3578", name: "Plano", listing_count: 620, metrics: { occupancy: 0.63, adr: 225, revenue: 51700, revpar: 142 } },
+      { id: "airdna-3579", name: "Frisco", listing_count: 380, metrics: { occupancy: 0.67, adr: 240, revenue: 58700, revpar: 161 } },
+      { id: "airdna-3580", name: "McKinney", listing_count: 290, metrics: { occupancy: 0.61, adr: 195, revenue: 43400, revpar: 119 } },
+    ],
+    total: 4,
+  },
 };
 
 // ============================================================
@@ -478,6 +537,18 @@ const mockRoutes: MockRoute[] = [
       body: MOCK_SUBMARKET_DETAILS_RESPONSE,
     }),
   },
+  // AirDNA Listing Comps / Radius Search
+  {
+    service: "AirDNA Listing Comps",
+    match: (url) => url.includes("airdna.co") && url.includes("/listing/comps"),
+    fixtureKey: (url) => "airdna-listing-comps",
+    defaultResponse: () => ({
+      status: 200,
+      statusText: "OK",
+      headers: { "content-type": "application/json" },
+      body: MOCK_LISTINGS_RESPONSE,
+    }),
+  },
   // AirDNA Market Listings
   {
     service: "AirDNA Listings",
@@ -490,28 +561,16 @@ const mockRoutes: MockRoute[] = [
       body: MOCK_LISTINGS_RESPONSE,
     }),
   },
-  // AirDNA Market Supply
+  // AirDNA Market/Submarket Metrics (occupancy, revenue, adr, supply, etc.)
   {
-    service: "AirDNA Market Supply",
-    match: (url) => url.includes("airdna.co") && url.includes("/supply"),
-    fixtureKey: (url) => "airdna-market-supply",
+    service: "AirDNA Market Metrics",
+    match: (url) => url.includes("airdna.co") && url.includes("/metrics/"),
+    fixtureKey: (url) => "airdna-market-metrics",
     defaultResponse: () => ({
       status: 200,
       statusText: "OK",
       headers: { "content-type": "application/json" },
-      body: MOCK_MARKET_SUPPLY_RESPONSE,
-    }),
-  },
-  // AirDNA Bedroom Performance
-  {
-    service: "AirDNA Bedroom Performance",
-    match: (url) => url.includes("airdna.co") && (url.includes("/bedroom") || url.includes("/performance")),
-    fixtureKey: (url) => "airdna-bedroom-performance",
-    defaultResponse: () => ({
-      status: 200,
-      statusText: "OK",
-      headers: { "content-type": "application/json" },
-      body: MOCK_BEDROOM_PERFORMANCE,
+      body: MOCK_MARKET_METRICS_RESPONSE,
     }),
   },
   // AirDNA Market Details (catch-all for /market/{id} endpoints)
