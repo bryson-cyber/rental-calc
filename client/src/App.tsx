@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { PropertyProvider } from "./contexts/PropertyContext";
 import { TrustBanner } from "./components/TrustBanner";
 import { MockModeBadge } from "./components/MockModeBadge";
+import { PageTracker } from "./components/PageTracker";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -162,6 +163,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <PageTracker />
             <TrustBanner />
             <MockModeBadge />
           </TooltipProvider>

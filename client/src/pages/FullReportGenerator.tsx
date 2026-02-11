@@ -19,6 +19,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useActionTracking } from '@/components/PageTracker';
 import { getLoginUrl } from '@/const';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +88,7 @@ export default function FullReportGenerator() {
   const [currentStep, setCurrentStep] = useState(0);
   
   const generateMutation = trpc.sharedReports.generateFromAddress.useMutation();
+  const { trackAction } = useActionTracking('full_report');
   
   // Pre-fill from URL parameters (from main page)
   useEffect(() => {
@@ -162,6 +164,7 @@ export default function FullReportGenerator() {
     }
     
     setGenerating(true);
+    trackAction('report_generated', { address: address.trim() });
     
     try {
       const result = await generateMutation.mutateAsync({

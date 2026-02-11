@@ -10305,3 +10305,17 @@ Results:
 - Dependencies removed: streamdown, xlsx, @types/jspdf
 - Dependencies added: exceljs
 - Dependencies upgraded: jspdf 3.0.4 → 4.1.0
+## Tier 2 Optimization (Feb 11, 2026)
+- [x] Remove MapFirstLayout V1 (2,011 lines, 0 imports — only V2 is used)
+- [x] Remove newsletter-engagement.ts (564 lines, never imported)
+- [x] Remove AIChatBox.tsx (335 lines, unused template component)
+- [x] Remove ManusDialog.tsx (89 lines, unused template component)
+- [x] Archive 257 stale markdown files from project root (1.5 MB → /home/ubuntu/rental-calculator-archive/)
+- [x] Archive docs/ folder (420 KB, restored nurture-email-templates-simplified.md which is referenced in code)
+- [x] Wire tool_usage_events tracking: PageTracker component (auto-tracks page views), useActionTracking hook, wired into LeadMagnet (search_started, estimate_viewed) and FullReportGenerator (report_generated)
+- [x] Remove 16 unused shadcn/ui components (carousel, command, drawer, input-otp, resizable, accordion, aspect-ratio, breadcrumb, collapsible, context-menu, hover-card, menubar, navigation-menu, pagination, radio-group, toggle-group)
+- [x] Remove 15 unused npm packages (embla-carousel-react, cmdk, vaul, input-otp, react-resizable-panels, next-themes, @radix-ui/react-accordion, @radix-ui/react-aspect-ratio, @radix-ui/react-collapsible, @radix-ui/react-context-menu, @radix-ui/react-hover-card, @radix-ui/react-menubar, @radix-ui/react-navigation-menu, @radix-ui/react-radio-group, @radix-ui/react-toggle-group)
+- [x] Replace next-themes import in sonner.tsx with app's own ThemeContext
+- [ ] Split routers.ts (8,401 lines, 154 procedures) into feature-based router files (deferred — high risk, needs dedicated session)
+- [ ] Consolidate chart.js + recharts into single library (deferred — each used in 1 component)
+- [x] All 784 tests pass across 60 files after all changes

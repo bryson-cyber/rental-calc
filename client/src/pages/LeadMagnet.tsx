@@ -18,6 +18,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import { useActionTracking } from '@/components/PageTracker';
 import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
@@ -392,6 +393,9 @@ export default function LeadMagnet() {
   
   // Property context for property-centric workflow
   const { myProperty, hasProperty, bedroomFilter, setMyProperty, globalMode } = useProperty();
+  
+  // Tool usage tracking
+  const { trackAction } = useActionTracking('revenue_calculator');
   
   // Tab state - now in job sequence
   const [activeTab, setActiveTab] = useState<TabType>('ebook');
@@ -1225,6 +1229,9 @@ export default function LeadMagnet() {
     setAnalysisTimer(0); // Reset timer
     setRentometerData(null); // Clear previous rentometer data
     
+    // Track search event
+    trackAction('search_started', { address });
+    
     // Start timer interval - defined outside try block for cleanup in finally
     let timerInterval: ReturnType<typeof setInterval> | null = null;
     timerInterval = setInterval(() => {
@@ -1488,6 +1495,12 @@ export default function LeadMagnet() {
       
       toast.success('Property validated! See your results below.');
       console.log('[handleAnalyze] Result set successfully:', { hasResult: true, activeTab });
+      
+      // Track successful estimate
+      trackAction('estimate_viewed', {
+        address,
+        revenueEstimate: data.property?.estimates?.annual_revenue,
+      });
       
       // Auto-send notification if user has contact info and auto-notifications enabled
       const hasContactInfo = myProperty?.userEmail || myProperty?.userPhone;
