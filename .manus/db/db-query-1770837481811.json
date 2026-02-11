@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, shareId, JSON_EXTRACT(reportData, '$.purchase') as purchase_data, JSON_EXTRACT(reportData, '$.rental_arbitrage') as rental_data FROM shared_reports WHERE shareId = '1byhaxuxmlibqtbt' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareId, JSON_EXTRACT(reportData, '$.purchase') as purchase_data, JSON_EXTRACT(reportData, '$.rental_arbitrage') as rental_data FROM shared_reports WHERE shareId = '1byhaxuxmlibqtbt' LIMIT 1;",
+  "rows": [
+    {
+      "id": "240003",
+      "shareId": "1byhaxuxmlibqtbt",
+      "purchase_data": "{\"annual_cash_flow\": -20268, \"cap_rate\": 3.268810586244038, \"cash_on_cash\": -15.593168179719957, \"down_payment\": 129980, \"down_payment_percent\": 20, \"interest_rate\": 7, \"loan_amount\": 519920, \"loan_type\": \"conventional\", \"monthly_cash_flow\": -1689, \"monthly_expenses\": 5313, \"monthly_mortgage\": 3459, \"monthly_revenue\": 7083, \"purchase_price\": 649900}",
+      "rental_data": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareId\tpurchase_data\trental_data\n240003\t1byhaxuxmlibqtbt\t{\"annual_cash_flow\": -20268, \"cap_rate\": 3.268810586244038, \"cash_on_cash\": -15.593168179719957, \"down_payment\": 129980, \"down_payment_percent\": 20, \"interest_rate\": 7, \"loan_amount\": 519920, \"loan_type\": \"conventional\", \"monthly_cash_flow\": -1689, \"monthly_expenses\": 5313, \"monthly_mortgage\": 3459, \"monthly_revenue\": 7083, \"purchase_price\": 649900}\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 113
+}

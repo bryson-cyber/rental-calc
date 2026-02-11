@@ -256,7 +256,8 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
         // Distance section with both straight-line and driving
         let distanceHtml = "";
         if (straightDist.text !== "N/A" || driveDist) {
-          distanceHtml = `<div style="display:flex;gap:10px;margin-top:8px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">`;
+          const shortAddr = subjectProperty.address.split(',')[0];
+          distanceHtml = `<div style="margin-top:8px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;"><div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-weight:500;">Distance from ${shortAddr}</div><div style="display:flex;gap:10px;">`;
           if (straightDist.text !== "N/A") {
             distanceHtml += `<div style="display:flex;align-items:center;gap:4px;font-size:11px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9A962" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -272,7 +273,7 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
               <span style="color:#94a3b8;">(${driveDist.duration})</span>
             </div>`;
           }
-          distanceHtml += `</div>`;
+          distanceHtml += `</div></div>`;
         }
 
         infoWindowRef.current?.setContent(
@@ -511,12 +512,15 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
                   </div>
                 </div>
                 
-                {/* Distance row with both straight-line and driving */}
-                <div className="flex items-center gap-4 mt-2 flex-wrap">
+                {/* Distance from subject property */}
+                {(selectedCompStraightDist || selectedCompDrivingDist || distanceLoading) && (
+                  <p className="text-[10px] text-muted-foreground mt-2 mb-1 font-medium uppercase tracking-wider">Distance from {subjectProperty.address.split(',')[0]}</p>
+                )}
+                <div className="flex items-center gap-4 flex-wrap">
                   {selectedCompStraightDist && selectedCompStraightDist !== "N/A" && (
                     <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-full">
                       <Navigation className="w-3 h-3" />
-                      {selectedCompStraightDist} straight
+                      {selectedCompStraightDist} from property
                     </span>
                   )}
                   {selectedCompDrivingDist && (

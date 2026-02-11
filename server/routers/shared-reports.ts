@@ -884,19 +884,19 @@ export const sharedReportsRouter = router({
             const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
             const monthlyRev = Math.round(annualRev / 12);
             reportData.purchase = {
-              purchase_price: input.purchasePrice,
-              down_payment: downPayment,
-              down_payment_percent: downPct,
-              loan_amount: loanAmount,
-              interest_rate: rate,
-              loan_type: input.loanType || 'conventional',
-              monthly_mortgage: Math.round(monthlyMortgage),
-              monthly_revenue: monthlyRev,
-              monthly_expenses: totalMonthlyExpenses,
-              monthly_cash_flow: monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses,
-              annual_cash_flow: (monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12,
-              cap_rate: (annualRev - totalMonthlyExpenses * 12) / input.purchasePrice * 100,
-              cash_on_cash: ((monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12) / downPayment * 100,
+              purchasePrice: input.purchasePrice,
+              downPayment: downPayment,
+              downPaymentPercent: downPct,
+              loanAmount: loanAmount,
+              interestRate: rate,
+              loanType: input.loanType || 'conventional',
+              monthlyMortgage: Math.round(monthlyMortgage),
+              monthlyRevenue: monthlyRev,
+              monthlyExpenses: totalMonthlyExpenses,
+              monthlyCashFlow: monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses,
+              annualCashFlow: (monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12,
+              capRate: (annualRev - totalMonthlyExpenses * 12) / input.purchasePrice * 100,
+              cashOnCash: ((monthlyRev - Math.round(monthlyMortgage) - totalMonthlyExpenses) * 12) / downPayment * 100,
             };
           }
           

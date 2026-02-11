@@ -10465,3 +10465,28 @@ Results:
 - [x] Enhanced subject property marker label with gradient pill and refined styling
 - [x] Note: Cannot use JSON dark map theme due to mapId requirement for AdvancedMarkerElement
 - [x] All 783 tests pass, 0 TypeScript errors
+
+## Switch Google Maps to User's Own API Key (Feb 11, 2026)
+- [x] Replaced Manus proxy map loading with direct Google Maps JS API using VITE_GOOGLE_PLACES_API_KEY
+- [x] Updated Map.tsx to use dynamic script loader with user's API key from google CDN
+- [x] Removed DEMO_MAP_ID (incompatible with user's own key) — uses optional VITE_GOOGLE_MAP_ID env
+- [x] All features supported: markers, Distance Matrix, Places autocomplete, Street View
+- [ ] User needs to enable Maps JavaScript API in Google Cloud Console for map to load
+
+## Fix: Comp Card Distance Label Clarity (Feb 11, 2026)
+- [x] Info window now shows "Distance from [street address]" header above distance badges
+- [x] Selected comp panel shows "DISTANCE FROM [STREET ADDRESS]" label above distance badges
+- [x] Straight-line badge says "X.X mi from property" instead of just "X.X mi straight"
+
+## Bug: Missing Tax Section in Report (Feb 11, 2026)
+- [x] Investigated — tax section code was intact, hidden because purchase data had snake_case keys
+- [x] Fixed via purchase data normalization (see below)
+
+## Fix: Purchase/Tax Section Not Showing + Comp Distance Label (Feb 11, 2026)
+- [x] Fixed snake_case to camelCase mismatch — added normalization function in FullPropertyReport
+- [x] Normalization handles both legacy (snake_case) and new (camelCase) report data
+- [x] Fixed server shared-reports.ts to save camelCase keys for new reports
+- [x] Verified tax section shows with $649,900 purchase price, depreciation, mortgage interest
+- [x] Wrote 8 vitest tests for purchase normalization (all pass)
+- [x] All 791 tests pass, 0 TypeScript errors
+- [ ] Provide Google Maps API configuration instructions to user

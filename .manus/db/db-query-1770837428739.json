@@ -1,0 +1,28 @@
+{
+  "query": "SHOW TABLES LIKE '%report%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SHOW TABLES LIKE '%report%';",
+  "rows": [
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "analysis_reports"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "bug_reports"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "market_research_reports"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "shareable_regulation_reports"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "shared_reports"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)": "universal_shareable_reports"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%report%)\nanalysis_reports\nbug_reports\nmarket_research_reports\nshareable_regulation_reports\nshared_reports\nuniversal_shareable_reports\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}

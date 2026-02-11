@@ -559,6 +559,27 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     comp_selection,
   } = data as any;
 
+  // Normalize purchase data: handle both snake_case (legacy) and camelCase (new) keys
+  const normalizedPurchase = purchase ? {
+    purchasePrice: purchase.purchasePrice ?? purchase.purchase_price,
+    downPaymentPercent: purchase.downPaymentPercent ?? purchase.down_payment_percent,
+    downPayment: purchase.downPayment ?? purchase.down_payment,
+    interestRate: purchase.interestRate ?? purchase.interest_rate,
+    loanAmount: purchase.loanAmount ?? purchase.loan_amount,
+    loanType: purchase.loanType ?? purchase.loan_type,
+    loanTerm: purchase.loanTerm ?? purchase.loan_term,
+    monthlyMortgage: purchase.monthlyMortgage ?? purchase.monthly_mortgage,
+    monthlyRevenue: purchase.monthlyRevenue ?? purchase.monthly_revenue,
+    monthlyExpenses: purchase.monthlyExpenses ?? purchase.monthly_expenses,
+    monthlyCashFlow: purchase.monthlyCashFlow ?? purchase.monthly_cash_flow,
+    annualCashFlow: purchase.annualCashFlow ?? purchase.annual_cash_flow,
+    capRate: purchase.capRate ?? purchase.cap_rate,
+    cashOnCash: purchase.cashOnCash ?? purchase.cash_on_cash,
+    propertyTax: purchase.propertyTax ?? purchase.property_tax,
+    insurance: purchase.insurance,
+    closingCosts: purchase.closingCosts ?? purchase.closing_costs,
+  } as PurchaseScenario : undefined;
+
   // Defensive fallback for market_data (older reports may not have it)
   const market_data = rawMarketData || {
     name: 'Local Market',
@@ -679,7 +700,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   };
 
   const hasRental = !!rental_arbitrage?.monthlyRent;
-  const hasPurchase = !!purchase?.purchasePrice;
+  const hasPurchase = !!normalizedPurchase?.purchasePrice;
   const hasExpenses = !!expenses?.items?.length;
   const hasRegulation = !!regulation?.status;
   const hasStressTest = !!stress_test?.scenarios?.length;
@@ -707,27 +728,27 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
   // Purchase calculations
   const purchaseCalcs = useMemo(() => {
-    if (!purchase?.purchasePrice) return null;
-    const price = purchase.purchasePrice;
-    const downPct = (purchase.downPaymentPercent || 20) / 100;
+    if (!normalizedPurchase?.purchasePrice) return null;
+    const price = normalizedPurchase.purchasePrice;
+    const downPct = (normalizedPurchase.downPaymentPercent || 20) / 100;
     const downPayment = price * downPct;
     const loanAmount = price - downPayment;
-    const rate = (purchase.interestRate || 7) / 100 / 12;
-    const term = (purchase.loanTerm || 30) * 12;
-    const monthlyMortgage = purchase.loanType === 'cash' ? 0 :
+    const rate = (normalizedPurchase.interestRate || 7) / 100 / 12;
+    const term = (normalizedPurchase.loanTerm || 30) * 12;
+    const monthlyMortgage = normalizedPurchase.loanType === 'cash' ? 0 :
       loanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
     const annualMortgage = monthlyMortgage * 12;
 
     // Operating expenses (35% of revenue for STR)
     const operatingExpenses = revenue_estimate.annual * 0.35;
-    const propertyTax = purchase.propertyTax || price * 0.012;
-    const insurance = purchase.insurance || price * 0.005;
+    const propertyTax = normalizedPurchase.propertyTax || price * 0.012;
+    const insurance = normalizedPurchase.insurance || price * 0.005;
     const totalExpenses = annualMortgage + operatingExpenses + propertyTax + insurance;
     const noi = revenue_estimate.annual - operatingExpenses - propertyTax - insurance;
     const capRate = (noi / price) * 100;
     const annualCashFlow = revenue_estimate.annual - totalExpenses;
     const monthlyCashFlow = annualCashFlow / 12;
-    const totalCashNeeded = downPayment + (purchase.closingCosts || price * 0.03);
+    const totalCashNeeded = downPayment + (normalizedPurchase.closingCosts || price * 0.03);
     const cashOnCash = totalCashNeeded > 0 ? (annualCashFlow / totalCashNeeded) * 100 : 0;
     const dscr = annualMortgage > 0 ? noi / annualMortgage : Infinity;
     const breakEvenOccupancy = totalExpenses / (revenue_estimate.nightly * 365);
@@ -738,7 +759,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       noi, capRate, annualCashFlow, monthlyCashFlow,
       totalCashNeeded, cashOnCash, dscr, breakEvenOccupancy
     };
-  }, [purchase, revenue_estimate]);
+  }, [normalizedPurchase, revenue_estimate]);
 
   // Best/worst months
   const bestMonth = monthly_forecast.length > 0
@@ -2052,18 +2073,18 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 const professionalCost = Math.round(annualRev * 0.02); // ~2% accounting/legal
 
                 // Purchase-specific deductions
-                const purchasePrice = purchase?.purchasePrice || 0;
+                const purchasePrice = normalizedPurchase?.purchasePrice || 0;
                 const buildingValue = Math.round(purchasePrice * 0.80); // ~80% building, 20% land
                 const annualDepreciation = purchasePrice > 0 ? Math.round(buildingValue / 27.5) : 0;
                 const propertyTaxEst = purchasePrice > 0 ? Math.round(purchasePrice * 0.012) : 0; // ~1.2% avg
                 const mortgageInterest = (() => {
-                  if (!purchase?.purchasePrice) return 0;
-                  const price = purchase.purchasePrice;
-                  const downPct = (purchase.downPaymentPercent || 20) / 100;
+                  if (!normalizedPurchase?.purchasePrice) return 0;
+                  const price = normalizedPurchase.purchasePrice;
+                  const downPct = (normalizedPurchase.downPaymentPercent || 20) / 100;
                   const loanAmount = price * (1 - downPct);
-                  const rate = (purchase.interestRate || 7) / 100;
+                  const rate = (normalizedPurchase.interestRate || 7) / 100;
                   // First year interest is roughly the loan amount * rate
-                  return purchase.loanType === 'cash' ? 0 : Math.round(loanAmount * rate * 0.97);
+                  return normalizedPurchase.loanType === 'cash' ? 0 : Math.round(loanAmount * rate * 0.97);
                 })();
 
                 // Rental arbitrage specific

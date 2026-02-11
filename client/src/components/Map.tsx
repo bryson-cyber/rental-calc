@@ -89,11 +89,18 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+// Use the user's own Google Maps API key for full control
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+
+// Fallback to Manus proxy if user's key is not available
+const FORGE_API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
 const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+
+// Determine which loading strategy to use
+const useOwnKey = !!GOOGLE_MAPS_API_KEY;
 
 export async function loadMapScript(): Promise<void> {
   // If already loaded, return immediately
@@ -112,9 +119,22 @@ export async function loadMapScript(): Promise<void> {
   
   // Start loading
   window.__googleMapsLoading = new Promise((resolve, reject) => {
+    // Determine the script URL based on available keys
+    let scriptSrc: string;
+    
+    if (useOwnKey) {
+      // Load directly from Google's CDN with user's own API key
+      scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly`;
+      console.log("[Map] Loading Google Maps with your own API key");
+    } else {
+      // Fallback to Manus proxy
+      scriptSrc = `${MAPS_PROXY_URL}/maps/api/js?key=${FORGE_API_KEY}&v=weekly`;
+      console.log("[Map] Loading Google Maps via Manus proxy (fallback)");
+    }
+    
     // Check if script already exists in DOM
     const existingScript = document.querySelector(
-      `script[src*="${MAPS_PROXY_URL}/maps/api/js"]`
+      'script[src*="maps.googleapis.com/maps/api/js"], script[src*="maps/proxy/maps/api/js"]'
     );
     
     if (existingScript) {
@@ -136,7 +156,7 @@ export async function loadMapScript(): Promise<void> {
     
     // Load base script without libraries - we'll use importLibrary instead
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly`;
+    script.src = scriptSrc;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
@@ -265,9 +285,10 @@ export function MapView({
       gestureHandling: isMobile ? 'greedy' : 'auto', // 'greedy' allows single-finger pan on mobile
       // Disable scroll zoom on mobile when embedded (prevents accidental zoom while scrolling page)
       scrollwheel: !isMobile,
-      // Enable two-finger zoom on mobile
-      // Map ID for advanced markers
-      mapId: "DEMO_MAP_ID",
+      // Map ID for advanced markers - use user's configured Map ID if available
+      // Without a mapId, AdvancedMarkerElement still works but with some limitations
+      // To create a Map ID: Google Cloud Console > Maps > Map Management > Create Map ID
+      ...(import.meta.env.VITE_GOOGLE_MAP_ID ? { mapId: import.meta.env.VITE_GOOGLE_MAP_ID } : {}),
       // Additional mobile optimizations
       clickableIcons: !isMobile, // Disable POI clicks on mobile to prevent accidental taps
       disableDoubleClickZoom: false, // Keep double-tap zoom
