@@ -10,7 +10,7 @@ interface TypeformOverlayProps {
 declare global {
   interface Window {
     tf?: {
-      createWidget?: (formId: string, options: any) => any;
+      createWidget?: (formId: string, options: Record<string, unknown>) => unknown;
     };
   }
 }

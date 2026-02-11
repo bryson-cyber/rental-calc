@@ -238,7 +238,7 @@ export const generateRentalReportPdf = (data: ReportData): void => {
       },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
   }
 
   // ===== SECTION 3: MARKET OVERVIEW =====
@@ -352,7 +352,7 @@ export const generateRentalReportPdf = (data: ReportData): void => {
       },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
   }
 
   // ===== SECTION 5: SAME BEDROOM COMPS (Apples-to-Apples) =====
@@ -408,7 +408,7 @@ export const generateRentalReportPdf = (data: ReportData): void => {
       },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
   }
 
   // ===== FOOTER / CTA =====

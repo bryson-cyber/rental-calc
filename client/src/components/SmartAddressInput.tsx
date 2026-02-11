@@ -35,6 +35,17 @@ const REDFIN_URL_PATTERNS = [
   /^https?:\/\/(www\.)?redfin\.com\/[A-Z]{2}\/[^/]+\/[^/]+\/apartment-[^/]+\/home\/\d+/i,
 ];
 
+interface GooglePlacesSuggestion {
+  placePrediction?: {
+    placeId: string;
+    text?: { text: string };
+    structuredFormat?: {
+      mainText?: { text: string };
+      secondaryText?: { text: string };
+    };
+  };
+}
+
 interface PlacePrediction {
   placeId: string;
   description: string;
@@ -192,9 +203,9 @@ export function SmartAddressInput({
       const data = await response.json();
       
       const formattedPredictions: PlacePrediction[] = (data.suggestions || [])
-        .filter((s: any) => s.placePrediction)
-        .map((s: any) => {
-          const pred = s.placePrediction;
+        .filter((s: GooglePlacesSuggestion) => s.placePrediction)
+        .map((s: GooglePlacesSuggestion) => {
+          const pred = s.placePrediction!;
           return {
             placeId: pred.placeId,
             description: pred.text?.text || '',

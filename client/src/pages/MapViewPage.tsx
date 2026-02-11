@@ -289,8 +289,8 @@ export default function MapViewPage() {
       
       if (listingsData.result?.data?.json?.listings) {
         const fetchedListings = listingsData.result.data.json.listings
-          .filter((l: any) => l.latitude && l.longitude)
-          .map((l: any) => ({
+          .filter((l: { latitude?: number; longitude?: number; [key: string]: unknown }) => l.latitude && l.longitude)
+          .map((l: { latitude: number; longitude: number; title?: string; annualRevenue?: number; averageDailyRate?: number; occupancyRate?: number | string; bedrooms?: number; bathrooms?: number; [key: string]: unknown }) => ({
             id: l.id,
             title: l.title,
             revenue: l.annual_revenue || l.revenue || 0,

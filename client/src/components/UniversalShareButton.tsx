@@ -251,8 +251,8 @@ export function UniversalShareButton({
       
       if (result.success) {
         const methods: string[] = [];
-        if ((result.notifications as any)?.smsSent) methods.push('SMS');
-        if ((result.notifications as any)?.emailSent) methods.push('email');
+        if ((result.notifications as { smsSent?: boolean })?.smsSent) methods.push('SMS');
+        if ((result.notifications as { emailSent?: boolean })?.emailSent) methods.push('email');
         
         if (methods.length > 0) {
           toast.success(`Report sent via ${methods.join(' and ')}!`);

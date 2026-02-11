@@ -60,6 +60,7 @@ function ExportPDFButton({ address, monthlyRent, bedrooms, bathrooms, analysisDa
   monthlyRent: number;
   bedrooms: number;
   bathrooms: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   analysisData?: any;
 }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -973,12 +974,12 @@ export default function PropertyAnalyzer() {
       } else {
         setError(response.error || 'Analysis failed. Please try again.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearInterval(stepInterval);
       console.error('Analysis error:', err);
       
       // Detect timeout or network errors and show helpful message
-      const errorMessage = err.message || '';
+      const errorMessage = err instanceof Error ? err.message : '';
       if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('network')) {
         setError('The analysis is taking longer than expected. This can happen during peak times. Please try again in a few moments.');
       } else if (errorMessage.includes('HTML') || errorMessage.includes('not valid JSON')) {

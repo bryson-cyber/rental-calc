@@ -54,7 +54,7 @@ interface SavedRegulation {
   createdAt: Date | string;
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   allowed: { 
     label: 'Allowed', 
     color: 'oklch(0.35 0.12 145)', 

@@ -10356,3 +10356,25 @@ Results:
 - [x] Fix all TypeScript compilation errors in extracted files
 - [x] Run full test suite - all 784 tests pass across 60 files
 - [x] Verify dev server starts and serves pages correctly
+
+## Cleanup Tasks (Feb 11, 2026)
+
+### Task 1: Consolidate Charting Libraries
+- [x] Identified Chart.js usage in HistoricalCharts.tsx, Recharts in RevenueCharts.tsx
+- [x] Chose Recharts (better React ecosystem integration)
+- [x] Migrated HistoricalCharts.tsx from Chart.js to Recharts (Line, Area, Tooltip, ResponsiveContainer)
+- [x] Removed chart.js and react-chartjs-2 from package.json
+- [x] Verified all charts render correctly
+
+### Task 2: Barrel Exports for Router Files
+- [x] Created server/routers/index.ts with re-exports of all 29 routers
+- [x] Updated server/routers.ts to import from barrel file (single clean import)
+- [x] Verified TypeScript compilation (0 errors) and all 784 tests pass
+
+### Task 3: Fix Client-Side TypeScript Explicit Any Warnings
+- [x] Fixed 32 any usages across 12 files (198 → 166, 16% reduction)
+- [x] Added proper types for Google Places API, Recharts tooltips, PDF autotable, etc.
+- [x] Fixed catch blocks to use unknown with instanceof narrowing
+- [x] Fixed non-null assertions for filtered optional properties
+- [x] Verified zero new TypeScript errors (0 total)
+- [x] All 784 tests pass across 60 test files

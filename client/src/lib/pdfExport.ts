@@ -166,7 +166,7 @@ export function exportMarketComparisonPDF(
   });
 
   // Get the final Y position after the table
-  const finalY = (doc as any).lastAutoTable?.finalY || yPosition + 50;
+  const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || yPosition + 50;
 
   // Branding footer
   if (includeBranding) {

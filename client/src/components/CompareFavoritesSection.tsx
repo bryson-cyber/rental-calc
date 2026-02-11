@@ -313,10 +313,10 @@ export function CompareFavoritesSection({ onNavigateToMap }: CompareFavoritesSec
             monthlyRent: fav.monthlyRent,
             zillowUrl: fav.zillowUrl,
             // Purchase mode fields - use defaults if not stored
-            purchasePrice: (fav as any).purchasePrice || null,
-            loanType: (fav as any).loanType || null,
-            downPaymentPercent: (fav as any).downPaymentPercent || null,
-            interestRate: (fav as any).interestRate || null,
+            purchasePrice: (fav as unknown as { purchasePrice?: number }).purchasePrice || null,
+            loanType: (fav as unknown as { loanType?: string }).loanType || null,
+            downPaymentPercent: (fav as unknown as { downPaymentPercent?: number }).downPaymentPercent || null,
+            interestRate: (fav as unknown as { interestRate?: number }).interestRate || null,
           }))}
           onRemove={(id) => handleRemove(id)}
           mode={globalMode || 'rent'}

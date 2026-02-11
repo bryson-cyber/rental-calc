@@ -355,7 +355,7 @@ function DataSourceBadge({ type }: { type: 'property' | 'market' }) {
   );
 }
 
-function SectionHeader({ icon: Icon, title, subtitle, tooltip }: { icon: any; title: string; subtitle?: string; tooltip?: string }) {
+function SectionHeader({ icon: Icon, title, subtitle, tooltip }: { icon: React.ElementType; title: string; subtitle?: string; tooltip?: string }) {
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-2">
@@ -373,7 +373,7 @@ function SectionHeader({ icon: Icon, title, subtitle, tooltip }: { icon: any; ti
 }
 
 function StatCard({ label, value, sublabel, icon: Icon, highlight, tooltip }: {
-  label: string; value: string; sublabel?: string; icon?: any; highlight?: boolean; tooltip?: string;
+  label: string; value: string; sublabel?: string; icon?: React.ElementType; highlight?: boolean; tooltip?: string;
 }) {
   return (
     <div className={`rounded-xl p-5 ${highlight ? 'bg-[#C9A962]/10 border border-[#C9A962]/30' : 'bg-white border border-[#e2e8f0]'}`}>

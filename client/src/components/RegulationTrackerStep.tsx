@@ -197,12 +197,12 @@ export function RegulationTrackerStep() {
   const [autoNotificationSent, setAutoNotificationSent] = useState(false);
   
   // Helper to process regulation result and trigger auto-notification
-  const processRegulationResult = (data: any) => {
+  const processRegulationResult = (data: RegulationResult) => {
     let mappedStatus = data.status;
     if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
-      mappedStatus = 'allowed_with_permit' as any;
+      mappedStatus = 'allowed_with_permit';
     } else if (data.status === 'restricted' && data.keyRequirements.length > 0) {
-      mappedStatus = 'allowed_with_requirements' as any;
+      mappedStatus = 'allowed_with_requirements';
     }
     
     const processedResult = { ...data, status: mappedStatus } as RegulationResult;

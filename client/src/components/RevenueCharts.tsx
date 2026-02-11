@@ -61,12 +61,12 @@ const formatPercent = (value: number) => {
 };
 
 // Custom tooltip for charts
-const CustomTooltip = ({ active, payload, label, type = 'revenue' }: any) => {
+const CustomTooltip = ({ active, payload, label, type = 'revenue' }: { active?: boolean; payload?: Array<{ color: string; name: string; value: number }>; label?: string; type?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
         <p className="font-semibold text-gray-900 mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: { color: string; name: string; value: number }, index: number) => (
           <p key={index} style={{ color: entry.color }} className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
             <span className="text-gray-600">{entry.name}:</span>
@@ -454,7 +454,8 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
           />
           <YAxis hide />
           <Tooltip 
-            formatter={(value: number, name: string, props: any) => [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            formatter={(_value: number, _name: string, props: any) => [
               formatCurrency(props.payload.revenue),
               props.payload.season === 'peak' ? 'Peak Season' : 
               props.payload.season === 'off' ? 'Off-Season' : 'Shoulder Season'

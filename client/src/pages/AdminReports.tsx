@@ -49,8 +49,11 @@ interface AnalysisReport {
   verdict: string | null;
   confidenceScore: number | null;
   createdAt: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fullAnalysisData: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   narrativeReport: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   competitorData: any;
 }
 
@@ -78,8 +81,8 @@ export default function AdminReports() {
       }
       const data = await response.json();
       setReports(data.reports || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load reports');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load reports');
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,7 @@ export default function AdminReports() {
       return matchesSearch && matchesVerdict;
     })
     .sort((a, b) => {
-      let aVal: any, bVal: any;
+      let aVal: string | number = 0, bVal: string | number = 0;
       
       if (sortField === 'createdAt') {
         aVal = new Date(a.createdAt).getTime();
@@ -130,7 +133,7 @@ export default function AdminReports() {
   const getVerdictBadge = (verdict: string | null) => {
     if (!verdict) return null;
     
-    const badges: Record<string, { bg: string; text: string; icon: any }> = {
+    const badges: Record<string, { bg: string; text: string; icon: React.ElementType }> = {
       'GO': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
       'CAUTION': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: AlertTriangle },
       'NO-GO': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },

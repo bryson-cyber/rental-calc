@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,28 +11,14 @@ import {
 } from '@/components/ui/select';
 import { Loader2, TrendingUp, TrendingDown, Percent, DollarSign, Home, BarChart3 } from 'lucide-react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+  ResponsiveContainer,
+} from 'recharts';
 
 interface HistoricalChartsProps {
   marketId: string;
@@ -82,126 +68,6 @@ export function HistoricalCharts({
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   };
 
-  // Chart options with interactive tooltips
-  const getChartOptions = (metricKey: string) => {
-    const metric = metrics[metricKey as keyof typeof metrics];
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index' as const,
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          enabled: true,
-          backgroundColor: '#0F172A',
-          titleColor: '#fff',
-          bodyColor: '#fff',
-          padding: 16,
-          cornerRadius: 8,
-          displayColors: false,
-          titleFont: {
-            size: 14,
-            weight: 'bold' as const,
-          },
-          bodyFont: {
-            size: 13,
-          },
-          callbacks: {
-            title: (context: any) => {
-              return context[0]?.label || '';
-            },
-            label: (context: any) => {
-              const value = context.raw;
-              if (metricKey === 'occupancy') {
-                return `Booking Rate: ${Math.round(value)}%`;
-              } else if (metricKey === 'revenue') {
-                return `Annual Income: $${Math.round(value).toLocaleString()}`;
-              } else if (metricKey === 'adr') {
-                return `Nightly Rate: $${Math.round(value).toLocaleString()}`;
-              } else if (metricKey === 'listings') {
-                return `Active Listings: ${Math.round(value).toLocaleString()}`;
-              }
-              return `${metric?.label || 'Value'}: ${value}`;
-            },
-            afterLabel: (context: any) => {
-              // Add helpful context based on the metric
-              const value = context.raw;
-              if (metricKey === 'occupancy') {
-                if (value >= 70) return '✓ Excellent booking rate';
-                if (value >= 55) return '✓ Good booking rate';
-                return '⚠ Below average';
-              } else if (metricKey === 'revenue') {
-                const monthly = Math.round(value / 12);
-                return `≈ $${monthly.toLocaleString()}/month`;
-              }
-              return '';
-            },
-          },
-        },
-      },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#9CA3AF',
-          font: {
-            size: 11,
-          },
-          maxRotation: 45,
-          minRotation: 45,
-        },
-      },
-      y: {
-        grid: {
-          color: '#F3F4F6',
-        },
-        ticks: {
-          color: '#9CA3AF',
-          font: {
-            size: 11,
-          },
-        },
-      },
-    },
-      elements: {
-        line: {
-          tension: 0.4,
-        },
-        point: {
-          radius: 3,
-          hoverRadius: 8,
-          backgroundColor: metric?.color || '#3B82F6',
-          borderColor: '#fff',
-          borderWidth: 2,
-          hoverBackgroundColor: metric?.color || '#3B82F6',
-          hoverBorderColor: '#fff',
-          hoverBorderWidth: 3,
-        },
-      },
-    };
-  };
-
-  // Create chart data for each metric
-  const createChartData = (dataPoints: Array<{ month: string; value: number }>, color: string) => ({
-    labels: dataPoints.map(d => formatMonth(d.month)),
-    datasets: [
-      {
-        data: dataPoints.map(d => d.value),
-        borderColor: color,
-        backgroundColor: `${color}20`,
-        fill: true,
-        borderWidth: 2,
-      },
-    ],
-  });
-
   const metrics = {
     occupancy: {
       label: 'Booking Rate',
@@ -210,6 +76,12 @@ export function HistoricalCharts({
       format: (v: number) => `${Math.round(v)}%`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'How often properties are booked throughout the year. 60%+ is healthy. If this number is going UP, demand is growing!',
+      tooltipFormatter: (value: number) => `Booking Rate: ${Math.round(value)}%`,
+      tooltipAfter: (value: number) => {
+        if (value >= 70) return '✓ Excellent booking rate';
+        if (value >= 55) return '✓ Good booking rate';
+        return '⚠ Below average';
+      },
     },
     revenue: {
       label: 'Annual Income',
@@ -218,6 +90,11 @@ export function HistoricalCharts({
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Average yearly income hosts earn in this market (before expenses). This is the "gross revenue" you can expect.',
+      tooltipFormatter: (value: number) => `Annual Income: $${Math.round(value).toLocaleString()}`,
+      tooltipAfter: (value: number) => {
+        const monthly = Math.round(value / 12);
+        return `≈ $${monthly.toLocaleString()}/month`;
+      },
     },
     adr: {
       label: 'Nightly Rate',
@@ -226,6 +103,8 @@ export function HistoricalCharts({
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Average price per night guests pay. Higher = more premium market. This affects your revenue potential.',
+      tooltipFormatter: (value: number) => `Nightly Rate: $${Math.round(value).toLocaleString()}`,
+      tooltipAfter: () => '',
     },
     listings: {
       label: 'Competition',
@@ -234,7 +113,30 @@ export function HistoricalCharts({
       format: (v: number) => Math.round(v).toLocaleString(),
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Total active short-term rentals in this market. More listings = more competition. Watch if this is growing faster than demand.',
+      tooltipFormatter: (value: number) => `Active Listings: ${Math.round(value).toLocaleString()}`,
+      tooltipAfter: () => '',
     },
+  };
+
+  // Custom tooltip component for Recharts
+  const CustomTooltip = ({ active, payload, label, metricKey }: {
+    active?: boolean;
+    payload?: Array<{ value: number }>;
+    label?: string;
+    metricKey: string;
+  }) => {
+    if (!active || !payload || !payload.length) return null;
+    const metric = metrics[metricKey as keyof typeof metrics];
+    const value = payload[0].value;
+    const afterText = metric.tooltipAfter(value);
+
+    return (
+      <div className="bg-[#0F172A] text-white px-4 py-3 rounded-lg shadow-lg text-sm">
+        <p className="font-bold mb-1">{label}</p>
+        <p>{metric.tooltipFormatter(value)}</p>
+        {afterText && <p className="mt-1 text-gray-300 text-xs">{afterText}</p>}
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -271,7 +173,7 @@ export function HistoricalCharts({
             <h3 className="text-xl font-semibold text-gray-900">Is this market growing or declining?</h3>
             <p className="text-sm text-gray-500 mt-1">Track {marketName}'s performance over time to spot trends</p>
           </div>
-          <Select value={String(timeRange)} onValueChange={(v) => setTimeRange(parseInt(v))}>
+          <Select value={String(timeRange)} onValueChange={(v: string) => setTimeRange(parseInt(v))}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -345,15 +247,51 @@ export function HistoricalCharts({
 
           {Object.entries(metrics).map(([key, metric]) => {
             const dataPoints = historicalData[key as keyof typeof historicalData] || [];
+            const chartData = dataPoints.map((d: { month: string; value: number }) => ({
+              month: formatMonth(d.month),
+              value: d.value,
+            }));
             
             return (
               <TabsContent key={key} value={key} className="mt-0">
                 <div className="h-64">
-                  {dataPoints.length > 0 ? (
-                    <Line 
-                      data={createChartData(dataPoints, metric.color)} 
-                      options={getChartOptions(key)}
-                    />
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={metric.color} stopOpacity={0.2} />
+                            <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                        <XAxis 
+                          dataKey="month" 
+                          tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                          tickLine={false}
+                          axisLine={false}
+                          angle={-45}
+                          textAnchor="end"
+                          height={50}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={60}
+                        />
+                        <Tooltip content={<CustomTooltip metricKey={key} />} />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke={metric.color}
+                          strokeWidth={2}
+                          fill={`url(#gradient-${key})`}
+                          dot={{ r: 3, fill: metric.color, stroke: '#fff', strokeWidth: 2 }}
+                          activeDot={{ r: 6, fill: metric.color, stroke: '#fff', strokeWidth: 3 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   ) : (
                     <div className="h-full flex items-center justify-center text-gray-500">
                       No data available for this time range

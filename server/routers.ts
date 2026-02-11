@@ -4,43 +4,45 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { getUsageStatus } from "./usage-limits";
 
-// External routers (already separate files)
+// External routers (already separate files before refactoring)
 import { marketResearchRouter } from "./market-research-v2";
 import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
 import { adminRouter } from "./admin-router";
 import { newsletterRouter } from "./newsletter-router";
 
-// Extracted routers (server/routers/)
-import { rentalRouter } from "./routers/rental";
-import { advancedRouter } from "./routers/advanced";
-import { sharedReportsRouter } from "./routers/shared-reports";
-import { regulationTrackerRouter } from "./routers/regulation-tracker";
-import { savedSearchesRouter } from "./routers/saved-searches";
-import { favoritesRouter } from "./routers/favorites";
-import { favoriteListingsRouter } from "./routers/favorite-listings";
-import { exportRouter } from "./routers/export";
-import { deepAnalysisRouter } from "./routers/deep-analysis";
-import { listingsByAreaRouter } from "./routers/listings-by-area";
-import { compDataRouter } from "./routers/comp-data";
-import { bulkSummaryRouter } from "./routers/bulk-summary";
-import { marketComparisonRouter } from "./routers/market-comparison";
-import { marketDiscoveryRouter } from "./routers/market-discovery";
-import { favoriteMarketsRouter } from "./routers/favorite-markets";
-import { marketAlertsRouter } from "./routers/market-alerts";
-import { notificationsRouter } from "./routers/notifications";
-import { rentometerRouter } from "./routers/rentometer";
-import { marketExplorerRouter } from "./routers/market-explorer";
-import { zillowRouter } from "./routers/zillow";
-import { redfinRouter } from "./routers/redfin";
-import { webhookRouter } from "./routers/webhook";
-import { emailOptinRouter } from "./routers/email-optin";
-import { adminTrackingRouter } from "./routers/admin-tracking";
-import { bugReportsRouter } from "./routers/bug-reports";
-import { shareableReportsRouter } from "./routers/shareable-reports";
-import { aiRouter } from "./routers/ai";
-import { dealAlertsRouter } from "./routers/deal-alerts";
-import { behaviorEngineRouter } from "./routers/behavior-engine";
+// All extracted feature routers (barrel import)
+import {
+  rentalRouter,
+  advancedRouter,
+  sharedReportsRouter,
+  regulationTrackerRouter,
+  savedSearchesRouter,
+  favoritesRouter,
+  favoriteListingsRouter,
+  exportRouter,
+  deepAnalysisRouter,
+  listingsByAreaRouter,
+  compDataRouter,
+  bulkSummaryRouter,
+  marketComparisonRouter,
+  marketDiscoveryRouter,
+  favoriteMarketsRouter,
+  marketAlertsRouter,
+  notificationsRouter,
+  rentometerRouter,
+  marketExplorerRouter,
+  zillowRouter,
+  redfinRouter,
+  webhookRouter,
+  emailOptinRouter,
+  adminTrackingRouter,
+  bugReportsRouter,
+  shareableReportsRouter,
+  aiRouter,
+  dealAlertsRouter,
+  behaviorEngineRouter,
+} from "./routers/index";
 
 export const appRouter = router({
   system: systemRouter,
