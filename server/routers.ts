@@ -5560,6 +5560,53 @@ export const appRouter = router({
         };
       }),
 
+    // Save comp selection for a shared report (admin only)
+    saveCompSelection: protectedProcedure
+      .input(z.object({
+        shareId: z.string(),
+        selectedCompIds: z.array(z.string()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Only admins can save comp selections');
+        }
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+
+        const results = await db
+          .select()
+          .from(sharedReports)
+          .where(eq(sharedReports.shareId, input.shareId))
+          .limit(1);
+
+        if (results.length === 0) {
+          throw new Error('Report not found');
+        }
+
+        const report = results[0];
+        let reportData: any;
+        try {
+          reportData = typeof report.reportData === 'string'
+            ? JSON.parse(report.reportData)
+            : report.reportData;
+        } catch {
+          throw new Error('Failed to parse report data');
+        }
+
+        // Store the comp selection in the report data
+        reportData.comp_selection = {
+          selectedIds: input.selectedCompIds,
+          savedAt: Date.now(),
+          savedBy: ctx.user.name || ctx.user.openId,
+        };
+
+        await db.update(sharedReports)
+          .set({ reportData: JSON.stringify(reportData) })
+          .where(eq(sharedReports.shareId, input.shareId));
+
+        return { success: true, selectedCount: input.selectedCompIds.length };
+      }),
+
     // Regenerate a shared report with fresh data from AirDNA + Gemini 3
     regenerate: protectedProcedure
       .input(z.object({

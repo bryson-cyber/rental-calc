@@ -10244,3 +10244,22 @@ This makes the grading more optimistic - properties now get better grades at low
   - Added manual chunks in vite.config.ts to split vendor libraries (react, trpc, charts, pdf, maps, ui)
   - All pages already lazy-loaded with React.lazy + Suspense
   - All 741 tests pass across 58 test files
+
+## Feature - Manual Comp Selection (Feb 10, 2026)
+- [x] Add checkboxes to comp table rows for selecting/deselecting comps
+  - Each comp row has a checkbox; toggling updates filteredComps in real-time
+- [x] Recalculate comp summary stats (avg revenue, avg ADR, avg occupancy, avg rating) based on selected comps only
+  - Summary stats, map markers, and summary text all use filteredComps
+- [x] Persist comp selections per report in the database
+  - localStorage auto-saves on every change (no API calls)
+  - Backend tRPC mutation `saveCompSelection` for explicit admin save (persists in reportData JSON)
+  - Priority chain: backend saved > localStorage > all comps selected
+- [x] Update the comp map to only show selected comps
+  - CompsMapView receives filteredComps instead of displayComps
+- [x] Add select all / deselect all controls
+  - Toggle all button in comp selection controls bar
+- [x] Add visual indicator showing how many comps are selected vs total
+  - Shows "X of Y comps selected" with selection controls bar
+  - Admin-only "Save Selection" button to persist to backend
+  - 17 unit tests for comp selection logic
+  - All 758 tests pass across 59 test files
