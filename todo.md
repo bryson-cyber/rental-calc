@@ -10432,3 +10432,13 @@ Results:
 - [x] Verified LeadMagnet.tsx Explore Area map already had the fix applied
 - [x] Audited all 7 MapView usages across 5 files - all now properly contained
 - [x] All 764 tests pass, 0 TypeScript errors
+
+## Fix: Comp Map Info Card (Feb 11, 2026)
+- [x] Calculate distance from comp lat/long to subject property using Haversine formula (was showing "N/A away")
+- [x] Fix occupancy display showing "7761%" instead of "77%" - handles both decimal (0.77) and percentage (77) formats
+- [x] Add property thumbnail preview image to info window popup and selected comp panel below map
+- [x] Add review count alongside star rating in info card
+- [x] Improve info window layout with structured Revenue/ADR/Occ columns
+- [x] Add compass icon with distance display ("1.3 mi from your property")
+- [x] Write vitest unit tests for haversineDistance, formatOccupancy, and getDistance helpers
+- [x] All 783 tests pass, 0 TypeScript errors

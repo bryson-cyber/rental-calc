@@ -3,7 +3,7 @@ import { MapView } from "./Map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Home, Star, Expand, Minimize, ExternalLink } from "lucide-react";
+import { MapPin, Home, Star, Expand, Minimize, ExternalLink, Navigation } from "lucide-react";
 
 interface Comp {
   title?: string;
@@ -19,6 +19,7 @@ interface Comp {
   longitude?: number;
   airbnb_listing_id?: string;
   thumbnail_url?: string;
+  image_url?: string;
 }
 
 interface SubjectProperty {
@@ -47,15 +48,64 @@ function formatCurrency(value: number | undefined): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
-function formatDistance(meters: number | undefined): string {
-  if (!meters) return "N/A";
-  if (meters < 1000) return `${Math.round(meters)}m`;
-  return `${(meters / 1609.34).toFixed(1)} mi`;
+/**
+ * Calculate distance between two lat/lng points using the Haversine formula.
+ * Returns distance in meters.
+ */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth's radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Get distance in a human-readable format.
+ * Uses distance_meters from API if available, otherwise calculates from coordinates.
+ */
+function getDistance(
+  comp: Comp,
+  subjectLat: number,
+  subjectLng: number
+): { meters: number; text: string } {
+  let meters = comp.distance_meters;
+
+  // If API didn't provide distance, calculate from coordinates
+  if (!meters && comp.latitude && comp.longitude) {
+    meters = haversineDistance(subjectLat, subjectLng, comp.latitude, comp.longitude);
+  }
+
+  if (!meters || meters <= 0) {
+    return { meters: 0, text: "N/A" };
+  }
+
+  // Format: under 1000m show meters, otherwise show miles
+  if (meters < 1000) {
+    return { meters, text: `${Math.round(meters)}m` };
+  }
+  const miles = meters / 1609.34;
+  return { meters, text: `${miles.toFixed(1)} mi` };
+}
+
+/**
+ * Format occupancy handling both decimal (0.77) and percentage (77) formats.
+ */
+function formatOccupancy(value: number | undefined): string {
+  if (value === undefined || value === null) return "N/A";
+  // If value > 1, it's already a percentage; otherwise multiply by 100
+  const pct = value > 1 ? value : value * 100;
+  return `${Math.round(pct)}%`;
 }
 
 export function CompsMapView({ comps, subjectProperty, className }: CompsMapViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedComp, setSelectedComp] = useState<Comp | null>(null);
+  const [selectedCompDistance, setSelectedCompDistance] = useState<string>("");
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
@@ -84,9 +134,38 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
         content: el
       });
       marker.addListener("click", () => {
+        const dist = getDistance(comp, subjectProperty.latitude, subjectProperty.longitude);
         setSelectedComp(comp);
-        const airbnbLink = comp.airbnb_listing_id ? `<a href="https://www.airbnb.com/rooms/${comp.airbnb_listing_id}" target="_blank" style="color:#3B82F6;text-decoration:underline;font-size:11px;">View on Airbnb</a>` : "";
-        infoWindowRef.current?.setContent(`<div style="padding:8px;max-width:250px;"><b>${comp.title || `Comp #${i + 1}`}</b><div style="font-size:12px;color:#666;margin-bottom:4px;">${comp.bedrooms || "?"} BR / ${comp.bathrooms || "?"} BA ${comp.rating ? `• ⭐ ${comp.rating.toFixed(1)}` : ""}</div><div style="font-size:13px;font-weight:600;color:#059669;margin-bottom:4px;">${formatCurrency(comp.annual_revenue)}/yr</div><div style="font-size:12px;color:#666;">ADR: ${formatCurrency(comp.adr)} • Occ: ${comp.occupancy ? `${Math.round(comp.occupancy * 100)}%` : "N/A"}</div><div style="font-size:11px;color:#999;margin-top:4px;">${formatDistance(comp.distance_meters)} away</div>${airbnbLink ? `<div style="margin-top:6px;">${airbnbLink}</div>` : ""}</div>`);
+        setSelectedCompDistance(dist.text);
+
+        // Build info window with thumbnail, distance, and correct occupancy
+        const imgUrl = comp.thumbnail_url || comp.image_url;
+        const thumbnailHtml = imgUrl
+          ? `<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;"><img src="${imgUrl}" alt="${comp.title || 'Property'}" style="width:100%;height:120px;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'" /></div>`
+          : "";
+
+        const airbnbLink = comp.airbnb_listing_id
+          ? `<a href="https://www.airbnb.com/rooms/${comp.airbnb_listing_id}" target="_blank" rel="noopener noreferrer" style="color:#3B82F6;text-decoration:none;font-size:11px;display:inline-flex;align-items:center;gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on Airbnb</a>`
+          : "";
+
+        const distanceHtml = dist.text !== "N/A"
+          ? `<div style="font-size:11px;color:#666;margin-top:6px;display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9A962" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg><span style="color:#B45309;font-weight:600;">${dist.text}</span> from your property</div>`
+          : "";
+
+        infoWindowRef.current?.setContent(
+          `<div style="padding:4px;max-width:260px;font-family:system-ui,-apple-system,sans-serif;">` +
+            thumbnailHtml +
+            `<div style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:4px;">${comp.title || `Comp #${i + 1}`}</div>` +
+            `<div style="font-size:12px;color:#64748b;margin-bottom:4px;">${comp.bedrooms || "?"} BR / ${comp.bathrooms || "?"} BA${comp.rating ? ` · ⭐ ${comp.rating.toFixed(1)}` : ""}${comp.reviews ? ` (${comp.reviews})` : ""}</div>` +
+            `<div style="display:flex;gap:12px;margin-bottom:2px;">` +
+              `<div><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Revenue</div><div style="font-size:14px;font-weight:700;color:#059669;">${formatCurrency(comp.annual_revenue)}<span style="font-size:11px;font-weight:400;color:#64748b;">/yr</span></div></div>` +
+              `<div><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">ADR</div><div style="font-size:14px;font-weight:600;color:#1e293b;">${formatCurrency(comp.adr)}</div></div>` +
+              `<div><div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Occ.</div><div style="font-size:14px;font-weight:600;color:#1e293b;">${formatOccupancy(comp.occupancy)}</div></div>` +
+            `</div>` +
+            distanceHtml +
+            (airbnbLink ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;">${airbnbLink}</div>` : "") +
+          `</div>`
+        );
         infoWindowRef.current?.open(map, marker);
       });
       markersRef.current.push(marker);
@@ -181,8 +260,8 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
     if (mapRef.current) handleMapReady(mapRef.current);
   }, [comps, subjectProperty]);
 
-  // Always show the map when subject property has coordinates
-  // Even if no comps have coordinates, the subject property marker is valuable
+  // Get the image URL for the selected comp
+  const selectedCompImg = selectedComp?.thumbnail_url || selectedComp?.image_url;
 
   return (
     <Card className={className}>
@@ -236,38 +315,66 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
           </div>
         </div>
 
-        {/* Selected comp details */}
+        {/* Selected comp details panel (below map) */}
         {selectedComp && (
-          <div className="p-3 border-t bg-muted/50">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="font-medium text-sm">{selectedComp.title || "Comparable Property"}</h4>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <span>{selectedComp.bedrooms} BR / {selectedComp.bathrooms} BA</span>
-                  {selectedComp.rating && (
-                    <span className="flex items-center gap-0.5">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                      {selectedComp.rating.toFixed(1)}
+          <div className="p-4 border-t bg-muted/50">
+            <div className="flex gap-4">
+              {/* Thumbnail */}
+              {selectedCompImg && (
+                <div className="flex-shrink-0">
+                  <img
+                    src={selectedCompImg}
+                    alt={selectedComp.title || "Comparable Property"}
+                    className="w-20 h-16 rounded-lg object-cover border border-border"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              
+              {/* Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h4 className="font-medium text-sm truncate">{selectedComp.title || "Comparable Property"}</h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                      <span>{selectedComp.bedrooms} BR / {selectedComp.bathrooms} BA</span>
+                      {selectedComp.rating && (
+                        <span className="flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          {selectedComp.rating.toFixed(1)}
+                          {selectedComp.reviews ? <span className="text-muted-foreground">({selectedComp.reviews})</span> : null}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="font-semibold text-green-600 text-sm">{formatCurrency(selectedComp.annual_revenue)}/yr</div>
+                    <div className="text-xs text-muted-foreground">ADR: {formatCurrency(selectedComp.adr)} · Occ: {formatOccupancy(selectedComp.occupancy)}</div>
+                  </div>
+                </div>
+                
+                {/* Distance + Airbnb link row */}
+                <div className="flex items-center gap-4 mt-2">
+                  {selectedCompDistance && selectedCompDistance !== "N/A" && (
+                    <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium">
+                      <Navigation className="w-3 h-3" />
+                      {selectedCompDistance} away
                     </span>
+                  )}
+                  {selectedComp.airbnb_listing_id && (
+                    <a
+                      href={`https://www.airbnb.com/rooms/${selectedComp.airbnb_listing_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      View on Airbnb
+                    </a>
                   )}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-semibold text-green-600 text-sm">{formatCurrency(selectedComp.annual_revenue)}/yr</div>
-                <div className="text-xs text-muted-foreground">ADR: {formatCurrency(selectedComp.adr)}</div>
-              </div>
             </div>
-            {selectedComp.airbnb_listing_id && (
-              <a
-                href={`https://www.airbnb.com/rooms/${selectedComp.airbnb_listing_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-2"
-              >
-                <ExternalLink className="w-3 h-3" />
-                View on Airbnb
-              </a>
-            )}
           </div>
         )}
       </CardContent>
