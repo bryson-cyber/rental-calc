@@ -10284,3 +10284,15 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Wire badge into App.tsx with system.devFlags tRPC endpoint — only shows when mockApi=true and isProduction=false
 - [x] Badge is dismissible with X button
 - [x] Write 26 tests for mock API + devFlags ENV test — all 784 tests pass across 60 files
+
+## Tier 1 Optimization Fixes (Feb 11, 2026)
+- [ ] Fix Mermaid/Streamdown bundle bloat — exclude unused syntax highlighter languages (~3 MB savings)
+- [ ] Add React.lazy() code splitting for heavy pages (SharedReportPage, PropertyAnalyzer, InvestmentCalculator, etc.)
+- [ ] Remove axios (2 files) — migrate to native fetch()
+- [ ] Replace xlsx with exceljs (eliminate 2 high vulnerabilities)
+- [ ] Update/fix jspdf (critical vulnerability)
+- [ ] Add database indexes on property_images table (13K+ rows, no index)
+- [ ] Add database indexes on activity_logs table (5.7K+ rows, no index)
+- [ ] Add index on universal_shareable_reports.shareToken
+- [ ] Investigate tool_usage_events tracking (0 rows — should be tracking)
+- [ ] Run full test suite to verify nothing is broken
