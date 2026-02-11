@@ -1,4 +1,9 @@
 import "dotenv/config";
+import { installMockApi } from "../dev-mock-api";
+
+// Install mock API interceptor early (only activates when DEV_MOCK_API=true)
+installMockApi();
+
 import express from "express";
 import { createServer } from "http";
 import net from "net";

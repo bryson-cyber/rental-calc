@@ -15,4 +15,5 @@ export const ENV = {
   rentometerApiKey: process.env.RENTOMETER_API_KEY ?? "",
   simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
   zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
+  devMockApi: process.env.DEV_MOCK_API === "true",
 };

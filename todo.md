@@ -10263,3 +10263,16 @@ This makes the grading more optimistic - properties now get better grades at low
   - Admin-only "Save Selection" button to persist to backend
   - 17 unit tests for comp selection logic
   - All 758 tests pass across 59 test files
+
+## Feature - DEV_MOCK_API Mode (Feb 11, 2026)
+- [x] Audit all external API call points (77 fetch calls across 25 files)
+- [x] Create inline fixture data with accurate response shapes matching TypeScript types
+- [x] Create global fetch interceptor (server/dev-mock-api.ts) that intercepts all external calls when DEV_MOCK_API=true
+- [x] Wire installMockApi() into server entry point (server/_core/index.ts line 2-5)
+- [x] Add DEV_MOCK_API=true env variable via webdev_request_secrets
+- [x] Write 17 tests verifying mock mode returns fixture data for all services
+- [x] Document usage with comprehensive JSDoc comments in dev-mock-api.ts
+- [x] Mock routes cover: AirDNA (rentalizer, market search, market details, submarkets, listings, supply, bedroom performance), Rentometer, Gemini AI, HubSpot, HasData, SimpleTexting, Zapier, Airbnb, Google Vertex AI Search, URL validation (.gov/.org/.edu), Google Search
+- [x] Passthrough for: localhost, manus.computer, manus.im, forge.manus, tidbcloud.com (database)
+- [x] Support for recorded fixtures (load from server/fixtures/*.json) with fallback to inline defaults
+- [x] All 775 tests pass across 60 test files
