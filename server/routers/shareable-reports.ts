@@ -1,0 +1,166 @@
+import { z } from "zod";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { notifications } from "../../drizzle/schema";
+import { createAndNotifyShareableReport, createShareableReport, getNotificationAnalytics, getShareableReport, sendShareableReportNotifications, type ShareableReportType } from "../shareable-reports";
+
+export const shareableReportsRouter = router({
+    // Create a shareable report for any tool type
+    create: publicProcedure
+      .input(z.object({
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
+        // Property information
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        monthlyRent: z.number().optional(),
+        // Market information
+        marketId: z.string().optional(),
+        marketName: z.string().optional(),
+        // Report data
+        reportData: z.any(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        // Key metrics
+        annualRevenue: z.number().optional(),
+        occupancyRate: z.number().optional(),
+        averageDailyRate: z.number().optional(),
+        profitMargin: z.number().optional(),
+        verdict: z.string().optional(),
+        // Creator info
+        creatorEmail: z.string().optional(),
+        creatorPhone: z.string().optional(),
+        creatorName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await createShareableReport(input);
+        return result;
+      }),
+
+    // Get a shareable report by share code
+    get: publicProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+      }))
+      .query(async ({ input }) => {
+        const report = await getShareableReport(input.shareCode);
+        if (!report) {
+          return { success: false, error: 'Report not found' };
+        }
+        return { success: true, data: report };
+      }),
+
+    // Send notifications for an existing shareable report
+    sendNotifications: publicProcedure
+      .input(z.object({
+        shareCode: z.string().min(1),
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
+        phone: z.string().optional(),
+        email: z.string().email().optional(),
+        name: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        address: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await sendShareableReportNotifications(
+          input.shareCode,
+          input.reportType as ShareableReportType,
+          { phone: input.phone, email: input.email, name: input.name },
+          { city: input.city, state: input.state, address: input.address, title: input.title }
+        );
+        return { success: true, notifications: result };
+      }),
+
+    // Create shareable report and send notifications in one call (for auto-notification)
+    createAndNotify: publicProcedure
+      .input(z.object({
+        reportType: z.enum(['revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map', 'regulation']),
+        // Property information
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        bedrooms: z.number().optional(),
+        bathrooms: z.number().optional(),
+        monthlyRent: z.number().optional(),
+        // Market information
+        marketId: z.string().optional(),
+        marketName: z.string().optional(),
+        // Report data
+        reportData: z.any(),
+        title: z.string().optional(),
+        summary: z.string().optional(),
+        // Key metrics
+        annualRevenue: z.number().optional(),
+        occupancyRate: z.number().optional(),
+        averageDailyRate: z.number().optional(),
+        profitMargin: z.number().optional(),
+        verdict: z.string().optional(),
+        // Contact info for notification
+        userEmail: z.string().email().optional(),
+        userPhone: z.string().optional(),
+        userName: z.string().optional(),
+        // Options
+        triggeredBy: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await createAndNotifyShareableReport(
+          {
+            reportType: input.reportType as ShareableReportType,
+            address: input.address,
+            city: input.city,
+            state: input.state,
+            zipCode: input.zipCode,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            bedrooms: input.bedrooms,
+            bathrooms: input.bathrooms,
+            monthlyRent: input.monthlyRent,
+            marketId: input.marketId,
+            marketName: input.marketName,
+            reportData: input.reportData,
+            title: input.title,
+            summary: input.summary,
+            annualRevenue: input.annualRevenue,
+            occupancyRate: input.occupancyRate,
+            averageDailyRate: input.averageDailyRate,
+            profitMargin: input.profitMargin,
+            verdict: input.verdict,
+            creatorEmail: input.userEmail,
+            creatorPhone: input.userPhone,
+            creatorName: input.userName,
+          },
+          {
+            phone: input.userPhone,
+            email: input.userEmail,
+            name: input.userName,
+          },
+          {
+            isAutoNotification: true,
+            triggeredBy: input.triggeredBy || input.reportType,
+          }
+        );
+        return result;
+      }),
+
+    // Get notification analytics (admin only)
+    getAnalytics: protectedProcedure
+      .input(z.object({
+        reportType: z.enum(['regulation', 'revenue', 'validator', 'market', 'ai_advisor', 'listings', 'comparison', 'map']).optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        if (ctx.user?.role !== 'admin') {
+          throw new Error('Admin access required');
+        }
+        const analytics = await getNotificationAnalytics({ reportType: input.reportType as any });
+        return analytics;
+      }),
+});

@@ -10316,6 +10316,43 @@ Results:
 - [x] Remove 16 unused shadcn/ui components (carousel, command, drawer, input-otp, resizable, accordion, aspect-ratio, breadcrumb, collapsible, context-menu, hover-card, menubar, navigation-menu, pagination, radio-group, toggle-group)
 - [x] Remove 15 unused npm packages (embla-carousel-react, cmdk, vaul, input-otp, react-resizable-panels, next-themes, @radix-ui/react-accordion, @radix-ui/react-aspect-ratio, @radix-ui/react-collapsible, @radix-ui/react-context-menu, @radix-ui/react-hover-card, @radix-ui/react-menubar, @radix-ui/react-navigation-menu, @radix-ui/react-radio-group, @radix-ui/react-toggle-group)
 - [x] Replace next-themes import in sonner.tsx with app's own ThemeContext
-- [ ] Split routers.ts (8,401 lines, 154 procedures) into feature-based router files (deferred — high risk, needs dedicated session)
+- [x] Split routers.ts (8,401 lines, 154 procedures) into feature-based router files — COMPLETED in Router Splitting session
 - [ ] Consolidate chart.js + recharts into single library (deferred — each used in 1 component)
 - [x] All 784 tests pass across 60 files after all changes
+
+## Router Splitting (Feb 11, 2026)
+- [x] Analyze full router structure and dependency graph
+- [x] Create server/routers/ directory for feature-based router files
+- [x] Extract rental router (~1,793 lines)
+- [x] Extract advanced router (~1,188 lines)
+- [x] Extract sharedReports router (~1,111 lines)
+- [x] Extract regulationTracker router (~701 lines)
+- [x] Extract compData router (~335 lines)
+- [x] Extract adminTracking router (~324 lines)
+- [x] Extract ai router (~256 lines)
+- [x] Extract favoriteListings router (~237 lines)
+- [x] Extract favorites router (~202 lines)
+- [x] Extract savedSearches router (~199 lines)
+- [x] Extract webhook router (~193 lines)
+- [x] Extract marketExplorer router (~193 lines)
+- [x] Extract shareableReports router (~166 lines)
+- [x] Extract notifications router (~164 lines)
+- [x] Extract bugReports router (~154 lines)
+- [x] Extract export router (~153 lines)
+- [x] Extract emailOptin router (~143 lines)
+- [x] Extract marketAlerts router (~139 lines)
+- [x] Extract dealAlerts router (~137 lines)
+- [x] Extract favoriteMarkets router (~126 lines)
+- [x] Extract zillow router (~78 lines)
+- [x] Extract redfin router (~78 lines)
+- [x] Extract rentometer router (~63 lines)
+- [x] Extract listingsByArea router (~59 lines)
+- [x] Extract behaviorEngine router (~54 lines)
+- [x] Extract deepAnalysis router (~50 lines)
+- [x] Extract marketDiscovery router (~47 lines)
+- [x] Extract marketComparison router (~41 lines)
+- [x] Extract bulkSummary router (~40 lines)
+- [x] Keep main routers.ts as thin orchestrator (121 lines, down from 8,401)
+- [x] Fix all TypeScript compilation errors in extracted files
+- [x] Run full test suite - all 784 tests pass across 60 files
+- [x] Verify dev server starts and serves pages correctly

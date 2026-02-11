@@ -1,0 +1,1793 @@
+import { z } from "zod";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { getDb } from "../db";
+import { leads, analysisReports } from "../../drizzle/schema";
+import { and, lt, max, min, or } from "drizzle-orm";
+import {
+  getRentalizerEstimate,
+  searchMarkets,
+  searchMarketsAPI,
+  detectSearchType,
+  getComprehensivePropertyReport,
+  getComprehensiveMarketReport,
+  getComprehensiveSubmarketReport,
+  getQualifyingCompetitors,
+  exploreSubmarketsWithMetrics,
+  getListingComps,
+  getListingHistoricalMetrics,
+  getMarketBookingPatterns,
+  getMarketSupplyTrend,
+  getMarketFutureDailyData,
+  calculateForwardLookingDemand,
+} from "../airdna";
+import { batchScrapeAirbnbImages } from "../airbnb-scraper";
+import { geocodeZipCodeToMarket } from "../airdna-hierarchy";
+import { generateEnhancedPropertyReport, generateEnhancedMarketReport } from "../gemini";
+import { getLocationQuality } from "../location-quality";
+import { logActivity, ActionCategory, ActionType } from "../activity";
+import { upsertContact, generateDeepLink } from "../hubspot";
+
+// Input validation schemas
+export const rentalizerInputSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  bedrooms: z.number().int().min(1).max(20).optional(),
+  bathrooms: z.number().min(0.5).max(20).optional(),
+  accommodates: z.number().int().min(1).max(50).optional(),
+  currency: z.string().default("usd"),
+});
+
+export const leadInputSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().optional(),
+  address: z.string().min(1, "Address is required"),
+  bedrooms: z.number().int().optional(),
+  bathrooms: z.number().optional(),
+  accommodates: z.number().int().optional(),
+  zillow_url: z.string().optional(),
+});
+
+export const propertyReportInputSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  bedrooms: z.number().int().min(1).max(20).optional(),
+  bathrooms: z.number().min(0.5).max(20).optional(),
+  accommodates: z.number().int().min(1).max(50).optional(),
+  leadName: z.string().optional(),
+  leadEmail: z.string().email().optional(),
+  leadPhone: z.string().optional(),
+});
+
+export const aiPropertyReportInputSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  monthlyRent: z.number().min(0, "Monthly rent is required"),
+  bedrooms: z.number().int().min(1).max(20).optional(),
+  bathrooms: z.number().min(0.5).max(20).optional(),
+  accommodates: z.number().int().min(1).max(50).optional(),
+  propertyType: z.string().optional(),
+  squareFootage: z.number().optional(),
+});
+
+export const marketSearchInputSchema = z.object({
+  searchTerm: z.string().min(1, "Search term is required"),
+  limit: z.number().int().min(1).max(20).default(10),
+});
+
+export const marketReportInputSchema = z.object({
+  marketId: z.string().min(1, "Market ID is required"),
+});
+
+export const submarketReportInputSchema = z.object({
+  submarketId: z.string().min(1, "Submarket ID is required"),
+});
+
+export const smartSearchInputSchema = z.object({
+  query: z.string().min(1, "Search query is required"),
+});
+
+export const rentalRouter = router({
+    // Get location quality metrics (walk score, transit, attractions)
+    getLocationQuality: publicProcedure
+      .input(z.object({
+        lat: z.number(),
+        lng: z.number(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[Rental] Getting location quality for ${input.lat}, ${input.lng}`);
+          const quality = await getLocationQuality(input.lat, input.lng);
+          return {
+            success: true,
+            data: quality,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting location quality:", error);
+          return {
+            success: false,
+            error: "Failed to get location quality",
+            data: null,
+          };
+        }
+      }),
+
+    // Search for markets (for autocomplete)
+    searchMarkets: publicProcedure
+      .input(marketSearchInputSchema)
+      .query(async ({ input }) => {
+        try {
+          // Log activity
+          await logActivity({
+            action: ActionType.MARKET_SEARCH,
+            actionCategory: ActionCategory.SEARCH,
+            details: { searchTerm: input.searchTerm },
+          });
+          
+          // Use searchMarketsAPI which supports zip codes, cities, and submarkets
+          const results = await searchMarketsAPI(input.searchTerm, input.limit);
+          return {
+            success: true,
+            data: results,
+          };
+        } catch (error) {
+          console.error("[Rental] Error searching markets:", error);
+          return {
+            success: false,
+            error: "Failed to search markets",
+            data: [],
+          };
+        }
+      }),
+
+    // Search zip codes for autocomplete
+    searchZipCodes: publicProcedure
+      .input(z.object({ prefix: z.string().min(1).max(5) }))
+      .query(async ({ input }) => {
+        try {
+          // US zip code database - common zip codes by major cities
+          const zipCodeDatabase: Array<{ zip: string; city: string; state: string }> = [
+            // Florida - Miami area
+            { zip: '33101', city: 'Miami', state: 'FL' },
+            { zip: '33109', city: 'Miami Beach', state: 'FL' },
+            { zip: '33125', city: 'Miami', state: 'FL' },
+            { zip: '33129', city: 'Miami', state: 'FL' },
+            { zip: '33130', city: 'Miami', state: 'FL' },
+            { zip: '33131', city: 'Miami', state: 'FL' },
+            { zip: '33132', city: 'Miami', state: 'FL' },
+            { zip: '33133', city: 'Miami', state: 'FL' },
+            { zip: '33134', city: 'Miami', state: 'FL' },
+            { zip: '33135', city: 'Miami', state: 'FL' },
+            { zip: '33136', city: 'Miami', state: 'FL' },
+            { zip: '33137', city: 'Miami', state: 'FL' },
+            { zip: '33138', city: 'Miami', state: 'FL' },
+            { zip: '33139', city: 'Miami Beach', state: 'FL' },
+            { zip: '33140', city: 'Miami Beach', state: 'FL' },
+            { zip: '33141', city: 'Miami Beach', state: 'FL' },
+            { zip: '33142', city: 'Miami', state: 'FL' },
+            { zip: '33145', city: 'Miami', state: 'FL' },
+            { zip: '33146', city: 'Coral Gables', state: 'FL' },
+            { zip: '33149', city: 'Key Biscayne', state: 'FL' },
+            // Florida - Orlando area
+            { zip: '32801', city: 'Orlando', state: 'FL' },
+            { zip: '32803', city: 'Orlando', state: 'FL' },
+            { zip: '32804', city: 'Orlando', state: 'FL' },
+            { zip: '32805', city: 'Orlando', state: 'FL' },
+            { zip: '32806', city: 'Orlando', state: 'FL' },
+            { zip: '32807', city: 'Orlando', state: 'FL' },
+            { zip: '32808', city: 'Orlando', state: 'FL' },
+            { zip: '32809', city: 'Orlando', state: 'FL' },
+            { zip: '32819', city: 'Orlando', state: 'FL' },
+            { zip: '32821', city: 'Orlando', state: 'FL' },
+            { zip: '32822', city: 'Orlando', state: 'FL' },
+            { zip: '32824', city: 'Orlando', state: 'FL' },
+            { zip: '32825', city: 'Orlando', state: 'FL' },
+            { zip: '32826', city: 'Orlando', state: 'FL' },
+            { zip: '32827', city: 'Orlando', state: 'FL' },
+            { zip: '32828', city: 'Orlando', state: 'FL' },
+            { zip: '32829', city: 'Orlando', state: 'FL' },
+            { zip: '32830', city: 'Orlando', state: 'FL' },
+            { zip: '32831', city: 'Orlando', state: 'FL' },
+            { zip: '32832', city: 'Orlando', state: 'FL' },
+            { zip: '34747', city: 'Kissimmee', state: 'FL' },
+            { zip: '34746', city: 'Kissimmee', state: 'FL' },
+            { zip: '34744', city: 'Kissimmee', state: 'FL' },
+            { zip: '34741', city: 'Kissimmee', state: 'FL' },
+            // Florida - Tampa area
+            { zip: '33601', city: 'Tampa', state: 'FL' },
+            { zip: '33602', city: 'Tampa', state: 'FL' },
+            { zip: '33603', city: 'Tampa', state: 'FL' },
+            { zip: '33604', city: 'Tampa', state: 'FL' },
+            { zip: '33605', city: 'Tampa', state: 'FL' },
+            { zip: '33606', city: 'Tampa', state: 'FL' },
+            { zip: '33607', city: 'Tampa', state: 'FL' },
+            { zip: '33609', city: 'Tampa', state: 'FL' },
+            { zip: '33610', city: 'Tampa', state: 'FL' },
+            { zip: '33611', city: 'Tampa', state: 'FL' },
+            { zip: '33612', city: 'Tampa', state: 'FL' },
+            { zip: '33613', city: 'Tampa', state: 'FL' },
+            { zip: '33614', city: 'Tampa', state: 'FL' },
+            { zip: '33615', city: 'Tampa', state: 'FL' },
+            { zip: '33616', city: 'Tampa', state: 'FL' },
+            { zip: '33617', city: 'Tampa', state: 'FL' },
+            { zip: '33618', city: 'Tampa', state: 'FL' },
+            { zip: '33619', city: 'Tampa', state: 'FL' },
+            { zip: '33701', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33702', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33703', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33704', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33705', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33706', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33707', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33708', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33709', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33710', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33711', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33712', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33713', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33714', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33715', city: 'St. Petersburg', state: 'FL' },
+            { zip: '33716', city: 'St. Petersburg', state: 'FL' },
+            // Texas - Austin area
+            { zip: '78701', city: 'Austin', state: 'TX' },
+            { zip: '78702', city: 'Austin', state: 'TX' },
+            { zip: '78703', city: 'Austin', state: 'TX' },
+            { zip: '78704', city: 'Austin', state: 'TX' },
+            { zip: '78705', city: 'Austin', state: 'TX' },
+            { zip: '78721', city: 'Austin', state: 'TX' },
+            { zip: '78722', city: 'Austin', state: 'TX' },
+            { zip: '78723', city: 'Austin', state: 'TX' },
+            { zip: '78724', city: 'Austin', state: 'TX' },
+            { zip: '78725', city: 'Austin', state: 'TX' },
+            { zip: '78726', city: 'Austin', state: 'TX' },
+            { zip: '78727', city: 'Austin', state: 'TX' },
+            { zip: '78728', city: 'Austin', state: 'TX' },
+            { zip: '78729', city: 'Austin', state: 'TX' },
+            { zip: '78730', city: 'Austin', state: 'TX' },
+            { zip: '78731', city: 'Austin', state: 'TX' },
+            { zip: '78732', city: 'Austin', state: 'TX' },
+            { zip: '78733', city: 'Austin', state: 'TX' },
+            { zip: '78734', city: 'Austin', state: 'TX' },
+            { zip: '78735', city: 'Austin', state: 'TX' },
+            { zip: '78736', city: 'Austin', state: 'TX' },
+            { zip: '78737', city: 'Austin', state: 'TX' },
+            { zip: '78738', city: 'Austin', state: 'TX' },
+            { zip: '78739', city: 'Austin', state: 'TX' },
+            { zip: '78741', city: 'Austin', state: 'TX' },
+            { zip: '78742', city: 'Austin', state: 'TX' },
+            { zip: '78744', city: 'Austin', state: 'TX' },
+            { zip: '78745', city: 'Austin', state: 'TX' },
+            { zip: '78746', city: 'Austin', state: 'TX' },
+            { zip: '78747', city: 'Austin', state: 'TX' },
+            { zip: '78748', city: 'Austin', state: 'TX' },
+            { zip: '78749', city: 'Austin', state: 'TX' },
+            { zip: '78750', city: 'Austin', state: 'TX' },
+            { zip: '78751', city: 'Austin', state: 'TX' },
+            { zip: '78752', city: 'Austin', state: 'TX' },
+            { zip: '78753', city: 'Austin', state: 'TX' },
+            { zip: '78754', city: 'Austin', state: 'TX' },
+            { zip: '78756', city: 'Austin', state: 'TX' },
+            { zip: '78757', city: 'Austin', state: 'TX' },
+            { zip: '78758', city: 'Austin', state: 'TX' },
+            { zip: '78759', city: 'Austin', state: 'TX' },
+            // Texas - Dallas area
+            { zip: '75201', city: 'Dallas', state: 'TX' },
+            { zip: '75202', city: 'Dallas', state: 'TX' },
+            { zip: '75203', city: 'Dallas', state: 'TX' },
+            { zip: '75204', city: 'Dallas', state: 'TX' },
+            { zip: '75205', city: 'Dallas', state: 'TX' },
+            { zip: '75206', city: 'Dallas', state: 'TX' },
+            { zip: '75207', city: 'Dallas', state: 'TX' },
+            { zip: '75208', city: 'Dallas', state: 'TX' },
+            { zip: '75209', city: 'Dallas', state: 'TX' },
+            { zip: '75210', city: 'Dallas', state: 'TX' },
+            { zip: '75211', city: 'Dallas', state: 'TX' },
+            { zip: '75212', city: 'Dallas', state: 'TX' },
+            { zip: '75214', city: 'Dallas', state: 'TX' },
+            { zip: '75215', city: 'Dallas', state: 'TX' },
+            { zip: '75216', city: 'Dallas', state: 'TX' },
+            { zip: '75217', city: 'Dallas', state: 'TX' },
+            { zip: '75218', city: 'Dallas', state: 'TX' },
+            { zip: '75219', city: 'Dallas', state: 'TX' },
+            { zip: '75220', city: 'Dallas', state: 'TX' },
+            { zip: '75223', city: 'Dallas', state: 'TX' },
+            { zip: '75224', city: 'Dallas', state: 'TX' },
+            { zip: '75225', city: 'Dallas', state: 'TX' },
+            { zip: '75226', city: 'Dallas', state: 'TX' },
+            { zip: '75227', city: 'Dallas', state: 'TX' },
+            { zip: '75228', city: 'Dallas', state: 'TX' },
+            { zip: '75229', city: 'Dallas', state: 'TX' },
+            { zip: '75230', city: 'Dallas', state: 'TX' },
+            { zip: '75231', city: 'Dallas', state: 'TX' },
+            { zip: '75232', city: 'Dallas', state: 'TX' },
+            { zip: '75233', city: 'Dallas', state: 'TX' },
+            { zip: '75234', city: 'Dallas', state: 'TX' },
+            { zip: '75235', city: 'Dallas', state: 'TX' },
+            { zip: '75236', city: 'Dallas', state: 'TX' },
+            { zip: '75237', city: 'Dallas', state: 'TX' },
+            { zip: '75238', city: 'Dallas', state: 'TX' },
+            { zip: '75240', city: 'Dallas', state: 'TX' },
+            { zip: '75241', city: 'Dallas', state: 'TX' },
+            { zip: '75243', city: 'Dallas', state: 'TX' },
+            { zip: '75244', city: 'Dallas', state: 'TX' },
+            { zip: '75246', city: 'Dallas', state: 'TX' },
+            { zip: '75247', city: 'Dallas', state: 'TX' },
+            { zip: '75248', city: 'Dallas', state: 'TX' },
+            { zip: '75249', city: 'Dallas', state: 'TX' },
+            { zip: '75251', city: 'Dallas', state: 'TX' },
+            { zip: '75252', city: 'Dallas', state: 'TX' },
+            { zip: '75253', city: 'Dallas', state: 'TX' },
+            { zip: '75254', city: 'Dallas', state: 'TX' },
+            // Texas - Houston area
+            { zip: '77001', city: 'Houston', state: 'TX' },
+            { zip: '77002', city: 'Houston', state: 'TX' },
+            { zip: '77003', city: 'Houston', state: 'TX' },
+            { zip: '77004', city: 'Houston', state: 'TX' },
+            { zip: '77005', city: 'Houston', state: 'TX' },
+            { zip: '77006', city: 'Houston', state: 'TX' },
+            { zip: '77007', city: 'Houston', state: 'TX' },
+            { zip: '77008', city: 'Houston', state: 'TX' },
+            { zip: '77009', city: 'Houston', state: 'TX' },
+            { zip: '77010', city: 'Houston', state: 'TX' },
+            { zip: '77011', city: 'Houston', state: 'TX' },
+            { zip: '77012', city: 'Houston', state: 'TX' },
+            { zip: '77013', city: 'Houston', state: 'TX' },
+            { zip: '77014', city: 'Houston', state: 'TX' },
+            { zip: '77015', city: 'Houston', state: 'TX' },
+            { zip: '77016', city: 'Houston', state: 'TX' },
+            { zip: '77017', city: 'Houston', state: 'TX' },
+            { zip: '77018', city: 'Houston', state: 'TX' },
+            { zip: '77019', city: 'Houston', state: 'TX' },
+            { zip: '77020', city: 'Houston', state: 'TX' },
+            { zip: '77021', city: 'Houston', state: 'TX' },
+            { zip: '77022', city: 'Houston', state: 'TX' },
+            { zip: '77023', city: 'Houston', state: 'TX' },
+            { zip: '77024', city: 'Houston', state: 'TX' },
+            { zip: '77025', city: 'Houston', state: 'TX' },
+            { zip: '77026', city: 'Houston', state: 'TX' },
+            { zip: '77027', city: 'Houston', state: 'TX' },
+            { zip: '77028', city: 'Houston', state: 'TX' },
+            { zip: '77029', city: 'Houston', state: 'TX' },
+            { zip: '77030', city: 'Houston', state: 'TX' },
+            { zip: '77031', city: 'Houston', state: 'TX' },
+            { zip: '77032', city: 'Houston', state: 'TX' },
+            { zip: '77033', city: 'Houston', state: 'TX' },
+            { zip: '77034', city: 'Houston', state: 'TX' },
+            { zip: '77035', city: 'Houston', state: 'TX' },
+            { zip: '77036', city: 'Houston', state: 'TX' },
+            { zip: '77037', city: 'Houston', state: 'TX' },
+            { zip: '77038', city: 'Houston', state: 'TX' },
+            { zip: '77039', city: 'Houston', state: 'TX' },
+            { zip: '77040', city: 'Houston', state: 'TX' },
+            { zip: '77041', city: 'Houston', state: 'TX' },
+            { zip: '77042', city: 'Houston', state: 'TX' },
+            { zip: '77043', city: 'Houston', state: 'TX' },
+            { zip: '77044', city: 'Houston', state: 'TX' },
+            { zip: '77045', city: 'Houston', state: 'TX' },
+            { zip: '77046', city: 'Houston', state: 'TX' },
+            { zip: '77047', city: 'Houston', state: 'TX' },
+            { zip: '77048', city: 'Houston', state: 'TX' },
+            { zip: '77049', city: 'Houston', state: 'TX' },
+            { zip: '77050', city: 'Houston', state: 'TX' },
+            { zip: '77051', city: 'Houston', state: 'TX' },
+            { zip: '77053', city: 'Houston', state: 'TX' },
+            { zip: '77054', city: 'Houston', state: 'TX' },
+            { zip: '77055', city: 'Houston', state: 'TX' },
+            { zip: '77056', city: 'Houston', state: 'TX' },
+            { zip: '77057', city: 'Houston', state: 'TX' },
+            { zip: '77058', city: 'Houston', state: 'TX' },
+            { zip: '77059', city: 'Houston', state: 'TX' },
+            { zip: '77060', city: 'Houston', state: 'TX' },
+            { zip: '77061', city: 'Houston', state: 'TX' },
+            { zip: '77062', city: 'Houston', state: 'TX' },
+            { zip: '77063', city: 'Houston', state: 'TX' },
+            { zip: '77064', city: 'Houston', state: 'TX' },
+            { zip: '77065', city: 'Houston', state: 'TX' },
+            { zip: '77066', city: 'Houston', state: 'TX' },
+            { zip: '77067', city: 'Houston', state: 'TX' },
+            { zip: '77068', city: 'Houston', state: 'TX' },
+            { zip: '77069', city: 'Houston', state: 'TX' },
+            { zip: '77070', city: 'Houston', state: 'TX' },
+            { zip: '77071', city: 'Houston', state: 'TX' },
+            { zip: '77072', city: 'Houston', state: 'TX' },
+            { zip: '77073', city: 'Houston', state: 'TX' },
+            { zip: '77074', city: 'Houston', state: 'TX' },
+            { zip: '77075', city: 'Houston', state: 'TX' },
+            { zip: '77076', city: 'Houston', state: 'TX' },
+            { zip: '77077', city: 'Houston', state: 'TX' },
+            { zip: '77078', city: 'Houston', state: 'TX' },
+            { zip: '77079', city: 'Houston', state: 'TX' },
+            { zip: '77080', city: 'Houston', state: 'TX' },
+            { zip: '77081', city: 'Houston', state: 'TX' },
+            { zip: '77082', city: 'Houston', state: 'TX' },
+            { zip: '77083', city: 'Houston', state: 'TX' },
+            { zip: '77084', city: 'Houston', state: 'TX' },
+            { zip: '77085', city: 'Houston', state: 'TX' },
+            { zip: '77086', city: 'Houston', state: 'TX' },
+            { zip: '77087', city: 'Houston', state: 'TX' },
+            { zip: '77088', city: 'Houston', state: 'TX' },
+            { zip: '77089', city: 'Houston', state: 'TX' },
+            { zip: '77090', city: 'Houston', state: 'TX' },
+            { zip: '77091', city: 'Houston', state: 'TX' },
+            { zip: '77092', city: 'Houston', state: 'TX' },
+            { zip: '77093', city: 'Houston', state: 'TX' },
+            { zip: '77094', city: 'Houston', state: 'TX' },
+            { zip: '77095', city: 'Houston', state: 'TX' },
+            { zip: '77096', city: 'Houston', state: 'TX' },
+            { zip: '77098', city: 'Houston', state: 'TX' },
+            { zip: '77099', city: 'Houston', state: 'TX' },
+            // Arizona - Phoenix area
+            { zip: '85001', city: 'Phoenix', state: 'AZ' },
+            { zip: '85003', city: 'Phoenix', state: 'AZ' },
+            { zip: '85004', city: 'Phoenix', state: 'AZ' },
+            { zip: '85006', city: 'Phoenix', state: 'AZ' },
+            { zip: '85007', city: 'Phoenix', state: 'AZ' },
+            { zip: '85008', city: 'Phoenix', state: 'AZ' },
+            { zip: '85009', city: 'Phoenix', state: 'AZ' },
+            { zip: '85012', city: 'Phoenix', state: 'AZ' },
+            { zip: '85013', city: 'Phoenix', state: 'AZ' },
+            { zip: '85014', city: 'Phoenix', state: 'AZ' },
+            { zip: '85015', city: 'Phoenix', state: 'AZ' },
+            { zip: '85016', city: 'Phoenix', state: 'AZ' },
+            { zip: '85017', city: 'Phoenix', state: 'AZ' },
+            { zip: '85018', city: 'Phoenix', state: 'AZ' },
+            { zip: '85019', city: 'Phoenix', state: 'AZ' },
+            { zip: '85020', city: 'Phoenix', state: 'AZ' },
+            { zip: '85021', city: 'Phoenix', state: 'AZ' },
+            { zip: '85022', city: 'Phoenix', state: 'AZ' },
+            { zip: '85023', city: 'Phoenix', state: 'AZ' },
+            { zip: '85024', city: 'Phoenix', state: 'AZ' },
+            { zip: '85027', city: 'Phoenix', state: 'AZ' },
+            { zip: '85028', city: 'Phoenix', state: 'AZ' },
+            { zip: '85029', city: 'Phoenix', state: 'AZ' },
+            { zip: '85031', city: 'Phoenix', state: 'AZ' },
+            { zip: '85032', city: 'Phoenix', state: 'AZ' },
+            { zip: '85033', city: 'Phoenix', state: 'AZ' },
+            { zip: '85034', city: 'Phoenix', state: 'AZ' },
+            { zip: '85035', city: 'Phoenix', state: 'AZ' },
+            { zip: '85037', city: 'Phoenix', state: 'AZ' },
+            { zip: '85040', city: 'Phoenix', state: 'AZ' },
+            { zip: '85041', city: 'Phoenix', state: 'AZ' },
+            { zip: '85042', city: 'Phoenix', state: 'AZ' },
+            { zip: '85043', city: 'Phoenix', state: 'AZ' },
+            { zip: '85044', city: 'Phoenix', state: 'AZ' },
+            { zip: '85045', city: 'Phoenix', state: 'AZ' },
+            { zip: '85048', city: 'Phoenix', state: 'AZ' },
+            { zip: '85050', city: 'Phoenix', state: 'AZ' },
+            { zip: '85051', city: 'Phoenix', state: 'AZ' },
+            { zip: '85053', city: 'Phoenix', state: 'AZ' },
+            { zip: '85054', city: 'Phoenix', state: 'AZ' },
+            { zip: '85083', city: 'Phoenix', state: 'AZ' },
+            { zip: '85085', city: 'Phoenix', state: 'AZ' },
+            { zip: '85086', city: 'Phoenix', state: 'AZ' },
+            { zip: '85087', city: 'Phoenix', state: 'AZ' },
+            { zip: '85251', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85252', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85253', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85254', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85255', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85256', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85257', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85258', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85259', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85260', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85262', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85264', city: 'Scottsdale', state: 'AZ' },
+            { zip: '85266', city: 'Scottsdale', state: 'AZ' },
+            // California - Los Angeles area
+            { zip: '90001', city: 'Los Angeles', state: 'CA' },
+            { zip: '90002', city: 'Los Angeles', state: 'CA' },
+            { zip: '90003', city: 'Los Angeles', state: 'CA' },
+            { zip: '90004', city: 'Los Angeles', state: 'CA' },
+            { zip: '90005', city: 'Los Angeles', state: 'CA' },
+            { zip: '90006', city: 'Los Angeles', state: 'CA' },
+            { zip: '90007', city: 'Los Angeles', state: 'CA' },
+            { zip: '90008', city: 'Los Angeles', state: 'CA' },
+            { zip: '90010', city: 'Los Angeles', state: 'CA' },
+            { zip: '90011', city: 'Los Angeles', state: 'CA' },
+            { zip: '90012', city: 'Los Angeles', state: 'CA' },
+            { zip: '90013', city: 'Los Angeles', state: 'CA' },
+            { zip: '90014', city: 'Los Angeles', state: 'CA' },
+            { zip: '90015', city: 'Los Angeles', state: 'CA' },
+            { zip: '90016', city: 'Los Angeles', state: 'CA' },
+            { zip: '90017', city: 'Los Angeles', state: 'CA' },
+            { zip: '90018', city: 'Los Angeles', state: 'CA' },
+            { zip: '90019', city: 'Los Angeles', state: 'CA' },
+            { zip: '90020', city: 'Los Angeles', state: 'CA' },
+            { zip: '90021', city: 'Los Angeles', state: 'CA' },
+            { zip: '90023', city: 'Los Angeles', state: 'CA' },
+            { zip: '90024', city: 'Los Angeles', state: 'CA' },
+            { zip: '90025', city: 'Los Angeles', state: 'CA' },
+            { zip: '90026', city: 'Los Angeles', state: 'CA' },
+            { zip: '90027', city: 'Los Angeles', state: 'CA' },
+            { zip: '90028', city: 'Los Angeles', state: 'CA' },
+            { zip: '90029', city: 'Los Angeles', state: 'CA' },
+            { zip: '90031', city: 'Los Angeles', state: 'CA' },
+            { zip: '90032', city: 'Los Angeles', state: 'CA' },
+            { zip: '90033', city: 'Los Angeles', state: 'CA' },
+            { zip: '90034', city: 'Los Angeles', state: 'CA' },
+            { zip: '90035', city: 'Los Angeles', state: 'CA' },
+            { zip: '90036', city: 'Los Angeles', state: 'CA' },
+            { zip: '90037', city: 'Los Angeles', state: 'CA' },
+            { zip: '90038', city: 'Los Angeles', state: 'CA' },
+            { zip: '90039', city: 'Los Angeles', state: 'CA' },
+            { zip: '90041', city: 'Los Angeles', state: 'CA' },
+            { zip: '90042', city: 'Los Angeles', state: 'CA' },
+            { zip: '90043', city: 'Los Angeles', state: 'CA' },
+            { zip: '90044', city: 'Los Angeles', state: 'CA' },
+            { zip: '90045', city: 'Los Angeles', state: 'CA' },
+            { zip: '90046', city: 'Los Angeles', state: 'CA' },
+            { zip: '90047', city: 'Los Angeles', state: 'CA' },
+            { zip: '90048', city: 'Los Angeles', state: 'CA' },
+            { zip: '90049', city: 'Los Angeles', state: 'CA' },
+            { zip: '90056', city: 'Los Angeles', state: 'CA' },
+            { zip: '90057', city: 'Los Angeles', state: 'CA' },
+            { zip: '90058', city: 'Los Angeles', state: 'CA' },
+            { zip: '90059', city: 'Los Angeles', state: 'CA' },
+            { zip: '90061', city: 'Los Angeles', state: 'CA' },
+            { zip: '90062', city: 'Los Angeles', state: 'CA' },
+            { zip: '90063', city: 'Los Angeles', state: 'CA' },
+            { zip: '90064', city: 'Los Angeles', state: 'CA' },
+            { zip: '90065', city: 'Los Angeles', state: 'CA' },
+            { zip: '90066', city: 'Los Angeles', state: 'CA' },
+            { zip: '90067', city: 'Los Angeles', state: 'CA' },
+            { zip: '90068', city: 'Los Angeles', state: 'CA' },
+            { zip: '90069', city: 'West Hollywood', state: 'CA' },
+            { zip: '90071', city: 'Los Angeles', state: 'CA' },
+            { zip: '90077', city: 'Los Angeles', state: 'CA' },
+            { zip: '90089', city: 'Los Angeles', state: 'CA' },
+            { zip: '90094', city: 'Los Angeles', state: 'CA' },
+            { zip: '90095', city: 'Los Angeles', state: 'CA' },
+            { zip: '90210', city: 'Beverly Hills', state: 'CA' },
+            { zip: '90211', city: 'Beverly Hills', state: 'CA' },
+            { zip: '90212', city: 'Beverly Hills', state: 'CA' },
+            { zip: '90401', city: 'Santa Monica', state: 'CA' },
+            { zip: '90402', city: 'Santa Monica', state: 'CA' },
+            { zip: '90403', city: 'Santa Monica', state: 'CA' },
+            { zip: '90404', city: 'Santa Monica', state: 'CA' },
+            { zip: '90405', city: 'Santa Monica', state: 'CA' },
+            // California - San Diego area
+            { zip: '92101', city: 'San Diego', state: 'CA' },
+            { zip: '92102', city: 'San Diego', state: 'CA' },
+            { zip: '92103', city: 'San Diego', state: 'CA' },
+            { zip: '92104', city: 'San Diego', state: 'CA' },
+            { zip: '92105', city: 'San Diego', state: 'CA' },
+            { zip: '92106', city: 'San Diego', state: 'CA' },
+            { zip: '92107', city: 'San Diego', state: 'CA' },
+            { zip: '92108', city: 'San Diego', state: 'CA' },
+            { zip: '92109', city: 'San Diego', state: 'CA' },
+            { zip: '92110', city: 'San Diego', state: 'CA' },
+            { zip: '92111', city: 'San Diego', state: 'CA' },
+            { zip: '92113', city: 'San Diego', state: 'CA' },
+            { zip: '92114', city: 'San Diego', state: 'CA' },
+            { zip: '92115', city: 'San Diego', state: 'CA' },
+            { zip: '92116', city: 'San Diego', state: 'CA' },
+            { zip: '92117', city: 'San Diego', state: 'CA' },
+            { zip: '92118', city: 'Coronado', state: 'CA' },
+            { zip: '92119', city: 'San Diego', state: 'CA' },
+            { zip: '92120', city: 'San Diego', state: 'CA' },
+            { zip: '92121', city: 'San Diego', state: 'CA' },
+            { zip: '92122', city: 'San Diego', state: 'CA' },
+            { zip: '92123', city: 'San Diego', state: 'CA' },
+            { zip: '92124', city: 'San Diego', state: 'CA' },
+            { zip: '92126', city: 'San Diego', state: 'CA' },
+            { zip: '92127', city: 'San Diego', state: 'CA' },
+            { zip: '92128', city: 'San Diego', state: 'CA' },
+            { zip: '92129', city: 'San Diego', state: 'CA' },
+            { zip: '92130', city: 'San Diego', state: 'CA' },
+            { zip: '92131', city: 'San Diego', state: 'CA' },
+            { zip: '92132', city: 'San Diego', state: 'CA' },
+            { zip: '92134', city: 'San Diego', state: 'CA' },
+            { zip: '92135', city: 'San Diego', state: 'CA' },
+            { zip: '92136', city: 'San Diego', state: 'CA' },
+            { zip: '92139', city: 'San Diego', state: 'CA' },
+            { zip: '92140', city: 'San Diego', state: 'CA' },
+            { zip: '92145', city: 'San Diego', state: 'CA' },
+            { zip: '92147', city: 'San Diego', state: 'CA' },
+            { zip: '92154', city: 'San Diego', state: 'CA' },
+            { zip: '92155', city: 'San Diego', state: 'CA' },
+            // California - San Francisco area
+            { zip: '94102', city: 'San Francisco', state: 'CA' },
+            { zip: '94103', city: 'San Francisco', state: 'CA' },
+            { zip: '94104', city: 'San Francisco', state: 'CA' },
+            { zip: '94105', city: 'San Francisco', state: 'CA' },
+            { zip: '94107', city: 'San Francisco', state: 'CA' },
+            { zip: '94108', city: 'San Francisco', state: 'CA' },
+            { zip: '94109', city: 'San Francisco', state: 'CA' },
+            { zip: '94110', city: 'San Francisco', state: 'CA' },
+            { zip: '94111', city: 'San Francisco', state: 'CA' },
+            { zip: '94112', city: 'San Francisco', state: 'CA' },
+            { zip: '94114', city: 'San Francisco', state: 'CA' },
+            { zip: '94115', city: 'San Francisco', state: 'CA' },
+            { zip: '94116', city: 'San Francisco', state: 'CA' },
+            { zip: '94117', city: 'San Francisco', state: 'CA' },
+            { zip: '94118', city: 'San Francisco', state: 'CA' },
+            { zip: '94121', city: 'San Francisco', state: 'CA' },
+            { zip: '94122', city: 'San Francisco', state: 'CA' },
+            { zip: '94123', city: 'San Francisco', state: 'CA' },
+            { zip: '94124', city: 'San Francisco', state: 'CA' },
+            { zip: '94127', city: 'San Francisco', state: 'CA' },
+            { zip: '94129', city: 'San Francisco', state: 'CA' },
+            { zip: '94130', city: 'San Francisco', state: 'CA' },
+            { zip: '94131', city: 'San Francisco', state: 'CA' },
+            { zip: '94132', city: 'San Francisco', state: 'CA' },
+            { zip: '94133', city: 'San Francisco', state: 'CA' },
+            { zip: '94134', city: 'San Francisco', state: 'CA' },
+            // Colorado - Denver area
+            { zip: '80202', city: 'Denver', state: 'CO' },
+            { zip: '80203', city: 'Denver', state: 'CO' },
+            { zip: '80204', city: 'Denver', state: 'CO' },
+            { zip: '80205', city: 'Denver', state: 'CO' },
+            { zip: '80206', city: 'Denver', state: 'CO' },
+            { zip: '80207', city: 'Denver', state: 'CO' },
+            { zip: '80209', city: 'Denver', state: 'CO' },
+            { zip: '80210', city: 'Denver', state: 'CO' },
+            { zip: '80211', city: 'Denver', state: 'CO' },
+            { zip: '80212', city: 'Denver', state: 'CO' },
+            { zip: '80214', city: 'Denver', state: 'CO' },
+            { zip: '80216', city: 'Denver', state: 'CO' },
+            { zip: '80218', city: 'Denver', state: 'CO' },
+            { zip: '80219', city: 'Denver', state: 'CO' },
+            { zip: '80220', city: 'Denver', state: 'CO' },
+            { zip: '80221', city: 'Denver', state: 'CO' },
+            { zip: '80222', city: 'Denver', state: 'CO' },
+            { zip: '80223', city: 'Denver', state: 'CO' },
+            { zip: '80224', city: 'Denver', state: 'CO' },
+            { zip: '80227', city: 'Denver', state: 'CO' },
+            { zip: '80230', city: 'Denver', state: 'CO' },
+            { zip: '80231', city: 'Denver', state: 'CO' },
+            { zip: '80232', city: 'Denver', state: 'CO' },
+            { zip: '80235', city: 'Denver', state: 'CO' },
+            { zip: '80236', city: 'Denver', state: 'CO' },
+            { zip: '80237', city: 'Denver', state: 'CO' },
+            { zip: '80238', city: 'Denver', state: 'CO' },
+            { zip: '80239', city: 'Denver', state: 'CO' },
+            { zip: '80246', city: 'Denver', state: 'CO' },
+            { zip: '80247', city: 'Denver', state: 'CO' },
+            { zip: '80249', city: 'Denver', state: 'CO' },
+            // Nevada - Las Vegas area
+            { zip: '89101', city: 'Las Vegas', state: 'NV' },
+            { zip: '89102', city: 'Las Vegas', state: 'NV' },
+            { zip: '89103', city: 'Las Vegas', state: 'NV' },
+            { zip: '89104', city: 'Las Vegas', state: 'NV' },
+            { zip: '89106', city: 'Las Vegas', state: 'NV' },
+            { zip: '89107', city: 'Las Vegas', state: 'NV' },
+            { zip: '89108', city: 'Las Vegas', state: 'NV' },
+            { zip: '89109', city: 'Las Vegas', state: 'NV' },
+            { zip: '89110', city: 'Las Vegas', state: 'NV' },
+            { zip: '89113', city: 'Las Vegas', state: 'NV' },
+            { zip: '89115', city: 'Las Vegas', state: 'NV' },
+            { zip: '89117', city: 'Las Vegas', state: 'NV' },
+            { zip: '89118', city: 'Las Vegas', state: 'NV' },
+            { zip: '89119', city: 'Las Vegas', state: 'NV' },
+            { zip: '89120', city: 'Las Vegas', state: 'NV' },
+            { zip: '89121', city: 'Las Vegas', state: 'NV' },
+            { zip: '89122', city: 'Las Vegas', state: 'NV' },
+            { zip: '89123', city: 'Las Vegas', state: 'NV' },
+            { zip: '89124', city: 'Las Vegas', state: 'NV' },
+            { zip: '89128', city: 'Las Vegas', state: 'NV' },
+            { zip: '89129', city: 'Las Vegas', state: 'NV' },
+            { zip: '89130', city: 'Las Vegas', state: 'NV' },
+            { zip: '89131', city: 'Las Vegas', state: 'NV' },
+            { zip: '89134', city: 'Las Vegas', state: 'NV' },
+            { zip: '89135', city: 'Las Vegas', state: 'NV' },
+            { zip: '89138', city: 'Las Vegas', state: 'NV' },
+            { zip: '89139', city: 'Las Vegas', state: 'NV' },
+            { zip: '89141', city: 'Las Vegas', state: 'NV' },
+            { zip: '89142', city: 'Las Vegas', state: 'NV' },
+            { zip: '89143', city: 'Las Vegas', state: 'NV' },
+            { zip: '89144', city: 'Las Vegas', state: 'NV' },
+            { zip: '89145', city: 'Las Vegas', state: 'NV' },
+            { zip: '89146', city: 'Las Vegas', state: 'NV' },
+            { zip: '89147', city: 'Las Vegas', state: 'NV' },
+            { zip: '89148', city: 'Las Vegas', state: 'NV' },
+            { zip: '89149', city: 'Las Vegas', state: 'NV' },
+            { zip: '89156', city: 'Las Vegas', state: 'NV' },
+            { zip: '89166', city: 'Las Vegas', state: 'NV' },
+            { zip: '89169', city: 'Las Vegas', state: 'NV' },
+            { zip: '89178', city: 'Las Vegas', state: 'NV' },
+            { zip: '89179', city: 'Las Vegas', state: 'NV' },
+            { zip: '89183', city: 'Las Vegas', state: 'NV' },
+            // Tennessee - Nashville area
+            { zip: '37201', city: 'Nashville', state: 'TN' },
+            { zip: '37203', city: 'Nashville', state: 'TN' },
+            { zip: '37204', city: 'Nashville', state: 'TN' },
+            { zip: '37205', city: 'Nashville', state: 'TN' },
+            { zip: '37206', city: 'Nashville', state: 'TN' },
+            { zip: '37207', city: 'Nashville', state: 'TN' },
+            { zip: '37208', city: 'Nashville', state: 'TN' },
+            { zip: '37209', city: 'Nashville', state: 'TN' },
+            { zip: '37210', city: 'Nashville', state: 'TN' },
+            { zip: '37211', city: 'Nashville', state: 'TN' },
+            { zip: '37212', city: 'Nashville', state: 'TN' },
+            { zip: '37213', city: 'Nashville', state: 'TN' },
+            { zip: '37214', city: 'Nashville', state: 'TN' },
+            { zip: '37215', city: 'Nashville', state: 'TN' },
+            { zip: '37216', city: 'Nashville', state: 'TN' },
+            { zip: '37217', city: 'Nashville', state: 'TN' },
+            { zip: '37218', city: 'Nashville', state: 'TN' },
+            { zip: '37219', city: 'Nashville', state: 'TN' },
+            { zip: '37220', city: 'Nashville', state: 'TN' },
+            { zip: '37221', city: 'Nashville', state: 'TN' },
+            // Georgia - Atlanta area
+            { zip: '30301', city: 'Atlanta', state: 'GA' },
+            { zip: '30303', city: 'Atlanta', state: 'GA' },
+            { zip: '30305', city: 'Atlanta', state: 'GA' },
+            { zip: '30306', city: 'Atlanta', state: 'GA' },
+            { zip: '30307', city: 'Atlanta', state: 'GA' },
+            { zip: '30308', city: 'Atlanta', state: 'GA' },
+            { zip: '30309', city: 'Atlanta', state: 'GA' },
+            { zip: '30310', city: 'Atlanta', state: 'GA' },
+            { zip: '30311', city: 'Atlanta', state: 'GA' },
+            { zip: '30312', city: 'Atlanta', state: 'GA' },
+            { zip: '30313', city: 'Atlanta', state: 'GA' },
+            { zip: '30314', city: 'Atlanta', state: 'GA' },
+            { zip: '30315', city: 'Atlanta', state: 'GA' },
+            { zip: '30316', city: 'Atlanta', state: 'GA' },
+            { zip: '30317', city: 'Atlanta', state: 'GA' },
+            { zip: '30318', city: 'Atlanta', state: 'GA' },
+            { zip: '30319', city: 'Atlanta', state: 'GA' },
+            { zip: '30324', city: 'Atlanta', state: 'GA' },
+            { zip: '30326', city: 'Atlanta', state: 'GA' },
+            { zip: '30327', city: 'Atlanta', state: 'GA' },
+            { zip: '30328', city: 'Atlanta', state: 'GA' },
+            { zip: '30329', city: 'Atlanta', state: 'GA' },
+            { zip: '30331', city: 'Atlanta', state: 'GA' },
+            { zip: '30332', city: 'Atlanta', state: 'GA' },
+            { zip: '30334', city: 'Atlanta', state: 'GA' },
+            { zip: '30336', city: 'Atlanta', state: 'GA' },
+            { zip: '30337', city: 'Atlanta', state: 'GA' },
+            { zip: '30338', city: 'Atlanta', state: 'GA' },
+            { zip: '30339', city: 'Atlanta', state: 'GA' },
+            { zip: '30340', city: 'Atlanta', state: 'GA' },
+            { zip: '30341', city: 'Atlanta', state: 'GA' },
+            { zip: '30342', city: 'Atlanta', state: 'GA' },
+            { zip: '30344', city: 'Atlanta', state: 'GA' },
+            { zip: '30345', city: 'Atlanta', state: 'GA' },
+            { zip: '30346', city: 'Atlanta', state: 'GA' },
+            { zip: '30349', city: 'Atlanta', state: 'GA' },
+            { zip: '30350', city: 'Atlanta', state: 'GA' },
+            { zip: '30354', city: 'Atlanta', state: 'GA' },
+            { zip: '30360', city: 'Atlanta', state: 'GA' },
+            { zip: '30363', city: 'Atlanta', state: 'GA' },
+            // New York - NYC area
+            { zip: '10001', city: 'New York', state: 'NY' },
+            { zip: '10002', city: 'New York', state: 'NY' },
+            { zip: '10003', city: 'New York', state: 'NY' },
+            { zip: '10004', city: 'New York', state: 'NY' },
+            { zip: '10005', city: 'New York', state: 'NY' },
+            { zip: '10006', city: 'New York', state: 'NY' },
+            { zip: '10007', city: 'New York', state: 'NY' },
+            { zip: '10009', city: 'New York', state: 'NY' },
+            { zip: '10010', city: 'New York', state: 'NY' },
+            { zip: '10011', city: 'New York', state: 'NY' },
+            { zip: '10012', city: 'New York', state: 'NY' },
+            { zip: '10013', city: 'New York', state: 'NY' },
+            { zip: '10014', city: 'New York', state: 'NY' },
+            { zip: '10016', city: 'New York', state: 'NY' },
+            { zip: '10017', city: 'New York', state: 'NY' },
+            { zip: '10018', city: 'New York', state: 'NY' },
+            { zip: '10019', city: 'New York', state: 'NY' },
+            { zip: '10020', city: 'New York', state: 'NY' },
+            { zip: '10021', city: 'New York', state: 'NY' },
+            { zip: '10022', city: 'New York', state: 'NY' },
+            { zip: '10023', city: 'New York', state: 'NY' },
+            { zip: '10024', city: 'New York', state: 'NY' },
+            { zip: '10025', city: 'New York', state: 'NY' },
+            { zip: '10026', city: 'New York', state: 'NY' },
+            { zip: '10027', city: 'New York', state: 'NY' },
+            { zip: '10028', city: 'New York', state: 'NY' },
+            { zip: '10029', city: 'New York', state: 'NY' },
+            { zip: '10030', city: 'New York', state: 'NY' },
+            { zip: '10031', city: 'New York', state: 'NY' },
+            { zip: '10032', city: 'New York', state: 'NY' },
+            { zip: '10033', city: 'New York', state: 'NY' },
+            { zip: '10034', city: 'New York', state: 'NY' },
+            { zip: '10035', city: 'New York', state: 'NY' },
+            { zip: '10036', city: 'New York', state: 'NY' },
+            { zip: '10037', city: 'New York', state: 'NY' },
+            { zip: '10038', city: 'New York', state: 'NY' },
+            { zip: '10039', city: 'New York', state: 'NY' },
+            { zip: '10040', city: 'New York', state: 'NY' },
+            { zip: '10044', city: 'New York', state: 'NY' },
+            { zip: '10065', city: 'New York', state: 'NY' },
+            { zip: '10069', city: 'New York', state: 'NY' },
+            { zip: '10075', city: 'New York', state: 'NY' },
+            { zip: '10128', city: 'New York', state: 'NY' },
+            { zip: '10280', city: 'New York', state: 'NY' },
+            { zip: '10282', city: 'New York', state: 'NY' },
+            // Washington - Seattle area
+            { zip: '98101', city: 'Seattle', state: 'WA' },
+            { zip: '98102', city: 'Seattle', state: 'WA' },
+            { zip: '98103', city: 'Seattle', state: 'WA' },
+            { zip: '98104', city: 'Seattle', state: 'WA' },
+            { zip: '98105', city: 'Seattle', state: 'WA' },
+            { zip: '98106', city: 'Seattle', state: 'WA' },
+            { zip: '98107', city: 'Seattle', state: 'WA' },
+            { zip: '98108', city: 'Seattle', state: 'WA' },
+            { zip: '98109', city: 'Seattle', state: 'WA' },
+            { zip: '98112', city: 'Seattle', state: 'WA' },
+            { zip: '98115', city: 'Seattle', state: 'WA' },
+            { zip: '98116', city: 'Seattle', state: 'WA' },
+            { zip: '98117', city: 'Seattle', state: 'WA' },
+            { zip: '98118', city: 'Seattle', state: 'WA' },
+            { zip: '98119', city: 'Seattle', state: 'WA' },
+            { zip: '98121', city: 'Seattle', state: 'WA' },
+            { zip: '98122', city: 'Seattle', state: 'WA' },
+            { zip: '98125', city: 'Seattle', state: 'WA' },
+            { zip: '98126', city: 'Seattle', state: 'WA' },
+            { zip: '98133', city: 'Seattle', state: 'WA' },
+            { zip: '98134', city: 'Seattle', state: 'WA' },
+            { zip: '98136', city: 'Seattle', state: 'WA' },
+            { zip: '98144', city: 'Seattle', state: 'WA' },
+            { zip: '98146', city: 'Seattle', state: 'WA' },
+            { zip: '98154', city: 'Seattle', state: 'WA' },
+            { zip: '98164', city: 'Seattle', state: 'WA' },
+            { zip: '98174', city: 'Seattle', state: 'WA' },
+            { zip: '98177', city: 'Seattle', state: 'WA' },
+            { zip: '98178', city: 'Seattle', state: 'WA' },
+            { zip: '98195', city: 'Seattle', state: 'WA' },
+            { zip: '98199', city: 'Seattle', state: 'WA' },
+            // Oregon - Portland area
+            { zip: '97201', city: 'Portland', state: 'OR' },
+            { zip: '97202', city: 'Portland', state: 'OR' },
+            { zip: '97203', city: 'Portland', state: 'OR' },
+            { zip: '97204', city: 'Portland', state: 'OR' },
+            { zip: '97205', city: 'Portland', state: 'OR' },
+            { zip: '97206', city: 'Portland', state: 'OR' },
+            { zip: '97209', city: 'Portland', state: 'OR' },
+            { zip: '97210', city: 'Portland', state: 'OR' },
+            { zip: '97211', city: 'Portland', state: 'OR' },
+            { zip: '97212', city: 'Portland', state: 'OR' },
+            { zip: '97213', city: 'Portland', state: 'OR' },
+            { zip: '97214', city: 'Portland', state: 'OR' },
+            { zip: '97215', city: 'Portland', state: 'OR' },
+            { zip: '97216', city: 'Portland', state: 'OR' },
+            { zip: '97217', city: 'Portland', state: 'OR' },
+            { zip: '97218', city: 'Portland', state: 'OR' },
+            { zip: '97219', city: 'Portland', state: 'OR' },
+            { zip: '97220', city: 'Portland', state: 'OR' },
+            { zip: '97221', city: 'Portland', state: 'OR' },
+            { zip: '97222', city: 'Portland', state: 'OR' },
+            { zip: '97223', city: 'Portland', state: 'OR' },
+            { zip: '97224', city: 'Portland', state: 'OR' },
+            { zip: '97225', city: 'Portland', state: 'OR' },
+            { zip: '97227', city: 'Portland', state: 'OR' },
+            { zip: '97229', city: 'Portland', state: 'OR' },
+            { zip: '97230', city: 'Portland', state: 'OR' },
+            { zip: '97231', city: 'Portland', state: 'OR' },
+            { zip: '97232', city: 'Portland', state: 'OR' },
+            { zip: '97233', city: 'Portland', state: 'OR' },
+            { zip: '97236', city: 'Portland', state: 'OR' },
+            { zip: '97239', city: 'Portland', state: 'OR' },
+            { zip: '97266', city: 'Portland', state: 'OR' },
+            // Illinois - Chicago area
+            { zip: '60601', city: 'Chicago', state: 'IL' },
+            { zip: '60602', city: 'Chicago', state: 'IL' },
+            { zip: '60603', city: 'Chicago', state: 'IL' },
+            { zip: '60604', city: 'Chicago', state: 'IL' },
+            { zip: '60605', city: 'Chicago', state: 'IL' },
+            { zip: '60606', city: 'Chicago', state: 'IL' },
+            { zip: '60607', city: 'Chicago', state: 'IL' },
+            { zip: '60608', city: 'Chicago', state: 'IL' },
+            { zip: '60609', city: 'Chicago', state: 'IL' },
+            { zip: '60610', city: 'Chicago', state: 'IL' },
+            { zip: '60611', city: 'Chicago', state: 'IL' },
+            { zip: '60612', city: 'Chicago', state: 'IL' },
+            { zip: '60613', city: 'Chicago', state: 'IL' },
+            { zip: '60614', city: 'Chicago', state: 'IL' },
+            { zip: '60615', city: 'Chicago', state: 'IL' },
+            { zip: '60616', city: 'Chicago', state: 'IL' },
+            { zip: '60617', city: 'Chicago', state: 'IL' },
+            { zip: '60618', city: 'Chicago', state: 'IL' },
+            { zip: '60619', city: 'Chicago', state: 'IL' },
+            { zip: '60620', city: 'Chicago', state: 'IL' },
+            { zip: '60621', city: 'Chicago', state: 'IL' },
+            { zip: '60622', city: 'Chicago', state: 'IL' },
+            { zip: '60623', city: 'Chicago', state: 'IL' },
+            { zip: '60624', city: 'Chicago', state: 'IL' },
+            { zip: '60625', city: 'Chicago', state: 'IL' },
+            { zip: '60626', city: 'Chicago', state: 'IL' },
+            { zip: '60628', city: 'Chicago', state: 'IL' },
+            { zip: '60629', city: 'Chicago', state: 'IL' },
+            { zip: '60630', city: 'Chicago', state: 'IL' },
+            { zip: '60631', city: 'Chicago', state: 'IL' },
+            { zip: '60632', city: 'Chicago', state: 'IL' },
+            { zip: '60633', city: 'Chicago', state: 'IL' },
+            { zip: '60634', city: 'Chicago', state: 'IL' },
+            { zip: '60636', city: 'Chicago', state: 'IL' },
+            { zip: '60637', city: 'Chicago', state: 'IL' },
+            { zip: '60638', city: 'Chicago', state: 'IL' },
+            { zip: '60639', city: 'Chicago', state: 'IL' },
+            { zip: '60640', city: 'Chicago', state: 'IL' },
+            { zip: '60641', city: 'Chicago', state: 'IL' },
+            { zip: '60642', city: 'Chicago', state: 'IL' },
+            { zip: '60643', city: 'Chicago', state: 'IL' },
+            { zip: '60644', city: 'Chicago', state: 'IL' },
+            { zip: '60645', city: 'Chicago', state: 'IL' },
+            { zip: '60646', city: 'Chicago', state: 'IL' },
+            { zip: '60647', city: 'Chicago', state: 'IL' },
+            { zip: '60649', city: 'Chicago', state: 'IL' },
+            { zip: '60651', city: 'Chicago', state: 'IL' },
+            { zip: '60652', city: 'Chicago', state: 'IL' },
+            { zip: '60653', city: 'Chicago', state: 'IL' },
+            { zip: '60654', city: 'Chicago', state: 'IL' },
+            { zip: '60655', city: 'Chicago', state: 'IL' },
+            { zip: '60656', city: 'Chicago', state: 'IL' },
+            { zip: '60657', city: 'Chicago', state: 'IL' },
+            { zip: '60659', city: 'Chicago', state: 'IL' },
+            { zip: '60660', city: 'Chicago', state: 'IL' },
+            { zip: '60661', city: 'Chicago', state: 'IL' },
+            // Washington DC area
+            { zip: '20001', city: 'Washington', state: 'DC' },
+            { zip: '20002', city: 'Washington', state: 'DC' },
+            { zip: '20003', city: 'Washington', state: 'DC' },
+            { zip: '20004', city: 'Washington', state: 'DC' },
+            { zip: '20005', city: 'Washington', state: 'DC' },
+            { zip: '20006', city: 'Washington', state: 'DC' },
+            { zip: '20007', city: 'Washington', state: 'DC' },
+            { zip: '20008', city: 'Washington', state: 'DC' },
+            { zip: '20009', city: 'Washington', state: 'DC' },
+            { zip: '20010', city: 'Washington', state: 'DC' },
+            { zip: '20011', city: 'Washington', state: 'DC' },
+            { zip: '20012', city: 'Washington', state: 'DC' },
+            { zip: '20015', city: 'Washington', state: 'DC' },
+            { zip: '20016', city: 'Washington', state: 'DC' },
+            { zip: '20017', city: 'Washington', state: 'DC' },
+            { zip: '20018', city: 'Washington', state: 'DC' },
+            { zip: '20019', city: 'Washington', state: 'DC' },
+            { zip: '20020', city: 'Washington', state: 'DC' },
+            { zip: '20024', city: 'Washington', state: 'DC' },
+            { zip: '20032', city: 'Washington', state: 'DC' },
+            { zip: '20036', city: 'Washington', state: 'DC' },
+            { zip: '20037', city: 'Washington', state: 'DC' },
+          ];
+          
+          // Filter by prefix
+          const prefix = input.prefix.replace(/\D/g, ''); // Remove non-digits
+          const matches = zipCodeDatabase
+            .filter(z => z.zip.startsWith(prefix))
+            .slice(0, 15); // Limit to 15 results
+          
+          return {
+            success: true,
+            data: matches,
+          };
+        } catch (error) {
+          console.error('[searchZipCodes] Error:', error);
+          return {
+            success: false,
+            data: [],
+          };
+        }
+      }),
+
+    // Geocode a zip code to find the corresponding market and submarket
+    geocodeZipCode: publicProcedure
+      .input(z.object({ zipcode: z.string().length(5) }))
+      .query(async ({ input }) => {
+        try {
+          console.log(`[geocodeZipCode] Looking up zip code: ${input.zipcode}`);
+          
+          const result = await geocodeZipCodeToMarket(input.zipcode);
+          
+          // Log activity
+          await logActivity({
+            action: ActionType.MARKET_SEARCH,
+            actionCategory: ActionCategory.SEARCH,
+            details: { 
+              searchType: 'zipcode_geocode',
+              zipcode: input.zipcode,
+              city: result.city,
+              state: result.state,
+              marketId: result.market?.id,
+              marketName: result.market?.name,
+              success: result.success
+            },
+          });
+          
+          return result;
+        } catch (error) {
+          console.error("[geocodeZipCode] Error:", error);
+          return {
+            success: false,
+            zipcode: input.zipcode,
+            error: "An error occurred while looking up the zip code. Please try again."
+          };
+        }
+      }),
+
+    // Get basic rental estimate from AirDNA API
+    getEstimate: publicProcedure
+      .input(rentalizerInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          const estimate = await getRentalizerEstimate({
+            address: input.address,
+            bedrooms: input.bedrooms,
+            bathrooms: input.bathrooms,
+            accommodates: input.accommodates,
+            currency: input.currency,
+          });
+          
+          return {
+            success: true,
+            data: estimate,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting estimate:", error);
+          const message = error instanceof Error ? error.message : "Failed to get rental estimate";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get comprehensive property report with market data
+    getPropertyReport: publicProcedure
+      .input(propertyReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          const report = await getComprehensivePropertyReport(
+            input.address,
+            input.bedrooms,
+            input.bathrooms,
+            input.accommodates
+          );
+
+          if (!report) {
+            return {
+              success: false,
+              error: "Could not generate property report for this address",
+              data: null,
+            };
+          }
+          
+          // Save lead capture data if provided
+          if (input.leadEmail) {
+            try {
+              const db = await getDb();
+              if (db) {
+                const property = report.property as any;
+                await db.insert(analysisReports).values({
+                  address: input.address,
+                  city: property?.location?.city || null,
+                  state: property?.location?.state || null,
+                  zipCode: property?.location?.zipcode || null,
+                  latitude: property?.location?.latitude?.toString() || null,
+                  longitude: property?.location?.longitude?.toString() || null,
+                  bedrooms: input.bedrooms || null,
+                  bathrooms: input.bathrooms?.toString() || null,
+                  marketId: property?.location?.market_id || null,
+                  marketName: property?.location?.market_name || null,
+                  annualRevenueRealistic: property?.estimates?.annual_revenue || null,
+                  occupancyRate: property?.estimates?.occupancy_rate?.toString() || null,
+                  averageDailyRate: property?.estimates?.average_daily_rate || null,
+                  leadName: input.leadName || null,
+                  leadEmail: input.leadEmail || null,
+                  leadPhone: input.leadPhone || null,
+                  fullAnalysisData: report,
+                });
+                console.log('[Rental] Lead captured:', input.leadEmail);
+              }
+            } catch (dbError) {
+              console.error('[Rental] Error saving lead:', dbError);
+              // Don't fail the request if lead save fails
+            }
+          }
+
+          return {
+            success: true,
+            data: report,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting property report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate property report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get AI-enhanced property report with profitability analysis
+    getAIPropertyReport: publicProcedure
+      .input(aiPropertyReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          // First get the comprehensive property report from AirDNA
+          const baseReport = await getComprehensivePropertyReport(
+            input.address,
+            input.bedrooms,
+            input.bathrooms,
+            input.accommodates
+          );
+
+          if (!baseReport) {
+            return {
+              success: false,
+              error: "Could not generate property report for this address",
+              data: null,
+            };
+          }
+
+          // Calculate revenue projections based on market data
+          const medianRevenue = baseReport.property.estimates?.annual_revenue || 0;
+          const top25Revenue = Math.round(medianRevenue * 1.25);
+          const top10Revenue = Math.round(medianRevenue * 1.5);
+
+          // Get neighborhood from address (last part before state/zip)
+          const addressParts = input.address.split(',');
+          const neighborhood = addressParts.length >= 2 ? addressParts[1].trim() : 'Local Area';
+
+          // Get the market ID from the base report
+          const marketId = baseReport.market?.id || baseReport.property.property?.market_id;
+          console.log('[getAIPropertyReport] baseReport.market:', JSON.stringify(baseReport.market, null, 2));
+          console.log('[getAIPropertyReport] marketId:', marketId);
+          const bedrooms = input.bedrooms || baseReport.property.property?.bedrooms || 2;
+          
+          // Fetch ALL qualifying competitors from Market Charts API
+          let allCompetitors: typeof baseReport.same_bedroom_comps = [];
+          let qualifyingCompetitors: typeof baseReport.same_bedroom_comps = [];
+          const minRevenueThreshold = input.monthlyRent * 12 * 2;
+          
+          // Get subject property coordinates for distance calculation
+          // baseReport.property is a RentalizerResponse, and RentalizerResponse.property contains lat/lng
+          const subjectLat = baseReport.property.property?.latitude;
+          const subjectLng = baseReport.property.property?.longitude;
+          console.log(`[getAIPropertyReport] Subject coordinates: lat=${subjectLat}, lng=${subjectLng}`);
+          console.log(`[getAIPropertyReport] baseReport.property keys:`, Object.keys(baseReport.property || {}));
+          console.log(`[getAIPropertyReport] baseReport.property.property keys:`, Object.keys(baseReport.property?.property || {}));
+          
+          // Helper function to calculate distance in meters using Haversine formula
+          const calculateDistanceMeters = (lat1: number, lng1: number, lat2: number | null | undefined, lng2: number | null | undefined): number | undefined => {
+            if (!lat2 || !lng2) return undefined;
+            const R = 6371000; // Earth's radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+          };
+          
+          if (marketId) {
+            console.log(`[getAIPropertyReport] Fetching all competitors for market ${marketId}, ${bedrooms}BR, threshold $${minRevenueThreshold}`);
+            const competitorData = await getQualifyingCompetitors(marketId, bedrooms, input.monthlyRent, { excludeInactive: true });
+            allCompetitors = competitorData.allSameBedroomListings; // Already filtered to active only
+            qualifyingCompetitors = competitorData.qualifyingListings;
+            const inactiveFiltered = competitorData.inactiveCount;
+            console.log(`[getAIPropertyReport] Found ${allCompetitors.length} active same-bedroom listings (filtered ${inactiveFiltered} inactive), ${qualifyingCompetitors.length} meet threshold`);
+            
+            // Calculate distance for each competitor if we have subject property coordinates
+            if (subjectLat && subjectLng) {
+              allCompetitors = allCompetitors.map(c => ({
+                ...c,
+                distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
+              }));
+              qualifyingCompetitors = qualifyingCompetitors.map(c => ({
+                ...c,
+                distance_meters: c.distance_meters || calculateDistanceMeters(subjectLat, subjectLng, c.latitude, c.longitude),
+              }));
+              const compsWithLatLng = allCompetitors.filter(c => c.latitude && c.longitude).length;
+              const compsWithDistance = allCompetitors.filter(c => c.distance_meters).length;
+              console.log(`[getAIPropertyReport] Comps with lat/lng: ${compsWithLatLng}/${allCompetitors.length}, Comps with distance: ${compsWithDistance}/${allCompetitors.length}`);
+            }
+            
+            // Scrape images from Airbnb for top competitors
+            const airbnbUrls = allCompetitors
+              .slice(0, 15)
+              .map(c => c.airbnb_url)
+              .filter((url): url is string => !!url);
+            
+            if (airbnbUrls.length > 0) {
+              console.log(`[getAIPropertyReport] Scraping images for ${airbnbUrls.length} listings...`);
+              try {
+                const imageMap = await batchScrapeAirbnbImages(airbnbUrls, 3);
+                console.log(`[getAIPropertyReport] Successfully scraped images for ${imageMap.size} listings`);
+                
+                // Update competitors with scraped images
+                allCompetitors = allCompetitors.map(c => {
+                  if (c.airbnb_url && imageMap.has(c.airbnb_url)) {
+                    const images = imageMap.get(c.airbnb_url)!;
+                    return {
+                      ...c,
+                      image_url: images[0],
+                      images: images,
+                    };
+                  }
+                  return c;
+                });
+              } catch (error) {
+                console.error('[getAIPropertyReport] Image scraping failed:', error);
+                // Continue without images - UI will show fallback
+              }
+            }
+          } else {
+            // Fallback to original comps if no market ID
+            allCompetitors = baseReport.same_bedroom_comps || [];
+            qualifyingCompetitors = allCompetitors.filter(c => c.annual_revenue >= minRevenueThreshold);
+          }
+
+          // Fetch AirDNA's native comp algorithm (if we have a listing ID from comps)
+          let airdnaNativeComps: Awaited<ReturnType<typeof getListingComps>> = [];
+          const topCompId = (baseReport.property as any)?.comps?.[0]?.airbnb_listing_id || allCompetitors[0]?.id;
+          if (topCompId) {
+            try {
+              console.log(`[getAIPropertyReport] Fetching AirDNA native comps for listing ${topCompId}`);
+              airdnaNativeComps = await getListingComps(topCompId, 10);
+              console.log(`[getAIPropertyReport] Found ${airdnaNativeComps.length} native comps from AirDNA algorithm`);
+            } catch (error) {
+              console.error('[getAIPropertyReport] Native comps fetch failed:', error);
+              // Continue without native comps
+            }
+          }
+
+          // Fetch historical metrics for top 10 comp properties (revenue trends)
+          const compHistoricalMetrics: Map<string, { trend: 'growing' | 'stable' | 'declining'; totalRevenue: number; avgOccupancy: number }> = new Map();
+          const top10Comps = allCompetitors.slice(0, 10);
+          if (top10Comps.length > 0) {
+            console.log(`[getAIPropertyReport] Fetching historical metrics for ${top10Comps.length} top comps...`);
+            try {
+              // Fetch in parallel with rate limiting (batches of 5)
+              const batchSize = 5;
+              for (let i = 0; i < top10Comps.length; i += batchSize) {
+                const batch = top10Comps.slice(i, i + batchSize);
+                const batchResults = await Promise.all(
+                  batch.map(async (comp) => {
+                    if (!comp.id) return null;
+                    try {
+                      const metrics = await getListingHistoricalMetrics(comp.id, 12);
+                      if (metrics) {
+                        return {
+                          id: comp.id,
+                          trend: metrics.summary.revenue_trend,
+                          totalRevenue: metrics.summary.total_revenue,
+                          avgOccupancy: metrics.summary.avg_occupancy,
+                        };
+                      }
+                    } catch (e) {
+                      console.error(`[getAIPropertyReport] Failed to fetch metrics for comp ${comp.id}:`, e);
+                    }
+                    return null;
+                  })
+                );
+                
+                for (const result of batchResults) {
+                  if (result) {
+                    compHistoricalMetrics.set(result.id, {
+                      trend: result.trend,
+                      totalRevenue: result.totalRevenue,
+                      avgOccupancy: result.avgOccupancy,
+                    });
+                  }
+                }
+                
+                // Small delay between batches to avoid rate limiting
+                if (i + batchSize < top10Comps.length) {
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                }
+              }
+              console.log(`[getAIPropertyReport] Successfully fetched historical metrics for ${compHistoricalMetrics.size} comps`);
+            } catch (error) {
+              console.error('[getAIPropertyReport] Historical metrics fetch failed:', error);
+              // Continue without historical metrics
+            }
+          }
+
+          // Enrich allCompetitors with historical trend data
+          allCompetitors = allCompetitors.map(comp => {
+            const historicalData = comp.id ? compHistoricalMetrics.get(comp.id) : undefined;
+            return {
+              ...comp,
+              revenue_trend: historicalData?.trend,
+              historical_total_revenue: historicalData?.totalRevenue,
+              historical_avg_occupancy: historicalData?.avgOccupancy,
+            };
+          });
+
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedPropertyReport(input.address, {
+            property: {
+              address: input.address,
+              neighborhood,
+              propertyType: input.propertyType || 'House',
+              bedrooms,
+              bathrooms: input.bathrooms || baseReport.property.property?.bathrooms || 1,
+              squareFootage: input.squareFootage,
+              monthlyRent: input.monthlyRent,
+            },
+            marketData: {
+              occupancy: baseReport.market?.metrics?.occupancy || 0,
+              adr: baseReport.market?.metrics?.adr || 0,
+              revenue: baseReport.market?.metrics?.revenue || 0,
+              listingCount: baseReport.market?.listing_count || 0,
+            },
+            competitors: allCompetitors.slice(0, 10).map(c => ({
+              name: c.title || 'Competitor',
+              revenue: c.annual_revenue || 0,
+              adr: c.adr || 0,
+              occupancy: c.occupancy || 0,
+              rating: c.rating ?? undefined,
+            })),
+            revenueProjections: {
+              conservative: medianRevenue,
+              realistic: top25Revenue,
+              optimistic: top10Revenue,
+            },
+          });
+
+          // Calculate profitability
+          const monthlyExpenses = input.monthlyRent + 780; // Rent + utilities/supplies
+          const annualExpenses = monthlyExpenses * 12;
+          const meetsThreshold = qualifyingCompetitors.length > 0;
+
+          // Ensure market.id is included in the response
+          const marketData = baseReport.market ? {
+            ...baseReport.market,
+            id: marketId || baseReport.market.id,
+          } : { id: marketId };
+
+          return {
+            success: true,
+            data: {
+              ...baseReport,
+              // Ensure market.id is always included
+              market: marketData,
+              // Override same_bedroom_comps with ALL competitors from Market Charts API
+              same_bedroom_comps: allCompetitors,
+              qualifying_comps: qualifyingCompetitors,
+              // AirDNA's native comp algorithm (similarity-based)
+              airdna_native_comps: airdnaNativeComps.length > 0 ? airdnaNativeComps.map(c => ({
+                id: c.listing_id,
+                title: c.title,
+                bedrooms: c.bedrooms,
+                bathrooms: c.bathrooms,
+                accommodates: c.accommodates,
+                property_type: c.property_type,
+                annual_revenue: c.annual_revenue,
+                adr: c.adr,
+                occupancy: c.occupancy,
+                rating: c.rating,
+                reviews: c.reviews,
+                distance_meters: c.distance_meters,
+                similarity_score: c.similarity_score,
+                airbnb_url: c.airbnb_url,
+                amenities: c.amenities,
+              })) : undefined,
+              ai_analysis: aiAnalysis,
+              profitability: {
+                monthly_rent: input.monthlyRent,
+                monthly_expenses: monthlyExpenses,
+                annual_expenses: annualExpenses,
+                startup_costs: 20000,
+                min_revenue_threshold: minRevenueThreshold,
+                meets_threshold: meetsThreshold,
+                qualifying_count: qualifyingCompetitors.length,
+                total_same_bedroom_count: allCompetitors.length,
+                revenue_projections: {
+                  conservative: medianRevenue,
+                  realistic: top25Revenue,
+                  optimistic: top10Revenue,
+                },
+                profit_projections: {
+                  conservative: medianRevenue - annualExpenses,
+                  realistic: top25Revenue - annualExpenses,
+                  optimistic: top10Revenue - annualExpenses,
+                },
+              },
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting AI property report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate AI property report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get comprehensive market report with AI analysis
+    getMarketReport: publicProcedure
+      .input(marketReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          console.log(`[getMarketReport] Fetching report for market: ${input.marketId}`);
+          const report = await getComprehensiveMarketReport(input.marketId);
+
+          if (!report) {
+            console.log(`[getMarketReport] No report returned for market: ${input.marketId}`);
+            return {
+              success: false,
+              error: `Could not find market data for ID: ${input.marketId}. This market may not exist or may not have sufficient data available. Please try searching for a different market.`,
+              data: null,
+            };
+          }
+          
+          // Validate that we have meaningful data
+          if (!report.market?.listing_count || report.market.listing_count === 0) {
+            console.log(`[getMarketReport] Market ${input.marketId} has 0 listings`);
+            return {
+              success: false,
+              error: `The market "${report.market?.name || input.marketId}" shows 0 active rentals. This market may not have sufficient short-term rental data available. Please try a different market.`,
+              data: null,
+            };
+          }
+
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedMarketReport(report.market.name, {
+            market: {
+              name: report.market.name,
+              listingCount: report.market.listing_count,
+            },
+            metrics: {
+              occupancy: report.market.metrics.occupancy,
+              adr: report.market.metrics.adr,
+              revenue: report.market.metrics.revenue,
+              revpar: report.market.metrics.revpar,
+            },
+            topListings: (report.top_listings || []).slice(0, 5).map(l => ({
+              title: l.title,
+              revenue: l.annual_revenue,
+              adr: l.adr,
+              occupancy: l.occupancy,
+              rating: l.rating,
+              bedrooms: l.bedrooms,
+              propertyType: l.property_type,
+            })),
+            bedroomPerformance: (report.bedroom_performance || []).map(b => ({
+              bedrooms: b.bedrooms,
+              count: b.count,
+              avgRevenue: b.avg_revenue,
+              avgOccupancy: b.avg_occupancy,
+            })),
+            insights: report.insights ? {
+              professionallyManagedPct: report.insights.professionally_managed_pct,
+              superhostPct: report.insights.superhost_pct,
+              revenuePercentiles: report.insights.revenue_percentiles,
+            } : undefined,
+          });
+
+          return {
+            success: true,
+            data: {
+              ...report,
+              ai_analysis: aiAnalysis,
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting market report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate market report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Get comprehensive submarket/zip code report with AI analysis
+    getSubmarketReport: publicProcedure
+      .input(submarketReportInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          console.log(`[getSubmarketReport] Fetching report for submarket: ${input.submarketId}`);
+          const report = await getComprehensiveSubmarketReport(input.submarketId);
+
+          if (!report) {
+            console.log(`[getSubmarketReport] No report returned for submarket: ${input.submarketId}`);
+            return {
+              success: false,
+              error: `Could not find data for this market/neighborhood. The ID "${input.submarketId}" may not exist or may not have sufficient data available. Please try searching for a different location.`,
+              data: null,
+            };
+          }
+          
+          // Validate that we have meaningful data
+          if (!report.submarket?.listing_count || report.submarket.listing_count === 0) {
+            console.log(`[getSubmarketReport] Submarket ${input.submarketId} has 0 listings`);
+            return {
+              success: false,
+              error: `"${report.submarket?.name || input.submarketId}" shows 0 active rentals. This area may not have sufficient short-term rental data available. Please try a different neighborhood or city.`,
+              data: null,
+            };
+          }
+
+          // Generate AI-enhanced analysis
+          const aiAnalysis = await generateEnhancedMarketReport(report.submarket.name, {
+            market: {
+              name: report.submarket.name,
+              listingCount: report.submarket.listing_count,
+            },
+            metrics: {
+              occupancy: report.submarket.metrics.occupancy,
+              adr: report.submarket.metrics.adr,
+              revenue: report.submarket.metrics.revenue,
+              revpar: report.submarket.metrics.revpar,
+            },
+            topListings: (report.top_listings || []).slice(0, 5).map(l => ({
+              title: l.title,
+              revenue: l.annual_revenue,
+              adr: l.adr,
+              occupancy: l.occupancy,
+              rating: l.rating,
+              bedrooms: l.bedrooms,
+              propertyType: l.property_type,
+            })),
+            bedroomPerformance: (report.bedroom_performance || []).map(b => ({
+              bedrooms: b.bedrooms,
+              count: b.count,
+              avgRevenue: b.avg_revenue,
+              avgOccupancy: b.avg_occupancy,
+            })),
+            insights: report.insights ? {
+              professionallyManagedPct: report.insights.professionally_managed_pct,
+              superhostPct: report.insights.superhost_pct,
+              revenuePercentiles: report.insights.revenue_percentiles,
+            } : undefined,
+          });
+
+          return {
+            success: true,
+            data: {
+              ...report,
+              ai_analysis: aiAnalysis,
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting submarket report:", error);
+          const message = error instanceof Error ? error.message : "Failed to generate submarket report";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Explore submarkets within a market - returns ranked list with recommendations
+    exploreSubmarkets: publicProcedure
+      .input(z.object({
+        marketId: z.string().min(1, "Market ID is required"),
+        sortBy: z.enum(['revenue', 'occupancy', 'revpar', 'overall']).default('overall'),
+        limit: z.number().int().min(1).max(20).default(15),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await exploreSubmarketsWithMetrics(input.marketId, {
+            sortBy: input.sortBy,
+            limit: input.limit,
+          });
+          
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Rental] Error exploring submarkets:", error);
+          const message = error instanceof Error ? error.message : "Failed to explore submarkets";
+          return {
+            success: false,
+            error: message,
+            data: null,
+          };
+        }
+      }),
+
+    // Smart search - detects input type and returns appropriate results
+    smartSearch: publicProcedure
+      .input(smartSearchInputSchema)
+      .query(async ({ input }) => {
+        try {
+          const searchType = detectSearchType(input.query);
+          const results = await searchMarkets(input.query, 10);
+          
+          return {
+            success: true,
+            data: {
+              search_type: searchType,
+              query: input.query,
+              results: results.map(r => ({
+                ...r,
+                search_type: searchType,
+              })),
+            },
+          };
+        } catch (error) {
+          console.error("[Rental] Error in smart search:", error);
+          return {
+            success: false,
+            error: "Failed to search",
+            data: null,
+          };
+        }
+      }),
+
+    // Get booking patterns for a market
+    getBookingPatterns: publicProcedure
+      .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        try {
+          // Keep the full market ID (e.g., 'airdna-163') - API requires it
+          const result = await getMarketBookingPatterns(String(input.marketId), input.bedrooms);
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting booking patterns:", error);
+          return {
+            success: false,
+            error: "Failed to get booking patterns",
+            data: null,
+          };
+        }
+      }),
+
+    // Get supply trend for a market
+    getSupplyTrend: publicProcedure
+      .input(z.object({ marketId: z.union([z.number(), z.string()]), bedrooms: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await getMarketSupplyTrend(String(input.marketId), input.bedrooms);
+          console.log('[getSupplyTrend] Result monthly_data sample:', result?.monthly_data?.slice(0, 2));
+          return {
+            success: true,
+            data: result,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting supply trend:", error);
+          return {
+            success: false,
+            error: "Failed to get supply trend",
+            data: null,
+          };
+        }
+      }),
+
+    // Get forward-looking demand indicators
+    getForwardDemand: publicProcedure
+      .input(z.object({ 
+        marketId: z.union([z.number(), z.string()]),
+        numMonths: z.number().optional().default(6),
+        bedrooms: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const futureDailyData = await getMarketFutureDailyData(
+            String(input.marketId),
+            input.numMonths,
+            input.bedrooms
+          );
+          
+          if (!futureDailyData || futureDailyData.length === 0) {
+            return {
+              success: false,
+              error: "No future pricing data available",
+              data: null,
+            };
+          }
+          
+          const indicators = calculateForwardLookingDemand(futureDailyData);
+          
+          return {
+            success: true,
+            data: indicators,
+          };
+        } catch (error) {
+          console.error("[Rental] Error getting forward demand:", error);
+          return {
+            success: false,
+            error: "Failed to get forward demand indicators",
+            data: null,
+          };
+        }
+      }),
+
+    // Submit lead and store in database
+    submitLead: publicProcedure
+      .input(leadInputSchema)
+      .mutation(async ({ input }) => {
+        try {
+          // Log activity
+          await logActivity({
+            action: ActionType.LEAD_SUBMITTED,
+            actionCategory: ActionCategory.LEAD,
+            details: {
+              email: input.email,
+              address: input.address,
+            },
+          });
+          
+          const db = await getDb();
+          
+          if (db) {
+            // Store lead in database
+            await db.insert(leads).values({
+              name: input.name,
+              email: input.email,
+              phone: input.phone || null,
+              address: input.address,
+              bedrooms: input.bedrooms || null,
+              bathrooms: input.bathrooms ? String(input.bathrooms) : null,
+              accommodates: input.accommodates || null,
+              zillowUrl: input.zillow_url || null,
+            });
+
+            console.log("[Lead] New lead stored:", {
+              name: input.name,
+              email: input.email,
+              address: input.address,
+              timestamp: new Date().toISOString(),
+            });
+
+            // Sync lead to HubSpot for email automation
+            try {
+              const nameParts = input.name.split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              
+              // Generate a personalized deep link for follow-up emails
+              const baseUrl = process.env.VITE_APP_URL || 'https://coachinayahturnkeytool.com';
+              const deepLink = generateDeepLink({
+                baseUrl,
+                tool: 'calculator',
+                email: input.email,
+                utm_source: 'hubspot',
+                utm_medium: 'email',
+                utm_campaign: 'lead_followup',
+              });
+
+              await upsertContact({
+                email: input.email,
+                firstName,
+                lastName,
+                phone: input.phone,
+                source: 'rental_calculator',
+                toolUsed: 'property_calculator',
+                propertyAddress: input.address,
+                deepLink,
+              });
+              
+              console.log('[HubSpot] Lead synced to HubSpot:', input.email);
+            } catch (hubspotError) {
+              // Don't fail the lead submission if HubSpot sync fails
+              console.error('[HubSpot] Error syncing lead:', hubspotError);
+            }
+          } else {
+            // Log the lead if DB not available
+            console.log("[Lead] Database not available, logging lead:", {
+              name: input.name,
+              email: input.email,
+              phone: input.phone,
+              address: input.address,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          return {
+            success: true,
+            message: "Lead submitted successfully",
+          };
+        } catch (error) {
+          console.error("[Lead] Error storing lead:", error);
+          
+          // Still return success to user even if DB fails
+          console.log("[Lead] Fallback - Lead data:", {
+            name: input.name,
+            email: input.email,
+            phone: input.phone,
+            address: input.address,
+            timestamp: new Date().toISOString(),
+          });
+
+          return {
+            success: true,
+            message: "Lead submitted successfully",
+          };
+        }
+      }),
+});
