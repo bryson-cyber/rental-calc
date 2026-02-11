@@ -203,12 +203,12 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className={isExpanded ? "h-[500px]" : "h-[300px]"}>
+        <div className={`overflow-hidden ${isExpanded ? "h-[600px] sm:h-[650px] md:h-[700px]" : "h-[350px] sm:h-[400px] md:h-[450px]"}`}>
           <MapView
             initialCenter={{ lat: subjectProperty.latitude, lng: subjectProperty.longitude }}
             initialZoom={14}
             onMapReady={handleMapReady}
-            className="h-full rounded-b-lg"
+            className="h-full sm:h-full md:h-full lg:h-full rounded-b-lg"
           />
         </div>
         

@@ -5607,6 +5607,7 @@ export default function LeadMagnet() {
                     initialCenter={exploreCenter}
                     initialZoom={13}
                     onMapReady={() => setMapReady(true)}
+                    className="h-full sm:h-full md:h-full lg:h-full"
                   />
                 </div>
               )

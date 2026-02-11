@@ -943,7 +943,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   <Eye className="w-4 h-4 inline mr-2" />Street View
                 </button>
               </div>
-              <div className="h-[350px]">
+              <div className="h-[350px] overflow-hidden">
                 {property.latitude && property.longitude ? (
                   showStreetView ? (
                     <StreetViewPanorama
@@ -953,7 +953,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   ) : (
                     <MapView
                       key="property-map"
-                      className="w-full h-full"
+                      className="w-full h-full sm:h-full md:h-full lg:h-full"
                       onMapReady={(map) => {
                         map.setCenter({ lat: property.latitude!, lng: property.longitude! });
                         map.setZoom(15);

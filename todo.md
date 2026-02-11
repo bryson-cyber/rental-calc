@@ -10421,3 +10421,14 @@ Results:
 - [x] Updated dev-mock-api.test.ts to verify production guard exists and DEV_MOCK_API=false
 - [x] All 764 tests pass
 - [ ] Add server-side validation to prevent saving reports with mock data indicators (future)
+
+## Bug Fix: Map View Overflow (Feb 11, 2026)
+- [x] Fix CompsMapView map container overflow - added overflow-hidden wrapper with explicit responsive heights
+- [x] Fix MapView responsive height classes overriding h-full - added sm:h-full md:h-full lg:h-full overrides
+- [x] Fix comp table UI blocked/covered by overflowing map - verified table renders below map
+- [x] Ensure map properly fills its container with correct bounds fitting all markers
+- [x] Verify YOUR PROPERTY marker and comp markers display correctly (all 10 comps + subject)
+- [x] Fix same overflow bug in FullPropertyReport.tsx Property Overview map (h-[350px] container)
+- [x] Verified LeadMagnet.tsx Explore Area map already had the fix applied
+- [x] Audited all 7 MapView usages across 5 files - all now properly contained
+- [x] All 764 tests pass, 0 TypeScript errors
