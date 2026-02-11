@@ -10413,3 +10413,11 @@ Results:
 - [ ] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport
 - [ ] Fix 8 sequential await-in-loop patterns to use Promise.all for parallel execution
 - [ ] Consider removing opportunitySearches table if feature is deprecated
+
+## Fix: DEV_MOCK_API Leaked to Production (Feb 11, 2026)
+- [x] Added NODE_ENV=production guard to installMockApi() — blocks mock API in production even if DEV_MOCK_API=true
+- [x] Set DEV_MOCK_API secret to "false" for production safety
+- [x] Production guard logs clear error message when DEV_MOCK_API=true is detected in production
+- [x] Updated dev-mock-api.test.ts to verify production guard exists and DEV_MOCK_API=false
+- [x] All 764 tests pass
+- [ ] Add server-side validation to prevent saving reports with mock data indicators (future)

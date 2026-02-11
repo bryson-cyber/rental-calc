@@ -773,11 +773,21 @@ function createMockResponse(mockResp: MockResponse): Response {
  * Only activates when DEV_MOCK_API=true.
  */
 export function installMockApi(): void {
+  // CRITICAL SAFEGUARD: Never allow mock API in production, regardless of DEV_MOCK_API value.
+  // This prevents mock data from leaking into customer-facing reports.
+  if (ENV.isProduction) {
+    if (ENV.devMockApi) {
+      console.error(
+        "[DEV_MOCK] \u26d4 BLOCKED: DEV_MOCK_API=true is set but NODE_ENV=production. " +
+        "Mock API will NOT activate in production. Remove or set DEV_MOCK_API=false."
+      );
+    }
+    return;
+  }
   if (!ENV.devMockApi) {
     console.log("[DEV_MOCK] Mock API disabled (DEV_MOCK_API != true)");
     return;
   }
-
   if (mockInstalled) {
     console.log("[DEV_MOCK] Mock API already installed");
     return;
