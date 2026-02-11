@@ -10442,3 +10442,26 @@ Results:
 - [x] Add compass icon with distance display ("1.3 mi from your property")
 - [x] Write vitest unit tests for haversineDistance, formatOccupancy, and getDistance helpers
 - [x] All 783 tests pass, 0 TypeScript errors
+
+## Admin-Only Regenerate Button (Feb 11, 2026)
+- [x] Verified Regenerate button already guarded by isAdmin (isAuthenticated && user.role === 'admin')
+- [x] Verified backend regenerate procedure uses protectedProcedure + isOwner/isAdmin check
+- [x] Added extra !isSharedView guard so button never shows on /report/:shareId shared view URL
+- [x] Also hid Save Selection button from shared view (same admin-only pattern)
+
+## Driving Distance via Google Distance Matrix (Feb 11, 2026)
+- [x] Added Google Distance Matrix API integration - auto-fetches driving distances for all comps on map load
+- [x] Shows both straight-line (Haversine) and driving distance with duration (e.g. "4.4 mi drive (10 mins)")
+- [x] Batch requests for all comps (max 25 per batch) with loading indicator
+- [x] Display in both info window popup and selected comp panel with colored badges
+
+## Premium Map Styling (Feb 11, 2026)
+- [x] Upgraded markers with gradient colors, glow effects, and text shadows per revenue tier
+- [x] Added hover scale animations (1.15x) to comp markers
+- [x] Added $100k+ revenue tier (emerald green) to color coding
+- [x] Enhanced info window with thumbnail overlay, gradient fade, star rating badge overlay
+- [x] Added structured Revenue/ADR/Occ card layout with background styling
+- [x] Added distance section with background card, icons, and colored text
+- [x] Enhanced subject property marker label with gradient pill and refined styling
+- [x] Note: Cannot use JSON dark map theme due to mapId requirement for AdvancedMarkerElement
+- [x] All 783 tests pass, 0 TypeScript errors

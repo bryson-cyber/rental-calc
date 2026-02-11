@@ -168,7 +168,7 @@ async function loadLibraries(): Promise<void> {
   try {
     // Load libraries in parallel using importLibrary
     // This is the recommended approach for Google Maps JS API v3
-    const librariesToLoad = ["marker", "places", "geocoding", "geometry"];
+    const librariesToLoad = ["marker", "places", "geocoding", "geometry", "routes"];
     
     await Promise.all(
       librariesToLoad.map(async (lib) => {

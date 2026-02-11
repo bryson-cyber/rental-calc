@@ -783,7 +783,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             )}
             {!onBack && <div />}
             <div className="flex items-center gap-2">
-              {isAdmin && shareId && (
+              {isAdmin && shareId && !isSharedView && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1412,7 +1412,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   >
                     {selectedCompIds.size === displayComps.length ? 'Deselect All' : 'Select All'}
                   </button>
-                  {isAdmin && shareId && (
+                  {isAdmin && shareId && !isSharedView && (
                     <button
                       onClick={handleSaveCompSelection}
                       disabled={saveCompSelectionMutation.isPending}
