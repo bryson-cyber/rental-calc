@@ -17,7 +17,7 @@
  * LIGHT THEME — warm white backgrounds, gold (#C9A962) accents, navy text.
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -570,6 +570,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   const [compSelectionInitialized, setCompSelectionInitialized] = useState(false);
   const [compSortField, setCompSortField] = useState<CompSortField>('revenue');
   const [compSortDir, setCompSortDir] = useState<SortDirection>('desc');
+  const [highlightedCompKey, setHighlightedCompKey] = useState<string | null>(null);
+  const compTableRef = useRef<HTMLDivElement>(null);
+  const compRowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
@@ -837,6 +840,26 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       setSelectedCompIds(new Set(displayComps.map((c, i) => getCompKey(c, i))));
     }
   };
+
+  /** Handle clicking a table row — highlight it and tell the map */
+  const handleCompRowClick = useCallback((compKey: string) => {
+    setHighlightedCompKey(prev => prev === compKey ? null : compKey);
+  }, []);
+
+  /** Handle clicking a map marker — highlight the corresponding table row and scroll to it */
+  const handleMapCompSelect = useCallback((compKey: string) => {
+    setHighlightedCompKey(compKey);
+    // Scroll the table row into view
+    const rowEl = compRowRefs.current.get(compKey);
+    if (rowEl) {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
+
+  /** Clear highlight when clicking elsewhere */
+  const clearHighlight = useCallback(() => {
+    setHighlightedCompKey(null);
+  }, []);
 
   const hasRental = !!rental_arbitrage?.monthlyRent;
   const hasPurchase = !!normalizedPurchase?.purchasePrice;
@@ -1641,12 +1664,23 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   bedrooms: property.bedrooms,
                   bathrooms: property.bathrooms,
                 }}
+                onCompSelect={handleMapCompSelect}
+                highlightedCompKey={highlightedCompKey}
+                getCompKey={(comp) => {
+                  // Find the matching Comparable in displayComps to use getStableCompKey
+                  const match = displayComps.find(dc =>
+                    (dc.airbnb_listing_id && dc.airbnb_listing_id === comp.airbnb_listing_id) ||
+                    (dc.id && dc.id === comp.id) ||
+                    (dc.latitude === comp.latitude && dc.longitude === comp.longitude && dc.title === comp.title)
+                  );
+                  return match ? getStableCompKey(match) : (comp.id || comp.airbnb_listing_id || 'unknown');
+                }}
               />
             </div>
           )}
 
           {/* Comps Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden mb-8">
+          <div ref={compTableRef} className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden mb-8">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -1672,16 +1706,28 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   {(showAllComps ? sortedDisplayComps : sortedDisplayComps.slice(0, 10)).map((comp) => {
                     const stableKey = getStableCompKey(comp);
                     const revenueRank = revenueRankMap.get(stableKey) ?? '—';
+                    const isHighlighted = highlightedCompKey === stableKey;
                     return (
-                    <tr key={stableKey} className={`border-b border-[#e2e8f0] transition-colors ${selectedCompIds.has(stableKey) ? 'hover:bg-[#C9A962]/5' : 'opacity-40 hover:opacity-60 bg-[#f8fafc]'}`}>
-                      <td className="p-4">
+                    <tr
+                      key={stableKey}
+                      ref={(el) => { if (el) compRowRefs.current.set(stableKey, el); else compRowRefs.current.delete(stableKey); }}
+                      onClick={() => handleCompRowClick(stableKey)}
+                      className={`border-b border-[#e2e8f0] transition-all duration-200 cursor-pointer ${
+                        isHighlighted
+                          ? 'bg-[#C9A962]/15 ring-2 ring-[#C9A962]/40 ring-inset shadow-sm'
+                          : selectedCompIds.has(stableKey)
+                            ? 'hover:bg-[#C9A962]/5'
+                            : 'opacity-40 hover:opacity-60 bg-[#f8fafc]'
+                      }`}
+                    >
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedCompIds.has(stableKey)}
                           onCheckedChange={() => toggleComp(stableKey)}
                           className="data-[state=checked]:bg-[#C9A962] data-[state=checked]:border-[#C9A962]"
                         />
                       </td>
-                      <td className="p-4 text-[#94a3b8] font-medium">{revenueRank}</td>
+                      <td className={`p-4 font-medium ${isHighlighted ? 'text-[#C9A962]' : 'text-[#94a3b8]'}`}>{revenueRank}</td>
                       <td className="p-4">
                         <div className="flex items-start gap-3">
                           {comp.image_url ? (

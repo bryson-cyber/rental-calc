@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Home, Star, Expand, Minimize, ExternalLink, Navigation, Car, Route, Loader2 } from "lucide-react";
 
 interface Comp {
+  id?: string;
   title?: string;
   bedrooms?: number;
   bathrooms?: number | null;
@@ -34,6 +35,12 @@ interface CompsMapViewProps {
   comps: Comp[];
   subjectProperty: SubjectProperty;
   className?: string;
+  /** Called when user clicks a comp marker on the map. Passes the comp's stable key. */
+  onCompSelect?: (compKey: string) => void;
+  /** The currently highlighted comp key (set from outside, e.g. table row click). */
+  highlightedCompKey?: string | null;
+  /** Function to derive a stable key for a comp (same logic as FullPropertyReport). */
+  getCompKey?: (comp: Comp) => string;
 }
 
 interface DrivingDistance {
@@ -102,7 +109,12 @@ function getCompImageUrl(comp: Comp): string | null {
   return null;
 }
 
-export function CompsMapView({ comps, subjectProperty, className }: CompsMapViewProps) {
+/** Default key derivation if no getCompKey prop provided */
+function defaultGetCompKey(comp: Comp, index: number): string {
+  return comp.id || comp.airbnb_listing_id || `comp-${index}`;
+}
+
+export function CompsMapView({ comps, subjectProperty, className, onCompSelect, highlightedCompKey, getCompKey: getCompKeyProp }: CompsMapViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedComp, setSelectedComp] = useState<Comp | null>(null);
   const [selectedCompIndex, setSelectedCompIndex] = useState<number>(-1);
@@ -114,21 +126,32 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
   // Use refs to avoid circular dependencies in useCallback/useEffect
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const markerKeyMapRef = useRef<Map<string, number>>(new Map()); // compKey → marker index
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const hoverInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const distanceFetchedRef = useRef(false);
   const drivingDistancesRef = useRef<Map<string, DrivingDistance>>(new Map());
   const compsRef = useRef(comps);
   const subjectRef = useRef(subjectProperty);
+  const onCompSelectRef = useRef(onCompSelect);
+  const getCompKeyPropRef = useRef(getCompKeyProp);
 
   
   // Keep refs in sync
   compsRef.current = comps;
   subjectRef.current = subjectProperty;
   drivingDistancesRef.current = drivingDistances;
+  onCompSelectRef.current = onCompSelect;
+  getCompKeyPropRef.current = getCompKeyProp;
 
 
   const compsWithCoords = comps.filter((c) => c.latitude && c.longitude && !isNaN(c.latitude!) && !isNaN(c.longitude!));
+
+  /** Derive a key for a comp */
+  const deriveCompKey = useCallback((comp: Comp, index: number): string => {
+    if (getCompKeyPropRef.current) return getCompKeyPropRef.current(comp);
+    return defaultGetCompKey(comp, index);
+  }, []);
 
   /**
    * Fetch driving distances - uses refs to avoid dependency issues.
@@ -277,6 +300,58 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
   }, []);
 
   /**
+   * Programmatically select a marker by its compKey (called from parent via highlightedCompKey).
+   */
+  const selectMarkerByKey = useCallback((compKey: string) => {
+    const markerIndex = markerKeyMapRef.current.get(compKey);
+    if (markerIndex === undefined) return;
+    
+    const marker = markersRef.current[markerIndex];
+    const map = mapRef.current;
+    if (!marker || !map) return;
+
+    const currentComps = compsRef.current.filter((c) => c.latitude && c.longitude && !isNaN(c.latitude!) && !isNaN(c.longitude!));
+    const comp = currentComps[markerIndex];
+    if (!comp) return;
+
+    const currentSubject = subjectRef.current;
+    const straightDist = getStraightLineDistance(comp, currentSubject.latitude, currentSubject.longitude);
+    const driveDist = drivingDistancesRef.current.get(`${comp.latitude},${comp.longitude}`) || null;
+
+    setSelectedComp(comp);
+    setSelectedCompIndex(markerIndex);
+    setSelectedCompStraightDist(straightDist.text);
+    setSelectedCompDrivingDist(driveDist);
+
+    hoverInfoWindowRef.current?.close();
+    const content = buildInfoWindowContent(comp, markerIndex, straightDist.text, driveDist);
+    infoWindowRef.current?.setContent(content);
+    infoWindowRef.current?.open(map, marker);
+
+    // Pan to the marker
+    if (comp.latitude && comp.longitude) {
+      map.panTo({ lat: comp.latitude, lng: comp.longitude });
+    }
+
+    // Add a brief bounce/highlight effect to the marker element
+    const el = marker.content as HTMLElement;
+    if (el) {
+      el.style.transition = 'transform 0.15s ease';
+      el.style.transform = 'scale(1.35)';
+      setTimeout(() => {
+        el.style.transform = 'scale(1)';
+      }, 300);
+    }
+  }, [buildInfoWindowContent]);
+
+  // React to external highlightedCompKey changes
+  useEffect(() => {
+    if (highlightedCompKey && mapRef.current) {
+      selectMarkerByKey(highlightedCompKey);
+    }
+  }, [highlightedCompKey, selectMarkerByKey]);
+
+  /**
    * Add markers to the map. Uses refs to read current data.
    */
   const addMarkersToMap = useCallback((map: google.maps.Map) => {
@@ -288,6 +363,7 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
     // Clean up existing markers
     markersRef.current.forEach((m) => { m.map = null; });
     markersRef.current = [];
+    markerKeyMapRef.current.clear();
     
     if (!infoWindowRef.current) {
       infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 320 });
@@ -310,12 +386,20 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
           60% { transform: scale(1.15); }
           100% { transform: scale(1); opacity: 1; }
         }
+        @keyframes marker-highlight-pulse {
+          0% { box-shadow: 0 0 0 0 rgba(201,169,98,0.6); }
+          70% { box-shadow: 0 0 0 12px rgba(201,169,98,0); }
+          100% { box-shadow: 0 0 0 0 rgba(201,169,98,0); }
+        }
       `;
       document.head.appendChild(style);
     }
 
     // Add comp markers FIRST (so subject marker renders on top)
     currentComps.forEach((comp, i) => {
+      const compKey = deriveCompKey(comp, i);
+      markerKeyMapRef.current.set(compKey, i);
+
       const colors = getMarkerColors(comp.annual_revenue);
       const revenueLabel = formatCompactRevenue(comp.annual_revenue);
       const el = document.createElement("div");
@@ -396,6 +480,11 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
         const content = buildInfoWindowContent(comp, i, straightDist.text, driveDist);
         infoWindowRef.current?.setContent(content);
         infoWindowRef.current?.open(map, marker);
+
+        // Notify parent about the selection
+        if (onCompSelectRef.current) {
+          onCompSelectRef.current(compKey);
+        }
       });
 
       // Hover handler - show mini preview with distance
@@ -507,7 +596,7 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
       });
       map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
     }
-  }, [buildInfoWindowContent]); // buildInfoWindowContent is stable (no deps)
+  }, [buildInfoWindowContent, deriveCompKey]); // buildInfoWindowContent is stable (no deps)
 
   /**
    * Called once when the MapView component reports the map is ready.
@@ -551,6 +640,7 @@ export function CompsMapView({ comps, subjectProperty, className }: CompsMapView
             {isExpanded ? <Minimize className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">Click a marker to see details. Click a table row below to highlight it on the map.</p>
       </CardHeader>
       <CardContent className="p-0">
         {/* Map container */}

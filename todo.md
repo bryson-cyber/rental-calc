@@ -10521,7 +10521,11 @@ Results:
 ## Comp Table Fixes (Feb 12, 2026)
 - [x] BUG: Rank # changes when sorting by non-revenue columns - should always reflect revenue rank
 - [x] INVESTIGATED: Review counts come from AirDNA cached data at report generation time (not a display bug)
-- [ ] Sync map markers with table - clicking marker highlights corresponding row
+- [x] Sync map markers with table - clicking marker highlights corresponding row
 - [x] Stable comp keys: checkbox selection no longer breaks when re-sorting
 - [x] Stable row keys: React no longer re-mounts rows when sort order changes
 - [x] Added 12 comprehensive tests for stable revenue rank feature
+- [x] Map-table sync: clicking map marker highlights and scrolls to corresponding table row
+- [x] Map-table sync: clicking table row highlights corresponding map marker and opens info window
+- [x] Map-table sync: visual highlighting styles for selected row and marker
+- [x] Added 11 comprehensive tests for map-table sync feature
