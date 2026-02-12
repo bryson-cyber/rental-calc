@@ -10699,3 +10699,10 @@ Results:
 - [x] Route registered in App.tsx at /my-reports
 - [x] Fixed occupancy rate display bug (values stored as xx.xx vs 0.xx)
 - [x] 24 vitest tests passing, 947 total tests passing
+
+## BUG FIX: TypeError M.map is not a function (Feb 12, 2026)
+- [x] Added Array.isArray() guards to StandaloneMarketAdvisor topPerformers .map/.filter calls
+- [x] Added Array.isArray() guards to SharedRegulationDisplay .map calls
+- [x] Added Array.isArray() guards to RegulationTrackerStep .map calls and guard conditions
+- [x] Added Array.isArray() guards to LeadMagnet seasonality, propertyTypes, submarkets, bedroomBreakdown
+- [x] All 947 tests passing, TypeScript compiles cleanly

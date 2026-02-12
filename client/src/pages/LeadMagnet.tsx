@@ -1936,13 +1936,13 @@ export default function LeadMagnet() {
         avgAdr: report.overview.avgAdr,
         avgOccupancy: report.overview.avgOccupancy,
         totalListings: report.overview.totalListings,
-        propertyTypes: report.bedroomBreakdown.map(b => ({
+        propertyTypes: (Array.isArray(report.bedroomBreakdown) ? report.bedroomBreakdown : []).map(b => ({
           type: b.bedrooms === 0 ? 'Studio' : b.bedrooms === 6 ? '6+ Bedroom' : `${b.bedrooms} Bedroom`,
           count: b.count,
           avgRevenue: b.avgRevenue,
           occupancy: b.avgOccupancy
         })),
-        seasonality: report.seasonality.monthlyData.map(m => ({
+        seasonality: (Array.isArray(report.seasonality?.monthlyData) ? report.seasonality.monthlyData : []).map(m => ({
           month: m.month,
           occupancy: m.occupancy,
           adr: m.adr,
@@ -3880,7 +3880,7 @@ export default function LeadMagnet() {
             })()}
             
             {/* Quick Insights Summary */}
-            {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
+            {Array.isArray(researchResult.propertyTypes) && researchResult.propertyTypes.length > 0 && (() => {
               // Find the best performing bedroom type
               const sortedByRevenue = [...researchResult.propertyTypes]
                 .filter(t => t.count > 0)
@@ -3943,7 +3943,7 @@ export default function LeadMagnet() {
             })()}
             
             {/* Submarket Comparison - "Where in [City]?" */}
-            {researchResult.submarkets && researchResult.submarkets.length > 0 && (() => {
+            {Array.isArray(researchResult.submarkets) && researchResult.submarkets.length > 0 && (() => {
               // Sort by revenue to show best areas first
               const sortedSubmarkets = [...researchResult.submarkets]
                 .filter(s => s.avgRevenue > 0)
@@ -4431,7 +4431,7 @@ export default function LeadMagnet() {
             </div>
             
             {/* Property Types - Show all bedroom types */}
-            {researchResult.propertyTypes && researchResult.propertyTypes.length > 0 && (() => {
+            {Array.isArray(researchResult.propertyTypes) && researchResult.propertyTypes.length > 0 && (() => {
               // Ensure we show all bedroom types from Studio (0) to 6+ BR
               const allBedroomTypes = [0, 1, 2, 3, 4, 5, 6];
               const existingTypesMap: Record<number, typeof researchResult.propertyTypes[0]> = {};
@@ -4630,7 +4630,7 @@ export default function LeadMagnet() {
                 </div>
               </div>
             )}
-            {!isResearching && researchResult.seasonality && researchResult.seasonality.length > 0 && (() => {
+            {!isResearching && Array.isArray(researchResult.seasonality) && researchResult.seasonality.length > 0 && (() => {
               // Calculate averages for the guide lines
               const avgOccupancy = researchResult.seasonality.reduce((sum, m) => sum + m.occupancy, 0) / researchResult.seasonality.length;
               const avgAdr = researchResult.seasonality.reduce((sum, m) => sum + m.adr, 0) / researchResult.seasonality.length;

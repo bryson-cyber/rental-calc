@@ -201,7 +201,7 @@ export function RegulationTrackerStep() {
     let mappedStatus = data.status;
     if (data.status === 'restricted' && data.permitRequired && !data.primaryResidenceOnly) {
       mappedStatus = 'allowed_with_permit';
-    } else if (data.status === 'restricted' && data.keyRequirements.length > 0) {
+    } else if (data.status === 'restricted' && Array.isArray(data.keyRequirements) && data.keyRequirements.length > 0) {
       mappedStatus = 'allowed_with_requirements';
     }
     
@@ -455,7 +455,7 @@ export function RegulationTrackerStep() {
       permitRequired: result.permitRequired,
       primaryResidenceOnly: result.primaryResidenceOnly,
       registrationFee: result.registrationFee,
-      sources: result.sources.map(s => ({
+      sources: (Array.isArray(result.sources) ? result.sources : []).map(s => ({
         title: s.title,
         url: s.url,
         type: s.type,
@@ -718,8 +718,8 @@ export function RegulationTrackerStep() {
                         }`}
                       >
                         {tab === 'summary' && 'Summary'}
-                        {tab === 'requirements' && `Requirements (${result.keyRequirements.length})`}
-                        {tab === 'sources' && `Sources (${result.sources.length})`}
+                        {tab === 'requirements' && `Requirements (${Array.isArray(result.keyRequirements) ? result.keyRequirements.length : 0})`}
+                        {tab === 'sources' && `Sources (${Array.isArray(result.sources) ? result.sources.length : 0})`}
                       </button>
                     ))}
                   </div>
@@ -873,14 +873,14 @@ export function RegulationTrackerStep() {
                           transition={{ duration: 0.2 }}
                           className="space-y-3"
                         >
-                          {result.keyRequirements.length === 0 ? (
+                          {(!Array.isArray(result.keyRequirements) || result.keyRequirements.length === 0) ? (
                             <div className="text-center py-12">
                               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
                               <p className="text-lg text-gray-600">No specific requirements found</p>
                               <p className="text-sm text-gray-400 mt-1">This area may have minimal regulations</p>
                             </div>
                           ) : (
-                            result.keyRequirements.map((req, i) => (
+                            (Array.isArray(result.keyRequirements) ? result.keyRequirements : []).map((req, i) => (
                               <motion.div 
                                 key={i}
                                 initial={{ opacity: 0, y: 10 }}
@@ -907,7 +907,7 @@ export function RegulationTrackerStep() {
                           transition={{ duration: 0.2 }}
                           className="space-y-3"
                         >
-                          {result.sources.length === 0 ? (
+                          {(!Array.isArray(result.sources) || result.sources.length === 0) ? (
                             <div className="text-center py-12">
                               <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
                               <p className="text-lg text-gray-600">No official sources found</p>
@@ -916,7 +916,7 @@ export function RegulationTrackerStep() {
                               </p>
                             </div>
                           ) : (
-                            result.sources.map((source, i) => (
+                            (Array.isArray(result.sources) ? result.sources : []).map((source, i) => (
                               <motion.a 
                                 key={i}
                                 href={source.url}
@@ -1126,7 +1126,7 @@ export function RegulationTrackerStep() {
               </div>
               
               {/* Warnings */}
-              {result.warnings.length > 0 && (
+              {Array.isArray(result.warnings) && result.warnings.length > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1137,7 +1137,7 @@ export function RegulationTrackerStep() {
                     Important Notes
                   </h4>
                   <ul className="space-y-2">
-                    {result.warnings.map((warning, index) => (
+                    {(Array.isArray(result.warnings) ? result.warnings : []).map((warning, index) => (
                       <li key={index} className="text-sm text-amber-700 flex items-start gap-2">
                         <span className="text-amber-400 mt-1">•</span>
                         {warning}

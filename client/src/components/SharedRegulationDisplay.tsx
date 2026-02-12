@@ -390,14 +390,14 @@ export function SharedRegulationDisplay({ data }: SharedRegulationDisplayProps) 
                       transition={{ duration: 0.2 }}
                       className="space-y-3"
                     >
-                      {(!data.keyRequirements || data.keyRequirements.length === 0) ? (
+                      {(!Array.isArray(data.keyRequirements) || data.keyRequirements.length === 0) ? (
                         <div className="text-center py-12">
                           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
                           <p className="text-lg text-gray-600">No specific requirements found</p>
                           <p className="text-sm text-gray-400 mt-1">This area may have minimal regulations</p>
                         </div>
                       ) : (
-                        data.keyRequirements.map((req, i) => (
+                        (Array.isArray(data.keyRequirements) ? data.keyRequirements : []).map((req, i) => (
                           <motion.div
                             key={i}
                             initial={{ opacity: 0, y: 10 }}
@@ -433,7 +433,7 @@ export function SharedRegulationDisplay({ data }: SharedRegulationDisplayProps) 
                           </p>
                         </div>
                       ) : (
-                        data.sources.map((source, i) => (
+                        (Array.isArray(data.sources) ? data.sources : []).map((source, i) => (
                           <motion.a
                             key={i}
                             href={source.url}
@@ -495,7 +495,7 @@ export function SharedRegulationDisplay({ data }: SharedRegulationDisplayProps) 
               </div>
 
               {/* Warnings */}
-              {data.warnings && data.warnings.length > 0 && (
+              {Array.isArray(data.warnings) && data.warnings.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -506,7 +506,7 @@ export function SharedRegulationDisplay({ data }: SharedRegulationDisplayProps) 
                     <h4 className="font-medium text-amber-800">Important Warnings</h4>
                   </div>
                   <ul className="space-y-2 ml-8">
-                    {data.warnings.map((warning, index) => (
+                    {(Array.isArray(data.warnings) ? data.warnings : []).map((warning, index) => (
                       <li key={index} className="text-sm text-amber-700 flex items-start gap-2">
                         <span className="text-amber-400 mt-1">•</span>
                         {warning}

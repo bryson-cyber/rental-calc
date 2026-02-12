@@ -576,7 +576,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                 <div className="text-center">
                   <div className="flex items-center gap-2 text-primary-foreground">
                     <Database className="w-5 h-5" />
-                    <span className="text-3xl font-bold">{marketData.metrics.totalListings?.toLocaleString() || marketData.topPerformers?.length || '100+'}</span>
+                    <span className="text-3xl font-bold">{marketData.metrics.totalListings?.toLocaleString() || (Array.isArray(marketData.topPerformers) ? marketData.topPerformers.length : 0) || '100+'}</span>
                   </div>
                   <div className="text-primary-foreground/80 text-sm font-medium">Verified Properties</div>
                 </div>
@@ -629,7 +629,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   </div>
                   <UniversalShareButton
                     reportType="market"
-                    reportData={{ advice: marketAdvice, market: marketData.market, topPerformers: marketData.topPerformers }}
+                    reportData={{ advice: marketAdvice, market: marketData.market, topPerformers: Array.isArray(marketData.topPerformers) ? marketData.topPerformers : [] }}
                     marketId={marketData.market.id}
                     marketName={marketData.market.name}
                     city={marketData.market.city}
@@ -647,7 +647,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
           )}
 
           {/* TOP PERFORMERS - The only data section we keep */}
-          {marketData.topPerformers && marketData.topPerformers.length > 0 && (
+          {Array.isArray(marketData.topPerformers) && marketData.topPerformers.length > 0 && (
             <Card className="apple-card">
               <CardHeader 
                 className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-xl"
@@ -669,7 +669,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
               {showTopPerformers && (
                 <CardContent>
                   <div className="space-y-4">
-                    {marketData.topPerformers
+                    {(Array.isArray(marketData.topPerformers) ? marketData.topPerformers : [])
                       .filter((performer: any) => {
                         if (bedroomFilter === 'all') return true;
                         if (bedroomFilter === '5') return performer.bedrooms >= 5;
