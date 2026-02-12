@@ -660,128 +660,168 @@ export function HistoricalTrendChart({
   );
 }
 
-// Seasonality Chart — shows all available months (historical + forecast)
+// Seasonality Chart — aggregates data by calendar month (Jan-Dec) to show true seasonal patterns
 interface SeasonalityChartProps {
   data: MonthlyForecastData[];
   historicalMonths?: HistoricalMonthData[];
   height?: number;
 }
 
-export function SeasonalityChart({ data, historicalMonths, height = 200 }: SeasonalityChartProps) {
-  const chartData = useMemo(() => {
-    const combined: Array<{
-      shortMonth: string;
+export function SeasonalityChart({ data, historicalMonths, height = 280 }: SeasonalityChartProps) {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const { chartData, yearLabels } = useMemo(() => {
+    // Collect all months with their year and month index
+    const allEntries: Array<{
+      year: string;
+      monthIdx: number;
       revenue: number;
-      occupancyPct: number;
+      occupancy: number;
       adr?: number;
-      variance: number;
-      season: string;
       isHistorical: boolean;
     }> = [];
 
-    // Combine all months
-    const allMonths: Array<{ date: string; revenue: number; occupancy: number; adr?: number; isHistorical: boolean }> = [];
-    
     if (historicalMonths && historicalMonths.length > 0) {
       for (const m of historicalMonths) {
-        allMonths.push({
-          date: m.date,
+        const parsed = parseMonthDate(m.date);
+        const occ = m.occupancy != null ? (m.occupancy > 1 ? m.occupancy : m.occupancy * 100) : 0;
+        allEntries.push({
+          year: parsed.year,
+          monthIdx: parsed.monthIdx,
           revenue: Math.round(m.revenue),
-          occupancy: m.occupancy ?? 0,
+          occupancy: Math.round(occ),
           adr: m.adr,
           isHistorical: true,
         });
       }
     }
-    
+
     for (const m of data) {
-      allMonths.push({
-        date: m.month,
+      const parsed = parseMonthDate(m.month);
+      const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
+      allEntries.push({
+        year: parsed.year,
+        monthIdx: parsed.monthIdx,
         revenue: Math.round(m.revenue),
-        occupancy: m.occupancy,
+        occupancy: Math.round(occ),
         adr: m.adr,
         isHistorical: false,
       });
     }
 
-    const avgRevenue = allMonths.reduce((sum, d) => sum + d.revenue, 0) / allMonths.length;
+    // Get unique years sorted
+    const years = Array.from(new Set(allEntries.map(e => e.year))).sort();
 
-    for (const m of allMonths) {
-      const parsed = parseMonthDate(m.date);
-      const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
-      const variance = ((m.revenue - avgRevenue) / avgRevenue) * 100;
-      combined.push({
-        shortMonth: parsed.shortLabel,
-        revenue: m.revenue,
-        occupancyPct: Math.round(occ),
-        adr: m.adr,
-        variance,
-        season: variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder',
-        isHistorical: m.isHistorical,
-      });
+    // Build 12-month rows with a column per year for revenue, and averaged occupancy
+    const rows = monthNames.map((name, idx) => {
+      const row: Record<string, string | number> = { month: name };
+      let totalOcc = 0;
+      let occCount = 0;
+      let totalAdr = 0;
+      let adrCount = 0;
+
+      for (const yr of years) {
+        const entry = allEntries.find(e => e.year === yr && e.monthIdx === idx);
+        row[`rev_${yr}`] = entry ? entry.revenue : 0;
+        if (entry && entry.occupancy > 0) {
+          totalOcc += entry.occupancy;
+          occCount++;
+        }
+        if (entry?.adr) {
+          totalAdr += entry.adr;
+          adrCount++;
+        }
+      }
+
+      row.avgOccupancy = occCount > 0 ? Math.round(totalOcc / occCount) : 0;
+      row.avgAdr = adrCount > 0 ? Math.round(totalAdr / adrCount) : 0;
+
+      // Calculate average revenue across years for season classification
+      const revenues = years.map(yr => (row[`rev_${yr}`] as number) || 0).filter(r => r > 0);
+      row.avgRevenue = revenues.length > 0 ? Math.round(revenues.reduce((a, b) => a + b, 0) / revenues.length) : 0;
+
+      return row;
+    });
+
+    // Classify seasons based on average revenue
+    const allAvgRevenues = rows.map(r => r.avgRevenue as number).filter(r => r > 0);
+    const overallAvg = allAvgRevenues.length > 0 ? allAvgRevenues.reduce((a, b) => a + b, 0) / allAvgRevenues.length : 0;
+    for (const row of rows) {
+      const avg = row.avgRevenue as number;
+      const variance = overallAvg > 0 ? ((avg - overallAvg) / overallAvg) * 100 : 0;
+      row.season = variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder';
     }
 
-    return combined;
+    return { chartData: rows, yearLabels: years };
   }, [data, historicalMonths]);
 
-  // Find the boundary for the reference line
-  const forecastStartIdx = chartData.findIndex(d => !d.isHistorical);
-  const forecastStartLabel = forecastStartIdx > 0 ? chartData[forecastStartIdx].shortMonth : null;
+  // Color for each year's bar
+  const yearColors: Record<string, string> = {};
+  const colorPalette = [BRAND.histBar, BRAND.goldMuted, BRAND.gold, '#6366f1'];
+  yearLabels.forEach((yr, i) => {
+    yearColors[yr] = colorPalette[i % colorPalette.length];
+  });
 
-  // Custom tooltip for dual-axis display
+  // Custom tooltip
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SeasonTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null;
     const entry = payload[0]?.payload;
     if (!entry) return null;
-    const seasonLabel = entry.season === 'peak' ? 'Peak Season' : 
+    const seasonLabel = entry.season === 'peak' ? 'Peak Season' :
       entry.season === 'off' ? 'Off-Season' : 'Shoulder Season';
-    const dataType = entry.isHistorical ? 'Historical' : 'Forecast';
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
-        <p className="font-semibold text-[#0f172a] mb-1.5">{label} — {seasonLabel} <span className="text-[#94a3b8] font-normal">({dataType})</span></p>
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.isHistorical ? BRAND.histBar : BRAND.gold }} />
-          <span className="text-[#64748b]">Revenue:</span>
-          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
-          <span className="text-[#64748b]">Occupancy:</span>
-          <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
-        </div>
-        {entry.adr != null && (
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
-            <span className="text-[#64748b]">ADR:</span>
-            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs min-w-[180px]">
+        <p className="font-semibold text-[#0f172a] mb-2">{label} — {seasonLabel}</p>
+        {yearLabels.map((yr) => {
+          const rev = entry[`rev_${yr}`] as number;
+          if (!rev || rev === 0) return null;
+          return (
+            <div key={yr} className="flex items-center gap-1.5 mb-1">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: yearColors[yr] }} />
+              <span className="text-[#64748b]">{yr}:</span>
+              <span className="font-semibold text-[#1e293b]">{formatCurrency(rev)}</span>
+            </div>
+          );
+        })}
+        <div className="border-t border-[#e2e8f0] mt-1.5 pt-1.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
+            <span className="text-[#64748b]">Avg Occupancy:</span>
+            <span className="font-semibold text-[#1e293b]">{entry.avgOccupancy}%</span>
           </div>
-        )}
+          {entry.avgAdr > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
+              <span className="text-[#64748b]">Avg ADR:</span>
+              <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.avgAdr)}</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  const hasHistorical = historicalMonths && historicalMonths.length > 0;
-
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: chartData.length > 18 ? 30 : 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
-          <XAxis 
-            dataKey="shortMonth" 
-            tick={{ fill: BRAND.axisText, fontSize: chartData.length > 18 ? 9 : 11 }}
+          <XAxis
+            dataKey="month"
+            tick={{ fill: BRAND.axisText, fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            interval={chartData.length > 24 ? 2 : chartData.length > 18 ? 1 : 0}
-            angle={chartData.length > 18 ? -45 : 0}
-            textAnchor={chartData.length > 18 ? 'end' : 'middle'}
           />
-          <YAxis 
+          <YAxis
             yAxisId="revenue"
-            hide 
+            tick={{ fill: BRAND.axisText, fontSize: 10 }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+            axisLine={false}
+            tickLine={false}
+            width={50}
           />
-          <YAxis 
+          <YAxis
             yAxisId="occupancy"
             orientation="right"
             domain={[0, 100]}
@@ -792,47 +832,38 @@ export function SeasonalityChart({ data, historicalMonths, height = 200 }: Seaso
             width={40}
           />
           <Tooltip content={<SeasonTooltip />} />
-          <Legend 
-            verticalAlign="top" 
+          <Legend
+            verticalAlign="top"
             height={28}
             payload={[
-              ...(hasHistorical ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
-              { value: 'Revenue (Forecast)', type: 'square' as const, color: BRAND.gold },
-              { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
+              ...yearLabels.map(yr => ({
+                value: yr,
+                type: 'square' as const,
+                color: yearColors[yr],
+              })),
+              { value: 'Avg Occupancy', type: 'line' as const, color: BRAND.navy },
             ]}
           />
-          {/* Vertical reference line at forecast boundary */}
-          {forecastStartLabel && (
-            <ReferenceLine 
+          {/* One bar per year, grouped by month */}
+          {yearLabels.map((yr) => (
+            <Bar
+              key={yr}
               yAxisId="revenue"
-              x={forecastStartLabel} 
-              stroke={BRAND.navy} 
-              strokeDasharray="6 4" 
-              strokeWidth={1.5}
+              dataKey={`rev_${yr}`}
+              name={yr}
+              fill={yearColors[yr]}
+              radius={[3, 3, 0, 0]}
             />
-          )}
-          <Bar yAxisId="revenue" dataKey="revenue" name="Revenue" radius={[3, 3, 0, 0]}>
-            {chartData.map((entry, index) => {
-              let fill: string;
-              if (entry.isHistorical) {
-                fill = entry.season === 'peak' ? BRAND.histBar : 
-                       entry.season === 'off' ? BRAND.histBarLight : '#b0bec5';
-              } else {
-                fill = entry.season === 'peak' ? BRAND.gold : 
-                       entry.season === 'off' ? BRAND.goldPale : BRAND.goldMuted;
-              }
-              return <Cell key={`cell-${index}`} fill={fill} />;
-            })}
-          </Bar>
-          <Line 
+          ))}
+          <Line
             yAxisId="occupancy"
-            type="monotone" 
-            dataKey="occupancyPct" 
-            name="Occupancy"
+            type="monotone"
+            dataKey="avgOccupancy"
+            name="Avg Occupancy"
             stroke={BRAND.navy}
-            strokeWidth={2}
-            dot={{ fill: BRAND.navy, r: chartData.length > 24 ? 2 : 3.5, strokeWidth: 0 }}
-            activeDot={{ fill: BRAND.navy, r: 5, strokeWidth: 2, stroke: BRAND.white }}
+            strokeWidth={2.5}
+            dot={{ fill: BRAND.navy, r: 4, strokeWidth: 0 }}
+            activeDot={{ fill: BRAND.navy, r: 6, strokeWidth: 2, stroke: BRAND.white }}
           />
         </ComposedChart>
       </ResponsiveContainer>
