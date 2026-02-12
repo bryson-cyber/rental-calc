@@ -10536,3 +10536,9 @@ Results:
 - [x] Add tooltips to remaining DataRows (Monthly Profit, Months to Recoup, Mortgage Annual, Annual/Monthly Cash Flow)
 - [x] Ensure consistent tooltip styling across the entire report
 - [x] All 821 tests passing, TypeScript compilation clean
+## Seasonality Chart Enhancement (Feb 12, 2026)
+- [x] Add occupancy data to seasonality chart alongside revenue
+- [x] Show dual-axis ComposedChart with revenue bars + occupancy line overlay
+- [x] Custom tooltip showing both revenue and occupancy with season label
+- [x] Right-side Y-axis showing occupancy percentage (0-100%)
+- [x] Legend at top distinguishing Revenue bars from Occupancy line

@@ -415,7 +415,7 @@ interface SeasonalityChartProps {
   height?: number;
 }
 
-export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) {
+export function SeasonalityChart({ data, height = 200 }: SeasonalityChartProps) {
   const chartData = useMemo(() => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const avgRevenue = data.reduce((sum, d) => sum + d.revenue, 0) / data.length;
@@ -432,19 +432,47 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
       } else if (item.month.length > 3) {
         shortMonth = item.month.slice(0, 3);
       }
+      // Ensure occupancy is in percentage form (0-100)
+      const occupancyPct = item.occupancy > 1 ? item.occupancy : item.occupancy * 100;
       return {
         ...item,
         shortMonth,
         variance,
+        occupancyPct: Math.round(occupancyPct),
         season: variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder',
       };
     });
   }, [data]);
 
+  // Custom tooltip for dual-axis display
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const entry = payload[0]?.payload;
+    if (!entry) return null;
+    const seasonLabel = entry.season === 'peak' ? 'Peak Season' : 
+      entry.season === 'off' ? 'Off-Season' : 'Shoulder Season';
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
+        <p className="font-semibold text-[#0f172a] mb-1.5">{label} — {seasonLabel}</p>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.gold }} />
+          <span className="text-[#64748b]">Revenue:</span>
+          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
+          <span className="text-[#64748b]">Occupancy:</span>
+          <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
           <XAxis 
             dataKey="shortMonth" 
@@ -452,17 +480,29 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
             axisLine={false}
             tickLine={false}
           />
-          <YAxis hide />
-          <Tooltip 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={(_value: number, _name: string, props: any) => [
-              formatCurrency(props.payload.revenue),
-              props.payload.season === 'peak' ? 'Peak Season' : 
-              props.payload.season === 'off' ? 'Off-Season' : 'Shoulder Season'
-            ]}
-            labelStyle={{ color: BRAND.labelDark, fontWeight: 600 }}
+          <YAxis 
+            yAxisId="revenue"
+            hide 
           />
-          <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+          <YAxis 
+            yAxisId="occupancy"
+            orientation="right"
+            domain={[0, 100]}
+            tick={{ fill: BRAND.axisText, fontSize: 10 }}
+            tickFormatter={(value) => `${value}%`}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend 
+            verticalAlign="top" 
+            height={28}
+            formatter={(value: string) => (
+              <span style={{ color: BRAND.axisText, fontSize: 11 }}>{value}</span>
+            )}
+          />
+          <Bar yAxisId="revenue" dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
@@ -473,7 +513,17 @@ export function SeasonalityChart({ data, height = 150 }: SeasonalityChartProps) 
               />
             ))}
           </Bar>
-        </BarChart>
+          <Line 
+            yAxisId="occupancy"
+            type="monotone" 
+            dataKey="occupancyPct" 
+            name="Occupancy"
+            stroke={BRAND.navy}
+            strokeWidth={2.5}
+            dot={{ fill: BRAND.navy, r: 3.5, strokeWidth: 0 }}
+            activeDot={{ fill: BRAND.navy, r: 5, strokeWidth: 2, stroke: BRAND.white }}
+          />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
