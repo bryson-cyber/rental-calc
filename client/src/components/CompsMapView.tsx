@@ -115,6 +115,25 @@ function defaultGetCompKey(comp: Comp, index: number): string {
 }
 
 export function CompsMapView({ comps, subjectProperty, className, onCompSelect, highlightedCompKey, getCompKey: getCompKeyProp }: CompsMapViewProps) {
+  // Safety check: if subjectProperty has invalid coordinates, don't render the map
+  if (!subjectProperty || !subjectProperty.latitude || !subjectProperty.longitude || isNaN(subjectProperty.latitude) || isNaN(subjectProperty.longitude)) {
+    return (
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MapPin className="w-4 h-4 text-amber-600" />
+            Comparable Properties Map
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+            <p className="text-sm text-muted-foreground">Map unavailable — property coordinates not found</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedComp, setSelectedComp] = useState<Comp | null>(null);
   const [selectedCompIndex, setSelectedCompIndex] = useState<number>(-1);

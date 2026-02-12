@@ -84,8 +84,8 @@ export function ExportListings({
       'Rating': listing.rating || 'N/A',
       'Reviews': listing.reviews,
       'Distance (mi)': listing.distanceToMyProperty ? listing.distanceToMyProperty.toFixed(2) : 'N/A',
-      'Latitude': listing.latitude.toFixed(6),
-      'Longitude': listing.longitude.toFixed(6),
+      'Latitude': listing.latitude?.toFixed(6) || 'N/A',
+      'Longitude': listing.longitude?.toFixed(6) || 'N/A',
       'Airbnb URL': listing.airbnbUrl,
     }));
   };

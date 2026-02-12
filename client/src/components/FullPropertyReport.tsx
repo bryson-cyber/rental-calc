@@ -623,7 +623,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   };
 
   const {
-    property,
+    property = { address: '', city: '', state: '', zipCode: '', bedrooms: 0, bathrooms: 0, accommodates: 0 } as any,
     revenue_estimate,
     monthly_forecast = [],
     comps = [],
@@ -821,8 +821,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         case 'rating': aVal = a.rating || 0; bVal = b.rating || 0; break;
         case 'reviews': aVal = a.reviews || 0; bVal = b.reviews || 0; break;
         case 'distance': {
-          aVal = getCompDistanceMiles(a, property.latitude, property.longitude) ?? 9999;
-          bVal = getCompDistanceMiles(b, property.latitude, property.longitude) ?? 9999;
+          aVal = getCompDistanceMiles(a, property.latitude || 0, property.longitude || 0) ?? 9999;
+          bVal = getCompDistanceMiles(b, property.latitude || 0, property.longitude || 0) ?? 9999;
           break;
         }
         default: aVal = a.annual_revenue || 0; bVal = b.annual_revenue || 0;
@@ -830,7 +830,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       return compSortDir === 'desc' ? bVal - aVal : aVal - bVal;
     });
     return sorted;
-  }, [displayComps, compSortField, compSortDir, property.latitude, property.longitude]);
+  }, [displayComps, compSortField, compSortDir, property?.latitude, property?.longitude]);
 
   const handleCompSort = (field: CompSortField) => {
     if (field === compSortField) {
@@ -1855,7 +1855,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                             <p className="text-xs text-[#94a3b8] mt-0.5">
                               {comp.bedrooms}BR / {comp.bathrooms}BA
                               {(() => {
-                                const d = getCompDistanceMiles(comp, property.latitude, property.longitude);
+                                const d = getCompDistanceMiles(comp, property?.latitude || 0, property?.longitude || 0);
                                 return d !== null ? ` · ${d.toFixed(1)} mi away` : '';
                               })()}
                             </p>
@@ -1887,7 +1887,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       <td className="p-4 text-right text-[#64748b]">{comp.reviews || '—'}</td>
                       <td className="p-4 text-right">
                         {(() => {
-                          const distMiles = getCompDistanceMiles(comp, property.latitude, property.longitude);
+                          const distMiles = getCompDistanceMiles(comp, property?.latitude || 0, property?.longitude || 0);
                           if (distMiles !== null) {
                             return (
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full border border-blue-200/50">

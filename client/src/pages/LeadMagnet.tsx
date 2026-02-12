@@ -119,6 +119,7 @@ import { InteractiveTour, useInteractiveTour, TOUR_SAMPLE_DATA } from '@/compone
 import { ContextualAIChat } from '@/components/ContextualAIChat';
 import { LoginGate } from '@/components/LoginGate';
 import { BuildFullReportButton } from '@/components/BuildFullReportButton';
+import StepErrorBoundary from '@/components/StepErrorBoundary';
 
 // ============================================
 // TYPE DEFINITIONS
@@ -1319,7 +1320,7 @@ export default function LeadMagnet() {
       console.log('[Validate Deal] API Response:', JSON.stringify(data, null, 2));
       console.log('[Validate Deal] Property estimates:', data.property?.estimates);
       const rent = parseFloat(monthlyRent) || 0;
-      const annualRevenue = data.property.estimates?.annual_revenue || 0;
+      const annualRevenue = data.property?.estimates?.annual_revenue || 0;
       console.log('[Validate Deal] Annual revenue:', annualRevenue);
       const monthlyRevenue = annualRevenue / 12;
       
@@ -1327,14 +1328,14 @@ export default function LeadMagnet() {
       setResult({
         revenue: {
           projected: annualRevenue,
-          low: data.property.estimates?.annual_revenue_low || annualRevenue * 0.8,
-          high: data.property.estimates?.annual_revenue_high || annualRevenue * 1.2,
+          low: data.property?.estimates?.annual_revenue_low || annualRevenue * 0.8,
+          high: data.property?.estimates?.annual_revenue_high || annualRevenue * 1.2,
         },
         metrics: {
-          adr: data.property.estimates?.average_daily_rate || 0,
+          adr: data.property?.estimates?.average_daily_rate || 0,
           // Convert occupancy from decimal to percentage if needed (API returns 0.57 for 57%)
           occupancy: (() => {
-            const occ = data.property.estimates?.occupancy_rate || 0;
+            const occ = data.property?.estimates?.occupancy_rate || 0;
             return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
           })(),
         },
@@ -1508,9 +1509,9 @@ export default function LeadMagnet() {
       
       if (hasContactInfo && autoNotifyEnabled) {
         console.log('[handleAnalyze] Auto-sending revenue report notification');
-        const annualRev = data.property.estimates?.annual_revenue || 0;
-        const occupancy = data.property.estimates?.occupancy_rate || 0;
-        const adr = data.property.estimates?.average_daily_rate || 0;
+        const annualRev = data.property?.estimates?.annual_revenue || 0;
+        const occupancy = data.property?.estimates?.occupancy_rate || 0;
+        const adr = data.property?.estimates?.average_daily_rate || 0;
         
         createAndNotifyReport.mutate({
           reportType: 'revenue',
@@ -1524,8 +1525,8 @@ export default function LeadMagnet() {
           bathrooms: parseFloat(bathrooms),
           monthlyRent: parseFloat(monthlyRent) || undefined,
           reportData: {
-            estimates: data.property.estimates,
-            monthly_forecast: data.property.monthly_forecast,
+            estimates: data.property?.estimates,
+            monthly_forecast: data.property?.monthly_forecast,
             comps: data.same_bedroom_comps?.slice(0, 5),
             market: data.market,
           },
@@ -1604,14 +1605,14 @@ export default function LeadMagnet() {
         }
         
         const data = response.data;
-        const annualRevenue = data.property.estimates?.annual_revenue || 0;
+        const annualRevenue = data.property?.estimates?.annual_revenue || 0;
         const monthlyRevenue = annualRevenue / 12;
         const profit = monthlyRevenue - prop.rent;
         
         // Get property type and comparable count for confidence indicator
-        const firstComp = data.property.comps?.[0];
+        const firstComp = data.property?.comps?.[0];
         const propertyType = firstComp?.property_type || undefined;
-        const comparableCount = data.property.comps?.length || 0;
+        const comparableCount = data.property?.comps?.length || 0;
         
         results.push({
           id: prop.id,
@@ -1622,10 +1623,10 @@ export default function LeadMagnet() {
           revenue: monthlyRevenue,
           profit,
           ratio: prop.rent > 0 ? monthlyRevenue / prop.rent : 0,
-          adr: data.property.estimates?.average_daily_rate || 0,
+          adr: data.property?.estimates?.average_daily_rate || 0,
           // Convert occupancy from decimal to percentage if needed (API returns 0.57 for 57%)
           occupancy: (() => {
-            const occ = data.property.estimates?.occupancy_rate || 0;
+            const occ = data.property?.estimates?.occupancy_rate || 0;
             return occ < 1 ? Math.round(occ * 100) : Math.round(occ);
           })(),
           status: 'success',
@@ -2218,8 +2219,8 @@ export default function LeadMagnet() {
             />
           </div>
           
-          {/* Full Report CTA - Standalone Entry Point */}
-          <div className="mb-12">
+          {/* Full Report CTA - Admin Only */}
+          {user?.role === 'admin' && <div className="mb-12">
             <button
               onClick={() => {
                 // Build URL with pre-filled data from the main page
@@ -2251,7 +2252,7 @@ export default function LeadMagnet() {
                 <ArrowRight className="w-5 h-5 text-[oklch(0.55_0.12_75)] flex-shrink-0 mt-2 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
-          </div>
+          </div>}
           
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -3163,6 +3164,7 @@ export default function LeadMagnet() {
             {/* AI ADVISOR TAB */}
             {/* ============================================ */}
             {activeTab === 'advisor' && result && (
+              <StepErrorBoundary stepName="AI Advisor">
               <AIAdvisorStep
                 property={{
                   address: address,
@@ -3294,6 +3296,7 @@ export default function LeadMagnet() {
                   } : undefined,
                 }))}
               />
+              </StepErrorBoundary>
             )}
 
             {activeTab === 'advisor' && !result && (
@@ -5653,22 +5656,24 @@ export default function LeadMagnet() {
                 summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}
               />
             </div>
-            <TeslaDashboard
-              result={result}
-              address={address}
-              bedrooms={parseInt(bedrooms)}
-              bathrooms={parseFloat(bathrooms)}
-              monthlyRent={parseFloat(monthlyRent) || undefined}
-              furnitureCost={parseFloat(furnitureCost) || 0}
-              expensePercent={expensePercent}
-              marketId={result.marketId}
-              rentometerData={rentometerData}
-              mode={globalMode}
-              purchasePrice={myProperty?.purchasePrice}
-              loanType={myProperty?.loanType as 'conventional' | 'dscr' | 'fha' | 'cash' | undefined}
-              downPaymentPercent={myProperty?.downPaymentPercent}
-              interestRate={myProperty?.interestRate}
-            />
+            <StepErrorBoundary stepName="Revenue Dashboard">
+              <TeslaDashboard
+                result={result}
+                address={address}
+                bedrooms={parseInt(bedrooms)}
+                bathrooms={parseFloat(bathrooms)}
+                monthlyRent={parseFloat(monthlyRent) || undefined}
+                furnitureCost={parseFloat(furnitureCost) || 0}
+                expensePercent={expensePercent}
+                marketId={result.marketId}
+                rentometerData={rentometerData}
+                mode={globalMode}
+                purchasePrice={myProperty?.purchasePrice}
+                loanType={myProperty?.loanType as 'conventional' | 'dscr' | 'fha' | 'cash' | undefined}
+                downPaymentPercent={myProperty?.downPaymentPercent}
+                interestRate={myProperty?.interestRate}
+              />
+            </StepErrorBoundary>
             
             {/* Build Full Report + Next Step CTA */}
             <div className="flex flex-col items-center gap-4 mt-8">

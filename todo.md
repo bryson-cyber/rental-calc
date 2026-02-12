@@ -10706,3 +10706,21 @@ Results:
 - [x] Added Array.isArray() guards to RegulationTrackerStep .map calls and guard conditions
 - [x] Added Array.isArray() guards to LeadMagnet seasonality, propertyTypes, submarkets, bedroomBreakdown
 - [x] All 947 tests passing, TypeScript compiles cleanly
+
+## BUG: Cannot read properties of undefined (reading 'latitude') when running property (Feb 12, 2026)
+- [x] Find the undefined latitude access in the property report flow
+- [x] Add defensive guards to prevent crash (CompsMapView, FullPropertyReport, ExportListings)
+- [x] Add StepErrorBoundary component for graceful error containment
+- [x] Wrap TeslaDashboard and AIAdvisorStep with StepErrorBoundary in LeadMagnet
+- [x] Test fix — 27 new tests passing, 974 total tests passing
+
+## BUG: Cannot read 'latitude' crash on Step 5 (Feb 12, 2026)
+- [x] Traced crash path: AirDNA API → missing lat/lng → geocoding fallback fails → undefined property.latitude
+- [x] Fixed CompsMapView: added early return guard for invalid subjectProperty coordinates
+- [x] Fixed FullPropertyReport: added null-safe access for property.latitude/longitude in useMemo, getCompDistanceMiles calls
+- [x] Fixed ExportListings: added optional chaining for listing.latitude/longitude
+- [x] Test fix with the same property — 974 total tests passing
+
+## Full Property Report: Admin-only access (Feb 12, 2026)
+- [x] Make "Generate a Full Property Report" feature admin-only
+- [x] Non-admin viewers see "Admin Access Required" message with redirect to home page
