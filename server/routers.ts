@@ -43,6 +43,7 @@ import {
   aiRouter,
   dealAlertsRouter,
   behaviorEngineRouter,
+  myReportsRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -120,6 +121,9 @@ export const appRouter = router({
   ai: aiRouter,
   dealAlerts: dealAlertsRouter,
   behaviorEngine: behaviorEngineRouter,
+
+  // My Reports
+  myReports: myReportsRouter,
 
   // Admin & tracking
   admin: adminRouter,

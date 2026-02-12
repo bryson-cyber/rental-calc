@@ -32,3 +32,4 @@ export { shareableReportsRouter } from "./shareable-reports";
 export { aiRouter } from "./ai";
 export { dealAlertsRouter } from "./deal-alerts";
 export { behaviorEngineRouter } from "./behavior-engine";
+export { myReportsRouter } from "./my-reports";

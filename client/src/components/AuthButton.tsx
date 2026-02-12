@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator, Shield } from 'lucide-react';
+import { LogIn, LogOut, User, ChevronDown, Loader2, Save, Settings, Calculator, Shield, FileText } from 'lucide-react';
 import { Link } from 'wouter';
 
 export function AuthButton() {
@@ -59,6 +59,12 @@ export function AuthButton() {
           <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
           <p className="text-xs text-slate-500 truncate">{user.email}</p>
         </div>
+        <Link href="/my-reports">
+          <DropdownMenuItem className="gap-2 cursor-pointer min-h-[44px]">
+            <FileText className="w-4 h-4" />
+            <span>My Reports</span>
+          </DropdownMenuItem>
+        </Link>
         <Link href="/saved-items">
           <DropdownMenuItem className="gap-2 cursor-pointer min-h-[44px]">
             <Save className="w-4 h-4" />

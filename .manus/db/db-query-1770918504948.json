@@ -1,0 +1,66 @@
+{
+  "query": "SELECT 'shared_reports' as source, reportType, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM shared_reports GROUP BY reportType UNION ALL SELECT 'universal_shareable_reports' as source, reportType, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM universal_shareable_reports GROUP BY reportType ORDER BY source, reportType;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT 'shared_reports' as source, reportType, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM shared_reports GROUP BY reportType UNION ALL SELECT 'universal_shareable_reports' as source, reportType, COUNT(*) as cnt, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM universal_shareable_reports GROUP BY reportType ORDER BY source, reportType;",
+  "rows": [
+    {
+      "source": "shared_reports",
+      "reportType": "full",
+      "cnt": "23",
+      "earliest": "2026-02-09 13:31:25",
+      "latest": "2026-02-12 09:17:10"
+    },
+    {
+      "source": "shared_reports",
+      "reportType": "market",
+      "cnt": "5",
+      "earliest": "2026-01-26 15:01:54",
+      "latest": "2026-01-27 06:12:09"
+    },
+    {
+      "source": "shared_reports",
+      "reportType": "property",
+      "cnt": "2",
+      "earliest": "2026-01-23 18:31:38",
+      "latest": "2026-01-23 18:33:17"
+    },
+    {
+      "source": "universal_shareable_reports",
+      "reportType": "ai_advisor",
+      "cnt": "3",
+      "earliest": "2026-02-02 17:01:10",
+      "latest": "2026-02-02 17:19:37"
+    },
+    {
+      "source": "universal_shareable_reports",
+      "reportType": "market",
+      "cnt": "6",
+      "earliest": "2026-02-01 22:56:14",
+      "latest": "2026-02-02 16:56:04"
+    },
+    {
+      "source": "universal_shareable_reports",
+      "reportType": "regulation",
+      "cnt": "1",
+      "earliest": "2026-02-01 23:33:42",
+      "latest": "2026-02-01 23:33:42"
+    },
+    {
+      "source": "universal_shareable_reports",
+      "reportType": "revenue",
+      "cnt": "13",
+      "earliest": "2026-02-02 00:56:02",
+      "latest": "2026-02-11 20:44:23"
+    },
+    {
+      "source": "universal_shareable_reports",
+      "reportType": "validator",
+      "cnt": "3",
+      "earliest": "2026-02-10 02:49:34",
+      "latest": "2026-02-12 16:38:13"
+    }
+  ],
+  "messages": [],
+  "stdout": "source\treportType\tcnt\tearliest\tlatest\nshared_reports\tfull\t23\t2026-02-09 13:31:25\t2026-02-12 09:17:10\nshared_reports\tmarket\t5\t2026-01-26 15:01:54\t2026-01-27 06:12:09\nshared_reports\tproperty\t2\t2026-01-23 18:31:38\t2026-01-23 18:33:17\nuniversal_shareable_reports\tai_advisor\t3\t2026-02-02 17:01:10\t2026-02-02 17:19:37\nuniversal_shareable_reports\tmarket\t6\t2026-02-01 22:56:14\t2026-02-02 16:56:04\nuniversal_shareable_reports\tregulation\t1\t2026-02-01 23:33:42\t2026-02-01 23:33:42\nuniversal_shareable_reports\trevenue\t13\t2026-02-02 00:56:02\t2026-02-11 20:44:23\nuniversal_shareable_reports\tvalidator\t3\t2026-02-10 02:49:34\t2026-02-12 16:38:13\n",
+  "stderr": "",
+  "execution_time_ms": 85
+}

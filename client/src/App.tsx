@@ -49,6 +49,7 @@ const UnifiedAdmin = lazy(() => import("./pages/UnifiedAdmin"));
 const FullReportGenerator = lazy(() => import("./pages/FullReportGenerator"));
 const DealAlertsPage = lazy(() => import("./pages/DealAlertsPage"));
 const MarketEvaluationPage = lazy(() => import("./pages/MarketEvaluationPage"));
+const MyReportsPage = lazy(() => import("./pages/MyReportsPage"));
 
 // Minimal loading fallback
 function PageLoader() {
@@ -95,6 +96,9 @@ function Router() {
         
         {/* Saved Regulations */}
         <Route path={"/saved-regulations"} component={SavedRegulations} />
+        
+        {/* My Reports */}
+        <Route path={"/my-reports"} component={MyReportsPage} />
         
         {/* My Account */}
         <Route path={"/account"} component={AccountPage} />

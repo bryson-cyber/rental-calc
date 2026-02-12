@@ -10687,3 +10687,15 @@ Results:
 - [x] Created SharedRegulationDisplay component matching RegulationTrackerStep styling
 - [x] Tested all 5 share codes: validator, revenue, ai_advisor, market, regulation — all render correctly
 - [x] 26 transformation tests passing
+
+## My Reports Page (Feb 12, 2026)
+- [x] Create backend endpoint to list all reports from shared_reports, universal_shareable_reports, and analysis_reports
+- [x] Report counts by type for filter tabs (All, Full, Revenue, Validation, AI Advisor, Market, Regulation, Property)
+- [x] Build My Reports page UI with search bar, filter tabs, and 3-column report cards grid
+- [x] Report cards show type badge, address, metrics (revenue, occupancy, ADR), date, creator, view count
+- [x] Copy link button on each card
+- [x] Cards link to share URL for viewing full report
+- [x] Added My Reports link to AuthButton dropdown menu
+- [x] Route registered in App.tsx at /my-reports
+- [x] Fixed occupancy rate display bug (values stored as xx.xx vs 0.xx)
+- [x] 24 vitest tests passing, 947 total tests passing
