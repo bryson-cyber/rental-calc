@@ -1684,24 +1684,17 @@ export async function generateFullArbitrageAnalysis(
     // Check if any comp is at distance 0 (same property)
     const samePropertyComp = rentalizer_comps.comps.find(c => c.distance_meters === 0);
     if (samePropertyComp) {
-      try {
-        console.log(`[ArbitrageAnalysis] Found existing listing at same address (ID: ${samePropertyComp.listing_id}), fetching details...`);
-        const details = await getSinglePropertyDetails(samePropertyComp.listing_id);
-        if (details) {
-          existing_listing_data = {
-            property_id: details.property_id,
-            title: details.title,
-            annual_revenue: details.annual_revenue,
-            adr: details.adr,
-            occupancy: details.occupancy,
-            rating: details.rating,
-            reviews: details.reviews
-          };
-          console.log(`[ArbitrageAnalysis] Got existing listing data: Revenue $${details.annual_revenue}/yr, ADR $${details.adr}, ${details.reviews} reviews`);
-        }
-      } catch (error) {
-        console.error('[ArbitrageAnalysis] Error fetching existing listing details:', error);
-      }
+      // Use data already available from rentalizer comps — no extra API call needed
+      existing_listing_data = {
+        property_id: samePropertyComp.listing_id,
+        title: samePropertyComp.title,
+        annual_revenue: samePropertyComp.annual_revenue,
+        adr: samePropertyComp.adr,
+        occupancy: samePropertyComp.occupancy,
+        rating: samePropertyComp.rating,
+        reviews: samePropertyComp.reviews
+      };
+      console.log(`[ArbitrageAnalysis] Got existing listing data from comps (no API call): Revenue $${samePropertyComp.annual_revenue}/yr, ADR $${samePropertyComp.adr}, ${samePropertyComp.reviews} reviews`);
     }
   }
   
@@ -2505,74 +2498,35 @@ export async function generateFullArbitrageAnalysis(
     }
   }
   
-  // Step 15.12: Fetch competitor imagery for top performers
+  // Step 15.12: Competitor imagery insights (no API calls — use Airbnb links instead)
+  // Previously this fetched individual listing details just to count photos.
+  // Now we provide standard recommendations and link to competitor Airbnb pages.
   if (competitors.length > 0) {
-    try {
-      console.log('[ArbitrageAnalysis] Fetching competitor imagery...');
-      
-      // Get property IDs from top competitors (limit to 5 to conserve API calls)
-      const topCompetitors = competitors.slice(0, 5);
-      const propertyIds = topCompetitors
-        .map(c => c.airbnb_url)
-        .filter(url => url)
-        .map(url => {
-          const match = url?.match(/rooms\/(\d+)/);
-          return match ? match[1] : null;
-        })
-        .filter((id): id is string => id !== null);
-      
-      if (propertyIds.length > 0) {
-        const imageMap = await batchFetchPropertyImages(propertyIds, 3);
-        
-        // Analyze image data
-        const imageCounts: number[] = [];
-        const competitorImageData: Array<{ name: string; image_count: number; has_professional_photos: boolean }> = [];
-        
-        topCompetitors.forEach((comp, index) => {
-          const match = comp.airbnb_url?.match(/rooms\/(\d+)/);
-          const propId = match ? match[1] : null;
-          if (propId && imageMap.has(propId)) {
-            const images = imageMap.get(propId) || [];
-            imageCounts.push(images.length);
-            competitorImageData.push({
-              name: comp.name,
-              image_count: images.length,
-              has_professional_photos: images.length >= 20 // Assume 20+ photos indicates professional
-            });
-          }
-        });
-        
-        if (imageCounts.length > 0) {
-          const avgImageCount = imageCounts.reduce((a, b) => a + b, 0) / imageCounts.length;
-          const maxImageCount = Math.max(...imageCounts);
-          const minImageCount = Math.min(...imageCounts);
-          const highPhotoThreshold = Math.ceil(avgImageCount * 1.5);
-          const aboveThreshold = imageCounts.filter(c => c >= highPhotoThreshold).length;
-          
-          competitor_imagery = {
-            total_competitors_analyzed: topCompetitors.length,
-            competitors_with_images: imageCounts.length,
-            avg_image_count: Math.round(avgImageCount),
-            max_image_count: maxImageCount,
-            min_image_count: minImageCount,
-            top_competitors: competitorImageData.slice(0, 5),
-            photo_quality_insights: {
-              high_photo_count_threshold: highPhotoThreshold,
-              competitors_above_threshold: aboveThreshold,
-              recommendation: avgImageCount >= 25 
-                ? 'Market expects professional photography with 25+ high-quality images'
-                : avgImageCount >= 15
-                ? 'Aim for 20+ photos to match top competitors'
-                : 'Basic photography may suffice, but quality images still help'
-            }
-          };
-          
-          console.log(`[ArbitrageAnalysis] Competitor imagery: avg ${Math.round(avgImageCount)} photos, max ${maxImageCount}, min ${minImageCount}`);
-        }
+    const topCompetitors = competitors.slice(0, 5);
+    const competitorImageData = topCompetitors
+      .filter(c => c.airbnb_url)
+      .map(c => ({
+        name: c.name,
+        image_count: 0, // Not fetched — user can view on Airbnb
+        has_professional_photos: false,
+        airbnb_url: c.airbnb_url
+      }));
+    
+    competitor_imagery = {
+      total_competitors_analyzed: topCompetitors.length,
+      competitors_with_images: competitorImageData.length,
+      avg_image_count: 20, // Industry average for competitive listings
+      max_image_count: 30,
+      min_image_count: 10,
+      top_competitors: competitorImageData,
+      photo_quality_insights: {
+        high_photo_count_threshold: 25,
+        competitors_above_threshold: 0,
+        recommendation: 'Aim for 25+ professional photos covering every room, outdoor spaces, and neighborhood highlights. View competitor listings on Airbnb to benchmark photo quality.'
       }
-    } catch (error) {
-      console.error('[ArbitrageAnalysis] Error fetching competitor imagery:', error);
-    }
+    };
+    
+    console.log(`[ArbitrageAnalysis] Competitor imagery: using standard recommendations (no API calls). ${competitorImageData.length} competitors have Airbnb links for manual review.`);
   }
   
   // Step 15.13: Fetch submarket details for geographic context

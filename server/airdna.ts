@@ -3367,7 +3367,7 @@ export async function getComprehensivePropertyReport(
     .slice(0, 30);
   
   // Enrich listings that don't have images (radius comps)
-  // Only enrich top 5 listings to conserve API calls (images are cached in DB for 90 days)
+  // Uses /listing/batch endpoint (100 per request) instead of individual calls
   sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 5);
   
   // Step 5: Get bedroom performance data
@@ -3882,6 +3882,20 @@ export async function getAllMarketListings(
     minFilteredCount?: number; // Minimum number of filtered listings to return
   }
 ): Promise<{ listings: ListingData[]; total_count: number }> {
+  // OPTIMIZATION: Cache results at the function level to prevent repeated 25-call sequences
+  // Same market + bedroom combo within 12 hours returns cached data
+  const cacheKey = apiCache.generateKey('all_market_listings', {
+    marketId,
+    bedrooms: options?.bedrooms ?? 'all',
+    minRevenue: options?.minRevenue ?? 0,
+  });
+  const cached = await apiCache.getAsync<{ listings: ListingData[]; total_count: number }>(cacheKey);
+  if (cached) {
+    console.log(`[getAllMarketListings] CACHE HIT for market ${marketId}, bedrooms: ${options?.bedrooms} (${cached.listings.length} listings)`);
+    logCacheHit('/market/listings/all', 'getAllMarketListings-cache');
+    return cached;
+  }
+
   const allListings: ListingData[] = [];
   const pageSize = 25; // API max
   let totalCount = 0;
@@ -4050,7 +4064,13 @@ export async function getAllMarketListings(
     // Sort by revenue (highest first)
     filtered.sort((a, b) => b.annual_revenue - a.annual_revenue);
     
-    return { listings: filtered, total_count: totalCount };
+    const result = { listings: filtered, total_count: totalCount };
+    
+    // Cache the result to prevent repeated 25-call sequences for the same market
+    apiCache.set(cacheKey, result, 'all_market_listings');
+    console.log(`[getAllMarketListings] Cached ${filtered.length} listings for market ${marketId}`);
+    
+    return result;
   } catch (error) {
     console.error("[getAllMarketListings] Error:", error);
     return { listings: [], total_count: 0 };
@@ -4202,13 +4222,14 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
 }
 
 /**
- * Batch fetch images for multiple properties with database caching
- * Returns a map of property_id -> image_url
- * First checks cache, then fetches missing from API and caches results
+ * Batch fetch images for multiple properties using /listing/batch endpoint.
+ * Uses POST /listing/batch (up to 100 per request) instead of individual GET /listing/{id} calls.
+ * This reduces API calls by ~99% (e.g., 879 listings = 9 batch calls instead of 879 individual calls).
+ * Returns a map of property_id -> image_url[]
  */
 export async function batchFetchPropertyImages(
   propertyIds: string[],
-  maxConcurrent: number = 5
+  _maxConcurrent: number = 5 // kept for backward compat but no longer used
 ): Promise<Map<string, string[]>> {
   const imageMap = new Map<string, string[]>();
   
@@ -4234,29 +4255,68 @@ export async function batchFetchPropertyImages(
     return imageMap;
   }
   
-  // Step 2: Fetch uncached images from API
+  // Step 2: Fetch uncached images using /listing/batch (max 100 per request)
+  const BATCH_SIZE = 100;
   const newlyFetchedImages = new Map<string, string[]>();
   
-  // Process in batches to avoid overwhelming the API
-  for (let i = 0; i < uncachedIds.length; i += maxConcurrent) {
-    const batch = uncachedIds.slice(i, i + maxConcurrent);
-    console.log(`[batchFetchPropertyImages] API batch ${Math.floor(i / maxConcurrent) + 1}: ${batch.join(', ')}`);
+  for (let i = 0; i < uncachedIds.length; i += BATCH_SIZE) {
+    const batchIds = uncachedIds.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(uncachedIds.length / BATCH_SIZE);
+    console.log(`[batchFetchPropertyImages] API batch ${batchNum}/${totalBatches}: ${batchIds.length} listings`);
     
-    const results = await Promise.all(
-      batch.map(id => getSinglePropertyDetails(id))
-    );
-    
-    results.forEach((result, index) => {
-      if (result) {
-        console.log(`[batchFetchPropertyImages] Property ${batch[index]}: ${result.images.length} images`);
-        if (result.images.length > 0) {
-          imageMap.set(batch[index], result.images);
-          newlyFetchedImages.set(batch[index], result.images);
+    try {
+      const response = await makeApiRequest<{
+        payload: {
+          listings: Array<{
+            property_id: string;
+            details: {
+              title?: string;
+              images?: string[];
+              bedrooms?: number;
+              bathrooms?: number;
+              accommodates?: number;
+              property_type?: string;
+              reviews?: number;
+            };
+            ratings?: { overall?: number };
+            metrics?: { summary?: { annual_revenue?: number; adr?: number; occupancy?: number } };
+          }>;
+        };
+      }>('/listing/batch', 'POST', { listing_ids: batchIds }, 2, 'batchFetchPropertyImages');
+      
+      if (response?.payload?.listings) {
+        for (const listing of response.payload.listings) {
+          const images = listing.details?.images || [];
+          if (images.length > 0) {
+            imageMap.set(listing.property_id, images);
+            newlyFetchedImages.set(listing.property_id, images);
+          }
+          
+          // Also populate the in-memory cache for getSinglePropertyDetails
+          const cacheKey = apiCache.generateKey('single_property', { propertyId: listing.property_id });
+          const d = listing.details;
+          apiCache.set(cacheKey, {
+            property_id: listing.property_id,
+            title: d?.title || '',
+            images,
+            bedrooms: d?.bedrooms || 0,
+            bathrooms: d?.bathrooms || 0,
+            accommodates: d?.accommodates || 0,
+            property_type: d?.property_type || '',
+            rating: listing.ratings?.overall || null,
+            reviews: d?.reviews || 0,
+            annual_revenue: listing.metrics?.summary?.annual_revenue || 0,
+            adr: listing.metrics?.summary?.adr || 0,
+            occupancy: listing.metrics?.summary?.occupancy || 0,
+          }, 'single_property');
         }
-      } else {
-        console.log(`[batchFetchPropertyImages] Property ${batch[index]}: FAILED to fetch`);
+        console.log(`[batchFetchPropertyImages] Batch ${batchNum}: got ${response.payload.listings.length} listings, ${newlyFetchedImages.size} with images so far`);
       }
-    });
+    } catch (error) {
+      console.error(`[batchFetchPropertyImages] Batch ${batchNum} failed:`, error);
+      // Continue with next batch instead of failing entirely
+    }
   }
   
   // Step 3: Cache newly fetched images in database
@@ -4737,10 +4797,12 @@ export async function getCountryMarkets(
       geometry: m.geom,
     }));
 
-    return {
+    const result = {
       markets,
       total_count: response.payload.page_info.total_count,
     };
+    apiCache.set(_ck, result, 'country_markets');
+    return result;
   } catch (error) {
     console.error("Error fetching country markets:", error);
     return { markets: [], total_count: 0 };

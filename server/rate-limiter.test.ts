@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the dependencies before importing the module
 vi.mock('./api-logger', () => ({
@@ -59,6 +59,93 @@ describe('Rate Limiter - Fail-Closed Design', () => {
     expect(error.type).toBe('per_minute');
     expect(error.message).toContain('too many requests per minute');
   });
+
+  it('should export NON_ADMIN_SOFT_LIMIT as 400', async () => {
+    const { NON_ADMIN_SOFT_LIMIT } = await import('./airdna-rate-limiter');
+    expect(NON_ADMIN_SOFT_LIMIT).toBe(400);
+  });
+});
+
+describe('Request Context - Admin Detection', () => {
+  it('should export runWithRequestContext and isAdminRequest', async () => {
+    const { runWithRequestContext, isAdminRequest } = await import('./request-context');
+    expect(typeof runWithRequestContext).toBe('function');
+    expect(typeof isAdminRequest).toBe('function');
+  });
+
+  it('should return false for isAdminRequest when no context is set', async () => {
+    const { isAdminRequest } = await import('./request-context');
+    // Outside of any request context, should default to false
+    expect(isAdminRequest()).toBe(false);
+  });
+
+  it('should return true for isAdminRequest when admin context is set', async () => {
+    const { runWithRequestContext, isAdminRequest } = await import('./request-context');
+    
+    let result = false;
+    await runWithRequestContext({ isAdmin: true, userId: 1 }, async () => {
+      result = isAdminRequest();
+    });
+    
+    expect(result).toBe(true);
+  });
+
+  it('should return false for isAdminRequest when non-admin context is set', async () => {
+    const { runWithRequestContext, isAdminRequest } = await import('./request-context');
+    
+    let result = true;
+    await runWithRequestContext({ isAdmin: false, userId: 2 }, async () => {
+      result = isAdminRequest();
+    });
+    
+    expect(result).toBe(false);
+  });
+
+  it('should properly scope context to the callback (no leaking)', async () => {
+    const { runWithRequestContext, isAdminRequest } = await import('./request-context');
+    
+    // Before: no context
+    expect(isAdminRequest()).toBe(false);
+    
+    // During: admin context
+    await runWithRequestContext({ isAdmin: true }, async () => {
+      expect(isAdminRequest()).toBe(true);
+    });
+    
+    // After: context should be gone
+    expect(isAdminRequest()).toBe(false);
+  });
+
+  it('should support nested contexts correctly', async () => {
+    const { runWithRequestContext, isAdminRequest } = await import('./request-context');
+    
+    await runWithRequestContext({ isAdmin: true, userId: 1 }, async () => {
+      expect(isAdminRequest()).toBe(true);
+      
+      // Nested non-admin context
+      await runWithRequestContext({ isAdmin: false, userId: 2 }, async () => {
+        expect(isAdminRequest()).toBe(false);
+      });
+      
+      // Back to admin context
+      expect(isAdminRequest()).toBe(true);
+    });
+  });
+
+  it('should export getRequestContext', async () => {
+    const { getRequestContext, runWithRequestContext } = await import('./request-context');
+    
+    // Outside context
+    expect(getRequestContext()).toBeNull();
+    
+    // Inside context
+    await runWithRequestContext({ isAdmin: true, userId: 42 }, async () => {
+      const ctx = getRequestContext();
+      expect(ctx).not.toBeNull();
+      expect(ctx?.isAdmin).toBe(true);
+      expect(ctx?.userId).toBe(42);
+    });
+  });
 });
 
 describe('Cache TTL Configuration', () => {
@@ -86,6 +173,12 @@ describe('Cache TTL Configuration', () => {
     expect(ttl).toBe(30 * 24 * 60 * 60 * 1000); // 30 days
   });
 
+  it('should have all_market_listings in 30-day TTL config', async () => {
+    const { apiCache } = await import('./cache');
+    const ttl = apiCache.getTTL('all_market_listings');
+    expect(ttl).toBe(30 * 24 * 60 * 60 * 1000); // 30 days
+  });
+
   it('should have listing_future_pricing in 7-day TTL config', async () => {
     const { apiCache } = await import('./cache');
     const ttl = apiCache.getTTL('listing_future_pricing');
@@ -101,8 +194,6 @@ describe('Cache TTL Configuration', () => {
 
 describe('Image Cache TTL in db.ts', () => {
   it('should have 90-day default expiration for cachePropertyImages', async () => {
-    // We verify the function signature has expirationDays = 90
-    // by checking the module exports
     const dbModule = await import('./db');
     expect(dbModule.cachePropertyImages).toBeDefined();
     expect(typeof dbModule.cachePropertyImages).toBe('function');

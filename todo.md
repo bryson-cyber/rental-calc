@@ -10880,3 +10880,22 @@ Results:
 - [x] Fix: Halliard Dr will work once daily limit resets (no code fix needed, was rate-limited)
 - [x] Explain: Notifications use notifyOwner() from server/_core/notification.ts (Manus platform built-in)
 - [x] All 1030 tests pass across 79 test files
+
+## CRITICAL: Eliminate Wasteful API Calls at Source + Admin Bypass
+- [ ] Trace exact API call count for a single Full Report generation
+- [ ] Trace exact API call count for a single Quick Estimate
+- [ ] Identify and eliminate every redundant/duplicate API call
+- [x] Make admin users bypass rate limits entirely
+- [x] Non-admin users get paused when usage is high (soft limit at 400)
+- [x] Never block the app from working for admin
+
+## API Optimization: Image Fetching (per AirDNA API skill)
+- [x] Replace getSinglePropertyDetails individual calls with /listing/batch (100 per request) - saves ~1900 calls/day
+- [x] Remove competitor imagery analysis API calls in sop-reports.ts (use generic recommendations)
+- [x] Remove getSinglePropertyDetails call for existing listing check (use rentalizer comp data)
+- [x] Add result-level caching to getAllMarketListings (prevents repeated 25-call sequences)
+- [x] Add cache persistence to getCountryMarkets (prevents 131 repeated calls)
+- [x] Admin bypass: admin users never blocked by rate limiter (AsyncLocalStorage request context)
+- [x] Non-admin soft limit at 400 calls to preserve quota for admin
+- [x] Global tRPC middleware auto-detects admin from session context
+- [x] All 1039 tests pass across 79 test files
