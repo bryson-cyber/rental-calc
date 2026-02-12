@@ -1,0 +1,130 @@
+{
+  "query": "SELECT endpoint, COUNT(*) as call_count, MIN(createdAt) as first_call, MAX(createdAt) as last_call FROM api_call_logs WHERE DATE(createdAt) = CURDATE() GROUP BY endpoint ORDER BY call_count DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT endpoint, COUNT(*) as call_count, MIN(createdAt) as first_call, MAX(createdAt) as last_call FROM api_call_logs WHERE DATE(createdAt) = CURDATE() GROUP BY endpoint ORDER BY call_count DESC LIMIT 20;",
+  "rows": [
+    {
+      "endpoint": "/listing/comps/area",
+      "call_count": "546",
+      "first_call": "2026-02-12 00:30:22",
+      "last_call": "2026-02-12 22:04:25"
+    },
+    {
+      "endpoint": "search_markets_api",
+      "call_count": "293",
+      "first_call": "2026-02-12 00:24:57",
+      "last_call": "2026-02-12 22:04:24"
+    },
+    {
+      "endpoint": "/market/search",
+      "call_count": "164",
+      "first_call": "2026-02-12 00:05:39",
+      "last_call": "2026-02-12 21:37:35"
+    },
+    {
+      "endpoint": "/country/us/markets",
+      "call_count": "131",
+      "first_call": "2026-02-12 02:07:45",
+      "last_call": "2026-02-12 16:37:24"
+    },
+    {
+      "endpoint": "/rentalizer/estimate",
+      "call_count": "82",
+      "first_call": "2026-02-12 00:30:19",
+      "last_call": "2026-02-12 22:04:14"
+    },
+    {
+      "endpoint": "market_details",
+      "call_count": "67",
+      "first_call": "2026-02-12 00:30:38",
+      "last_call": "2026-02-12 22:04:14"
+    },
+    {
+      "endpoint": "/market/airdna-2/listings",
+      "call_count": "61",
+      "first_call": "2026-02-12 00:42:03",
+      "last_call": "2026-02-12 03:16:27"
+    },
+    {
+      "endpoint": "/market/airdna-489/listings",
+      "call_count": "58",
+      "first_call": "2026-02-12 21:03:14",
+      "last_call": "2026-02-12 21:03:25"
+    },
+    {
+      "endpoint": "/submarket/airdna-1528/listings",
+      "call_count": "48",
+      "first_call": "2026-02-12 00:33:16",
+      "last_call": "2026-02-12 00:37:02"
+    },
+    {
+      "endpoint": "/submarket/airdna-3853/listings",
+      "call_count": "43",
+      "first_call": "2026-02-12 20:59:46",
+      "last_call": "2026-02-12 21:00:51"
+    },
+    {
+      "endpoint": "/submarket/airdna-474/listings",
+      "call_count": "39",
+      "first_call": "2026-02-12 20:50:23",
+      "last_call": "2026-02-12 20:51:28"
+    },
+    {
+      "endpoint": "rentalizer",
+      "call_count": "37",
+      "first_call": "2026-02-12 00:30:38",
+      "last_call": "2026-02-12 22:00:10"
+    },
+    {
+      "endpoint": "search_markets",
+      "call_count": "35",
+      "first_call": "2026-02-12 00:24:57",
+      "last_call": "2026-02-12 22:04:14"
+    },
+    {
+      "endpoint": "all_us_markets",
+      "call_count": "32",
+      "first_call": "2026-02-12 00:30:19",
+      "last_call": "2026-02-12 21:11:47"
+    },
+    {
+      "endpoint": "market_historical",
+      "call_count": "30",
+      "first_call": "2026-02-12 00:30:38",
+      "last_call": "2026-02-12 22:04:14"
+    },
+    {
+      "endpoint": "/submarket/airdna-4447/listings",
+      "call_count": "26",
+      "first_call": "2026-02-12 04:33:21",
+      "last_call": "2026-02-12 04:33:24"
+    },
+    {
+      "endpoint": "/submarket/airdna-155/listings",
+      "call_count": "26",
+      "first_call": "2026-02-12 21:11:47",
+      "last_call": "2026-02-12 21:11:52"
+    },
+    {
+      "endpoint": "/submarket/airdna-1686/listings",
+      "call_count": "26",
+      "first_call": "2026-02-12 04:32:19",
+      "last_call": "2026-02-12 04:32:23"
+    },
+    {
+      "endpoint": "/market/airdna-493/listings",
+      "call_count": "20",
+      "first_call": "2026-02-12 00:44:47",
+      "last_call": "2026-02-12 00:44:52"
+    },
+    {
+      "endpoint": "/submarket/airdna-4750/listings",
+      "call_count": "20",
+      "first_call": "2026-02-12 03:19:38",
+      "last_call": "2026-02-12 03:19:41"
+    }
+  ],
+  "messages": [],
+  "stdout": "endpoint\tcall_count\tfirst_call\tlast_call\n/listing/comps/area\t546\t2026-02-12 00:30:22\t2026-02-12 22:04:25\nsearch_markets_api\t293\t2026-02-12 00:24:57\t2026-02-12 22:04:24\n/market/search\t164\t2026-02-12 00:05:39\t2026-02-12 21:37:35\n/country/us/markets\t131\t2026-02-12 02:07:45\t2026-02-12 16:37:24\n/rentalizer/estimate\t82\t2026-02-12 00:30:19\t2026-02-12 22:04:14\nmarket_details\t67\t2026-02-12 00:30:38\t2026-02-12 22:04:14\n/market/airdna-2/listings\t61\t2026-02-12 00:42:03\t2026-02-12 03:16:27\n/market/airdna-489/listings\t58\t2026-02-12 21:03:14\t2026-02-12 21:03:25\n/submarket/airdna-1528/listings\t48\t2026-02-12 00:33:16\t2026-02-12 00:37:02\n/submarket/airdna-3853/listings\t43\t2026-02-12 20:59:46\t2026-02-12 21:00:51\n/submarket/airdna-474/listings\t39\t2026-02-12 20:50:23\t2026-02-12 20:51:28\nrentalizer\t37\t2026-02-12 00:30:38\t2026-02-12 22:00:10\nsearch_markets\t35\t2026-02-12 00:24:57\t2026-02-12 22:04:14\nall_us_markets\t32\t2026-02-12 00:30:19\t2026-02-12 21:11:47\nmarket_historical\t30\t2026-02-12 00:30:38\t2026-02-12 22:04:14\n/submarket/airdna-4447/listings\t26\t2026-02-12 04:33:21\t2026-02-12 04:33:24\n/submarket/airdna-155/listings\t26\t2026-02-12 21:11:47\t2026-02-12 21:11:52\n/submarket/airdna-1686/listings\t26\t2026-02-12 04:32:19\t2026-02-12 04:32:23\n/market/airdna-493/listings\t20\t2026-02-12 00:44:47\t2026-02-12 00:44:52\n/submarket/airdna-4750/listings\t20\t2026-02-12 03:19:38\t2026-02-12 03:19:41\n",
+  "stderr": "",
+  "execution_time_ms": 80
+}

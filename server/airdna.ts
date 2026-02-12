@@ -3367,8 +3367,8 @@ export async function getComprehensivePropertyReport(
     .slice(0, 30);
   
   // Enrich listings that don't have images (radius comps)
-  // Only enrich top 10 listings to avoid too many API calls
-  sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 10);
+  // Only enrich top 5 listings to conserve API calls (images are cached in DB for 90 days)
+  sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 5);
   
   // Step 5: Get bedroom performance data
   // OPTIMIZED: Single radius call for ALL bedrooms, then group by BR count
@@ -4178,7 +4178,7 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
     
     const p = response.payload;
     const d = p.details;
-    return {
+    const result = {
       property_id: p.property_id,
       title: d.title,
       images: d.images || [],
@@ -4192,6 +4192,9 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
       adr: p.metrics?.summary?.adr || 0,
       occupancy: p.metrics?.summary?.occupancy || 0,
     };
+    // Persist to both memory and DB cache (survives LRU eviction and server restarts)
+    apiCache.set(_ck, result, 'single_property');
+    return result;
   } catch (error) {
     console.error(`[getSinglePropertyDetails] Error fetching property ${propertyId}:`, error);
     return null;

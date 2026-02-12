@@ -186,7 +186,7 @@ export async function cachePropertyImages(
   propertyId: string,
   images: string[],
   platform: string = 'airbnb',
-  expirationDays: number = 7
+  expirationDays: number = 90
 ): Promise<void> {
   const db = await getDb();
   if (!db) {
@@ -230,7 +230,7 @@ export async function cachePropertyImages(
 export async function batchCachePropertyImages(
   imageMap: Map<string, string[]>,
   platform: string = 'airbnb',
-  expirationDays: number = 7
+  expirationDays: number = 90
 ): Promise<void> {
   const db = await getDb();
   if (!db || imageMap.size === 0) {

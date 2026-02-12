@@ -54,11 +54,18 @@ class APICache {
     'all_submarket_listings': 30 * 24 * 60 * 60 * 1000,
     'all_market_listings': 30 * 24 * 60 * 60 * 1000,
     
-    // Property data - more dynamic (7 days)
-    'rentalizer': 7 * 24 * 60 * 60 * 1000,
-    'listing_comps': 7 * 24 * 60 * 60 * 1000,
-    'listing_pricing': 7 * 24 * 60 * 60 * 1000,
-    'property_details': 7 * 24 * 60 * 60 * 1000,
+    // Property data - 14 days (balances freshness vs API conservation)
+    'rentalizer': 14 * 24 * 60 * 60 * 1000,
+    'listing_comps': 14 * 24 * 60 * 60 * 1000,
+    'listing_pricing': 14 * 24 * 60 * 60 * 1000,
+    'property_details': 14 * 24 * 60 * 60 * 1000,
+    'single_property': 30 * 24 * 60 * 60 * 1000, // Images/details rarely change
+    'listing_details': 14 * 24 * 60 * 60 * 1000,
+    'listing_historical': 14 * 24 * 60 * 60 * 1000,
+    'listing_future_pricing': 7 * 24 * 60 * 60 * 1000,
+    'listings_in_radius': 14 * 24 * 60 * 60 * 1000,
+    'enhanced_rentalizer': 14 * 24 * 60 * 60 * 1000,
+    'rentalizer_comps': 14 * 24 * 60 * 60 * 1000,
     
     // Static reference data - 30 days (US market list barely changes)
     'all_us_markets': 30 * 24 * 60 * 60 * 1000,

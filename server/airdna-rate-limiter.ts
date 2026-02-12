@@ -5,7 +5,9 @@
  * Enforces:
  * - Daily limit: 600 calls/day (conservative buffer under 700 plan limit)
  * - Per-minute limit: 15 calls/min (prevents burst usage)
- * - Blocks requests when limits are hit (returns error, does NOT silently continue)
+ * - FAIL-CLOSED: if the limit check fails, requests are BLOCKED (not allowed through)
+ * - In-memory daily counter as PRIMARY gate (no DB dependency for blocking)
+ * - DB counter as secondary verification (synced on startup and periodically)
  * - Logs all calls for monitoring
  */
 
@@ -30,6 +32,65 @@ const PER_MINUTE_LIMIT = 15;
 
 /** Track per-minute calls in memory */
 const minuteCallLog: number[] = [];
+
+// ============================================
+// IN-MEMORY DAILY COUNTER (PRIMARY GATE)
+// ============================================
+
+/** 
+ * In-memory daily counter - this is the PRIMARY rate limit gate.
+ * Does NOT depend on DB. Incremented atomically before every API call.
+ * Synced with DB on startup and periodically.
+ */
+let dailyCallCount = 0;
+let dailyCountDate = '';
+
+/** Get today's date string in local timezone */
+function getTodayString(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/** Reset counter if it's a new day */
+function resetIfNewDay(): void {
+  const today = getTodayString();
+  if (today !== dailyCountDate) {
+    console.log(`[AirDNA-RateLimit] New day detected (${dailyCountDate} -> ${today}), resetting daily counter`);
+    dailyCallCount = 0;
+    dailyCountDate = today;
+    dailyLimitNotified = false;
+    warnNotified = false;
+  }
+}
+
+/** 
+ * Sync in-memory counter with DB on startup.
+ * Called once when the module loads.
+ */
+async function syncCounterFromDb(): Promise<void> {
+  try {
+    const limitStatus = await checkDailyLimit('airdna', DAILY_HARD_LIMIT);
+    const dbCount = limitStatus.currentCount;
+    
+    // Use the higher of memory vs DB count (never go backwards)
+    if (dbCount > dailyCallCount) {
+      console.log(`[AirDNA-RateLimit] Synced from DB: ${dailyCallCount} -> ${dbCount}`);
+      dailyCallCount = dbCount;
+    }
+    dailyCountDate = getTodayString();
+  } catch (error) {
+    console.warn('[AirDNA-RateLimit] Failed to sync from DB, using memory counter:', error);
+    // Keep whatever count we have - fail closed means we don't reset to 0
+  }
+}
+
+// Sync on module load
+syncCounterFromDb().catch(() => {});
+
+// Re-sync every 5 minutes to catch any drift
+setInterval(() => {
+  syncCounterFromDb().catch(() => {});
+}, 5 * 60 * 1000);
 
 // ============================================
 // PER-MINUTE THROTTLE
@@ -79,12 +140,14 @@ export class AirDNARateLimitError extends Error {
 
 /** Track if we've already notified about daily limit today */
 let dailyLimitNotified = false;
+let warnNotified = false;
 let lastNotifyDate = '';
 
 function resetDailyNotifyIfNewDay(): void {
   const today = new Date().toISOString().split('T')[0];
   if (today !== lastNotifyDate) {
     dailyLimitNotified = false;
+    warnNotified = false;
     lastNotifyDate = today;
   }
 }
@@ -94,6 +157,8 @@ function resetDailyNotifyIfNewDay(): void {
  * 
  * This is the ONLY function that should make HTTP requests to AirDNA.
  * All other modules must use this function.
+ * 
+ * FAIL-CLOSED: If rate limit check fails for any reason, the request is BLOCKED.
  * 
  * @throws {AirDNARateLimitError} when daily or per-minute limit is exceeded
  */
@@ -115,7 +180,7 @@ export async function rateLimitedAirDNARequest<T>(
 
   // ── Rate limit checks (unless bypassed) ──
   if (!options?.bypassRateLimit) {
-    // 1. Check per-minute limit
+    // 1. Check per-minute limit (memory-based, instant)
     const callsThisMinute = getCallsInLastMinute();
     if (callsThisMinute >= PER_MINUTE_LIMIT) {
       console.warn(`[AirDNA-RateLimit] Per-minute limit hit: ${callsThisMinute}/${PER_MINUTE_LIMIT}`);
@@ -135,57 +200,53 @@ export async function rateLimitedAirDNARequest<T>(
       throw new AirDNARateLimitError('per_minute', callsThisMinute, PER_MINUTE_LIMIT);
     }
 
-    // 2. Check daily limit
-    try {
-      const limitStatus = await checkDailyLimit('airdna', DAILY_HARD_LIMIT);
+    // 2. Check daily limit using IN-MEMORY counter (PRIMARY gate - no DB dependency)
+    resetIfNewDay();
+    
+    if (dailyCallCount >= DAILY_HARD_LIMIT) {
+      console.error(`[AirDNA-RateLimit] DAILY LIMIT EXCEEDED (memory): ${dailyCallCount}/${DAILY_HARD_LIMIT} - BLOCKING REQUEST`);
       
-      if (limitStatus.isOverLimit) {
-        console.error(`[AirDNA-RateLimit] DAILY LIMIT EXCEEDED: ${limitStatus.currentCount}/${DAILY_HARD_LIMIT} - BLOCKING REQUEST`);
-        
-        // Notify owner once per day
-        resetDailyNotifyIfNewDay();
-        if (!dailyLimitNotified) {
-          dailyLimitNotified = true;
-          notifyOwner({
-            title: '🚨 AirDNA Daily Limit REACHED - Requests Blocked',
-            content: `AirDNA API has hit the hard limit of ${DAILY_HARD_LIMIT} calls today (actual: ${limitStatus.currentCount}). New API requests are being blocked. Cached data is still being served. The limit resets at midnight UTC.`,
-          }).catch(() => {});
-        }
-
-        logApiCall({
-          provider: 'airdna',
-          endpoint,
-          params: body,
-          statusCode: 429,
-          success: false,
-          errorMessage: `Daily rate limit: ${limitStatus.currentCount}/${DAILY_HARD_LIMIT}`,
-          responseTimeMs: 0,
-          cacheHit: false,
-          source: source || 'rate_limited',
-        });
-
-        throw new AirDNARateLimitError('daily', limitStatus.currentCount, DAILY_HARD_LIMIT);
+      // Notify owner once per day
+      resetDailyNotifyIfNewDay();
+      if (!dailyLimitNotified) {
+        dailyLimitNotified = true;
+        notifyOwner({
+          title: '🚨 AirDNA Daily Limit REACHED - Requests Blocked',
+          content: `AirDNA API has hit the hard limit of ${DAILY_HARD_LIMIT} calls today (actual: ${dailyCallCount}). New API requests are being blocked. Cached data is still being served. The limit resets at midnight.`,
+        }).catch(() => {});
       }
 
-      // Warn when approaching limit
-      if (limitStatus.currentCount >= DAILY_WARN_THRESHOLD) {
-        console.warn(`[AirDNA-RateLimit] WARNING: ${limitStatus.currentCount}/${DAILY_HARD_LIMIT} calls today (${limitStatus.percentUsed.toFixed(1)}% used)`);
-        
-        // Notify owner once when hitting warning threshold
-        resetDailyNotifyIfNewDay();
-        if (!dailyLimitNotified && limitStatus.currentCount >= DAILY_WARN_THRESHOLD) {
-          dailyLimitNotified = true;
-          notifyOwner({
-            title: '⚠️ AirDNA API Usage Warning',
-            content: `AirDNA API is at ${limitStatus.currentCount}/${DAILY_HARD_LIMIT} calls today (${limitStatus.percentUsed.toFixed(1)}%). Requests will be blocked at ${DAILY_HARD_LIMIT}. Consider if all current API calls are necessary.`,
-          }).catch(() => {});
-        }
-      }
-    } catch (error) {
-      if (error instanceof AirDNARateLimitError) throw error;
-      // Rate limit check itself failed - log but continue (fail open for DB errors)
-      console.warn('[AirDNA-RateLimit] Rate limit check failed, continuing:', error);
+      logApiCall({
+        provider: 'airdna',
+        endpoint,
+        params: body,
+        statusCode: 429,
+        success: false,
+        errorMessage: `Daily rate limit: ${dailyCallCount}/${DAILY_HARD_LIMIT}`,
+        responseTimeMs: 0,
+        cacheHit: false,
+        source: source || 'rate_limited',
+      });
+
+      throw new AirDNARateLimitError('daily', dailyCallCount, DAILY_HARD_LIMIT);
     }
+
+    // Warn when approaching limit
+    if (dailyCallCount >= DAILY_WARN_THRESHOLD) {
+      console.warn(`[AirDNA-RateLimit] WARNING: ${dailyCallCount}/${DAILY_HARD_LIMIT} calls today`);
+      
+      resetDailyNotifyIfNewDay();
+      if (!warnNotified) {
+        warnNotified = true;
+        notifyOwner({
+          title: '⚠️ AirDNA API Usage Warning',
+          content: `AirDNA API is at ${dailyCallCount}/${DAILY_HARD_LIMIT} calls today (${((dailyCallCount / DAILY_HARD_LIMIT) * 100).toFixed(1)}%). Requests will be blocked at ${DAILY_HARD_LIMIT}. Consider if all current API calls are necessary.`,
+        }).catch(() => {});
+      }
+    }
+
+    // INCREMENT the counter BEFORE making the call (prevents race conditions)
+    dailyCallCount++;
   }
 
   // ── Make the actual API request ──
@@ -253,7 +314,7 @@ export async function rateLimitedAirDNARequest<T>(
 
       const data = await response.json();
 
-      // Log successful call
+      // Log successful call (DB logging is fire-and-forget, doesn't affect the gate)
       logApiCall({
         provider: 'airdna',
         endpoint,
@@ -290,6 +351,8 @@ export function getRateLimiterStats() {
     dailyHardLimit: DAILY_HARD_LIMIT,
     dailyWarnThreshold: DAILY_WARN_THRESHOLD,
     dailyLimitNotified,
+    dailyCallCount,
+    dailyCountDate,
   };
 }
 

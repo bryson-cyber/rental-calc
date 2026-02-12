@@ -1,0 +1,66 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'api_call_logs' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'api_call_logs' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "provider",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "endpoint",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "params",
+      "DATA_TYPE": "json"
+    },
+    {
+      "COLUMN_NAME": "statusCode",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "success",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "errorMessage",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "responseTimeMs",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "cacheHit",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "source",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "userId",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "sessionId",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "contactId",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\nid\tint\nprovider\tvarchar\nendpoint\tvarchar\nparams\tjson\nstatusCode\tint\nsuccess\tint\nerrorMessage\ttext\nresponseTimeMs\tint\ncacheHit\tint\nsource\tvarchar\nuserId\tint\nsessionId\tvarchar\ncontactId\tvarchar\ncreatedAt\ttimestamp\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

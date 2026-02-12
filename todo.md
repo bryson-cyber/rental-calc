@@ -10862,3 +10862,21 @@ Results:
 - [x] Moved admin-redirect useEffect above the early return for authLoading
 - [x] All hooks now called in same order on every render (76 hooks consistently)
 - [x] All 1017 tests pass across 78 test files
+
+## Investigation: AirDNA API still at 3084/700 calls
+- [x] Query api_call_logs to identify top API callers and patterns
+- [x] Trace the notification system (where it's hosted, how it triggers)
+- [x] Fix root cause of excessive API calls despite caching
+
+## CRITICAL: API Usage Still at 3500+/day - Rate Limiter Broken
+- [x] Diagnose: Why rate limiter allows 3500+ calls past 600 hard limit (fail-open catch block)
+- [x] Diagnose: What generates 1974 individual listing detail calls (batchFetchPropertyImages + expired image cache)
+- [x] Diagnose: Why Full Report fails for Halliard Dr (rate limiter blocked all calls at 3511/600)
+- [x] Fix: Rate limiter rewritten with fail-closed design + in-memory counter as primary gate
+- [x] Fix: Image cache TTL extended from 7 to 90 days, 12033 expired entries refreshed
+- [x] Fix: Listing enrichment reduced from 10 to 5 per report section
+- [x] Fix: getSinglePropertyDetails now persists to DB cache (survives LRU eviction + restarts)
+- [x] Fix: Cache TTL config updated (single_property=30d, rentalizer/listings=14d)
+- [x] Fix: Halliard Dr will work once daily limit resets (no code fix needed, was rate-limited)
+- [x] Explain: Notifications use notifyOwner() from server/_core/notification.ts (Manus platform built-in)
+- [x] All 1030 tests pass across 79 test files

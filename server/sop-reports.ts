@@ -2510,8 +2510,8 @@ export async function generateFullArbitrageAnalysis(
     try {
       console.log('[ArbitrageAnalysis] Fetching competitor imagery...');
       
-      // Get property IDs from top competitors (limit to 10 to avoid too many API calls)
-      const topCompetitors = competitors.slice(0, 10);
+      // Get property IDs from top competitors (limit to 5 to conserve API calls)
+      const topCompetitors = competitors.slice(0, 5);
       const propertyIds = topCompetitors
         .map(c => c.airbnb_url)
         .filter(url => url)
