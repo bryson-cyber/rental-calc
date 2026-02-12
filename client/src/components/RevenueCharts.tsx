@@ -224,7 +224,7 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
     if (!active || !payload || payload.length === 0) return null;
     const entry = payload[0]?.payload;
     if (!entry) return null;
-    const dataType = entry.isHistorical ? 'Historical' : 'Forecast';
+    const dataType = entry.isHistorical ? 'Market Avg' : 'Property Forecast';
     return (
       <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
         <p className="font-semibold text-[#0f172a] mb-1.5">{label} <span className="text-[#94a3b8] font-normal">({dataType})</span></p>
@@ -270,7 +270,7 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
             <div key={yr} className="mb-1.5 last:mb-0">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.yoyColors[i % BRAND.yoyColors.length] }} />
-                <span className="font-semibold text-[#1e293b]">{yr}{isHist ? '' : ' (Forecast)'}</span>
+                <span className="font-semibold text-[#1e293b]">{yr}{isHist ? ' (Market Avg)' : ' (Property Forecast)'}</span>
               </div>
               <div className="pl-4 text-[#64748b]">
                 Revenue: <span className="font-medium text-[#1e293b]">{formatCurrency(rev)}</span>
@@ -346,8 +346,8 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
                 verticalAlign="top"
                 height={28}
                 payload={[
-                  ...(hasHistorical ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
-                  { value: 'Forecast', type: 'square' as const, color: BRAND.gold },
+                  ...(hasHistorical ? [{ value: 'Market Avg (Historical)', type: 'square' as const, color: BRAND.histBar }] : []),
+                  { value: 'Property Forecast', type: 'square' as const, color: BRAND.gold },
                   { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
                 ]}
               />
@@ -358,7 +358,7 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
                   stroke={BRAND.navy} 
                   strokeDasharray="6 4" 
                   strokeWidth={1.5}
-                  label={{ value: 'Forecast →', position: 'top', fill: BRAND.navy, fontSize: 10, fontWeight: 600 }}
+                  label={{ value: 'Your Property →', position: 'top', fill: BRAND.navy, fontSize: 10, fontWeight: 600 }}
                 />
               )}
               <Bar 
@@ -407,11 +407,16 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
               <Legend 
                 verticalAlign="top"
                 height={28}
-                payload={yearLabels.map((yr, i) => ({
-                  value: yr,
-                  type: 'square' as const,
-                  color: BRAND.yoyColors[i % BRAND.yoyColors.length],
-                }))}
+                payload={yearLabels.map((yr, i) => {
+                  // Check if this year has any historical entries
+                  const sampleRow = yoyData[0];
+                  const isHistYear = sampleRow && sampleRow[`hist_${yr}`] === 1;
+                  return {
+                    value: isHistYear ? `${yr} (Market)` : `${yr} (Forecast)`,
+                    type: 'square' as const,
+                    color: BRAND.yoyColors[i % BRAND.yoyColors.length],
+                  };
+                })}
               />
               {yearLabels.map((yr, i) => (
                 <Bar 
@@ -426,6 +431,11 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
           </ResponsiveContainer>
         )}
       </div>
+      {hasHistorical && (
+        <p className="text-[10px] text-[#94a3b8] mt-2 text-center italic">
+          Historical bars show market-wide averages. Forecast bars show this property's projected revenue.
+        </p>
+      )}
     </div>
   );
 }
@@ -776,10 +786,12 @@ export function SeasonalityChart({ data, historicalMonths, height = 280 }: Seaso
         {yearLabels.map((yr) => {
           const rev = entry[`rev_${yr}`] as number;
           if (!rev || rev === 0) return null;
+          const isHistYear = historicalMonths && historicalMonths.length > 0 && 
+            historicalMonths.some(m => m.date.startsWith(yr));
           return (
             <div key={yr} className="flex items-center gap-1.5 mb-1">
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: yearColors[yr] }} />
-              <span className="text-[#64748b]">{yr}:</span>
+              <span className="text-[#64748b]">{yr}{isHistYear ? ' (Mkt)' : ' (Est)'}:</span>
               <span className="font-semibold text-[#1e293b]">{formatCurrency(rev)}</span>
             </div>
           );
@@ -836,11 +848,16 @@ export function SeasonalityChart({ data, historicalMonths, height = 280 }: Seaso
             verticalAlign="top"
             height={28}
             payload={[
-              ...yearLabels.map(yr => ({
-                value: yr,
-                type: 'square' as const,
-                color: yearColors[yr],
-              })),
+              ...yearLabels.map(yr => {
+                // Check if any entry for this year is historical
+                const isHistYear = historicalMonths && historicalMonths.length > 0 && 
+                  historicalMonths.some(m => m.date.startsWith(yr));
+                return {
+                  value: isHistYear ? `${yr} (Market)` : `${yr} (Forecast)`,
+                  type: 'square' as const,
+                  color: yearColors[yr],
+                };
+              }),
               { value: 'Avg Occupancy', type: 'line' as const, color: BRAND.navy },
             ]}
           />

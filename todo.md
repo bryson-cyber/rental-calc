@@ -10561,3 +10561,12 @@ Results:
 - [x] Add distance labels at midpoint of each line
 - [x] Lines color-coded by comp revenue tier (green/blue/gray)
 - [x] All 821 tests passing, TypeScript compilation clean
+## Chart Data Investigation (Feb 12, 2026)
+- [x] Investigated: Historical data is market-wide averages (~$2,900/mo), forecast is property-specific projections (~$6,300/mo)
+- [x] Updated Timeline legend: "Market Avg (Historical)" + "Property Forecast" with explanatory note
+- [x] Updated YoY legend: years labeled as "(Market)" or "(Forecast)"
+- [x] Updated Seasonality legend: years labeled as "(Market)" or "(Forecast)"
+- [x] Updated all tooltips to show "Market Avg" vs "Property Forecast" / "(Mkt)" vs "(Est)"
+- [x] Added reference line label "Your Property →" at forecast boundary
+- [x] Added footnote explaining data source difference
+- [x] All 821 tests passing, TypeScript compilation clean
