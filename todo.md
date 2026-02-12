@@ -10570,3 +10570,12 @@ Results:
 - [x] Added reference line label "Your Property →" at forecast boundary
 - [x] Added footnote explaining data source difference
 - [x] All 821 tests passing, TypeScript compilation clean
+## Separate Market vs Property Data in Charts (Feb 12, 2026)
+- [x] Remove market-wide historical data from all property-specific charts (Revenue Projections section)
+- [x] Audit entire report to ensure market data and property data are never mixed in the same visualization
+- [x] Fix cramped legend/label UI in Monthly Revenue chart — added proper spacing and height
+- [x] Revert MonthlyForecastChart to show only property forecast data (12 months)
+- [x] Revert SeasonalityChart to show only property forecast data aggregated by month
+- [x] Keep market historical data only in Market Analysis section where it belongs
+- [x] Removed YoY toggle (only 1 year of property data, not needed)
+- [x] All 821 tests passing, TypeScript compilation clean

@@ -1236,17 +1236,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           {/* Monthly Forecast Chart */}
           {monthly_forecast.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Revenue {historical_data?.months?.length ? 'History & Forecast' : 'Forecast'} <InfoTip text="A month-by-month breakdown of your rental income — including historical performance (gray bars) and projected future revenue (gold bars). The dashed line marks where historical data ends and the forecast begins. Use this to see trends over time and plan your cash flow." /></h3>
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Revenue Forecast <InfoTip text="A month-by-month breakdown of your property's projected rental income over the next 12 months. Taller bars mean higher revenue months. Use this to plan your cash flow and see which months are strongest." /></h3>
               <MonthlyForecastChart 
                 data={monthly_forecast.map(m => ({
                   ...m,
                   occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100,
-                }))}
-                historicalMonths={(historical_data?.months || historical_data?.monthly)?.map(m => ({
-                  date: m.date,
-                  revenue: m.revenue,
-                  occupancy: m.occupancy,
-                  adr: m.adr,
                 }))}
                 height={350}
               />
@@ -1267,19 +1261,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           {/* Seasonality */}
           {monthly_forecast.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Seasonality Pattern <InfoTip text="Shows how revenue and occupancy change throughout the year across all available data. Gray bars are historical months, gold bars are forecasted. Most markets have a 'high season' (summer or holidays) and a 'low season.' Understanding this pattern helps you set realistic expectations and adjust your pricing strategy." /></h3>
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Seasonality Pattern <InfoTip text="Shows how your property's projected revenue and occupancy change throughout the year. Most markets have a 'high season' (summer or holidays) and a 'low season.' Understanding this pattern helps you set realistic expectations and adjust your pricing strategy." /></h3>
               <SeasonalityChart 
                 data={monthly_forecast.map(m => ({
                   ...m,
                   occupancy: m.occupancy > 1 ? m.occupancy : m.occupancy * 100,
                 }))}
-                historicalMonths={(historical_data?.months || historical_data?.monthly)?.map(m => ({
-                  date: m.date,
-                  revenue: m.revenue,
-                  occupancy: m.occupancy,
-                  adr: m.adr,
-                }))}
-                height={(historical_data?.months?.length || historical_data?.monthly?.length) ? 250 : 180}
+                height={220}
               />
             </div>
           )}
