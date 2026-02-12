@@ -124,6 +124,13 @@ export default function FullReportGenerator() {
     if (urlPreparedFor) setPreparedFor(decodeURIComponent(urlPreparedFor));
   }, [searchString]);
   
+  // Admin-only: silently redirect non-admin users to Step 5 (main tool)
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      navigate('/');
+    }
+  }, [authLoading, user, navigate]);
+
   // Progress animation during generation
   useEffect(() => {
     if (!generating) {
@@ -200,7 +207,7 @@ export default function FullReportGenerator() {
     }
   };
   
-  // Loading state
+  // Loading state — all hooks are above, safe to return early here
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
@@ -209,14 +216,7 @@ export default function FullReportGenerator() {
     );
   }
   
-  // Admin-only: silently redirect non-admin users to Step 5 (main tool)
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) {
-      navigate('/');
-    }
-  }, [authLoading, user, navigate]);
-
-  if (!authLoading && (!user || user.role !== 'admin')) {
+  if (!user || user.role !== 'admin') {
     return null;
   }
   

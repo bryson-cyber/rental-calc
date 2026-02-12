@@ -10856,3 +10856,9 @@ Results:
 - [x] Added caching to airdna-hierarchy.ts (all functions)
 - [x] Result: 46/52 call sites have direct caching, remaining 6 are inside cached parent functions
 - [x] All 1017 tests pass
+
+## Bug Fix: FullReportGenerator Hooks Order Error
+- [x] Fix: "Rendered more hooks than during the previous render" in FullReportGenerator.tsx
+- [x] Moved admin-redirect useEffect above the early return for authLoading
+- [x] All hooks now called in same order on every render (76 hooks consistently)
+- [x] All 1017 tests pass across 78 test files
