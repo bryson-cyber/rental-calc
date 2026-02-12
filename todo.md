@@ -10805,3 +10805,11 @@ Results:
 - [x] Add API call monitoring/logging with counts (console.log for CACHE HIT/MISS)
 - [ ] Add rate limiting safeguards
 - [x] Verify reduced API usage end-to-end (1001 tests pass)
+
+## Shared Report - Missing Rent Validation (Feb 12, 2026)
+- [x] Fix: Shared report at /share/ is missing rent validation section
+- [x] Ensure shared report shows EXACT same content as Step 5 TeslaDashboard
+- [x] Verify all data fields are properly passed to TeslaDashboard in ShareableReportViewer
+- [x] Embed _rentometerData, _expensePercent, _furnitureCost, _mode into reportData
+- [x] Extract embedded metadata in ShareableReportViewer and pass to TeslaDashboard
+- [x] Backward compatible: old shares without metadata use sensible defaults

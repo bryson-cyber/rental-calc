@@ -5644,7 +5644,7 @@ export default function LeadMagnet() {
               </div>
               <UniversalShareButton
                 reportType="validator"
-                reportData={result}
+                reportData={{ ...result, _rentometerData: rentometerData || undefined, _expensePercent: expensePercent, _furnitureCost: parseFloat(furnitureCost) || 0, _mode: globalMode }}
                 address={address}
                 bedrooms={parseInt(bedrooms)}
                 bathrooms={parseFloat(bathrooms)}

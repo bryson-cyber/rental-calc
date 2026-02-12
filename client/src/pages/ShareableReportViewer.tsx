@@ -551,10 +551,17 @@ export default function ShareableReportViewer() {
     const seoDescription = `Full property investment analysis for ${location}. Shared via Coach Inayah Turnkey Tool.`;
 
     // The reportData IS the AnalysisResult object — pass it directly to TeslaDashboard
+    // Extract embedded metadata that was stored alongside the result
     const validatorAddress = report.address || '';
     const validatorBedrooms = report.bedrooms || 2;
     const validatorBathrooms = report.bathrooms ? parseFloat(String(report.bathrooms)) : 1;
     const validatorMonthlyRent = report.monthlyRent || undefined;
+    
+    // Extract rentometerData and other props that were embedded in reportData
+    const storedRentometerData = reportData?._rentometerData || null;
+    const storedExpensePercent = reportData?._expensePercent ?? 20;
+    const storedFurnitureCost = reportData?._furnitureCost ?? 0;
+    const storedMode = reportData?._mode || 'rent';
 
     return (
       <>
@@ -602,6 +609,10 @@ export default function ShareableReportViewer() {
                 bathrooms={validatorBathrooms}
                 monthlyRent={validatorMonthlyRent}
                 marketId={reportData.marketId}
+                rentometerData={storedRentometerData}
+                expensePercent={storedExpensePercent}
+                furnitureCost={storedFurnitureCost}
+                mode={storedMode}
               />
             </div>
           </section>
