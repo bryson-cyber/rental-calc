@@ -1462,8 +1462,8 @@ export async function runFullAIAnalysis(
     profitability_realistic: profitability.realistic
   });
   
-  // Check cache first
-  const cached = apiCache.get<FullAIAnalysis>(cacheKey);
+  // Check cache first (async for DB fallback)
+  const cached = await apiCache.getAsync<FullAIAnalysis>(cacheKey);
   if (cached) {
     console.log('[GeminiAnalyzer] Returning cached AI analysis for:', property.address);
     return cached;

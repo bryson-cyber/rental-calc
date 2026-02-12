@@ -488,7 +488,7 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
 
 export async function searchMarkets(searchTerm: string, limit: number = 10): Promise<MarketSearchResult[]> {
   const cacheKey = apiCache.generateKey('search_markets', { searchTerm, limit });
-  const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
+  const cached = await apiCache.getAsync<MarketSearchResult[]>(cacheKey);
   if (cached) { logCacheHit('search_markets'); return cached; }
   
   try {
@@ -619,7 +619,7 @@ function extractStateFromLocation(location: string): string | undefined {
  */
 export async function searchMarketsAPI(searchTerm: string, limit: number = 15): Promise<MarketSearchResult[]> {
   const cacheKey = apiCache.generateKey('search_markets_api', { searchTerm, limit });
-  const cached = apiCache.get<MarketSearchResult[]>(cacheKey);
+  const cached = await apiCache.getAsync<MarketSearchResult[]>(cacheKey);
   if (cached) { logCacheHit('search_markets_api'); return cached; }
   
   try {
@@ -1047,7 +1047,7 @@ export async function getMarketDetails(marketId: string): Promise<{
   };
 } | null> {
   const cacheKey = apiCache.generateKey('market_details', { marketId });
-  const cached = apiCache.get<{
+  const cached = await apiCache.getAsync<{
     id: string;
     name: string;
     listing_count: number;
@@ -1290,9 +1290,9 @@ async function getSubmarketMetric(
 export async function getSubmarketSeasonality(
   submarketId: string
 ): Promise<SeasonalityData[]> {
-  // Check cache first
+  // Check cache first (async for DB fallback)
   const cacheKey = `submarket_seasonality:${submarketId}`;
-  const cached = apiCache.get<SeasonalityData[]>(cacheKey);
+  const cached = await apiCache.getAsync<SeasonalityData[]>(cacheKey);
   if (cached) {
     logCacheHit('submarket_seasonality');
     return cached;
@@ -1393,7 +1393,7 @@ export async function getMarketHistoricalData(marketId: string, numMonths: numbe
 }> {
   // Check cache first - historical data is expensive (5 API calls)
   const cacheKey = apiCache.generateKey('market_historical', { marketId, numMonths });
-  const cached = apiCache.get<{
+  const cached = await apiCache.getAsync<{
     occupancy: HistoricalDataPoint[];
     adr: HistoricalDataPoint[];
     revenue: HistoricalDataPoint[];
@@ -2057,7 +2057,7 @@ export async function getAllSubmarketListings(
     maxListings: options?.maxListings || 500,
     bedrooms: options?.bedrooms // Include bedroom in cache key
   });
-  const cached = apiCache.get<ListingData[]>(cacheKey);
+  const cached = await apiCache.getAsync<ListingData[]>(cacheKey);
   if (cached) {
     console.log(`[getAllSubmarketListings] CACHE HIT for ${submarketId}, bedrooms: ${options?.bedrooms}, ${cached.length} listings`);
     logCacheHit('all_submarket_listings');
@@ -2430,8 +2430,8 @@ export async function getRentalizerEstimate(
     accommodates: request.accommodates
   });
   
-  // Check cache first
-  const cached = apiCache.get<RentalizerResponse>(cacheKey);
+  // Check cache first (async for DB fallback)
+  const cached = await apiCache.getAsync<RentalizerResponse>(cacheKey);
   if (cached) {
     logCacheHit('rentalizer');
     return cached;
@@ -3512,9 +3512,9 @@ export async function getComprehensivePropertyReport(
 export async function getComprehensiveMarketReport(
   marketId: string
 ): Promise<ComprehensiveMarketReport | null> {
-  // Check cache first
+  // Check cache first (async for DB fallback)
   const cacheKey = `market_comprehensive:${marketId}`;
-  const cached = apiCache.get<ComprehensiveMarketReport>(cacheKey);
+  const cached = await apiCache.getAsync<ComprehensiveMarketReport>(cacheKey);
   if (cached) {
     logCacheHit('market_comprehensive');
     return cached;
@@ -3629,9 +3629,9 @@ export async function getComprehensiveSubmarketReport(
   insights: MarketInsights;
   generated_at: string;
 } | null> {
-  // Check cache first - but clear any stale data with 0 metrics
+  // Check cache first - but clear any stale data with 0 metrics (async for DB fallback)
   const cacheKey = `submarket_comprehensive:${submarketId}`;
-  const cached = apiCache.get<NonNullable<Awaited<ReturnType<typeof getComprehensiveSubmarketReport>>>>(cacheKey);
+  const cached = await apiCache.getAsync<NonNullable<Awaited<ReturnType<typeof getComprehensiveSubmarketReport>>>>(cacheKey);
   if (cached) {
     // Check if cached data has valid metrics (not all zeros)
     const hasValidMetrics = cached.submarket.metrics.revenue > 0 || cached.submarket.metrics.occupancy > 0;
@@ -4856,9 +4856,9 @@ export interface SeasonalityData {
 export async function getMarketSeasonality(
   marketId: string
 ): Promise<SeasonalityData[]> {
-  // Check cache first
+  // Check cache first (async for DB fallback)
   const cacheKey = `market_seasonality:${marketId}`;
-  const cached = apiCache.get<SeasonalityData[]>(cacheKey);
+  const cached = await apiCache.getAsync<SeasonalityData[]>(cacheKey);
   if (cached) {
     logCacheHit('market_seasonality');
     return cached;
@@ -6654,11 +6654,11 @@ export async function getListingsByArea(
 ): Promise<ListingsByAreaResponse | null> {
   const cacheKey = `listings-area:${JSON.stringify({ address, radiusMeters, ...options })}`;
   
-  const cached = apiCache.get(cacheKey);
+  const cached = await apiCache.getAsync<ListingsByAreaResponse>(cacheKey);
   if (cached) {
     console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
     logCacheHit('listings_by_area');
-    return cached as ListingsByAreaResponse;
+    return cached;
   }
   console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
 
@@ -6856,11 +6856,11 @@ export async function getRentalizerBulkSummary(
   
   const cacheKey = `bulk-summary:${JSON.stringify(limitedQueries)}`;
   
-  const cached = apiCache.get(cacheKey);
+  const cached = await apiCache.getAsync<BulkSummaryResponse>(cacheKey);
   if (cached) {
     console.log(`[Cache] HIT: ${cacheKey.substring(0, 50)}...`);
     logCacheHit('bulk_summary');
-    return cached as BulkSummaryResponse;
+    return cached;
   }
   console.log(`[Cache] MISS: ${cacheKey.substring(0, 50)}...`);
 
@@ -7710,7 +7710,7 @@ export async function getBulkListings(
   
   for (const id of listingIds) {
     const cacheKey = `bulk_listing:${id}:${currency}`;
-    const cached = apiCache.get<BulkListingResult>(cacheKey);
+    const cached = await apiCache.getAsync<BulkListingResult>(cacheKey);
     if (cached) {
       logCacheHit('bulk_listing');
       cachedListings.push(cached);

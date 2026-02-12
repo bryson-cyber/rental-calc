@@ -10598,14 +10598,14 @@ Results:
 - [x] Compiled 10-item prioritized recommendation list
 
 ## Investor Report Improvements (Feb 12, 2026)
-- [ ] Add "Total Return Summary" card combining cash flow + tax savings into one view
-- [ ] Show pre-tax cash flow, estimated tax savings, and net annual benefit after tax
-- [ ] Position Total Return Summary prominently (after Purchase section, before Tax details)
-- [ ] Ensure Stress Test section is always populated — generate scenarios in the report pipeline if not provided
-- [ ] Ensure Regulatory Status section is always populated — fetch/generate regulation data in the pipeline
-- [ ] Switch Market Analysis headline comparison to use bedroom-specific benchmarks instead of all-bedroom market averages
-- [ ] Add bedroom-specific context to KPI comparisons where available
-- [ ] Write tests for all new features
+- [x] Add "Total Return Summary" card combining cash flow + tax savings into one view
+- [x] Show pre-tax cash flow, estimated tax savings, and net annual benefit after tax
+- [x] Position Total Return Summary prominently (after Purchase section, before Tax details)
+- [x] Ensure Stress Test section is always populated — added post-processing to create and regenerate endpoints
+- [x] Ensure Regulatory Status section is always populated — added post-processing to create and regenerate endpoints
+- [x] Switch Market Analysis headline comparison to use bedroom-specific benchmarks instead of all-bedroom market averages
+- [x] Add bedroom-specific context to KPI comparisons where available
+- [x] Write tests for all new features — 22 new tests added
 
 ## BUG: AirDNA API calls burning 760/day with no user activity (Feb 12, 2026)
 - [x] Diagnose: traced all code paths — getAllUSMarkets() used sync apiCache.get() (memory-only) instead of getAsync() (memory+DB), causing 13 API calls per server restart
@@ -10615,3 +10615,24 @@ Results:
 - [x] Fix: added 'all_us_markets' to TTL_CONFIG with 30-day TTL
 - [x] Fix: changed MapFirstLayoutV2 staleTime from 0 to 30 minutes (was triggering refetch every render)
 - [x] Verify: all 869 tests passing, TypeScript clean
+
+## FIX: Convert ALL apiCache.get() to getAsync() to eliminate API drain (Feb 12, 2026)
+- [x] Audit all apiCache.get() calls in airdna.ts (found 13 sync calls total)
+- [x] Convert searchMarkets() cache to getAsync()
+- [x] Convert searchMarketsAPI() cache to getAsync()
+- [x] Convert getMarketDetails() cache to getAsync()
+- [x] Convert getSubmarketSeasonality() cache to getAsync()
+- [x] Convert getMarketHistoricalData() cache to getAsync()
+- [x] Convert getAllSubmarketListings() cache to getAsync()
+- [x] Convert getRentalizerEstimate() cache to getAsync()
+- [x] Convert getComprehensiveMarketReport() cache to getAsync()
+- [x] Convert getComprehensiveSubmarketReport() cache to getAsync()
+- [x] Convert getMarketSeasonality() cache to getAsync()
+- [x] Convert getBulkListingDetails() cache to getAsync()
+- [x] Convert getListingsByArea() cache to getAsync()
+- [x] Convert getBulkSummary() cache to getAsync()
+- [x] Convert gemini-analyzer.ts fullAIAnalysis cache to getAsync()
+- [x] Audited other files — gemini-analyzer-enhanced.ts and market-research-simple.ts use local in-memory caches (not AirDNA calls, acceptable)
+- [x] Frontend queries already have proper staleTime (30min for markets, 5min for favorites, 10min for neighborhoods)
+- [x] Newsletter cron jobs are defined but only triggered manually by admin (not auto-running)
+- [x] All 869 tests passing, TypeScript clean — ZERO remaining sync apiCache.get() calls
