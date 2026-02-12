@@ -20,6 +20,7 @@ import {
   Legend,
   Cell,
   ComposedChart,
+  ReferenceLine,
 } from 'recharts';
 
 // ── Brand Color Palette ──────────────────────────────────────
@@ -42,6 +43,9 @@ const BRAND = {
   pctMid:      '#C9A962',
   pctHigh:     '#B89A4F',
   pctTop:      '#A68A3C',
+  // Historical data colors
+  histBar:     '#94a3b8',  // muted gray for historical bars
+  histBarLight:'#cbd5e1',  // lighter gray for below-avg historical
 };
 
 // Format currency
@@ -83,6 +87,24 @@ const CustomTooltip = ({ active, payload, label, type = 'revenue' }: { active?: 
   return null;
 };
 
+// Parse a date string like "2025-05" into { monthIdx, year, shortLabel }
+function parseMonthDate(dateStr: string) {
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dashParts = dateStr.split('-');
+  if (dashParts.length >= 2) {
+    const year = dashParts[0];
+    const monthIdx = parseInt(dashParts[1]) - 1;
+    const shortYear = year.slice(2);
+    const shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : dateStr.slice(0, 3);
+    return { monthIdx, year, shortLabel: `${shortMonth} '${shortYear}` };
+  }
+  if (dateStr.includes(' ')) {
+    const parts = dateStr.split(' ');
+    return { monthIdx: 0, year: parts[1] || '', shortLabel: parts[0]?.slice(0, 3) || dateStr.slice(0, 3) };
+  }
+  return { monthIdx: 0, year: '', shortLabel: dateStr.length > 3 ? dateStr.slice(0, 3) : dateStr };
+}
+
 // Monthly Forecast Bar Chart
 interface MonthlyForecastData {
   month: string;
@@ -91,39 +113,101 @@ interface MonthlyForecastData {
   adr?: number;
 }
 
+interface HistoricalMonthData {
+  date: string;
+  revenue: number;
+  occupancy?: number;
+  adr?: number;
+}
+
 interface MonthlyForecastChartProps {
   data: MonthlyForecastData[];
+  historicalMonths?: HistoricalMonthData[];
   height?: number;
 }
 
-export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChartProps) {
-  // Format month labels to be shorter
+export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: MonthlyForecastChartProps) {
   const chartData = useMemo(() => {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return data.slice(0, 12).map(item => {
-      // Parse month from various formats: "2025-05", "May 2025", "May", etc.
-      let shortMonth = item.month;
-      const dashParts = item.month.split('-');
-      if (dashParts.length >= 2) {
-        // Format: "2025-05" or "2025-05-01"
-        const monthIdx = parseInt(dashParts[1]) - 1;
-        const year = dashParts[0].slice(2); // "25"
-        shortMonth = monthIdx >= 0 && monthIdx < 12 ? `${monthNames[monthIdx]} '${year}` : item.month.slice(0, 3);
-      } else if (item.month.includes(' ')) {
-        // Format: "May 2025"
-        shortMonth = item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3);
-      } else if (item.month.length > 3) {
-        shortMonth = item.month.slice(0, 3);
+    const combined: Array<{
+      shortMonth: string;
+      revenue: number;
+      occupancyPct: number;
+      adr?: number;
+      isHistorical: boolean;
+      rawDate: string;
+    }> = [];
+
+    // Add historical months first (if available)
+    if (historicalMonths && historicalMonths.length > 0) {
+      for (const m of historicalMonths) {
+        const parsed = parseMonthDate(m.date);
+        const occ = m.occupancy != null ? (m.occupancy > 1 ? m.occupancy : m.occupancy * 100) : 0;
+        combined.push({
+          shortMonth: parsed.shortLabel,
+          revenue: Math.round(m.revenue),
+          occupancyPct: Math.round(occ),
+          adr: m.adr,
+          isHistorical: true,
+          rawDate: m.date,
+        });
       }
-      return {
-        ...item,
-        shortMonth,
-        occupancyPct: item.occupancy > 1 ? item.occupancy : item.occupancy * 100,
-      };
-    });
-  }, [data]);
+    }
+
+    // Add forecast months
+    for (const m of data) {
+      const parsed = parseMonthDate(m.month);
+      const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
+      combined.push({
+        shortMonth: parsed.shortLabel,
+        revenue: Math.round(m.revenue),
+        occupancyPct: Math.round(occ),
+        adr: m.adr,
+        isHistorical: false,
+        rawDate: m.month,
+      });
+    }
+
+    return combined;
+  }, [data, historicalMonths]);
 
   const avgRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length;
+  
+  // Find the boundary index between historical and forecast
+  const forecastStartIdx = chartData.findIndex(d => !d.isHistorical);
+  const forecastStartLabel = forecastStartIdx > 0 ? chartData[forecastStartIdx].shortMonth : null;
+
+  // Custom tooltip for combined view
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const CombinedTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const entry = payload[0]?.payload;
+    if (!entry) return null;
+    const dataType = entry.isHistorical ? 'Historical' : 'Forecast';
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
+        <p className="font-semibold text-[#0f172a] mb-1.5">{label} <span className="text-[#94a3b8] font-normal">({dataType})</span></p>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.isHistorical ? BRAND.histBar : BRAND.gold }} />
+          <span className="text-[#64748b]">Revenue:</span>
+          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+        </div>
+        {entry.occupancyPct > 0 && (
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
+            <span className="text-[#64748b]">Occupancy:</span>
+            <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
+          </div>
+        )}
+        {entry.adr != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
+            <span className="text-[#64748b]">ADR:</span>
+            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="w-full" style={{ height }}>
@@ -132,8 +216,12 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis 
             dataKey="shortMonth" 
-            tick={{ fill: BRAND.axisText, fontSize: 12 }}
+            tick={{ fill: BRAND.axisText, fontSize: chartData.length > 18 ? 9 : 11 }}
             axisLine={{ stroke: BRAND.warmGrayLt }}
+            interval={chartData.length > 24 ? 2 : chartData.length > 18 ? 1 : 0}
+            angle={chartData.length > 18 ? -45 : 0}
+            textAnchor={chartData.length > 18 ? 'end' : 'middle'}
+            height={chartData.length > 18 ? 50 : 30}
           />
           <YAxis 
             yAxisId="revenue"
@@ -149,18 +237,40 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
             tickFormatter={(value) => `${value}%`}
             domain={[0, 100]}
           />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend />
+          <Tooltip content={<CombinedTooltip />} />
+          <Legend 
+            verticalAlign="top"
+            height={28}
+            payload={[
+              ...(historicalMonths && historicalMonths.length > 0 ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
+              { value: 'Forecast', type: 'square' as const, color: BRAND.gold },
+              { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
+            ]}
+          />
+          {/* Vertical reference line at forecast boundary */}
+          {forecastStartLabel && (
+            <ReferenceLine 
+              yAxisId="revenue"
+              x={forecastStartLabel} 
+              stroke={BRAND.navy} 
+              strokeDasharray="6 4" 
+              strokeWidth={1.5}
+              label={{ value: 'Forecast →', position: 'top', fill: BRAND.navy, fontSize: 10, fontWeight: 600 }}
+            />
+          )}
           <Bar 
             yAxisId="revenue"
             dataKey="revenue" 
             name="Revenue"
-            radius={[4, 4, 0, 0]}
+            radius={[3, 3, 0, 0]}
           >
             {chartData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`}
-                fill={entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted}
+                fill={entry.isHistorical 
+                  ? (entry.revenue >= avgRevenue ? BRAND.histBar : BRAND.histBarLight)
+                  : (entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted)
+                }
               />
             ))}
           </Bar>
@@ -171,7 +281,7 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
             name="Occupancy"
             stroke={BRAND.navy} 
             strokeWidth={2}
-            dot={{ fill: BRAND.navy, strokeWidth: 2 }}
+            dot={{ fill: BRAND.navy, strokeWidth: 2, r: chartData.length > 24 ? 2 : 3 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -409,54 +519,88 @@ export function HistoricalTrendChart({
   );
 }
 
-// Seasonality Chart (simple bar visualization)
+// Seasonality Chart — shows all available months (historical + forecast)
 interface SeasonalityChartProps {
   data: MonthlyForecastData[];
+  historicalMonths?: HistoricalMonthData[];
   height?: number;
 }
 
-export function SeasonalityChart({ data, height = 200 }: SeasonalityChartProps) {
+export function SeasonalityChart({ data, historicalMonths, height = 200 }: SeasonalityChartProps) {
   const chartData = useMemo(() => {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const avgRevenue = data.reduce((sum, d) => sum + d.revenue, 0) / data.length;
-    return data.slice(0, 12).map(item => {
-      const variance = ((item.revenue - avgRevenue) / avgRevenue) * 100;
-      // Parse month from various formats: "2025-05", "May 2025", "May", etc.
-      let shortMonth = item.month;
-      const dashParts = item.month.split('-');
-      if (dashParts.length >= 2) {
-        const monthIdx = parseInt(dashParts[1]) - 1;
-        shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : item.month.slice(0, 3);
-      } else if (item.month.includes(' ')) {
-        shortMonth = item.month.split(' ')[0]?.slice(0, 3) || item.month.slice(0, 3);
-      } else if (item.month.length > 3) {
-        shortMonth = item.month.slice(0, 3);
+    const combined: Array<{
+      shortMonth: string;
+      revenue: number;
+      occupancyPct: number;
+      adr?: number;
+      variance: number;
+      season: string;
+      isHistorical: boolean;
+    }> = [];
+
+    // Combine all months
+    const allMonths: Array<{ date: string; revenue: number; occupancy: number; adr?: number; isHistorical: boolean }> = [];
+    
+    if (historicalMonths && historicalMonths.length > 0) {
+      for (const m of historicalMonths) {
+        allMonths.push({
+          date: m.date,
+          revenue: Math.round(m.revenue),
+          occupancy: m.occupancy ?? 0,
+          adr: m.adr,
+          isHistorical: true,
+        });
       }
-      // Ensure occupancy is in percentage form (0-100)
-      const occupancyPct = item.occupancy > 1 ? item.occupancy : item.occupancy * 100;
-      return {
-        ...item,
-        shortMonth,
+    }
+    
+    for (const m of data) {
+      allMonths.push({
+        date: m.month,
+        revenue: Math.round(m.revenue),
+        occupancy: m.occupancy,
+        adr: m.adr,
+        isHistorical: false,
+      });
+    }
+
+    const avgRevenue = allMonths.reduce((sum, d) => sum + d.revenue, 0) / allMonths.length;
+
+    for (const m of allMonths) {
+      const parsed = parseMonthDate(m.date);
+      const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
+      const variance = ((m.revenue - avgRevenue) / avgRevenue) * 100;
+      combined.push({
+        shortMonth: parsed.shortLabel,
+        revenue: m.revenue,
+        occupancyPct: Math.round(occ),
+        adr: m.adr,
         variance,
-        occupancyPct: Math.round(occupancyPct),
         season: variance > 15 ? 'peak' : variance < -15 ? 'off' : 'shoulder',
-      };
-    });
-  }, [data]);
+        isHistorical: m.isHistorical,
+      });
+    }
+
+    return combined;
+  }, [data, historicalMonths]);
+
+  // Find the boundary for the reference line
+  const forecastStartIdx = chartData.findIndex(d => !d.isHistorical);
+  const forecastStartLabel = forecastStartIdx > 0 ? chartData[forecastStartIdx].shortMonth : null;
 
   // Custom tooltip for dual-axis display
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const SeasonTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null;
     const entry = payload[0]?.payload;
     if (!entry) return null;
     const seasonLabel = entry.season === 'peak' ? 'Peak Season' : 
       entry.season === 'off' ? 'Off-Season' : 'Shoulder Season';
+    const dataType = entry.isHistorical ? 'Historical' : 'Forecast';
     return (
       <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
-        <p className="font-semibold text-[#0f172a] mb-1.5">{label} — {seasonLabel}</p>
+        <p className="font-semibold text-[#0f172a] mb-1.5">{label} — {seasonLabel} <span className="text-[#94a3b8] font-normal">({dataType})</span></p>
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.gold }} />
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.isHistorical ? BRAND.histBar : BRAND.gold }} />
           <span className="text-[#64748b]">Revenue:</span>
           <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
         </div>
@@ -465,20 +609,32 @@ export function SeasonalityChart({ data, height = 200 }: SeasonalityChartProps) 
           <span className="text-[#64748b]">Occupancy:</span>
           <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
         </div>
+        {entry.adr != null && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
+            <span className="text-[#64748b]">ADR:</span>
+            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+          </div>
+        )}
       </div>
     );
   };
 
+  const hasHistorical = historicalMonths && historicalMonths.length > 0;
+
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: chartData.length > 18 ? 30 : 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} vertical={false} />
           <XAxis 
             dataKey="shortMonth" 
-            tick={{ fill: BRAND.axisText, fontSize: 11 }}
+            tick={{ fill: BRAND.axisText, fontSize: chartData.length > 18 ? 9 : 11 }}
             axisLine={false}
             tickLine={false}
+            interval={chartData.length > 24 ? 2 : chartData.length > 18 ? 1 : 0}
+            angle={chartData.length > 18 ? -45 : 0}
+            textAnchor={chartData.length > 18 ? 'end' : 'middle'}
           />
           <YAxis 
             yAxisId="revenue"
@@ -494,24 +650,38 @@ export function SeasonalityChart({ data, height = 200 }: SeasonalityChartProps) 
             tickLine={false}
             width={40}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<SeasonTooltip />} />
           <Legend 
             verticalAlign="top" 
             height={28}
-            formatter={(value: string) => (
-              <span style={{ color: BRAND.axisText, fontSize: 11 }}>{value}</span>
-            )}
+            payload={[
+              ...(hasHistorical ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
+              { value: 'Revenue (Forecast)', type: 'square' as const, color: BRAND.gold },
+              { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
+            ]}
           />
-          <Bar yAxisId="revenue" dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
-            {chartData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`}
-                fill={
-                  entry.season === 'peak' ? BRAND.gold : 
-                  entry.season === 'off' ? BRAND.goldPale : BRAND.goldMuted
-                }
-              />
-            ))}
+          {/* Vertical reference line at forecast boundary */}
+          {forecastStartLabel && (
+            <ReferenceLine 
+              yAxisId="revenue"
+              x={forecastStartLabel} 
+              stroke={BRAND.navy} 
+              strokeDasharray="6 4" 
+              strokeWidth={1.5}
+            />
+          )}
+          <Bar yAxisId="revenue" dataKey="revenue" name="Revenue" radius={[3, 3, 0, 0]}>
+            {chartData.map((entry, index) => {
+              let fill: string;
+              if (entry.isHistorical) {
+                fill = entry.season === 'peak' ? BRAND.histBar : 
+                       entry.season === 'off' ? BRAND.histBarLight : '#b0bec5';
+              } else {
+                fill = entry.season === 'peak' ? BRAND.gold : 
+                       entry.season === 'off' ? BRAND.goldPale : BRAND.goldMuted;
+              }
+              return <Cell key={`cell-${index}`} fill={fill} />;
+            })}
           </Bar>
           <Line 
             yAxisId="occupancy"
@@ -519,8 +689,8 @@ export function SeasonalityChart({ data, height = 200 }: SeasonalityChartProps) 
             dataKey="occupancyPct" 
             name="Occupancy"
             stroke={BRAND.navy}
-            strokeWidth={2.5}
-            dot={{ fill: BRAND.navy, r: 3.5, strokeWidth: 0 }}
+            strokeWidth={2}
+            dot={{ fill: BRAND.navy, r: chartData.length > 24 ? 2 : 3.5, strokeWidth: 0 }}
             activeDot={{ fill: BRAND.navy, r: 5, strokeWidth: 2, stroke: BRAND.white }}
           />
         </ComposedChart>

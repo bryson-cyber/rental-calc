@@ -1,0 +1,16 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysis_reports' AND COLUMN_NAME IN ('address', 'report_data', 'analyzed_at', 'created_at', 'createdAt') LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysis_reports' AND COLUMN_NAME IN ('address', 'report_data', 'analyzed_at', 'created_at', 'createdAt') LIMIT 10",
+  "rows": [
+    {
+      "COLUMN_NAME": "address"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\naddress\ncreatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

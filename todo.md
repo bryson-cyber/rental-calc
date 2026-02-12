@@ -10542,3 +10542,14 @@ Results:
 - [x] Custom tooltip showing both revenue and occupancy with season label
 - [x] Right-side Y-axis showing occupancy percentage (0-100%)
 - [x] Legend at top distinguishing Revenue bars from Occupancy line
+## Seasonality Multi-Year Data & Cash Flow Verification (Feb 12, 2026)
+- [x] Investigate how much forecast/seasonality data AirDNA provides — 24 months historical + 12 months forecast = 36 months total
+- [x] Remove 12-month cap on both SeasonalityChart and MonthlyForecastChart
+- [x] Expand MonthlyForecastChart to show all available months with historical (gray) + forecast (gold) bars
+- [x] Add dashed reference line at historical/forecast boundary with "Forecast →" label
+- [x] Add dual-axis (revenue + occupancy) to expanded MonthlyForecastChart
+- [x] Custom tooltips show Historical vs Forecast label, revenue, occupancy, and ADR
+- [x] Dynamic axis label sizing and rotation for 36-month view
+- [x] Updated section headers to say "History & Forecast" when historical data is available
+- [x] Verified cash flow: Albuquerque deal has $45,889 revenue - $40,224 expenses = $5,665/year (correct, no rental_arbitrage or purchase sections entered)
+- [x] All 821 tests passing, TypeScript compilation clean
