@@ -5,38 +5,22 @@
  * State → Market/City → Submarket/Neighborhood → Zip Code
  */
 
-const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
+import { rateLimitedAirDNARequest, AIRDNA_API_BASE } from './airdna-rate-limiter';
 
-// Helper to make API requests
+// Helper to make API requests - routes through centralized rate limiter
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" = "GET",
   body?: any
 ): Promise<T> {
-  const apiKey = process.env.AIRDNA_API_KEY;
-  if (!apiKey) {
-    throw new Error("AIRDNA_API_KEY is not set");
-  }
+  const data = await rateLimitedAirDNARequest<any>(endpoint, method, body as Record<string, unknown>, {
+    retries: 2,
+    source: 'airdna-hierarchy',
+  });
 
-  const url = `${AIRDNA_API_BASE}${endpoint}`;
-  const options: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-  };
-
-  if (body && method === "POST") {
-    options.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, options);
-  const data = await response.json();
-
-  if (!response.ok || data.status?.type === "error") {
+  if (data.status?.type === "error") {
     throw new Error(
-      `AirDNA API error (${response.status}): ${JSON.stringify(data)}`
+      `AirDNA API error: ${JSON.stringify(data)}`
     );
   }
 

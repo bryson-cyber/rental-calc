@@ -10813,3 +10813,16 @@ Results:
 - [x] Embed _rentometerData, _expensePercent, _furnitureCost, _mode into reportData
 - [x] Extract embedded metadata in ShareableReportViewer and pass to TeslaDashboard
 - [x] Backward compatible: old shares without metadata use sensible defaults
+
+## AirDNA API Rate Limiting - CRITICAL (Feb 12, 2026)
+- [x] Audit: Found 5 files making direct AirDNA fetch() calls bypassing all limits
+- [x] Implement hard daily rate limiter (600/day hard cap - BLOCKS requests)
+- [x] Implement per-minute rate limiter (15/min burst limit)
+- [x] Created centralized airdna-rate-limiter.ts - ALL AirDNA calls route through it
+- [x] Wired rate limiter into: airdna.ts, market-research-simple.ts, airdna-hierarchy.ts, opportunity-finder.ts, nurture-sequence-service.ts
+- [x] Eliminated 50 parallel submarket listing count calls (use metrics from response instead)
+- [x] Reduced zipcode pagination from 8 parallel pages to 3 sequential pages
+- [x] Added owner notifications when daily limit is approached/hit
+- [x] Added AirDNARateLimitError class for graceful error handling
+- [x] Fixed batch-validate tests to work with rate limiter
+- [x] All 1017 tests pass

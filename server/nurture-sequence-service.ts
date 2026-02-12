@@ -5,8 +5,8 @@
  * Called via webhook before each email in the 7-day nurture sequence.
  */
 
+import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 const AIRDNA_API_KEY = process.env.AIRDNA_API_KEY;
-const AIRDNA_BASE_URL = 'https://api.airdna.co/api/enterprise/v2';
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 const HUBSPOT_API_BASE = 'https://api.hubapi.com';
 
@@ -196,24 +196,13 @@ async function getMarketRevenue(marketId: string): Promise<{ avgRevenue: number;
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
 
-    const response = await fetch(`${AIRDNA_BASE_URL}/market/${marketId}/revenue`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRDNA_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filters: [],
-        time_period: {
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        }
-      })
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
+    const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/revenue`, 'POST', {
+      filters: [],
+      time_period: {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      }
+    }, { retries: 2, source: 'nurture-service' });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -250,24 +239,13 @@ async function getMarketOccupancy(marketId: string): Promise<{ avgOccupancy: num
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
 
-    const response = await fetch(`${AIRDNA_BASE_URL}/market/${marketId}/occupancy`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRDNA_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filters: [],
-        time_period: {
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        }
-      })
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
+    const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/occupancy`, 'POST', {
+      filters: [],
+      time_period: {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      }
+    }, { retries: 2, source: 'nurture-service' });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -297,24 +275,13 @@ async function getMarketAdr(marketId: string): Promise<{ avgAdr: number; seasona
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - 1);
 
-    const response = await fetch(`${AIRDNA_BASE_URL}/market/${marketId}/adr`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRDNA_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filters: [],
-        time_period: {
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        }
-      })
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
+    const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/adr`, 'POST', {
+      filters: [],
+      time_period: {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
+      }
+    }, { retries: 2, source: 'nurture-service' });
     const metrics = data.payload?.metrics || [];
 
     if (metrics.length === 0) return null;
@@ -340,20 +307,9 @@ async function getActiveListings(marketId: string): Promise<number | null> {
   if (!AIRDNA_API_KEY) return null;
 
   try {
-    const response = await fetch(`${AIRDNA_BASE_URL}/market/${marketId}/active_listings`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRDNA_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filters: []
-      })
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
+    const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/active_listings`, 'POST', {
+      filters: []
+    }, { retries: 2, source: 'nurture-service' });
     return data.payload?.listing_count || data.payload?.count || null;
   } catch (error) {
     console.error('[NurtureService] Error fetching active listings:', error);

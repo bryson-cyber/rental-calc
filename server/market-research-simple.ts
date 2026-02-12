@@ -11,6 +11,7 @@
 
 import { router, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
+import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 import {
   searchMarkets,
   searchMarketsAPI,
@@ -743,53 +744,34 @@ export const marketResearchSimpleRouter = router({
       console.log(`[getSubmarkets] Getting submarkets for market ${marketId}${expectedState ? ` (expected state: ${expectedState})` : ''}`);
       
       try {
-        // Use the AirDNA /market/{market_id}/submarkets endpoint
-        const response = await fetch(
-          `https://api.airdna.co/api/enterprise/v2/market/${marketId}/submarkets`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              pagination: { page_size: 25, offset: 0 }
-            })
-          }
-        );
-        
-        const data = await response.json();
+        // Use the AirDNA /market/{market_id}/submarkets endpoint via rate limiter
+        const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
+          pagination: { page_size: 50, offset: 0 }
+        }, { retries: 2, source: 'market-research-getSubmarkets' });
         
         if (data.status?.type === 'error') {
-          console.error(`[getSubmarkets] API error:`, data.status.message);
+          console.error(`[getSubmarkets] API error:`, data.status?.message);
           return [];
         }
         
         const submarkets = data.payload?.submarkets || [];
         const totalCount = data.payload?.page_info?.total_count || 0;
         
-        // Fetch additional pages if needed
+        // Fetch additional pages if needed (use larger page size to reduce calls)
         let allSubmarkets = [...submarkets];
-        let offset = 25;
+        let offset = 50;
         
         while (offset < totalCount) {
-          const moreResponse = await fetch(
-            `https://api.airdna.co/api/enterprise/v2/market/${marketId}/submarkets`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                pagination: { page_size: 25, offset }
-              })
-            }
-          );
-          
-          const moreData = await moreResponse.json();
-          allSubmarkets.push(...(moreData.payload?.submarkets || []));
-          offset += 25;
+          try {
+            const moreData = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
+              pagination: { page_size: 50, offset }
+            }, { retries: 1, source: 'market-research-getSubmarkets-page' });
+            allSubmarkets.push(...(moreData.payload?.submarkets || []));
+          } catch (err) {
+            if (err instanceof AirDNARateLimitError) break; // Stop paginating if rate limited
+            console.warn(`[getSubmarkets] Failed to fetch page at offset ${offset}`);
+          }
+          offset += 50;
         }
         
         console.log(`[getSubmarkets] Found ${allSubmarkets.length} submarkets`);
@@ -829,36 +811,14 @@ export const marketResearchSimpleRouter = router({
           (a.name || '').localeCompare(b.name || '')
         );
         
-        // Fetch listing counts for each submarket in parallel (limit to top 50 to avoid too many API calls)
+        // Use metrics from submarket response instead of making 50 separate API calls
+        // The submarket response already includes listing_count in metrics
         const topSubmarkets = allSubmarkets.slice(0, 50);
-        const listingCounts = await Promise.all(
-          topSubmarkets.map(async (s: any) => {
-            try {
-              const listingsResponse = await fetch(
-                `https://api.airdna.co/api/enterprise/v2/submarket/${s.id}/listings`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    pagination: { page_size: 1, offset: 0 }
-                  })
-                }
-              );
-              const listingsData = await listingsResponse.json();
-              return listingsData.payload?.page_info?.total_count || 0;
-            } catch {
-              return 0;
-            }
-          })
-        );
         
-        return topSubmarkets.map((s: any, index: number) => ({
+        return topSubmarkets.map((s: any) => ({
           id: s.id,
           name: s.name,
-          listingCount: listingCounts[index],
+          listingCount: s.listing_count || s.metrics?.listing_count || s.metrics?.active_listings || 0,
           revenue: s.metrics?.revenue ? Math.round(s.metrics.revenue) : undefined,
           occupancy: s.metrics?.booked ? Math.round(s.metrics.booked * 100) : undefined
         }));
@@ -894,55 +854,47 @@ export const marketResearchSimpleRouter = router({
       }
       
       try {
-        // Fetch multiple pages in parallel to get a better sample (up to 200 listings)
-        const pageSize = 25;
-        const pagesToFetch = Math.min(8, Math.ceil((submarketListingCount || 200) / pageSize)); // Up to 8 pages (200 listings)
+        // Use rate-limited requests with larger page size to reduce API calls
+        // Max 3 pages (150 listings) instead of 8 pages (200 listings) — good enough for zip distribution
+        const pageSize = 50;
+        const maxPages = 3;
         
-        // Helper to fetch from submarket API
+        // Helper to fetch from submarket API via rate limiter
         const fetchSubmarketPage = async (offset: number) => {
-          const response = await fetch(
-            `https://api.airdna.co/api/enterprise/v2/submarket/${submarketId}/listings`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                pagination: { page_size: pageSize, offset }
-              })
-            }
-          );
-          return response.json();
+          return rateLimitedAirDNARequest<any>(`/submarket/${submarketId}/listings`, 'POST', {
+            pagination: { page_size: pageSize, offset }
+          }, { retries: 1, source: 'market-research-zipcodes' });
         };
         
         // Helper to fetch from market API (for when submarketId is actually a market)
         const fetchMarketPage = async (offset: number) => {
-          const response = await fetch(
-            `https://api.airdna.co/api/enterprise/v2/market/${submarketId}/listings`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.AIRDNA_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                pagination: { page_size: pageSize, offset }
-              })
-            }
-          );
-          return response.json();
+          return rateLimitedAirDNARequest<any>(`/market/${submarketId}/listings`, 'POST', {
+            pagination: { page_size: pageSize, offset }
+          }, { retries: 1, source: 'market-research-zipcodes-market' });
         };
         
         // Try submarket API first
-        let firstPageData = await fetchSubmarketPage(0);
-        let fetchPage = fetchSubmarketPage;
+        let firstPageData: any;
+        let fetchPage: (offset: number) => Promise<any>;
         let apiType = 'submarket';
+        
+        try {
+          firstPageData = await fetchSubmarketPage(0);
+        } catch (err) {
+          if (err instanceof AirDNARateLimitError) throw err;
+          firstPageData = { status: { type: 'error' } };
+        }
+        fetchPage = fetchSubmarketPage;
         
         // If submarket API fails, try market API with the same ID
         if (firstPageData.status?.type === 'error' || !firstPageData.payload?.listings) {
           console.log(`[getZipcodesInSubmarket] Submarket API failed, trying market API with same ID...`);
-          firstPageData = await fetchMarketPage(0);
+          try {
+            firstPageData = await fetchMarketPage(0);
+          } catch (err) {
+            if (err instanceof AirDNARateLimitError) throw err;
+            firstPageData = { status: { type: 'error' } };
+          }
           fetchPage = fetchMarketPage;
           apiType = 'market';
           
@@ -962,22 +914,23 @@ export const marketResearchSimpleRouter = router({
         const totalCount = firstPageData.payload?.page_info?.total_count || 0;
         const allListings = [...(firstPageData.payload?.listings || [])];
         
-        // Fetch additional pages in parallel if there are more listings
+        // Fetch additional pages sequentially (not parallel) to respect rate limits
+        // Max 2 more pages (3 total = 150 listings) — enough for zip distribution
         if (totalCount > pageSize) {
-          const additionalPages = Math.min(pagesToFetch - 1, Math.ceil(totalCount / pageSize) - 1);
+          const additionalPages = Math.min(maxPages - 1, Math.ceil(totalCount / pageSize) - 1);
           console.log(`[getZipcodesInSubmarket] Fetching ${additionalPages} additional pages for better accuracy...`);
           
-          const pagePromises = [];
           for (let i = 1; i <= additionalPages; i++) {
-            pagePromises.push(fetchPage(i * pageSize));
-          }
-          
-          const additionalData = await Promise.all(pagePromises);
-          additionalData.forEach(data => {
-            if (data.payload?.listings) {
-              allListings.push(...data.payload.listings);
+            try {
+              const pageData = await fetchPage(i * pageSize);
+              if (pageData.payload?.listings) {
+                allListings.push(...pageData.payload.listings);
+              }
+            } catch (err) {
+              if (err instanceof AirDNARateLimitError) break; // Stop if rate limited
+              console.warn(`[getZipcodesInSubmarket] Failed to fetch page ${i}`);
             }
-          });
+          }
         }
         
         console.log(`[getZipcodesInSubmarket] Sampled ${allListings.length} of ${totalCount} total listings`);

@@ -2,8 +2,7 @@ import { ENV } from "./_core/env";
 import { apiCache } from './cache';
 import { logApiCall, getDbCache, setDbCache, checkDailyLimit } from './api-logger';
 import { notifyOwner } from './_core/notification';
-
-const AIRDNA_API_BASE = "https://api.airdna.co/api/enterprise/v2";
+import { rateLimitedAirDNARequest, AirDNARateLimitError, AIRDNA_API_BASE } from './airdna-rate-limiter';
 
 // Helper to log cache hits to the API usage tracker
 function logCacheHit(endpoint: string, source?: string): void {
@@ -274,10 +273,14 @@ export interface ComprehensiveMarketReport {
 // API HELPER FUNCTIONS
 // ============================================
 
-// Daily API call limit (AirDNA allows 24,000/month = ~800/day)
-// We set a conservative limit to prevent overages
-const DAILY_AIRDNA_LIMIT = 700;
+// Daily API call limit - now enforced by centralized rate limiter
+const DAILY_AIRDNA_LIMIT = 600;
 
+/**
+ * Make an AirDNA API request through the centralized rate limiter.
+ * This function delegates to rateLimitedAirDNARequest which enforces
+ * both daily and per-minute rate limits.
+ */
 async function makeApiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" = "POST",
@@ -285,115 +288,10 @@ async function makeApiRequest<T>(
   retries: number = 3,
   source?: string
 ): Promise<T> {
-  const url = `${AIRDNA_API_BASE}${endpoint}`;
-  const startTime = Date.now();
-  
-  // Check daily rate limit - WARN ONLY, never block the app
-  try {
-    const limitStatus = await checkDailyLimit('airdna', DAILY_AIRDNA_LIMIT);
-    if (limitStatus.isOverLimit) {
-      console.warn(`[AirDNA] RATE LIMIT WARNING: ${limitStatus.currentCount}/${limitStatus.limit} calls today - continuing anyway`);
-      // Notify owner but DO NOT block the request
-      notifyOwner({
-        title: 'AirDNA Daily Limit Warning',
-        content: `AirDNA API has reached ${limitStatus.currentCount}/${limitStatus.limit} calls today. The app continues to work normally. Consider reviewing usage if this persists.`,
-      }).catch(() => {}); // fire-and-forget, don't block on notification
-    } else if (limitStatus.isNearLimit) {
-      console.warn(`[AirDNA] WARNING: Approaching daily limit (${limitStatus.currentCount}/${limitStatus.limit} - ${limitStatus.percentUsed.toFixed(1)}% used)`);
-    }
-  } catch (error) {
-    // Rate limit check failed - continue anyway (fail open)
-    console.warn('[AirDNA] Rate limit check failed, continuing anyway:', error);
-  }
-  
-  const options: RequestInit = {
-    method,
-    headers: {
-      "Authorization": `Bearer ${ENV.airdnaApiKey}`,
-      "Content-Type": "application/json",
-    },
-  };
-  
-  if (body && method === "POST") {
-    options.body = JSON.stringify(body);
-  }
-  
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        const statusCode = response.status;
-        
-        // Don't retry 4xx errors (client errors) except 429 (rate limit)
-        if (statusCode >= 400 && statusCode < 500 && statusCode !== 429) {
-          throw new Error(`AirDNA API error (${statusCode}): ${errorText}`);
-        }
-        
-        // Retry on 5xx errors (server errors) and 429 (rate limit)
-        if (attempt < retries - 1) {
-          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000; // Exponential backoff with jitter
-          console.log(`[AirDNA] Retrying ${endpoint} in ${Math.round(delay)}ms (attempt ${attempt + 1}/${retries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        // Log failed API call
-        logApiCall({
-          provider: 'airdna',
-          endpoint,
-          params: body,
-          statusCode,
-          success: false,
-          errorMessage: errorText,
-          responseTimeMs: Date.now() - startTime,
-          cacheHit: false,
-          source,
-        });
-        
-        throw new Error(`AirDNA API error (${statusCode}): ${errorText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Log successful API call
-      logApiCall({
-        provider: 'airdna',
-        endpoint,
-        params: body,
-        statusCode: response.status,
-        success: true,
-        responseTimeMs: Date.now() - startTime,
-        cacheHit: false,
-        source,
-      });
-      
-      return data;
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Check if it's a network error (ECONNRESET, ETIMEDOUT, etc.)
-      const isNetworkError = lastError.message.includes('ECONNRESET') ||
-                             lastError.message.includes('ETIMEDOUT') ||
-                             lastError.message.includes('ENOTFOUND') ||
-                             lastError.message.includes('socket') ||
-                             lastError.message.includes('network');
-      
-      if (isNetworkError && attempt < retries - 1) {
-        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-        console.log(`[AirDNA] Network error, retrying ${endpoint} in ${Math.round(delay)}ms (attempt ${attempt + 1}/${retries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      
-      throw lastError;
-    }
-  }
-  
-  throw lastError || new Error('Unknown error in makeApiRequest');
+  return rateLimitedAirDNARequest<T>(endpoint, method, body, {
+    retries,
+    source,
+  });
 }
 
 // ============================================

@@ -18,6 +18,7 @@ const createTask = async (_opts: any): Promise<any> => ({ id: '' });
 const getTask = async (_id: string): Promise<any> => ({ status: 'stopped', steps: [], output: '' });
 const stopSession = async (_id: string): Promise<void> => {};
 import { searchZillowListings, searchZillowListingsWithEnrichment, getZillowPropertyWithContacts, type ZillowProperty, type ZillowListingResponse, type ZillowAgentContact, type ZillowPropertyWithContacts } from './hasdata';
+import { rateLimitedAirDNARequest, AirDNARateLimitError } from './airdna-rate-limiter';
 
 // ============================================
 // CITY NAME NORMALIZATION
@@ -212,30 +213,26 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
     
     console.log(`[AirDNA] Original: ${address} -> Clean: ${cleanAddress}`);
 
-    const response = await fetch(
-      `https://api.airdna.co/api/enterprise/v2/rentalizer/estimate`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: cleanAddress,
-          bedrooms: bedrooms,
-          bathrooms: bathrooms,
-          accommodates: Math.max(bedrooms * 2, 2), // Estimate accommodates
-          currency: 'usd'
-        })
+    let data: any;
+    try {
+      data = await rateLimitedAirDNARequest('/rentalizer/estimate', 'POST', {
+        address: cleanAddress,
+        bedrooms: bedrooms,
+        bathrooms: bathrooms,
+        accommodates: Math.max(bedrooms * 2, 2),
+        currency: 'usd'
+      }, {
+        retries: 2,
+        source: 'opportunity-finder',
+      });
+    } catch (err: any) {
+      if (err?.isRateLimit) {
+        console.log(`[AirDNA] Rate limited for ${address}: ${err.message}`);
+        return null;
       }
-    );
-
-    if (!response.ok) {
-      console.log(`[AirDNA] Error for ${address}: ${response.status}`);
+      console.log(`[AirDNA] Error for ${address}: ${err}`);
       return null;
     }
-
-    const data = await response.json();
     console.log(`[AirDNA] Response status: ${data.status?.type}`);
     
     // Handle enterprise API response format - data is in payload.stats.future.summary

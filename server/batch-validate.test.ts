@@ -2,6 +2,40 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
+// Mock the rate limiter to bypass DB checks and use our mock fetch directly
+vi.mock('./airdna-rate-limiter', async (importOriginal) => {
+  return {
+    rateLimitedAirDNARequest: async (endpoint: string, method: string, body: any, options?: any) => {
+      // Use globalThis.fetch which is mocked in tests
+      const response = await globalThis.fetch(`https://api.airdna.co/api/enterprise/v2${endpoint}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) {
+        throw new Error(`AirDNA API error (${response.status})`);
+      }
+      return response.json();
+    },
+    AirDNARateLimitError: class AirDNARateLimitError extends Error {
+      isRateLimit = true;
+      type: string;
+      currentCount: number;
+      limit: number;
+      constructor(type: string, currentCount: number, limit: number) {
+        super(`Rate limit: ${type}`);
+        this.type = type;
+        this.currentCount = currentCount;
+        this.limit = limit;
+      }
+    },
+    AIRDNA_API_BASE: 'https://api.airdna.co/api/enterprise/v2',
+    DAILY_HARD_LIMIT: 600,
+    PER_MINUTE_LIMIT: 15,
+    getRateLimiterStats: () => ({ callsInLastMinute: 0, perMinuteLimit: 15, dailyHardLimit: 600, dailyWarnThreshold: 500, dailyLimitNotified: false }),
+  };
+});
+
 // Mock fetch globally so AirDNA API calls return predictable data
 const mockFetch = vi.fn();
 
