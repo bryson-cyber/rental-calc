@@ -1,0 +1,154 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "activity_logs"
+    },
+    {
+      "TABLE_NAME": "ai_advisor_cache"
+    },
+    {
+      "TABLE_NAME": "ai_conversations"
+    },
+    {
+      "TABLE_NAME": "ai_messages"
+    },
+    {
+      "TABLE_NAME": "analysis_reports"
+    },
+    {
+      "TABLE_NAME": "api_cache"
+    },
+    {
+      "TABLE_NAME": "api_call_logs"
+    },
+    {
+      "TABLE_NAME": "api_usage_summary"
+    },
+    {
+      "TABLE_NAME": "browser_use_settings"
+    },
+    {
+      "TABLE_NAME": "bug_reports"
+    },
+    {
+      "TABLE_NAME": "comment_votes"
+    },
+    {
+      "TABLE_NAME": "deal_alert_criteria"
+    },
+    {
+      "TABLE_NAME": "deal_alert_matches"
+    },
+    {
+      "TABLE_NAME": "deep_analysis"
+    },
+    {
+      "TABLE_NAME": "email_optins"
+    },
+    {
+      "TABLE_NAME": "favorite_listings"
+    },
+    {
+      "TABLE_NAME": "favorite_markets"
+    },
+    {
+      "TABLE_NAME": "favorite_properties"
+    },
+    {
+      "TABLE_NAME": "leads"
+    },
+    {
+      "TABLE_NAME": "link_clicks"
+    },
+    {
+      "TABLE_NAME": "market_alerts"
+    },
+    {
+      "TABLE_NAME": "market_evaluations"
+    },
+    {
+      "TABLE_NAME": "market_research_reports"
+    },
+    {
+      "TABLE_NAME": "newsletter_cities"
+    },
+    {
+      "TABLE_NAME": "newsletter_deals"
+    },
+    {
+      "TABLE_NAME": "newsletter_jobs"
+    },
+    {
+      "TABLE_NAME": "newsletter_preferences"
+    },
+    {
+      "TABLE_NAME": "newsletter_sends"
+    },
+    {
+      "TABLE_NAME": "notification_analytics"
+    },
+    {
+      "TABLE_NAME": "notifications"
+    },
+    {
+      "TABLE_NAME": "opportunity_searches"
+    },
+    {
+      "TABLE_NAME": "owner_notification_log"
+    },
+    {
+      "TABLE_NAME": "personalized_links"
+    },
+    {
+      "TABLE_NAME": "promotion_recipients"
+    },
+    {
+      "TABLE_NAME": "promotions"
+    },
+    {
+      "TABLE_NAME": "property_images"
+    },
+    {
+      "TABLE_NAME": "regulation_cache"
+    },
+    {
+      "TABLE_NAME": "regulation_comments"
+    },
+    {
+      "TABLE_NAME": "saved_regulations"
+    },
+    {
+      "TABLE_NAME": "saved_searches"
+    },
+    {
+      "TABLE_NAME": "shareable_regulation_reports"
+    },
+    {
+      "TABLE_NAME": "shared_reports"
+    },
+    {
+      "TABLE_NAME": "tool_usage_events"
+    },
+    {
+      "TABLE_NAME": "universal_shareable_reports"
+    },
+    {
+      "TABLE_NAME": "user_sessions"
+    },
+    {
+      "TABLE_NAME": "user_usage"
+    },
+    {
+      "TABLE_NAME": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nactivity_logs\nai_advisor_cache\nai_conversations\nai_messages\nanalysis_reports\napi_cache\napi_call_logs\napi_usage_summary\nbrowser_use_settings\nbug_reports\ncomment_votes\ndeal_alert_criteria\ndeal_alert_matches\ndeep_analysis\nemail_optins\nfavorite_listings\nfavorite_markets\nfavorite_properties\nleads\nlink_clicks\nmarket_alerts\nmarket_evaluations\nmarket_research_reports\nnewsletter_cities\nnewsletter_deals\nnewsletter_jobs\nnewsletter_preferences\nnewsletter_sends\nnotification_analytics\nnotifications\nopportunity_searches\nowner_notification_log\npersonalized_links\npromotion_recipients\npromotions\nproperty_images\nregulation_cache\nregulation_comments\nsaved_regulations\nsaved_searches\nshareable_regulation_reports\nshared_reports\ntool_usage_events\nuniversal_shareable_reports\nuser_sessions\nuser_usage\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

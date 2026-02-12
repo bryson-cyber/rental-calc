@@ -76,7 +76,7 @@
 
 /// <reference types="@types/google.maps" />
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { usePersistFn } from "@/hooks/usePersistFn";
 import { cn } from "@/lib/utils";
 
@@ -85,12 +85,14 @@ declare global {
     google?: typeof google;
     __googleMapsLoading?: Promise<void>;
     __googleMapsLoaded?: boolean;
-    __googleMapsLibrariesLoaded?: boolean;
+    __googleMapsInitCallback?: () => void;
   }
 }
 
 // Use the user's own Google Maps API key for full control
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
+// User's custom Map ID for AdvancedMarkerElement styling (from Google Cloud Console)
+const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID;
 
 // Fallback to Manus proxy if user's key is not available
 const FORGE_API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
@@ -102,43 +104,29 @@ const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 // Determine which loading strategy to use
 const useOwnKey = !!GOOGLE_MAPS_API_KEY;
 
+// Libraries to load - included in the script URL for reliability
+const LIBRARIES = "marker,places,geocoding,geometry,routes";
+
 export async function loadMapScript(): Promise<void> {
   // If already loaded, return immediately
   if (window.__googleMapsLoaded && window.google?.maps) {
-    // Ensure libraries are also loaded
-    await loadLibraries();
     return;
   }
   
   // If currently loading, return the existing promise
   if (window.__googleMapsLoading) {
     await window.__googleMapsLoading;
-    await loadLibraries();
     return;
   }
   
   // Start loading
-  window.__googleMapsLoading = new Promise((resolve, reject) => {
-    // Determine the script URL based on available keys
-    let scriptSrc: string;
-    
-    if (useOwnKey) {
-      // Load directly from Google's CDN with user's own API key
-      scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly`;
-      console.log("[Map] Loading Google Maps with your own API key");
-    } else {
-      // Fallback to Manus proxy
-      scriptSrc = `${MAPS_PROXY_URL}/maps/api/js?key=${FORGE_API_KEY}&v=weekly`;
-      console.log("[Map] Loading Google Maps via Manus proxy (fallback)");
-    }
-    
+  window.__googleMapsLoading = new Promise<void>((resolve, reject) => {
     // Check if script already exists in DOM
     const existingScript = document.querySelector(
       'script[src*="maps.googleapis.com/maps/api/js"], script[src*="maps/proxy/maps/api/js"]'
     );
     
     if (existingScript) {
-      // Script exists, wait for it to load
       if (window.google?.maps) {
         window.__googleMapsLoaded = true;
         resolve();
@@ -153,59 +141,108 @@ export async function loadMapScript(): Promise<void> {
       });
       return;
     }
+
+    // Set up the callback function that Google Maps will call when ready
+    const callbackName = '__googleMapsInitCallback';
+    (window as any)[callbackName] = () => {
+      window.__googleMapsLoaded = true;
+      console.log("[Map] Google Maps fully initialized via callback");
+      resolve();
+    };
     
-    // Load base script without libraries - we'll use importLibrary instead
+    // Determine the script URL - include libraries inline (matching the working diagnostic pattern)
+    let scriptSrc: string;
+    
+    if (useOwnKey) {
+      scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly&libraries=${LIBRARIES}&callback=${callbackName}`;
+      console.log("[Map] Loading Google Maps with your own API key");
+    } else {
+      scriptSrc = `${MAPS_PROXY_URL}/maps/api/js?key=${FORGE_API_KEY}&v=weekly&libraries=${LIBRARIES}&callback=${callbackName}`;
+      console.log("[Map] Loading Google Maps via Manus proxy (fallback)");
+    }
+    
     const script = document.createElement("script");
     script.src = scriptSrc;
     script.async = true;
-    script.crossOrigin = "anonymous";
-    script.onload = () => {
-      window.__googleMapsLoaded = true;
-      resolve();
-    };
+    script.defer = true;
+    // Do NOT set crossOrigin - it can cause CORS issues with Google's CDN
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
+      delete (window as any)[callbackName];
       reject(new Error('Failed to load Google Maps script'));
     };
     document.head.appendChild(script);
   });
   
   await window.__googleMapsLoading;
-  await loadLibraries();
 }
 
-// Load required libraries using the dynamic importLibrary API
-async function loadLibraries(): Promise<void> {
-  if (window.__googleMapsLibrariesLoaded) {
-    return;
-  }
-  
-  if (!window.google?.maps) {
-    console.error("Google Maps not available for library loading");
-    return;
-  }
-  
-  try {
-    // Load libraries in parallel using importLibrary
-    // This is the recommended approach for Google Maps JS API v3
-    const librariesToLoad = ["marker", "places", "geocoding", "geometry", "routes"];
-    
-    await Promise.all(
-      librariesToLoad.map(async (lib) => {
-        try {
-          await google.maps.importLibrary(lib);
-          console.log(`[Map] Loaded library: ${lib}`);
-        } catch (err) {
-          console.warn(`[Map] Failed to load library ${lib}:`, err);
-        }
-      })
-    );
-    
-    window.__googleMapsLibrariesLoaded = true;
-    console.log("[Map] All libraries loaded successfully");
-  } catch (err) {
-    console.error("[Map] Error loading libraries:", err);
-  }
+/**
+ * Creates a custom "Recenter" control button for the map.
+ * When clicked, it pans/zooms the map back to the provided center & zoom.
+ */
+function createRecenterControl(
+  map: google.maps.Map,
+  homeCenter: google.maps.LatLngLiteral,
+  homeZoom: number,
+  homeBounds?: google.maps.LatLngBounds | null
+): HTMLElement {
+  const controlDiv = document.createElement("div");
+  controlDiv.style.cssText = `
+    margin: 10px;
+    cursor: pointer;
+  `;
+
+  const controlButton = document.createElement("button");
+  controlButton.type = "button";
+  controlButton.title = "Recenter map";
+  controlButton.setAttribute("aria-label", "Recenter map");
+  controlButton.style.cssText = `
+    background: white;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0F172A;
+    transition: background 0.2s, box-shadow 0.2s;
+    outline: none;
+  `;
+  controlButton.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C9A962" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span>Recenter</span>
+  `;
+
+  controlButton.addEventListener("mouseenter", () => {
+    controlButton.style.background = "#F8FAFC";
+    controlButton.style.boxShadow = "0 3px 8px rgba(0,0,0,0.35)";
+  });
+  controlButton.addEventListener("mouseleave", () => {
+    controlButton.style.background = "white";
+    controlButton.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+  });
+
+  controlButton.addEventListener("click", () => {
+    if (homeBounds) {
+      map.fitBounds(homeBounds, { top: 60, right: 60, bottom: 60, left: 60 });
+    } else {
+      map.panTo(homeCenter);
+      map.setZoom(homeZoom);
+    }
+  });
+
+  controlDiv.appendChild(controlButton);
+  return controlDiv;
 }
 
 interface MapViewProps {
@@ -213,6 +250,10 @@ interface MapViewProps {
   initialCenter?: google.maps.LatLngLiteral;
   initialZoom?: number;
   onMapReady?: (map: google.maps.Map) => void;
+  /** If true, show a recenter button. Defaults to true. */
+  showRecenter?: boolean;
+  /** Optional bounds to fit when recenter is clicked (overrides center+zoom) */
+  recenterBounds?: google.maps.LatLngBounds | null;
 }
 
 export function MapView({
@@ -220,10 +261,17 @@ export function MapView({
   initialCenter = { lat: 37.7749, lng: -122.4194 },
   initialZoom = 12,
   onMapReady,
+  showRecenter = true,
+  recenterBounds,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const initialized = useRef(false);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const recenterBoundsRef = useRef(recenterBounds);
+
+  // Keep bounds ref in sync for the recenter button
+  recenterBoundsRef.current = recenterBounds;
 
   const init = usePersistFn(async () => {
     // Prevent double initialization
@@ -253,10 +301,10 @@ export function MapView({
     // Detect mobile device
     const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
     
-    map.current = new window.google.maps.Map(mapContainer.current, {
+    // Build map options - use the real Map ID from Google Cloud Console
+    const mapOptions: google.maps.MapOptions = {
       zoom: initialZoom,
       center: initialCenter,
-      // Map type control - smaller on mobile
       mapTypeControl: true,
       mapTypeControlOptions: {
         style: isMobile 
@@ -264,43 +312,143 @@ export function MapView({
           : google.maps.MapTypeControlStyle.DEFAULT,
         position: google.maps.ControlPosition.TOP_RIGHT,
       },
-      // Fullscreen control - essential for mobile
       fullscreenControl: true,
       fullscreenControlOptions: {
         position: google.maps.ControlPosition.RIGHT_TOP,
       },
-      // Zoom control - larger buttons on mobile
       zoomControl: true,
       zoomControlOptions: {
         position: isMobile 
           ? google.maps.ControlPosition.RIGHT_BOTTOM 
           : google.maps.ControlPosition.RIGHT_CENTER,
       },
-      // Street view control
-      streetViewControl: !isMobile, // Hide on mobile to reduce clutter
+      streetViewControl: !isMobile,
       streetViewControlOptions: {
         position: google.maps.ControlPosition.RIGHT_BOTTOM,
       },
-      // Mobile-friendly gesture handling
-      gestureHandling: isMobile ? 'greedy' : 'auto', // 'greedy' allows single-finger pan on mobile
-      // Disable scroll zoom on mobile when embedded (prevents accidental zoom while scrolling page)
+      gestureHandling: isMobile ? 'greedy' : 'auto',
       scrollwheel: !isMobile,
-      // Map ID for advanced markers - use user's configured Map ID if available
-      // Without a mapId, AdvancedMarkerElement still works but with some limitations
-      // To create a Map ID: Google Cloud Console > Maps > Map Management > Create Map ID
-      ...(import.meta.env.VITE_GOOGLE_MAP_ID ? { mapId: import.meta.env.VITE_GOOGLE_MAP_ID } : {}),
-      // Additional mobile optimizations
-      clickableIcons: !isMobile, // Disable POI clicks on mobile to prevent accidental taps
-      disableDoubleClickZoom: false, // Keep double-tap zoom
-      keyboardShortcuts: !isMobile, // Disable keyboard shortcuts on mobile
+      // Map ID for vector maps and AdvancedMarkerElement
+      ...(GOOGLE_MAP_ID ? { mapId: GOOGLE_MAP_ID } : {}),
+      clickableIcons: !isMobile,
+      disableDoubleClickZoom: false,
+      keyboardShortcuts: !isMobile,
+    };
+    
+    console.log("[Map] Creating map with mapId:", GOOGLE_MAP_ID || "(none)", "center:", initialCenter, "container size:", mapContainer.current.offsetWidth, "x", mapContainer.current.offsetHeight);
+    
+    const mapInstance = new window.google.maps.Map(mapContainer.current, mapOptions);
+    map.current = mapInstance;
+    
+    // Add recenter button
+    if (showRecenter) {
+      const recenterControl = createRecenterControl(
+        mapInstance,
+        initialCenter,
+        initialZoom,
+        recenterBoundsRef.current
+      );
+      mapInstance.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(recenterControl);
+    }
+    
+    // Track whether tiles have loaded successfully
+    let tilesLoaded = false;
+    
+    const tilesLoadedListener = mapInstance.addListener('tilesloaded', () => {
+      if (!tilesLoaded) {
+        tilesLoaded = true;
+        console.log("[Map] Tiles loaded successfully");
+      }
     });
+    
+    // Periodic resize to handle maps in tabs/accordions/lazy containers
+    let resizeCount = 0;
+    const maxResizes = 40;
+    
+    const resizeInterval = setInterval(() => {
+      resizeCount++;
+      
+      if (tilesLoaded || resizeCount >= maxResizes) {
+        clearInterval(resizeInterval);
+        return;
+      }
+      
+      google.maps.event.trigger(mapInstance, 'resize');
+      
+      if (resizeCount <= 5) {
+        const center = mapInstance.getCenter();
+        if (center) {
+          mapInstance.setCenter(center);
+        }
+      }
+    }, 500);
+    
+    // Immediate resize after short delay
+    const immediateTimer = setTimeout(() => {
+      google.maps.event.trigger(mapInstance, 'resize');
+      mapInstance.setCenter(initialCenter);
+    }, 100);
+    
+    // Delayed resize for maps that become visible later
+    const delayedTimer = setTimeout(() => {
+      if (!tilesLoaded) {
+        google.maps.event.trigger(mapInstance, 'resize');
+        const center = mapInstance.getCenter();
+        if (center) {
+          mapInstance.setCenter(center);
+        }
+      }
+    }, 1000);
+    
+    // IntersectionObserver: trigger resize when map container scrolls into view
+    // This is the key fix for maps created off-screen (e.g., in tabs or below the fold)
+    let visibilityObserver: IntersectionObserver | null = null;
+    if (mapContainer.current) {
+      visibilityObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && !tilesLoaded) {
+            console.log("[Map] Container became visible, triggering resize");
+            google.maps.event.trigger(mapInstance, 'resize');
+            mapInstance.setCenter(initialCenter);
+            mapInstance.setZoom(initialZoom);
+            // Try again after a short delay for good measure
+            setTimeout(() => {
+              if (!tilesLoaded) {
+                google.maps.event.trigger(mapInstance, 'resize');
+                mapInstance.setCenter(initialCenter);
+              }
+            }, 300);
+          }
+          if (tilesLoaded && visibilityObserver) {
+            visibilityObserver.disconnect();
+          }
+        },
+        { threshold: 0.1 } // Trigger when 10% visible
+      );
+      visibilityObserver.observe(mapContainer.current);
+    }
+    
+    cleanupRef.current = () => {
+      clearInterval(resizeInterval);
+      clearTimeout(immediateTimer);
+      clearTimeout(delayedTimer);
+      google.maps.event.removeListener(tilesLoadedListener);
+      if (visibilityObserver) visibilityObserver.disconnect();
+    };
+    
     if (onMapReady) {
-      onMapReady(map.current);
+      onMapReady(mapInstance);
     }
   });
 
   useEffect(() => {
     init();
+    
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+      }
+    };
   }, [init]);
 
   return (
@@ -308,9 +456,7 @@ export function MapView({
       ref={mapContainer} 
       className={cn(
         "w-full",
-        // Responsive height: smaller on mobile, larger on desktop
         "h-[350px] sm:h-[400px] md:h-[500px] lg:h-[600px]",
-        // Touch-friendly: ensure map is easily tappable
         "touch-manipulation",
         className
       )} 

@@ -55,7 +55,10 @@ import {
   Loader2,
   HelpCircle,
   Info,
-  ListFilter
+  ListFilter,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -321,6 +324,34 @@ const formatMonth = (dateStr: string) => {
   return dateStr.slice(0, 3);
 };
 
+/** Calculate straight-line distance between two coordinates in meters (Haversine formula) */
+const haversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371000; // Earth's radius in meters
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+/** Get distance in miles between subject property and a comp */
+const getCompDistanceMiles = (
+  comp: { distance_meters?: number; latitude?: number; longitude?: number },
+  subjectLat?: number,
+  subjectLng?: number
+): number | null => {
+  // Prefer AirDNA's distance_meters if available and non-zero
+  if (comp.distance_meters && comp.distance_meters > 0) {
+    return comp.distance_meters / 1609.34;
+  }
+  // Fallback: calculate from coordinates
+  if (comp.latitude && comp.longitude && subjectLat && subjectLng) {
+    const meters = haversineDistance(subjectLat, subjectLng, comp.latitude, comp.longitude);
+    return meters / 1609.34;
+  }
+  return null;
+};
+
 // ============================================================
 // SUB-COMPONENTS (Light Theme)
 // ============================================================
@@ -339,6 +370,53 @@ function InfoTip({ text, className }: { text: string; className?: string }) {
         {text}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+// ============================================================
+// SORT TYPES & HELPERS
+// ============================================================
+
+type CompSortField = 'revenue' | 'adr' | 'occupancy' | 'rating' | 'reviews' | 'distance';
+type SortDirection = 'asc' | 'desc';
+
+/** Clickable column header with sort direction indicator */
+function SortableHeader({ 
+  label, 
+  field, 
+  activeField, 
+  direction, 
+  onSort, 
+  tooltip,
+  className = ''
+}: { 
+  label: string; 
+  field: CompSortField; 
+  activeField: CompSortField; 
+  direction: SortDirection; 
+  onSort: (field: CompSortField) => void;
+  tooltip: string;
+  className?: string;
+}) {
+  const isActive = field === activeField;
+  return (
+    <th className={`text-right p-4 font-medium ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="inline-flex items-center gap-1 hover:text-white/80 transition-colors group cursor-pointer"
+      >
+        {label}
+        <span className={`transition-opacity ${isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'}`}>
+          {isActive ? (
+            direction === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
+          ) : (
+            <ArrowUpDown className="w-3 h-3" />
+          )}
+        </span>
+        <InfoTip text={tooltip} className="text-white/70 hover:text-white" />
+      </button>
+    </th>
   );
 }
 
@@ -490,6 +568,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   const [showAllComps, setShowAllComps] = useState(false);
   const [selectedCompIds, setSelectedCompIds] = useState<Set<string>>(new Set());
   const [compSelectionInitialized, setCompSelectionInitialized] = useState(false);
+  const [compSortField, setCompSortField] = useState<CompSortField>('revenue');
+  const [compSortDir, setCompSortDir] = useState<SortDirection>('desc');
 
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
@@ -676,6 +756,39 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     if (selectedCompIds.size === 0 && compSelectionInitialized) return [];
     return displayComps.filter((c, i) => selectedCompIds.has(getCompKey(c, i)));
   }, [displayComps, selectedCompIds, compSelectionInitialized]);
+
+  // Sorted display comps for the table
+  const sortedDisplayComps = useMemo(() => {
+    const sorted = [...displayComps];
+    sorted.sort((a, b) => {
+      let aVal: number, bVal: number;
+      switch (compSortField) {
+        case 'revenue': aVal = a.annual_revenue || 0; bVal = b.annual_revenue || 0; break;
+        case 'adr': aVal = a.adr || 0; bVal = b.adr || 0; break;
+        case 'occupancy': aVal = a.occupancy || 0; bVal = b.occupancy || 0; break;
+        case 'rating': aVal = a.rating || 0; bVal = b.rating || 0; break;
+        case 'reviews': aVal = a.reviews || 0; bVal = b.reviews || 0; break;
+        case 'distance': {
+          aVal = getCompDistanceMiles(a, property.latitude, property.longitude) ?? 9999;
+          bVal = getCompDistanceMiles(b, property.latitude, property.longitude) ?? 9999;
+          break;
+        }
+        default: aVal = a.annual_revenue || 0; bVal = b.annual_revenue || 0;
+      }
+      return compSortDir === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+    return sorted;
+  }, [displayComps, compSortField, compSortDir, property.latitude, property.longitude]);
+
+  const handleCompSort = (field: CompSortField) => {
+    if (field === compSortField) {
+      setCompSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+      setCompSortField(field);
+      // Default direction: desc for most fields, asc for distance
+      setCompSortDir(field === 'distance' ? 'asc' : 'desc');
+    }
+  };
 
   const toggleComp = (compKey: string) => {
     setSelectedCompIds(prev => {
@@ -975,13 +1088,46 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     <MapView
                       key="property-map"
                       className="w-full h-full sm:h-full md:h-full lg:h-full"
+                      initialCenter={{ lat: property.latitude!, lng: property.longitude! }}
+                      initialZoom={15}
+                      showRecenter={true}
                       onMapReady={(map) => {
-                        map.setCenter({ lat: property.latitude!, lng: property.longitude! });
-                        map.setZoom(15);
+                        // Create a custom marker for the subject property
+                        const markerEl = document.createElement('div');
+                        markerEl.innerHTML = `
+                          <div style="position:relative;">
+                            <div style="
+                              background:linear-gradient(135deg, #F59E0B, #D97706);
+                              border:3px solid white;
+                              border-radius:50%;
+                              width:42px;
+                              height:42px;
+                              display:flex;
+                              align-items:center;
+                              justify-content:center;
+                              box-shadow:0 0 0 3px rgba(245,158,11,0.3), 0 4px 12px rgba(0,0,0,0.3);
+                            ">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22" fill="rgba(255,255,255,0.3)"/>
+                              </svg>
+                            </div>
+                            <div style="
+                              width:0;
+                              height:0;
+                              border-left:7px solid transparent;
+                              border-right:7px solid transparent;
+                              border-top:7px solid #D97706;
+                              margin:0 auto;
+                              margin-top:-1px;
+                            "></div>
+                          </div>
+                        `;
                         new google.maps.marker.AdvancedMarkerElement({
                           map,
                           position: { lat: property.latitude!, lng: property.longitude! },
                           title: property.address,
+                          content: markerEl,
                         });
                       }}
                     />
@@ -1488,15 +1634,16 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     </th>
                     <th className="text-left p-4 font-medium">#</th>
                     <th className="text-left p-4 font-medium">Property</th>
-                    <th className="text-right p-4 font-medium">Revenue <InfoTip text="Annual revenue this listing earned in the last 12 months from Airbnb/VRBO bookings." className="text-white/70 hover:text-white" /></th>
-                    <th className="text-right p-4 font-medium">ADR <InfoTip text="Average Daily Rate — the average price per night this listing charges." className="text-white/70 hover:text-white" /></th>
-                    <th className="text-right p-4 font-medium">Occupancy <InfoTip text="What percentage of available nights this listing was booked over the last 12 months." className="text-white/70 hover:text-white" /></th>
-                    <th className="text-right p-4 font-medium">Rating <InfoTip text="Guest rating on a 1-5 scale. Higher ratings attract more bookings and allow higher pricing." className="text-white/70 hover:text-white" /></th>
-                    <th className="text-right p-4 font-medium">Reviews <InfoTip text="Total number of guest reviews. More reviews = more established listing with booking history." className="text-white/70 hover:text-white" /></th>
+                    <SortableHeader label="Revenue" field="revenue" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Annual revenue this listing earned in the last 12 months from Airbnb/VRBO bookings. Click to sort." />
+                    <SortableHeader label="ADR" field="adr" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Average Daily Rate — the average price per night this listing charges. Click to sort." />
+                    <SortableHeader label="Occupancy" field="occupancy" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="What percentage of available nights this listing was booked over the last 12 months. Click to sort." />
+                    <SortableHeader label="Rating" field="rating" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Guest rating on a 1-5 scale. Higher ratings attract more bookings and allow higher pricing. Click to sort." />
+                    <SortableHeader label="Reviews" field="reviews" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Total number of guest reviews. More reviews = more established listing with booking history. Click to sort." />
+                    <SortableHeader label="Distance" field="distance" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Straight-line distance from the subject property to this comparable listing. Click to sort." />
                   </tr>
                 </thead>
                 <tbody>
-                  {(showAllComps ? displayComps : displayComps.slice(0, 10)).map((comp, i) => (
+                  {(showAllComps ? sortedDisplayComps : sortedDisplayComps.slice(0, 10)).map((comp, i) => (
                     <tr key={comp.id || i} className={`border-b border-[#e2e8f0] transition-colors ${selectedCompIds.has(getCompKey(comp, i)) ? 'hover:bg-[#C9A962]/5' : 'opacity-40 hover:opacity-60 bg-[#f8fafc]'}`}>
                       <td className="p-4">
                         <Checkbox
@@ -1528,7 +1675,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                             </p>
                             <p className="text-xs text-[#94a3b8] mt-0.5">
                               {comp.bedrooms}BR / {comp.bathrooms}BA
-                              {comp.distance_meters && ` · ${(comp.distance_meters / 1609.34).toFixed(1)} mi away`}
+                              {(() => {
+                                const d = getCompDistanceMiles(comp, property.latitude, property.longitude);
+                                return d !== null ? ` · ${d.toFixed(1)} mi away` : '';
+                              })()}
                             </p>
                             {comp.airbnb_url && (
                               <a
@@ -1556,6 +1706,20 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                         ) : '—'}
                       </td>
                       <td className="p-4 text-right text-[#64748b]">{comp.reviews || '—'}</td>
+                      <td className="p-4 text-right">
+                        {(() => {
+                          const distMiles = getCompDistanceMiles(comp, property.latitude, property.longitude);
+                          if (distMiles !== null) {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full border border-blue-200/50">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                                {distMiles.toFixed(1)} mi
+                              </span>
+                            );
+                          }
+                          return '\u2014';
+                        })()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -10490,3 +10490,29 @@ Results:
 - [x] Wrote 8 vitest tests for purchase normalization (all pass)
 - [x] All 791 tests pass, 0 TypeScript errors
 - [ ] Provide Google Maps API configuration instructions to user
+
+
+## Map Debug (Feb 12, 2026)
+- [ ] BUG: Competition comp map not rendering tiles (gray/blank area)
+- [ ] BUG: Property Overview map sometimes shows gray/blank tiles
+- [ ] Set VITE_GOOGLE_MAP_ID to user's actual Map ID (21716a29ef7ad3055240c910)
+- [ ] Verify both maps render correctly with user's own API key
+
+
+## Competition Map & Cards Upgrade (Feb 12, 2026)
+- [x] Add property images to comp cards (picture preview of listing)
+- [x] Show driving distance on marker hover/click info windows
+- [x] Upgrade map markers with premium custom styling (revenue tiers, ratings)
+- [x] Make comp map feel premium and data-rich for sophisticated investors
+- [x] BUG FIX: Google Maps tiles now working with user's own API key
+
+
+## Map Fixes & Comp Table Distance (Feb 12, 2026)
+- [x] BUG: Property Overview map centering on San Francisco instead of subject property
+- [x] Add recenter/home button to both maps (Property Overview + Competition)
+- [x] Add distance column to comp table showing distance from subject property
+
+## Comp Table Sort Options (Feb 12, 2026)
+- [x] Add clickable sort headers to comp table columns (Revenue, ADR, Occupancy, Rating, Reviews, Distance)
+- [x] Add sort direction indicators (ascending/descending arrows)
+- [x] Maintain sort state when toggling comps on/off
