@@ -10529,3 +10529,10 @@ Results:
 - [x] Map-table sync: clicking table row highlights corresponding map marker and opens info window
 - [x] Map-table sync: visual highlighting styles for selected row and marker
 - [x] Added 11 comprehensive tests for map-table sync feature
+## Report Section Tooltips (Feb 12, 2026)
+- [x] Audit all report sections for missing tooltips
+- [x] Add beginner-friendly tooltips to all h3 sub-section headings (20+ added)
+- [x] Add tooltips to regulatory quick facts (Permit Required, Primary Residence, Max Nights, Occupancy Tax)
+- [x] Add tooltips to remaining DataRows (Monthly Profit, Months to Recoup, Mortgage Annual, Annual/Monthly Cash Flow)
+- [x] Ensure consistent tooltip styling across the entire report
+- [x] All 821 tests passing, TypeScript compilation clean
