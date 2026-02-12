@@ -1,14 +1,18 @@
 /**
  * Universal Shareable Report Viewer
- * Displays any type of shareable report based on the report type
+ * 
+ * For "validator" reports, renders the EXACT same FullPropertyReport component
+ * that authenticated users see. For other report types, renders a simplified view.
  */
 
 import { useParams, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import FullPropertyReport from '@/components/FullPropertyReport';
+import type { FullReportData } from '@/components/FullPropertyReport';
 import {
   Loader2,
   ArrowLeft,
@@ -34,12 +38,297 @@ import {
   Eye,
 } from 'lucide-react';
 
-// Coach Inayah Brand Colors
-// Primary: Deep Navy #0F172A
-// Accent: Warm Gold #C9A962
-// Background: Warm off-white
+/**
+ * Transform validator report data (from universal_shareable_reports) into
+ * the FullReportData shape that FullPropertyReport expects.
+ */
+function transformValidatorToFullReportData(
+  reportData: any,
+  dbRecord: any
+): FullReportData {
+  // Parse address into components
+  const fullAddress = dbRecord.address || '';
+  const addressParts = fullAddress.split(',').map((s: string) => s.trim());
+  const streetAddress = addressParts[0] || fullAddress;
+  let city = dbRecord.city || '';
+  let state = dbRecord.state || '';
+  let zipCode = '';
 
-// Report type configurations - all use consistent Coach Inayah branding
+  // Try to parse city/state/zip from address if not in DB
+  if (!city && addressParts.length >= 2) {
+    city = addressParts[1] || '';
+  }
+  if (!state && addressParts.length >= 3) {
+    const stateZip = addressParts[2] || '';
+    const stateZipParts = stateZip.split(' ').filter(Boolean);
+    state = stateZipParts[0] || '';
+    zipCode = stateZipParts[1] || '';
+  }
+
+  const bedrooms = dbRecord.bedrooms || 2;
+  const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
+  const monthlyRent = dbRecord.monthlyRent || 0;
+
+  // Revenue mapping
+  const revenue = reportData.revenue || {};
+  const metrics = reportData.metrics || {};
+  const projected = revenue.projected || 0;
+  const occupancy = metrics.occupancy || 0;
+  const adr = metrics.adr || 0;
+
+  // Build property info
+  const property = {
+    address: fullAddress,
+    city,
+    state,
+    zipCode,
+    bedrooms,
+    bathrooms,
+    accommodates: bedrooms * 2, // estimate
+    latitude: dbRecord.latitude ? parseFloat(dbRecord.latitude) : undefined,
+    longitude: dbRecord.longitude ? parseFloat(dbRecord.longitude) : undefined,
+  };
+
+  // Build revenue estimate
+  const revenue_estimate = {
+    annual: projected,
+    monthly: Math.round(projected / 12),
+    nightly: adr,
+    occupancy: occupancy > 1 ? occupancy / 100 : occupancy,
+    range: revenue.low && revenue.high ? { low: revenue.low, high: revenue.high } : undefined,
+  };
+
+  // Build monthly forecast
+  const monthly_forecast = (reportData.forecast || []).map((f: any) => ({
+    month: f.month,
+    revenue: f.revenue,
+    occupancy: f.occupancy > 1 ? f.occupancy : f.occupancy * 100,
+    adr: f.adr,
+  }));
+
+  // Build comps - transform from validator format to FullPropertyReport format
+  const comps = (reportData.comparables || []).map((c: any) => ({
+    id: c.id || String(Math.random()),
+    title: c.title || 'Comparable Property',
+    airbnb_url: c.airbnbUrl,
+    image_url: c.imageUrl || (c.images && c.images[0]) || undefined,
+    bedrooms: c.bedrooms || bedrooms,
+    bathrooms: c.bathrooms || bathrooms,
+    accommodates: c.accommodates,
+    rating: c.rating ?? null,
+    reviews: c.reviews || 0,
+    annual_revenue: c.revenue || 0,
+    adr: c.adr || 0,
+    occupancy: c.occupancy || 0,
+    latitude: c.latitude,
+    longitude: c.longitude,
+    airbnb_listing_id: c.id,
+  }));
+
+  // Build bedroom performance
+  const bedroom_performance = (reportData.bedroomPerformance || []).map((bp: any) => ({
+    bedrooms: bp.bedrooms,
+    occupancy: bp.occupancy,
+    adr: bp.adr,
+    revenue: bp.revenue,
+    listing_count: bp.listing_count,
+  }));
+
+  // Build revenue percentiles
+  const revenue_percentiles = reportData.revenuePercentiles || undefined;
+
+  // Build market data from rawMarketData or marketInsights
+  let market_data = undefined;
+  if (reportData.rawMarketData) {
+    const raw = reportData.rawMarketData;
+    market_data = {
+      name: raw.name || 'Local Market',
+      metrics: {
+        occupancy: raw.metrics?.occupancy || 0,
+        adr: raw.metrics?.adr || 0,
+        revenue: raw.metrics?.revenue || 0,
+        revpar: raw.metrics?.revpar,
+        active_listings: raw.metrics?.active_listings || raw.listing_count || 0,
+        market_score: raw.metrics?.market_score,
+      },
+      listing_count: raw.listing_count || raw.metrics?.active_listings || 0,
+    };
+  }
+
+  // Build historical data
+  let historical_data = undefined;
+  if (reportData.historicalData) {
+    historical_data = {
+      summary: reportData.historicalData.summary || {},
+      months: reportData.historicalData.months || [],
+    };
+  }
+
+  // Build rental arbitrage scenario
+  let rental_arbitrage = undefined;
+  if (monthlyRent > 0) {
+    rental_arbitrage = {
+      monthlyRent,
+      startupCosts: 5000, // reasonable default
+    };
+  }
+
+  return {
+    property,
+    revenue_estimate,
+    monthly_forecast,
+    comps,
+    same_bedroom_comps: comps.filter((c: any) => c.bedrooms === bedrooms),
+    market_data,
+    bedroom_performance,
+    revenue_percentiles,
+    rental_arbitrage,
+    historical_data,
+    generated_at: dbRecord.createdAt ? new Date(dbRecord.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+/**
+ * Transform revenue report data (from universal_shareable_reports) into
+ * the FullReportData shape that FullPropertyReport expects.
+ * Revenue reports use: estimates, comps, market, monthly_forecast
+ */
+function transformRevenueToFullReportData(
+  reportData: any,
+  dbRecord: any
+): FullReportData {
+  // Parse address into components
+  const fullAddress = dbRecord.address || '';
+  const addressParts = fullAddress.split(',').map((s: string) => s.trim());
+  let city = dbRecord.city || '';
+  let state = dbRecord.state || '';
+  let zipCode = '';
+
+  if (!city && addressParts.length >= 2) {
+    city = addressParts[1] || '';
+  }
+  if (!state && addressParts.length >= 3) {
+    const stateZip = addressParts[2] || '';
+    const stateZipParts = stateZip.split(' ').filter(Boolean);
+    state = stateZipParts[0] || '';
+    zipCode = stateZipParts[1] || '';
+  }
+
+  const bedrooms = dbRecord.bedrooms || 2;
+  const bathrooms = parseFloat(dbRecord.bathrooms) || 1;
+
+  // Revenue estimates mapping
+  const est = reportData.estimates || {};
+  const annualRevenue = est.annual_revenue || 0;
+  const adr = est.average_daily_rate || 0;
+  const occupancy = est.occupancy_rate || 0;
+
+  const property = {
+    address: fullAddress,
+    city,
+    state,
+    zipCode,
+    bedrooms,
+    bathrooms,
+    accommodates: bedrooms * 2,
+    latitude: dbRecord.latitude ? parseFloat(dbRecord.latitude) : undefined,
+    longitude: dbRecord.longitude ? parseFloat(dbRecord.longitude) : undefined,
+  };
+
+  const revenue_estimate = {
+    annual: annualRevenue,
+    monthly: Math.round(annualRevenue / 12),
+    nightly: adr,
+    occupancy: occupancy > 1 ? occupancy / 100 : occupancy,
+    range: est.annual_revenue_low && est.annual_revenue_high
+      ? { low: est.annual_revenue_low, high: est.annual_revenue_high }
+      : undefined,
+  };
+
+  // Monthly forecast
+  const monthly_forecast = (reportData.monthly_forecast || []).map((f: any) => ({
+    month: f.month,
+    revenue: f.revenue,
+    occupancy: f.occupancy != null ? (f.occupancy > 1 ? f.occupancy : f.occupancy * 100) : undefined,
+    adr: f.adr,
+  }));
+
+  // Comps - revenue reports already use the FullPropertyReport field names
+  const comps = (reportData.comps || []).map((c: any) => ({
+    id: c.id || String(Math.random()),
+    title: c.title || 'Comparable Property',
+    airbnb_url: c.airbnb_url || c.airbnbUrl,
+    image_url: c.image_url || c.imageUrl || (c.images && c.images[0]) || undefined,
+    bedrooms: c.bedrooms || bedrooms,
+    bathrooms: c.bathrooms || bathrooms,
+    accommodates: c.accommodates,
+    property_type: c.property_type,
+    rating: c.rating ?? null,
+    reviews: c.reviews || 0,
+    annual_revenue: c.annual_revenue || c.revenue || 0,
+    adr: c.adr || 0,
+    occupancy: c.occupancy || 0,
+    superhost: c.superhost,
+    distance_meters: c.distance_meters,
+    latitude: c.latitude,
+    longitude: c.longitude,
+    airbnb_listing_id: c.airbnb_listing_id || c.id,
+  }));
+
+  // Market data
+  let market_data = undefined;
+  if (reportData.market) {
+    const mkt = reportData.market;
+    market_data = {
+      name: mkt.name || 'Local Market',
+      metrics: {
+        occupancy: mkt.metrics?.occupancy || 0,
+        adr: mkt.metrics?.adr || 0,
+        revenue: mkt.metrics?.revenue || 0,
+        revpar: mkt.metrics?.revpar,
+        active_listings: mkt.metrics?.active_listings || mkt.listing_count || 0,
+        market_score: mkt.metrics?.market_score,
+      },
+      listing_count: mkt.listing_count || mkt.metrics?.active_listings || 0,
+    };
+  }
+
+  // Historical data from market
+  let historical_data = undefined;
+  if (reportData.market?.historical) {
+    historical_data = {
+      summary: reportData.market.historical.summary || {},
+      months: reportData.market.historical.months || [],
+    };
+  }
+
+  // Bedroom performance from market
+  const bedroom_performance = (reportData.market?.bedroom_performance || []).map((bp: any) => ({
+    bedrooms: bp.bedrooms,
+    occupancy: bp.occupancy,
+    adr: bp.adr,
+    revenue: bp.revenue,
+    listing_count: bp.listing_count,
+  }));
+
+  // Revenue percentiles from market
+  const revenue_percentiles = reportData.market?.revenue_percentiles || undefined;
+
+  return {
+    property,
+    revenue_estimate,
+    monthly_forecast,
+    comps,
+    same_bedroom_comps: comps.filter((c: any) => c.bedrooms === bedrooms),
+    market_data,
+    bedroom_performance,
+    revenue_percentiles,
+    historical_data,
+    generated_at: dbRecord.createdAt ? new Date(dbRecord.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+// Report type configurations for non-validator types
 const reportTypeConfig = {
   revenue: {
     title: 'Revenue Analysis',
@@ -201,9 +490,49 @@ export default function ShareableReportViewer() {
   }
 
   const report = data.data;
+  const reportData = report.reportData as any;
+
+  // =====================================================
+  // VALIDATOR & REVENUE REPORTS: Render the EXACT same
+  // FullPropertyReport component that authenticated users see
+  // =====================================================
+  if ((report.reportType === 'validator' || report.reportType === 'revenue') && reportData) {
+    const fullReportData = report.reportType === 'validator'
+      ? transformValidatorToFullReportData(reportData, report)
+      : transformRevenueToFullReportData(reportData, report);
+
+    const location = report.address ||
+      (report.city && report.state ? `${report.city}, ${report.state}` : report.marketName || 'Unknown Location');
+    const seoTitle = `Property Analysis - ${location}`;
+    const seoDescription = `Full property investment analysis for ${location}. Shared via Coach Inayah Turnkey Tool.`;
+
+    return (
+      <>
+        <SEOHead
+          title={seoTitle}
+          description={seoDescription}
+          canonicalPath={`/share/${shareCode}`}
+          noIndex={true}
+          structuredData={createWebPageSchema({
+            name: seoTitle,
+            description: seoDescription,
+            url: `/share/${shareCode}`
+          })}
+        />
+        <FullPropertyReport
+          data={fullReportData}
+          onBack={() => setLocation('/')}
+          isSharedView={true}
+        />
+      </>
+    );
+  }
+
+  // =====================================================
+  // NON-VALIDATOR REPORTS: Simplified viewer (legacy)
+  // =====================================================
   const config = reportTypeConfig[report.reportType as keyof typeof reportTypeConfig] || reportTypeConfig.revenue;
   const ReportIcon = config.icon;
-  const reportData = report.reportData as any;
 
   // Format currency
   const formatCurrency = (value: number | null | undefined) => {
@@ -238,7 +567,7 @@ export default function ShareableReportViewer() {
         title={seoTitle}
         description={seoDescription}
         canonicalPath={`/share/${shareCode}`}
-        noIndex={true} // Shared reports should not be indexed
+        noIndex={true}
         structuredData={createWebPageSchema({
           name: seoTitle,
           description: seoDescription,
@@ -336,7 +665,7 @@ export default function ShareableReportViewer() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-          {/* Status Header - Coach Inayah Navy/Gold */}
+          {/* Status Header */}
           <div className={`bg-gradient-to-r ${config.gradient} text-white p-8`}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-[#C9A962]/20 rounded-xl flex items-center justify-center">
@@ -368,19 +697,37 @@ export default function ShareableReportViewer() {
           </div>
 
           {/* Summary */}
-          {report.summary && (
-            <div className="p-6 border-b border-[#C9A962]/20">
-              <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Summary</h2>
-              <p className="text-[#0F172A]/80 leading-relaxed">{report.summary}</p>
-            </div>
-          )}
+          {(() => {
+            const dbSummary = report.summary;
+            const isPlaceholder = !dbSummary || dbSummary.includes('$0/year') || dbSummary.includes('0% occupancy');
+            if (isPlaceholder && reportData?.revenue?.projected) {
+              const rev = formatCurrency(reportData.revenue.projected);
+              const occ = reportData.metrics?.occupancy ? `${Math.round(reportData.metrics.occupancy)}%` : 'N/A';
+              const adrVal = reportData.metrics?.adr ? formatCurrency(reportData.metrics.adr) : 'N/A';
+              const generatedSummary = `Projected annual revenue of ${rev} with ${occ} occupancy and ${adrVal} average daily rate.`;
+              return (
+                <div className="p-6 border-b border-[#C9A962]/20">
+                  <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Summary</h2>
+                  <p className="text-[#0F172A]/80 leading-relaxed">{generatedSummary}</p>
+                </div>
+              );
+            }
+            if (dbSummary && !isPlaceholder) {
+              return (
+                <div className="p-6 border-b border-[#C9A962]/20">
+                  <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-3">Summary</h2>
+                  <p className="text-[#0F172A]/80 leading-relaxed">{dbSummary}</p>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
-          {/* Key Metrics — pull from reportData when DB-level fields are null */}
+          {/* Key Metrics */}
           {(() => {
             const annualRev = report.annualRevenue || reportData?.revenue?.projected;
             const occRate = report.occupancyRate || (reportData?.metrics?.occupancy ? reportData.metrics.occupancy / 100 : null);
             const adr = report.averageDailyRate || reportData?.metrics?.adr;
-            const profit = report.profitMargin;
             const cashFlow = reportData?.cashFlow;
             return (
               <div className="p-6">
@@ -443,7 +790,6 @@ export default function ShareableReportViewer() {
               {/* Revenue Report Data */}
               {report.reportType === 'revenue' && reportData.estimates && (
                 <div className="space-y-6">
-                  {/* Monthly Forecast */}
                   {reportData.monthly_forecast && (
                     <div>
                       <h3 className="font-medium text-gray-800 mb-3">Monthly Revenue Forecast</h3>
@@ -459,7 +805,6 @@ export default function ShareableReportViewer() {
                     </div>
                   )}
 
-                  {/* Comparable Properties */}
                   {reportData.comps && reportData.comps.length > 0 && (
                     <div>
                       <h3 className="font-medium text-gray-800 mb-3">Comparable Properties</h3>
@@ -513,198 +858,6 @@ export default function ShareableReportViewer() {
                 </div>
               )}
 
-              {/* Validator Report Data */}
-              {report.reportType === 'validator' && reportData && (
-                <div className="space-y-8">
-                  {/* Revenue Range */}
-                  {reportData.revenue && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Revenue Projections</h3>
-                      <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-xl p-6 text-white">
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                          <div>
-                            <p className="text-white/60 text-sm mb-1">Conservative</p>
-                            <p className="text-2xl font-bold text-red-300">{formatCurrency(reportData.revenue.low)}</p>
-                          </div>
-                          <div className="border-x border-white/20">
-                            <p className="text-[#C9A962] text-sm mb-1 font-medium">Projected</p>
-                            <p className="text-3xl font-bold text-[#C9A962]">{formatCurrency(reportData.revenue.projected)}</p>
-                          </div>
-                          <div>
-                            <p className="text-white/60 text-sm mb-1">Optimistic</p>
-                            <p className="text-2xl font-bold text-emerald-300">{formatCurrency(reportData.revenue.high)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Revenue Percentiles */}
-                  {reportData.revenuePercentiles && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Market Revenue Distribution</h3>
-                      <div className="bg-[#0F172A]/5 rounded-xl p-5 border border-[#C9A962]/10">
-                        <div className="flex items-center justify-between gap-2">
-                          {[{label: '10th', value: reportData.revenuePercentiles.p10},
-                            {label: '25th', value: reportData.revenuePercentiles.p25},
-                            {label: '50th', value: reportData.revenuePercentiles.p50},
-                            {label: '75th', value: reportData.revenuePercentiles.p75},
-                            {label: '90th', value: reportData.revenuePercentiles.p90}].map((p, i) => (
-                            <div key={i} className="text-center flex-1">
-                              <div className={`h-${Math.max(8, 8 + i * 4)} bg-gradient-to-t from-[#C9A962]/30 to-[#C9A962]/60 rounded-t-md mb-2 flex items-end justify-center pb-1`}
-                                   style={{height: `${20 + i * 12}px`}}>
-                              </div>
-                              <p className="text-xs text-[#0F172A]/60">{p.label}%ile</p>
-                              <p className="text-sm font-semibold text-[#0F172A]">{formatCurrency(p.value)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Monthly Forecast */}
-                  {reportData.forecast && reportData.forecast.length > 0 && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">12-Month Revenue Forecast</h3>
-                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {reportData.forecast.map((month: any, idx: number) => {
-                          const monthDate = new Date(month.month + '-01');
-                          const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                          return (
-                            <div key={idx} className="bg-white rounded-xl p-3 border border-[#C9A962]/10 shadow-sm text-center">
-                              <p className="text-xs text-[#0F172A]/50 font-medium uppercase">{monthName}</p>
-                              <p className="text-lg font-bold text-[#0F172A] mt-1">{formatCurrency(month.revenue)}</p>
-                              <div className="flex justify-between mt-2 text-xs text-[#0F172A]/60">
-                                <span>{formatPercent(month.occupancy / 100)} occ</span>
-                                <span>${Math.round(month.adr)}/nt</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bedroom Performance */}
-                  {reportData.bedroomPerformance && reportData.bedroomPerformance.length > 0 && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Performance by Bedroom Count</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b-2 border-[#C9A962]/30">
-                              <th className="text-left py-3 px-4 text-[#0F172A]/60 font-medium">Bedrooms</th>
-                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Avg Revenue</th>
-                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">ADR</th>
-                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Occupancy</th>
-                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Listings</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {reportData.bedroomPerformance.map((bp: any, idx: number) => {
-                              const isMatch = bp.bedrooms === report.bedrooms;
-                              return (
-                                <tr key={idx} className={`border-b border-gray-100 ${isMatch ? 'bg-[#C9A962]/10 font-semibold' : ''}`}>
-                                  <td className="py-3 px-4">
-                                    <span className="flex items-center gap-2">
-                                      <BedDouble className="w-4 h-4 text-[#C9A962]" />
-                                      {bp.bedrooms} BR
-                                      {isMatch && <span className="text-xs bg-[#C9A962] text-white px-2 py-0.5 rounded-full">Your Property</span>}
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-4 text-right">{formatCurrency(bp.revenue)}</td>
-                                  <td className="py-3 px-4 text-right">{formatCurrency(bp.adr)}</td>
-                                  <td className="py-3 px-4 text-right">{bp.occupancy}%</td>
-                                  <td className="py-3 px-4 text-right text-[#0F172A]/60">{bp.listing_count}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Top Comparable Properties */}
-                  {reportData.comparables && reportData.comparables.length > 0 && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Top Comparable Properties</h3>
-                      <div className="space-y-3">
-                        {reportData.comparables.slice(0, 6).map((comp: any, idx: number) => (
-                          <div key={idx} className="bg-white rounded-xl border border-[#C9A962]/10 shadow-sm overflow-hidden">
-                            <div className="flex">
-                              {/* Comp image */}
-                              {comp.images && comp.images[0] && (
-                                <div className="w-24 h-24 md:w-32 md:h-28 flex-shrink-0">
-                                  <img src={comp.images[0]} alt={comp.title} className="w-full h-full object-cover" />
-                                </div>
-                              )}
-                              <div className="flex-1 p-4 flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium text-[#0F172A] text-sm md:text-base">{comp.title || `Comparable ${idx + 1}`}</p>
-                                  <p className="text-xs md:text-sm text-[#0F172A]/60 mt-1">
-                                    {comp.bedrooms} BR • {comp.bathrooms} BA
-                                    {comp.rating ? ` • ★ ${comp.rating}` : ''}
-                                    {comp.reviews ? ` (${comp.reviews} reviews)` : ''}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-bold text-[#0F172A] text-lg">{formatCurrency(comp.revenue)}</p>
-                                  <p className="text-xs text-[#0F172A]/60">{formatCurrency(comp.adr)}/night • {comp.occupancy}% occ</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {reportData.comparables.length > 6 && (
-                        <p className="text-center text-sm text-[#0F172A]/50 mt-3">
-                          + {reportData.comparables.length - 6} more comparable properties in the full analysis
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Market Insights */}
-                  {reportData.marketInsights && (
-                    <div>
-                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Market Overview</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {reportData.marketInsights.totalListings && (
-                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
-                            <Building className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
-                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.totalListings.toLocaleString()}</p>
-                            <p className="text-xs text-[#0F172A]/60">Active Listings</p>
-                          </div>
-                        )}
-                        {reportData.marketInsights.avgRating && (
-                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
-                            <Star className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
-                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.avgRating}</p>
-                            <p className="text-xs text-[#0F172A]/60">Avg Rating</p>
-                          </div>
-                        )}
-                        {reportData.marketInsights.superhostPct != null && (
-                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
-                            <CheckCircle2 className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
-                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.superhostPct}%</p>
-                            <p className="text-xs text-[#0F172A]/60">Superhosts</p>
-                          </div>
-                        )}
-                        {reportData.marketInsights.professionallyManagedPct != null && (
-                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
-                            <Users className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
-                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.professionallyManagedPct}%</p>
-                            <p className="text-xs text-[#0F172A]/60">Professionally Managed</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Generic fallback for other types */}
               {!['revenue', 'market', 'ai_advisor', 'validator'].includes(report.reportType) && (
                 <div className="bg-gray-50 rounded-lg p-4 overflow-auto max-h-96">
@@ -717,7 +870,7 @@ export default function ShareableReportViewer() {
           )}
         </div>
 
-        {/* Footer - Coach Inayah Branding */}
+        {/* Footer */}
         <div className="text-center mt-8 py-6 border-t border-[#C9A962]/20">
           <p className="text-[#0F172A] font-serif font-semibold text-lg">Coach Inayah Turnkey Tool</p>
           <p className="text-[#0F172A]/60 text-sm mt-1">

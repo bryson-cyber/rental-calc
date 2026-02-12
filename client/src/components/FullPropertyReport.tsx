@@ -961,7 +961,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   };
 
   const handleCopyLink = async () => {
-    const url = shareId ? `${window.location.origin}/report/${shareId}` : window.location.href;
+    // For shared views, use the current URL (e.g. /share/XYZ); for owner views, use /report/:shareId
+    const url = isSharedView ? window.location.href : (shareId ? `${window.location.origin}/report/${shareId}` : window.location.href);
     await navigator.clipboard.writeText(url);
     setCopied(true);
     toast.success('Link copied to clipboard!');

@@ -10664,3 +10664,13 @@ Results:
 - [x] Fix: Key Metrics now pulls from reportData when DB-level fields are null
 - [x] Fix: Added full validator report rendering — Revenue Projections, Revenue Percentiles, 12-Month Forecast, Bedroom Performance table, Top 6 Comps with images, Market Overview
 - [x] All 897 tests passing, TypeScript clean
+
+## REWORK: Share link should show the EXACT same report page (Feb 12, 2026)
+- [x] /share/:shareCode now resolves to the real FullPropertyReport, not a separate viewer page
+- [x] Share link is publicly accessible (no login required)
+- [x] The shared view looks identical to what the owner sees at /report/:id
+- [x] Data transformation functions map validator/revenue report data to FullReportData format
+- [x] Both validator and revenue report types render via FullPropertyReport
+- [x] Admin-only features (Regenerate, Save Comp Selection) hidden for shared views
+- [x] Copy Link uses current URL for shared views
+- [x] 26 tests for data transformation functions, all passing
