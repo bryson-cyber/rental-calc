@@ -10589,3 +10589,9 @@ Results:
 - [x] Distance lines default to visible, toggle hides/shows both polylines and midpoint distance labels
 - [x] Added 22 new tests for MarketTrendsChart data transformation and distance lines toggle logic
 - [x] All 843 tests passing, TypeScript compilation clean
+## Remove Map Distance Lines & Investor Report Audit (Feb 12, 2026)
+- [x] Remove distance polylines and midpoint labels from comp map entirely (user says they're ugly)
+- [x] Remove the "Show Lines / Hide Lines" toggle button (no longer needed)
+- [x] Clean up unused refs and state for distance lines
+- [ ] Conduct thorough investor-perspective audit of the full property report
+- [ ] Identify sections that are unclear, confusing, or incomplete for a real investor
