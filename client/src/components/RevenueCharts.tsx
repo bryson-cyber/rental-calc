@@ -4,7 +4,7 @@
  * Coach Inayah palette: Gold (#C9A962), Navy (#1e293b), warm grays
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -46,6 +46,9 @@ const BRAND = {
   // Historical data colors
   histBar:     '#94a3b8',  // muted gray for historical bars
   histBarLight:'#cbd5e1',  // lighter gray for below-avg historical
+  // Year-over-Year colors (distinct per year)
+  yoyColors: ['#94a3b8', '#C9A962', '#1e293b', '#6366f1'] as string[],
+  yoyColorNames: ['gray', 'gold', 'navy', 'indigo'] as string[],
 };
 
 // Format currency
@@ -127,7 +130,10 @@ interface MonthlyForecastChartProps {
 }
 
 export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: MonthlyForecastChartProps) {
-  const chartData = useMemo(() => {
+  const [viewMode, setViewMode] = useState<'timeline' | 'yoy'>('timeline');
+
+  // ── Timeline data (existing linear view) ──
+  const timelineData = useMemo(() => {
     const combined: Array<{
       shortMonth: string;
       revenue: number;
@@ -137,7 +143,6 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
       rawDate: string;
     }> = [];
 
-    // Add historical months first (if available)
     if (historicalMonths && historicalMonths.length > 0) {
       for (const m of historicalMonths) {
         const parsed = parseMonthDate(m.date);
@@ -153,7 +158,6 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
       }
     }
 
-    // Add forecast months
     for (const m of data) {
       const parsed = parseMonthDate(m.month);
       const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
@@ -170,13 +174,51 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
     return combined;
   }, [data, historicalMonths]);
 
-  const avgRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0) / chartData.length;
-  
-  // Find the boundary index between historical and forecast
-  const forecastStartIdx = chartData.findIndex(d => !d.isHistorical);
-  const forecastStartLabel = forecastStartIdx > 0 ? chartData[forecastStartIdx].shortMonth : null;
+  // ── YoY overlay data ──
+  const { yoyData, yearLabels } = useMemo(() => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Collect all months with their year
+    const allEntries: Array<{ year: string; monthIdx: number; revenue: number; occupancy: number; adr?: number; isHistorical: boolean }> = [];
 
-  // Custom tooltip for combined view
+    if (historicalMonths && historicalMonths.length > 0) {
+      for (const m of historicalMonths) {
+        const parsed = parseMonthDate(m.date);
+        const occ = m.occupancy != null ? (m.occupancy > 1 ? m.occupancy : m.occupancy * 100) : 0;
+        allEntries.push({ year: parsed.year, monthIdx: parsed.monthIdx, revenue: Math.round(m.revenue), occupancy: Math.round(occ), adr: m.adr, isHistorical: true });
+      }
+    }
+    for (const m of data) {
+      const parsed = parseMonthDate(m.month);
+      const occ = m.occupancy > 1 ? m.occupancy : m.occupancy * 100;
+      allEntries.push({ year: parsed.year, monthIdx: parsed.monthIdx, revenue: Math.round(m.revenue), occupancy: Math.round(occ), adr: m.adr, isHistorical: false });
+    }
+
+    // Get unique years sorted
+    const years = Array.from(new Set(allEntries.map(e => e.year))).sort();
+
+    // Build 12-month rows with a column per year
+    const rows: Array<Record<string, string | number>> = monthNames.map((name, idx) => {
+      const row: Record<string, string | number> = { month: name };
+      for (const yr of years) {
+        const entry = allEntries.find(e => e.year === yr && e.monthIdx === idx);
+        row[`rev_${yr}`] = entry ? entry.revenue : 0;
+        row[`occ_${yr}`] = entry ? entry.occupancy : 0;
+        row[`adr_${yr}`] = entry?.adr ?? 0;
+        row[`hist_${yr}`] = entry ? (entry.isHistorical ? 1 : 0) : 0;
+      }
+      return row;
+    });
+
+    return { yoyData: rows, yearLabels: years };
+  }, [data, historicalMonths]);
+
+  const avgRevenue = timelineData.reduce((sum, d) => sum + d.revenue, 0) / timelineData.length;
+  const forecastStartIdx = timelineData.findIndex(d => !d.isHistorical);
+  const forecastStartLabel = forecastStartIdx > 0 ? timelineData[forecastStartIdx].shortMonth : null;
+  const hasMultipleYears = yearLabels.length > 1;
+  const hasHistorical = historicalMonths && historicalMonths.length > 0;
+
+  // Custom tooltip for timeline view
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CombinedTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || payload.length === 0) return null;
@@ -209,82 +251,181 @@ export function MonthlyForecastChart({ data, historicalMonths, height = 300 }: M
     );
   };
 
+  // Custom tooltip for YoY view
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const YoYTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const entry = payload[0]?.payload;
+    if (!entry) return null;
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
+        <p className="font-semibold text-[#0f172a] mb-2">{label}</p>
+        {yearLabels.map((yr, i) => {
+          const rev = entry[`rev_${yr}`] as number;
+          const occ = entry[`occ_${yr}`] as number;
+          const adr = entry[`adr_${yr}`] as number;
+          const isHist = entry[`hist_${yr}`] === 1;
+          if (rev === 0 && occ === 0) return null;
+          return (
+            <div key={yr} className="mb-1.5 last:mb-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.yoyColors[i % BRAND.yoyColors.length] }} />
+                <span className="font-semibold text-[#1e293b]">{yr}{isHist ? '' : ' (Forecast)'}</span>
+              </div>
+              <div className="pl-4 text-[#64748b]">
+                Revenue: <span className="font-medium text-[#1e293b]">{formatCurrency(rev)}</span>
+                {occ > 0 && <> · Occ: <span className="font-medium text-[#1e293b]">{occ}%</span></>}
+                {adr > 0 && <> · ADR: <span className="font-medium text-[#1e293b]">{formatCurrency(adr)}</span></>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
-          <XAxis 
-            dataKey="shortMonth" 
-            tick={{ fill: BRAND.axisText, fontSize: chartData.length > 18 ? 9 : 11 }}
-            axisLine={{ stroke: BRAND.warmGrayLt }}
-            interval={chartData.length > 24 ? 2 : chartData.length > 18 ? 1 : 0}
-            angle={chartData.length > 18 ? -45 : 0}
-            textAnchor={chartData.length > 18 ? 'end' : 'middle'}
-            height={chartData.length > 18 ? 50 : 30}
-          />
-          <YAxis 
-            yAxisId="revenue"
-            tick={{ fill: BRAND.axisText, fontSize: 12 }}
-            axisLine={{ stroke: BRAND.warmGrayLt }}
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-          />
-          <YAxis 
-            yAxisId="occupancy"
-            orientation="right"
-            tick={{ fill: BRAND.axisText, fontSize: 12 }}
-            axisLine={{ stroke: BRAND.warmGrayLt }}
-            tickFormatter={(value) => `${value}%`}
-            domain={[0, 100]}
-          />
-          <Tooltip content={<CombinedTooltip />} />
-          <Legend 
-            verticalAlign="top"
-            height={28}
-            payload={[
-              ...(historicalMonths && historicalMonths.length > 0 ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
-              { value: 'Forecast', type: 'square' as const, color: BRAND.gold },
-              { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
-            ]}
-          />
-          {/* Vertical reference line at forecast boundary */}
-          {forecastStartLabel && (
-            <ReferenceLine 
-              yAxisId="revenue"
-              x={forecastStartLabel} 
-              stroke={BRAND.navy} 
-              strokeDasharray="6 4" 
-              strokeWidth={1.5}
-              label={{ value: 'Forecast →', position: 'top', fill: BRAND.navy, fontSize: 10, fontWeight: 600 }}
-            />
-          )}
-          <Bar 
-            yAxisId="revenue"
-            dataKey="revenue" 
-            name="Revenue"
-            radius={[3, 3, 0, 0]}
+    <div className="w-full">
+      {/* View mode toggle — only show if we have multiple years */}
+      {hasMultipleYears && (
+        <div className="flex items-center justify-end gap-1 mb-3">
+          <button
+            onClick={() => setViewMode('timeline')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-l-lg border transition-colors ${
+              viewMode === 'timeline'
+                ? 'bg-[#1e293b] text-white border-[#1e293b]'
+                : 'bg-white text-[#64748b] border-[#e2e8f0] hover:bg-[#f8fafc]'
+            }`}
           >
-            {chartData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`}
-                fill={entry.isHistorical 
-                  ? (entry.revenue >= avgRevenue ? BRAND.histBar : BRAND.histBarLight)
-                  : (entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted)
-                }
+            Timeline
+          </button>
+          <button
+            onClick={() => setViewMode('yoy')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-r-lg border transition-colors ${
+              viewMode === 'yoy'
+                ? 'bg-[#1e293b] text-white border-[#1e293b]'
+                : 'bg-white text-[#64748b] border-[#e2e8f0] hover:bg-[#f8fafc]'
+            }`}
+          >
+            Year-over-Year
+          </button>
+        </div>
+      )}
+
+      <div style={{ height }}>
+        {viewMode === 'timeline' ? (
+          /* ── Timeline View ── */
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
+              <XAxis 
+                dataKey="shortMonth" 
+                tick={{ fill: BRAND.axisText, fontSize: timelineData.length > 18 ? 9 : 11 }}
+                axisLine={{ stroke: BRAND.warmGrayLt }}
+                interval={timelineData.length > 24 ? 2 : timelineData.length > 18 ? 1 : 0}
+                angle={timelineData.length > 18 ? -45 : 0}
+                textAnchor={timelineData.length > 18 ? 'end' : 'middle'}
+                height={timelineData.length > 18 ? 50 : 30}
               />
-            ))}
-          </Bar>
-          <Line 
-            yAxisId="occupancy"
-            type="monotone" 
-            dataKey="occupancyPct" 
-            name="Occupancy"
-            stroke={BRAND.navy} 
-            strokeWidth={2}
-            dot={{ fill: BRAND.navy, strokeWidth: 2, r: chartData.length > 24 ? 2 : 3 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+              <YAxis 
+                yAxisId="revenue"
+                tick={{ fill: BRAND.axisText, fontSize: 12 }}
+                axisLine={{ stroke: BRAND.warmGrayLt }}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              />
+              <YAxis 
+                yAxisId="occupancy"
+                orientation="right"
+                tick={{ fill: BRAND.axisText, fontSize: 12 }}
+                axisLine={{ stroke: BRAND.warmGrayLt }}
+                tickFormatter={(value) => `${value}%`}
+                domain={[0, 100]}
+              />
+              <Tooltip content={<CombinedTooltip />} />
+              <Legend 
+                verticalAlign="top"
+                height={28}
+                payload={[
+                  ...(hasHistorical ? [{ value: 'Historical', type: 'square' as const, color: BRAND.histBar }] : []),
+                  { value: 'Forecast', type: 'square' as const, color: BRAND.gold },
+                  { value: 'Occupancy', type: 'line' as const, color: BRAND.navy },
+                ]}
+              />
+              {forecastStartLabel && (
+                <ReferenceLine 
+                  yAxisId="revenue"
+                  x={forecastStartLabel} 
+                  stroke={BRAND.navy} 
+                  strokeDasharray="6 4" 
+                  strokeWidth={1.5}
+                  label={{ value: 'Forecast →', position: 'top', fill: BRAND.navy, fontSize: 10, fontWeight: 600 }}
+                />
+              )}
+              <Bar 
+                yAxisId="revenue"
+                dataKey="revenue" 
+                name="Revenue"
+                radius={[3, 3, 0, 0]}
+              >
+                {timelineData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`}
+                    fill={entry.isHistorical 
+                      ? (entry.revenue >= avgRevenue ? BRAND.histBar : BRAND.histBarLight)
+                      : (entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted)
+                    }
+                  />
+                ))}
+              </Bar>
+              <Line 
+                yAxisId="occupancy"
+                type="monotone" 
+                dataKey="occupancyPct" 
+                name="Occupancy"
+                stroke={BRAND.navy} 
+                strokeWidth={2}
+                dot={{ fill: BRAND.navy, strokeWidth: 2, r: timelineData.length > 24 ? 2 : 3 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          /* ── Year-over-Year View ── */
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={yoyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fill: BRAND.axisText, fontSize: 12 }}
+                axisLine={{ stroke: BRAND.warmGrayLt }}
+              />
+              <YAxis 
+                tick={{ fill: BRAND.axisText, fontSize: 12 }}
+                axisLine={{ stroke: BRAND.warmGrayLt }}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              />
+              <Tooltip content={<YoYTooltip />} />
+              <Legend 
+                verticalAlign="top"
+                height={28}
+                payload={yearLabels.map((yr, i) => ({
+                  value: yr,
+                  type: 'square' as const,
+                  color: BRAND.yoyColors[i % BRAND.yoyColors.length],
+                }))}
+              />
+              {yearLabels.map((yr, i) => (
+                <Bar 
+                  key={yr}
+                  dataKey={`rev_${yr}`}
+                  name={yr}
+                  fill={BRAND.yoyColors[i % BRAND.yoyColors.length]}
+                  radius={[3, 3, 0, 0]}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
 }

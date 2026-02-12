@@ -10553,3 +10553,11 @@ Results:
 - [x] Updated section headers to say "History & Forecast" when historical data is available
 - [x] Verified cash flow: Albuquerque deal has $45,889 revenue - $40,224 expenses = $5,665/year (correct, no rental_arbitrage or purchase sections entered)
 - [x] All 821 tests passing, TypeScript compilation clean
+## YoY Overlay Toggle & Comp Map Distance Lines (Feb 12, 2026)
+- [x] Add Timeline/Year-over-Year toggle to MonthlyForecastChart
+- [x] YoY view: group same calendar months from different years side-by-side with distinct colors per year
+- [x] Custom YoY tooltip showing all years' revenue, occupancy, and ADR for each month
+- [x] Add dashed distance lines from subject property to each comp on the map
+- [x] Add distance labels at midpoint of each line
+- [x] Lines color-coded by comp revenue tier (green/blue/gray)
+- [x] All 821 tests passing, TypeScript compilation clean

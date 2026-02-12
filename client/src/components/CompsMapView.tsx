@@ -127,6 +127,8 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const markerKeyMapRef = useRef<Map<string, number>>(new Map()); // compKey → marker index
+  const polylinesRef = useRef<google.maps.Polyline[]>([]);
+  const distanceOverlaysRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const hoverInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const distanceFetchedRef = useRef(false);
@@ -360,10 +362,14 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
     
     console.log("[CompsMap] Adding", currentComps.length, "comp markers to map");
     
-    // Clean up existing markers
+    // Clean up existing markers, polylines, and distance labels
     markersRef.current.forEach((m) => { m.map = null; });
     markersRef.current = [];
     markerKeyMapRef.current.clear();
+    polylinesRef.current.forEach((p) => p.setMap(null));
+    polylinesRef.current = [];
+    distanceOverlaysRef.current.forEach((o) => { o.map = null; });
+    distanceOverlaysRef.current = [];
     
     if (!infoWindowRef.current) {
       infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 320 });
@@ -586,6 +592,69 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
       zIndex: 1000,
     });
     markersRef.current.push(subjectMarker);
+
+    // Draw dashed distance lines from subject to each comp
+    currentComps.forEach((comp, i) => {
+      if (!comp.latitude || !comp.longitude) return;
+      const subjectPos = { lat: currentSubject.latitude, lng: currentSubject.longitude };
+      const compPos = { lat: comp.latitude, lng: comp.longitude };
+      
+      // Get distance for the label
+      const dist = getStraightLineDistance(comp, currentSubject.latitude, currentSubject.longitude);
+      const colors = getMarkerColors(comp.annual_revenue);
+      
+      // Create dashed polyline
+      const polyline = new google.maps.Polyline({
+        path: [subjectPos, compPos],
+        geodesic: true,
+        strokeColor: colors.bg,
+        strokeOpacity: 0.45,
+        strokeWeight: 1.5,
+        icons: [{
+          icon: {
+            path: 'M 0,-1 0,1',
+            strokeOpacity: 0.6,
+            strokeWeight: 1.5,
+            scale: 3,
+          },
+          offset: '0',
+          repeat: '12px',
+        }],
+        map,
+      });
+      polylinesRef.current.push(polyline);
+
+      // Add distance label at midpoint
+      if (dist.text !== 'N/A') {
+        const midLat = (currentSubject.latitude + comp.latitude) / 2;
+        const midLng = (currentSubject.longitude + comp.longitude) / 2;
+        
+        const labelEl = document.createElement('div');
+        labelEl.style.cssText = 'pointer-events:none;';
+        labelEl.innerHTML = `
+          <div style="
+            background:white;
+            color:${colors.textColor};
+            font-size:9px;
+            font-weight:600;
+            padding:2px 5px;
+            border-radius:3px;
+            white-space:nowrap;
+            box-shadow:0 1px 3px rgba(0,0,0,0.15);
+            border:1px solid ${colors.border}20;
+            opacity:0.85;
+            font-family:'DM Sans',system-ui,sans-serif;
+          ">${dist.text}</div>
+        `;
+        const labelMarker = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: { lat: midLat, lng: midLng },
+          content: labelEl,
+          zIndex: 500,
+        });
+        distanceOverlaysRef.current.push(labelMarker);
+      }
+    });
 
     // Fit bounds to show all markers
     if (currentComps.length > 0) {
