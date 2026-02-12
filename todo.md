@@ -10579,3 +10579,13 @@ Results:
 - [x] Keep market historical data only in Market Analysis section where it belongs
 - [x] Removed YoY toggle (only 1 year of property data, not needed)
 - [x] All 821 tests passing, TypeScript compilation clean
+## Market Trends Chart & Map Distance Toggle (Feb 12, 2026)
+- [x] Create MarketTrendsChart component in RevenueCharts.tsx — dual-axis ComposedChart with gray revenue bars and navy occupancy line
+- [x] Integrate Market Trends chart into Market Analysis section of FullPropertyReport (between Supply Trend and Submarket Comparison)
+- [x] Show revenue, occupancy, and ADR trends over time for the market with "MARKET DATA" tooltip badge
+- [x] Handles both `months` and `monthly` fields from HistoricalData interface
+- [x] Only renders when 3+ data points are available
+- [x] Add toggle button ("Show Lines" / "Hide Lines") on CompsMapView header to show/hide distance polylines and labels
+- [x] Distance lines default to visible, toggle hides/shows both polylines and midpoint distance labels
+- [x] Added 22 new tests for MarketTrendsChart data transformation and distance lines toggle logic
+- [x] All 843 tests passing, TypeScript compilation clean

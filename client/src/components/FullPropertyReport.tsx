@@ -62,7 +62,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart } from './RevenueCharts';
+import { MonthlyForecastChart, SeasonalityChart, BedroomPerformanceChart, MarketTrendsChart } from './RevenueCharts';
 import { CompsMapView } from './CompsMapView';
 import { MapView } from './Map';
 import { StreetViewPanorama } from './StreetViewPanorama';
@@ -1539,6 +1539,40 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {/* Market Revenue & Occupancy Trends (24-month historical) */}
+          {historical_data && historical_data.months && historical_data.months.length > 2 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b]">Market Revenue & Occupancy Trends</h3>
+                <DataSourceBadge type="market" />
+                <InfoTip text="This chart shows how the AVERAGE short-term rental in your market has performed over the past 24 months. Revenue bars show the market-wide average monthly income, and the line shows average occupancy. Use this to spot seasonal patterns and overall market direction. Note: these are market averages across all listing types — your specific property may earn more or less." />
+              </div>
+              <p className="text-sm text-[#64748b] mb-4">Monthly market-wide average revenue and occupancy over the past {historical_data.months.length} months</p>
+              <MarketTrendsChart
+                data={historical_data.months}
+                height={320}
+              />
+              <p className="text-[10px] text-[#94a3b8] mt-3 italic">Data represents market-wide averages across all listing types and bedroom counts in this area.</p>
+            </div>
+          )}
+
+          {/* If no months data, try monthly field */}
+          {historical_data && !historical_data.months && historical_data.monthly && historical_data.monthly.length > 2 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b]">Market Revenue & Occupancy Trends</h3>
+                <DataSourceBadge type="market" />
+                <InfoTip text="This chart shows how the AVERAGE short-term rental in your market has performed over the past months. Revenue bars show the market-wide average monthly income, and the line shows average occupancy. Use this to spot seasonal patterns and overall market direction." />
+              </div>
+              <p className="text-sm text-[#64748b] mb-4">Monthly market-wide average revenue and occupancy over the past {historical_data.monthly.length} months</p>
+              <MarketTrendsChart
+                data={historical_data.monthly}
+                height={320}
+              />
+              <p className="text-[10px] text-[#94a3b8] mt-3 italic">Data represents market-wide averages across all listing types and bedroom counts in this area.</p>
             </div>
           )}
 

@@ -675,6 +675,142 @@ export function CompetitorDistributionChart({ data, threshold, height = 200 }: C
   );
 }
 
+// Market Trends Chart — shows 24-month historical market data (revenue, occupancy, ADR)
+interface MarketTrendMonth {
+  date: string;
+  revenue: number;
+  occupancy?: number;
+  adr?: number;
+}
+
+interface MarketTrendsChartProps {
+  data: MarketTrendMonth[];
+  height?: number;
+}
+
+export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps) {
+  const chartData = useMemo(() => {
+    return data.map(m => {
+      const parsed = parseMonthDate(m.date);
+      const occ = m.occupancy != null
+        ? (m.occupancy > 1 ? m.occupancy : m.occupancy * 100)
+        : 0;
+      return {
+        shortMonth: parsed.shortLabel,
+        revenue: Math.round(m.revenue),
+        occupancyPct: Math.round(occ),
+        adr: m.adr ? Math.round(m.adr) : undefined,
+      };
+    });
+  }, [data]);
+
+  const avgRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0) / (chartData.length || 1);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const MarketTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || payload.length === 0) return null;
+    const entry = payload[0]?.payload;
+    if (!entry) return null;
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
+        <p className="font-semibold text-[#0f172a] mb-1.5">{label}</p>
+        <div className="inline-block bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium px-1.5 py-0.5 rounded mb-2">MARKET DATA</div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.warmGray }} />
+          <span className="text-[#64748b]">Avg Revenue:</span>
+          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+        </div>
+        {entry.occupancyPct > 0 && (
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
+            <span className="text-[#64748b]">Avg Occupancy:</span>
+            <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
+          </div>
+        )}
+        {entry.adr != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldMuted }} />
+            <span className="text-[#64748b]">Avg ADR:</span>
+            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
+          <XAxis
+            dataKey="shortMonth"
+            tick={{ fill: BRAND.axisText, fontSize: 10 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
+            interval={data.length > 18 ? 1 : 0}
+            angle={data.length > 18 ? -45 : 0}
+            textAnchor={data.length > 18 ? 'end' : 'middle'}
+            height={data.length > 18 ? 50 : 30}
+          />
+          <YAxis
+            yAxisId="revenue"
+            tick={{ fill: BRAND.axisText, fontSize: 11 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
+            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+          />
+          <YAxis
+            yAxisId="occupancy"
+            orientation="right"
+            tick={{ fill: BRAND.axisText, fontSize: 11 }}
+            axisLine={{ stroke: BRAND.warmGrayLt }}
+            tickFormatter={(value) => `${value}%`}
+            domain={[0, 100]}
+          />
+          <Tooltip content={<MarketTooltip />} />
+          <Legend
+            verticalAlign="top"
+            height={36}
+            wrapperStyle={{ paddingBottom: 8 }}
+            payload={[
+              { value: 'Market Avg Revenue', type: 'square' as const, color: BRAND.warmGray },
+              { value: 'Avg Occupancy', type: 'line' as const, color: BRAND.navy },
+            ]}
+          />
+          <ReferenceLine
+            yAxisId="revenue"
+            y={avgRevenue}
+            stroke={BRAND.warmGray}
+            strokeDasharray="4 4"
+            strokeOpacity={0.5}
+          />
+          <Bar
+            yAxisId="revenue"
+            dataKey="revenue"
+            name="Revenue"
+            radius={[3, 3, 0, 0]}
+          >
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={entry.revenue >= avgRevenue ? BRAND.warmGray : BRAND.warmGrayLt}
+              />
+            ))}
+          </Bar>
+          <Line
+            yAxisId="occupancy"
+            type="monotone"
+            dataKey="occupancyPct"
+            name="Occupancy"
+            stroke={BRAND.navy}
+            strokeWidth={2}
+            dot={{ fill: BRAND.navy, strokeWidth: 2, r: 3 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export default {
   MonthlyForecastChart,
   RevenuePercentileChart,
@@ -682,4 +818,5 @@ export default {
   HistoricalTrendChart,
   SeasonalityChart,
   CompetitorDistributionChart,
+  MarketTrendsChart,
 };

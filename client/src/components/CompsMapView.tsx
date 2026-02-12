@@ -116,6 +116,7 @@ function defaultGetCompKey(comp: Comp, index: number): string {
 
 export function CompsMapView({ comps, subjectProperty, className, onCompSelect, highlightedCompKey, getCompKey: getCompKeyProp }: CompsMapViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showDistanceLines, setShowDistanceLines] = useState(true);
   const [selectedComp, setSelectedComp] = useState<Comp | null>(null);
   const [selectedCompIndex, setSelectedCompIndex] = useState<number>(-1);
   const [selectedCompStraightDist, setSelectedCompStraightDist] = useState<string>("");
@@ -133,6 +134,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
   const hoverInfoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const distanceFetchedRef = useRef(false);
   const drivingDistancesRef = useRef<Map<string, DrivingDistance>>(new Map());
+  const showDistanceLinesRef = useRef(showDistanceLines);
   const compsRef = useRef(comps);
   const subjectRef = useRef(subjectProperty);
   const onCompSelectRef = useRef(onCompSelect);
@@ -140,6 +142,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
 
   
   // Keep refs in sync
+  showDistanceLinesRef.current = showDistanceLines;
   compsRef.current = comps;
   subjectRef.current = subjectProperty;
   drivingDistancesRef.current = drivingDistances;
@@ -603,7 +606,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
       const dist = getStraightLineDistance(comp, currentSubject.latitude, currentSubject.longitude);
       const colors = getMarkerColors(comp.annual_revenue);
       
-      // Create dashed polyline
+      // Create dashed polyline (visibility controlled by showDistanceLinesRef)
       const polyline = new google.maps.Polyline({
         path: [subjectPos, compPos],
         geodesic: true,
@@ -620,7 +623,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
           offset: '0',
           repeat: '12px',
         }],
-        map,
+        map: showDistanceLinesRef.current ? map : null,
       });
       polylinesRef.current.push(polyline);
 
@@ -647,7 +650,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
           ">${dist.text}</div>
         `;
         const labelMarker = new google.maps.marker.AdvancedMarkerElement({
-          map,
+          map: showDistanceLinesRef.current ? map : null,
           position: { lat: midLat, lng: midLng },
           content: labelEl,
           zIndex: 500,
@@ -681,6 +684,13 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
     fetchDrivingDistances();
   }, [addMarkersToMap, fetchDrivingDistances]);
 
+  // Toggle distance lines visibility
+  useEffect(() => {
+    const map = mapRef.current;
+    polylinesRef.current.forEach((p) => p.setMap(showDistanceLines ? map : null));
+    distanceOverlaysRef.current.forEach((o) => { o.map = showDistanceLines ? map : null; });
+  }, [showDistanceLines]);
+
   // Update driving distance for selected comp when distances load
   useEffect(() => {
     if (selectedComp && drivingDistances.size > 0) {
@@ -705,9 +715,21 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
               <Badge variant="outline" className="ml-2">Subject Property</Badge>
             )}
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)}>
-            {isExpanded ? <Minimize className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={showDistanceLines ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setShowDistanceLines(!showDistanceLines)}
+              title={showDistanceLines ? "Hide distance lines" : "Show distance lines"}
+              className="text-xs gap-1"
+            >
+              <Route className="w-3.5 h-3.5" />
+              {showDistanceLines ? "Hide Lines" : "Show Lines"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)}>
+              {isExpanded ? <Minimize className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mt-1">Click a marker to see details. Click a table row below to highlight it on the map.</p>
       </CardHeader>
