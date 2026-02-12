@@ -10899,3 +10899,21 @@ Results:
 - [x] Non-admin soft limit at 400 calls to preserve quota for admin
 - [x] Global tRPC middleware auto-detects admin from session context
 - [x] All 1039 tests pass across 79 test files
+
+## AUDIT: Comprehensive AirDNA API Endpoint Review
+- [x] Read all AirDNA API reference files (market_data, submarket_data, str_listing_data, rentalizer_data, smart_rates_data)
+- [x] Catalog every makeApiRequest call in airdna.ts with endpoint, method, caching, and frequency (41 call sites, 17 endpoints)
+- [x] Catalog every API call in airdna-hierarchy.ts and other server files
+- [x] Cross-reference each call against API docs for correctness
+- [x] Identify endpoints using wrong parameters: /listing/{id}/metrics (should be /historical), /listing/{id}/comps (wrong body)
+- [x] Identify redundant calls: 1974 individual listing detail calls for images → eliminated
+- [x] Fix all issues: 3 broken endpoints fixed, negative caching added, hierarchy caching persisted to DB
+- [x] Write comprehensive audit report with findings
+
+## Remove All Image-Fetching API Calls
+- [x] Remove batchFetchPropertyImages (cache-only, zero new API calls)
+- [x] Remove enrichListingsWithImages API calls (cache-only, returns cached data only)
+- [x] Remove getSinglePropertyDetails calls from sop-reports.ts (already removed earlier)
+- [x] Remove competitor imagery section API calls from sop-reports.ts (uses generic recommendations)
+- [x] Verify no other code paths call individual /listing/{id} for images
+- [x] All 1039 tests pass across 79 test files

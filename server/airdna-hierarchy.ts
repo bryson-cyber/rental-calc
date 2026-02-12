@@ -6,6 +6,7 @@
  */
 
 import { rateLimitedAirDNARequest, AIRDNA_API_BASE } from './airdna-rate-limiter';
+import { apiCache } from './cache';
 
 // Helper to make API requests - routes through centralized rate limiter
 async function makeApiRequest<T>(
@@ -44,15 +45,12 @@ export interface MarketResult {
  * Get all markets in a given US state
  * Uses the /market/search endpoint with state name
  */
-// In-memory cache for state market lookups
-const stateMarketsCache = new Map<string, { result: MarketResult[]; time: number }>();
-
 export async function getMarketsInState(stateName: string): Promise<MarketResult[]> {
-  const cacheKey = stateName.toLowerCase().trim();
-  const cached = stateMarketsCache.get(cacheKey);
-  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+  const cacheKey = apiCache.generateKey('state_markets', { state: stateName.toLowerCase().trim() });
+  const cached = await apiCache.getAsync<MarketResult[]>(cacheKey);
+  if (cached) {
     console.log(`[getMarketsInState] CACHE HIT for ${stateName}`);
-    return cached.result;
+    return cached;
   }
 
   try {
@@ -114,7 +112,7 @@ export async function getMarketsInState(stateName: string): Promise<MarketResult
       listingCount: m.listing_count,
       state: m.location?.state
     }));
-    stateMarketsCache.set(cacheKey, { result, time: Date.now() });
+    apiCache.set(cacheKey, result, 'state_markets');
     return result;
     
   } catch (error) {
@@ -137,14 +135,12 @@ export interface SubmarketResult {
 /**
  * Get all submarkets in a given market
  */
-// In-memory cache for submarket lookups
-const submarketCache = new Map<string, { result: SubmarketResult[]; time: number }>();
-
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketResult[]> {
-  const cached = submarketCache.get(marketId);
-  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+  const cacheKey = apiCache.generateKey('submarkets_in_market', { marketId });
+  const cached = await apiCache.getAsync<SubmarketResult[]>(cacheKey);
+  if (cached) {
     console.log(`[getSubmarketsInMarket] CACHE HIT for ${marketId}`);
-    return cached.result;
+    return cached;
   }
 
   try {
@@ -186,7 +182,7 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
       listingCount: sm.listing_count,
       zipcodes: sm.legacy_location?.zipcodes
     }));
-    submarketCache.set(marketId, { result, time: Date.now() });
+    apiCache.set(cacheKey, result, 'submarkets_in_market');
     return result;
     
   } catch (error) {
@@ -215,15 +211,12 @@ export interface SearchResult {
 /**
  * Search for markets and submarkets by name
  */
-// In-memory cache for market search
-const marketSearchCache = new Map<string, { result: SearchResult[]; time: number }>();
-
 export async function searchMarkets(query: string): Promise<SearchResult[]> {
-  const cacheKey = query.toLowerCase().trim();
-  const cached = marketSearchCache.get(cacheKey);
-  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+  const cacheKey = apiCache.generateKey('market_search_hierarchy', { query: query.toLowerCase().trim() });
+  const cached = await apiCache.getAsync<SearchResult[]>(cacheKey);
+  if (cached) {
     console.log(`[searchMarkets] CACHE HIT for ${query}`);
-    return cached.result;
+    return cached;
   }
 
   try {
@@ -270,7 +263,7 @@ export async function searchMarkets(query: string): Promise<SearchResult[]> {
       parentMarket: r.parent_market,
       zipcodes: r.legacy_location?.zipcodes
     }));
-    marketSearchCache.set(cacheKey, { result, time: Date.now() });
+    apiCache.set(cacheKey, result, 'market_search_hierarchy');
     return result;
     
   } catch (error) {
@@ -361,16 +354,12 @@ export interface ZipCodeLookupResult {
  * IMPROVED: Now searches for the zip code directly in AirDNA first, which is more accurate
  * than geocoding and then searching for the city name.
  */
-// Simple in-memory cache for zip code lookups (they repeat a lot)
-const zipCodeCache = new Map<string, { result: ZipCodeLookupResult; time: number }>();
-const ZIP_CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
-
 export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLookupResult> {
-  // Check memory cache first
-  const cached = zipCodeCache.get(zipcode);
-  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+  const cacheKey = apiCache.generateKey('zipcode_lookup', { zipcode });
+  const cached = await apiCache.getAsync<ZipCodeLookupResult>(cacheKey);
+  if (cached) {
     console.log(`[geocodeZipCodeToMarket] CACHE HIT for ${zipcode}`);
-    return cached.result;
+    return cached;
   }
 
   try {
@@ -497,7 +486,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
           listingCount: foundSubmarket.listing_count || 0
         } : undefined
       };
-      zipCodeCache.set(zipcode, { result: directResult, time: Date.now() });
+      apiCache.set(cacheKey, directResult, 'zipcode_lookup');
       return directResult;
     }
     
@@ -644,7 +633,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
         listingCount: matchedSubmarket.listing_count || 0
       } : undefined
     };
-    zipCodeCache.set(zipcode, { result: successResult, time: Date.now() });
+    apiCache.set(cacheKey, successResult, 'zipcode_lookup');
     return successResult;
     
   } catch (error) {

@@ -1,0 +1,43 @@
+{
+  "query": "SELECT * FROM property_images LIMIT 3",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT * FROM property_images LIMIT 3",
+  "rows": [
+    {
+      "id": "1",
+      "propertyId": "test_abnb_12345",
+      "platform": "airbnb",
+      "images": "[\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\", \"https://example.com/image3.jpg\"]",
+      "imageCount": "3",
+      "fetchedAt": "2026-02-12 22:45:18",
+      "expiresAt": "2026-02-19 22:45:18",
+      "createdAt": "2026-01-21 01:11:25",
+      "updatedAt": "2026-02-12 22:45:18"
+    },
+    {
+      "id": "4",
+      "propertyId": "batch_test_1",
+      "platform": "airbnb",
+      "images": "[\"img1.jpg\"]",
+      "imageCount": "1",
+      "fetchedAt": "2026-02-12 22:45:19",
+      "expiresAt": "2026-02-19 22:45:19",
+      "createdAt": "2026-01-21 01:11:26",
+      "updatedAt": "2026-02-12 22:45:18"
+    },
+    {
+      "id": "5",
+      "propertyId": "batch_test_2",
+      "platform": "airbnb",
+      "images": "[\"img2.jpg\"]",
+      "imageCount": "1",
+      "fetchedAt": "2026-02-12 22:45:19",
+      "expiresAt": "2026-02-19 22:45:19",
+      "createdAt": "2026-01-21 01:11:26",
+      "updatedAt": "2026-02-12 22:45:18"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpropertyId\tplatform\timages\timageCount\tfetchedAt\texpiresAt\tcreatedAt\tupdatedAt\n1\ttest_abnb_12345\tairbnb\t[\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\", \"https://example.com/image3.jpg\"]\t3\t2026-02-12 22:45:18\t2026-02-19 22:45:18\t2026-01-21 01:11:25\t2026-02-12 22:45:18\n4\tbatch_test_1\tairbnb\t[\"img1.jpg\"]\t1\t2026-02-12 22:45:19\t2026-02-19 22:45:19\t2026-01-21 01:11:26\t2026-02-12 22:45:18\n5\tbatch_test_2\tairbnb\t[\"img2.jpg\"]\t1\t2026-02-12 22:45:19\t2026-02-19 22:45:19\t2026-01-21 01:11:26\t2026-02-12 22:45:18\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

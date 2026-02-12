@@ -74,6 +74,11 @@ class APICache {
     'search_markets': 30 * 24 * 60 * 60 * 1000,
     'search_zipcode': 30 * 24 * 60 * 60 * 1000,
     
+    // Hierarchy data - 30 days (market structure rarely changes)
+    'state_markets': 30 * 24 * 60 * 60 * 1000,
+    'market_search_hierarchy': 30 * 24 * 60 * 60 * 1000,
+    'zipcode_lookup': 30 * 24 * 60 * 60 * 1000,
+    
     // Analysis results - cache for 30 days since they're expensive
     'full_analysis': 30 * 24 * 60 * 60 * 1000,
     

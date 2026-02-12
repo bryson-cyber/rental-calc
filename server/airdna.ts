@@ -961,7 +961,10 @@ export async function getMarketDetails(marketId: string): Promise<{
     market_type?: string;
     metrics?: { market_score: number; revenue: number; booked: number; daily_rate: number; revpar: number; };
   }>(cacheKey);
-  if (cached) { logCacheHit('market_details'); return cached; }
+  if (cached) {
+    if ((cached as any) === '__NEGATIVE__') { logCacheHit('market_details'); return null; }
+    logCacheHit('market_details'); return cached;
+  }
   
   try {
     const response = await makeApiRequest<{
@@ -994,6 +997,12 @@ export async function getMarketDetails(marketId: string): Promise<{
     return result;
   } catch (error) {
     console.error("Error fetching market details:", error);
+    // Negative cache: remember that this market ID is invalid so we don't retry
+    const errorMsg = String(error);
+    if (errorMsg.includes('API-E-009') || errorMsg.includes('Could not find Market')) {
+      apiCache.set(cacheKey, '__NEGATIVE__', 'market_details');
+      console.log(`[getMarketDetails] Negative-cached invalid market ID: ${marketId}`);
+    }
     return null;
   }
 }
@@ -4222,155 +4231,59 @@ export async function getSinglePropertyDetails(propertyId: string): Promise<Sing
 }
 
 /**
- * Batch fetch images for multiple properties using /listing/batch endpoint.
- * Uses POST /listing/batch (up to 100 per request) instead of individual GET /listing/{id} calls.
- * This reduces API calls by ~99% (e.g., 879 listings = 9 batch calls instead of 879 individual calls).
- * Returns a map of property_id -> image_url[]
+ * Returns cached images only. Makes ZERO API calls.
+ * The /listing/batch endpoint is not available on our API plan, and individual
+ * /listing/{id} calls are too expensive (1974 calls/day just for thumbnails).
+ * Images that were previously cached will still be served.
+ * For uncached listings, the UI shows the Airbnb link instead.
  */
 export async function batchFetchPropertyImages(
   propertyIds: string[],
-  _maxConcurrent: number = 5 // kept for backward compat but no longer used
+  _maxConcurrent: number = 5
 ): Promise<Map<string, string[]>> {
   const imageMap = new Map<string, string[]>();
   
-  console.log(`[batchFetchPropertyImages] Starting with ${propertyIds.length} property IDs`);
-  console.log(`[batchFetchPropertyImages] Sample IDs: ${propertyIds.slice(0, 3).join(', ')}`);
+  if (propertyIds.length === 0) return imageMap;
   
-  // Step 1: Check database cache first
-  const { getBatchCachedPropertyImages, batchCachePropertyImages } = await import('./db');
-  const cachedImages = await getBatchCachedPropertyImages(propertyIds);
-  
-  // Add cached images to result map
-  Array.from(cachedImages.entries()).forEach(([id, images]) => {
-    imageMap.set(id, images);
-  });
-  
-  // Find which property IDs still need to be fetched from API
-  const uncachedIds = propertyIds.filter(id => !cachedImages.has(id));
-  
-  console.log(`[batchFetchPropertyImages] Cache: ${cachedImages.size} hits, ${uncachedIds.length} misses`);
-  
-  if (uncachedIds.length === 0) {
-    console.log(`[batchFetchPropertyImages] All images served from cache!`);
-    return imageMap;
-  }
-  
-  // Step 2: Fetch uncached images using /listing/batch (max 100 per request)
-  const BATCH_SIZE = 100;
-  const newlyFetchedImages = new Map<string, string[]>();
-  
-  for (let i = 0; i < uncachedIds.length; i += BATCH_SIZE) {
-    const batchIds = uncachedIds.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(uncachedIds.length / BATCH_SIZE);
-    console.log(`[batchFetchPropertyImages] API batch ${batchNum}/${totalBatches}: ${batchIds.length} listings`);
-    
-    try {
-      const response = await makeApiRequest<{
-        payload: {
-          listings: Array<{
-            property_id: string;
-            details: {
-              title?: string;
-              images?: string[];
-              bedrooms?: number;
-              bathrooms?: number;
-              accommodates?: number;
-              property_type?: string;
-              reviews?: number;
-            };
-            ratings?: { overall?: number };
-            metrics?: { summary?: { annual_revenue?: number; adr?: number; occupancy?: number } };
-          }>;
-        };
-      }>('/listing/batch', 'POST', { listing_ids: batchIds }, 2, 'batchFetchPropertyImages');
-      
-      if (response?.payload?.listings) {
-        for (const listing of response.payload.listings) {
-          const images = listing.details?.images || [];
-          if (images.length > 0) {
-            imageMap.set(listing.property_id, images);
-            newlyFetchedImages.set(listing.property_id, images);
-          }
-          
-          // Also populate the in-memory cache for getSinglePropertyDetails
-          const cacheKey = apiCache.generateKey('single_property', { propertyId: listing.property_id });
-          const d = listing.details;
-          apiCache.set(cacheKey, {
-            property_id: listing.property_id,
-            title: d?.title || '',
-            images,
-            bedrooms: d?.bedrooms || 0,
-            bathrooms: d?.bathrooms || 0,
-            accommodates: d?.accommodates || 0,
-            property_type: d?.property_type || '',
-            rating: listing.ratings?.overall || null,
-            reviews: d?.reviews || 0,
-            annual_revenue: listing.metrics?.summary?.annual_revenue || 0,
-            adr: listing.metrics?.summary?.adr || 0,
-            occupancy: listing.metrics?.summary?.occupancy || 0,
-          }, 'single_property');
-        }
-        console.log(`[batchFetchPropertyImages] Batch ${batchNum}: got ${response.payload.listings.length} listings, ${newlyFetchedImages.size} with images so far`);
-      }
-    } catch (error) {
-      console.error(`[batchFetchPropertyImages] Batch ${batchNum} failed:`, error);
-      // Continue with next batch instead of failing entirely
+  // Only return what's already in the database cache — no API calls
+  try {
+    const { getBatchCachedPropertyImages } = await import('./db');
+    const cachedImages = await getBatchCachedPropertyImages(propertyIds);
+    for (const [id, images] of Array.from(cachedImages.entries())) {
+      imageMap.set(id, images);
     }
+    console.log(`[batchFetchPropertyImages] Cache-only: ${cachedImages.size}/${propertyIds.length} served from cache (0 API calls)`);
+  } catch (error) {
+    console.error('[batchFetchPropertyImages] Cache lookup failed:', error);
   }
   
-  // Step 3: Cache newly fetched images in database
-  if (newlyFetchedImages.size > 0) {
-    console.log(`[batchFetchPropertyImages] Caching ${newlyFetchedImages.size} newly fetched images`);
-    await batchCachePropertyImages(newlyFetchedImages);
-  }
-  
-  console.log(`[batchFetchPropertyImages] Total: ${imageMap.size}/${propertyIds.length} properties (${cachedImages.size} cached, ${newlyFetchedImages.size} from API)`);
   return imageMap;
 }
 
 /**
- * Enrich listings with images from single property endpoint
+ * Enrich listings with cached images only. Makes ZERO API calls.
+ * Returns listings with any previously-cached images applied.
+ * Listings without cached images keep their existing data (Airbnb URL still available for linking).
  */
 export async function enrichListingsWithImages(
   listings: ListingData[],
-  maxListings: number = 20
+  _maxListings: number = 20
 ): Promise<ListingData[]> {
-  console.log(`[enrichListingsWithImages] Starting with ${listings.length} listings, maxListings: ${maxListings}`);
-  
-  // Only fetch images for listings that don't already have them
-  const listingsNeedingImages = listings
-    .slice(0, maxListings)
-    .filter(l => !l.image_url || l.image_url.length === 0);
-  
-  console.log(`[enrichListingsWithImages] Listings needing images: ${listingsNeedingImages.length}`);
-  
-  if (listingsNeedingImages.length === 0) {
-    console.log('[enrichListingsWithImages] All listings already have images');
-    return listings;
-  }
-  
-  const propertyIds = listingsNeedingImages
+  // Collect IDs of listings that need images
+  const idsNeedingImages = listings
+    .filter(l => !l.image_url || l.image_url.length === 0)
     .map(l => l.id)
     .filter(id => id && id.length > 0);
   
-  if (propertyIds.length === 0) {
-    console.log('[enrichListingsWithImages] No valid property IDs to fetch images for');
-    return listings;
-  }
+  if (idsNeedingImages.length === 0) return listings;
   
-  console.log(`[enrichListingsWithImages] Fetching images for ${propertyIds.length} listings`);
-  const imageMap = await batchFetchPropertyImages(propertyIds);
+  // Cache-only lookup (zero API calls)
+  const imageMap = await batchFetchPropertyImages(idsNeedingImages);
   
-  // Update listings with fetched images
   return listings.map(l => {
     if ((!l.image_url || l.image_url.length === 0) && imageMap.has(l.id)) {
       const images = imageMap.get(l.id)!;
-      return {
-        ...l,
-        image_url: images[0],
-        images: images, // Store all images for gallery
-      };
+      return { ...l, image_url: images[0], images };
     }
     return l;
   });
@@ -5568,12 +5481,20 @@ export async function getListingHistoricalMetrics(
   if (_cv) { logCacheHit('listing_historical'); return _cv; }
 
   try {
+    // Calculate time period for the API (docs say /listing/{id}/historical with time_period)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - numMonths);
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    
     const response = await makeApiRequest(
-      `/listing/${listingId}/metrics`,
+      `/listing/${listingId}/historical`,
       "POST",
       {
-        num_months: numMonths,
-        metrics: ["revenue", "adr", "occupancy", "nights_booked", "nights_available"],
+        time_period: {
+          start_date: formatDate(startDate),
+          end_date: formatDate(endDate),
+        },
       }
     );
 
@@ -5655,11 +5576,13 @@ export async function getListingComps(
   if (_cv) { logCacheHit('listing_comps'); return _cv; }
 
   try {
+    // API docs: POST /listing/{listing_id}/comps with { filters: [], comp_count: N }
     const response = await makeApiRequest(
       `/listing/${listingId}/comps`,
       "POST",
       {
-        pagination: { page_size: limit, offset: 0 },
+        filters: [],
+        comp_count: limit,
       }
     );
 
