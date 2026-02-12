@@ -1,0 +1,30 @@
+{
+  "query": "SELECT shareId, address FROM shared_reports ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, address FROM shared_reports ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "shareId": "wzc458h9mliwcc74",
+      "address": "Los Angeles, CA, USA"
+    },
+    {
+      "shareId": "cczsv06omlivxnku",
+      "address": "1028 17th St, Plano, TX 75074, USA"
+    },
+    {
+      "shareId": "lmwg07v4mlivx4m1",
+      "address": "1028 17th St, Plano, TX 75074, USA"
+    },
+    {
+      "shareId": "jx83sd79mliqita1",
+      "address": "693 Canvas Ave, Fulshear, TX 77441, USA"
+    },
+    {
+      "shareId": "jvkub6xfmlilyld1",
+      "address": "2310 Moser Ave, Dallas, TX 75206, USA"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\taddress\nwzc458h9mliwcc74\tLos Angeles, CA, USA\ncczsv06omlivxnku\t1028 17th St, Plano, TX 75074, USA\nlmwg07v4mlivx4m1\t1028 17th St, Plano, TX 75074, USA\njx83sd79mliqita1\t693 Canvas Ave, Fulshear, TX 77441, USA\njvkub6xfmlilyld1\t2310 Moser Ave, Dallas, TX 75206, USA\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

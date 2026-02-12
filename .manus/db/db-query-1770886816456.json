@@ -1,0 +1,40 @@
+{
+  "query": "SELECT shareId, address, reportType, createdAt FROM shared_reports ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, address, reportType, createdAt FROM shared_reports ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "shareId": "wzc458h9mliwcc74",
+      "address": "Los Angeles, CA, USA",
+      "reportType": "full",
+      "createdAt": "2026-02-12 03:25:53"
+    },
+    {
+      "shareId": "cczsv06omlivxnku",
+      "address": "1028 17th St, Plano, TX 75074, USA",
+      "reportType": "full",
+      "createdAt": "2026-02-12 03:14:28"
+    },
+    {
+      "shareId": "lmwg07v4mlivx4m1",
+      "address": "1028 17th St, Plano, TX 75074, USA",
+      "reportType": "full",
+      "createdAt": "2026-02-12 03:14:04"
+    },
+    {
+      "shareId": "jx83sd79mliqita1",
+      "address": "693 Canvas Ave, Fulshear, TX 77441, USA",
+      "reportType": "full",
+      "createdAt": "2026-02-12 00:42:58"
+    },
+    {
+      "shareId": "jvkub6xfmlilyld1",
+      "address": "2310 Moser Ave, Dallas, TX 75206, USA",
+      "reportType": "full",
+      "createdAt": "2026-02-11 22:35:16"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\taddress\treportType\tcreatedAt\nwzc458h9mliwcc74\tLos Angeles, CA, USA\tfull\t2026-02-12 03:25:53\ncczsv06omlivxnku\t1028 17th St, Plano, TX 75074, USA\tfull\t2026-02-12 03:14:28\nlmwg07v4mlivx4m1\t1028 17th St, Plano, TX 75074, USA\tfull\t2026-02-12 03:14:04\njx83sd79mliqita1\t693 Canvas Ave, Fulshear, TX 77441, USA\tfull\t2026-02-12 00:42:58\njvkub6xfmlilyld1\t2310 Moser Ave, Dallas, TX 75206, USA\tfull\t2026-02-11 22:35:16\n",
+  "stderr": "",
+  "execution_time_ms": 140
+}

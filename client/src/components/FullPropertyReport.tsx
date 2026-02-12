@@ -699,8 +699,34 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     .sort((a: Comparable, b: Comparable) => b.annual_revenue - a.annual_revenue);
 
   // Initialize comp selection: all comps selected by default
-  // Uses a stable key: comp.id || comp.airbnb_listing_id || index
-  const getCompKey = (comp: Comparable, index: number) => comp.id || comp.airbnb_listing_id || `comp-${index}`;
+  // Uses a stable key: comp.id || comp.airbnb_listing_id || index-in-displayComps (revenue-sorted)
+  // IMPORTANT: The index parameter MUST be the comp's position in displayComps (revenue-sorted),
+  // NOT in sortedDisplayComps. This ensures keys are stable regardless of current sort order.
+  const getCompKey = (comp: Comparable, displayIndex: number) => comp.id || comp.airbnb_listing_id || `comp-${displayIndex}`;
+
+  // Build a map from comp reference → its index in displayComps (revenue-sorted order)
+  // This allows us to find the stable displayIndex for any comp, even after re-sorting.
+  const compToDisplayIndex = useMemo(() => {
+    const map = new Map<Comparable, number>();
+    displayComps.forEach((c, i) => map.set(c, i));
+    return map;
+  }, [displayComps]);
+
+  // Revenue rank map: comp key → rank (1 = highest revenue)
+  // displayComps is already sorted by revenue desc, so rank = displayIndex + 1
+  const revenueRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    displayComps.forEach((c, i) => {
+      map.set(getCompKey(c, i), i + 1);
+    });
+    return map;
+  }, [displayComps]);
+
+  /** Get the stable key for a comp using its position in displayComps */
+  const getStableCompKey = (comp: Comparable) => {
+    const displayIndex = compToDisplayIndex.get(comp) ?? -1;
+    return getCompKey(comp, displayIndex);
+  };
   const compStorageKey = shareId ? `comp-selection-${shareId}` : null;
 
   useEffect(() => {
@@ -754,8 +780,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   // Filtered comps based on user selection
   const filteredComps = useMemo(() => {
     if (selectedCompIds.size === 0 && compSelectionInitialized) return [];
-    return displayComps.filter((c, i) => selectedCompIds.has(getCompKey(c, i)));
-  }, [displayComps, selectedCompIds, compSelectionInitialized]);
+    return displayComps.filter((c) => selectedCompIds.has(getStableCompKey(c)));
+  }, [displayComps, selectedCompIds, compSelectionInitialized, compToDisplayIndex]);
 
   // Sorted display comps for the table
   const sortedDisplayComps = useMemo(() => {
@@ -1643,16 +1669,19 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   </tr>
                 </thead>
                 <tbody>
-                  {(showAllComps ? sortedDisplayComps : sortedDisplayComps.slice(0, 10)).map((comp, i) => (
-                    <tr key={comp.id || i} className={`border-b border-[#e2e8f0] transition-colors ${selectedCompIds.has(getCompKey(comp, i)) ? 'hover:bg-[#C9A962]/5' : 'opacity-40 hover:opacity-60 bg-[#f8fafc]'}`}>
+                  {(showAllComps ? sortedDisplayComps : sortedDisplayComps.slice(0, 10)).map((comp) => {
+                    const stableKey = getStableCompKey(comp);
+                    const revenueRank = revenueRankMap.get(stableKey) ?? '—';
+                    return (
+                    <tr key={stableKey} className={`border-b border-[#e2e8f0] transition-colors ${selectedCompIds.has(stableKey) ? 'hover:bg-[#C9A962]/5' : 'opacity-40 hover:opacity-60 bg-[#f8fafc]'}`}>
                       <td className="p-4">
                         <Checkbox
-                          checked={selectedCompIds.has(getCompKey(comp, i))}
-                          onCheckedChange={() => toggleComp(getCompKey(comp, i))}
+                          checked={selectedCompIds.has(stableKey)}
+                          onCheckedChange={() => toggleComp(stableKey)}
                           className="data-[state=checked]:bg-[#C9A962] data-[state=checked]:border-[#C9A962]"
                         />
                       </td>
-                      <td className="p-4 text-[#94a3b8] font-medium">{i + 1}</td>
+                      <td className="p-4 text-[#94a3b8] font-medium">{revenueRank}</td>
                       <td className="p-4">
                         <div className="flex items-start gap-3">
                           {comp.image_url ? (
@@ -1721,7 +1750,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                         })()}
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>

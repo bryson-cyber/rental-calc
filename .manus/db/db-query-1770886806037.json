@@ -1,0 +1,60 @@
+{
+  "query": "SELECT shareId, address, LEFT(reportData, 200) as data_preview FROM shared_reports ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, address, LEFT(reportData, 200) as data_preview FROM shared_reports ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "shareId": "wzc458h9mliwcc74",
+      "address": "Los Angeles, CA, USA",
+      "data_preview": "{\"property\":{\"address\":\"Los Angeles, CA, USA\",\"city\":\"Los Angeles\",\"state\":\"CA\",\"zipCode\":\"\",\"bedrooms\":2,\"bathrooms\":1,\"accommodates\":6,\"latitude\":34.0549076,\"longitude\":-118.242643},\"revenue_estimat"
+    },
+    {
+      "shareId": "cczsv06omlivxnku",
+      "address": "1028 17th St, Plano, TX 75074, USA",
+      "data_preview": "{\"property\":{\"address\":\"1028 17th St, Plano, TX 75074, USA\",\"city\":\"1028 17TH ST\",\"state\":\"PLANO\",\"zipCode\":\"75074\",\"bedrooms\":3,\"bathrooms\":3,\"accommodates\":6,\"latitude\":33.022884,\"longitude\":-96.700"
+    },
+    {
+      "shareId": "lmwg07v4mlivx4m1",
+      "address": "1028 17th St, Plano, TX 75074, USA",
+      "data_preview": "{\"property\":{\"address\":\"1028 17th St, Plano, TX 75074, USA\",\"city\":\"1028 17TH ST\",\"state\":\"PLANO\",\"zipCode\":\"75074\",\"bedrooms\":3,\"bathrooms\":3,\"accommodates\":6,\"latitude\":33.022884,\"longitude\":-96.700"
+    },
+    {
+      "shareId": "jx83sd79mliqita1",
+      "address": "693 Canvas Ave, Fulshear, TX 77441, USA",
+      "data_preview": "{\"property\":{\"address\":\"693 Canvas Ave, Fulshear, TX 77441, USA\",\"city\":\"693 CANVAS AVE\",\"state\":\"FULSHEAR\",\"zipCode\":\"77441\",\"bedrooms\":1,\"bathrooms\":1,\"accommodates\":2,\"latitude\":29.69353,\"longitude"
+    },
+    {
+      "shareId": "jvkub6xfmlilyld1",
+      "address": "2310 Moser Ave, Dallas, TX 75206, USA",
+      "data_preview": "{\"property\":{\"address\":\"2310 Moser Ave, Dallas, TX 75206, USA\",\"city\":\"2310 MOSER AVE\",\"state\":\"DALLAS\",\"zipCode\":\"75206\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":32.81372,\"longitude\":-9"
+    },
+    {
+      "shareId": "55f2qvkcmlikgf7f",
+      "address": "6847 Vanlynn Ln, Houston, TX 77084, USA",
+      "data_preview": "{\"property\":{\"address\":\"6847 Vanlynn Ln, Houston, TX 77084, USA\",\"city\":\"6847 VANLYNN LN\",\"state\":\"HOUSTON\",\"zipCode\":\"77084\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":29.877787,\"longitud"
+    },
+    {
+      "shareId": "1u7d5gvvmlijq44a",
+      "address": "2135 Whiteback Dr, Houston, TX 77084, USA",
+      "data_preview": "{\"property\":{\"address\":\"2135 Whiteback Dr, Houston, TX 77084, USA\",\"city\":\"2135 WHITEBACK DR\",\"state\":\"HOUSTON\",\"zipCode\":\"77084\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":29.798082,\"long"
+    },
+    {
+      "shareId": "qd4o7lunmlii4ia3",
+      "address": "1211 Wamajo Dr, Sandusky, OH 44870, USA",
+      "data_preview": "{\"property\":{\"address\":\"1211 Wamajo Dr, Sandusky, OH 44870, USA\",\"city\":\"1211 WAMAJO DR\",\"state\":\"SANDUSKY\",\"zipCode\":\"44870\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":41.438854,\"longitud"
+    },
+    {
+      "shareId": "1byhaxuxmlibqtbt",
+      "address": "2680 Carnation Dr, Richardson, TX 75082, USA",
+      "data_preview": "{\"property\":{\"address\":\"2680 Carnation Dr, Richardson, TX 75082, USA\",\"city\":\"2680 CARNATION DR\",\"state\":\"RICHARDSON\",\"zipCode\":\"75082\",\"bedrooms\":6,\"bathrooms\":5,\"accommodates\":12,\"latitude\":32.98646"
+    },
+    {
+      "shareId": "mnk14ulomlia28bm",
+      "address": "415 Big Bear Wy, Pigeon Forge, TN 37863, USA",
+      "data_preview": "{\"property\":{\"address\":\"415 Big Bear Wy, Pigeon Forge, TN 37863, USA\",\"city\":\"Richardson\",\"state\":\"TX\",\"zipCode\":\"75082\",\"bedrooms\":2,\"bathrooms\":2,\"accommodates\":6,\"latitude\":32.9483,\"longitude\":-96."
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\taddress\tdata_preview\nwzc458h9mliwcc74\tLos Angeles, CA, USA\t{\"property\":{\"address\":\"Los Angeles, CA, USA\",\"city\":\"Los Angeles\",\"state\":\"CA\",\"zipCode\":\"\",\"bedrooms\":2,\"bathrooms\":1,\"accommodates\":6,\"latitude\":34.0549076,\"longitude\":-118.242643},\"revenue_estimat\ncczsv06omlivxnku\t1028 17th St, Plano, TX 75074, USA\t{\"property\":{\"address\":\"1028 17th St, Plano, TX 75074, USA\",\"city\":\"1028 17TH ST\",\"state\":\"PLANO\",\"zipCode\":\"75074\",\"bedrooms\":3,\"bathrooms\":3,\"accommodates\":6,\"latitude\":33.022884,\"longitude\":-96.700\nlmwg07v4mlivx4m1\t1028 17th St, Plano, TX 75074, USA\t{\"property\":{\"address\":\"1028 17th St, Plano, TX 75074, USA\",\"city\":\"1028 17TH ST\",\"state\":\"PLANO\",\"zipCode\":\"75074\",\"bedrooms\":3,\"bathrooms\":3,\"accommodates\":6,\"latitude\":33.022884,\"longitude\":-96.700\njx83sd79mliqita1\t693 Canvas Ave, Fulshear, TX 77441, USA\t{\"property\":{\"address\":\"693 Canvas Ave, Fulshear, TX 77441, USA\",\"city\":\"693 CANVAS AVE\",\"state\":\"FULSHEAR\",\"zipCode\":\"77441\",\"bedrooms\":1,\"bathrooms\":1,\"accommodates\":2,\"latitude\":29.69353,\"longitude\njvkub6xfmlilyld1\t2310 Moser Ave, Dallas, TX 75206, USA\t{\"property\":{\"address\":\"2310 Moser Ave, Dallas, TX 75206, USA\",\"city\":\"2310 MOSER AVE\",\"state\":\"DALLAS\",\"zipCode\":\"75206\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":32.81372,\"longitude\":-9\n55f2qvkcmlikgf7f\t6847 Vanlynn Ln, Houston, TX 77084, USA\t{\"property\":{\"address\":\"6847 Vanlynn Ln, Houston, TX 77084, USA\",\"city\":\"6847 VANLYNN LN\",\"state\":\"HOUSTON\",\"zipCode\":\"77084\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":29.877787,\"longitud\n1u7d5gvvmlijq44a\t2135 Whiteback Dr, Houston, TX 77084, USA\t{\"property\":{\"address\":\"2135 Whiteback Dr, Houston, TX 77084, USA\",\"city\":\"2135 WHITEBACK DR\",\"state\":\"HOUSTON\",\"zipCode\":\"77084\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":29.798082,\"long\nqd4o7lunmlii4ia3\t1211 Wamajo Dr, Sandusky, OH 44870, USA\t{\"property\":{\"address\":\"1211 Wamajo Dr, Sandusky, OH 44870, USA\",\"city\":\"1211 WAMAJO DR\",\"state\":\"SANDUSKY\",\"zipCode\":\"44870\",\"bedrooms\":3,\"bathrooms\":2,\"accommodates\":6,\"latitude\":41.438854,\"longitud\n1byhaxuxmlibqtbt\t2680 Carnation Dr, Richardson, TX 75082, USA\t{\"property\":{\"address\":\"2680 Carnation Dr, Richardson, TX 75082, USA\",\"city\":\"2680 CARNATION DR\",\"state\":\"RICHARDSON\",\"zipCode\":\"75082\",\"bedrooms\":6,\"bathrooms\":5,\"accommodates\":12,\"latitude\":32.98646\nmnk14ulomlia28bm\t415 Big Bear Wy, Pigeon Forge, TN 37863, USA\t{\"property\":{\"address\":\"415 Big Bear Wy, Pigeon Forge, TN 37863, USA\",\"city\":\"Richardson\",\"state\":\"TX\",\"zipCode\":\"75082\",\"bedrooms\":2,\"bathrooms\":2,\"accommodates\":6,\"latitude\":32.9483,\"longitude\":-96.\n",
+  "stderr": "",
+  "execution_time_ms": 249
+}

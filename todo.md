@@ -10516,3 +10516,12 @@ Results:
 - [x] Add clickable sort headers to comp table columns (Revenue, ADR, Occupancy, Rating, Reviews, Distance)
 - [x] Add sort direction indicators (ascending/descending arrows)
 - [x] Maintain sort state when toggling comps on/off
+
+
+## Comp Table Fixes (Feb 12, 2026)
+- [x] BUG: Rank # changes when sorting by non-revenue columns - should always reflect revenue rank
+- [x] INVESTIGATED: Review counts come from AirDNA cached data at report generation time (not a display bug)
+- [ ] Sync map markers with table - clicking marker highlights corresponding row
+- [x] Stable comp keys: checkbox selection no longer breaks when re-sorting
+- [x] Stable row keys: React no longer re-mounts rows when sort order changes
+- [x] Added 12 comprehensive tests for stable revenue rank feature
