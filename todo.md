@@ -10724,3 +10724,19 @@ Results:
 ## Full Property Report: Admin-only access (Feb 12, 2026)
 - [x] Make "Generate a Full Property Report" feature admin-only
 - [x] Non-admin viewers see "Admin Access Required" message with redirect to home page
+
+## Full Report: Hide from non-admins + redirect to Step 5 (Feb 12, 2026)
+- [x] Remove "Admin Access Required" page from FullReportGenerator — replaced with silent redirect
+- [x] Hide BuildFullReportButton entirely for non-admin users (wrapped in isAdmin check)
+- [x] Redirect non-admin users who navigate to /full-report silently to home page
+- [x] Removed "Admin Access Required" page — non-admins just never see it
+
+## Server-side geocoding retry (Feb 12, 2026)
+- [x] Add Google Geocoding fallback with retry logic (3 address variants: original, cleaned, with city/state)
+- [x] Ensure coordinates are always populated before sending response to client
+- [x] Add tests for geocoding retry logic — 7 new tests passing
+
+## BUG: searchResults.map is not a function in StandaloneMarketAdvisor (Feb 12, 2026)
+- [x] Fix searchResults.map crash — added Array.isArray guard in useEffect setter
+- [x] Add defensive guard to ensure searchResults is always an array before .map() in JSX render
+- [x] Test fix — 981 total tests passing

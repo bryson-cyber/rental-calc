@@ -51,7 +51,6 @@ import {
   Shield,
   CheckCircle2,
   Circle,
-  Lock,
 } from 'lucide-react';
 import { SmartAddressInput } from '@/components/SmartAddressInput';
 
@@ -210,26 +209,15 @@ export default function FullReportGenerator() {
     );
   }
   
-  // Admin-only access - redirect non-admin users to main page
+  // Admin-only: silently redirect non-admin users to Step 5 (main tool)
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== 'admin')) {
+      navigate('/');
+    }
+  }, [authLoading, user, navigate]);
+
   if (!authLoading && (!user || user.role !== 'admin')) {
-    return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#C9A962]/10 rounded-2xl mb-6 border border-[#C9A962]/20">
-            <Lock className="w-8 h-8 text-[#C9A962]" />
-          </div>
-          <h2 className="text-2xl font-serif font-bold text-[#0F172A] mb-3">Admin Access Required</h2>
-          <p className="text-[#6B7280] mb-6">The Full Property Report generator is currently available to administrators only. Use the main tool to validate your deal.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0F172A] text-white rounded-xl font-medium hover:bg-[#1e293b] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Go to Main Tool
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
   
   return (

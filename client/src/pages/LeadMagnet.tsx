@@ -380,6 +380,7 @@ type TabType = 'ebook' | 'regulations' | 'prove' | 'find' | 'validate' | 'compar
 export default function LeadMagnet() {
   // Auth state for login requirement
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
   
   // Interactive tour state
   const { showTour, isFirstVisit, startTour, closeTour, completeTour, resetTour } = useInteractiveTour();
@@ -5677,7 +5678,8 @@ export default function LeadMagnet() {
             
             {/* Build Full Report + Next Step CTA */}
             <div className="flex flex-col items-center gap-4 mt-8">
-              {/* Build Full Report Button */}
+              {/* Build Full Report Button — admin only */}
+              {isAdmin && (
               <div className="w-full max-w-md mx-auto bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-2xl p-6 text-center">
                 <p className="text-white/90 font-serif text-lg font-semibold mb-2">Share With Your Client</p>
                 <p className="text-white/60 text-sm mb-4">Generate a comprehensive, branded report combining all analysis data.</p>
@@ -5738,6 +5740,7 @@ export default function LeadMagnet() {
                   size="lg"
                 />
               </div>
+              )}
               
               <p className="text-slate-500">Have multiple properties to compare? Find the best one.</p>
               <Button

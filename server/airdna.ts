@@ -2717,49 +2717,72 @@ export async function getComprehensivePropertyReport(
   }
   
   // Step 1b: Geocode address to get lat/lng and city/state if not in rentalizer response
+  // Includes retry logic with cleaned address variants
   if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
-    try {
-      const { makeRequest: makeGeoRequest } = await import('./_core/map');
-      const geocodeResult = await makeGeoRequest<{
-        status: string;
-        results: Array<{
-          geometry: { location: { lat: number; lng: number } };
-          formatted_address: string;
-          address_components: Array<{
-            long_name: string;
-            short_name: string;
-            types: string[];
+    const geocodeAttempts = [
+      address, // Original address
+      address.replace(/\s*#\S+/, '').replace(/\s*(apt|unit|suite|ste|bldg|fl|floor)\s*\S*/gi, '').trim(), // Remove unit/apt
+      propertyEstimate.property.address_lookup ? `${propertyEstimate.property.address || address}, ${propertyEstimate.property.address_lookup}` : null, // address + city/state
+    ].filter(Boolean) as string[];
+    
+    // Deduplicate attempts
+    const uniqueAttempts = Array.from(new Set(geocodeAttempts));
+    
+    for (let i = 0; i < uniqueAttempts.length; i++) {
+      const attemptAddress = uniqueAttempts[i];
+      try {
+        const { makeRequest: makeGeoRequest } = await import('./_core/map');
+        console.log(`[Property Report] Geocoding attempt ${i + 1}/${uniqueAttempts.length}: "${attemptAddress}"`);
+        const geocodeResult = await makeGeoRequest<{
+          status: string;
+          results: Array<{
+            geometry: { location: { lat: number; lng: number } };
+            formatted_address: string;
+            address_components: Array<{
+              long_name: string;
+              short_name: string;
+              types: string[];
+            }>;
           }>;
-        }>;
-      }>('/maps/api/geocode/json', { address });
-      
-      if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
-        const result = geocodeResult.results[0];
-        const cityComp = result.address_components.find(c => c.types.includes('locality'));
-        const stateComp = result.address_components.find(c => c.types.includes('administrative_area_level_1'));
+        }>('/maps/api/geocode/json', { address: attemptAddress });
         
-        // Inject location into propertyEstimate so downstream code can use it
-        (propertyEstimate.property as any).latitude = result.geometry.location.lat;
-        (propertyEstimate.property as any).longitude = result.geometry.location.lng;
-        // Store city/state as extra fields for report building
-        (propertyEstimate.property as any)._geocoded_city = cityComp?.long_name || '';
-        (propertyEstimate.property as any)._geocoded_state = stateComp?.short_name || '';
-        
-        // Also set address_lookup if missing
-        if (!propertyEstimate.property.address_lookup) {
-          (propertyEstimate.property as any).address_lookup = 
-            `${cityComp?.long_name || ''}, ${stateComp?.short_name || ''}`;
+        if (geocodeResult.status === 'OK' && geocodeResult.results?.[0]) {
+          const result = geocodeResult.results[0];
+          const cityComp = result.address_components.find(c => c.types.includes('locality'));
+          const stateComp = result.address_components.find(c => c.types.includes('administrative_area_level_1'));
+          
+          // Inject location into propertyEstimate so downstream code can use it
+          (propertyEstimate.property as any).latitude = result.geometry.location.lat;
+          (propertyEstimate.property as any).longitude = result.geometry.location.lng;
+          // Store city/state as extra fields for report building
+          (propertyEstimate.property as any)._geocoded_city = cityComp?.long_name || '';
+          (propertyEstimate.property as any)._geocoded_state = stateComp?.short_name || '';
+          
+          // Also set address_lookup if missing
+          if (!propertyEstimate.property.address_lookup) {
+            (propertyEstimate.property as any).address_lookup = 
+              `${cityComp?.long_name || ''}, ${stateComp?.short_name || ''}`;
+          }
+          
+          console.log('[Property Report] Geocoded address successfully:', {
+            attempt: i + 1,
+            lat: result.geometry.location.lat,
+            lng: result.geometry.location.lng,
+            city: cityComp?.long_name,
+            state: stateComp?.short_name,
+          });
+          break; // Success — stop retrying
+        } else {
+          console.log(`[Property Report] Geocoding attempt ${i + 1} returned status: ${geocodeResult.status}`);
         }
-        
-        console.log('[Property Report] Geocoded address:', {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng,
-          city: cityComp?.long_name,
-          state: stateComp?.short_name,
-        });
+      } catch (geoErr) {
+        console.log(`[Property Report] Geocoding attempt ${i + 1} failed:`, (geoErr as Error).message);
       }
-    } catch (geoErr) {
-      console.log('[Property Report] Geocoding failed:', (geoErr as Error).message);
+    }
+    
+    // Final warning if all attempts failed
+    if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
+      console.warn('[Property Report] All geocoding attempts failed. Property will have no coordinates. Map features will be disabled.');
     }
   }
   

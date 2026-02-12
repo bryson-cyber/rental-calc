@@ -166,7 +166,8 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
   // Update search results when query changes
   useEffect(() => {
     if (searchMarketsMutation.data?.success && searchMarketsMutation.data.data) {
-      setSearchResults(searchMarketsMutation.data.data);
+      const rawData = searchMarketsMutation.data.data;
+      setSearchResults(Array.isArray(rawData) ? rawData : []);
       if (!justSelected) {
         setShowResults(true);
       }
@@ -357,7 +358,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                     exit={{ opacity: 0, y: -10 }}
                     className="absolute z-50 w-full mt-2 bg-card rounded-lg shadow-lg border border-border max-h-80 overflow-y-auto"
                   >
-                    {searchResults.map((market) => (
+                    {(Array.isArray(searchResults) ? searchResults : []).map((market) => (
                       <button
                         key={market.id}
                         onClick={() => handleMarketSelect(market)}
