@@ -1,0 +1,53 @@
+{
+  "query": "SELECT cacheType, COUNT(*) as cnt, ROUND(SUM(LENGTH(data)) / 1024, 1) as size_kb FROM api_cache GROUP BY cacheType ORDER BY size_kb DESC; SELECT COUNT(*) as expired_entries FROM api_cache WHERE expiresAt < NOW();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT cacheType, COUNT(*) as cnt, ROUND(SUM(LENGTH(data)) / 1024, 1) as size_kb FROM api_cache GROUP BY cacheType ORDER BY size_kb DESC; SELECT COUNT(*) as expired_entries FROM api_cache WHERE expiresAt < NOW();",
+  "rows": [
+    {
+      "cacheType": "market_listings",
+      "cnt": "12",
+      "size_kb": "1924.4"
+    },
+    {
+      "cacheType": "rentalizer",
+      "cnt": "107",
+      "size_kb": "1679.4"
+    },
+    {
+      "cacheType": "search_markets_api",
+      "cnt": "542",
+      "size_kb": "704.0"
+    },
+    {
+      "cacheType": "submarket_details",
+      "cnt": "17",
+      "size_kb": "349.1"
+    },
+    {
+      "cacheType": "search_markets",
+      "cnt": "393",
+      "size_kb": "241.3"
+    },
+    {
+      "cacheType": "market_historical",
+      "cnt": "45",
+      "size_kb": "181.0"
+    },
+    {
+      "cacheType": "market_seasonality",
+      "cnt": "28",
+      "size_kb": "55.3"
+    },
+    {
+      "cacheType": "market_details",
+      "cnt": "52",
+      "size_kb": "35.2"
+    }
+  ],
+  "messages": [
+    "expired_entries",
+    "1"
+  ],
+  "stdout": "cacheType\tcnt\tsize_kb\nmarket_listings\t12\t1924.4\nrentalizer\t107\t1679.4\nsearch_markets_api\t542\t704.0\nsubmarket_details\t17\t349.1\nsearch_markets\t393\t241.3\nmarket_historical\t45\t181.0\nmarket_seasonality\t28\t55.3\nmarket_details\t52\t35.2\nexpired_entries\n1\n",
+  "stderr": "",
+  "execution_time_ms": 94
+}

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT cache_type, COUNT(*) as cnt, ROUND(SUM(LENGTH(data)) / 1024, 1) as size_kb FROM api_cache GROUP BY cache_type ORDER BY size_kb DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT cache_type, COUNT(*) as cnt, ROUND(SUM(LENGTH(data)) / 1024, 1) as size_kb FROM api_cache GROUP BY cache_type ORDER BY size_kb DESC LIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cache_type' in 'group statement'"
+  ]
+}

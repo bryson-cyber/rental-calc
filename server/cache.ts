@@ -2,10 +2,10 @@
  * API Response Caching Layer
  * 
  * Provides HYBRID caching for AirDNA API responses:
- * 1. In-memory cache for fast access
+ * 1. In-memory LRU cache (max 500 entries) for fast access
  * 2. Database-backed cache for persistence across server restarts
  * 
- * This prevents the ~113k API calls/month issue by ensuring cache
+ * This prevents unnecessary API calls by ensuring cache
  * survives deployments and server restarts.
  */
 
@@ -13,22 +13,26 @@ interface CacheEntry<T> {
   data: T;
   timestamp: number;
   ttl: number;
+  lastAccessed: number; // For LRU eviction
 }
 
 interface CacheStats {
   hits: number;
   misses: number;
   size: number;
+  evictions: number;
   oldestEntry: number | null;
   newestEntry: number | null;
 }
 
 class APICache {
   private cache: Map<string, CacheEntry<unknown>> = new Map();
+  private readonly MAX_ENTRIES = 500; // LRU eviction threshold
   private stats: CacheStats = {
     hits: 0,
     misses: 0,
     size: 0,
+    evictions: 0,
     oldestEntry: null,
     newestEntry: null
   };
@@ -38,38 +42,38 @@ class APICache {
   private readonly DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days default
   private readonly TTL_CONFIG: Record<string, number> = {
     // Market data - changes slowly (AirDNA updates monthly) - 30 days
-    'market_details': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'market_historical': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'market_seasonality': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'market_listings': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'submarket_details': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'submarkets_in_market': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'submarket_seasonality': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'submarket_comprehensive': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'market_comprehensive': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'all_submarket_listings': 30 * 24 * 60 * 60 * 1000, // 30 days - paginated listings
-    'all_market_listings': 30 * 24 * 60 * 60 * 1000, // 30 days - paginated listings
+    'market_details': 30 * 24 * 60 * 60 * 1000,
+    'market_historical': 30 * 24 * 60 * 60 * 1000,
+    'market_seasonality': 30 * 24 * 60 * 60 * 1000,
+    'market_listings': 30 * 24 * 60 * 60 * 1000,
+    'submarket_details': 30 * 24 * 60 * 60 * 1000,
+    'submarkets_in_market': 30 * 24 * 60 * 60 * 1000,
+    'submarket_seasonality': 30 * 24 * 60 * 60 * 1000,
+    'submarket_comprehensive': 30 * 24 * 60 * 60 * 1000,
+    'market_comprehensive': 30 * 24 * 60 * 60 * 1000,
+    'all_submarket_listings': 30 * 24 * 60 * 60 * 1000,
+    'all_market_listings': 30 * 24 * 60 * 60 * 1000,
     
     // Property data - more dynamic (7 days)
-    'rentalizer': 7 * 24 * 60 * 60 * 1000, // 7 days
-    'listing_comps': 7 * 24 * 60 * 60 * 1000, // 7 days
-    'listing_pricing': 7 * 24 * 60 * 60 * 1000, // 7 days
-    'property_details': 7 * 24 * 60 * 60 * 1000, // 7 days
+    'rentalizer': 7 * 24 * 60 * 60 * 1000,
+    'listing_comps': 7 * 24 * 60 * 60 * 1000,
+    'listing_pricing': 7 * 24 * 60 * 60 * 1000,
+    'property_details': 7 * 24 * 60 * 60 * 1000,
     
     // Static reference data - 30 days (US market list barely changes)
-    'all_us_markets': 30 * 24 * 60 * 60 * 1000, // 30 days
+    'all_us_markets': 30 * 24 * 60 * 60 * 1000,
     
     // Search results - 30 days (markets don't change often)
-    'search_markets': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'search_zipcode': 30 * 24 * 60 * 60 * 1000, // 30 days
+    'search_markets': 30 * 24 * 60 * 60 * 1000,
+    'search_zipcode': 30 * 24 * 60 * 60 * 1000,
     
     // Analysis results - cache for 30 days since they're expensive
-    'full_analysis': 30 * 24 * 60 * 60 * 1000, // 30 days
+    'full_analysis': 30 * 24 * 60 * 60 * 1000,
     
     // AI analysis results - cache for 30 days since they're expensive to generate
-    'ai_analysis': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'ai_narrative': 30 * 24 * 60 * 60 * 1000, // 30 days
-    'ai_structured': 30 * 24 * 60 * 60 * 1000, // 30 days
+    'ai_analysis': 30 * 24 * 60 * 60 * 1000,
+    'ai_narrative': 30 * 24 * 60 * 60 * 1000,
+    'ai_structured': 30 * 24 * 60 * 60 * 1000,
   };
   
   /**
@@ -89,7 +93,7 @@ class APICache {
   /**
    * Get TTL for a specific cache type
    */
-  private getTTL(cacheType: string): number {
+  getTTL(cacheType: string): number {
     return this.TTL_CONFIG[cacheType] || this.DEFAULT_TTL;
   }
   
@@ -101,14 +105,57 @@ class APICache {
   }
   
   /**
-   * Get a value from cache (checks memory first, then database)
+   * Evict the least recently accessed entry when cache exceeds MAX_ENTRIES
+   */
+  private evictLRU(): void {
+    if (this.cache.size <= this.MAX_ENTRIES) return;
+    
+    let oldestKey: string | null = null;
+    let oldestAccess = Infinity;
+    
+    const entries = Array.from(this.cache.entries());
+    for (const [key, entry] of entries) {
+      if (entry.lastAccessed < oldestAccess) {
+        oldestAccess = entry.lastAccessed;
+        oldestKey = key;
+      }
+    }
+    
+    if (oldestKey) {
+      this.cache.delete(oldestKey);
+      this.stats.evictions++;
+      this.stats.size = this.cache.size;
+      console.log(`[Cache] LRU EVICT: ${oldestKey.substring(0, 50)}...`);
+    }
+  }
+  
+  /**
+   * Set a value in memory cache ONLY (no DB persist).
+   * Used when restoring from DB cache to avoid writing back what we just read.
+   */
+  private setMemoryOnly<T>(key: string, data: T, cacheType?: string): void {
+    const ttl = cacheType ? this.getTTL(cacheType) : this.DEFAULT_TTL;
+    const now = Date.now();
+    
+    this.cache.set(key, {
+      data,
+      timestamp: now,
+      ttl,
+      lastAccessed: now
+    });
+    
+    this.stats.size = this.cache.size;
+    this.evictLRU();
+  }
+  
+  /**
+   * Get a value from memory cache only (sync)
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     
     if (!entry) {
       this.stats.misses++;
-      console.log(`[Cache] MISS: ${key.substring(0, 50)}...`);
       return null;
     }
     
@@ -116,18 +163,18 @@ class APICache {
       this.cache.delete(key);
       this.stats.misses++;
       this.stats.size = this.cache.size;
-      console.log(`[Cache] EXPIRED: ${key.substring(0, 50)}...`);
       return null;
     }
     
+    // Update last accessed time for LRU tracking
+    entry.lastAccessed = Date.now();
     this.stats.hits++;
-    console.log(`[Cache] HIT: ${key.substring(0, 50)}...`);
     return entry.data as T;
   }
   
   /**
-   * Get a value from cache with async database fallback
-   * Use this when you need to check database cache on miss
+   * Get a value from cache with async database fallback.
+   * On DB hit, restores to memory only (no double DB write).
    */
   async getAsync<T>(key: string): Promise<T | null> {
     // Check memory first
@@ -141,13 +188,8 @@ class APICache {
       const { getDbCache } = await import('./api-logger');
       const dbResult = await getDbCache<T>(key);
       if (dbResult !== null) {
-        // Restore to memory cache
-        this.cache.set(key, {
-          data: dbResult,
-          timestamp: Date.now(),
-          ttl: this.DEFAULT_TTL
-        });
-        this.stats.size = this.cache.size;
+        // Restore to memory ONLY — don't write back to DB (it's already there)
+        this.setMemoryOnly(key, dbResult);
         this.stats.hits++;
         console.log(`[Cache] DB HIT: ${key.substring(0, 50)}...`);
         return dbResult;
@@ -164,23 +206,25 @@ class APICache {
    */
   set<T>(key: string, data: T, cacheType?: string): void {
     const ttl = cacheType ? this.getTTL(cacheType) : this.DEFAULT_TTL;
-    const timestamp = Date.now();
+    const now = Date.now();
     
     // Set in memory cache
     this.cache.set(key, {
       data,
-      timestamp,
-      ttl
+      timestamp: now,
+      ttl,
+      lastAccessed: now
     });
     
     this.stats.size = this.cache.size;
     
-    if (!this.stats.oldestEntry || timestamp < this.stats.oldestEntry) {
-      this.stats.oldestEntry = timestamp;
+    if (!this.stats.oldestEntry || now < this.stats.oldestEntry) {
+      this.stats.oldestEntry = now;
     }
-    this.stats.newestEntry = timestamp;
+    this.stats.newestEntry = now;
     
-    console.log(`[Cache] SET: ${key.substring(0, 50)}... (TTL: ${ttl / 1000}s)`);
+    // Evict LRU if over limit
+    this.evictLRU();
     
     // Also persist to database (async, don't block)
     this.persistToDb(key, cacheType || 'default', data, ttl).catch(err => {
@@ -218,6 +262,7 @@ class APICache {
       hits: 0,
       misses: 0,
       size: 0,
+      evictions: 0,
       oldestEntry: null,
       newestEntry: null
     };
@@ -242,7 +287,7 @@ class APICache {
   }
   
   /**
-   * Clean up expired entries
+   * Clean up expired entries from memory
    */
   cleanup(): number {
     let cleaned = 0;
@@ -257,26 +302,28 @@ class APICache {
     }
     
     this.stats.size = this.cache.size;
-    console.log(`[Cache] CLEANUP: Removed ${cleaned} expired entries`);
+    console.log(`[Cache] CLEANUP: Removed ${cleaned} expired entries (${this.cache.size} remaining, max ${this.MAX_ENTRIES})`);
     return cleaned;
   }
   
   /**
    * Get cache statistics
    */
-  getStats(): CacheStats & { hitRate: string } {
+  getStats(): CacheStats & { hitRate: string; maxEntries: number } {
     const total = this.stats.hits + this.stats.misses;
     const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(1) + '%' : '0%';
     
     return {
       ...this.stats,
-      hitRate
+      hitRate,
+      maxEntries: this.MAX_ENTRIES
     };
   }
   
   /**
    * Wrapper function to cache API calls
    * Uses hybrid approach: check memory -> check DB -> fetch fresh
+   * IMPORTANT: No double DB writes — set() handles the single DB persist
    */
   async cached<T>(
     key: string,
@@ -291,11 +338,11 @@ class APICache {
     
     // 2. Check database cache (survives restarts)
     try {
-      const { getDbCache, setDbCache, logApiCall } = await import('./api-logger');
+      const { getDbCache, logApiCall } = await import('./api-logger');
       const dbCached = await getDbCache<T>(key);
       if (dbCached !== null) {
-        // Restore to memory cache for faster subsequent access
-        this.set(key, dbCached, cacheType);
+        // Restore to memory ONLY — don't write back to DB (it's already there)
+        this.setMemoryOnly(key, dbCached, cacheType);
         console.log(`[Cache] DB HIT: ${key.substring(0, 50)}...`);
         
         // Log as cache hit
@@ -316,19 +363,9 @@ class APICache {
     // 3. Fetch fresh data
     const data = await fetchFn();
     
-    // 4. Cache the result in both memory and database
+    // 4. Cache the result — set() handles BOTH memory and DB persist (single write)
     if (data !== null && data !== undefined) {
       this.set(key, data, cacheType);
-      
-      // Also save to database for persistence
-      try {
-        const { setDbCache } = await import('./api-logger');
-        const ttl = this.getTTL(cacheType);
-        await setDbCache(key, cacheType, data, ttl);
-        console.log(`[Cache] DB SET: ${key.substring(0, 50)}...`);
-      } catch (error) {
-        console.warn('[Cache] DB cache set failed:', error);
-      }
     }
     
     return data;

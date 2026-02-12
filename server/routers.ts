@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { getUsageStatus } from "./usage-limits";
+import { getRateLimitStatus } from "./rate-limiter";
 
 // External routers (already separate files before refactoring)
 import { marketResearchRouter } from "./market-research-v2";
@@ -56,6 +57,14 @@ export const appRouter = router({
       const ipAddress = ctx.req.ip || ctx.req.headers['x-forwarded-for'] as string;
       const status = await getUsageStatus(userId, sessionId, ipAddress);
       return status;
+    }),
+    // Rate limit status for report generation (5/day per user)
+    reportLimit: publicProcedure.query(({ ctx }) => {
+      if (!ctx.user) {
+        return { limit: 5, used: 0, remaining: 5, resetAt: 0, isExempt: false, loggedIn: false };
+      }
+      const status = getRateLimitStatus(ctx.user.id, ctx.user.role);
+      return { ...status, loggedIn: true };
     }),
   }),
 

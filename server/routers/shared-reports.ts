@@ -7,6 +7,7 @@ import { getComprehensivePropertyReport } from "../airdna";
 import { generateFullReportSummary, type FullReportSummaryInput } from "../gemini";
 import { getRegulationInfo } from "../regulation-tracker";
 import { searchZillowListings } from "../hasdata";
+import { checkReportRateLimit, incrementReportCount } from "../rate-limiter";
 
 export const sharedReportsRouter = router({
     // Create a new shared report
@@ -36,6 +37,11 @@ export const sharedReportsRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error('Database not available');
+        
+        // Rate limit: 5 reports/day for standard users, admin exempt
+        if (ctx.user) {
+          checkReportRateLimit(ctx.user.id, ctx.user.role);
+        }
         
         // Generate unique share ID
         const shareId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -251,6 +257,11 @@ export const sharedReportsRouter = router({
           createdByName: input.creatorName || ctx.user?.name,
         });
         
+        // Increment rate limit counter on success
+        if (ctx.user) {
+          incrementReportCount(ctx.user.id, ctx.user.role);
+        }
+        
         return { success: true, shareId };
       }),
 
@@ -426,6 +437,9 @@ export const sharedReportsRouter = router({
         if (!isOwner && !isAdmin) {
           return { success: false, error: 'Not authorized to regenerate this report' };
         }
+        
+        // Rate limit: 5 reports/day for standard users, admin exempt
+        checkReportRateLimit(ctx.user.id, ctx.user.role);
         
         if (report.reportType !== 'full') {
           return { success: false, error: 'Only full property reports can be regenerated' };
@@ -792,6 +806,9 @@ export const sharedReportsRouter = router({
           
           console.log(`[Regenerate] Report ${input.shareId} regenerated successfully`);
           
+          // Increment rate limit counter on success
+          incrementReportCount(ctx.user.id, ctx.user.role);
+          
           return {
             success: true,
             message: 'Report regenerated with fresh data',
@@ -825,6 +842,11 @@ export const sharedReportsRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error('Database not available');
+        
+        // Rate limit: 5 reports/day for standard users, admin exempt
+        if (ctx.user) {
+          checkReportRateLimit(ctx.user.id, ctx.user.role);
+        }
         
         const { address, bedrooms, bathrooms, preparedFor } = input;
         const accommodates = input.accommodates || bedrooms * 2;
@@ -1279,6 +1301,11 @@ export const sharedReportsRouter = router({
           });
           
           console.log(`[GenerateFromAddress] Report created with shareId: ${shareId}`);
+          
+          // Increment rate limit counter on success
+          if (ctx.user) {
+            incrementReportCount(ctx.user.id, ctx.user.role);
+          }
           
           return {
             success: true as const,

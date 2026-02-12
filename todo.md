@@ -10636,3 +10636,16 @@ Results:
 - [x] Frontend queries already have proper staleTime (30min for markets, 5min for favorites, 10min for neighborhoods)
 - [x] Newsletter cron jobs are defined but only triggered manually by admin (not auto-running)
 - [x] All 869 tests passing, TypeScript clean — ZERO remaining sync apiCache.get() calls
+
+## FIX: Cache Security & Performance (Feb 12, 2026)
+- [x] Fix double DB write in cached() — set() handles DB persist internally, cached() no longer calls setDbCache separately
+- [x] Fix DB-hit re-persist — added setMemoryOnly() method, getAsync() and cached() use it on DB cache hits (zero unnecessary DB writes)
+- [x] Add 5-report-per-day per-user rate limit on all 3 report endpoints (create, regenerate, generateFromAddress)
+- [x] Created server/rate-limiter.ts with in-memory tracking per userId, auto-resets at midnight UTC
+- [x] Returns clear TRPCError (TOO_MANY_REQUESTS) with remaining time when limit reached
+- [x] Admin users are fully exempt from rate limit
+- [x] Count only increments on successful report generation (not on failures)
+- [x] Added usage.reportLimit tRPC endpoint for frontend to show remaining reports
+- [x] Add LRU eviction with MAX_ENTRIES = 500 to memory cache
+- [x] Added lastAccessed tracking on all cache reads, evictLRU removes oldest entry when Map exceeds limit
+- [x] 28 new tests for cache improvements and rate limiter, all 897 tests passing
