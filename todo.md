@@ -10835,3 +10835,24 @@ Results:
 - [x] Added memory caching to all airdna-hierarchy.ts functions: getMarketsInState, getSubmarketsInMarket, searchMarkets, geocodeZipCodeToMarket
 - [x] Added DB caching to getListingsInRadius (was the #1 API call burner)
 - [x] All 1017 tests pass across 78 test files
+
+
+## Comprehensive API Caching Audit - Feb 12, 2026 (FINAL)
+- [x] Audited ALL 52 AirDNA API call sites across 5 server files
+- [x] Added caching to 15+ previously uncached functions in airdna.ts:
+  - getSubmarketDetails, getMarketMetric, getSubmarketMetric
+  - getMarketListings, getSubmarketListings, getRentalizerComps
+  - getEnhancedRentalizerEstimate, getSubmarketBookingPatterns
+  - getSubmarketSupplyTrend, searchByZipcode, getFilteredMarketListings
+  - getMarketProfessionalStats, getMarketCancellationPolicies
+  - getMarketBookingPatterns, getMarketSupplyTrend, getTopPerformers
+  - getSinglePropertyDetails, getCountryMarkets, getListingComps
+  - getListingHistoricalMetrics, getListingFuturePricing
+  - getMarketFutureDailyData, getListingsByArea, getRentalizerBulkSummary
+  - getBulkListings, getStandaloneMarketAdvisorData
+- [x] Added caching to opportunity-finder.ts getAirDNAEstimate
+- [x] Added caching to market-research-simple.ts getSubmarkets mutation
+- [x] Added caching to nurture-sequence-service.ts (4 market metric functions)
+- [x] Added caching to airdna-hierarchy.ts (all functions)
+- [x] Result: 46/52 call sites have direct caching, remaining 6 are inside cached parent functions
+- [x] All 1017 tests pass

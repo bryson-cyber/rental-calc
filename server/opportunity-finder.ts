@@ -10,6 +10,9 @@
 
 import { z } from 'zod';
 import { router, publicProcedure } from './_core/trpc';
+
+// In-memory cache for AirDNA estimates (24h TTL)
+let _oppCache: Map<string, { data: any; ts: number }> = new Map();
 import { TRPCError } from '@trpc/server';
 import { ENV } from './_core/env';
 // Browser Use removed - stub functions for compilation
@@ -213,6 +216,15 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
     
     console.log(`[AirDNA] Original: ${address} -> Clean: ${cleanAddress}`);
 
+    // Check in-memory cache first (keyed by cleaned address + bedrooms + bathrooms)
+    const cacheKey = `opp_rentalizer_${cleanAddress}_${bedrooms}_${bathrooms}`;
+    if (!_oppCache) { _oppCache = new Map(); }
+    const cached = _oppCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < 24 * 60 * 60 * 1000) {
+      console.log(`[AirDNA] CACHE HIT for ${cleanAddress}`);
+      return cached.data;
+    }
+
     let data: any;
     try {
       data = await rateLimitedAirDNARequest('/rentalizer/estimate', 'POST', {
@@ -246,11 +258,14 @@ async function getAirDNAEstimate(address: string, bedrooms: number, bathrooms: n
     const summary = stats.future.summary;
     
     // Occupancy is returned as decimal (0.84), convert to percentage for display
-    return {
+    const result = {
       revenue: summary.revenue || 0,
       occupancy: (summary.occupancy || 0) * 100, // Convert to percentage
       adr: summary.adr || 0,
     };
+    // Cache the result
+    _oppCache.set(cacheKey, { data: result, ts: Date.now() });
+    return result;
   } catch (error) {
     console.error('[AirDNA] Error getting estimate:', error);
     return null;

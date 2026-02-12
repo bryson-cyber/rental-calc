@@ -37,6 +37,8 @@ import {
 
 // In-memory cache for zip codes to speed up repeated requests
 const zipcodeCache = new Map<string, { data: Array<{ zipcode: string; listingCount: number }>; timestamp: number }>();
+// General-purpose in-memory cache for market research data (30 min TTL)
+const mrCache = new Map<string, { data: any; timestamp: number }>();
 
 // ============================================
 // TYPES
@@ -743,6 +745,14 @@ export const marketResearchSimpleRouter = router({
       const { marketId, expectedState } = input;
       console.log(`[getSubmarkets] Getting submarkets for market ${marketId}${expectedState ? ` (expected state: ${expectedState})` : ''}`);
       
+      // Check in-memory cache (30 min TTL)
+      const smCacheKey = `submarkets_${marketId}_${expectedState || ''}`;
+      const smCached = mrCache.get(smCacheKey);
+      if (smCached && Date.now() - smCached.timestamp < 30 * 60 * 1000) {
+        console.log(`[getSubmarkets] CACHE HIT: ${smCached.data.length} submarkets`);
+        return smCached.data;
+      }
+      
       try {
         // Use the AirDNA /market/{market_id}/submarkets endpoint via rate limiter
         const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/submarkets`, 'POST', {
@@ -815,13 +825,16 @@ export const marketResearchSimpleRouter = router({
         // The submarket response already includes listing_count in metrics
         const topSubmarkets = allSubmarkets.slice(0, 50);
         
-        return topSubmarkets.map((s: any) => ({
+        const result = topSubmarkets.map((s: any) => ({
           id: s.id,
           name: s.name,
           listingCount: s.listing_count || s.metrics?.listing_count || s.metrics?.active_listings || 0,
           revenue: s.metrics?.revenue ? Math.round(s.metrics.revenue) : undefined,
           occupancy: s.metrics?.booked ? Math.round(s.metrics.booked * 100) : undefined
         }));
+        // Cache the result
+        mrCache.set(smCacheKey, { data: result, timestamp: Date.now() });
+        return result;
       } catch (error) {
         console.error(`[getSubmarkets] Error:`, error);
         return [];

@@ -187,8 +187,19 @@ async function searchMarket(city: string, state?: string): Promise<{ marketId: s
 /**
  * Get market revenue metrics
  */
+const _nurtureCache = new Map<string, { data: any; ts: number }>();
+function _nc(key: string): any | null {
+  const e = _nurtureCache.get(key);
+  if (e && Date.now() - e.ts < 12 * 60 * 60 * 1000) return e.data;
+  return null;
+}
+function _ns(key: string, data: any) { _nurtureCache.set(key, { data, ts: Date.now() }); }
+
 async function getMarketRevenue(marketId: string): Promise<{ avgRevenue: number; trend: 'up' | 'down' | 'stable' } | null> {
   if (!AIRDNA_API_KEY) return null;
+  const ck = `revenue:${marketId}`;
+  const cv = _nc(ck);
+  if (cv) { console.log(`[NurtureService] CACHE HIT: ${ck}`); return cv; }
 
   try {
     // Get last 12 months of data
@@ -221,7 +232,9 @@ async function getMarketRevenue(marketId: string): Promise<{ avgRevenue: number;
     if (secondAvg > firstAvg * 1.05) trend = 'up';
     else if (secondAvg < firstAvg * 0.95) trend = 'down';
 
-    return { avgRevenue, trend };
+    const result = { avgRevenue, trend };
+    _ns(ck, result);
+    return result;
   } catch (error) {
     console.error('[NurtureService] Error fetching market revenue:', error);
     return null;
@@ -233,6 +246,9 @@ async function getMarketRevenue(marketId: string): Promise<{ avgRevenue: number;
  */
 async function getMarketOccupancy(marketId: string): Promise<{ avgOccupancy: number; seasonality: Array<{ month: string; occupancy: number }> } | null> {
   if (!AIRDNA_API_KEY) return null;
+  const ck = `occupancy:${marketId}`;
+  const cv = _nc(ck);
+  if (cv) { console.log(`[NurtureService] CACHE HIT: ${ck}`); return cv; }
 
   try {
     const endDate = new Date();
@@ -257,7 +273,9 @@ async function getMarketOccupancy(marketId: string): Promise<{ avgOccupancy: num
 
     const avgOccupancy = seasonality.reduce((a: number, b: any) => a + b.occupancy, 0) / seasonality.length;
 
-    return { avgOccupancy, seasonality };
+    const result = { avgOccupancy, seasonality };
+    _ns(ck, result);
+    return result;
   } catch (error) {
     console.error('[NurtureService] Error fetching market occupancy:', error);
     return null;
@@ -269,6 +287,9 @@ async function getMarketOccupancy(marketId: string): Promise<{ avgOccupancy: num
  */
 async function getMarketAdr(marketId: string): Promise<{ avgAdr: number; seasonality: Array<{ month: string; adr: number }> } | null> {
   if (!AIRDNA_API_KEY) return null;
+  const ck = `adr:${marketId}`;
+  const cv = _nc(ck);
+  if (cv) { console.log(`[NurtureService] CACHE HIT: ${ck}`); return cv; }
 
   try {
     const endDate = new Date();
@@ -293,7 +314,9 @@ async function getMarketAdr(marketId: string): Promise<{ avgAdr: number; seasona
 
     const avgAdr = seasonality.reduce((a: number, b: any) => a + b.adr, 0) / seasonality.length;
 
-    return { avgAdr, seasonality };
+    const result = { avgAdr, seasonality };
+    _ns(ck, result);
+    return result;
   } catch (error) {
     console.error('[NurtureService] Error fetching market ADR:', error);
     return null;
@@ -305,12 +328,17 @@ async function getMarketAdr(marketId: string): Promise<{ avgAdr: number; seasona
  */
 async function getActiveListings(marketId: string): Promise<number | null> {
   if (!AIRDNA_API_KEY) return null;
+  const ck = `active_listings:${marketId}`;
+  const cv = _nc(ck);
+  if (cv) { console.log(`[NurtureService] CACHE HIT: ${ck}`); return cv; }
 
   try {
     const data = await rateLimitedAirDNARequest<any>(`/market/${marketId}/active_listings`, 'POST', {
       filters: []
     }, { retries: 2, source: 'nurture-service' });
-    return data.payload?.listing_count || data.payload?.count || null;
+    const result = data.payload?.listing_count || data.payload?.count || null;
+    if (result) _ns(ck, result);
+    return result;
   } catch (error) {
     console.error('[NurtureService] Error fetching active listings:', error);
     return null;

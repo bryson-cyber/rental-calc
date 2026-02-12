@@ -726,6 +726,10 @@ export async function searchByZipcode(zipcode: string, options?: {
   priceTier?: string;
   limit?: number;
 }): Promise<ZipCodeSearchResult | null> {
+  const cacheKey = apiCache.generateKey('search_zipcode', { zipcode, bedrooms: options?.bedrooms, bathrooms: options?.bathrooms, limit: options?.limit });
+  const cached = await apiCache.getAsync<ZipCodeSearchResult>(cacheKey);
+  if (cached) { logCacheHit('search_zipcode'); return cached; }
+
   console.log(`[searchByZipcode] Searching for zip code: ${zipcode}`);
   
   try {
@@ -879,7 +883,7 @@ export async function searchByZipcode(zipcode: string, options?: {
     const location = targetResult.location_name || 
       (targetResult.location ? `${targetResult.name}, ${targetResult.location.state}` : targetResult.name);
     
-    return {
+    const result: ZipCodeSearchResult = {
       zipcode,
       location,
       submarket: submarket ? {
@@ -896,6 +900,9 @@ export async function searchByZipcode(zipcode: string, options?: {
       metrics,
       top_performers: topPerformers
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`search_zipcode:${zipcode}`, 'search_zipcode', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error(`[searchByZipcode] Error searching zip code ${zipcode}:`, error);
     return null;
@@ -1010,6 +1017,10 @@ export async function getSubmarketDetails(submarketId: string): Promise<{
     revpar: number;
   };
 } | null> {
+  const cacheKey = apiCache.generateKey('submarket_details', { submarketId });
+  const cached = await apiCache.getAsync<any>(cacheKey);
+  if (cached) { logCacheHit('submarket_details'); return cached; }
+
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1031,7 +1042,7 @@ export async function getSubmarketDetails(submarketId: string): Promise<{
     
     console.log(`[getSubmarketDetails] Raw API response for ${submarketId}:`, JSON.stringify(response.payload, null, 2));
     
-    return {
+    const result = {
       id: response.payload.id,
       name: response.payload.name,
       listing_count: response.payload.listing_count,
@@ -1040,6 +1051,9 @@ export async function getSubmarketDetails(submarketId: string): Promise<{
       market_type: response.payload.market_type,
       metrics: response.payload.metrics,
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`submarket_details:${submarketId}`, 'submarket_details', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching submarket details:", error);
     return null;
@@ -1055,6 +1069,10 @@ async function getMarketMetric(
   metricType: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count" | "booking_lead_time" | "los",
   numMonths: number = 12
 ): Promise<HistoricalDataPoint[]> {
+  const cacheKey = apiCache.generateKey('market_metric', { marketId, metricType, numMonths });
+  const cached = await apiCache.getAsync<HistoricalDataPoint[]>(cacheKey);
+  if (cached) { logCacheHit('market_metric'); return cached; }
+
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1093,7 +1111,7 @@ async function getMarketMetric(
       }
     }
     
-    return results.map((r) => {
+    const result = results.map((r) => {
       const date = r.month || r.date || "";
       let value = r.value;
       
@@ -1112,6 +1130,9 @@ async function getMarketMetric(
       
       return { date, value: value || 0 };
     });
+    apiCache.set(cacheKey, result);
+    setDbCache(`market_metric:${marketId}:${metricType}`, 'market_metric', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error(`Error fetching ${metricType} for market ${marketId}:`, error);
     return [];
@@ -1127,6 +1148,10 @@ async function getSubmarketMetric(
   metricType: "occupancy" | "avg_revenue" | "adr" | "revpar" | "active_listings_count" | "booking_lead_time" | "los",
   numMonths: number = 12
 ): Promise<HistoricalDataPoint[]> {
+  const cacheKey = apiCache.generateKey('submarket_metric', { submarketId, metricType, numMonths });
+  const cached = await apiCache.getAsync<HistoricalDataPoint[]>(cacheKey);
+  if (cached) { logCacheHit('submarket_metric'); return cached; }
+
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1161,7 +1186,7 @@ async function getSubmarketMetric(
       console.log(`[AirDNA] Submarket ${metricType} returned ${results.length} results for ${numMonths} months`);
     }
     
-    return results.map((r) => {
+    const result = results.map((r) => {
       const date = r.month || r.date || "";
       let value = r.value;
       
@@ -1180,6 +1205,9 @@ async function getSubmarketMetric(
       
       return { date, value: value || 0 };
     });
+    apiCache.set(cacheKey, result);
+    setDbCache(`submarket_metric:${submarketId}:${metricType}`, 'submarket_metric', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error(`Error fetching ${metricType} for submarket ${submarketId}:`, error);
     return [];
@@ -1607,6 +1635,10 @@ export async function getMarketListings(
     filters?: ListingFilters;
   }
 ): Promise<{ listings: ListingData[]; total_count: number }> {
+  const cacheKey = apiCache.generateKey('market_listings', { marketId, limit: options?.limit, offset: options?.offset, orderBy: options?.orderBy, bedrooms: options?.filters?.bedrooms });
+  const cached = await apiCache.getAsync<{ listings: ListingData[]; total_count: number }>(cacheKey);
+  if (cached) { logCacheHit('market_listings'); return cached; }
+
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -1717,10 +1749,13 @@ export async function getMarketListings(
       days_reserved: r.days_reserved_ltm || 0,
     }));
     
-    return {
+    const result = {
       listings,
       total_count: response.payload.page_info.total_count,
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`market_listings:${marketId}:${options?.offset || 0}`, 'market_listings', result, 12 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching market listings:", error);
     return { listings: [], total_count: 0 };
@@ -1762,6 +1797,10 @@ export async function getSubmarketListings(
     filters?: ListingFilters;
   }
 ): Promise<{ listings: ListingData[]; total_count: number }> {
+  const cacheKey = apiCache.generateKey('submarket_listings', { submarketId, limit: options?.limit, offset: options?.offset, orderBy: options?.orderBy, bedrooms: options?.filters?.bedrooms });
+  const cached = await apiCache.getAsync<{ listings: ListingData[]; total_count: number }>(cacheKey);
+  if (cached) { logCacheHit('submarket_listings'); return cached; }
+
   try {
     // Build filters array based on options
     const filters: Array<Record<string, unknown>> = [];
@@ -1932,10 +1971,13 @@ export async function getSubmarketListings(
       days_reserved: r.days_reserved_ltm || 0,
     }));
     
-    return {
+    const result = {
       listings,
       total_count: response.payload.page_info.total_count,
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`submarket_listings:${submarketId}:${options?.offset || 0}`, 'submarket_listings', result, 12 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching submarket listings:", error);
     return { listings: [], total_count: 0 };
@@ -4104,6 +4146,10 @@ interface SinglePropertyResponse {
  * Fetch single property details including images from AirDNA
  */
 export async function getSinglePropertyDetails(propertyId: string): Promise<SinglePropertyResponse | null> {
+  const _ck = apiCache.generateKey('single_property', { propertyId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('single_property'); return _cv; }
+
   try {
     const response = await makeApiRequest<{
       payload: {
@@ -4538,6 +4584,10 @@ export async function getCountryMarkets(
     include_geoms?: boolean;
   }
 ): Promise<CountryMarketsResponse> {
+  const _ck = apiCache.generateKey('country_markets', { countryCode });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('country_markets'); return _cv; }
+
   try {
     // Build filters array in the API's expected format
     const filtersArray: Array<{ type: string; field: string; value?: string | number; min?: number; max?: number }> = [];
@@ -4989,6 +5039,10 @@ export interface TopPerformersOptions {
 export async function getTopPerformers(
   options: TopPerformersOptions
 ): Promise<{ listings: ListingData[]; total_count: number }> {
+  const _ck = apiCache.generateKey('top_performers', { marketId: options.marketId, bedrooms: options.filters?.bedrooms, limit: options.limit });
+  const _cv = await apiCache.getAsync<{ listings: ListingData[]; total_count: number }>(_ck);
+  if (_cv) { logCacheHit('top_performers'); return _cv; }
+
   try {
     // If filtering by bedrooms, we need to paginate through multiple pages
     // because the AirDNA API bedroom filter doesn't work reliably
@@ -5369,6 +5423,10 @@ export async function getMarketFutureDailyData(
   numMonths: number = 6,
   bedrooms?: number
 ): Promise<FutureDailyData[]> {
+  const _ck = apiCache.generateKey('market_future_daily', { marketId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('market_future_daily'); return _cv; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -5440,6 +5498,10 @@ export async function getListingHistoricalMetrics(
   listingId: string,
   numMonths: number = 12
 ): Promise<ListingHistoricalMetrics | null> {
+  const _ck = apiCache.generateKey('listing_historical', { listingId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('listing_historical'); return _cv; }
+
   try {
     const response = await makeApiRequest(
       `/listing/${listingId}/metrics`,
@@ -5523,6 +5585,10 @@ export async function getListingComps(
   listingId: string,
   limit: number = 10
 ): Promise<ListingComp[]> {
+  const _ck = apiCache.generateKey('listing_comps', { listingId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('listing_comps'); return _cv; }
+
   try {
     const response = await makeApiRequest(
       `/listing/${listingId}/comps`,
@@ -5588,6 +5654,10 @@ export async function getListingFuturePricing(
   numDays: number = 90,
   numMonths: number = 3
 ): Promise<ListingFuturePricing | null> {
+  const _ck = apiCache.generateKey('listing_future_pricing', { listingId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('listing_future_pricing'); return _cv; }
+
   try {
     const response = await makeApiRequest(
       `/listing/${listingId}/future/pricing`,
@@ -5692,6 +5762,10 @@ export async function getRentalizerComps(
   bathrooms?: number,
   limit: number = 25
 ): Promise<RentalizerCompData | null> {
+  const cacheKey = apiCache.generateKey('rentalizer_comps', { address: address.toLowerCase().trim(), bedrooms, bathrooms, limit });
+  const cached = await apiCache.getAsync<RentalizerCompData>(cacheKey);
+  if (cached) { logCacheHit('rentalizer_comps'); return cached; }
+
   try {
     const response = await makeApiRequest("/rentalizer/comps", "POST", {
       address,
@@ -5708,7 +5782,7 @@ export async function getRentalizerComps(
     const comps = responsePayload.comps || responsePayload.listings || [];
     const details = responsePayload.details || {};
 
-    return {
+    const result: RentalizerCompData = {
       comps: comps.map((c: any) => ({
         listing_id: c.id || c.listing_id,
         title: c.title || c.name || "Untitled",
@@ -5740,6 +5814,9 @@ export async function getRentalizerComps(
         submarket_name: details.location?.submarket_name,
       },
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`rentalizer_comps:${address.toLowerCase().trim()}`, 'rentalizer_comps', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching rentalizer comps:", error);
     return null;
@@ -5771,6 +5848,10 @@ export interface EnhancedRentalizerResponse extends RentalizerResponse {
 export async function getEnhancedRentalizerEstimate(
   request: RentalizerRequest
 ): Promise<EnhancedRentalizerResponse | null> {
+  const cacheKey = apiCache.generateKey('enhanced_rentalizer', { address: request.address.toLowerCase().trim(), bedrooms: request.bedrooms, bathrooms: request.bathrooms });
+  const cached = await apiCache.getAsync<EnhancedRentalizerResponse>(cacheKey);
+  if (cached) { logCacheHit('enhanced_rentalizer'); return cached; }
+
   try {
     const response = await makeApiRequest("/rentalizer/estimate", "POST", {
       address: request.address,
@@ -5795,7 +5876,7 @@ export async function getEnhancedRentalizerEstimate(
     console.log('[Enhanced Rentalizer] Estimates:', JSON.stringify(estimates, null, 2));
 
     // Extract ALL fields including hidden ones
-    return {
+    const result: EnhancedRentalizerResponse = {
       property: {
         address: details.address || request.address,
         address_lookup: details.address_lookup || "",
@@ -5853,6 +5934,9 @@ export async function getEnhancedRentalizerEstimate(
         vrbo_property_id: details.vrbo_property_id,
       },
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`enhanced_rentalizer:${request.address.toLowerCase().trim()}`, 'enhanced_rentalizer', result, 24 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching enhanced rentalizer estimate:", error);
     return null;
@@ -5902,6 +5986,10 @@ export async function getFilteredMarketListings(
   sortBy: "revenue" | "occupancy" | "adr" | "rating" | "reviews" = "revenue",
   limit: number = 25
 ): Promise<ListingData[]> {
+  const _ck = apiCache.generateKey('filtered_market_listings', { marketId });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('filtered_market_listings'); return _cv; }
+
   try {
     const apiFilters: any[] = [];
 
@@ -6052,6 +6140,10 @@ export async function getMarketProfessionalStats(
   marketId: string,
   bedrooms?: number
 ): Promise<ProfessionalHostStats | null> {
+  const _ck = apiCache.generateKey('market_pro_stats', { marketId, bedrooms });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('market_pro_stats'); return _cv; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6125,6 +6217,10 @@ export async function getMarketCancellationPolicies(
   marketId: string,
   bedrooms?: number
 ): Promise<CancellationPolicyStats | null> {
+  const _ck = apiCache.generateKey('market_cancel_policies', { marketId, bedrooms });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('market_cancel_policies'); return _cv; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6215,6 +6311,10 @@ export async function getMarketBookingPatterns(
   marketId: string,
   bedrooms?: number
 ): Promise<BookingPatterns | null> {
+  const _ck = apiCache.generateKey('market_booking_patterns', { marketId, bedrooms });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('market_booking_patterns'); return _cv; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6347,6 +6447,10 @@ export async function getMarketSupplyTrend(
   marketId: string,
   bedrooms?: number
 ): Promise<SupplyTrend | null> {
+  const _ck = apiCache.generateKey('market_supply_trend', { marketId, bedrooms });
+  const _cv = await apiCache.getAsync<any>(_ck);
+  if (_cv) { logCacheHit('market_supply_trend'); return _cv; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6425,6 +6529,10 @@ export async function getSubmarketBookingPatterns(
   submarketId: string,
   bedrooms?: number
 ): Promise<BookingPatterns | null> {
+  const cacheKey = apiCache.generateKey('submarket_booking_patterns', { submarketId, bedrooms });
+  const cached = await apiCache.getAsync<BookingPatterns>(cacheKey);
+  if (cached) { logCacheHit('submarket_booking_patterns'); return cached; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6508,7 +6616,7 @@ export async function getSubmarketBookingPatterns(
       insights.push("Mix of short and medium stays - flexible pricing strategy recommended.");
     }
 
-    return {
+    const result: BookingPatterns = {
       lead_time: {
         avg_days: Math.round(avgLeadTime),
         last_minute_percent: lastMinutePercent,
@@ -6521,6 +6629,9 @@ export async function getSubmarketBookingPatterns(
       },
       insights,
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`submarket_booking:${submarketId}:${bedrooms ?? 'all'}`, 'submarket_booking', result, 12 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching submarket booking patterns:", error);
     return null;
@@ -6534,6 +6645,10 @@ export async function getSubmarketSupplyTrend(
   submarketId: string,
   bedrooms?: number
 ): Promise<SupplyTrend | null> {
+  const cacheKey = apiCache.generateKey('submarket_supply_trend', { submarketId, bedrooms });
+  const cached = await apiCache.getAsync<SupplyTrend>(cacheKey);
+  if (cached) { logCacheHit('submarket_supply_trend'); return cached; }
+
   try {
     const filters: any[] = [];
     if (bedrooms !== undefined) {
@@ -6586,7 +6701,7 @@ export async function getSubmarketSupplyTrend(
         : 0,
     }));
 
-    return {
+    const result: SupplyTrend = {
       current_listings: current,
       listings_12_months_ago: yearAgo,
       net_change: netChange,
@@ -6595,6 +6710,9 @@ export async function getSubmarketSupplyTrend(
       trend,
       insight,
     };
+    apiCache.set(cacheKey, result);
+    setDbCache(`submarket_supply:${submarketId}:${bedrooms ?? 'all'}`, 'submarket_supply', result, 12 * 60 * 60 * 1000).catch(() => {});
+    return result;
   } catch (error) {
     console.error("Error fetching submarket supply trend:", error);
     return null;
@@ -7108,6 +7226,10 @@ export async function getStandaloneMarketAdvisorData(
     listingType?: string;
   }
 ): Promise<StandaloneMarketAdvisorData | null> {
+  const _ck = apiCache.generateKey('standalone_market_advisor', { marketId, marketType, bedrooms: filters?.bedrooms });
+  const _cv = await apiCache.getAsync<StandaloneMarketAdvisorData>(_ck);
+  if (_cv) { logCacheHit('standalone_market_advisor'); return _cv; }
+
   console.log(`[StandaloneMarketAdvisor] Fetching comprehensive data for ${marketType} ${marketId}`);
   // Use explicit undefined check to handle bedrooms=0 (Studio)
   if (filters?.bedrooms !== undefined && filters?.bedrooms !== null) console.log(`[StandaloneMarketAdvisor] Bedroom filter: ${filters.bedrooms}`);
@@ -7648,6 +7770,7 @@ export async function getStandaloneMarketAdvisorData(
     };
     
     console.log(`[StandaloneMarketAdvisor] Successfully compiled data for ${marketDetails.name}`);
+    apiCache.set(_ck, result);
     return result;
     
   } catch (error) {
