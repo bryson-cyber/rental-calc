@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COUNT(*) as total, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM api_cache WHERE cacheKey LIKE '%airdna%' OR cacheKey LIKE '%rentalizer%' OR cacheKey LIKE '%market%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COUNT(*) as total, MIN(createdAt) as earliest, MAX(createdAt) as latest FROM api_cache WHERE cacheKey LIKE '%airdna%' OR cacheKey LIKE '%rentalizer%' OR cacheKey LIKE '%market%';",
+  "rows": [
+    {
+      "total": "1195",
+      "earliest": "2026-02-04 17:25:40",
+      "latest": "2026-02-12 15:24:56"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tearliest\tlatest\n1195\t2026-02-04 17:25:40\t2026-02-12 15:24:56\n",
+  "stderr": "",
+  "execution_time_ms": 74
+}

@@ -197,7 +197,8 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
     { query: searchQuery, limit: 5 },
     { 
       enabled: searchQuery.length >= 3,
-      staleTime: 0, // Always refetch
+      staleTime: 30 * 60 * 1000, // 30 minutes - markets don't change often
+      gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
     }
   );
   

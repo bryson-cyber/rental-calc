@@ -58,7 +58,9 @@ import {
   ListFilter,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Scale,
+  BedDouble
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -506,6 +508,7 @@ const SECTIONS = [
   { id: 'sales', label: 'Comp Sales', icon: Landmark },
   { id: 'rental', label: 'Rental Arbitrage', icon: Building },
   { id: 'purchase', label: 'Purchase', icon: Landmark },
+  { id: 'total-return', label: 'Total Return', icon: Scale },
   { id: 'tax', label: 'Tax Implications', icon: Calculator },
   { id: 'summary', label: 'Summary', icon: Sparkles },
 ];
@@ -528,6 +531,7 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
     if (s.id === 'regulation' && !hasRegulation) return false;
     if (s.id === 'stress' && !hasStressTest) return false;
     if (s.id === 'sales' && !hasSales) return false;
+    if (s.id === 'total-return' && !hasTax) return false;
     if (s.id === 'tax' && !hasTax) return false;
     return true;
   });
@@ -675,6 +679,25 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       active_listings: 0,
     },
   };
+
+  // Compute bedroom-specific benchmarks from bedroom_performance data
+  const bedroomBenchmark = useMemo(() => {
+    if (!bedroom_performance || bedroom_performance.length === 0) return null;
+    const match = bedroom_performance.find(bp => bp.bedrooms === property.bedrooms);
+    if (!match) return null;
+    const rev = match.avg_revenue || match.revenue || 0;
+    const adrVal = match.avg_adr || match.adr || 0;
+    const occVal = match.avg_occupancy || match.occupancy || 0;
+    const count = match.listing_count || match.count || 0;
+    if (rev === 0 && adrVal === 0) return null;
+    return {
+      revenue: rev < 50000 ? rev * 12 : rev,
+      adr: adrVal,
+      occupancy: occVal,
+      revpar: adrVal * (occVal > 1 ? occVal / 100 : occVal),
+      listingCount: count,
+    };
+  }, [bedroom_performance, property.bedrooms]);
 
   // Handle legacy expense_breakdown alias
   const expenses = itemized_expenses || (data as any).expense_breakdown;
@@ -1381,28 +1404,66 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             )}
           </div>
 
-          {/* Your Property vs Market */}
+          {/* Your Property vs Market — uses bedroom-specific benchmarks when available */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <h3 className="text-lg font-serif font-semibold text-[#1e293b]">Your Property vs. Market Average</h3>
-              <InfoTip text="This table compares YOUR property's projected performance against the overall market average. Gold column = your numbers. Gray column = what the average listing earns. Being above the market average is a positive sign." />
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b]">
+                Your Property vs. {bedroomBenchmark ? `${property.bedrooms}-Bedroom Average` : 'Market Average'}
+              </h3>
+              <InfoTip text={bedroomBenchmark
+                ? `This table compares YOUR property's projected performance against the average for ${property.bedrooms}-bedroom listings specifically — a much more accurate comparison than the overall market average which includes all bedroom counts.`
+                : "This table compares YOUR property's projected performance against the overall market average. Gold column = your numbers. Gray column = what the average listing earns. Being above the market average is a positive sign."
+              } />
             </div>
+            {bedroomBenchmark && (
+              <div className="mb-4 px-3 py-2 bg-[#C9A962]/8 rounded-lg border border-[#C9A962]/20">
+                <p className="text-xs text-[#64748b]">
+                  <strong className="text-[#C9A962]">Apples-to-apples comparison:</strong> Benchmarks below are from <strong>{bedroomBenchmark.listingCount > 0 ? `${bedroomBenchmark.listingCount} ` : ''}{property.bedrooms}-bedroom listings</strong> in your market, not the overall market average which includes all bedroom counts.
+                </p>
+              </div>
+            )}
             <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
-              <div className="grid grid-cols-3 bg-[#C9A962] text-white text-sm font-medium">
+              <div className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} bg-[#C9A962] text-white text-sm font-medium`}>
                 <div className="p-3">Metric</div>
                 <div className="p-3 text-center flex items-center justify-center gap-1"><Home className="w-3 h-3" /> Your Property</div>
-                <div className="p-3 text-center flex items-center justify-center gap-1"><BarChart3 className="w-3 h-3" /> Market Average</div>
+                <div className="p-3 text-center flex items-center justify-center gap-1"><BedDouble className="w-3 h-3" /> {property.bedrooms}-BR Avg</div>
+                {bedroomBenchmark && (
+                  <div className="p-3 text-center flex items-center justify-center gap-1 opacity-70"><BarChart3 className="w-3 h-3" /> All-Market Avg</div>
+                )}
               </div>
               {[
-                { label: 'Annual Revenue', yours: formatCurrency(revenue_estimate.annual), market: formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue) },
-                { label: 'Nightly Rate (ADR)', yours: formatCurrency(revenue_estimate.nightly), market: formatCurrency(market_data.metrics.adr) },
-                { label: 'Occupancy Rate', yours: formatPercent(revenue_estimate.occupancy), market: formatPercent(market_data.metrics.occupancy) },
-                { label: 'RevPAR', yours: formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy)), market: formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))) },
+                {
+                  label: 'Annual Revenue',
+                  yours: formatCurrency(revenue_estimate.annual),
+                  bedroom: bedroomBenchmark ? formatCurrency(bedroomBenchmark.revenue) : formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue),
+                  market: formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue),
+                },
+                {
+                  label: 'Nightly Rate (ADR)',
+                  yours: formatCurrency(revenue_estimate.nightly),
+                  bedroom: bedroomBenchmark ? formatCurrency(bedroomBenchmark.adr) : formatCurrency(market_data.metrics.adr),
+                  market: formatCurrency(market_data.metrics.adr),
+                },
+                {
+                  label: 'Occupancy Rate',
+                  yours: formatPercent(revenue_estimate.occupancy),
+                  bedroom: bedroomBenchmark ? formatPercent(bedroomBenchmark.occupancy) : formatPercent(market_data.metrics.occupancy),
+                  market: formatPercent(market_data.metrics.occupancy),
+                },
+                {
+                  label: 'RevPAR',
+                  yours: formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy)),
+                  bedroom: bedroomBenchmark ? formatCurrency(bedroomBenchmark.revpar) : formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))),
+                  market: formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))),
+                },
               ].map((row, i) => (
-                <div key={i} className="grid grid-cols-3 text-sm">
+                <div key={i} className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} text-sm`}>
                   <div className="p-3 text-[#64748b]">{row.label}</div>
                   <div className="p-3 text-center font-semibold text-[#1e293b]">{row.yours}</div>
-                  <div className="p-3 text-center text-[#64748b]">{row.market}</div>
+                  <div className="p-3 text-center text-[#64748b] font-medium">{row.bedroom}</div>
+                  {bedroomBenchmark && (
+                    <div className="p-3 text-center text-[#94a3b8]">{row.market}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -2326,6 +2387,187 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </InsightBox>
           </section>
         )}
+
+        {/* ---------------------------------------------------------- */}
+        {/* SECTION: TOTAL RETURN SUMMARY */}
+        {/* ---------------------------------------------------------- */}
+        {(hasRental || hasPurchase) && (() => {
+          // Calculate tax deductions inline (mirrors the Tax section logic)
+          const annualRev = revenue_estimate.annual;
+          const platformFees = Math.round(annualRev * 0.03);
+          const cleaningCosts = Math.round(annualRev * 0.08);
+          const utilitiesCost = Math.round(annualRev * 0.04);
+          const suppliesCost = Math.round(annualRev * 0.025);
+          const maintenanceCost = Math.round(annualRev * 0.04);
+          const insuranceCost = Math.round(annualRev * 0.03);
+          const advertisingCost = Math.round(annualRev * 0.01);
+          const professionalCost = Math.round(annualRev * 0.02);
+
+          let totalDeductions = platformFees + cleaningCosts + utilitiesCost + suppliesCost + maintenanceCost + insuranceCost + advertisingCost + professionalCost;
+
+          // Purchase-specific deductions
+          const purchasePrice = normalizedPurchase?.purchasePrice || 0;
+          const buildingValue = Math.round(purchasePrice * 0.80);
+          const annualDepreciation = purchasePrice > 0 ? Math.round(buildingValue / 27.5) : 0;
+          const propertyTaxEst = purchasePrice > 0 ? Math.round(purchasePrice * 0.012) : 0;
+          const mortgageInterestEst = (() => {
+            if (!normalizedPurchase?.purchasePrice) return 0;
+            const price = normalizedPurchase.purchasePrice;
+            const downPct = (normalizedPurchase.downPaymentPercent || 20) / 100;
+            const loanAmount = price * (1 - downPct);
+            const rate = (normalizedPurchase.interestRate || 7) / 100;
+            return normalizedPurchase.loanType === 'cash' ? 0 : Math.round(loanAmount * rate * 0.97);
+          })();
+
+          if (hasPurchase && purchasePrice > 0) {
+            totalDeductions += annualDepreciation + mortgageInterestEst + propertyTaxEst;
+          }
+
+          // Rental arbitrage lease deduction
+          const monthlyRent = rental_arbitrage?.monthlyRent || 0;
+          if (hasRental && monthlyRent > 0) {
+            totalDeductions += monthlyRent * 12;
+          }
+
+          // Tax savings at 24% bracket (middle estimate)
+          const taxSavingsLow = Math.round(totalDeductions * 0.22);
+          const taxSavingsMid = Math.round(totalDeductions * 0.24);
+          const taxSavingsHigh = Math.round(totalDeductions * 0.32);
+
+          // Pre-tax cash flow
+          const preTaxCashFlow = hasPurchase && purchaseCalcs
+            ? purchaseCalcs.annualCashFlow
+            : hasRental && rentalCalcs
+            ? rentalCalcs.annualProfit
+            : 0;
+
+          // Net benefit after tax savings
+          const netBenefitLow = preTaxCashFlow + taxSavingsLow;
+          const netBenefitMid = preTaxCashFlow + taxSavingsMid;
+          const netBenefitHigh = preTaxCashFlow + taxSavingsHigh;
+
+          return (
+            <section id="section-total-return" className="scroll-mt-24 mb-16">
+              <SectionHeader icon={Scale} title="Total Return Picture" subtitle="Combining cash flow with estimated tax benefits for the complete investment view" tooltip="This section brings together your pre-tax cash flow and estimated tax savings into one view. Many STR investments that look negative on a cash flow basis become positive when you factor in tax deductions like depreciation, mortgage interest, and operating expenses. This is the number sophisticated investors actually look at." />
+
+              {/* The Big Number */}
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-2">Annual Net Benefit (After Tax Savings) <InfoTip text="Your actual annual benefit when you combine cash flow with tax savings. Even if cash flow is negative, tax deductions can turn the overall picture positive. This uses the 24% federal tax bracket as the middle estimate — your actual savings depend on your tax situation." /></h3>
+                <p className="text-sm text-[#64748b] mb-6">What you actually keep when combining rental income with tax deductions</p>
+
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-[#f8fafc] rounded-xl p-5 text-center border border-[#e2e8f0]">
+                    <p className="text-xs text-[#94a3b8] mb-1 uppercase tracking-wider">Pre-Tax Cash Flow</p>
+                    <p className={`text-2xl font-bold ${preTaxCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(preTaxCashFlow)}
+                    </p>
+                    <p className="text-xs text-[#94a3b8] mt-1">{formatCurrency(preTaxCashFlow / 12)}/mo</p>
+                  </div>
+                  <div className="bg-[#f8fafc] rounded-xl p-5 text-center border border-[#e2e8f0]">
+                    <p className="text-xs text-[#94a3b8] mb-1 uppercase tracking-wider">Est. Tax Savings</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      +{formatCurrency(taxSavingsMid)}
+                    </p>
+                    <p className="text-xs text-[#94a3b8] mt-1">at 24% bracket</p>
+                  </div>
+                  <div className={`rounded-xl p-5 text-center border-2 ${netBenefitMid >= 0 ? 'border-green-500 bg-green-50' : 'border-red-400 bg-red-50'}`}>
+                    <p className="text-xs text-[#94a3b8] mb-1 uppercase tracking-wider font-semibold">Net Annual Benefit</p>
+                    <p className={`text-2xl font-bold ${netBenefitMid >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(netBenefitMid)}
+                    </p>
+                    <p className="text-xs text-[#94a3b8] mt-1">{formatCurrency(netBenefitMid / 12)}/mo</p>
+                  </div>
+                </div>
+
+                {/* Tax bracket range */}
+                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                  <h4 className="text-sm font-semibold text-[#1e293b] mb-3">Net Benefit by Tax Bracket <InfoTip text="Your net annual benefit varies depending on your federal tax bracket. Higher income = higher tax bracket = more savings from deductions. The highlighted column shows the most common bracket for STR investors." /></h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 rounded-lg bg-white border border-[#e2e8f0]">
+                      <p className="text-[10px] text-[#94a3b8] mb-1">22% bracket</p>
+                      <p className="text-xs text-[#64748b] mb-1">($44k-$95k income)</p>
+                      <p className={`text-lg font-bold ${netBenefitLow >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(netBenefitLow)}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-[#C9A962]/10 border-2 border-[#C9A962]/40">
+                      <p className="text-[10px] text-[#C9A962] font-semibold mb-1">24% bracket</p>
+                      <p className="text-xs text-[#64748b] mb-1">($95k-$191k income)</p>
+                      <p className={`text-lg font-bold ${netBenefitMid >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(netBenefitMid)}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-white border border-[#e2e8f0]">
+                      <p className="text-[10px] text-[#94a3b8] mb-1">32% bracket</p>
+                      <p className="text-xs text-[#64748b] mb-1">($191k-$244k income)</p>
+                      <p className={`text-lg font-bold ${netBenefitHigh >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(netBenefitHigh)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Waterfall breakdown */}
+              <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">How We Got Here <InfoTip text="A step-by-step waterfall showing how gross revenue flows down to your net benefit. Each line subtracts a cost or adds a benefit, so you can see exactly where the money goes." /></h3>
+                <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
+                  <DataRow label="Gross Annual Revenue" value={<span className="font-bold text-[#1e293b]">{formatCurrency(annualRev)}</span>} highlight tooltip="Total projected rental income before any expenses." />
+                  {hasPurchase && purchaseCalcs && (
+                    <>
+                      <DataRow label="Operating Expenses (35%)" value={<span className="text-red-600">- {formatCurrency(purchaseCalcs.operatingExpenses)}</span>} tooltip="Day-to-day costs: cleaning, supplies, repairs, platform fees, utilities." />
+                      <DataRow label="Property Tax" value={<span className="text-red-600">- {formatCurrency(purchaseCalcs.propertyTax)}</span>} tooltip="Annual property taxes." />
+                      <DataRow label="Insurance" value={<span className="text-red-600">- {formatCurrency(purchaseCalcs.insurance)}</span>} tooltip="Annual STR insurance premium." />
+                      {purchaseCalcs.annualMortgage > 0 && (
+                        <DataRow label="Mortgage (Annual)" value={<span className="text-red-600">- {formatCurrency(purchaseCalcs.annualMortgage)}</span>} tooltip="Annual mortgage payments (principal + interest)." />
+                      )}
+                      <DataRow label="Pre-Tax Cash Flow" value={
+                        <span className={`font-bold ${purchaseCalcs.annualCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(purchaseCalcs.annualCashFlow)}
+                        </span>
+                      } highlight tooltip="Revenue minus all expenses including mortgage. This is what most reports stop at." />
+                    </>
+                  )}
+                  {hasRental && rentalCalcs && !hasPurchase && (
+                    <>
+                      <DataRow label="Annual Lease Cost" value={<span className="text-red-600">- {formatCurrency(rentalCalcs.rent * 12)}</span>} tooltip="Monthly rent x 12 months." />
+                      <DataRow label="Pre-Tax Cash Flow" value={
+                        <span className={`font-bold ${rentalCalcs.annualProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(rentalCalcs.annualProfit)}
+                        </span>
+                      } highlight tooltip="Revenue minus lease payments. This is what most reports stop at." />
+                    </>
+                  )}
+                  <DataRow label="+ Estimated Tax Savings (24%)" value={
+                    <span className="font-bold text-green-600">+ {formatCurrency(taxSavingsMid)}</span>
+                  } highlight tooltip="Tax savings from deductions (depreciation, mortgage interest, operating expenses, etc.) at the 24% federal bracket. This is money you keep by paying less in taxes." />
+                  <DataRow label="Net Annual Benefit" value={
+                    <span className={`font-bold text-lg ${netBenefitMid >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(netBenefitMid)}
+                    </span>
+                  } highlight tooltip="Your total annual benefit combining cash flow and tax savings. This is the complete picture." />
+                </div>
+              </div>
+
+              {/* Context insight */}
+              {preTaxCashFlow < 0 && netBenefitMid > 0 && (
+                <InsightBox type="success">
+                  <strong>Tax Benefits Flip the Picture:</strong> While pre-tax cash flow is {formatCurrency(preTaxCashFlow)}, estimated tax deductions of {formatCurrency(totalDeductions)} generate approximately {formatCurrency(taxSavingsMid)} in tax savings (at 24% bracket), resulting in a net positive annual benefit of {formatCurrency(netBenefitMid)}. This is a common pattern for purchase investments where depreciation and mortgage interest create significant tax shields.
+                </InsightBox>
+              )}
+              {preTaxCashFlow >= 0 && (
+                <InsightBox type="success">
+                  <strong>Cash Flow Positive + Tax Benefits:</strong> This property generates positive cash flow of {formatCurrency(preTaxCashFlow)} before tax benefits. The additional {formatCurrency(taxSavingsMid)} in estimated tax savings (at 24% bracket) brings the total annual benefit to {formatCurrency(netBenefitMid)}.
+                </InsightBox>
+              )}
+              {preTaxCashFlow < 0 && netBenefitMid <= 0 && (
+                <InsightBox type="warning">
+                  <strong>Below Break-Even:</strong> Even after factoring in estimated tax savings of {formatCurrency(taxSavingsMid)} (at 24% bracket), the net annual benefit remains {formatCurrency(netBenefitMid)}. This property may require higher occupancy, increased nightly rates, or a lower purchase price to become financially viable. Consider the Stress Test section for scenario analysis.
+                </InsightBox>
+              )}
+
+              <div className="mt-4">
+                <InsightBox type="info">
+                  <strong>Important:</strong> Tax savings are estimates based on standard deduction categories and federal tax brackets. Your actual tax benefit depends on your total income, filing status, state taxes, and whether you qualify for additional deductions like the QBI (Section 199A) deduction. Always consult a tax professional.
+                </InsightBox>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ---------------------------------------------------------- */}
         {/* SECTION: TAX IMPLICATIONS */}

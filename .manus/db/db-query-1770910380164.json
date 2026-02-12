@@ -1,0 +1,43 @@
+{
+  "query": "SHOW TABLES LIKE '%api%'; SHOW TABLES LIKE '%cache%'; SHOW TABLES LIKE '%log%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SHOW TABLES LIKE '%api%'; SHOW TABLES LIKE '%cache%'; SHOW TABLES LIKE '%log%';",
+  "rows": [
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_cache"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_call_logs"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_usage_summary"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%cache%)"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "ai_advisor_cache"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_cache"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "regulation_cache"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%log%)"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "activity_logs"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_call_logs"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "owner_notification_log"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)\napi_cache\napi_call_logs\napi_usage_summary\nTables_in_DGUybt3jtP54yda4M9Ci8Y (%cache%)\nai_advisor_cache\napi_cache\nregulation_cache\nTables_in_DGUybt3jtP54yda4M9Ci8Y (%log%)\nactivity_logs\napi_call_logs\nowner_notification_log\n",
+  "stderr": "",
+  "execution_time_ms": 68
+}

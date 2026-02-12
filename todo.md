@@ -10593,5 +10593,25 @@ Results:
 - [x] Remove distance polylines and midpoint labels from comp map entirely (user says they're ugly)
 - [x] Remove the "Show Lines / Hide Lines" toggle button (no longer needed)
 - [x] Clean up unused refs and state for distance lines
-- [ ] Conduct thorough investor-perspective audit of the full property report
-- [ ] Identify sections that are unclear, confusing, or incomplete for a real investor
+- [x] Conduct thorough investor-perspective audit of the full property report
+- [x] Identify sections that are unclear, confusing, or incomplete for a real investor
+- [x] Compiled 10-item prioritized recommendation list
+
+## Investor Report Improvements (Feb 12, 2026)
+- [ ] Add "Total Return Summary" card combining cash flow + tax savings into one view
+- [ ] Show pre-tax cash flow, estimated tax savings, and net annual benefit after tax
+- [ ] Position Total Return Summary prominently (after Purchase section, before Tax details)
+- [ ] Ensure Stress Test section is always populated — generate scenarios in the report pipeline if not provided
+- [ ] Ensure Regulatory Status section is always populated — fetch/generate regulation data in the pipeline
+- [ ] Switch Market Analysis headline comparison to use bedroom-specific benchmarks instead of all-bedroom market averages
+- [ ] Add bedroom-specific context to KPI comparisons where available
+- [ ] Write tests for all new features
+
+## BUG: AirDNA API calls burning 760/day with no user activity (Feb 12, 2026)
+- [x] Diagnose: traced all code paths — getAllUSMarkets() used sync apiCache.get() (memory-only) instead of getAsync() (memory+DB), causing 13 API calls per server restart
+- [x] Diagnose: /listing/comps/area (148) and /market/search (117) were from development activity, not background drain
+- [x] Fix: changed getAllUSMarkets() to use apiCache.getAsync() for DB-backed cache that survives restarts
+- [x] Fix: increased page_size from 25 to 100 (4 calls instead of 13 when fresh fetch needed)
+- [x] Fix: added 'all_us_markets' to TTL_CONFIG with 30-day TTL
+- [x] Fix: changed MapFirstLayoutV2 staleTime from 0 to 30 minutes (was triggering refetch every render)
+- [x] Verify: all 869 tests passing, TypeScript clean

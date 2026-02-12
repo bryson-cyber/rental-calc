@@ -113,6 +113,119 @@ export const sharedReportsRouter = router({
           }
         }
         
+        // === POST-PROCESSING: Ensure stress_test, regulation, and expense_breakdown are always populated ===
+        if (input.reportType === 'full' && reportData && typeof reportData === 'object') {
+          const revEstimate = reportData.revenue_estimate;
+          const bedrooms = input.bedrooms || reportData.property?.bedrooms || 2;
+          const annualRev = revEstimate?.annual || 0;
+          const occRate = revEstimate?.occupancy ? (revEstimate.occupancy > 1 ? revEstimate.occupancy / 100 : revEstimate.occupancy) : 0.5;
+          const adr = revEstimate?.nightly || 0;
+
+          // Generate expense_breakdown if missing
+          if (!reportData.expense_breakdown && !reportData.itemized_expenses && annualRev > 0) {
+            const monthlyRevBase = Math.round(annualRev / 12);
+            const nightsPerMonth = Math.round(occRate * 30);
+            const itemizedExpenses = {
+              cleaning: Math.round(nightsPerMonth * 0.33 * (bedrooms <= 1 ? 75 : bedrooms <= 2 ? 100 : bedrooms <= 3 ? 140 : 180)),
+              platform_fees: Math.round(monthlyRevBase * 0.14),
+              property_management: Math.round(monthlyRevBase * 0.15),
+              supplies: Math.round(bedrooms * 40 + 60),
+              utilities: Math.round(bedrooms * 75 + 100),
+              maintenance: Math.round(monthlyRevBase * 0.05),
+              insurance: Math.round(bedrooms <= 2 ? 150 : bedrooms <= 4 ? 225 : 300),
+              licenses_taxes: Math.round(monthlyRevBase * 0.08),
+            };
+            const totalMonthlyExpenses = Object.values(itemizedExpenses).reduce((a, b) => a + b, 0);
+            const expensePercent = monthlyRevBase > 0 ? Math.round((totalMonthlyExpenses / monthlyRevBase) * 100) : 0;
+            reportData.expense_breakdown = {
+              items: itemizedExpenses,
+              total_monthly: totalMonthlyExpenses,
+              total_annual: totalMonthlyExpenses * 12,
+              percent_of_revenue: expensePercent,
+              note: 'Estimates based on market averages. Property management fee included — remove if self-managing to increase profit.',
+            };
+            console.log('[SharedReport] Generated expense_breakdown for report');
+          }
+
+          // Generate stress_test if missing
+          if (!reportData.stress_test && annualRev > 0 && adr > 0) {
+            const expenseBreakdown = reportData.expense_breakdown || reportData.itemized_expenses;
+            const totalMonthly = expenseBreakdown?.total_monthly || Math.round(annualRev / 12 * 0.35);
+            const expPct = Math.round(annualRev / 12) > 0 ? Math.round((totalMonthly / Math.round(annualRev / 12)) * 100) : 35;
+            const baseOcc = occRate;
+            const baseAdr = adr;
+            const occScenarios = [
+              Math.max(0.25, baseOcc - 0.20),
+              Math.max(0.30, baseOcc - 0.10),
+              baseOcc,
+              Math.min(0.95, baseOcc + 0.10),
+            ];
+            const adrScenarios = [
+              Math.round(baseAdr * 0.75),
+              Math.round(baseAdr * 0.90),
+              baseAdr,
+              Math.round(baseAdr * 1.10),
+            ];
+            const stressTestMatrix: Array<{ occupancy_pct: number; adr: number; annual_revenue: number; monthly_revenue: number; monthly_profit: number; cash_flow_positive: boolean; }> = [];
+            for (const occ of occScenarios) {
+              for (const testAdr of adrScenarios) {
+                const testAnnualRev = Math.round(occ * testAdr * 365);
+                const testMonthlyRev = Math.round(testAnnualRev / 12);
+                const testExpenses = Math.round(testMonthlyRev * (expPct / 100));
+                const monthlyProfit = testMonthlyRev - testExpenses;
+                stressTestMatrix.push({
+                  occupancy_pct: occ,
+                  adr: testAdr,
+                  annual_revenue: testAnnualRev,
+                  monthly_revenue: testMonthlyRev,
+                  monthly_profit: monthlyProfit,
+                  cash_flow_positive: monthlyProfit >= 0,
+                });
+              }
+            }
+            reportData.stress_test = {
+              base_occupancy: baseOcc,
+              base_adr: baseAdr,
+              scenarios: stressTestMatrix,
+              occupancy_levels: occScenarios,
+              adr_levels: adrScenarios,
+              breakeven_note: 'Green cells indicate positive cash flow. The breakeven point is where monthly profit crosses $0.',
+            };
+            console.log('[SharedReport] Generated stress_test for report');
+          }
+
+          // Fetch regulation if missing
+          if (!reportData.regulation) {
+            try {
+              const city = reportData.property?.city;
+              const state = reportData.property?.state;
+              if (city && state) {
+                console.log(`[SharedReport] Fetching regulation data for ${city}, ${state}...`);
+                const regData = await getRegulationInfo(city, state);
+                if (regData && regData.status !== 'unknown') {
+                  reportData.regulation = {
+                    status: regData.status,
+                    summary: regData.simplifiedSummary || regData.summary,
+                    key_requirements: regData.keyRequirements || [],
+                    permit_required: regData.permitRequired,
+                    primary_residence_only: regData.primaryResidenceOnly,
+                    max_nights_per_year: regData.maxNightsPerYear,
+                    registration_fee: regData.registrationFee,
+                    occupancy_tax: regData.occupancyTax,
+                    zoning_restrictions: regData.zoningRestrictions,
+                    confidence: regData.confidence,
+                    warnings: regData.warnings || [],
+                    sources: regData.sources?.slice(0, 3) || [],
+                  };
+                  console.log(`[SharedReport] Regulation status: ${regData.status}`);
+                }
+              }
+            } catch (regErr) {
+              console.error('[SharedReport] Regulation fetch failed (non-fatal):', regErr);
+            }
+          }
+        }
+
         // Serialize reportData to JSON string for text column
         const reportDataStr = typeof reportData === 'string' 
           ? reportData 
@@ -513,6 +626,109 @@ export const sharedReportsRouter = router({
             })),
           };
           
+          // === POST-PROCESSING: Ensure stress_test, regulation, and expense_breakdown are always populated ===
+          {
+            const regenAnnualRev = newReportData.revenue_estimate?.annual || 0;
+            const regenOccRate = newReportData.revenue_estimate?.occupancy ? (newReportData.revenue_estimate.occupancy > 1 ? newReportData.revenue_estimate.occupancy / 100 : newReportData.revenue_estimate.occupancy) : 0.5;
+            const regenAdr = newReportData.revenue_estimate?.nightly || 0;
+            const regenBedrooms = newReportData.property?.bedrooms || bedrooms;
+
+            // Generate expense_breakdown if missing
+            if (!newReportData.expense_breakdown && !newReportData.itemized_expenses && regenAnnualRev > 0) {
+              const monthlyRevBase = Math.round(regenAnnualRev / 12);
+              const nightsPerMonth = Math.round(regenOccRate * 30);
+              const itemizedExpenses = {
+                cleaning: Math.round(nightsPerMonth * 0.33 * (regenBedrooms <= 1 ? 75 : regenBedrooms <= 2 ? 100 : regenBedrooms <= 3 ? 140 : 180)),
+                platform_fees: Math.round(monthlyRevBase * 0.14),
+                property_management: Math.round(monthlyRevBase * 0.15),
+                supplies: Math.round(regenBedrooms * 40 + 60),
+                utilities: Math.round(regenBedrooms * 75 + 100),
+                maintenance: Math.round(monthlyRevBase * 0.05),
+                insurance: Math.round(regenBedrooms <= 2 ? 150 : regenBedrooms <= 4 ? 225 : 300),
+                licenses_taxes: Math.round(monthlyRevBase * 0.08),
+              };
+              const totalMonthlyExpenses = Object.values(itemizedExpenses).reduce((a, b) => a + b, 0);
+              const expensePercent = monthlyRevBase > 0 ? Math.round((totalMonthlyExpenses / monthlyRevBase) * 100) : 0;
+              newReportData.expense_breakdown = {
+                items: itemizedExpenses,
+                total_monthly: totalMonthlyExpenses,
+                total_annual: totalMonthlyExpenses * 12,
+                percent_of_revenue: expensePercent,
+                note: 'Estimates based on market averages. Property management fee included \u2014 remove if self-managing to increase profit.',
+              };
+              console.log('[Regenerate] Generated expense_breakdown');
+            }
+
+            // Generate stress_test if missing
+            if (!newReportData.stress_test && regenAnnualRev > 0 && regenAdr > 0) {
+              const expBrk = newReportData.expense_breakdown || newReportData.itemized_expenses;
+              const totalMo = expBrk?.total_monthly || Math.round(regenAnnualRev / 12 * 0.35);
+              const expPct = Math.round(regenAnnualRev / 12) > 0 ? Math.round((totalMo / Math.round(regenAnnualRev / 12)) * 100) : 35;
+              const occScenarios = [
+                Math.max(0.25, regenOccRate - 0.20),
+                Math.max(0.30, regenOccRate - 0.10),
+                regenOccRate,
+                Math.min(0.95, regenOccRate + 0.10),
+              ];
+              const adrScenarios = [
+                Math.round(regenAdr * 0.75),
+                Math.round(regenAdr * 0.90),
+                regenAdr,
+                Math.round(regenAdr * 1.10),
+              ];
+              const stressMatrix: Array<{ occupancy_pct: number; adr: number; annual_revenue: number; monthly_revenue: number; monthly_profit: number; cash_flow_positive: boolean; }> = [];
+              for (const occ of occScenarios) {
+                for (const testAdr of adrScenarios) {
+                  const testAnnRev = Math.round(occ * testAdr * 365);
+                  const testMoRev = Math.round(testAnnRev / 12);
+                  const testExp = Math.round(testMoRev * (expPct / 100));
+                  const moProfit = testMoRev - testExp;
+                  stressMatrix.push({ occupancy_pct: occ, adr: testAdr, annual_revenue: testAnnRev, monthly_revenue: testMoRev, monthly_profit: moProfit, cash_flow_positive: moProfit >= 0 });
+                }
+              }
+              newReportData.stress_test = {
+                base_occupancy: regenOccRate,
+                base_adr: regenAdr,
+                scenarios: stressMatrix,
+                occupancy_levels: occScenarios,
+                adr_levels: adrScenarios,
+                breakeven_note: 'Green cells indicate positive cash flow.',
+              };
+              console.log('[Regenerate] Generated stress_test');
+            }
+
+            // Fetch regulation if missing
+            if (!newReportData.regulation) {
+              try {
+                const city = newReportData.property?.city;
+                const state = newReportData.property?.state;
+                if (city && state) {
+                  console.log(`[Regenerate] Fetching regulation data for ${city}, ${state}...`);
+                  const regData = await getRegulationInfo(city, state);
+                  if (regData && regData.status !== 'unknown') {
+                    newReportData.regulation = {
+                      status: regData.status,
+                      summary: regData.simplifiedSummary || regData.summary,
+                      key_requirements: regData.keyRequirements || [],
+                      permit_required: regData.permitRequired,
+                      primary_residence_only: regData.primaryResidenceOnly,
+                      max_nights_per_year: regData.maxNightsPerYear,
+                      registration_fee: regData.registrationFee,
+                      occupancy_tax: regData.occupancyTax,
+                      zoning_restrictions: regData.zoningRestrictions,
+                      confidence: regData.confidence,
+                      warnings: regData.warnings || [],
+                      sources: regData.sources?.slice(0, 3) || [],
+                    };
+                    console.log(`[Regenerate] Regulation status: ${regData.status}`);
+                  }
+                }
+              } catch (regErr) {
+                console.error('[Regenerate] Regulation fetch failed (non-fatal):', regErr);
+              }
+            }
+          }
+
           // Step 3: Generate comprehensive AI summary via Gemini 3 Pro
           console.log('[Regenerate] Generating AI summary via Gemini 3 Pro...');
           try {

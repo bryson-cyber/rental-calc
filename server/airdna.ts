@@ -423,24 +423,28 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
     return usMarketsCache;
   }
   
-  // Check database cache
+  // Check database cache using async method (survives server restarts)
   const dbCacheKey = 'all_us_markets';
-  const dbCached = apiCache.get<typeof usMarketsCache>(dbCacheKey);
-  if (dbCached && dbCached.length > 0) {
-    console.log(`[getAllUSMarkets] Using database cache (${dbCached.length} markets)`);
-    logCacheHit('all_us_markets');
-    usMarketsCache = dbCached;
-    usMarketsCacheTime = Date.now();
-    return dbCached;
+  try {
+    const dbCached = await apiCache.getAsync<typeof usMarketsCache>(dbCacheKey);
+    if (dbCached && dbCached.length > 0) {
+      console.log(`[getAllUSMarkets] Using database cache (${dbCached.length} markets)`);
+      logCacheHit('all_us_markets');
+      usMarketsCache = dbCached;
+      usMarketsCacheTime = Date.now();
+      return dbCached;
+    }
+  } catch (error) {
+    console.warn('[getAllUSMarkets] DB cache check failed, will fetch from API:', error);
   }
   
   console.log('[getAllUSMarkets] Fetching all US markets...');
   const allMarkets: typeof usMarketsCache = [];
   let offset = 0;
-  const pageSize = 25;
+  const pageSize = 100; // Larger pages = fewer API calls (was 25, now 4 calls instead of 13)
   let hasMore = true;
   
-  while (hasMore && offset < 400) { // Max 400 markets to avoid infinite loop
+  while (hasMore && offset < 500) { // Max 500 markets to avoid infinite loop
     try {
       const response = await makeApiRequest<{
         payload: {
@@ -474,8 +478,8 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
   console.log(`[getAllUSMarkets] Loaded ${allMarkets.length} US markets`);
   if (allMarkets.length > 0) {
     console.log(`[getAllUSMarkets] Sample markets:`, allMarkets.slice(0, 10).map(m => m.name));
-    // Save to database cache for persistence across restarts
-    apiCache.set('all_us_markets', allMarkets, 'search_markets');
+    // Save to database cache for persistence across restarts (30-day TTL)
+    apiCache.set('all_us_markets', allMarkets, 'all_us_markets');
   }
   usMarketsCache = allMarkets;
   usMarketsCacheTime = Date.now();

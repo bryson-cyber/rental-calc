@@ -1,0 +1,19 @@
+{
+  "query": "SHOW TABLES LIKE '%api%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SHOW TABLES LIKE '%api%';",
+  "rows": [
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_cache"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_call_logs"
+    },
+    {
+      "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)": "api_usage_summary"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_DGUybt3jtP54yda4M9Ci8Y (%api%)\napi_cache\napi_call_logs\napi_usage_summary\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

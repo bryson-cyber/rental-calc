@@ -56,6 +56,9 @@ class APICache {
     'listing_pricing': 7 * 24 * 60 * 60 * 1000, // 7 days
     'property_details': 7 * 24 * 60 * 60 * 1000, // 7 days
     
+    // Static reference data - 30 days (US market list barely changes)
+    'all_us_markets': 30 * 24 * 60 * 60 * 1000, // 30 days
+    
     // Search results - 30 days (markets don't change often)
     'search_markets': 30 * 24 * 60 * 60 * 1000, // 30 days
     'search_zipcode': 30 * 24 * 60 * 60 * 1000, // 30 days
