@@ -1758,6 +1758,24 @@ export async function getMarketListings(
       days_reserved: r.days_reserved_ltm || 0,
     }));
     
+    // Persist images from market listings to property_images cache
+    // This allows comps from /listing/comps/area (which has no images) to
+    // cross-reference images from market listings at ZERO additional API cost
+    const imageMap = new Map<string, string[]>();
+    rawListings.forEach(r => {
+      if (r.property_id && r.images && r.images.length > 0) {
+        imageMap.set(r.property_id, r.images);
+      }
+    });
+    if (imageMap.size > 0) {
+      import('./db').then(({ batchCachePropertyImages }) => {
+        batchCachePropertyImages(imageMap).catch(err => {
+          console.error('[getMarketListings] Failed to cache images:', err);
+        });
+      });
+      console.log(`[getMarketListings] Cached images for ${imageMap.size} listings (free cross-reference for comps)`);
+    }
+    
     const result = {
       listings,
       total_count: response.payload.page_info.total_count,
@@ -1979,6 +1997,23 @@ export async function getSubmarketListings(
       days_available: r.days_available_ltm || 0,
       days_reserved: r.days_reserved_ltm || 0,
     }));
+    
+    // Persist images from submarket listings to property_images cache
+    // Same strategy as market listings: free cross-reference for comps
+    const subImageMap = new Map<string, string[]>();
+    rawSubListings.forEach(r => {
+      if (r.property_id && r.images && r.images.length > 0) {
+        subImageMap.set(r.property_id, r.images);
+      }
+    });
+    if (subImageMap.size > 0) {
+      import('./db').then(({ batchCachePropertyImages }) => {
+        batchCachePropertyImages(subImageMap).catch(err => {
+          console.error('[getSubmarketListings] Failed to cache images:', err);
+        });
+      });
+      console.log(`[getSubmarketListings] Cached images for ${subImageMap.size} listings (free cross-reference for comps)`);
+    }
     
     const result = {
       listings,

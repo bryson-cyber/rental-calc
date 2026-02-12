@@ -10917,3 +10917,15 @@ Results:
 - [x] Remove competitor imagery section API calls from sop-reports.ts (uses generic recommendations)
 - [x] Verify no other code paths call individual /listing/{id} for images
 - [x] All 1039 tests pass across 79 test files
+
+## Get Images Back: Test /listing/explore/radius Endpoint
+- [x] Test /listing/explore/radius endpoint — returns 404 (not available on plan)
+- [x] Test /listing/explore/market — returns 404 (not available on plan)
+- [x] Test /listing/explore/submarket — returns 404 (not available on plan)
+- [x] Test /listing/explore/country — returns 404 (not available on plan)
+- [x] Test /listing/batch — returns 400 (not available on plan)
+- [x] Confirmed /market/{id}/listings and /submarket/{id}/listings ALREADY return images (79 per listing)
+- [x] Added image persistence from market listings to property_images cache (zero extra API calls)
+- [x] Added image persistence from submarket listings to property_images cache (zero extra API calls)
+- [x] enrichListingsWithImages now cross-references cached images from market/submarket listings
+- [x] All 1039 tests pass across 79 test files
