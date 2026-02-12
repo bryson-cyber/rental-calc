@@ -2306,6 +2306,14 @@ export async function exploreListingsInRadius(
   },
   limit: number = 50
 ): Promise<ListingData[]> {
+  // ── Cache radius searches to prevent redundant API calls ──
+  const radiusCacheKey = `radius_listings:${address}:${radiusMeters}:br${filters?.bedrooms ?? 'all'}:ba${filters?.bathrooms ?? 'all'}:rev${filters?.minRevenue ?? 0}:lim${limit}`;
+  const cachedListings = await apiCache.getAsync<ListingData[]>(radiusCacheKey);
+  if (cachedListings) {
+    console.log(`[Radius Search] CACHE HIT for ${address} (${filters?.bedrooms ?? 'all'}BR, ${radiusMeters}m) — ${cachedListings.length} listings`);
+    return cachedListings;
+  }
+
   try {
     const filterArray: Array<{ type: string; field: string; value: unknown }> = [];
     
@@ -2414,6 +2422,10 @@ export async function exploreListingsInRadius(
     
     // Sort by revenue (highest first)
     listings.sort((a: ListingData, b: ListingData) => b.annual_revenue - a.annual_revenue);
+    
+    // Cache the results (7 days) to prevent redundant API calls
+    apiCache.set(radiusCacheKey, listings, 'property_details');
+    console.log(`[Radius Search] Cached ${listings.length} listings for ${address} (${filters?.bedrooms ?? 'all'}BR)`);
     
     return listings;
   } catch (error) {
@@ -2710,6 +2722,15 @@ export async function getComprehensivePropertyReport(
     yoy_perc_chg: number;
   };
 } | null> {
+  // ── Top-level cache: return instantly on repeat lookups ──
+  const reportCacheKey = `property_comprehensive:${address}:${bedrooms || 'auto'}:${bathrooms || 'auto'}:${accommodates || 'auto'}`;
+  const cachedReport = await apiCache.getAsync<Awaited<ReturnType<typeof getComprehensivePropertyReport>>>(reportCacheKey);
+  if (cachedReport) {
+    console.log(`[Property Report] CACHE HIT for ${address} — returning instantly`);
+    return cachedReport;
+  }
+  console.log(`[Property Report] CACHE MISS for ${address} — fetching fresh data`);
+
     // Get property estimates from rentalizer
     const propertyEstimate = await getRentalizerEstimate({
     address,
@@ -3409,7 +3430,10 @@ export async function getComprehensivePropertyReport(
   // Only enrich top 10 listings to avoid too many API calls
   sameBedroomComps = await enrichListingsWithImages(sameBedroomComps, 10);
   
-  // Step 5: Get bedroom performance data from comps in radius
+  // Step 5: Get bedroom performance data
+  // OPTIMIZED: Single radius call for ALL bedrooms, then group by BR count
+  // This replaces 5-6 separate radius calls (each paginating 2-4 times = 10-24 API calls)
+  // with just 1 call (max 8 pages = 200 listings)
   let bedroomPerformance: Array<{
     bedrooms: number;
     occupancy: number;
@@ -3418,28 +3442,38 @@ export async function getComprehensivePropertyReport(
     listing_count: number;
   }> = [];
   
-  // Get listings for different bedroom counts from radius comps
-  // Dynamically include the subject property's bedroom count (and one above)
-  const maxBr = Math.max(5, propertyBedrooms + 1);
-  for (let br = 1; br <= maxBr; br++) {
-    try {
-      const listings = await exploreListingsInRadius(address, 5000, { bedrooms: br }, 100);
-      if (listings.length > 0) {
-        const avgRevenue = listings.reduce((sum, l) => sum + l.annual_revenue, 0) / listings.length;
-        const avgAdr = listings.reduce((sum, l) => sum + l.adr, 0) / listings.length;
-        const avgOccupancy = listings.reduce((sum, l) => sum + l.occupancy, 0) / listings.length;
-        
-        bedroomPerformance.push({
+  try {
+    // Single call: get ALL listings in radius (no bedroom filter), then group by BR
+    const allRadiusListings = await exploreListingsInRadius(address, 5000, {}, 200);
+    if (allRadiusListings.length > 0) {
+      const brMap = new Map<number, { count: number; totalRev: number; totalAdr: number; totalOcc: number }>();
+      allRadiusListings.forEach(l => {
+        const br = l.bedrooms;
+        if (br >= 1 && br <= 8) {
+          const existing = brMap.get(br) || { count: 0, totalRev: 0, totalAdr: 0, totalOcc: 0 };
+          brMap.set(br, {
+            count: existing.count + 1,
+            totalRev: existing.totalRev + l.annual_revenue,
+            totalAdr: existing.totalAdr + l.adr,
+            totalOcc: existing.totalOcc + l.occupancy,
+          });
+        }
+      });
+      
+      bedroomPerformance = Array.from(brMap.entries())
+        .map(([br, data]) => ({
           bedrooms: br,
-          occupancy: Math.round(avgOccupancy),
-          adr: Math.round(avgAdr),
-          revenue: Math.round(avgRevenue),
-          listing_count: listings.length,
-        });
-      }
-    } catch (e) {
-      console.log(`[Bedroom Performance] Radius search failed for ${br}BR, will use fallback`);
+          occupancy: Math.round(data.totalOcc / data.count),
+          adr: Math.round(data.totalAdr / data.count),
+          revenue: Math.round(data.totalRev / data.count),
+          listing_count: data.count,
+        }))
+        .sort((a, b) => a.bedrooms - b.bedrooms);
+      
+      console.log(`[Bedroom Performance] OPTIMIZED: Grouped ${allRadiusListings.length} radius listings into ${bedroomPerformance.length} bedroom types (1 API call instead of ${Math.max(5, propertyBedrooms + 1)})`);
     }
+  } catch (e) {
+    console.log('[Bedroom Performance] Optimized radius search failed, will use fallback');
   }
   
   // Fallback: If radius search returned no bedroom performance data, calculate from available comps
@@ -3531,7 +3565,7 @@ export async function getComprehensivePropertyReport(
     }
   }
   
-  return {
+  const result = {
     property: propertyEstimate,
     market: marketData,
     submarkets,
@@ -3545,6 +3579,12 @@ export async function getComprehensivePropertyReport(
       yoy_perc_chg: yoyPercentChange,
     } : undefined,
   };
+
+  // Cache the full report for instant repeat lookups (7 days)
+  apiCache.set(reportCacheKey, result, 'property_details');
+  console.log(`[Property Report] Cached full report for ${address}`);
+
+  return result;
 }
 
 // ============================================

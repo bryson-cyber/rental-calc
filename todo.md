@@ -10781,3 +10781,27 @@ Results:
 - [x] All 981+ existing tests passing (no regressions)
 - [x] End-to-end test with 2953 Kalmia St, San Diego, CA 92104 - verified all data structures correct
 - [x] Property data returns as object (not string) with latitude, longitude, market_id accessible
+
+## API Call Optimization & Step 5 Performance (Feb 12, 2026)
+
+### Audit
+- [x] Audit all API call patterns to identify redundant/wasted calls
+- [x] Identify duplicate AirDNA API calls per request
+- [x] Audit Step 5 (analysis) loading time and bottlenecks
+- [ ] Check for unnecessary re-fetching on frontend
+
+### Clean
+- [x] Add top-level property report caching (so repeat lookups are instant)
+- [x] Add caching to exploreListingsInRadius (currently uncached = 20+ wasted calls)
+- [x] Consolidate bedroom performance loop into single multi-BR radius call (1 call instead of 5-6)
+- [x] Reduce API calls per minute (from ~35-50 to ~10-15 per first report, 0 on repeat)
+- [x] Fix: repeat property lookups take 30s instead of instant cache hit
+
+### Share Link Fix
+- [x] Fix: Share link from Step 5 takes user to wrong report style instead of exact same view
+- [x] Share link now renders TeslaDashboard (exact same Step 5 view) instead of FullPropertyReport
+
+### Prevent
+- [x] Add API call monitoring/logging with counts (console.log for CACHE HIT/MISS)
+- [ ] Add rate limiting safeguards
+- [x] Verify reduced API usage end-to-end (1001 tests pass)

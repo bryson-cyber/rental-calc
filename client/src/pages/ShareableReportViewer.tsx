@@ -22,6 +22,7 @@ import FullPropertyReport from '@/components/FullPropertyReport';
 import type { FullReportData } from '@/components/FullPropertyReport';
 import { SharedRegulationDisplay } from '@/components/SharedRegulationDisplay';
 import { SharedAIAdvisorDisplay } from '@/components/SharedAIAdvisorDisplay';
+import { TeslaDashboard } from '@/components/TeslaDashboard';
 import {
   Loader2,
   ArrowLeft,
@@ -543,19 +544,91 @@ export default function ShareableReportViewer() {
   );
 
   // ═══════════════════════════════════════════════════════════════════════
-  // VALIDATOR & REVENUE → FullPropertyReport (same as the owner sees)
+  // VALIDATOR → TeslaDashboard (exact same view as Step 5)
   // ═══════════════════════════════════════════════════════════════════════
-  if (
-    (reportType === 'validator' || reportType === 'revenue') &&
-    reportData
-  ) {
-    const fullReportData =
-      reportType === 'validator'
-        ? transformValidatorToFullReportData(reportData, report)
-        : transformRevenueToFullReportData(reportData, report);
-
+  if (reportType === 'validator' && reportData) {
     const seoTitle = `Property Analysis - ${location}`;
     const seoDescription = `Full property investment analysis for ${location}. Shared via Coach Inayah Turnkey Tool.`;
+
+    // The reportData IS the AnalysisResult object — pass it directly to TeslaDashboard
+    const validatorAddress = report.address || '';
+    const validatorBedrooms = report.bedrooms || 2;
+    const validatorBathrooms = report.bathrooms ? parseFloat(String(report.bathrooms)) : 1;
+    const validatorMonthlyRent = report.monthlyRent || undefined;
+
+    return (
+      <>
+        <SEOHead
+          title={seoTitle}
+          description={seoDescription}
+          canonicalPath={`/share/${shareCode}`}
+          noIndex={true}
+          structuredData={createWebPageSchema({
+            name: seoTitle,
+            description: seoDescription,
+            url: `/share/${shareCode}`,
+          })}
+        />
+        <div className="min-h-screen bg-gradient-to-b from-[#FFFBF5] to-white">
+          {/* Branded Header */}
+          <header className="bg-[#0F172A] text-white">
+            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+              <button
+                onClick={() => setLocation('/')}
+                className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Coach Inayah</span>
+              </button>
+              <span className="text-[#C9A962] font-serif font-semibold hidden sm:block">
+                Turnkey Tool
+              </span>
+            </div>
+          </header>
+
+          <section className="py-12 bg-slate-50">
+            <div className="container max-w-5xl mx-auto px-4">
+              {/* Header matching Step 5 */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Property Analysis Results</h2>
+                  <p className="text-slate-500">{validatorAddress}</p>
+                </div>
+              </div>
+              <TeslaDashboard
+                result={reportData}
+                address={validatorAddress}
+                bedrooms={validatorBedrooms}
+                bathrooms={validatorBathrooms}
+                monthlyRent={validatorMonthlyRent}
+                marketId={reportData.marketId}
+              />
+            </div>
+          </section>
+
+          {/* Footer */}
+          <div className="text-center mt-12 py-6 border-t border-[#C9A962]/20">
+            <p className="text-[#0F172A] font-serif font-semibold text-lg">
+              Coach Inayah Turnkey Tool
+            </p>
+            <p className="text-[#C9A962] text-xs mt-3">
+              Powered by Coach Inayah market data
+            </p>
+          </div>
+        </div>
+        <ShareBar />
+      </>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // REVENUE → FullPropertyReport (legacy revenue reports)
+  // ═══════════════════════════════════════════════════════════════════════
+  if (reportType === 'revenue' && reportData) {
+    const fullReportData = transformRevenueToFullReportData(reportData, report);
+
+    const seoTitle = `Revenue Analysis - ${location}`;
+    const seoDescription = `Revenue analysis for ${location}. Shared via Coach Inayah Turnkey Tool.`;
 
     return (
       <>
