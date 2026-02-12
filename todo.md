@@ -10826,3 +10826,12 @@ Results:
 - [x] Added AirDNARateLimitError class for graceful error handling
 - [x] Fixed batch-validate tests to work with rate limiter
 - [x] All 1017 tests pass
+
+## Deep Caching Audit - Feb 12, 2026
+- [x] Audited DB: 2766 actual API calls today (only 13% cache hit rate)
+- [x] #1 offender: /listing/comps/area — 376 calls, ZERO cache hits → Added DB caching to getListingsInRadius
+- [x] #2 offender: /market/search — 163 calls → Replaced 2 direct fetch() in geocodeZipCodeToMarket with rate-limited makeApiRequest + memory cache
+- [x] #3 offender: /country/us/markets — 131 calls → Already had cache but was failing due to double-stringify bug (now fixed)
+- [x] Added memory caching to all airdna-hierarchy.ts functions: getMarketsInState, getSubmarketsInMarket, searchMarkets, geocodeZipCodeToMarket
+- [x] Added DB caching to getListingsInRadius (was the #1 API call burner)
+- [x] All 1017 tests pass across 78 test files

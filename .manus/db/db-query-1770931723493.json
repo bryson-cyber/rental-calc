@@ -1,0 +1,310 @@
+{
+  "query": "\nSELECT \n  endpoint,\n  source,\n  COUNT(*) as call_count,\n  SUM(CASE WHEN cacheHit = 1 THEN 1 ELSE 0 END) as cache_hits,\n  SUM(CASE WHEN cacheHit = 0 THEN 1 ELSE 0 END) as actual_api_calls,\n  SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,\n  SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failures,\n  ROUND(AVG(responseTimeMs), 0) as avg_response_ms\nFROM api_call_logs \nWHERE provider = 'airdna' \n  AND DATE(createdAt) = CURDATE()\nGROUP BY endpoint, source\nORDER BY call_count DESC\nLIMIT 30;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute \nSELECT \n  endpoint,\n  source,\n  COUNT(*) as call_count,\n  SUM(CASE WHEN cacheHit = 1 THEN 1 ELSE 0 END) as cache_hits,\n  SUM(CASE WHEN cacheHit = 0 THEN 1 ELSE 0 END) as actual_api_calls,\n  SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,\n  SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failures,\n  ROUND(AVG(responseTimeMs), 0) as avg_response_ms\nFROM api_call_logs \nWHERE provider = 'airdna' \n  AND DATE(createdAt) = CURDATE()\nGROUP BY endpoint, source\nORDER BY call_count DESC\nLIMIT 30;\n",
+  "rows": [
+    {
+      "endpoint": "/listing/comps/area",
+      "source": "NULL",
+      "call_count": "376",
+      "cache_hits": "0",
+      "actual_api_calls": "376",
+      "successes": "376",
+      "failures": "0",
+      "avg_response_ms": "714"
+    },
+    {
+      "endpoint": "search_markets_api",
+      "source": "cache",
+      "call_count": "239",
+      "cache_hits": "239",
+      "actual_api_calls": "0",
+      "successes": "239",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "/market/search",
+      "source": "NULL",
+      "call_count": "163",
+      "cache_hits": "0",
+      "actual_api_calls": "163",
+      "successes": "162",
+      "failures": "1",
+      "avg_response_ms": "207"
+    },
+    {
+      "endpoint": "/country/us/markets",
+      "source": "NULL",
+      "call_count": "131",
+      "cache_hits": "0",
+      "actual_api_calls": "131",
+      "successes": "131",
+      "failures": "0",
+      "avg_response_ms": "119"
+    },
+    {
+      "endpoint": "/market/airdna-2/listings",
+      "source": "NULL",
+      "call_count": "61",
+      "cache_hits": "0",
+      "actual_api_calls": "61",
+      "successes": "61",
+      "failures": "0",
+      "avg_response_ms": "398"
+    },
+    {
+      "endpoint": "/market/airdna-489/listings",
+      "source": "NULL",
+      "call_count": "58",
+      "cache_hits": "0",
+      "actual_api_calls": "58",
+      "successes": "58",
+      "failures": "0",
+      "avg_response_ms": "163"
+    },
+    {
+      "endpoint": "/rentalizer/estimate",
+      "source": "opportunity-finder",
+      "call_count": "57",
+      "cache_hits": "0",
+      "actual_api_calls": "57",
+      "successes": "0",
+      "failures": "57",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "market_details",
+      "source": "cache",
+      "call_count": "50",
+      "cache_hits": "50",
+      "actual_api_calls": "0",
+      "successes": "50",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "/submarket/airdna-1528/listings",
+      "source": "NULL",
+      "call_count": "48",
+      "cache_hits": "0",
+      "actual_api_calls": "48",
+      "successes": "48",
+      "failures": "0",
+      "avg_response_ms": "182"
+    },
+    {
+      "endpoint": "/submarket/airdna-3853/listings",
+      "source": "NULL",
+      "call_count": "43",
+      "cache_hits": "0",
+      "actual_api_calls": "43",
+      "successes": "43",
+      "failures": "0",
+      "avg_response_ms": "168"
+    },
+    {
+      "endpoint": "/submarket/airdna-474/listings",
+      "source": "NULL",
+      "call_count": "39",
+      "cache_hits": "0",
+      "actual_api_calls": "39",
+      "successes": "39",
+      "failures": "0",
+      "avg_response_ms": "261"
+    },
+    {
+      "endpoint": "rentalizer",
+      "source": "cache",
+      "call_count": "35",
+      "cache_hits": "35",
+      "actual_api_calls": "0",
+      "successes": "35",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "all_us_markets",
+      "source": "cache",
+      "call_count": "32",
+      "cache_hits": "32",
+      "actual_api_calls": "0",
+      "successes": "32",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "search_markets",
+      "source": "cache",
+      "call_count": "30",
+      "cache_hits": "30",
+      "actual_api_calls": "0",
+      "successes": "30",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "/submarket/airdna-4447/listings",
+      "source": "NULL",
+      "call_count": "26",
+      "cache_hits": "0",
+      "actual_api_calls": "26",
+      "successes": "26",
+      "failures": "0",
+      "avg_response_ms": "148"
+    },
+    {
+      "endpoint": "/submarket/airdna-1686/listings",
+      "source": "NULL",
+      "call_count": "26",
+      "cache_hits": "0",
+      "actual_api_calls": "26",
+      "successes": "26",
+      "failures": "0",
+      "avg_response_ms": "206"
+    },
+    {
+      "endpoint": "/submarket/airdna-155/listings",
+      "source": "NULL",
+      "call_count": "26",
+      "cache_hits": "0",
+      "actual_api_calls": "26",
+      "successes": "26",
+      "failures": "0",
+      "avg_response_ms": "226"
+    },
+    {
+      "endpoint": "market_historical",
+      "source": "cache",
+      "call_count": "25",
+      "cache_hits": "25",
+      "actual_api_calls": "0",
+      "successes": "25",
+      "failures": "0",
+      "avg_response_ms": "0"
+    },
+    {
+      "endpoint": "/submarket/airdna-4750/listings",
+      "source": "NULL",
+      "call_count": "20",
+      "cache_hits": "0",
+      "actual_api_calls": "20",
+      "successes": "20",
+      "failures": "0",
+      "avg_response_ms": "158"
+    },
+    {
+      "endpoint": "/submarket/airdna-16097/listings",
+      "source": "NULL",
+      "call_count": "20",
+      "cache_hits": "0",
+      "actual_api_calls": "20",
+      "successes": "20",
+      "failures": "0",
+      "avg_response_ms": "154"
+    },
+    {
+      "endpoint": "/market/airdna-493/listings",
+      "source": "NULL",
+      "call_count": "20",
+      "cache_hits": "0",
+      "actual_api_calls": "20",
+      "successes": "20",
+      "failures": "0",
+      "avg_response_ms": "172"
+    },
+    {
+      "endpoint": "/rentalizer/estimate",
+      "source": "NULL",
+      "call_count": "18",
+      "cache_hits": "0",
+      "actual_api_calls": "18",
+      "successes": "18",
+      "failures": "0",
+      "avg_response_ms": "1311"
+    },
+    {
+      "endpoint": "/market/airdna-120/listings",
+      "source": "NULL",
+      "call_count": "11",
+      "cache_hits": "0",
+      "actual_api_calls": "11",
+      "successes": "11",
+      "failures": "0",
+      "avg_response_ms": "459"
+    },
+    {
+      "endpoint": "/market/airdna-2/metrics/adr",
+      "source": "NULL",
+      "call_count": "4",
+      "cache_hits": "0",
+      "actual_api_calls": "4",
+      "successes": "4",
+      "failures": "0",
+      "avg_response_ms": "196"
+    },
+    {
+      "endpoint": "/market/airdna-2/metrics/occupancy",
+      "source": "NULL",
+      "call_count": "4",
+      "cache_hits": "0",
+      "actual_api_calls": "4",
+      "successes": "4",
+      "failures": "0",
+      "avg_response_ms": "199"
+    },
+    {
+      "endpoint": "/market/airdna-120",
+      "source": "NULL",
+      "call_count": "4",
+      "cache_hits": "0",
+      "actual_api_calls": "4",
+      "successes": "4",
+      "failures": "0",
+      "avg_response_ms": "219"
+    },
+    {
+      "endpoint": "/market/airdna-2/metrics/avg_revenue",
+      "source": "NULL",
+      "call_count": "4",
+      "cache_hits": "0",
+      "actual_api_calls": "4",
+      "successes": "4",
+      "failures": "0",
+      "avg_response_ms": "178"
+    },
+    {
+      "endpoint": "/market/airdna-2",
+      "source": "NULL",
+      "call_count": "4",
+      "cache_hits": "0",
+      "actual_api_calls": "4",
+      "successes": "4",
+      "failures": "0",
+      "avg_response_ms": "149"
+    },
+    {
+      "endpoint": "/listing/abnb_1380650818226510686",
+      "source": "NULL",
+      "call_count": "3",
+      "cache_hits": "0",
+      "actual_api_calls": "3",
+      "successes": "3",
+      "failures": "0",
+      "avg_response_ms": "133"
+    },
+    {
+      "endpoint": "/listing/abnb_1414497315347206657",
+      "source": "NULL",
+      "call_count": "3",
+      "cache_hits": "0",
+      "actual_api_calls": "3",
+      "successes": "3",
+      "failures": "0",
+      "avg_response_ms": "134"
+    }
+  ],
+  "messages": [],
+  "stdout": "endpoint\tsource\tcall_count\tcache_hits\tactual_api_calls\tsuccesses\tfailures\tavg_response_ms\n/listing/comps/area\tNULL\t376\t0\t376\t376\t0\t714\nsearch_markets_api\tcache\t239\t239\t0\t239\t0\t0\n/market/search\tNULL\t163\t0\t163\t162\t1\t207\n/country/us/markets\tNULL\t131\t0\t131\t131\t0\t119\n/market/airdna-2/listings\tNULL\t61\t0\t61\t61\t0\t398\n/market/airdna-489/listings\tNULL\t58\t0\t58\t58\t0\t163\n/rentalizer/estimate\topportunity-finder\t57\t0\t57\t0\t57\t0\nmarket_details\tcache\t50\t50\t0\t50\t0\t0\n/submarket/airdna-1528/listings\tNULL\t48\t0\t48\t48\t0\t182\n/submarket/airdna-3853/listings\tNULL\t43\t0\t43\t43\t0\t168\n/submarket/airdna-474/listings\tNULL\t39\t0\t39\t39\t0\t261\nrentalizer\tcache\t35\t35\t0\t35\t0\t0\nall_us_markets\tcache\t32\t32\t0\t32\t0\t0\nsearch_markets\tcache\t30\t30\t0\t30\t0\t0\n/submarket/airdna-4447/listings\tNULL\t26\t0\t26\t26\t0\t148\n/submarket/airdna-1686/listings\tNULL\t26\t0\t26\t26\t0\t206\n/submarket/airdna-155/listings\tNULL\t26\t0\t26\t26\t0\t226\nmarket_historical\tcache\t25\t25\t0\t25\t0\t0\n/submarket/airdna-4750/listings\tNULL\t20\t0\t20\t20\t0\t158\n/submarket/airdna-16097/listings\tNULL\t20\t0\t20\t20\t0\t154\n/market/airdna-493/listings\tNULL\t20\t0\t20\t20\t0\t172\n/rentalizer/estimate\tNULL\t18\t0\t18\t18\t0\t1311\n/market/airdna-120/listings\tNULL\t11\t0\t11\t11\t0\t459\n/market/airdna-2/metrics/adr\tNULL\t4\t0\t4\t4\t0\t196\n/market/airdna-2/metrics/occupancy\tNULL\t4\t0\t4\t4\t0\t199\n/market/airdna-120\tNULL\t4\t0\t4\t4\t0\t219\n/market/airdna-2/metrics/avg_revenue\tNULL\t4\t0\t4\t4\t0\t178\n/market/airdna-2\tNULL\t4\t0\t4\t4\t0\t149\n/listing/abnb_1380650818226510686\tNULL\t3\t0\t3\t3\t0\t133\n/listing/abnb_1414497315347206657\tNULL\t3\t0\t3\t3\t0\t134\n",
+  "stderr": "",
+  "execution_time_ms": 98
+}

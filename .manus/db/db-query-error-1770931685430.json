@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT \n  endpoint,\n  source,\n  COUNT(*) as call_count,\n  SUM(CASE WHEN cache_hit = 1 THEN 1 ELSE 0 END) as cache_hits,\n  SUM(CASE WHEN cache_hit = 0 THEN 1 ELSE 0 END) as actual_api_calls,\n  SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,\n  SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failures,\n  ROUND(AVG(response_time_ms), 0) as avg_response_ms\nFROM api_call_log \nWHERE provider = 'airdna' \n  AND DATE(created_at) = CURDATE()\nGROUP BY endpoint, source\nORDER BY call_count DESC\nLIMIT 30;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute \nSELECT \n  endpoint,\n  source,\n  COUNT(*) as call_count,\n  SUM(CASE WHEN cache_hit = 1 THEN 1 ELSE 0 END) as cache_hits,\n  SUM(CASE WHEN cache_hit = 0 THEN 1 ELSE 0 END) as actual_api_calls,\n  SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,\n  SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failures,\n  ROUND(AVG(response_time_ms), 0) as avg_response_ms\nFROM api_call_log \nWHERE provider = 'airdna' \n  AND DATE(created_at) = CURDATE()\nGROUP BY endpoint, source\nORDER BY call_count DESC\nLIMIT 30;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 2: Table 'dguybt3jtp54yda4m9ci8y.api_call_log' doesn't exist"
+  ]
+}

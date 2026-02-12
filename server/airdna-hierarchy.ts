@@ -44,7 +44,17 @@ export interface MarketResult {
  * Get all markets in a given US state
  * Uses the /market/search endpoint with state name
  */
+// In-memory cache for state market lookups
+const stateMarketsCache = new Map<string, { result: MarketResult[]; time: number }>();
+
 export async function getMarketsInState(stateName: string): Promise<MarketResult[]> {
+  const cacheKey = stateName.toLowerCase().trim();
+  const cached = stateMarketsCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+    console.log(`[getMarketsInState] CACHE HIT for ${stateName}`);
+    return cached.result;
+  }
+
   try {
     console.log(`[getMarketsInState] Searching for markets in ${stateName}`);
     
@@ -98,12 +108,14 @@ export async function getMarketsInState(stateName: string): Promise<MarketResult
       }));
     }
     
-    return stateMarkets.map(m => ({
+    const result = stateMarkets.map(m => ({
       id: m.id,
       name: m.name,
       listingCount: m.listing_count,
       state: m.location?.state
     }));
+    stateMarketsCache.set(cacheKey, { result, time: Date.now() });
+    return result;
     
   } catch (error) {
     console.error(`[getMarketsInState] Error:`, error);
@@ -125,7 +137,16 @@ export interface SubmarketResult {
 /**
  * Get all submarkets in a given market
  */
+// In-memory cache for submarket lookups
+const submarketCache = new Map<string, { result: SubmarketResult[]; time: number }>();
+
 export async function getSubmarketsInMarket(marketId: string): Promise<SubmarketResult[]> {
+  const cached = submarketCache.get(marketId);
+  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+    console.log(`[getSubmarketsInMarket] CACHE HIT for ${marketId}`);
+    return cached.result;
+  }
+
   try {
     console.log(`[getSubmarketsInMarket] Getting submarkets for market ${marketId}`);
     
@@ -159,12 +180,14 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
       r.type === 'submarket' && r.parent_market?.id === marketId
     );
     
-    return submarkets.map(sm => ({
+    const result = submarkets.map(sm => ({
       id: sm.id,
       name: sm.name,
       listingCount: sm.listing_count,
       zipcodes: sm.legacy_location?.zipcodes
     }));
+    submarketCache.set(marketId, { result, time: Date.now() });
+    return result;
     
   } catch (error) {
     console.error(`[getSubmarketsInMarket] Error:`, error);
@@ -192,7 +215,17 @@ export interface SearchResult {
 /**
  * Search for markets and submarkets by name
  */
+// In-memory cache for market search
+const marketSearchCache = new Map<string, { result: SearchResult[]; time: number }>();
+
 export async function searchMarkets(query: string): Promise<SearchResult[]> {
+  const cacheKey = query.toLowerCase().trim();
+  const cached = marketSearchCache.get(cacheKey);
+  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+    console.log(`[searchMarkets] CACHE HIT for ${query}`);
+    return cached.result;
+  }
+
   try {
     console.log(`[searchMarkets] Searching for: ${query}`);
     
@@ -228,7 +261,7 @@ export async function searchMarkets(query: string): Promise<SearchResult[]> {
       r.location?.country_code === 'us' || r.parent_market
     );
     
-    return usResults.map(r => ({
+    const result = usResults.map(r => ({
       id: r.id,
       name: r.name,
       type: r.type as 'market' | 'submarket',
@@ -237,6 +270,8 @@ export async function searchMarkets(query: string): Promise<SearchResult[]> {
       parentMarket: r.parent_market,
       zipcodes: r.legacy_location?.zipcodes
     }));
+    marketSearchCache.set(cacheKey, { result, time: Date.now() });
+    return result;
     
   } catch (error) {
     console.error(`[searchMarkets] Error:`, error);
@@ -326,33 +361,35 @@ export interface ZipCodeLookupResult {
  * IMPROVED: Now searches for the zip code directly in AirDNA first, which is more accurate
  * than geocoding and then searching for the city name.
  */
+// Simple in-memory cache for zip code lookups (they repeat a lot)
+const zipCodeCache = new Map<string, { result: ZipCodeLookupResult; time: number }>();
+const ZIP_CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
+
 export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLookupResult> {
+  // Check memory cache first
+  const cached = zipCodeCache.get(zipcode);
+  if (cached && Date.now() - cached.time < ZIP_CACHE_TTL) {
+    console.log(`[geocodeZipCodeToMarket] CACHE HIT for ${zipcode}`);
+    return cached.result;
+  }
+
   try {
     console.log(`[geocodeZipCodeToMarket] Looking up zip code: ${zipcode}`);
-    
-    const apiKey = process.env.AIRDNA_API_KEY;
-    if (!apiKey) {
-      throw new Error("AIRDNA_API_KEY is not set");
-    }
     
     // Step 1: Search for the zip code directly in AirDNA
     // This is more accurate than geocoding first because AirDNA's search
     // can find submarkets that contain specific zip codes
     console.log(`[geocodeZipCodeToMarket] Searching AirDNA for zip code: ${zipcode}`);
     
-    const zipSearchResponse = await fetch(`${AIRDNA_API_BASE}/market/search`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        search_term: zipcode,
-        pagination: { page_size: 10, offset: 0 }
-      })
+    const zipSearchData = await makeApiRequest<{
+      payload: {
+        results: Array<any>;
+      };
+    }>("/market/search", "POST", {
+      search_term: zipcode,
+      pagination: { page_size: 10, offset: 0 }
     });
     
-    const zipSearchData = await zipSearchResponse.json();
     const zipResults = zipSearchData.payload?.results || [];
     
     // Look for a US submarket or market that contains this zip code
@@ -441,7 +478,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
       // Get all zip codes for this submarket/market
       const allZipcodes = foundSubmarket?.legacy_location?.zipcodes || foundMarket?.legacy_location?.zipcodes || [zipcode];
       
-      return {
+      const directResult: ZipCodeLookupResult = {
         success: true,
         zipcode,
         city: city || foundSubmarket?.name || foundMarket?.name,
@@ -460,6 +497,8 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
           listingCount: foundSubmarket.listing_count || 0
         } : undefined
       };
+      zipCodeCache.set(zipcode, { result: directResult, time: Date.now() });
+      return directResult;
     }
     
     // Step 2: If no AirDNA result, fall back to geocoding and city search
@@ -536,19 +575,15 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
     for (const searchTerm of searchTerms) {
       console.log(`[geocodeZipCodeToMarket] Trying search term: "${searchTerm}"`);
       
-      const searchResponse = await fetch(`${AIRDNA_API_BASE}/market/search`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          search_term: searchTerm,
-          pagination: { page_size: 25, offset: 0 }
-        })
+      const searchData = await makeApiRequest<{
+        payload: {
+          results: Array<any>;
+        };
+      }>("/market/search", "POST", {
+        search_term: searchTerm,
+        pagination: { page_size: 25, offset: 0 }
       });
       
-      const searchData = await searchResponse.json();
       const results = searchData.payload?.results || [];
       
       // Look for US markets/submarkets in the correct state
@@ -591,7 +626,7 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
     
     console.log(`[geocodeZipCodeToMarket] Found market: ${matchedMarket?.name || matchedSubmarket?.parent_market?.name}`);
     
-    return {
+    const successResult: ZipCodeLookupResult = {
       success: true,
       zipcode,
       city,
@@ -609,6 +644,8 @@ export async function geocodeZipCodeToMarket(zipcode: string): Promise<ZipCodeLo
         listingCount: matchedSubmarket.listing_count || 0
       } : undefined
     };
+    zipCodeCache.set(zipcode, { result: successResult, time: Date.now() });
+    return successResult;
     
   } catch (error) {
     console.error(`[geocodeZipCodeToMarket] Error:`, error);

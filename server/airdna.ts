@@ -4721,6 +4721,22 @@ export async function getListingsInRadius(
     sort_direction?: "asc" | "desc";
   }
 ): Promise<RadiusSearchResult> {
+  // DB cache check — this endpoint was burning 376+ calls/day uncached
+  const cacheKey = apiCache.generateKey('listings_in_radius', {
+    lat: Math.round(latitude * 1000) / 1000, // Round to ~100m precision for cache hits
+    lng: Math.round(longitude * 1000) / 1000,
+    radius: radiusMeters,
+    limit: options?.limit || 25,
+    offset: options?.offset || 0,
+    bedrooms: options?.bedrooms,
+    sort_by: options?.sort_by,
+  });
+  const cached = await apiCache.getAsync<RadiusSearchResult>(cacheKey);
+  if (cached) {
+    logCacheHit('listings_in_radius');
+    return cached;
+  }
+
   try {
     // API expects lat/lng at top level, not nested in location object
     const requestBody: Record<string, unknown> = {
@@ -4800,7 +4816,7 @@ export async function getListingsInRadius(
       distance_meters: r.distance_meters,
     }));
 
-    return {
+    const result = {
       listings,
       total_count: response.payload.page_info.total_count,
       center: {
@@ -4809,6 +4825,13 @@ export async function getListingsInRadius(
       },
       radius_meters: radiusMeters,
     };
+
+    // Cache the result (7-day TTL for listing data)
+    if (listings.length > 0) {
+      apiCache.set(cacheKey, result, 'listings_in_radius');
+    }
+
+    return result;
   } catch (error) {
     console.error("Error fetching listings in radius:", error);
     return {
