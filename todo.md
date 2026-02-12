@@ -10649,3 +10649,18 @@ Results:
 - [x] Add LRU eviction with MAX_ENTRIES = 500 to memory cache
 - [x] Added lastAccessed tracking on all cache reads, evictLRU removes oldest entry when Map exceeds limit
 - [x] 28 new tests for cache improvements and rate limiter, all 897 tests passing
+
+## Reports Remaining Badge (Feb 12, 2026)
+- [x] Add "Reports remaining" badge to FullReportGenerator page above generate button
+- [x] Add "Reports remaining" badge to BuildFullReportButton dialog
+- [x] Wire badge to usage.reportLimit tRPC endpoint
+- [x] Show badge only for logged-in users
+- [x] Style badge to match the existing UI design
+
+## BUG: Shared report /share/RxLHhzUAvv not populating (Feb 12, 2026) — URGENT
+- [x] Root cause: /share route went to ShareRedirect (requires login) instead of ShareableReportViewer
+- [x] Root cause: validator report type fell through to raw JSON dump
+- [x] Fix: Changed /share/:shareCode route to use ShareableReportViewer (public, no login needed)
+- [x] Fix: Key Metrics now pulls from reportData when DB-level fields are null
+- [x] Fix: Added full validator report rendering — Revenue Projections, Revenue Percentiles, 12-Month Forecast, Bedroom Performance table, Top 6 Comps with images, Market Overview
+- [x] All 897 tests passing, TypeScript clean

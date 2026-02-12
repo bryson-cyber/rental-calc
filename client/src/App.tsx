@@ -111,8 +111,8 @@ function Router() {
         {/* Shareable Regulation Reports */}
         <Route path="/regulation/:shareCode" component={ShareableReport} />
         
-        {/* Universal Shareable Reports - Redirect to actual tool page */}
-        <Route path="/share/:shareCode" component={ShareRedirect} />
+        {/* Universal Shareable Reports - Public report viewer */}
+        <Route path="/share/:shareCode" component={ShareableReportViewer} />
         
         {/* Legacy: Direct report viewer (for backwards compatibility) */}
         <Route path="/view-report/:shareCode" component={ShareableReportViewer} />

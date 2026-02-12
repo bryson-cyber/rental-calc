@@ -90,6 +90,12 @@ export default function FullReportGenerator() {
   const generateMutation = trpc.sharedReports.generateFromAddress.useMutation();
   const { trackAction } = useActionTracking('full_report');
   
+  // Rate limit status
+  const { data: rateLimitData } = trpc.usage.reportLimit.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+  });
+  
   // Pre-fill from URL parameters (from main page)
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -583,16 +589,51 @@ export default function FullReportGenerator() {
                 </div>
               )}
               
+              {/* Reports Remaining Badge */}
+              {isAuthenticated && rateLimitData && !rateLimitData.isExempt && (
+                <div className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-sans ${
+                  rateLimitData.remaining === 0
+                    ? 'bg-red-50 border border-red-200 text-red-700'
+                    : rateLimitData.remaining <= 2
+                      ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                      : 'bg-[#0F172A]/5 border border-[#E8E4DC] text-[#6B7280]'
+                }`}>
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: rateLimitData.limit }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          i < rateLimitData.used
+                            ? rateLimitData.remaining === 0 ? 'bg-red-400' : 'bg-[#C9A962]'
+                            : 'bg-[#E8E4DC]'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="font-medium">
+                    {rateLimitData.remaining === 0
+                      ? 'Daily limit reached'
+                      : `${rateLimitData.remaining} of ${rateLimitData.limit} reports remaining today`
+                    }
+                  </span>
+                </div>
+              )}
+              
               {/* Generate Button */}
               <Button
                 type="submit"
-                disabled={generating || !address.trim()}
+                disabled={generating || !address.trim() || (isAuthenticated && rateLimitData?.remaining === 0)}
                 className="w-full h-14 bg-[#C9A962] hover:bg-[#b8963f] text-white font-semibold text-lg rounded-full transition-all duration-300 disabled:opacity-50 font-sans shadow-md hover:shadow-lg"
               >
                 {!isAuthenticated ? (
                   <div className="flex items-center gap-2">
                     <Shield className="w-5 h-5" />
                     Sign In to Generate Report
+                  </div>
+                ) : rateLimitData?.remaining === 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Daily Limit Reached
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -604,7 +645,10 @@ export default function FullReportGenerator() {
               
               {/* Disclaimer */}
               <p className="text-center text-xs text-[#9CA3AF] mt-4 font-sans">
-                Report generation takes 20-40 seconds. Data powered by Coach Inayah market data.
+                {isAuthenticated && rateLimitData?.remaining === 0
+                  ? `Limit resets at ${new Date(rateLimitData.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Contact us for higher limits.`
+                  : 'Report generation takes 20-40 seconds. Data powered by Coach Inayah market data.'
+                }
               </p>
             </div>
           </form>

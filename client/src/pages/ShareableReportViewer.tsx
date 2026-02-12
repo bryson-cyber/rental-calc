@@ -29,6 +29,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
+  BedDouble,
+  Users,
+  Eye,
 } from 'lucide-react';
 
 // Coach Inayah Brand Colors
@@ -372,71 +375,65 @@ export default function ShareableReportViewer() {
             </div>
           )}
 
-          {/* Key Metrics */}
-          <div className="p-6">
-            <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Key Metrics</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {report.annualRevenue && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <DollarSign className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(report.annualRevenue)}
-                  </p>
-                  <p className="text-sm text-gray-500">Annual Revenue</p>
+          {/* Key Metrics — pull from reportData when DB-level fields are null */}
+          {(() => {
+            const annualRev = report.annualRevenue || reportData?.revenue?.projected;
+            const occRate = report.occupancyRate || (reportData?.metrics?.occupancy ? reportData.metrics.occupancy / 100 : null);
+            const adr = report.averageDailyRate || reportData?.metrics?.adr;
+            const profit = report.profitMargin;
+            const cashFlow = reportData?.cashFlow;
+            return (
+              <div className="p-6">
+                <h2 className="text-lg font-serif font-semibold text-[#0F172A] mb-4">Key Metrics</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {annualRev && (
+                    <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                      <DollarSign className="w-5 h-5 text-[#C9A962] mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(annualRev)}</p>
+                      <p className="text-sm text-gray-500">Projected Annual Revenue</p>
+                    </div>
+                  )}
+                  {occRate && (
+                    <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                      <Calendar className="w-5 h-5 text-[#C9A962] mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{formatPercent(occRate)}</p>
+                      <p className="text-sm text-gray-500">Occupancy Rate</p>
+                    </div>
+                  )}
+                  {adr && (
+                    <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                      <TrendingUp className="w-5 h-5 text-[#C9A962] mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(adr)}</p>
+                      <p className="text-sm text-gray-500">Avg Daily Rate</p>
+                    </div>
+                  )}
+                  {report.bedrooms && (
+                    <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                      <Home className="w-5 h-5 text-[#C9A962] mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{report.bedrooms} BR / {report.bathrooms || '?'} BA</p>
+                      <p className="text-sm text-gray-500">Property Size</p>
+                    </div>
+                  )}
+                  {report.monthlyRent && (
+                    <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
+                      <Building className="w-5 h-5 text-[#C9A962] mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(report.monthlyRent)}</p>
+                      <p className="text-sm text-gray-500">Monthly Rent</p>
+                    </div>
+                  )}
+                  {cashFlow?.monthlyProfit != null && (
+                    <div className={`rounded-xl p-4 border ${cashFlow.monthlyProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                      <TrendingUp className={`w-5 h-5 mb-2 ${cashFlow.monthlyProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`} />
+                      <p className={`text-2xl font-bold ${cashFlow.monthlyProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                        {formatCurrency(cashFlow.monthlyProfit)}/mo
+                      </p>
+                      <p className="text-sm text-gray-500">Cash Flow (STR − Rent)</p>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {report.occupancyRate && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <Calendar className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatPercent(report.occupancyRate)}
-                  </p>
-                  <p className="text-sm text-gray-500">Occupancy Rate</p>
-                </div>
-              )}
-
-              {report.averageDailyRate && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <TrendingUp className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(report.averageDailyRate)}
-                  </p>
-                  <p className="text-sm text-gray-500">Avg Daily Rate</p>
-                </div>
-              )}
-
-              {report.profitMargin && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <Percent className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatPercent(report.profitMargin)}
-                  </p>
-                  <p className="text-sm text-gray-500">Profit Margin</p>
-                </div>
-              )}
-
-              {report.bedrooms && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <Home className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {report.bedrooms} BR / {report.bathrooms || '?'} BA
-                  </p>
-                  <p className="text-sm text-gray-500">Property Size</p>
-                </div>
-              )}
-
-              {report.monthlyRent && (
-                <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10">
-                  <Building className="w-5 h-5 text-[#C9A962] mb-2" />
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(report.monthlyRent)}
-                  </p>
-                  <p className="text-sm text-gray-500">Monthly Rent</p>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
 
           {/* Full Report Data */}
           {reportData && (
@@ -516,8 +513,200 @@ export default function ShareableReportViewer() {
                 </div>
               )}
 
-              {/* Generic JSON display for other types */}
-              {!['revenue', 'market', 'ai_advisor'].includes(report.reportType) && (
+              {/* Validator Report Data */}
+              {report.reportType === 'validator' && reportData && (
+                <div className="space-y-8">
+                  {/* Revenue Range */}
+                  {reportData.revenue && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Revenue Projections</h3>
+                      <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] rounded-xl p-6 text-white">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-white/60 text-sm mb-1">Conservative</p>
+                            <p className="text-2xl font-bold text-red-300">{formatCurrency(reportData.revenue.low)}</p>
+                          </div>
+                          <div className="border-x border-white/20">
+                            <p className="text-[#C9A962] text-sm mb-1 font-medium">Projected</p>
+                            <p className="text-3xl font-bold text-[#C9A962]">{formatCurrency(reportData.revenue.projected)}</p>
+                          </div>
+                          <div>
+                            <p className="text-white/60 text-sm mb-1">Optimistic</p>
+                            <p className="text-2xl font-bold text-emerald-300">{formatCurrency(reportData.revenue.high)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Revenue Percentiles */}
+                  {reportData.revenuePercentiles && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Market Revenue Distribution</h3>
+                      <div className="bg-[#0F172A]/5 rounded-xl p-5 border border-[#C9A962]/10">
+                        <div className="flex items-center justify-between gap-2">
+                          {[{label: '10th', value: reportData.revenuePercentiles.p10},
+                            {label: '25th', value: reportData.revenuePercentiles.p25},
+                            {label: '50th', value: reportData.revenuePercentiles.p50},
+                            {label: '75th', value: reportData.revenuePercentiles.p75},
+                            {label: '90th', value: reportData.revenuePercentiles.p90}].map((p, i) => (
+                            <div key={i} className="text-center flex-1">
+                              <div className={`h-${Math.max(8, 8 + i * 4)} bg-gradient-to-t from-[#C9A962]/30 to-[#C9A962]/60 rounded-t-md mb-2 flex items-end justify-center pb-1`}
+                                   style={{height: `${20 + i * 12}px`}}>
+                              </div>
+                              <p className="text-xs text-[#0F172A]/60">{p.label}%ile</p>
+                              <p className="text-sm font-semibold text-[#0F172A]">{formatCurrency(p.value)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Monthly Forecast */}
+                  {reportData.forecast && reportData.forecast.length > 0 && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">12-Month Revenue Forecast</h3>
+                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {reportData.forecast.map((month: any, idx: number) => {
+                          const monthDate = new Date(month.month + '-01');
+                          const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                          return (
+                            <div key={idx} className="bg-white rounded-xl p-3 border border-[#C9A962]/10 shadow-sm text-center">
+                              <p className="text-xs text-[#0F172A]/50 font-medium uppercase">{monthName}</p>
+                              <p className="text-lg font-bold text-[#0F172A] mt-1">{formatCurrency(month.revenue)}</p>
+                              <div className="flex justify-between mt-2 text-xs text-[#0F172A]/60">
+                                <span>{formatPercent(month.occupancy / 100)} occ</span>
+                                <span>${Math.round(month.adr)}/nt</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bedroom Performance */}
+                  {reportData.bedroomPerformance && reportData.bedroomPerformance.length > 0 && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Performance by Bedroom Count</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b-2 border-[#C9A962]/30">
+                              <th className="text-left py-3 px-4 text-[#0F172A]/60 font-medium">Bedrooms</th>
+                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Avg Revenue</th>
+                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">ADR</th>
+                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Occupancy</th>
+                              <th className="text-right py-3 px-4 text-[#0F172A]/60 font-medium">Listings</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.bedroomPerformance.map((bp: any, idx: number) => {
+                              const isMatch = bp.bedrooms === report.bedrooms;
+                              return (
+                                <tr key={idx} className={`border-b border-gray-100 ${isMatch ? 'bg-[#C9A962]/10 font-semibold' : ''}`}>
+                                  <td className="py-3 px-4">
+                                    <span className="flex items-center gap-2">
+                                      <BedDouble className="w-4 h-4 text-[#C9A962]" />
+                                      {bp.bedrooms} BR
+                                      {isMatch && <span className="text-xs bg-[#C9A962] text-white px-2 py-0.5 rounded-full">Your Property</span>}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-right">{formatCurrency(bp.revenue)}</td>
+                                  <td className="py-3 px-4 text-right">{formatCurrency(bp.adr)}</td>
+                                  <td className="py-3 px-4 text-right">{bp.occupancy}%</td>
+                                  <td className="py-3 px-4 text-right text-[#0F172A]/60">{bp.listing_count}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Comparable Properties */}
+                  {reportData.comparables && reportData.comparables.length > 0 && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Top Comparable Properties</h3>
+                      <div className="space-y-3">
+                        {reportData.comparables.slice(0, 6).map((comp: any, idx: number) => (
+                          <div key={idx} className="bg-white rounded-xl border border-[#C9A962]/10 shadow-sm overflow-hidden">
+                            <div className="flex">
+                              {/* Comp image */}
+                              {comp.images && comp.images[0] && (
+                                <div className="w-24 h-24 md:w-32 md:h-28 flex-shrink-0">
+                                  <img src={comp.images[0]} alt={comp.title} className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <div className="flex-1 p-4 flex justify-between items-center">
+                                <div>
+                                  <p className="font-medium text-[#0F172A] text-sm md:text-base">{comp.title || `Comparable ${idx + 1}`}</p>
+                                  <p className="text-xs md:text-sm text-[#0F172A]/60 mt-1">
+                                    {comp.bedrooms} BR • {comp.bathrooms} BA
+                                    {comp.rating ? ` • ★ ${comp.rating}` : ''}
+                                    {comp.reviews ? ` (${comp.reviews} reviews)` : ''}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-[#0F172A] text-lg">{formatCurrency(comp.revenue)}</p>
+                                  <p className="text-xs text-[#0F172A]/60">{formatCurrency(comp.adr)}/night • {comp.occupancy}% occ</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {reportData.comparables.length > 6 && (
+                        <p className="text-center text-sm text-[#0F172A]/50 mt-3">
+                          + {reportData.comparables.length - 6} more comparable properties in the full analysis
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Market Insights */}
+                  {reportData.marketInsights && (
+                    <div>
+                      <h3 className="font-serif font-semibold text-[#0F172A] mb-4 text-lg">Market Overview</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {reportData.marketInsights.totalListings && (
+                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
+                            <Building className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
+                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.totalListings.toLocaleString()}</p>
+                            <p className="text-xs text-[#0F172A]/60">Active Listings</p>
+                          </div>
+                        )}
+                        {reportData.marketInsights.avgRating && (
+                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
+                            <Star className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
+                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.avgRating}</p>
+                            <p className="text-xs text-[#0F172A]/60">Avg Rating</p>
+                          </div>
+                        )}
+                        {reportData.marketInsights.superhostPct != null && (
+                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
+                            <CheckCircle2 className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
+                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.superhostPct}%</p>
+                            <p className="text-xs text-[#0F172A]/60">Superhosts</p>
+                          </div>
+                        )}
+                        {reportData.marketInsights.professionallyManagedPct != null && (
+                          <div className="bg-[#0F172A]/5 rounded-xl p-4 border border-[#C9A962]/10 text-center">
+                            <Users className="w-5 h-5 text-[#C9A962] mx-auto mb-2" />
+                            <p className="text-xl font-bold text-[#0F172A]">{reportData.marketInsights.professionallyManagedPct}%</p>
+                            <p className="text-xs text-[#0F172A]/60">Professionally Managed</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Generic fallback for other types */}
+              {!['revenue', 'market', 'ai_advisor', 'validator'].includes(report.reportType) && (
                 <div className="bg-gray-50 rounded-lg p-4 overflow-auto max-h-96">
                   <pre className="text-xs text-gray-600">
                     {JSON.stringify(reportData, null, 2)}

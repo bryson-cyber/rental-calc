@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { FileText, Loader2, Copy, Check, ExternalLink, DollarSign } from 'lucide-react';
+import { FileText, Loader2, Copy, Check, ExternalLink, DollarSign, Shield } from 'lucide-react';
 import type { FullReportData } from './FullPropertyReport';
 
 interface BuildFullReportButtonProps {
@@ -145,6 +145,12 @@ export function BuildFullReportButton({
   const [dialogPurchasePrice, setDialogPurchasePrice] = useState(purchasePrice?.toString() || '');
   
   const createReport = trpc.sharedReports.create.useMutation();
+  
+  // Rate limit status
+  const { data: rateLimitData } = trpc.usage.reportLimit.useQuery(undefined, {
+    enabled: open,
+    staleTime: 30_000,
+  });
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -423,14 +429,49 @@ export function BuildFullReportButton({
               </div>
             </div>
             
+            {/* Reports Remaining Badge */}
+            {rateLimitData && !rateLimitData.isExempt && rateLimitData.loggedIn && (
+              <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-sans ${
+                rateLimitData.remaining === 0
+                  ? 'bg-red-50 border border-red-200 text-red-700'
+                  : rateLimitData.remaining <= 2
+                    ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                    : 'bg-[#0F172A]/5 border border-[#E8E4DC] text-[#6B7280]'
+              }`}>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: rateLimitData.limit }, (_, i) => (
+                    <div
+                      key={i}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        i < rateLimitData.used
+                          ? rateLimitData.remaining === 0 ? 'bg-red-400' : 'bg-[#C9A962]'
+                          : 'bg-[#E8E4DC]'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="font-medium">
+                  {rateLimitData.remaining === 0
+                    ? 'Daily limit reached'
+                    : `${rateLimitData.remaining}/${rateLimitData.limit} reports today`
+                  }
+                </span>
+              </div>
+            )}
+            
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 onClick={handleGenerate}
-                disabled={generating || (!includeRental && !includePurchase)}
+                disabled={generating || (!includeRental && !includePurchase) || (rateLimitData?.loggedIn && rateLimitData?.remaining === 0)}
                 className="gap-2 bg-[#C9A962] hover:bg-[#b8963f] text-white"
               >
-                {generating ? (
+                {rateLimitData?.loggedIn && rateLimitData?.remaining === 0 ? (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    Daily Limit Reached
+                  </>
+                ) : generating ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Generating...
