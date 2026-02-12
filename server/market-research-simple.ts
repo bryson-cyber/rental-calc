@@ -296,7 +296,7 @@ export const marketResearchSimpleRouter = router({
       const accurateBedroomData = isSubmarket 
         ? await getSubmarketBedroomCounts(marketId)
         : await getBedroomCounts(marketId);
-      console.log(`[MarketResearch] Accurate bedroom counts:`, accurateBedroomData.bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+      console.log(`[MarketResearch] Accurate bedroom counts:`, (accurateBedroomData.bedroomCounts || []).map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
       console.log(`[MarketResearch] Total from bedroom counts: ${accurateBedroomData.totalListings}, Market total: ${overview.totalListings}`);
       console.log(`[MarketResearch] Using ${isSubmarket ? 'submarket' : 'market'}-specific bedroom counts`);
       
@@ -658,21 +658,22 @@ export const marketResearchSimpleRouter = router({
       }
       
       // Transform to SimplifiedMarketReport format
-      console.log(`[getSubmarketReport] Raw metrics from report:`, JSON.stringify(report.submarket.metrics, null, 2));
+      const metrics = report.submarket?.metrics || { occupancy: 0, adr: 0, revenue: 0, revpar: 0, market_score: 0 };
+      console.log(`[getSubmarketReport] Raw metrics from report:`, JSON.stringify(metrics, null, 2));
       
       const overview = {
-        totalListings: report.submarket.listing_count || 0,
-        avgOccupancy: report.submarket.metrics.occupancy,
-        avgAdr: report.submarket.metrics.adr,
-        avgRevenue: report.submarket.metrics.revenue,
-        avgRevpar: report.submarket.metrics.revpar,
-        marketScore: report.submarket.metrics.market_score
+        totalListings: report.submarket?.listing_count || 0,
+        avgOccupancy: metrics.occupancy || 0,
+        avgAdr: metrics.adr || 0,
+        avgRevenue: metrics.revenue || 0,
+        avgRevpar: metrics.revpar || 0,
+        marketScore: metrics.market_score || 0
       };
       
       console.log(`[getSubmarketReport] Transformed overview:`, JSON.stringify(overview, null, 2));
       
       // Process top performers
-      const topPerformers = report.top_listings.slice(0, 10).map(l => ({
+      const topPerformers = (report.top_listings || []).slice(0, 10).map(l => ({
         title: l.title,
         bedrooms: l.bedrooms,
         revenue: l.annual_revenue,
@@ -686,13 +687,13 @@ export const marketResearchSimpleRouter = router({
       // This gives us the REAL count of listings per bedroom type, not sampled counts
       console.log(`[getSubmarketReport] Fetching accurate bedroom counts from API...`);
       const accurateBedroomData = await getSubmarketBedroomCounts(submarketId);
-      console.log(`[getSubmarketReport] Accurate bedroom counts:`, accurateBedroomData.bedroomCounts.map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
+      console.log(`[getSubmarketReport] Accurate bedroom counts:`, (accurateBedroomData.bedroomCounts || []).map(b => `${b.bedrooms}BR: ${b.count}`).join(', '));
       console.log(`[getSubmarketReport] Total from bedroom counts: ${accurateBedroomData.totalListings}, Submarket total: ${overview.totalListings}`);
       
       const bedroomBreakdown = accurateBedroomData.bedroomCounts;
       
       // Seasonality - use parent market seasonality from comprehensive report
-      const monthlyData = report.seasonality.map(s => ({
+      const monthlyData = (report.seasonality || []).map(s => ({
         month: s.month,
         occupancy: s.occupancy,
         adr: s.adr,
@@ -714,7 +715,7 @@ export const marketResearchSimpleRouter = router({
           id: submarketId,
           name: submarketName,
           state: undefined,
-          listingCount: report.submarket.listing_count || 0
+          listingCount: report.submarket?.listing_count || 0
         },
         overview,
         seasonality: seasonalityData,

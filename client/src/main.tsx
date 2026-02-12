@@ -9,6 +9,15 @@ import { getLoginUrl } from "./const";
 import { ToastProvider } from "./contexts/ToastContext";
 import "./index.css";
 
+// Global error handler to capture exact crash location
+window.addEventListener('error', (event) => {
+  console.error('[GLOBAL ERROR]', event.message, '\nFile:', event.filename, '\nLine:', event.lineno, '\nCol:', event.colno, '\nStack:', event.error?.stack);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[UNHANDLED REJECTION]', event.reason?.message || event.reason, '\nStack:', event.reason?.stack);
+});
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {

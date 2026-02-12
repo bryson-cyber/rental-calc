@@ -1081,6 +1081,15 @@ export const rentalRouter = router({
           };
         } catch (error) {
           console.error("[Rental] Error getting property report:", error);
+          if (error instanceof Error && error.stack) {
+            const stackLines = error.stack.split('\n');
+            stackLines.forEach((line: string, i: number) => {
+              console.error(`[Rental] STACK[${i}]: ${line.trim()}`);
+            });
+            // Write full stack to file for debugging
+            const fs = await import('fs');
+            fs.writeFileSync('/tmp/rental-crash-stack.txt', error.stack + '\n\n', { flag: 'a' });
+          }
           const message = error instanceof Error ? error.message : "Failed to generate property report";
           return {
             success: false,

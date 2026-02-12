@@ -463,10 +463,11 @@ async function getAllUSMarkets(): Promise<typeof usMarketsCache> {
         pagination: { page_size: pageSize, offset },
       });
       
-      if (response.payload.markets.length === 0) {
+      const pageMarkets = Array.isArray(response?.payload?.markets) ? response.payload.markets : [];
+      if (pageMarkets.length === 0) {
         hasMore = false;
       } else {
-        allMarkets.push(...response.payload.markets);
+        allMarkets.push(...pageMarkets);
         offset += pageSize;
       }
     } catch (error) {
@@ -931,7 +932,7 @@ export async function searchByZipcode(zipcode: string, options?: {
             orderDirection: 'desc'
           });
           
-          topPerformers = unfilteredResult.listings.map((l: ListingData) => ({
+          topPerformers = (Array.isArray(unfilteredResult?.listings) ? unfilteredResult.listings : []).map((l: ListingData) => ({
             title: l.title,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,
@@ -945,7 +946,7 @@ export async function searchByZipcode(zipcode: string, options?: {
             note: 'Showing top performers across all property types (no exact matches for your filters)'
           }));
         } else {
-          topPerformers = listingsResult.listings.map((l: ListingData) => ({
+          topPerformers = (Array.isArray(listingsResult?.listings) ? listingsResult.listings : []).map((l: ListingData) => ({
             title: l.title,
             bedrooms: l.bedrooms,
             bathrooms: l.bathrooms,
@@ -1472,7 +1473,11 @@ export async function getSubmarketsInMarket(marketId: string): Promise<Submarket
     
     // Extract the base city name for searching related neighborhoods
     // For "Austin", "East Austin", "Downtown Austin", etc.
-    const fullName = marketDetails.name;
+    const fullName = marketDetails.name || '';
+    if (!fullName) {
+      console.warn(`[getSubmarketsInMarket] Market ${marketId} has no name, skipping submarket search`);
+      return [];
+    }
     const nameParts = fullName.split(' ');
     
     // Try to identify the city name - usually the last word or the whole name
@@ -1781,14 +1786,15 @@ export async function getMarketListings(
     })());
     
     // Log the bedroom counts of returned listings to verify filtering
-    const bedroomCounts = response.payload.listings.map(r => r.bedrooms);
-    console.log(`[getMarketListings] Returned ${response.payload.listings.length} listings with bedrooms:`, bedroomCounts.slice(0, 10), '...');
+    const rawListings = Array.isArray(response?.payload?.listings) ? response.payload.listings : [];
+    const bedroomCounts = rawListings.map(r => r.bedrooms);
+    console.log(`[getMarketListings] Returned ${rawListings.length} listings with bedrooms:`, bedroomCounts.slice(0, 10), '...');
     if (options?.filters?.bedrooms !== undefined && options?.filters?.bedrooms !== null) {
-      const matchingCount = response.payload.listings.filter(r => r.bedrooms === options.filters!.bedrooms).length;
-      console.log(`[getMarketListings] Expected bedroom: ${options.filters.bedrooms}, Matching: ${matchingCount}/${response.payload.listings.length}`);
+      const matchingCount = rawListings.filter(r => r.bedrooms === options.filters!.bedrooms).length;
+      console.log(`[getMarketListings] Expected bedroom: ${options.filters.bedrooms}, Matching: ${matchingCount}/${rawListings.length}`);
     }
     
-    const listings: ListingData[] = response.payload.listings.map((r) => ({
+    const listings: ListingData[] = rawListings.map((r) => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
@@ -1996,13 +2002,14 @@ export async function getSubmarketListings(
     });
     
     // Debug: log location data availability
-    const listingsWithLocation = response.payload.listings.filter(l => l.location?.lat && l.location?.lng);
-    console.log(`[getSubmarketListings] Listings with location: ${listingsWithLocation.length}/${response.payload.listings.length}`);
-    if (response.payload.listings.length > 0 && !response.payload.listings[0].location) {
-      console.log('[getSubmarketListings] Sample listing keys:', Object.keys(response.payload.listings[0]));
+    const rawSubListings = Array.isArray(response?.payload?.listings) ? response.payload.listings : [];
+    const listingsWithLocation = rawSubListings.filter(l => l.location?.lat && l.location?.lng);
+    console.log(`[getSubmarketListings] Listings with location: ${listingsWithLocation.length}/${rawSubListings.length}`);
+    if (rawSubListings.length > 0 && !rawSubListings[0].location) {
+      console.log('[getSubmarketListings] Sample listing keys:', Object.keys(rawSubListings[0]));
     }
     
-    const listings: ListingData[] = response.payload.listings.map((r) => ({
+    const listings: ListingData[] = rawSubListings.map((r) => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
@@ -2716,6 +2723,17 @@ export async function getComprehensivePropertyReport(
     return null;
   }
   
+  // Ensure property object exists (cached responses may have different structure)
+  if (!propertyEstimate.property) {
+    console.error("[Property Report] Property estimate missing .property object, creating defaults");
+    propertyEstimate.property = {
+      address: address,
+      bedrooms: bedrooms || 0,
+      bathrooms: bathrooms || 0,
+      accommodates: accommodates || 0,
+    };
+  }
+  
   // Step 1b: Geocode address to get lat/lng and city/state if not in rentalizer response
   // Includes retry logic with cleaned address variants
   if (!propertyEstimate.property.latitude || !propertyEstimate.property.longitude) {
@@ -2903,7 +2921,8 @@ export async function getComprehensivePropertyReport(
       // This fixes the Fayetteville NC vs AR disambiguation bug
       const searchWithState = state ? `${searchTerm}, ${state}` : searchTerm;
       console.log('[Market Search] Searching with state-aware term:', searchWithState);
-      const markets = await searchMarkets(searchWithState, 20); // Increased limit for better matching
+      const marketsRaw = await searchMarkets(searchWithState, 20); // Increased limit for better matching
+      const markets = Array.isArray(marketsRaw) ? marketsRaw : [];
       if (markets.length > 0) {
         console.log('[Market Search] Found markets:', JSON.stringify(markets.map(m => ({ id: m.id, name: m.name, type: m.type, state: m.state, location_name: m.location_name, listing_count: m.listing_count })), null, 2));
         console.log('[Market Search] Looking for state:', state);
@@ -4699,7 +4718,7 @@ export async function getCountryMarkets(
       };
     }>(`/country/${countryCode}/markets`, "POST", requestBody);
 
-    const markets: CountryMarket[] = response.payload.markets.map(m => ({
+    const markets: CountryMarket[] = (Array.isArray(response?.payload?.markets) ? response.payload.markets : []).map(m => ({
       id: m.id,
       name: m.name,
       market_type: m.market_type || "unknown",
@@ -4822,7 +4841,8 @@ export async function getListingsInRadius(
       };
     }>("/listing/comps/area", "POST", requestBody);
 
-    const listings: ListingData[] = response.payload.listings.map(r => ({
+    const rawApiListings = Array.isArray(response?.payload?.listings) ? response.payload.listings : [];
+    const listings: ListingData[] = rawApiListings.map(r => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
@@ -5156,7 +5176,8 @@ export async function getTopPerformers(
       };
     }>(`/market/${options.marketId}/listings`, "POST", requestBody);
 
-    const listings: ListingData[] = response.payload.listings.map(r => ({
+    const rawApiListings = Array.isArray(response?.payload?.listings) ? response.payload.listings : [];
+    const listings: ListingData[] = rawApiListings.map(r => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',
       airbnb_url: r.airbnb_property_url || (r.airbnb_property_id ? `https://www.airbnb.com/rooms/${r.airbnb_property_id}` : ''),
@@ -7585,7 +7606,7 @@ export async function getStandaloneMarketAdvisorData(
       bookingPatterns: bookingPatternsProcessed,
       supplyTrend,
       topPerformers,
-      submarkets: submarkets.map((s: any) => ({
+      submarkets: (Array.isArray(submarkets) ? submarkets : []).map((s: any) => ({
         id: s.id,
         name: s.name,
         listingCount: s.listing_count,

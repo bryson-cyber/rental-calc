@@ -275,7 +275,18 @@ export async function getDbCache<T>(cacheKey: string): Promise<T | null> {
       return null;
     }
     
-    return entry.data as T;
+    // Handle double-stringified JSON: setDbCache calls JSON.stringify() before storing
+    // in a JSON column, so Drizzle auto-parses one level but the data is still a string.
+    // We need to parse it again to get the actual object.
+    let data = entry.data;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        // If it's not valid JSON, return as-is
+      }
+    }
+    return data as T;
   } catch (error) {
     console.error('[DB Cache] Failed to get cache:', error);
     return null;

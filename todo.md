@@ -10748,3 +10748,36 @@ Results:
 - [x] Made RentalizerResponse interface match reality: latitude/longitude/address_lookup/zipcode now optional
 - [x] Fixed address_lookup access at line 3195 with null-safe conditional
 - [x] All 981 tests passing, 0 TypeScript errors
+
+## BUG: latitude crash STILL happening after previous fixes (Feb 12, 2026)
+- [x] Added full stack trace logging to rental.getPropertyReport error handler
+- [x] Reproduced with 2953 Kalmia St, San Diego — found additional crash points
+- [x] Fixed ALL unguarded .map() calls on API response data in airdna.ts:
+  - response.payload.markets.map → Array.isArray guard (getCountryMarkets)
+  - response.payload.listings.map → Array.isArray guard (getMarketListings, getSubmarketListings)
+  - markets.map → Array.isArray guard (getComprehensivePropertyReport)
+  - submarkets.map → Array.isArray guard (getStandaloneMarketAdvisorData)
+  - listingsResult.listings.map → safe access with || [] fallback
+- [x] Added global client-side error handler with stack trace logging
+- [x] Verified fix: test-kalmia.mjs passes — 2953 Kalmia St returns successfully
+- [x] All 981 tests passing, 0 TypeScript errors, 0 server errors
+
+## Cache Deserialization Fix (Feb 12, 2026)
+
+### Root Cause
+- [x] Identified root cause: getDbCache in api-logger.ts stored data with JSON.stringify() into MySQL JSON column (double-stringification)
+- [x] When Drizzle reads JSON column, it auto-parses one level, returning a string instead of an object
+- [x] All downstream property accesses (e.g., .property.latitude) crashed with TypeError on cached data
+
+### Fixes Applied
+- [x] Fix getDbCache to detect and parse double-stringified JSON data (handles string, double-string, and triple-string cases)
+- [x] Add null guard for marketDetails.name in getSubmarketsInMarket before .split() call
+- [x] Add defensive guards for report.submarket.metrics in market-research-simple.ts
+- [x] Add optional chaining for report.top_listings and report.seasonality
+- [x] Add optional chaining for accurateBedroomData.bedroomCounts.map calls
+
+### Testing
+- [x] 8 new cache deserialization tests passing
+- [x] All 981+ existing tests passing (no regressions)
+- [x] End-to-end test with 2953 Kalmia St, San Diego, CA 92104 - verified all data structures correct
+- [x] Property data returns as object (not string) with latitude, longitude, market_id accessible
