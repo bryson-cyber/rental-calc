@@ -69,13 +69,13 @@ interface Comp {
 export interface RentalizerResponse {
   property: {
     address: string;
-    address_lookup: string;
-    zipcode: string;
+    address_lookup?: string;
+    zipcode?: string;
     bedrooms: number;
     bathrooms: number;
     accommodates: number;
-    latitude: number;
-    longitude: number;
+    latitude?: number;
+    longitude?: number;
     market_id?: string;
     submarket_id?: string;
   };
@@ -2620,16 +2620,16 @@ async function tryRentalizerRequest(
     
     const result: RentalizerResponse = {
       property: {
-        address: payload.details.address,
-        address_lookup: payload.details.address_lookup,
-        zipcode: payload.details.zipcode,
-        bedrooms: payload.details.bedrooms,
-        bathrooms: payload.details.bathrooms,
-        accommodates: payload.details.accommodates,
-        latitude: payload.location.lat,
-        longitude: payload.location.lng,
-        market_id: payload.location.market_id,
-        submarket_id: payload.location.submarket_id,
+        address: payload.details?.address || request.address,
+        address_lookup: payload.details?.address_lookup,
+        zipcode: payload.details?.zipcode,
+        bedrooms: payload.details?.bedrooms ?? request.bedrooms,
+        bathrooms: payload.details?.bathrooms ?? request.bathrooms,
+        accommodates: payload.details?.accommodates ?? request.accommodates,
+        latitude: payload.location?.lat,
+        longitude: payload.location?.lng,
+        market_id: payload.location?.market_id,
+        submarket_id: payload.location?.submarket_id,
       },
       estimates: {
         annual_revenue: payload.stats.future.summary.revenue,
@@ -3192,7 +3192,7 @@ export async function getComprehensivePropertyReport(
       if (!marketDetails) {
         try {
           const addressLookup = propertyEstimate.property.address_lookup;
-          const cityFromLookup = addressLookup?.split(',').length >= 2 
+          const cityFromLookup = addressLookup && addressLookup.split(',').length >= 2 
             ? addressLookup.split(',')[addressLookup.split(',').length - 2]?.trim()
             : addressLookup?.split(',')[0]?.trim();
           

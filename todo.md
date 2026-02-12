@@ -10740,3 +10740,11 @@ Results:
 - [x] Fix searchResults.map crash — added Array.isArray guard in useEffect setter
 - [x] Add defensive guard to ensure searchResults is always an array before .map() in JSX render
 - [x] Test fix — 981 total tests passing
+
+## BUG: Persistent 'Cannot read properties of undefined (reading latitude)' — ROOT CAUSE INVESTIGATION (Feb 12, 2026)
+- [x] Traced full data flow from AirDNA API → getRentalizerEstimate → getComprehensivePropertyReport → client
+- [x] ROOT CAUSE 1: server/airdna.ts line 2629 — `payload.location.lat` crashes when AirDNA API returns no `location` object. Fixed: `payload.location?.lat` + `payload.details?.address` with fallbacks
+- [x] ROOT CAUSE 2: server/market-research-simple.ts line 446 — `primaryEstimate.property.latitude` crashes when `property` is undefined. Fixed: `primaryEstimate?.property?.latitude ?? null` + null-safe filtering
+- [x] Made RentalizerResponse interface match reality: latitude/longitude/address_lookup/zipcode now optional
+- [x] Fixed address_lookup access at line 3195 with null-safe conditional
+- [x] All 981 tests passing, 0 TypeScript errors

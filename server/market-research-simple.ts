@@ -432,7 +432,7 @@ export const marketResearchSimpleRouter = router({
       
       // Get the first valid estimate for location info
       const primaryEstimate = validEstimates[0]!;
-      const locationName = primaryEstimate.property.address_lookup?.split(',').slice(1, 3).join(',').trim() || location;
+      const locationName = primaryEstimate?.property?.address_lookup?.split(',').slice(1, 3).join(',').trim() || location;
       
       // Collect all comps from all estimates
       const allComps: any[] = [];
@@ -443,17 +443,23 @@ export const marketResearchSimpleRouter = router({
       });
       
       // Get the reference latitude from the primary estimate to filter out foreign comps
-      const refLat = primaryEstimate.property.latitude;
-      const refLng = primaryEstimate.property.longitude;
+      const refLat = primaryEstimate?.property?.latitude ?? null;
+      const refLng = primaryEstimate?.property?.longitude ?? null;
       
       // Filter out comps that are likely in different countries (e.g., Tijuana for San Diego)
       // A comp more than 50 miles away or with significantly different latitude is likely foreign
       const filteredComps = allComps.filter((comp: any) => {
+        // If we don't have reference coordinates, skip filtering entirely
+        if (refLat === null || refLng === null) return true;
+        
         // If comp doesn't have location data, keep it
         if (!comp.location?.lat && !comp.latitude) return true;
         
         const compLat = comp.location?.lat || comp.latitude;
         const compLng = comp.location?.lng || comp.longitude;
+        
+        // If comp coordinates are invalid, keep it
+        if (typeof compLat !== 'number' || typeof compLng !== 'number' || isNaN(compLat) || isNaN(compLng)) return true;
         
         // Check if comp is within reasonable distance (about 0.5 degrees = ~35 miles)
         const latDiff = Math.abs(compLat - refLat);
