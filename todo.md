@@ -10674,3 +10674,16 @@ Results:
 - [x] Admin-only features (Regenerate, Save Comp Selection) hidden for shared views
 - [x] Copy Link uses current URL for shared views
 - [x] 26 tests for data transformation functions, all passing
+
+## REWORK v2: Share links must show the EXACT same step UI (Feb 12, 2026)
+- [x] Audited all steps to identify components and share mechanisms (UniversalShareButton → /share/:shareCode)
+- [x] Each report type now renders the correct component:
+  - validator/revenue → FullPropertyReport (same as ChapterPropertyReport data)
+  - ai_advisor → SharedAIAdvisorDisplay (replicates AIAdvisorStep amber card + LightMarkdown)
+  - market/regulation → SharedRegulationDisplay (replicates RegulationTrackerStep glass morphism)
+- [x] No generic simplified viewer — each type gets its own faithful read-only display
+- [x] Share link = "live link" — recipient sees exactly what the sharer sees
+- [x] Created SharedAIAdvisorDisplay component matching AIAdvisorStep styling
+- [x] Created SharedRegulationDisplay component matching RegulationTrackerStep styling
+- [x] Tested all 5 share codes: validator, revenue, ai_advisor, market, regulation — all render correctly
+- [x] 26 transformation tests passing
