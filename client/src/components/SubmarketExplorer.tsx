@@ -105,7 +105,7 @@ export function SubmarketExplorer({ marketId, marketName, onSubmarketSelect }: S
       <CardHeader className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] text-white pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-serif flex items-center gap-2">
+            <CardTitle className="text-lg font-sans flex items-center gap-2">
               <Target className="h-5 w-5 text-[#C9A962]" />
               Where to Invest in {marketName}
             </CardTitle>

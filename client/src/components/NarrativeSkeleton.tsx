@@ -55,7 +55,7 @@ export default function NarrativeSkeleton() {
             <Loader2 className="w-5 h-5 text-[#C9A962] animate-spin" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-[#0F172A] font-serif flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#0F172A] font-sans flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#C9A962]" />
               AI Generating Executive Summary...
             </h3>

@@ -139,7 +139,7 @@ export default function AnalysisProgress({ progress, address, monthlyRent }: Ana
               />
             </motion.div>
 
-            <h2 className="text-3xl font-serif font-semibold text-white mb-3">
+            <h2 className="text-3xl font-sans font-semibold text-white mb-3">
               Building Your Analysis
             </h2>
             

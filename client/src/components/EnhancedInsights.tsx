@@ -6,6 +6,11 @@
  * - Action Items with priorities
  * - Market Context
  * - Quick Facts
+ * 
+ * Uses a consistent light theme matching the main interface:
+ * - White/cream backgrounds with gold accents
+ * - Dark navy (#0F172A) text
+ * - System font stack (font-sans)
  */
 
 import { motion } from 'framer-motion';
@@ -86,9 +91,9 @@ interface EnhancedInsightsProps {
 // Priority badge component
 function PriorityBadge({ priority }: { priority: ActionItem['priority'] }) {
   const colors = {
-    high: 'bg-red-500/20 text-red-400 border-red-500/30',
-    medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    low: 'bg-green-500/20 text-green-400 border-green-500/30',
+    high: 'bg-red-100 text-red-700 border-red-200',
+    medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    low: 'bg-green-100 text-green-700 border-green-200',
   };
 
   const labels = {
@@ -125,7 +130,7 @@ function MarketTypeBadge({ type }: { type: MarketContext['type'] }) {
   };
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#C9A962]/20 text-[#C9A962] text-xs font-medium rounded-lg">
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#C9A962]/20 text-[#8B7332] text-xs font-medium rounded-lg">
       {icons[type]}
       {labels[type]}
     </span>
@@ -135,9 +140,9 @@ function MarketTypeBadge({ type }: { type: MarketContext['type'] }) {
 // Level indicator (high/moderate/low)
 function LevelIndicator({ level, label }: { level: 'high' | 'moderate' | 'low'; label: string }) {
   const colors = {
-    high: 'text-red-400',
-    moderate: 'text-yellow-400',
-    low: 'text-green-400',
+    high: 'text-red-600',
+    moderate: 'text-yellow-600',
+    low: 'text-green-600',
   };
 
   const icons = {
@@ -149,7 +154,7 @@ function LevelIndicator({ level, label }: { level: 'high' | 'moderate' | 'low'; 
   return (
     <div className="flex items-center gap-2">
       <span className={colors[level]}>{icons[level]}</span>
-      <span className="text-white/70 text-sm">{label}:</span>
+      <span className="text-[#0F172A]/60 text-sm">{label}:</span>
       <span className={`font-medium capitalize ${colors[level]}`}>{level}</span>
     </div>
   );
@@ -162,25 +167,25 @@ function RatioIndicator({ ratio }: { ratio: number }) {
   return (
     <div className={`p-4 rounded-xl border ${
       meetsRule 
-        ? 'bg-green-500/10 border-green-500/30' 
-        : 'bg-red-500/10 border-red-500/30'
+        ? 'bg-green-50 border-green-200' 
+        : 'bg-red-50 border-red-200'
     }`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-white/70 text-sm">Revenue-to-Rent Ratio</span>
-        <span className={`text-2xl font-bold ${meetsRule ? 'text-green-400' : 'text-red-400'}`}>
+        <span className="text-[#0F172A]/60 text-sm">Revenue-to-Rent Ratio</span>
+        <span className={`text-2xl font-bold ${meetsRule ? 'text-green-600' : 'text-red-600'}`}>
           {ratio.toFixed(1)}x
         </span>
       </div>
       <div className="flex items-center gap-2">
         {meetsRule ? (
           <>
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span className="text-green-400 text-sm">Meets the 2x rule</span>
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="text-green-600 text-sm">Meets the 2x rule</span>
           </>
         ) : (
           <>
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-red-400 text-sm">Below 2x threshold</span>
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+            <span className="text-red-600 text-sm">Below 2x threshold</span>
           </>
         )}
       </div>
@@ -212,15 +217,15 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
       {/* Executive Summary */}
       {report.executive_summary && (
         <motion.div 
-          className="bg-gradient-to-br from-[#C9A962]/20 to-[#C9A962]/5 border border-[#C9A962]/30 rounded-xl p-6"
+          className="bg-gradient-to-br from-[#C9A962]/15 to-[#C9A962]/5 border border-[#C9A962]/30 rounded-xl p-6"
           variants={itemVariants}
         >
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-6 h-6 text-[#C9A962]" />
-            <h3 className="text-xl font-semibold text-white">Executive Summary</h3>
+            <h3 className="text-xl font-semibold text-[#0F172A]">Executive Summary</h3>
           </div>
-          <div className="prose prose-invert max-w-none">
-            <p className="text-white/90 leading-relaxed whitespace-pre-line">
+          <div className="prose max-w-none">
+            <p className="text-[#0F172A]/80 leading-relaxed whitespace-pre-line">
               {report.executive_summary}
             </p>
           </div>
@@ -235,13 +240,13 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
         >
           <div className="flex items-center gap-2 mb-3">
             <Zap className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-white">Quick Facts</h3>
+            <h3 className="font-semibold text-[#0F172A]">Quick Facts</h3>
           </div>
           <div className="grid md:grid-cols-2 gap-2">
             {report.quick_facts.slice(0, 6).map((fact, idx) => (
               <div key={idx} className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#C9A962] flex-shrink-0 mt-0.5" />
-                <span className="text-white/80 text-sm">{fact}</span>
+                <span className="text-[#0F172A]/70 text-sm">{fact}</span>
               </div>
             ))}
           </div>
@@ -254,15 +259,15 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
         variants={itemVariants}
       >
         {/* Market Context */}
-        <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+        <div className="bg-white rounded-xl p-5 border border-[#0F172A]/10 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <MapPin className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-white">Market Context</h3>
+            <h3 className="font-semibold text-[#0F172A]">Market Context</h3>
           </div>
           
           <div className="space-y-3">
             <MarketTypeBadge type={report.market_context.type} />
-            <p className="text-white/70 text-sm leading-relaxed">
+            <p className="text-[#0F172A]/60 text-sm leading-relaxed">
               {report.market_context.description}
             </p>
             <div className="pt-2 space-y-2">
@@ -273,27 +278,27 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
         </div>
 
         {/* Revenue-to-Rent Ratio */}
-        <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+        <div className="bg-white rounded-xl p-5 border border-[#0F172A]/10 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <DollarSign className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-white">Investment Viability</h3>
+            <h3 className="font-semibold text-[#0F172A]">Investment Viability</h3>
           </div>
           
           <RatioIndicator ratio={report.key_metrics.revenue_to_rent_ratio} />
           
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="text-center p-2 bg-white/5 rounded-lg">
-              <p className="text-white/50 text-xs">Break-even</p>
-              <p className="text-white font-semibold">{report.key_metrics.break_even_months} months</p>
+            <div className="text-center p-2 bg-[#f8f7f4] rounded-lg">
+              <p className="text-[#0F172A]/50 text-xs">Break-even</p>
+              <p className="text-[#0F172A] font-semibold">{report.key_metrics.break_even_months} months</p>
             </div>
-            <div className="text-center p-2 bg-white/5 rounded-lg">
-              <p className="text-white/50 text-xs">Confidence</p>
+            <div className="text-center p-2 bg-[#f8f7f4] rounded-lg">
+              <p className="text-[#0F172A]/50 text-xs">Confidence</p>
               <p className={`font-semibold capitalize ${
                 report.key_metrics.confidence_level === 'high' 
-                  ? 'text-green-400' 
+                  ? 'text-green-600' 
                   : report.key_metrics.confidence_level === 'medium'
-                    ? 'text-yellow-400'
-                    : 'text-red-400'
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
               }`}>
                 {report.key_metrics.confidence_level}
               </p>
@@ -304,22 +309,22 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
 
       {/* What This Means For You */}
       <motion.div 
-        className="bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-xl p-6 border border-[#C9A962]/20"
+        className="bg-white rounded-xl p-6 border border-[#C9A962]/30 shadow-sm"
         variants={itemVariants}
       >
         <div className="flex items-center gap-2 mb-6">
           <Lightbulb className="w-6 h-6 text-[#C9A962]" />
-          <h3 className="text-xl font-serif font-semibold text-white">What This Means For You</h3>
+          <h3 className="text-xl font-sans font-semibold text-[#0F172A]">What This Means For You</h3>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Revenue */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-green-400" />
-              <h4 className="font-medium text-white">Revenue Potential</h4>
+              <DollarSign className="w-4 h-4 text-green-600" />
+              <h4 className="font-medium text-[#0F172A]">Revenue Potential</h4>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed pl-6">
+            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.revenue}
             </p>
           </div>
@@ -327,10 +332,10 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           {/* Competition */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-400" />
-              <h4 className="font-medium text-white">Competition</h4>
+              <Users className="w-4 h-4 text-blue-600" />
+              <h4 className="font-medium text-[#0F172A]">Competition</h4>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed pl-6">
+            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.competition}
             </p>
           </div>
@@ -338,10 +343,10 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           {/* Seasonality */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-purple-400" />
-              <h4 className="font-medium text-white">Seasonality</h4>
+              <Calendar className="w-4 h-4 text-purple-600" />
+              <h4 className="font-medium text-[#0F172A]">Seasonality</h4>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed pl-6">
+            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.seasonality}
             </p>
           </div>
@@ -350,9 +355,9 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Award className="w-4 h-4 text-[#C9A962]" />
-              <h4 className="font-medium text-white">Bottom Line</h4>
+              <h4 className="font-medium text-[#0F172A]">Bottom Line</h4>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed pl-6">
+            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.overall}
             </p>
           </div>
@@ -361,19 +366,19 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
 
       {/* Action Items */}
       <motion.div 
-        className="bg-white/5 rounded-xl p-6 border border-white/10"
+        className="bg-white rounded-xl p-6 border border-[#0F172A]/10 shadow-sm"
         variants={itemVariants}
       >
         <div className="flex items-center gap-2 mb-6">
           <Target className="w-6 h-6 text-[#C9A962]" />
-          <h3 className="text-xl font-serif font-semibold text-white">Recommended Actions</h3>
+          <h3 className="text-xl font-sans font-semibold text-[#0F172A]">Recommended Actions</h3>
         </div>
 
         <div className="space-y-4">
           {report.action_items.map((item, idx) => (
             <motion.div
               key={idx}
-              className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-[#C9A962]/30 transition-colors"
+              className="bg-[#f8f7f4] rounded-xl p-4 border border-[#0F172A]/10 hover:border-[#C9A962]/30 transition-colors"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
@@ -382,25 +387,25 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     item.priority === 'high' 
-                      ? 'bg-red-500/20' 
+                      ? 'bg-red-100' 
                       : item.priority === 'medium'
-                        ? 'bg-yellow-500/20'
-                        : 'bg-green-500/20'
+                        ? 'bg-yellow-100'
+                        : 'bg-green-100'
                   }`}>
-                    <span className="text-white font-bold text-sm">{idx + 1}</span>
+                    <span className="text-[#0F172A] font-bold text-sm">{idx + 1}</span>
                   </div>
-                  <h4 className="font-medium text-white">{item.action}</h4>
+                  <h4 className="font-medium text-[#0F172A]">{item.action}</h4>
                 </div>
                 <PriorityBadge priority={item.priority} />
               </div>
               
-              <p className="text-white/60 text-sm mb-3 pl-11">
+              <p className="text-[#0F172A]/60 text-sm mb-3 pl-11">
                 {item.why}
               </p>
               
               <div className="flex items-center gap-2 pl-11">
-                <Clock className="w-4 h-4 text-white/40" />
-                <span className="text-white/50 text-xs">{item.timeline}</span>
+                <Clock className="w-4 h-4 text-[#0F172A]/40" />
+                <span className="text-[#0F172A]/50 text-xs">{item.timeline}</span>
               </div>
             </motion.div>
           ))}

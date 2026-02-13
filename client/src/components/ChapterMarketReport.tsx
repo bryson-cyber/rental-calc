@@ -205,7 +205,7 @@ function ChapterSection({ id, title, children }: {
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#0F172A] mb-8 flex items-center gap-3">
+        <h2 className="text-2xl md:text-3xl font-sans font-bold text-[#0F172A] mb-8 flex items-center gap-3">
           <BookOpen className="w-7 h-7 text-[#C9A962]" />
           {title}
         </h2>
@@ -231,7 +231,7 @@ function InfoCard({ title, value, subtitle, icon: Icon, trend }: {
         </div>
         <span className="text-sm font-medium text-[#0F172A]/60">{title}</span>
       </div>
-      <p className="text-3xl font-serif font-bold text-[#0F172A] mb-1">{value}</p>
+      <p className="text-3xl font-sans font-bold text-[#0F172A] mb-1">{value}</p>
       {subtitle && (
         <p className="text-sm text-[#0F172A]/50 flex items-center gap-1">
           {trend === 'up' && <TrendingUp className="w-4 h-4 text-green-600" />}
@@ -327,7 +327,7 @@ function TierCard({ tier, title, description, markets }: {
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
       <div className={`bg-gradient-to-r ${tierColors[tier as keyof typeof tierColors]} p-4`}>
         <span className="text-white/80 text-sm font-medium">Tier {tier}</span>
-        <h3 className="text-xl font-serif font-bold text-white">{title}</h3>
+        <h3 className="text-xl font-sans font-bold text-white">{title}</h3>
         <p className="text-white/80 text-sm mt-1">{description}</p>
       </div>
       <div className="p-4 space-y-3">
@@ -410,7 +410,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               </span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-sans font-bold mb-4">
               {marketInfo.name}: A Comprehensive Guide to Short-Term Rental Investment
             </h1>
 
@@ -430,7 +430,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
           {marketInfo.metrics.market_score && (
             <div className="absolute top-12 right-8 text-right hidden lg:block">
               <p className="text-sm text-white/60 mb-1">Market Score</p>
-              <p className="text-5xl font-serif font-bold text-[#C9A962]">
+              <p className="text-5xl font-sans font-bold text-[#C9A962]">
                 {Math.round(marketInfo.metrics.market_score)}
               </p>
               <p className="text-xs text-white/50">out of 100</p>
@@ -459,7 +459,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               } This guide will walk you through the essential data and insights needed to make an informed investment decision.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Key Market Highlights</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Key Market Highlights</h3>
 
             <div className="grid md:grid-cols-2 gap-4 mb-8">
               <HighlightBox
@@ -575,21 +575,21 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                 <div className="grid md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-white rounded-xl shadow-lg p-6">
                     <p className="text-sm text-[#0F172A]/60 mb-1">Top Performer Revenue</p>
-                    <p className="text-2xl font-serif font-bold text-[#C9A962]">
+                    <p className="text-2xl font-sans font-bold text-[#C9A962]">
                       {formatCurrency(data.top_listings[0]?.annual_revenue || 0)}
                     </p>
                     <p className="text-xs text-[#0F172A]/50">per year</p>
                   </div>
                   <div className="bg-white rounded-xl shadow-lg p-6">
                     <p className="text-sm text-[#0F172A]/60 mb-1">Avg. Top 5 Revenue</p>
-                    <p className="text-2xl font-serif font-bold text-[#0F172A]">
+                    <p className="text-2xl font-sans font-bold text-[#0F172A]">
                       {formatCurrency(data.top_listings.slice(0, 5).reduce((sum, l) => sum + l.annual_revenue, 0) / Math.min(5, data.top_listings.length))}
                     </p>
                     <p className="text-xs text-[#0F172A]/50">per year</p>
                   </div>
                   <div className="bg-white rounded-xl shadow-lg p-6">
                     <p className="text-sm text-[#0F172A]/60 mb-1">vs. Market Average</p>
-                    <p className="text-2xl font-serif font-bold text-green-600">
+                    <p className="text-2xl font-sans font-bold text-green-600">
                       +{Math.round(((data.top_listings[0]?.annual_revenue || avgRevenue) / avgRevenue - 1) * 100)}%
                     </p>
                     <p className="text-xs text-[#0F172A]/50">higher revenue</p>
@@ -624,7 +624,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               the data reveals clear trends in the amenities and property types that attract travelers.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Top 5 Most Important Amenities</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Top 5 Most Important Amenities</h3>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
               <DataTable
@@ -639,7 +639,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               />
             </div>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Property Type Performance</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Property Type Performance</h3>
 
             {insights?.property_type_breakdown && insights.property_type_breakdown.length > 0 ? (
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -686,7 +686,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               helps you anticipate income fluctuations and adjust your pricing strategy.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Peak vs. Off-Peak Months</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Peak vs. Off-Peak Months</h3>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
@@ -695,7 +695,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Peak Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">May through August</p>
-                <p className="text-2xl font-serif font-bold text-amber-600">55-65% occupancy</p>
+                <p className="text-2xl font-sans font-bold text-amber-600">55-65% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Higher rates, strong demand</p>
               </div>
 
@@ -705,7 +705,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Shoulder Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">Mar-Apr & Sep-Nov</p>
-                <p className="text-2xl font-serif font-bold text-green-600">50-55% occupancy</p>
+                <p className="text-2xl font-sans font-bold text-green-600">50-55% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Solid, consistent bookings</p>
               </div>
 
@@ -715,7 +715,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <span className="font-semibold text-[#0F172A]">Off-Peak Season</span>
                 </div>
                 <p className="text-sm text-[#0F172A]/70 mb-2">December through February</p>
-                <p className="text-2xl font-serif font-bold text-blue-600">45-50% occupancy</p>
+                <p className="text-2xl font-sans font-bold text-blue-600">45-50% occupancy</p>
                 <p className="text-xs text-[#0F172A]/50 mt-2">Lower rates, less demand</p>
               </div>
             </div>
@@ -818,7 +818,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               The data shows clear preferences that can guide your investment decision.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Performance by Property Size</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Performance by Property Size</h3>
 
             {data.bedroom_performance && data.bedroom_performance.length > 0 ? (
               <>
@@ -872,7 +872,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               Beyond the basics, the data reveals several deeper trends that can inform your investment strategy.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">The Professional Host Landscape</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">The Professional Host Landscape</h3>
 
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
               <p className="text-[#0F172A]/70 mb-6">
@@ -928,7 +928,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             {/* Revenue Distribution */}
             {insights?.revenue_percentiles && (
               <>
-                <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6">Revenue Distribution</h3>
+                <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Revenue Distribution</h3>
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <p className="text-[#0F172A]/70 mb-6">
                     Understanding where you can realistically land in the revenue spectrum helps set expectations.
@@ -970,7 +970,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               {/* New Investor */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
-                  <h3 className="text-xl font-serif font-bold text-white">For the New Investor Seeking Lower Risk</h3>
+                  <h3 className="text-xl font-sans font-bold text-white">For the New Investor Seeking Lower Risk</h3>
                 </div>
                 <div className="p-6">
                   <ol className="space-y-4">
@@ -1009,7 +1009,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               {/* Experienced Investor */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-4">
-                  <h3 className="text-xl font-serif font-bold text-white">For the Experienced Investor Seeking High Returns</h3>
+                  <h3 className="text-xl font-sans font-bold text-white">For the Experienced Investor Seeking High Returns</h3>
                 </div>
                 <div className="p-6">
                   <ol className="space-y-4">
@@ -1047,7 +1047,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
             {/* Why You Need Professional Help Section */}
             <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-serif font-semibold text-[#0F172A] mb-6 text-center">
+              <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6 text-center">
                 Why This Complexity Requires Expert Execution
               </h3>
               <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -1090,30 +1090,30 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
 
             {/* CTA Section */}
-            <div className="mt-8 bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl p-8 text-white">
+            <div className="mt-8 bg-gradient-to-br from-[#C9A962]/15 to-[#C9A962]/5 rounded-2xl p-8 border border-[#C9A962]/30">
               <div className="max-w-2xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
                   <Award className="w-4 h-4" />
                   Done-For-You Solution
                 </div>
-                <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
+                <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4 text-[#0F172A]">
                   Ready to Turn This Data Into Profit?
                 </h3>
-                <p className="text-white/70 mb-6">
+                <p className="text-[#0F172A]/60 mb-6">
                   You've seen the numbers. You understand the market. Now let our team handle the execution.
                 </p>
                 <div className="grid md:grid-cols-3 gap-4 mb-8 text-left">
-                  <div className="bg-white/10 rounded-lg p-4">
+                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Property sourcing & lease negotiation</p>
+                    <p className="text-sm text-[#0F172A]/70">Property sourcing & lease negotiation</p>
                   </div>
-                  <div className="bg-white/10 rounded-lg p-4">
+                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Professional design & furnishing</p>
+                    <p className="text-sm text-[#0F172A]/70">Professional design & furnishing</p>
                   </div>
-                  <div className="bg-white/10 rounded-lg p-4">
+                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
                     <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm">Full-service guest management</p>
+                    <p className="text-sm text-[#0F172A]/70">Full-service guest management</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">

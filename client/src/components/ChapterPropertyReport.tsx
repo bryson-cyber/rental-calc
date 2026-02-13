@@ -231,7 +231,7 @@ function ChapterSection({ id, title, children }: {
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#1A1A1A] mb-8 flex items-center gap-3">
+        <h2 className="text-2xl md:text-3xl font-sans font-bold text-[#1A1A1A] mb-8 flex items-center gap-3">
           <BookOpen className="w-7 h-7 text-[#D4A84B]" />
           {title}
         </h2>
@@ -439,7 +439,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               </span>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-serif font-bold mb-4">
+            <h1 className="text-3xl md:text-4xl font-sans font-bold mb-4">
               Understanding the Airbnb Arbitrage Opportunity
             </h1>
 
@@ -458,19 +458,19 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <div className="bg-white/10 rounded-xl p-4">
               <p className="text-white/60 text-sm">Est. Annual Revenue</p>
-              <p className="text-2xl font-serif font-bold text-[#D4A84B]">{formatCurrency(revenue_estimate.annual)}</p>
+              <p className="text-2xl font-sans font-bold text-[#D4A84B]">{formatCurrency(revenue_estimate.annual)}</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
               <p className="text-white/60 text-sm">Avg. Nightly Rate</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(revenue_estimate.nightly)}</p>
+              <p className="text-2xl font-sans font-bold text-white">{formatCurrency(revenue_estimate.nightly)}</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
               <p className="text-white/60 text-sm">Occupancy Rate</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatPercent(revenue_estimate.occupancy)}</p>
+              <p className="text-2xl font-sans font-bold text-white">{formatPercent(revenue_estimate.occupancy)}</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
               <p className="text-white/60 text-sm">Monthly Average</p>
-              <p className="text-2xl font-serif font-bold text-white">{formatCurrency(revenue_estimate.monthly)}</p>
+              <p className="text-2xl font-sans font-bold text-white">{formatCurrency(revenue_estimate.monthly)}</p>
             </div>
           </div>
         </div>
@@ -488,7 +488,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
         <div className="max-w-4xl mx-auto">
           {/* Introduction */}
           <div className="mb-8 p-6 bg-white rounded-xl shadow-lg">
-            <h3 className="text-lg font-serif font-semibold text-[#1A1A1A] mb-3">What is This Report?</h3>
+            <h3 className="text-lg font-sans font-semibold text-[#1A1A1A] mb-3">What is This Report?</h3>
             <p className="text-[#1A1A1A]/70 leading-relaxed">
               This report is a detailed analysis to show you how we evaluate a property for an <strong>Airbnb Arbitrage</strong> business.
               The idea is simple: we rent a regular, long-term property, furnish it, and re-rent it for short stays on Airbnb.
@@ -524,7 +524,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               </div>
             </div>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">What Makes This Property Attractive for Airbnb?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">What Makes This Property Attractive for Airbnb?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               We look for features that will stand out to guests. Based on the property details and market analysis, here are the key selling points:
@@ -594,7 +594,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               We focus on other <strong>{property.bedrooms}-bedroom properties</strong> in the same area to get a clear picture.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">What Do Similar Airbnbs Earn?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">What Do Similar Airbnbs Earn?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               Here are the average numbers for {property.bedrooms}-bedroom properties in {property.city}:
@@ -623,7 +623,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               />
             </div>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">How Much is Possible? (Good, Better, Best)</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">How Much is Possible? (Good, Better, Best)</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               Not all Airbnbs perform the same. Some are average, while others are run by expert hosts who make much more.
@@ -671,7 +671,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             </ThoughtProcess>
 
             {/* Monthly Forecast */}
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6 mt-10">Monthly Revenue Forecast</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6 mt-10">Monthly Revenue Forecast</h3>
 
             <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
               {/* Visual Chart */}
@@ -779,7 +779,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               </div>
             )}
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">What Do the Top Competitors Have in Common?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">What Do the Top Competitors Have in Common?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               Here are the top-earning {property.bedrooms}-bedroom properties in {property.city}. 
@@ -1038,7 +1038,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               We estimate the costs and subtract them from the potential revenue.
             </p>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">How Much Does It Cost to Start?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">How Much Does It Cost to Start?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               To turn an empty rental into a beautiful, guest-ready Airbnb, there are upfront costs.
@@ -1057,7 +1057,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               />
             </div>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">What Are the Monthly Expenses?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">What Are the Monthly Expenses?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               Every month, we have to pay for the costs of running the business.
@@ -1081,7 +1081,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
               />
             </div>
 
-            <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6">What is the Potential Profit?</h3>
+            <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6">What is the Potential Profit?</h3>
 
             <p className="text-[#1A1A1A]/70 mb-4">
               Here we compare our revenue goals with our annual costs to see the potential profit.
@@ -1142,7 +1142,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
 
             {/* Why You Need Professional Help Section */}
             <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-6 text-center">
+              <h3 className="text-xl font-sans font-semibold text-[#1A1A1A] mb-6 text-center">
                 What It Takes to Reach Top-Performer Status
               </h3>
               <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -1190,7 +1190,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                   <Award className="w-4 h-4" />
                   Done-For-You Solution
                 </div>
-                <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
+                <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4">
                   Ready to Turn This Analysis Into Reality?
                 </h3>
                 <p className="text-white/70 mb-6">
@@ -1490,7 +1490,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
                   <Award className="w-4 h-4" />
                   Done-For-You Setup
                 </div>
-                <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4">
+                <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4">
                   Ready to Launch Like a Top Performer?
                 </h3>
                 <p className="text-white/70 mb-6">

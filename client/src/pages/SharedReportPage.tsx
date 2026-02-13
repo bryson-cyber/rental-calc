@@ -39,7 +39,7 @@ export default function SharedReportPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">
+          <h1 className="text-2xl font-sans font-bold text-[#1A1A1A] mb-2">
             Error Loading Report
           </h1>
           <p className="text-[#1A1A1A]/60 mb-6">{error.message}</p>
@@ -64,7 +64,7 @@ export default function SharedReportPage() {
               <div className="w-16 h-16 bg-[#D4A84B]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-8 h-8 text-[#D4A84B]" />
               </div>
-              <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">
+              <h1 className="text-2xl font-sans font-bold text-[#1A1A1A] mb-2">
                 Password Protected
               </h1>
               <p className="text-[#1A1A1A]/60">
@@ -117,7 +117,7 @@ export default function SharedReportPage() {
                 <Eye className="w-8 h-8 text-red-500" />
               )}
             </div>
-            <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">
+            <h1 className="text-2xl font-sans font-bold text-[#1A1A1A] mb-2">
               {errorMessage.includes('expired') ? 'Link Expired' : 'View Limit Reached'}
             </h1>
             <p className="text-[#1A1A1A]/60 mb-6">
@@ -140,7 +140,7 @@ export default function SharedReportPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-2">
+          <h1 className="text-2xl font-sans font-bold text-[#1A1A1A] mb-2">
             Report Not Found
           </h1>
           <p className="text-[#1A1A1A]/60 mb-6">{errorMessage}</p>

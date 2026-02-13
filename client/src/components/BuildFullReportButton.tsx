@@ -323,7 +323,7 @@ export function BuildFullReportButton({
         {!shareUrl ? (
           <>
             <DialogHeader>
-              <DialogTitle className="font-serif text-xl">Build Full Property Report</DialogTitle>
+              <DialogTitle className="font-sans text-xl">Build Full Property Report</DialogTitle>
               <DialogDescription>
                 Generate a comprehensive, shareable report combining all analysis data for <strong>{address}</strong>.
               </DialogDescription>
@@ -488,7 +488,7 @@ export function BuildFullReportButton({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="font-serif text-xl">Report Ready!</DialogTitle>
+              <DialogTitle className="font-sans text-xl">Report Ready!</DialogTitle>
               <DialogDescription>
                 Your full property report has been generated. Share this link with your client.
               </DialogDescription>

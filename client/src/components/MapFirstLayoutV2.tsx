@@ -1011,7 +1011,7 @@ export function MapFirstLayoutV2({ className = '', embedded = false, initialLoca
                 <MapPin className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#0F172A]">How does my property compare to nearby competition?</h2>
+                <h2 className="text-2xl md:text-3xl font-sans font-semibold text-[#0F172A]">How does my property compare to nearby competition?</h2>
                 <p className="text-[#0F172A]/60 text-sm font-sans mt-1">
                   See revenue, occupancy, and nightly rates for comparable properties in your market
                 </p>
