@@ -319,12 +319,21 @@ function HeroRevenueCard({
                 <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Net Profit</p>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
-                <p className="text-sm">What you keep after paying rent and all expenses. This is your actual take-home profit.</p>
+                <p className="text-sm">What you keep after paying {mode === 'purchase' ? 'mortgage' : 'rent'} and all expenses. This is your actual take-home profit.</p>
               </TooltipContent>
             </Tooltip>
-            <p className={`text-lg md:text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
-              {formatCurrency(trueMonthlyProfit)}
-            </p>
+            <div className="flex items-baseline gap-2">
+              <p className={`text-lg md:text-xl font-bold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
+                {formatCurrency(trueMonthlyProfit)}
+              </p>
+              <span className={`text-xs font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${isProfitable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>/month</span>
+            </div>
+            <div className={`flex items-baseline gap-2 mt-1.5 pt-1.5 border-t border-dashed ${isProfitable ? 'border-emerald-200' : 'border-red-200'}`}>
+              <p className={`text-base font-semibold ${isProfitable ? 'text-emerald-600' : 'text-red-600'}`}>
+                {formatCurrency(trueMonthlyProfit * 12)}
+              </p>
+              <span className={`text-xs font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${isProfitable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>/year</span>
+            </div>
           </div>
         </div>
         

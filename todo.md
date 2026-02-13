@@ -10958,5 +10958,5 @@ Results:
 - [x] Add beginner-friendly "How to Read This Section" explainer to Competition section
 
 ## Monthly vs Yearly Profit Clarity (Feb 12, 2026)
-- [ ] Fix net profit display in HeroRevenueCard to clearly distinguish monthly vs yearly profit
-- [ ] Ensure users can't mistake the monthly profit number for the yearly profit
+- [x] Fix net profit display in HeroRevenueCard to clearly distinguish monthly vs yearly profit
+- [x] Added /MONTH and /YEAR badges next to profit numbers with clear visual separation
