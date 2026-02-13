@@ -10985,3 +10985,46 @@ Results:
 - [x] Tax section shows purchase-only terms (cost segregation, bonus depreciation) in arbitrage/rent mode — make mode-aware
 - [ ] Add TeslaDashboard-style straightforward revenue presentation to the report (how much does this property make)
 - [x] Fix comp map markers not rendering — root cause: Comparable interface in LeadMagnet.tsx did NOT include latitude/longitude fields, causing coordinates to be dropped when building shareable reports. Fixed by adding lat/lng to Comparable interface, server→LeadMagnet mapping, and TeslaDashboard→shareable report mapping.
+
+## Gemini API Compliance Audit (Feb 12, 2026)
+- [x] Audit all Gemini API usage against gemini-api-dev skill guidelines
+- [x] Check SDK version (should use @google/genai, not deprecated @google/generative-ai)
+- [x] Check model names (should use gemini-3-* not deprecated gemini-2.5-*, gemini-2.0-*, gemini-1.5-*)
+- [x] Check import patterns match new SDK conventions
+- [x] Check structured output usage
+- [x] Check function calling patterns
+- [x] Verify API key handling
+- [x] Report findings to user
+
+## Gemini API Compliance Fixes (Feb 12, 2026)
+### Fix 1: Update deprecated model names to Gemini 3
+- [x] ai-advisor.ts: gemini-2.5-pro → gemini-3-pro-preview
+- [x] ai-advisor-enhanced.ts: gemini-2.5-pro → gemini-3-pro-preview
+- [x] gemini-analyzer.ts: gemini-2.5-pro → gemini-3-pro-preview
+- [x] gemini-analyzer-enhanced.ts: gemini-2.5-pro → gemini-3-pro-preview
+- [x] ai-fallback.ts (Gemini Direct): gemini-2.0-flash → gemini-3-flash-preview
+- [x] ai-fallback.ts (Forge): gemini-2.5-flash → gemini-3-flash-preview
+- [x] gemini-streaming.ts: gemini-2.0-flash → gemini-3-flash-preview
+- [x] newsletter-content-generator.ts: gemini-2.0-flash → gemini-3-flash-preview (3 calls)
+- [x] regulation-tracker.ts: gemini-2.5-flash → gemini-3-flash-preview
+### Fix 2: Add thinkingConfig to direct API calls
+- [x] ai-advisor.ts: add thinkingConfig high
+- [x] ai-advisor-enhanced.ts: add thinkingConfig high (not needed, no direct fetch — uses ai-advisor's calls)
+- [x] gemini-analyzer.ts: add thinkingConfig high
+- [x] gemini-analyzer-enhanced.ts: add thinkingConfig high
+- [x] ai-fallback.ts: add thinkingConfig medium
+- [x] regulation-tracker.ts: add thinkingConfig medium
+### Fix 3: Migrate deprecated SDK (@google/generative-ai → REST API)
+- [x] gemini-streaming.ts: rewrite to use fetch() REST API instead of deprecated SDK
+- [x] newsletter-content-generator.ts: rewrite to use fetch() REST API instead of deprecated SDK
+### Fix 4: Standardize API key access
+- [x] gemini-streaming.ts: change process.env.GEMINI_API_KEY to ENV.geminiApiKey
+- [x] newsletter-content-generator.ts: change process.env.GEMINI_API_KEY to ENV.geminiApiKey
+### Fix 5: Use native systemInstruction
+- [x] gemini-streaming.ts: replace fake user/model pairs with systemInstruction field
+- [x] regulation-tracker.ts: replace fake user/model pairs with systemInstruction field
+### Fix 6: Remove deprecated dependency
+- [x] Remove @google/generative-ai from package.json
+### Fix 7: Testing
+- [x] Run full test suite — all 1073 tests pass across 82 files
+- [x] Verify TypeScript compilation — zero errors

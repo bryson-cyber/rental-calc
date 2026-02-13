@@ -208,10 +208,10 @@ async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<
         generationConfig: {
           temperature,
           maxOutputTokens: options?.maxTokens ?? 8192,
-        },
-        // Gemini 3 thinking configuration for advanced reasoning
-        thinkingConfig: {
-          thinkingLevel
+          // Gemini 3 thinking configuration for advanced reasoning
+          thinkingConfig: {
+            thinkingLevel
+          }
         }
       }),
       signal: controller.signal

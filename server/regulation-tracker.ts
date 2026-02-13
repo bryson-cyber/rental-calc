@@ -603,17 +603,10 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
-  const requestBody = {
+  const requestBody: Record<string, unknown> = {
     contents: [
-      ...(systemPrompt ? [{
-        role: "user",
-        parts: [{ text: `System instruction: ${systemPrompt}` }]
-      }, {
-        role: "model",
-        parts: [{ text: "Understood. I will follow these instructions." }]
-      }] : []),
       {
         role: "user",
         parts: [{ text: prompt }]
@@ -623,10 +616,20 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
       google_search: {}
     }],
     generationConfig: {
-      temperature: 0.1,
+      temperature: 0.3,
       maxOutputTokens: 8192,
+      thinkingConfig: {
+        thinkingLevel: 'medium'
+      }
     }
   };
+
+  // Use native systemInstruction instead of fake user/model pairs
+  if (systemPrompt) {
+    requestBody.systemInstruction = {
+      parts: [{ text: systemPrompt }]
+    };
+  }
 
   const response = await fetch(url, {
     method: "POST",

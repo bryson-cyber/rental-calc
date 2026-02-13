@@ -12,7 +12,7 @@
 
 import { ENV } from './_core/env';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
 
 // ============================================
 // CACHING LAYER
@@ -109,8 +109,11 @@ async function callGeminiWithRetry(
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 1.0,
             maxOutputTokens: maxTokens,
+            thinkingConfig: {
+              thinkingLevel: 'high'
+            }
           }
         }),
         signal: controller.signal

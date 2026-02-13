@@ -218,7 +218,7 @@ async function generateWithForge(
         'Authorization': `Bearer ${ENV.forgeApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         messages: [
           { role: 'system', content: 'You are a senior STR investment analyst providing objective market analysis.' },
           { role: 'user', content: prompt }
@@ -248,7 +248,7 @@ async function generateWithForge(
 }
 
 // Provider 2: Gemini Direct
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 async function generateWithGeminiDirect(
   prompt: string, 
@@ -266,7 +266,7 @@ async function generateWithGeminiDirect(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+        generationConfig: { temperature: 1.0, maxOutputTokens: 1024, thinkingConfig: { thinkingLevel: 'medium' } }
       }),
       signal: controller.signal
     });

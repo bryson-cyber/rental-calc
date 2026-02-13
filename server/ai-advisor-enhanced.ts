@@ -27,7 +27,7 @@ import {
 } from './airdna';
 import { makeRequest, GeocodingResult } from './_core/map';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
 
 // ============================================
 // ENHANCED FUNCTION DECLARATIONS

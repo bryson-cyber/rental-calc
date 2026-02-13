@@ -22,7 +22,7 @@ import { makeRequest, GeocodingResult } from './_core/map';
 import { ENHANCED_TOOLS, executeEnhancedFunction, executeAdditionalFunction, executeDealFunction } from './ai-advisor-enhanced';
 import { SOPReports, generateFullArbitrageAnalysis } from './sop-reports';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';  // Upgraded from 2.0-flash for better quality
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent';  // Gemini 3 Pro for complex reasoning
 
 // Define the tools/functions that Gemini can call
 const AVAILABLE_TOOLS = {
@@ -2575,8 +2575,11 @@ After EVERY metric, add "What This Means:" explanation.
         tools: [AVAILABLE_TOOLS],
         systemInstruction: { parts: [{ text: systemInstruction }] },
         generationConfig: {
-          temperature: 0.7,
+          temperature: 1.0,
           maxOutputTokens: 8192,
+          thinkingConfig: {
+            thinkingLevel: 'high'
+          }
         }
       })
     });
@@ -2643,8 +2646,11 @@ After EVERY metric, add "What This Means:" explanation.
           tools: [AVAILABLE_TOOLS],
           systemInstruction: { parts: [{ text: systemInstruction }] },
           generationConfig: {
-            temperature: 0.7,
+            temperature: 1.0,
             maxOutputTokens: 8192,
+            thinkingConfig: {
+              thinkingLevel: 'high'
+            }
           }
         })
       });

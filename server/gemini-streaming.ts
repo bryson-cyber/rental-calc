@@ -1,45 +1,28 @@
 /**
  * Gemini Streaming Integration for AI Chat
  * 
- * Provides real-time streaming responses using Google's Gemini API
+ * Provides real-time streaming responses using Google's Gemini 3 API
  * with Server-Sent Events (SSE) for the frontend.
+ * 
+ * GEMINI 3 COMPLIANT:
+ * - Model: gemini-3-flash-preview for fast chat responses
+ * - Uses REST API with fetch() (no deprecated SDK)
+ * - Uses native systemInstruction field
+ * - Uses thinkingConfig for improved reasoning
+ * - API key via ENV.geminiApiKey (centralized)
  */
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { ENV } from './_core/env';
 
-// Initialize the Gemini client with API key from environment
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// Model configuration - using Gemini 2.0 Flash (latest fast model)
-const MODEL_NAME = 'gemini-2.0-flash';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview';
 
 // Safety settings - allow all content for business analysis
 const safetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
 ];
-
-// Generation config optimized for chat
-const generationConfig = {
-  temperature: 0.7,
-  topK: 40,
-  topP: 0.95,
-  maxOutputTokens: 2048,
-};
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -55,99 +38,135 @@ export interface StreamingChatOptions {
 }
 
 /**
- * Build chat history in Gemini format
+ * Build chat contents in Gemini format, extracting system messages into systemInstruction
  */
-function buildChatHistory(messages: ChatMessage[], systemPrompt?: string) {
-  const history: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
-  
-  // Add system prompt as the first user message if provided
+function buildRequestBody(messages: ChatMessage[], systemPrompt?: string) {
+  // Collect all system-level instructions
+  const systemParts: string[] = [];
   if (systemPrompt) {
-    history.push({
-      role: 'user',
-      parts: [{ text: `System Instructions: ${systemPrompt}\n\nPlease acknowledge you understand these instructions and will follow them.` }],
-    });
-    history.push({
-      role: 'model',
-      parts: [{ text: 'I understand and will follow these instructions. I am Coach Inayah\'s AI assistant, trained on rental arbitrage methodology and ready to help with property analysis.' }],
-    });
+    systemParts.push(systemPrompt);
   }
 
-  // Convert messages to Gemini format
+  // Build contents array (user/model turns only)
+  const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+
   for (const msg of messages) {
     if (msg.role === 'system') {
-      // System messages become user messages with context
-      history.push({
-        role: 'user',
-        parts: [{ text: `Context: ${msg.content}` }],
-      });
-      history.push({
-        role: 'model',
-        parts: [{ text: 'I\'ve noted this context and will use it in my responses.' }],
-      });
+      // System messages go into systemInstruction, not as fake user/model pairs
+      systemParts.push(msg.content);
     } else if (msg.role === 'user') {
-      history.push({
+      contents.push({
         role: 'user',
         parts: [{ text: msg.content }],
       });
     } else if (msg.role === 'assistant') {
-      history.push({
+      contents.push({
         role: 'model',
         parts: [{ text: msg.content }],
       });
     }
   }
 
-  return history;
+  const body: Record<string, unknown> = {
+    contents,
+    safetySettings,
+    generationConfig: {
+      temperature: 1.0,
+      maxOutputTokens: 2048,
+      thinkingConfig: {
+        thinkingLevel: 'medium'
+      }
+    }
+  };
+
+  // Use native systemInstruction field instead of fake user/model pairs
+  if (systemParts.length > 0) {
+    body.systemInstruction = {
+      parts: [{ text: systemParts.join('\n\n') }]
+    };
+  }
+
+  return body;
 }
 
 /**
- * Stream a chat response from Gemini
+ * Stream a chat response from Gemini using REST API with streaming
  */
 export async function streamGeminiChat(options: StreamingChatOptions): Promise<void> {
   const { messages, systemPrompt, onChunk, onComplete, onError } = options;
   
   try {
-    // Get the model
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      safetySettings,
-      generationConfig,
-    });
+    const apiKey = ENV.geminiApiKey;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
 
-    // Build the conversation history
-    const history = buildChatHistory(messages, systemPrompt);
-    
-    // The last message should be from the user
     const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-    
     if (!lastUserMessage) {
       throw new Error('No user message found in conversation');
     }
 
-    // Start a chat session with history (excluding the last user message)
-    const chatHistory = history.slice(0, -1);
-    
-    const chat = model.startChat({
-      history: chatHistory.length > 0 ? chatHistory : undefined,
-    });
+    const body = buildRequestBody(messages, systemPrompt);
 
-    // Send the message and stream the response
-    const result = await chat.sendMessageStream(lastUserMessage.content);
-    
+    // Use streamGenerateContent endpoint for streaming
+    const response = await fetch(
+      `${GEMINI_API_URL}:streamGenerateContent?alt=sse&key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('No response body for streaming');
+    }
+
     let fullResponse = '';
-    
-    // Process the stream
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      if (chunkText) {
-        fullResponse += chunkText;
-        onChunk(chunkText);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process SSE events from the buffer
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === '[DONE]') continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const text = data.candidates?.[0]?.content?.parts
+              ?.filter((p: { text?: string }) => p.text)
+              ?.map((p: { text: string }) => p.text)
+              ?.join('') || '';
+            
+            if (text) {
+              fullResponse += text;
+              onChunk(text);
+            }
+          } catch {
+            // Skip malformed JSON chunks
+          }
+        }
       }
     }
-    
-    // Call onComplete with the full response
+
     onComplete(fullResponse);
-    
+
   } catch (error) {
     console.error('[Gemini Streaming] Error:', error);
     onError(error instanceof Error ? error : new Error('Unknown streaming error'));
@@ -159,31 +178,38 @@ export async function streamGeminiChat(options: StreamingChatOptions): Promise<v
  */
 export async function geminiChat(messages: ChatMessage[], systemPrompt?: string): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      safetySettings,
-      generationConfig,
-    });
+    const apiKey = ENV.geminiApiKey;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
 
-    const history = buildChatHistory(messages, systemPrompt);
     const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-    
     if (!lastUserMessage) {
       throw new Error('No user message found in conversation');
     }
 
-    const chatHistory = history.slice(0, -1);
-    
-    const chat = model.startChat({
-      history: chatHistory.length > 0 ? chatHistory : undefined,
-    });
+    const body = buildRequestBody(messages, systemPrompt);
 
-    const result = await chat.sendMessage(lastUserMessage.content);
-    return result.response.text();
-    
+    const response = await fetch(
+      `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
   } catch (error) {
     console.error('[Gemini Chat] Error:', error);
-    
+
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
         return 'I apologize, but I\'m having trouble connecting to my AI service. Please try again in a moment.';
@@ -192,7 +218,7 @@ export async function geminiChat(messages: ChatMessage[], systemPrompt?: string)
         return 'I\'m receiving a lot of questions right now. Please wait a moment and try again.';
       }
     }
-    
+
     return 'I apologize, but I encountered an error processing your question. Please try rephrasing or ask something else.';
   }
 }
@@ -202,9 +228,26 @@ export async function geminiChat(messages: ChatMessage[], systemPrompt?: string)
  */
 export async function checkGeminiHealth(): Promise<boolean> {
   try {
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-    const result = await model.generateContent('Say "OK" if you can hear me.');
-    return result.response.text().toLowerCase().includes('ok');
+    const apiKey = ENV.geminiApiKey;
+    if (!apiKey) return false;
+
+    const response = await fetch(
+      `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Say "OK" if you can hear me.' }] }],
+          generationConfig: { maxOutputTokens: 10 }
+        }),
+      }
+    );
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return text.toLowerCase().includes('ok');
   } catch {
     return false;
   }

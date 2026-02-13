@@ -1,17 +1,24 @@
 /**
  * Newsletter Content Generator
  * 
- * Uses Gemini AI to generate personalized, engaging newsletter content
+ * Uses Gemini 3 AI to generate personalized, engaging newsletter content
  * for market intelligence and deal alerts.
+ * 
+ * GEMINI 3 COMPLIANT:
+ * - Model: gemini-3-flash-preview for fast content generation
+ * - Uses REST API with fetch() (no deprecated SDK)
+ * - Uses native systemInstruction field
+ * - Uses thinkingConfig for improved reasoning
+ * - API key via ENV.geminiApiKey (centralized)
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ENV } from './_core/env';
 import type { MarketSnapshot } from './newsletter-market-data';
 import type { RentalDeal } from './newsletter-deal-finder';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
-interface NewsletterContent {
+export interface NewsletterContent {
   subject: string;
   preheader: string;
   greeting: string;
@@ -29,13 +36,49 @@ interface ContactInfo {
 }
 
 /**
- * Initialize Gemini client
+ * Call Gemini 3 API with structured JSON output
  */
-function getGeminiClient() {
-  if (!GEMINI_API_KEY) {
+async function callGeminiForJson<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number = 0.7
+): Promise<T> {
+  const apiKey = ENV.geminiApiKey;
+  if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
-  return new GoogleGenerativeAI(GEMINI_API_KEY);
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature,
+        maxOutputTokens: 2048,
+        thinkingConfig: {
+          thinkingLevel: 'medium'
+        }
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('Empty response from Gemini');
+  }
+
+  return JSON.parse(text) as T;
 }
 
 /**
@@ -46,12 +89,11 @@ export async function generateWeeklyMarketNewsletter(params: {
   marketSnapshot: MarketSnapshot;
   toolUrl: string;
 }): Promise<NewsletterContent> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  
   const { contact, marketSnapshot, toolUrl } = params;
-  
-  const prompt = `You are Coach Inayah's AI assistant, writing a personalized weekly market intelligence email for someone interested in Airbnb arbitrage in ${contact.city}, ${marketSnapshot.state}.
+
+  const systemPrompt = `You are Coach Inayah's AI assistant, writing personalized weekly market intelligence emails for people interested in Airbnb arbitrage. Your tone is friendly, knowledgeable, and encouraging - like a mentor sharing insider info with a friend.`;
+
+  const userPrompt = `Write a weekly market intelligence email for this recipient:
 
 RECIPIENT INFO:
 - Name: ${contact.firstName} ${contact.lastName}
@@ -79,7 +121,6 @@ Write an engaging, conversational email that:
 5. Includes a soft CTA to explore the free tool for more details
 6. Signs off as "Coach Inayah's Team"
 
-TONE: Friendly, knowledgeable, encouraging - like a mentor sharing insider info with a friend.
 LENGTH: Keep it concise - 150-200 words max for the main content.
 
 Output as JSON with these fields:
@@ -93,21 +134,10 @@ Output as JSON with these fields:
 }`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.7
-      }
-    });
-    
-    const responseText = result.response.text();
-    const content = JSON.parse(responseText) as NewsletterContent;
-    
-    return content;
+    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.7);
   } catch (error) {
     console.error('[Newsletter] Error generating weekly content:', error);
-    
+
     // Fallback content
     return {
       subject: `📊 ${contact.city} Market Update - Your Weekly Airbnb Intel`,
@@ -133,11 +163,8 @@ export async function generateDealAlertNewsletter(params: {
   marketSnapshot?: MarketSnapshot;
   toolUrl: string;
 }): Promise<NewsletterContent> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  
   const { contact, deals, marketSnapshot, toolUrl } = params;
-  
+
   // Format deals for the prompt
   const dealsText = deals.slice(0, 3).map((deal, i) => `
 DEAL ${i + 1}:
@@ -149,17 +176,12 @@ DEAL ${i + 1}:
 - Profit Margin: ${Math.round(deal.profitMargin * 100)}%
 - Deal Score: ${deal.dealScore}/100 (Grade ${deal.dealGrade})
 `).join('\n');
-  
-  // Calculate the best deal's profit for context
-  const topDeal = deals[0];
-  const profitDisplay = topDeal.monthlyProfit > 0 ? `$${topDeal.monthlyProfit.toLocaleString()}/mo profit` : `$${topDeal.projectedMonthlyRevenue.toLocaleString()}/mo revenue`;
-  
-  const prompt = `You are writing a personalized deal alert email from Coach Inayah's team to someone interested in Airbnb rental arbitrage.
 
-IMPORTANT CONTEXT:
-- Coach Inayah helps people start Airbnb businesses through rental arbitrage (renting a property and listing it on Airbnb for profit)
-- The Turnkey Program is our done-for-you service where we handle EVERYTHING: finding properties, negotiating with landlords, setting up and designing the property, furnishing it, creating the Airbnb listing, and automating operations
-- This email is meant to excite them about a real opportunity we found in their target market
+  const topDeal = deals[0];
+
+  const systemPrompt = `You are writing personalized deal alert emails from Coach Inayah's team to people interested in Airbnb rental arbitrage. Coach Inayah helps people start Airbnb businesses through rental arbitrage (renting a property and listing it on Airbnb for profit). The Turnkey Program is a done-for-you service that handles everything: finding properties, negotiating with landlords, setting up and designing the property, furnishing it, creating the Airbnb listing, and automating operations. Your tone is conversational and warm, like a knowledgeable friend sharing an opportunity. Be confident but not arrogant, helpful and educational, not salesy.`;
+
+  const userPrompt = `Write a deal alert email for this recipient:
 
 RECIPIENT:
 - First Name: ${contact.firstName}
@@ -184,12 +206,6 @@ WRITING GUIDELINES:
 7. Mention that the Turnkey Program handles everything: finding deals, landlord negotiation, property setup, design, furnishing, listing creation, and automation
 8. End with a clear next step (view the full analysis or book a call)
 
-TONE:
-- Conversational and warm, like a knowledgeable friend sharing an opportunity
-- Confident but not arrogant
-- Helpful and educational, not salesy
-- Use "I" and "we" naturally ("I found this property..." "My team can help...")
-
 LENGTH: 120-180 words for main content. Quality over brevity.
 
 Output as JSON:
@@ -198,28 +214,15 @@ Output as JSON:
   "preheader": "Preview text that creates curiosity (50 chars max)",
   "greeting": "Warm personalized greeting with their name",
   "mainContent": "The main email body. Use \\n\\n for paragraph breaks. Be conversational and specific about the numbers.",
-  "callToAction": "Clear next step with the tool URL",
+  "callToAction": "Clear next step with the tool URL: ${toolUrl}",
   "footer": "Warm sign-off from Coach Inayah's Team"
 }`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.8
-      }
-    });
-    
-    const responseText = result.response.text();
-    const content = JSON.parse(responseText) as NewsletterContent;
-    
-    return content;
+    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.8);
   } catch (error) {
     console.error('[Newsletter] Error generating deal alert content:', error);
-    
-    const topDeal = deals[0];
-    
+
     // Fallback content
     return {
       subject: `🔥 Hot Deal Alert: $${topDeal.monthlyProfit.toLocaleString()}/mo profit potential in ${contact.city}!`,
@@ -249,16 +252,15 @@ export async function generateMonthlyReportNewsletter(params: {
   topDeals: RentalDeal[];
   toolUrl: string;
 }): Promise<NewsletterContent> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  
   const { contact, marketSnapshot, dealsFoundThisMonth, topDeals, toolUrl } = params;
-  
-  const topDealsText = topDeals.slice(0, 3).map((deal, i) => 
+
+  const topDealsText = topDeals.slice(0, 3).map((deal, i) =>
     `${i + 1}. ${deal.address} - $${deal.monthlyProfit.toLocaleString()}/mo profit (Grade ${deal.dealGrade})`
   ).join('\n');
-  
-  const prompt = `You are Coach Inayah's AI assistant, writing a monthly market report email for someone interested in Airbnb arbitrage in ${contact.city}, ${contact.state}.
+
+  const systemPrompt = `You are Coach Inayah's AI assistant, writing monthly market report emails for people interested in Airbnb arbitrage. Your tone is professional but warm - like a monthly check-in from a trusted advisor.`;
+
+  const userPrompt = `Write a monthly market report email for this recipient:
 
 RECIPIENT INFO:
 - Name: ${contact.firstName} ${contact.lastName}
@@ -290,7 +292,6 @@ Write a comprehensive but engaging monthly report email that:
 5. CTAs to explore the market further
 6. Signs off as "Coach Inayah's Team"
 
-TONE: Professional but warm - like a monthly check-in from a trusted advisor.
 LENGTH: 200-250 words for main content.
 
 Output as JSON with these fields:
@@ -304,21 +305,10 @@ Output as JSON with these fields:
 }`;
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.6
-      }
-    });
-    
-    const responseText = result.response.text();
-    const content = JSON.parse(responseText) as NewsletterContent;
-    
-    return content;
+    return await callGeminiForJson<NewsletterContent>(systemPrompt, userPrompt, 0.6);
   } catch (error) {
     console.error('[Newsletter] Error generating monthly report content:', error);
-    
+
     // Fallback content
     return {
       subject: `📈 Your ${contact.city} Monthly Market Report`,
@@ -349,10 +339,10 @@ export function generateEmailHtml(content: NewsletterContent, options?: {
   const brandColor = options?.brandColor || '#C9A962';
   const logoUrl = options?.logoUrl || 'https://coachinayah.com/logo.png';
   const unsubscribeUrl = options?.unsubscribeUrl || '#';
-  
+
   // Convert newlines to <br> tags
   const mainContentHtml = content.mainContent.replace(/\n/g, '<br>');
-  
+
   return `
 <!DOCTYPE html>
 <html>
@@ -369,47 +359,39 @@ export function generateEmailHtml(content: NewsletterContent, options?: {
           <!-- Header -->
           <tr>
             <td style="background-color: #0F172A; padding: 24px; text-align: center;">
-              <img src="${logoUrl}" alt="Coach Inayah" style="height: 40px; width: auto;">
+              <img src="${logoUrl}" alt="Coach Inayah" style="max-width: 180px; height: auto;" />
             </td>
           </tr>
-          
           <!-- Content -->
           <tr>
-            <td style="padding: 32px;">
-              <p style="font-size: 18px; color: #0F172A; margin: 0 0 16px 0;">
+            <td style="padding: 32px 24px;">
+              <p style="font-size: 18px; font-weight: 600; color: #0F172A; margin: 0 0 16px 0;">
                 ${content.greeting}
               </p>
-              
-              <div style="font-size: 16px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
+              <div style="font-size: 15px; line-height: 1.6; color: #374151; margin: 0 0 24px 0;">
                 ${mainContentHtml}
               </div>
-              
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
+              <table cellpadding="0" cellspacing="0" style="margin: 24px 0;">
                 <tr>
-                  <td align="center" style="padding: 16px 0;">
-                    <a href="${content.callToAction.includes('http') ? content.callToAction.match(/https?:\/\/[^\s]+/)?.[0] || '#' : '#'}" 
-                       style="display: inline-block; background-color: ${brandColor}; color: #0F172A; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                      ${content.callToAction.replace(/https?:\/\/[^\s]+/, '').trim() || 'Explore Now'}
+                  <td style="background-color: ${brandColor}; border-radius: 8px; padding: 14px 28px;">
+                    <a href="#" style="color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
+                      ${content.callToAction}
                     </a>
                   </td>
                 </tr>
               </table>
-              
-              <!-- Footer -->
-              <p style="font-size: 16px; color: #374151; margin: 24px 0 0 0; white-space: pre-line;">
-                ${content.footer}
+              <p style="font-size: 14px; color: #6B7280; margin: 24px 0 0 0; line-height: 1.5;">
+                ${content.footer.replace(/\n/g, '<br>')}
               </p>
             </td>
           </tr>
-          
-          <!-- Email Footer -->
+          <!-- Footer -->
           <tr>
-            <td style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="font-size: 12px; color: #6b7280; margin: 0;">
-                Powered by Coach Inayah Market Data<br>
-                <a href="${unsubscribeUrl}" style="color: #6b7280;">Unsubscribe</a> | 
-                <a href="https://coachinayah.com" style="color: #6b7280;">Visit Website</a>
+            <td style="background-color: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="font-size: 12px; color: #9CA3AF; margin: 0;">
+                You're receiving this because you used Coach Inayah's Rental Revenue Calculator.
+                <br>
+                <a href="${unsubscribeUrl}" style="color: #9CA3AF; text-decoration: underline;">Unsubscribe</a>
               </p>
             </td>
           </tr>
@@ -418,8 +400,5 @@ export function generateEmailHtml(content: NewsletterContent, options?: {
     </tr>
   </table>
 </body>
-</html>
-  `.trim();
+</html>`;
 }
-
-export type { NewsletterContent, ContactInfo };
