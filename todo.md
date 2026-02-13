@@ -11029,11 +11029,11 @@ Results:
 - [x] Run full test suite — all 1073 tests pass across 82 files
 - [x] Verify TypeScript compilation — zero errors
 
-## Gemini 3 Live Smoke Tests
-- [ ] Test property analysis (gemini.ts) with real address via dev server
-- [ ] Test AI Advisor chat streaming (gemini-streaming.ts) via dev server
-- [ ] Test regulation tracker with Google Search grounding
-- [ ] Test AI fallback path (ai-fallback.ts)
+## Gemini 3 Live Smoke Tests (Feb 12, 2026)
+- [x] Test property analysis (gemini.ts) with real address via dev server — PASS, 57KB response, real AirDNA data, no thinking parts
+- [x] Test AI Advisor chat (ai-advisor.ts) — PASS, detailed market analysis, no thinking parts
+- [x] Test regulation tracker with Google Search grounding — PASS, real Atlanta GA data, no thinking parts
+- [x] Test AI Advisor follow-up — PASS, 2x rule framework response, no thinking parts
 
 ## Gemini API Deep Audit & PTCF Prompt Optimization (Feb 12, 2026)
 - [x] Fetch official Gemini API docs for structured output, function calling, thinking
