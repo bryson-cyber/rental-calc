@@ -1750,6 +1750,25 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
           )}
 
+          {/* Beginner-friendly explainer */}
+          <div className="bg-gradient-to-r from-[#eff6ff] to-[#dbeafe] rounded-2xl border border-[#3b82f6]/20 p-5 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#3b82f6]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sm">💡</span>
+              </div>
+              <div>
+                <p className="font-semibold text-[#1e40af] text-sm mb-1">How to Read This Section</p>
+                <p className="text-sm text-[#1e3a5f]/80 leading-relaxed">
+                  The table below shows <strong>real Airbnb listings near your property</strong> with the same number of bedrooms. 
+                  They are ranked by <strong>Revenue</strong> (how much they earned last year). 
+                  <strong>ADR</strong> is the average nightly price, and <strong>Occupancy</strong> is how often they were booked. 
+                  Click any column header to re-sort. Click a row to highlight it on the map. 
+                  Use the checkboxes to include or exclude specific comps from the summary stats.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Comps Table */}
           <div ref={compTableRef} className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden mb-8">
             <div className="overflow-x-auto">

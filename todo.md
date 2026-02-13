@@ -10953,3 +10953,10 @@ Results:
 - [x] Stress test section: redesigned with beginner-friendly explainer, color legend, clearer labels ("X% booked", "$X/night"), "YOUR RATE" / "YOUR OCC." markers, and "What This Means" summary cards
 - [x] Comp placeholder images: removed gray building icon placeholders, comp table now shows just property name and details
 - [x] Supply trend chart: removed the non-dynamic SVG mountain chart, kept summary stats (Current Listings, Change %) and text insight
+
+## Competition Section Explainer (Feb 12, 2026)
+- [x] Add beginner-friendly "How to Read This Section" explainer to Competition section
+
+## Monthly vs Yearly Profit Clarity (Feb 12, 2026)
+- [ ] Fix net profit display in HeroRevenueCard to clearly distinguish monthly vs yearly profit
+- [ ] Ensure users can't mistake the monthly profit number for the yearly profit
