@@ -1,342 +1,574 @@
-import { useState, useCallback } from "react";
+/**
+ * SendToSlack Admin Component
+ * 
+ * Allows admin to:
+ * 1. Search and select a Slack channel from the workspace
+ * 2. Pick an existing property report (Step 5 or Universal Shareable)
+ * 3. Generate an AI deal summary via Gemini
+ * 4. Send the report link + deal summary to the selected channel
+ */
+
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Send, 
-  Plus, 
-  Trash2, 
-  Loader2, 
-  CheckCircle, 
-  AlertCircle,
-  Hash,
-  MapPin,
-  MessageSquare,
-  ExternalLink
-} from "lucide-react";
 import { toast } from "sonner";
+import {
+  Search,
+  Hash,
+  Send,
+  Sparkles,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  Building,
+  Calendar,
+  DollarSign,
+  ExternalLink,
+  X,
+  MessageSquare,
+} from "lucide-react";
+
+// ============================================
+// TYPES
+// ============================================
 
 interface SlackChannel {
   id: string;
   name: string;
-  topic?: string;
+  purpose?: string;
+  created?: string;
 }
 
-// Pre-configured channels from the workspace
-const DEFAULT_CHANNELS: SlackChannel[] = [
-  { id: "C07USEEKPNK", name: "cape-coral-property-management" },
-  { id: "C07S7FBPC5U", name: "stl-property-management" },
-  { id: "C07V45JGHE1", name: "austin-tx-property-management" },
-  { id: "C082TEM4W6M", name: "property-issue-tracking" },
-  { id: "C08DV0XTZ1D", name: "bilaal-properties" },
-  { id: "C049W2T8MUG", name: "general" },
-  { id: "C072UDB1ML7", name: "general-coachinayah-management" },
-  { id: "C0981C9RK8R", name: "app-to-slack-migration" },
-];
+interface ReportItem {
+  id: number;
+  shareCode: string;
+  reportType: string;
+  address: string | null;
+  bedrooms: number | null;
+  bathrooms: string | null;
+  title: string | null;
+  annualRevenue: number | null;
+  occupancyRate: string | null;
+  averageDailyRate: number | null;
+  verdict: string | null;
+  createdAt: string | null;
+  source: "shared" | "universal";
+  shareUrl: string;
+}
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function SendToSlack() {
-  const [selectedChannel, setSelectedChannel] = useState("");
-  const [address, setAddress] = useState("");
-  const [bedrooms, setBedrooms] = useState(2);
-  const [bathrooms, setBathrooms] = useState(1);
-  const [customMessage, setCustomMessage] = useState("");
-  const [customChannelId, setCustomChannelId] = useState("");
-  const [customChannelName, setCustomChannelName] = useState("");
-  const [showCustomChannel, setShowCustomChannel] = useState(false);
-  const [lastResult, setLastResult] = useState<{
-    success: boolean;
-    address?: string;
-    channelName?: string;
-    estimate?: { annual_revenue: number; monthly_revenue: number; adr: number; occupancy: number };
-    error?: string;
-    preview?: any;
-  } | null>(null);
+  // --- State ---
+  const [channelSearch, setChannelSearch] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState<SlackChannel | null>(null);
+  const [showChannelDropdown, setShowChannelDropdown] = useState(false);
 
-  const sendReport = trpc.slackAdmin.sendReport.useMutation({
+  const [reportSearch, setReportSearch] = useState("");
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+
+  const [dealSummary, setDealSummary] = useState("");
+  const [customMessage, setCustomMessage] = useState("");
+  const [sent, setSent] = useState(false);
+  const [sentPermalink, setSentPermalink] = useState<string | null>(null);
+
+  // --- Queries ---
+  const channelsQuery = trpc.slackAdmin.searchChannels.useQuery(
+    { query: channelSearch || "a" },
+    { enabled: channelSearch.length > 0 || showChannelDropdown, staleTime: 10000 }
+  );
+
+  const reportsQuery = trpc.slackAdmin.getReports.useQuery(
+    { search: reportSearch || undefined, limit: 20 },
+    { staleTime: 5000 }
+  );
+
+  // --- Mutations ---
+  const generateSummaryMutation = trpc.slackAdmin.generateSummary.useMutation({
     onSuccess: (data) => {
-      setLastResult(data);
-      if (data.success) {
-        toast.success(`Revenue estimate for ${data.address} posted to #${data.channelName || selectedChannel}`);
-      } else {
-        toast.error(data.error || "No webhook URL configured. See preview below.");
-      }
+      setDealSummary(data.summary);
+      toast.success("Deal summary generated");
     },
-    onError: (error) => {
-      setLastResult({ success: false, error: error.message });
-      toast.error(error.message);
+    onError: (err) => {
+      toast.error(`Failed to generate summary: ${err.message}`);
     },
   });
 
-  const getChannelId = useCallback(() => {
-    if (showCustomChannel) return customChannelId;
-    return selectedChannel;
-  }, [showCustomChannel, customChannelId, selectedChannel]);
+  const sendReportMutation = trpc.slackAdmin.sendReport.useMutation({
+    onSuccess: (data) => {
+      setSent(true);
+      setSentPermalink(data.permalink || null);
+      toast.success(`Report sent to #${data.channelName || selectedChannel?.name}`);
+    },
+    onError: (err) => {
+      toast.error(`Failed to send: ${err.message}`);
+    },
+  });
 
-  const getChannelName = useCallback(() => {
-    if (showCustomChannel) return customChannelName;
-    const ch = DEFAULT_CHANNELS.find(c => c.id === selectedChannel);
-    return ch?.name || "";
-  }, [showCustomChannel, customChannelName, selectedChannel]);
+  // --- Handlers ---
+  const handleGenerateSummary = () => {
+    if (!selectedReport) return;
+    
+    generateSummaryMutation.mutate({
+      address: selectedReport.address || "Unknown",
+      bedrooms: selectedReport.bedrooms || undefined,
+      bathrooms: selectedReport.bathrooms ? parseFloat(selectedReport.bathrooms) : undefined,
+      annualRevenue: selectedReport.annualRevenue || undefined,
+      occupancyRate: selectedReport.occupancyRate ? parseFloat(selectedReport.occupancyRate) : undefined,
+      averageDailyRate: selectedReport.averageDailyRate || undefined,
+      verdict: selectedReport.verdict || undefined,
+      reportType: selectedReport.reportType,
+    });
+  };
 
   const handleSend = () => {
-    const channelId = getChannelId();
-    const channelName = getChannelName();
+    if (!selectedChannel || !selectedReport || !dealSummary) return;
 
-    if (!channelId) {
-      toast.error("Choose a Slack channel to send the report to.");
-      return;
-    }
-    if (!address || address.length < 5) {
-      toast.error("Provide a full property address to analyze.");
-      return;
-    }
-
-    sendReport.mutate({
-      channelId,
-      channelName,
-      address,
-      bedrooms,
-      bathrooms,
-      customMessage: customMessage.trim() || undefined,
+    sendReportMutation.mutate({
+      channelId: selectedChannel.id,
+      channelName: selectedChannel.name,
+      shareCode: selectedReport.shareCode,
+      reportSource: selectedReport.source,
+      address: selectedReport.address || "Unknown",
+      dealSummary,
+      customMessage: customMessage || undefined,
     });
   };
 
   const handleReset = () => {
-    setAddress("");
-    setBedrooms(2);
-    setBathrooms(1);
+    setSelectedChannel(null);
+    setSelectedReport(null);
+    setDealSummary("");
     setCustomMessage("");
-    setLastResult(null);
+    setSent(false);
+    setSentPermalink(null);
+    setChannelSearch("");
+    setReportSearch("");
   };
 
+  // --- Derived ---
+  const channels = channelsQuery.data?.channels || [];
+  const reports = reportsQuery.data?.reports || [];
+  const canSend = selectedChannel && selectedReport && dealSummary.trim().length > 0;
+  const isSending = sendReportMutation.isPending;
+
+  // Format helpers
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+
+  const formatDate = (dateStr: string | Date) =>
+    new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  const reportTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      full: "Full Report",
+      property: "Property",
+      market: "Market",
+      revenue: "Revenue",
+      validator: "Validator",
+      ai_advisor: "AI Advisor",
+      listings: "Listings",
+      comparison: "Comparison",
+      map: "Map",
+      regulation: "Regulation",
+    };
+    return labels[type] || type;
+  };
+
+  // --- Success State ---
+  if (sent) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-[#1e293b] border-green-500/30">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center gap-4 py-8">
+              <div className="w-16 h-16 rounded-full bg-green-900/30 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-green-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-1">Report Sent Successfully</h3>
+                <p className="text-white/70">
+                  Sent to <span className="font-medium text-[#C9A962]">#{selectedChannel?.name}</span>
+                </p>
+                <p className="text-sm text-white/50 mt-1">{selectedReport?.address}</p>
+              </div>
+              {sentPermalink && (
+                <a
+                  href={sentPermalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-[#C9A962] hover:text-[#b8963f] underline"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View in Slack
+                </a>
+              )}
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                className="mt-4 border-[#334155] text-white/70 hover:text-white hover:bg-[#334155]"
+              >
+                Send Another Report
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // --- Main UI ---
   return (
     <div className="space-y-6">
-      {/* Send Report Card */}
+      {/* Step 1: Select Channel */}
       <Card className="bg-[#1e293b] border-[#334155]">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Send className="w-5 h-5 text-[#C9A962]" />
-            Send Deal to Slack
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white flex items-center gap-2">
+            <Hash className="w-4 h-4 text-[#C9A962]" />
+            1. Select Slack Channel
           </CardTitle>
-          <CardDescription className="text-white/60">
-            Run a revenue analysis and send the results directly to a client's Slack channel with your personal message.
+          <CardDescription className="text-white/50">
+            Search your workspace to find the client's channel
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Channel Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/80 flex items-center gap-2">
-              <Hash className="w-4 h-4 text-[#C9A962]" />
-              Slack Channel
-            </label>
-            {!showCustomChannel ? (
-              <div className="flex gap-2">
-                <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-                  <SelectTrigger className="bg-[#0F172A] border-[#334155] text-white">
-                    <SelectValue placeholder="Select a channel..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1e293b] border-[#334155]">
-                    {DEFAULT_CHANNELS.map((ch) => (
-                      <SelectItem key={ch.id} value={ch.id} className="text-white hover:bg-[#334155]">
-                        #{ch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCustomChannel(true)}
-                  className="border-[#334155] text-white/70 hover:text-white hover:bg-[#334155] whitespace-nowrap"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Custom
-                </Button>
+        <CardContent>
+          {selectedChannel ? (
+            <div className="flex items-center justify-between p-3 bg-[#0F172A] rounded-lg border border-[#334155]">
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-[#C9A962]" />
+                <span className="font-medium text-white">{selectedChannel.name}</span>
+                {selectedChannel.purpose && (
+                  <span className="text-sm text-white/40 truncate max-w-[200px]">
+                    — {selectedChannel.purpose}
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Channel ID (e.g. C07USEEKPNK)"
-                    value={customChannelId}
-                    onChange={(e) => setCustomChannelId(e.target.value)}
-                    className="bg-[#0F172A] border-[#334155] text-white"
-                  />
-                  <Input
-                    placeholder="Channel name (e.g. my-channel)"
-                    value={customChannelName}
-                    onChange={(e) => setCustomChannelName(e.target.value)}
-                    className="bg-[#0F172A] border-[#334155] text-white"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setShowCustomChannel(false); setCustomChannelId(""); setCustomChannelName(""); }}
-                    className="border-[#334155] text-white/70 hover:text-white hover:bg-[#334155]"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-white/40">
-                  Find the Channel ID in Slack: right-click the channel name, copy link, the ID is the last part of the URL.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Property Address */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/80 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-[#C9A962]" />
-              Property Address
-            </label>
-            <Input
-              placeholder="123 Main St, Atlanta, GA 30301"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="bg-[#0F172A] border-[#334155] text-white"
-            />
-          </div>
-
-          {/* Bedrooms / Bathrooms */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white/80">Bedrooms</label>
-              <Select value={String(bedrooms)} onValueChange={(v) => setBedrooms(Number(v))}>
-                <SelectTrigger className="bg-[#0F172A] border-[#334155] text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1e293b] border-[#334155]">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                    <SelectItem key={n} value={String(n)} className="text-white hover:bg-[#334155]">
-                      {n} BR
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white/80">Bathrooms</label>
-              <Select value={String(bathrooms)} onValueChange={(v) => setBathrooms(Number(v))}>
-                <SelectTrigger className="bg-[#0F172A] border-[#334155] text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1e293b] border-[#334155]">
-                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(n => (
-                    <SelectItem key={n} value={String(n)} className="text-white hover:bg-[#334155]">
-                      {n} BA
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Custom Message */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/80 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#C9A962]" />
-              Message to Client
-              <Badge variant="outline" className="text-white/40 border-[#334155] text-xs">Optional</Badge>
-            </label>
-            <Textarea
-              placeholder="Hey! I found a great deal for you — check out this property..."
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              className="bg-[#0F172A] border-[#334155] text-white min-h-[80px] resize-none"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              onClick={handleSend}
-              disabled={sendReport.isPending || !address || !getChannelId()}
-              className="bg-[#C9A962] text-[#0F172A] hover:bg-[#b8963f] font-medium flex-1"
-            >
-              {sendReport.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Analyzing and Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Report to Slack
-                </>
-              )}
-            </Button>
-            {lastResult && (
               <Button
-                variant="outline"
-                onClick={handleReset}
-                className="border-[#334155] text-white/70 hover:text-white hover:bg-[#334155]"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedChannel(null);
+                  setChannelSearch("");
+                }}
+                className="text-white/50 hover:text-white hover:bg-[#334155]"
               >
-                New Report
+                <X className="w-4 h-4" />
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  placeholder="Search channels..."
+                  value={channelSearch}
+                  onChange={(e) => {
+                    setChannelSearch(e.target.value);
+                    setShowChannelDropdown(true);
+                  }}
+                  onFocus={() => setShowChannelDropdown(true)}
+                  className="pl-9 bg-[#0F172A] border-[#334155] text-white placeholder:text-white/30"
+                />
+              </div>
+              {showChannelDropdown && channelSearch.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {channelsQuery.isLoading ? (
+                    <div className="flex items-center justify-center p-4 gap-2 text-sm text-white/50">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching channels...
+                    </div>
+                  ) : channels.length === 0 ? (
+                    <div className="p-4 text-sm text-white/50 text-center">
+                      No channels found for "{channelSearch}"
+                    </div>
+                  ) : (
+                    channels.map((ch) => (
+                      <button
+                        key={ch.id}
+                        className="w-full text-left px-3 py-2.5 hover:bg-[#334155] transition-colors flex items-center gap-2"
+                        onClick={() => {
+                          setSelectedChannel(ch);
+                          setShowChannelDropdown(false);
+                          setChannelSearch("");
+                        }}
+                      >
+                        <Hash className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-medium text-sm text-white">{ch.name}</span>
+                          {ch.purpose && (
+                            <p className="text-xs text-white/40 truncate">{ch.purpose}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Result Card */}
-      {lastResult && (
-        <Card className={`border ${lastResult.success ? 'bg-[#1e293b] border-green-500/30' : 'bg-[#1e293b] border-amber-500/30'}`}>
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              {lastResult.success ? (
-                <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
-              )}
-              <div className="space-y-3 flex-1">
-                <div>
-                  <p className="text-white font-medium">
-                    {lastResult.success 
-                      ? `Report sent to #${lastResult.channelName}` 
-                      : lastResult.error || "Report could not be sent"
-                    }
-                  </p>
-                  {lastResult.address && (
-                    <p className="text-white/60 text-sm mt-1">{lastResult.address}</p>
-                  )}
+      {/* Step 2: Select Report */}
+      <Card className="bg-[#1e293b] border-[#334155]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[#C9A962]" />
+            2. Select Report
+          </CardTitle>
+          <CardDescription className="text-white/50">
+            Choose an existing property report to send
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {selectedReport ? (
+            <div className="flex items-center justify-between p-3 bg-[#0F172A] rounded-lg border border-[#334155]">
+              <div className="flex items-center gap-3 min-w-0">
+                <Building className="w-4 h-4 text-[#C9A962] flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-white truncate">
+                      {selectedReport.address || "Unknown Address"}
+                    </span>
+                    <Badge variant="outline" className="text-xs text-[#C9A962] border-[#C9A962]/30 flex-shrink-0">
+                      {reportTypeLabel(selectedReport.reportType)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-white/40 mt-0.5">
+                    {selectedReport.annualRevenue && (
+                      <span>{formatCurrency(selectedReport.annualRevenue)}/yr</span>
+                    )}
+                    {selectedReport.bedrooms && <span>{selectedReport.bedrooms} BR</span>}
+                    {selectedReport.createdAt && <span>{formatDate(selectedReport.createdAt)}</span>}
+                  </div>
                 </div>
-
-                {lastResult.estimate && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-[#0F172A] rounded-lg p-3">
-                      <p className="text-white/50 text-xs">Annual Revenue</p>
-                      <p className="text-white font-semibold">${lastResult.estimate.annual_revenue.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-[#0F172A] rounded-lg p-3">
-                      <p className="text-white/50 text-xs">Monthly</p>
-                      <p className="text-white font-semibold">${lastResult.estimate.monthly_revenue.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-[#0F172A] rounded-lg p-3">
-                      <p className="text-white/50 text-xs">Avg Daily Rate</p>
-                      <p className="text-white font-semibold">${lastResult.estimate.adr}</p>
-                    </div>
-                    <div className="bg-[#0F172A] rounded-lg p-3">
-                      <p className="text-white/50 text-xs">Occupancy</p>
-                      <p className="text-white font-semibold">{lastResult.estimate.occupancy}%</p>
-                    </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedReport(null);
+                  setDealSummary("");
+                }}
+                className="text-white/50 hover:text-white hover:bg-[#334155]"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <Input
+                  placeholder="Search by address..."
+                  value={reportSearch}
+                  onChange={(e) => setReportSearch(e.target.value)}
+                  className="pl-9 bg-[#0F172A] border-[#334155] text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="border border-[#334155] rounded-lg max-h-64 overflow-y-auto">
+                {reportsQuery.isLoading ? (
+                  <div className="flex items-center justify-center p-6 gap-2 text-sm text-white/50">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading reports...
                   </div>
-                )}
-
-                {!lastResult.success && lastResult.preview && (
-                  <div className="bg-[#0F172A] rounded-lg p-4 border border-[#334155]">
-                    <p className="text-white/50 text-xs mb-2">Message Preview (not sent — no webhook configured)</p>
-                    <pre className="text-white/80 text-xs overflow-x-auto whitespace-pre-wrap">
-                      {JSON.stringify(lastResult.preview, null, 2).substring(0, 500)}
-                    </pre>
+                ) : reports.length === 0 ? (
+                  <div className="p-6 text-sm text-white/50 text-center">
+                    No reports found{reportSearch ? ` for "${reportSearch}"` : ""}
                   </div>
+                ) : (
+                  reports.map((report) => (
+                    <button
+                      key={`${report.source}-${report.id}`}
+                      className="w-full text-left px-3 py-3 hover:bg-[#334155] transition-colors border-b border-[#334155] last:border-b-0 flex items-center gap-3"
+                      onClick={() => {
+                        setSelectedReport(report as ReportItem);
+                        setDealSummary("");
+                      }}
+                    >
+                      <Building className="w-4 h-4 text-white/40 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-white truncate">
+                            {report.address || report.title || "Unknown"}
+                          </span>
+                          <Badge variant="outline" className="text-xs text-white/50 border-[#334155] flex-shrink-0">
+                            {reportTypeLabel(report.reportType)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-white/40 mt-0.5">
+                          {report.annualRevenue && (
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              {formatCurrency(report.annualRevenue)}/yr
+                            </span>
+                          )}
+                          {report.bedrooms && <span>{report.bedrooms} BR</span>}
+                          {report.verdict && (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${
+                                report.verdict.toLowerCase().includes("strong")
+                                  ? "text-green-400 border-green-500/30"
+                                  : report.verdict.toLowerCase().includes("moderate")
+                                  ? "text-yellow-400 border-yellow-500/30"
+                                  : "text-white/50 border-[#334155]"
+                              }`}
+                            >
+                              {report.verdict}
+                            </Badge>
+                          )}
+                          {report.createdAt && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatDate(report.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Step 3: AI Deal Summary */}
+      <Card className="bg-[#1e293b] border-[#334155]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#C9A962]" />
+            3. Deal Summary
+          </CardTitle>
+          <CardDescription className="text-white/50">
+            AI-generated opportunity pitch — edit before sending
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateSummary}
+              disabled={!selectedReport || generateSummaryMutation.isPending}
+              className="border-[#334155] text-white/70 hover:text-white hover:bg-[#334155] flex items-center gap-2"
+            >
+              {generateSummaryMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {dealSummary ? "Regenerate" : "Generate"} Summary
+            </Button>
+            {dealSummary && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDealSummary("")}
+                className="text-white/50 hover:text-white hover:bg-[#334155]"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          <Textarea
+            placeholder={
+              selectedReport
+                ? "Click 'Generate Summary' to create an AI deal pitch, or write your own..."
+                : "Select a report first to generate a deal summary"
+            }
+            value={dealSummary}
+            onChange={(e) => setDealSummary(e.target.value)}
+            rows={5}
+            disabled={!selectedReport}
+            className="resize-none bg-[#0F172A] border-[#334155] text-white placeholder:text-white/30"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Step 4: Custom Message (Optional) */}
+      <Card className="bg-[#1e293b] border-[#334155]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-white flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#C9A962]" />
+            4. Personal Message
+            <Badge variant="outline" className="text-white/40 border-[#334155] text-xs">Optional</Badge>
+          </CardTitle>
+          <CardDescription className="text-white/50">
+            Add a personal note above the deal summary
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="Hey! Check out this property I found for you..."
+            value={customMessage}
+            onChange={(e) => setCustomMessage(e.target.value)}
+            rows={3}
+            className="resize-none bg-[#0F172A] border-[#334155] text-white placeholder:text-white/30"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Send Button */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={handleReset}
+          className="text-white/50 hover:text-white hover:bg-[#334155]"
+        >
+          Reset All
+        </Button>
+        <Button
+          onClick={handleSend}
+          disabled={!canSend || isSending}
+          size="lg"
+          className="bg-[#C9A962] text-[#0F172A] hover:bg-[#b8963f] font-medium flex items-center gap-2 min-w-[160px]"
+        >
+          {isSending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              Send to Slack
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Preview */}
+      {canSend && (
+        <Card className="bg-[#0F172A] border-[#334155] border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-white/40">Message Preview</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2 text-white/70">
+            {customMessage && (
+              <>
+                <p>{customMessage}</p>
+                <hr className="border-[#334155] border-dashed" />
+              </>
+            )}
+            <p className="whitespace-pre-wrap">{dealSummary}</p>
+            <p className="text-[#C9A962] font-medium">
+              View Full Report
+            </p>
+            <p className="text-xs text-white/40">
+              Zillow | Redfin
+            </p>
+            <p className="text-xs text-white/30 italic">
+              Sent by Coach Inayah's Turnkey Tool
+            </p>
           </CardContent>
         </Card>
       )}

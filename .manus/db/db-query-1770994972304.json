@@ -1,0 +1,120 @@
+{
+  "query": "SELECT shareCode, reportType, address, bedrooms, bathrooms, title, annualRevenue, verdict, createdAt FROM universal_shareable_reports ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareCode, reportType, address, bedrooms, bathrooms, title, annualRevenue, verdict, createdAt FROM universal_shareable_reports ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "shareCode": "xugAKhp2eV",
+      "reportType": "validator",
+      "address": "2953 Kalmia St, San Diego, CA 92104",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 2953 Kalmia St, San Diego, CA 92104",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-13 01:20:08"
+    },
+    {
+      "shareCode": "trARAvX7jD",
+      "reportType": "validator",
+      "address": "1622 Halliard Dr, Lawrenceville, GA 30043, USA",
+      "bedrooms": "4",
+      "bathrooms": "3.5",
+      "title": "Property Validation - 1622 Halliard Dr, Lawrenceville, GA 30043, USA",
+      "annualRevenue": "50494",
+      "verdict": "NULL",
+      "createdAt": "2026-02-13 01:09:24"
+    },
+    {
+      "shareCode": "hPdaQjd7QH",
+      "reportType": "validator",
+      "address": "2953 Kalmia St, San Diego, CA 92104",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 2953 Kalmia St, San Diego, CA 92104",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-12 20:50:24"
+    },
+    {
+      "shareCode": "Jkpq7g8XHm",
+      "reportType": "validator",
+      "address": "2953 Kalmia St, San Diego, CA 92104",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 2953 Kalmia St, San Diego, CA 92104",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-12 19:50:50"
+    },
+    {
+      "shareCode": "LECPZwGQ9M",
+      "reportType": "validator",
+      "address": "2953 Kalmia St, San Diego, CA 92104",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 2953 Kalmia St, San Diego, CA 92104",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-12 19:48:14"
+    },
+    {
+      "shareCode": "RxLHhzUAvv",
+      "reportType": "validator",
+      "address": "2953 Kalmia St, San Diego, CA 92104",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 2953 Kalmia St, San Diego, CA 92104",
+      "annualRevenue": "81721",
+      "verdict": "NULL",
+      "createdAt": "2026-02-12 16:38:13"
+    },
+    {
+      "shareCode": "rnbL7wqnE2",
+      "reportType": "revenue",
+      "address": "1012 Columbus Ave c, Sandusky, OH 44870, USA",
+      "bedrooms": "3",
+      "bathrooms": "2.5",
+      "title": "Revenue Analysis: 1012 Columbus Ave c, Sandusky, OH 44870, USA",
+      "annualRevenue": "36746",
+      "verdict": "NULL",
+      "createdAt": "2026-02-11 20:44:23"
+    },
+    {
+      "shareCode": "f4VwDpHwm2",
+      "reportType": "validator",
+      "address": "310 Delaware St, Kansas City, MO 64105, USA",
+      "bedrooms": "1",
+      "bathrooms": "1.0",
+      "title": "Property Validation - 310 Delaware St, Kansas City, MO 64105, USA",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-10 20:25:32"
+    },
+    {
+      "shareCode": "zYHGAk6k2U",
+      "reportType": "validator",
+      "address": "7544 Decatur Dr, Fayetteville, NC 28303",
+      "bedrooms": "3",
+      "bathrooms": "2.0",
+      "title": "Property Validation - 7544 Decatur Dr, Fayetteville, NC 28303",
+      "annualRevenue": "NULL",
+      "verdict": "NULL",
+      "createdAt": "2026-02-10 02:49:34"
+    },
+    {
+      "shareCode": "uhrtswVUCp",
+      "reportType": "revenue",
+      "address": "15312 S Bradley Dr, Olathe, KS 66062",
+      "bedrooms": "3",
+      "bathrooms": "2.5",
+      "title": "Revenue Analysis: 15312 S Bradley Dr, Olathe, KS 66062",
+      "annualRevenue": "53715",
+      "verdict": "NULL",
+      "createdAt": "2026-02-09 02:38:55"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareCode\treportType\taddress\tbedrooms\tbathrooms\ttitle\tannualRevenue\tverdict\tcreatedAt\nxugAKhp2eV\tvalidator\t2953 Kalmia St, San Diego, CA 92104\t3\t2.0\tProperty Validation - 2953 Kalmia St, San Diego, CA 92104\tNULL\tNULL\t2026-02-13 01:20:08\ntrARAvX7jD\tvalidator\t1622 Halliard Dr, Lawrenceville, GA 30043, USA\t4\t3.5\tProperty Validation - 1622 Halliard Dr, Lawrenceville, GA 30043, USA\t50494\tNULL\t2026-02-13 01:09:24\nhPdaQjd7QH\tvalidator\t2953 Kalmia St, San Diego, CA 92104\t3\t2.0\tProperty Validation - 2953 Kalmia St, San Diego, CA 92104\tNULL\tNULL\t2026-02-12 20:50:24\nJkpq7g8XHm\tvalidator\t2953 Kalmia St, San Diego, CA 92104\t3\t2.0\tProperty Validation - 2953 Kalmia St, San Diego, CA 92104\tNULL\tNULL\t2026-02-12 19:50:50\nLECPZwGQ9M\tvalidator\t2953 Kalmia St, San Diego, CA 92104\t3\t2.0\tProperty Validation - 2953 Kalmia St, San Diego, CA 92104\tNULL\tNULL\t2026-02-12 19:48:14\nRxLHhzUAvv\tvalidator\t2953 Kalmia St, San Diego, CA 92104\t3\t2.0\tProperty Validation - 2953 Kalmia St, San Diego, CA 92104\t81721\tNULL\t2026-02-12 16:38:13\nrnbL7wqnE2\trevenue\t1012 Columbus Ave c, Sandusky, OH 44870, USA\t3\t2.5\tRevenue Analysis: 1012 Columbus Ave c, Sandusky, OH 44870, USA\t36746\tNULL\t2026-02-11 20:44:23\nf4VwDpHwm2\tvalidator\t310 Delaware St, Kansas City, MO 64105, USA\t1\t1.0\tProperty Validation - 310 Delaware St, Kansas City, MO 64105, USA\tNULL\tNULL\t2026-02-10 20:25:32\nzYHGAk6k2U\tvalidator\t7544 Decatur Dr, Fayetteville, NC 28303\t3\t2.0\tProperty Validation - 7544 Decatur Dr, Fayetteville, NC 28303\tNULL\tNULL\t2026-02-10 02:49:34\nuhrtswVUCp\trevenue\t15312 S Bradley Dr, Olathe, KS 66062\t3\t2.5\tRevenue Analysis: 15312 S Bradley Dr, Olathe, KS 66062\t53715\tNULL\t2026-02-09 02:38:55\n",
+  "stderr": "",
+  "execution_time_ms": 72
+}

@@ -11075,3 +11075,11 @@ Results:
 - [x] Set up SLACK_WEBHOOK_URL: skipped — response_url from Slack Workflow handles posting back to originating channel
 - [x] Build admin Send to Slack feature: tRPC endpoint to send property reports to any Slack channel
 - [x] Build admin UI: channel selector, message input, send report to Slack button
+
+## Admin Send to Slack Overhaul (Feb 13, 2026)
+- [x] Overhaul admin Send to Slack: send existing report links (Step 5 / Premium) instead of running new analysis
+- [x] Dynamic channel search: search all workspace channels via Slack API (not hardcoded list)
+- [x] Gemini AI deal summary: auto-generate opportunity pitch message from report data
+- [x] Report link + AI summary sent to selected client channel
+- [x] Update tests for new Send to Slack flow (11 new tests, 1110 total passing)
+- [x] Test end-to-end with real Slack channel
