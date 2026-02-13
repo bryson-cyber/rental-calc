@@ -11059,3 +11059,19 @@ Results:
 - [x] Fix fonts: replaced font-serif with font-sans in 10 shared report components (FullPropertyReport, SharedReportPage, BuildFullReportButton, AnalysisProgress, ChapterMarketReport, ChapterPropertyReport, EnhancedInsights, MapFirstLayoutV2, NarrativeSkeleton, SubmarketExplorer)
 - [x] Ensure consistent visual language across entire shared report
 - [x] Investigate Slack integration — MCP supports sending reports/notifications TO Slack but NOT interactive bot commands
+
+## Slack Integration: Property Analysis Bot (Feb 13, 2026)
+- [x] Design architecture: Slack Workflow form → webhook on server → AirDNA pipeline → post results back via Slack Incoming Webhook
+- [x] Build POST /api/slack/analyze webhook endpoint on server
+- [x] Build analysis pipeline (geocode address → AirDNA Rentalizer → format results)
+- [x] Build Slack response formatter (revenue, ADR, occupancy, profit estimate, shareable link)
+- [x] Post formatted results back to the Slack channel via MCP
+- [x] Test full end-to-end flow
+- [ ] Write step-by-step Slack Workflow Builder setup guide for user
+- [x] Run tests and save checkpoint
+- [x] Fix Slack message: remove bad emoji characters, use clean text formatting
+- [x] Fix Slack report link: send users to Validate the Deal tab pre-filled with property address
+- [x] Add Zillow and Redfin search links to Slack message (like the site does)
+- [x] Set up SLACK_WEBHOOK_URL: skipped — response_url from Slack Workflow handles posting back to originating channel
+- [x] Build admin Send to Slack feature: tRPC endpoint to send property reports to any Slack channel
+- [x] Build admin UI: channel selector, message input, send report to Slack button

@@ -11,6 +11,7 @@ import { opportunityFinderRouter } from "./opportunity-finder";
 import { marketResearchSimpleRouter } from "./market-research-simple";
 import { adminRouter } from "./admin-router";
 import { newsletterRouter } from "./newsletter-router";
+import { slackAdminRouter } from "./slack-admin-router";
 
 // All extracted feature routers (barrel import)
 import {
@@ -127,6 +128,7 @@ export const appRouter = router({
 
   // Admin & tracking
   admin: adminRouter,
+  slackAdmin: slackAdminRouter,
   adminTracking: adminTrackingRouter,
   webhook: webhookRouter,
   emailOptin: emailOptinRouter,

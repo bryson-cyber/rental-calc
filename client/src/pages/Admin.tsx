@@ -14,8 +14,10 @@ import {
   Shield,
   AlertCircle,
   Search,
-  Filter
+  Filter,
+  Send
 } from "lucide-react";
+import SendToSlack from "@/components/SendToSlack";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -175,6 +177,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="leads" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A]">
               <UserPlus className="w-4 h-4 mr-2" />
               Leads
+            </TabsTrigger>
+            <TabsTrigger value="slack" className="data-[state=active]:bg-[#C9A962] data-[state=active]:text-[#0F172A]">
+              <Send className="w-4 h-4 mr-2" />
+              Send to Slack
             </TabsTrigger>
           </TabsList>
 
@@ -525,6 +531,10 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          {/* Slack Tab */}
+          <TabsContent value="slack" className="space-y-6">
+            <SendToSlack />
           </TabsContent>
         </Tabs>
       </main>

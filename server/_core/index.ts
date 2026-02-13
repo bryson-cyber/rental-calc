@@ -677,6 +677,38 @@ async function startServer() {
     }
   });
 
+  // ============================================
+  // SLACK INTEGRATION WEBHOOK
+  // ============================================
+  // Accepts property analysis requests from Slack Workflow Builder.
+  // Returns 200 immediately, processes async, posts results back via webhook.
+  app.post('/api/slack/analyze', async (req: any, res: any) => {
+    try {
+      const { text, channel_id, user_id, response_url } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: 'Missing required field: text' });
+      }
+
+      // Respond immediately to avoid Slack timeout (3 second limit)
+      res.status(200).json({ 
+        ok: true, 
+        message: 'Analysis started. Results will be posted to Slack shortly.' 
+      });
+
+      // Process async - don't await
+      const { handleSlackAnalyze } = await import('../slack-integration');
+      handleSlackAnalyze({ text, channel_id, user_id, response_url }).catch((err: unknown) => {
+        console.error('[Slack] Async analysis failed:', err);
+      });
+    } catch (error) {
+      console.error('[Slack] Route error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
