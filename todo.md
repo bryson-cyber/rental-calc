@@ -10948,3 +10948,8 @@ Results:
 - [x] ShareToolButton still used as fallback when no results are available
 - [x] All purchase mode props included in shared report data for full fidelity
 - [x] Tests written and passing (server/purchase-mode.test.ts)
+
+## UI Fixes: Full Property Report (Feb 12, 2026)
+- [x] Stress test section: redesigned with beginner-friendly explainer, color legend, clearer labels ("X% booked", "$X/night"), "YOUR RATE" / "YOUR OCC." markers, and "What This Means" summary cards
+- [x] Comp placeholder images: removed gray building icon placeholders, comp table now shows just property name and details
+- [x] Supply trend chart: removed the non-dynamic SVG mountain chart, kept summary stats (Current Listings, Change %) and text insight

@@ -1531,24 +1531,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <p className="text-sm text-[#64748b] mb-4">Active short-term rental listings over time in this market</p>
               {(() => {
                 const sorted = [...supply_trend].sort((a, b) => a.date.localeCompare(b.date));
-                const maxVal = Math.max(...sorted.map(d => d.value));
-                const minVal = Math.min(...sorted.map(d => d.value));
-                const range = maxVal - minVal || 1;
-                const chartHeight = 180;
                 const first = sorted[0];
                 const last = sorted[sorted.length - 1];
                 const changePercent = first.value > 0 ? ((last.value - first.value) / first.value * 100) : 0;
                 const isGrowing = changePercent > 2;
                 const isShrinking = changePercent < -2;
-
-                // Build SVG path
-                const points = sorted.map((d, i) => {
-                  const x = (i / (sorted.length - 1)) * 100;
-                  const y = chartHeight - ((d.value - minVal) / range) * (chartHeight - 20) - 10;
-                  return `${x},${y}`;
-                });
-                const linePath = `M ${points.join(' L ')}`;
-                const areaPath = `${linePath} L 100,${chartHeight} L 0,${chartHeight} Z`;
 
                 return (
                   <div>
@@ -1567,26 +1554,6 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                         <p className={`text-lg font-bold ${isGrowing ? 'text-amber-600' : isShrinking ? 'text-green-600' : 'text-[#1e293b]'}`}>
                           {changePercent > 0 ? '+' : ''}{changePercent.toFixed(1)}%
                         </p>
-                      </div>
-                    </div>
-
-                    {/* SVG Chart */}
-                    <div className="relative">
-                      <svg viewBox={`0 0 100 ${chartHeight}`} className="w-full" preserveAspectRatio="none" style={{ height: '180px' }}>
-                        <defs>
-                          <linearGradient id="supplyGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#C9A962" stopOpacity="0.3" />
-                            <stop offset="100%" stopColor="#C9A962" stopOpacity="0.02" />
-                          </linearGradient>
-                        </defs>
-                        <path d={areaPath} fill="url(#supplyGradient)" />
-                        <path d={linePath} fill="none" stroke="#C9A962" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
-                      </svg>
-                      {/* X-axis labels */}
-                      <div className="flex justify-between mt-2">
-                        {sorted.filter((_, i) => i === 0 || i === Math.floor(sorted.length / 2) || i === sorted.length - 1).map((d, i) => (
-                          <span key={i} className="text-[10px] text-[#94a3b8]">{formatMonth(d.date)}</span>
-                        ))}
                       </div>
                     </div>
 
@@ -1834,20 +1801,6 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       <td className={`p-4 font-medium ${isHighlighted ? 'text-[#C9A962]' : 'text-[#94a3b8]'}`}>{revenueRank}</td>
                       <td className="p-4">
                         <div className="flex items-start gap-3">
-                          {comp.image_url ? (
-                            <img
-                              src={comp.image_url}
-                              alt={comp.title}
-                              className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-[#e2e8f0]"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-16 h-12 rounded-lg bg-[#f1f5f9] flex items-center justify-center flex-shrink-0 border border-[#e2e8f0]">
-                              <Building className="w-5 h-5 text-[#94a3b8]" />
-                            </div>
-                          )}
                           <div className="min-w-0">
                             <p className="font-medium text-[#1e293b] truncate max-w-[200px]">
                               {comp.title}
@@ -2061,15 +2014,52 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <section id="section-stress" className="scroll-mt-24 mb-16">
             <SectionHeader icon={AlertTriangle} title="Stress Test" subtitle="What happens to your cash flow when occupancy or nightly rate changes?" tooltip="A stress test shows what your monthly profit would look like under different scenarios — what if occupancy drops 20%? What if nightly rates fall? This helps you understand your financial cushion and risk." />
 
+            {/* Beginner-friendly explainer */}
+            <div className="bg-gradient-to-r from-[#fffbeb] to-[#fef3c7] rounded-2xl border border-[#f59e0b]/20 p-5 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#f59e0b]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-sm">💡</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#92400e] text-sm mb-1">How to Read This Section</p>
+                  <p className="text-sm text-[#78350f]/80 leading-relaxed">
+                    The table below shows your estimated <strong>monthly profit</strong> under different "what if" scenarios. 
+                    Each row changes the <strong>occupancy rate</strong> (how often the property is booked), 
+                    and each column changes the <strong>nightly rate</strong> (what guests pay per night). 
+                    The <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-[#C9A962]/20 text-[#92400e] border border-[#C9A962]/30">highlighted cell</span> is your projected baseline. 
+                    Green numbers mean profit; red numbers mean loss.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-2">Sensitivity Matrix <InfoTip text="A grid showing your monthly profit under different combinations of occupancy rate and nightly rate. Green cells mean profit, red cells mean loss. Find your projected numbers in the middle — then look at the surrounding cells to see how much room you have before losing money." /></h3>
-              <p className="text-sm text-[#64748b] mb-6">Monthly profit at different occupancy and ADR combinations{stress_test.base_monthly_rent ? ` (rent: ${formatCurrency(stress_test.base_monthly_rent)}/mo)` : ''}</p>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-serif font-semibold text-[#1e293b]">Monthly Profit Scenarios <InfoTip text="Each cell shows your estimated monthly profit at that combination of occupancy and nightly rate. The highlighted cell is your projected baseline — surrounding cells show what happens if conditions change." /></h3>
+              </div>
+              <p className="text-sm text-[#64748b] mb-1">What you could earn each month under different conditions{stress_test.base_monthly_rent ? ` (rent: ${formatCurrency(stress_test.base_monthly_rent)}/mo)` : ''}</p>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-green-100 border border-green-300"></div>
+                  <span className="text-xs text-[#64748b]">Profit</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-red-100 border border-red-300"></div>
+                  <span className="text-xs text-[#64748b]">Loss</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm bg-[#C9A962]/20 ring-1 ring-[#C9A962]"></div>
+                  <span className="text-xs text-[#64748b]">Your Projected Baseline</span>
+                </div>
+              </div>
 
               {/* Build matrix from scenarios */}
               {(() => {
                 const occupancies = Array.from(new Set(stress_test.scenarios.map(s => s.occupancy_pct))).filter(v => v != null && !isNaN(v)).sort((a, b) => a - b);
                 const adrs = Array.from(new Set(stress_test.scenarios.map(s => s.adr))).filter(v => v != null && !isNaN(v)).sort((a, b) => a - b);
                 const getScenario = (occ: number, adr: number) => stress_test.scenarios.find(s => s.occupancy_pct === occ && s.adr === adr);
+                const allProfits = stress_test.scenarios.map(s => s.monthly_profit ?? s.monthly_revenue ?? 0);
+                const maxProfit = Math.max(...allProfits, 1);
 
                 if (occupancies.length === 0 || adrs.length === 0) {
                   return (
@@ -2084,32 +2074,41 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     <table className="w-full text-sm">
                       <thead>
                         <tr>
-                          <th className="p-3 text-left text-[#64748b] font-medium bg-[#f8fafc] rounded-tl-lg">Occ \ ADR</th>
+                          <th className="p-3 text-left bg-[#f8fafc] rounded-tl-lg">
+                            <div className="text-[10px] text-[#94a3b8] uppercase tracking-wider">Occupancy ↓</div>
+                            <div className="text-[10px] text-[#94a3b8] uppercase tracking-wider">Nightly Rate →</div>
+                          </th>
                           {adrs.map((adr, adrIdx) => (
-                            <th key={`adr-${adrIdx}-${adr}`} className={`p-3 text-center font-medium bg-[#f8fafc] ${adr === stress_test.base_adr ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
-                              {formatCurrency(adr)}
-                              {adr === stress_test.base_adr && <div className="text-[10px]">base</div>}
+                            <th key={`adr-${adrIdx}-${adr}`} className={`p-3 text-center bg-[#f8fafc] ${adr === stress_test.base_adr ? 'text-[#C9A962] font-bold' : 'text-[#64748b] font-medium'}`}>
+                              {formatCurrency(adr)}/night
+                              {adr === stress_test.base_adr && <div className="text-[10px] font-bold">⬆ YOUR RATE</div>}
                             </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {occupancies.map((occ, occIdx) => (
-                          <tr key={`occ-${occIdx}-${occ}`} className="border-t border-[#e2e8f0]">
-                            <td className={`p-3 font-medium ${occ === stress_test.base_occupancy ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
-                              {Math.round(occ * 100)}%
-                              {occ === stress_test.base_occupancy && <span className="text-[10px] ml-1">base</span>}
+                          <tr key={`occ-${occIdx}-${occ}`}>
+                            <td className={`p-3 font-medium border-t border-[#e2e8f0] ${occ === stress_test.base_occupancy ? 'text-[#C9A962] font-bold' : 'text-[#64748b]'}`}>
+                              {Math.round(occ * 100)}% booked
+                              {occ === stress_test.base_occupancy && <div className="text-[10px] font-bold">⬅ YOUR OCC.</div>}
                             </td>
                             {adrs.map((adr, adrIdx) => {
                               const scenario = getScenario(occ, adr);
                               const profit = scenario?.monthly_profit ?? scenario?.monthly_revenue ?? 0;
                               const isBase = occ === stress_test.base_occupancy && adr === stress_test.base_adr;
+                              const intensity = Math.min(Math.abs(profit) / maxProfit, 1);
+                              const bgColor = isBase
+                                ? 'bg-[#C9A962]/15 ring-2 ring-[#C9A962] ring-inset'
+                                : profit >= 0
+                                  ? `bg-green-${intensity > 0.6 ? '100' : '50'}`
+                                  : `bg-red-${intensity > 0.6 ? '100' : '50'}`;
                               return (
-                                <td key={`cell-${occIdx}-${adrIdx}`} className={`p-3 text-center font-medium ${
-                                  isBase ? 'bg-[#C9A962]/10 ring-2 ring-[#C9A962] rounded' :
-                                  profit >= 0 ? 'text-green-700' : 'text-red-600'
+                                <td key={`cell-${occIdx}-${adrIdx}`} className={`p-3 text-center font-semibold border-t border-[#e2e8f0] rounded-sm ${
+                                  isBase ? 'bg-[#C9A962]/15 ring-2 ring-[#C9A962] ring-inset text-[#1e293b]' :
+                                  profit >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
                                 }`}>
-                                  {formatCurrency(profit)}
+                                  {formatCurrency(profit)}/mo
                                 </td>
                               );
                             })}
@@ -2125,12 +2124,40 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             {/* Break-even insight */}
             {(() => {
               const breakEvenScenarios = stress_test.scenarios.filter(s => s.cash_flow_positive);
+              const totalScenarios = stress_test.scenarios.length;
               const worstCase = stress_test.scenarios.reduce((min, s) => (s.monthly_profit ?? s.monthly_revenue) < (min.monthly_profit ?? min.monthly_revenue) ? s : min);
+              const bestCase = stress_test.scenarios.reduce((max, s) => (s.monthly_profit ?? s.monthly_revenue) > (max.monthly_profit ?? max.monthly_revenue) ? s : max);
+              const positivePercent = Math.round((breakEvenScenarios.length / totalScenarios) * 100);
+
               return (
-                <InsightBox type={breakEvenScenarios.length > stress_test.scenarios.length / 2 ? 'info' : 'warning'}>
-                  <strong>Stress Test Result:</strong> {breakEvenScenarios.length} of {stress_test.scenarios.length} scenarios are cash-flow positive.
-                  {' '}Worst case scenario ({Math.round(worstCase.occupancy_pct * 100)}% occupancy, {formatCurrency(worstCase.adr)} ADR) yields {formatCurrency(worstCase.monthly_profit ?? worstCase.monthly_revenue)}/mo.
-                </InsightBox>
+                <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
+                  <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">What This Means</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className={`rounded-xl p-4 text-center ${positivePercent >= 75 ? 'bg-green-50 border border-green-200' : positivePercent >= 50 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+                      <p className="text-xs text-[#64748b] mb-1 uppercase tracking-wider">Profitable Scenarios</p>
+                      <p className={`text-2xl font-bold ${positivePercent >= 75 ? 'text-green-700' : positivePercent >= 50 ? 'text-amber-700' : 'text-red-600'}`}>{breakEvenScenarios.length} of {totalScenarios}</p>
+                      <p className="text-xs text-[#64748b] mt-1">{positivePercent}% of scenarios make money</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
+                      <p className="text-xs text-[#64748b] mb-1 uppercase tracking-wider">Best Case</p>
+                      <p className="text-2xl font-bold text-green-700">{formatCurrency(bestCase.monthly_profit ?? bestCase.monthly_revenue)}/mo</p>
+                      <p className="text-xs text-[#64748b] mt-1">{Math.round(bestCase.occupancy_pct * 100)}% occ. at {formatCurrency(bestCase.adr)}/night</p>
+                    </div>
+                    <div className={`rounded-xl p-4 text-center ${(worstCase.monthly_profit ?? worstCase.monthly_revenue) >= 0 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+                      <p className="text-xs text-[#64748b] mb-1 uppercase tracking-wider">Worst Case</p>
+                      <p className={`text-2xl font-bold ${(worstCase.monthly_profit ?? worstCase.monthly_revenue) >= 0 ? 'text-amber-700' : 'text-red-600'}`}>{formatCurrency(worstCase.monthly_profit ?? worstCase.monthly_revenue)}/mo</p>
+                      <p className="text-xs text-[#64748b] mt-1">{Math.round(worstCase.occupancy_pct * 100)}% occ. at {formatCurrency(worstCase.adr)}/night</p>
+                    </div>
+                  </div>
+                  <InsightBox type={breakEvenScenarios.length > totalScenarios / 2 ? 'info' : 'warning'}>
+                    <strong>Bottom Line:</strong> {positivePercent >= 75
+                      ? `This property stays profitable in ${positivePercent}% of tested scenarios, showing strong financial resilience even when occupancy or rates dip.`
+                      : positivePercent >= 50
+                      ? `This property is profitable in ${positivePercent}% of tested scenarios. There is moderate risk if occupancy or rates drop significantly.`
+                      : `This property is only profitable in ${positivePercent}% of tested scenarios. There is meaningful risk if market conditions weaken.`
+                    }
+                  </InsightBox>
+                </div>
               );
             })()}
           </section>
