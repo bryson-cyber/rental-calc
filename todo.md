@@ -11083,3 +11083,11 @@ Results:
 - [x] Report link + AI summary sent to selected client channel
 - [x] Update tests for new Send to Slack flow (11 new tests, 1110 total passing)
 - [x] Test end-to-end with real Slack channel
+
+## Slack Features Round 2 (Feb 13, 2026)
+- [x] Fix 4-BR average anomaly ($449,676 was wrong — avg_revenue already annual, removed incorrect *12 multiplier)
+- [x] Set up Slack slash command /analyze integration (handler supports both JSON + URL-encoded payloads)
+- [x] Build report delivery tracking: DB table (slack_report_deliveries), backend endpoints, admin UI history tab with stats
+- [x] Build batch send to multiple channels feature with per-channel results
+- [x] Write tests for all new features (1126 tests passing)
+- [x] Save checkpoint

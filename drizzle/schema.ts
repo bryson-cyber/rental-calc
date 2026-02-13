@@ -2121,3 +2121,48 @@ export const marketEvaluations = mysqlTable("market_evaluations", {
 ]);
 export type MarketEvaluation = typeof marketEvaluations.$inferSelect;
 export type InsertMarketEvaluation = typeof marketEvaluations.$inferInsert;
+
+
+/**
+ * Slack Report Deliveries — tracks every report sent to a Slack channel.
+ * Used for delivery history in the admin dashboard and batch send tracking.
+ */
+export const slackReportDeliveries = mysqlTable("slack_report_deliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Who sent it
+  sentByUserId: int("sentByUserId"),
+  sentByName: varchar("sentByName", { length: 255 }),
+  
+  // Slack channel info
+  channelId: varchar("channelId", { length: 50 }).notNull(),
+  channelName: varchar("channelName", { length: 255 }),
+  
+  // Report info
+  shareCode: varchar("shareCode", { length: 100 }).notNull(),
+  reportSource: varchar("reportSource", { length: 20 }).notNull(), // "shared" | "universal"
+  address: text("address"),
+  reportType: varchar("reportType", { length: 50 }),
+  
+  // Message content
+  dealSummary: text("dealSummary"),
+  customMessage: text("customMessage"),
+  
+  // Delivery status
+  status: mysqlEnum("status", ["sent", "failed", "pending"]).default("pending").notNull(),
+  slackPermalink: text("slackPermalink"),
+  errorMessage: text("errorMessage"),
+  
+  // Batch tracking (null if single send)
+  batchId: varchar("batchId", { length: 50 }),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("slack_delivery_channel_idx").on(table.channelId),
+  index("slack_delivery_status_idx").on(table.status),
+  index("slack_delivery_batch_idx").on(table.batchId),
+  index("slack_delivery_created_idx").on(table.createdAt),
+]);
+export type SlackReportDelivery = typeof slackReportDeliveries.$inferSelect;
+export type InsertSlackReportDelivery = typeof slackReportDeliveries.$inferInsert;

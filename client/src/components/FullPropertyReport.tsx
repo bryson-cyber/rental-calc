@@ -690,8 +690,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
     const occVal = match.avg_occupancy || match.occupancy || 0;
     const count = match.listing_count || match.count || 0;
     if (rev === 0 && adrVal === 0) return null;
+    // avg_revenue from bedroom_performance is already annual (calculated from annual_revenue of listings)
+    // Do NOT multiply by 12 — the old heuristic (rev < 50000 ? rev * 12 : rev) was incorrect
     return {
-      revenue: rev < 50000 ? rev * 12 : rev,
+      revenue: rev,
       adr: adrVal,
       occupancy: occVal,
       revpar: adrVal * (occVal > 1 ? occVal / 100 : occVal),

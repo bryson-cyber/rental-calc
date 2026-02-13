@@ -7,7 +7,10 @@
  * - Dynamic channel search across the entire Slack workspace
  * - Fetch existing reports (shared_reports + universal_shareable_reports)
  * - Generate AI deal summary via Gemini as an opportunity pitch
- * - Post report link + AI summary to any channel via Slack Incoming Webhook
+ * - Post report link + AI summary to any channel via Slack MCP
+ * - Track all deliveries in slack_report_deliveries table
+ * - Batch send to multiple channels at once
+ * - Delivery history with filtering
  */
 
 import { z } from "zod";
@@ -16,8 +19,9 @@ import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { getDb } from "./db";
-import { sharedReports, universalShareableReports } from "../drizzle/schema";
-import { desc, or, eq, like, isNotNull } from "drizzle-orm";
+import { sharedReports, universalShareableReports, slackReportDeliveries } from "../drizzle/schema";
+import { desc, eq, like, and, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 /**
  * Admin-only procedure that checks if the user has admin role
@@ -68,7 +72,6 @@ function parseSlackChannelResults(rawText: string): SlackChannel[] {
   const channels: SlackChannel[] = [];
   
   // Parse the markdown-formatted results from Slack MCP
-  // Format: ### Result N of M\nName: #channel-name\nCreator: ...\nCreated: ...\nPermalink: [link](https://...slack.com/archives/CHANNEL_ID)\n
   const resultBlocks = rawText.split(/###\s+Result\s+\d+\s+of\s+\d+/);
   
   for (const block of resultBlocks) {
@@ -116,8 +119,6 @@ async function searchSlackChannels(query: string, cursor?: string): Promise<{ ch
       cwd: "/home/ubuntu/rental-calculator"
     });
     
-    // Parse the JSON result from the tool output
-    // The output contains a JSON result with "results" and "pagination_info" fields
     const jsonMatch = output.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("[SlackAdmin] Could not parse MCP output");
@@ -127,7 +128,6 @@ async function searchSlackChannels(query: string, cursor?: string): Promise<{ ch
     const result = JSON.parse(jsonMatch[0]);
     const channels = parseSlackChannelResults(result.results || "");
     
-    // Extract next cursor from pagination_info
     let nextCursor: string | undefined;
     if (result.pagination_info && result.pagination_info.includes("cursor")) {
       const cursorMatch = result.pagination_info.match(/cursor\s+`([^`]+)`/);
@@ -163,12 +163,10 @@ async function postToSlackChannel(channelId: string, message: string): Promise<{
       cwd: "/home/ubuntu/rental-calculator"
     });
     
-    // Check for success indicators
     if (output.includes("error") && output.includes("not_in_channel")) {
       return { success: false, error: "Bot is not in this channel. Please invite the bot first." };
     }
     
-    // Extract permalink if available
     const permalinkMatch = output.match(/https:\/\/coachinayah\.slack\.com\/archives\/[^\s)]+/);
     
     return { 
@@ -251,13 +249,87 @@ Report Type: ${reportData.reportType}`
 }
 
 // ============================================
+// HELPER: Build the Slack message for a report
+// ============================================
+
+function buildReportSlackMessage(params: {
+  reportUrl: string;
+  address: string;
+  dealSummary: string;
+  customMessage?: string;
+}): string {
+  const { reportUrl, address, dealSummary, customMessage } = params;
+  
+  const encodedAddr = encodeURIComponent(address);
+  const zillowUrl = `https://www.zillow.com/homes/${encodedAddr}_rb/`;
+  const redfinUrl = `https://www.redfin.com/search#query=${encodedAddr}`;
+
+  let message = "";
+  
+  if (customMessage?.trim()) {
+    message += `${customMessage.trim()}\n\n---\n\n`;
+  }
+  
+  message += `${dealSummary}\n\n`;
+  message += `*<${reportUrl}|View Full Report>*\n\n`;
+  message += `<${zillowUrl}|Zillow> | <${redfinUrl}|Redfin>\n\n`;
+  message += `_Sent by Coach Inayah's Turnkey Tool_`;
+
+  return message;
+}
+
+// ============================================
+// HELPER: Record delivery in DB
+// ============================================
+
+async function recordDelivery(params: {
+  sentByUserId?: number;
+  sentByName?: string;
+  channelId: string;
+  channelName?: string;
+  shareCode: string;
+  reportSource: string;
+  address?: string;
+  reportType?: string;
+  dealSummary?: string;
+  customMessage?: string;
+  status: "sent" | "failed" | "pending";
+  slackPermalink?: string;
+  errorMessage?: string;
+  batchId?: string;
+}): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    
+    await db.insert(slackReportDeliveries).values({
+      sentByUserId: params.sentByUserId,
+      sentByName: params.sentByName,
+      channelId: params.channelId,
+      channelName: params.channelName,
+      shareCode: params.shareCode,
+      reportSource: params.reportSource,
+      address: params.address,
+      reportType: params.reportType,
+      dealSummary: params.dealSummary,
+      customMessage: params.customMessage,
+      status: params.status,
+      slackPermalink: params.slackPermalink,
+      errorMessage: params.errorMessage,
+      batchId: params.batchId,
+    });
+  } catch (error) {
+    console.error("[SlackAdmin] Error recording delivery:", error);
+  }
+}
+
+// ============================================
 // ROUTER
 // ============================================
 
 export const slackAdminRouter = router({
   /**
    * Search Slack channels dynamically.
-   * Proxies the Slack MCP channel search so the admin UI can search in real-time.
    */
   searchChannels: adminProcedure
     .input(z.object({
@@ -271,7 +343,6 @@ export const slackAdminRouter = router({
 
   /**
    * Get existing reports that can be sent to Slack.
-   * Searches both shared_reports (full reports) and universal_shareable_reports.
    */
   getReports: adminProcedure
     .input(z.object({
@@ -286,7 +357,7 @@ export const slackAdminRouter = router({
       
       // Fetch from shared_reports (full property reports / Step 5)
       try {
-        let sharedQuery = db.select({
+        const sharedResults = await db.select({
           id: sharedReports.id,
           shareId: sharedReports.shareId,
           reportType: sharedReports.reportType,
@@ -298,8 +369,6 @@ export const slackAdminRouter = router({
         .from(sharedReports)
         .orderBy(desc(sharedReports.createdAt))
         .limit(input.limit);
-        
-        const sharedResults = await sharedQuery;
         
         for (const r of sharedResults) {
           if (input.search && r.address && !r.address.toLowerCase().includes(input.search.toLowerCase())) {
@@ -328,7 +397,7 @@ export const slackAdminRouter = router({
       
       // Fetch from universal_shareable_reports
       try {
-        let universalQuery = db.select({
+        const universalResults = await db.select({
           id: universalShareableReports.id,
           shareCode: universalShareableReports.shareCode,
           reportType: universalShareableReports.reportType,
@@ -345,8 +414,6 @@ export const slackAdminRouter = router({
         .from(universalShareableReports)
         .orderBy(desc(universalShareableReports.createdAt))
         .limit(input.limit);
-        
-        const universalResults = await universalQuery;
         
         for (const r of universalResults) {
           if (input.search && r.address && !r.address.toLowerCase().includes(input.search.toLowerCase())) {
@@ -385,7 +452,6 @@ export const slackAdminRouter = router({
 
   /**
    * Generate an AI deal summary for a report.
-   * Uses Gemini to write a compelling opportunity pitch.
    */
   generateSummary: adminProcedure
     .input(z.object({
@@ -414,24 +480,23 @@ export const slackAdminRouter = router({
     }),
 
   /**
-   * Send a report to a Slack channel.
+   * Send a report to a single Slack channel.
    * Posts the report link + AI deal summary + optional custom message.
+   * Records delivery in the tracking table.
    */
   sendReport: adminProcedure
     .input(z.object({
       channelId: z.string().min(1, "Channel ID is required"),
       channelName: z.string().optional(),
-      // Report info
       shareCode: z.string().min(1, "Report share code is required"),
       reportSource: z.enum(["shared", "universal"]),
       address: z.string().min(1, "Property address is required"),
-      // AI-generated deal summary
+      reportType: z.string().optional(),
       dealSummary: z.string().min(1, "Deal summary is required"),
-      // Optional custom message from admin
       customMessage: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const { channelId, channelName, shareCode, reportSource, address, dealSummary, customMessage } = input;
+    .mutation(async ({ input, ctx }) => {
+      const { channelId, channelName, shareCode, reportSource, address, reportType, dealSummary, customMessage } = input;
 
       console.log(`[SlackAdmin] Sending report ${shareCode} for "${address}" to channel ${channelId} (${channelName})`);
 
@@ -444,33 +509,33 @@ export const slackAdminRouter = router({
         ? `${baseUrl}/report/${shareCode}`
         : `${baseUrl}/share/${shareCode}`;
 
-      // Build Zillow and Redfin links
-      const encodedAddr = encodeURIComponent(address);
-      const zillowUrl = `https://www.zillow.com/homes/${encodedAddr}_rb/`;
-      const redfinUrl = `https://www.redfin.com/search#query=${encodedAddr}`;
-
-      // Build the Slack message in markdown format
-      let message = "";
-      
-      // Custom message from admin (if provided)
-      if (customMessage?.trim()) {
-        message += `${customMessage.trim()}\n\n---\n\n`;
-      }
-      
-      // AI deal summary
-      message += `${dealSummary}\n\n`;
-      
-      // Report link
-      message += `*<${reportUrl}|View Full Report>*\n\n`;
-      
-      // Property links
-      message += `<${zillowUrl}|Zillow> | <${redfinUrl}|Redfin>\n\n`;
-      
-      // Footer
-      message += `_Sent by Coach Inayah's Turnkey Tool_`;
+      // Build the Slack message
+      const message = buildReportSlackMessage({
+        reportUrl,
+        address,
+        dealSummary,
+        customMessage,
+      });
 
       // Post to Slack via MCP
       const result = await postToSlackChannel(channelId, message);
+
+      // Record delivery
+      await recordDelivery({
+        sentByUserId: ctx.user.id,
+        sentByName: ctx.user.name || undefined,
+        channelId,
+        channelName,
+        shareCode,
+        reportSource,
+        address,
+        reportType,
+        dealSummary,
+        customMessage,
+        status: result.success ? "sent" : "failed",
+        slackPermalink: result.permalink,
+        errorMessage: result.error,
+      });
 
       if (!result.success) {
         throw new TRPCError({
@@ -485,6 +550,175 @@ export const slackAdminRouter = router({
         channelName,
         address,
         permalink: result.permalink,
+      };
+    }),
+
+  /**
+   * Batch send a report to multiple Slack channels.
+   * Posts the same report + deal summary to each selected channel.
+   * Records each delivery individually with a shared batchId.
+   */
+  batchSendReport: adminProcedure
+    .input(z.object({
+      channels: z.array(z.object({
+        id: z.string(),
+        name: z.string().optional(),
+      })).min(1, "At least one channel is required"),
+      shareCode: z.string().min(1, "Report share code is required"),
+      reportSource: z.enum(["shared", "universal"]),
+      address: z.string().min(1, "Property address is required"),
+      reportType: z.string().optional(),
+      dealSummary: z.string().min(1, "Deal summary is required"),
+      customMessage: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { channels, shareCode, reportSource, address, reportType, dealSummary, customMessage } = input;
+      const batchId = randomBytes(12).toString("hex");
+
+      console.log(`[SlackAdmin] Batch send (${batchId}): report ${shareCode} to ${channels.length} channels`);
+
+      // Build the report URL
+      const baseUrl = ENV.isProduction
+        ? "https://coachinayahturnkeytool.com"
+        : "http://localhost:3000";
+      
+      const reportUrl = reportSource === "shared"
+        ? `${baseUrl}/report/${shareCode}`
+        : `${baseUrl}/share/${shareCode}`;
+
+      // Build the Slack message
+      const message = buildReportSlackMessage({
+        reportUrl,
+        address,
+        dealSummary,
+        customMessage,
+      });
+
+      // Send to each channel sequentially (to avoid rate limits)
+      const results: Array<{
+        channelId: string;
+        channelName?: string;
+        success: boolean;
+        permalink?: string;
+        error?: string;
+      }> = [];
+
+      for (const channel of channels) {
+        const result = await postToSlackChannel(channel.id, message);
+        
+        results.push({
+          channelId: channel.id,
+          channelName: channel.name,
+          success: result.success,
+          permalink: result.permalink,
+          error: result.error,
+        });
+
+        // Record each delivery
+        await recordDelivery({
+          sentByUserId: ctx.user.id,
+          sentByName: ctx.user.name || undefined,
+          channelId: channel.id,
+          channelName: channel.name,
+          shareCode,
+          reportSource,
+          address,
+          reportType,
+          dealSummary,
+          customMessage,
+          status: result.success ? "sent" : "failed",
+          slackPermalink: result.permalink,
+          errorMessage: result.error,
+          batchId,
+        });
+
+        // Small delay between sends to avoid Slack rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      return {
+        batchId,
+        totalChannels: channels.length,
+        successCount,
+        failCount,
+        results,
+      };
+    }),
+
+  /**
+   * Get delivery history with optional filtering.
+   */
+  getDeliveryHistory: adminProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(50),
+      offset: z.number().min(0).default(0),
+      channelId: z.string().optional(),
+      status: z.enum(["sent", "failed", "pending"]).optional(),
+      search: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const conditions = [];
+      
+      if (input.channelId) {
+        conditions.push(eq(slackReportDeliveries.channelId, input.channelId));
+      }
+      if (input.status) {
+        conditions.push(eq(slackReportDeliveries.status, input.status));
+      }
+      if (input.search) {
+        conditions.push(like(slackReportDeliveries.address, `%${input.search}%`));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [deliveries, countResult] = await Promise.all([
+        db.select()
+          .from(slackReportDeliveries)
+          .where(whereClause)
+          .orderBy(desc(slackReportDeliveries.createdAt))
+          .limit(input.limit)
+          .offset(input.offset),
+        db.select({ count: sql<number>`count(*)` })
+          .from(slackReportDeliveries)
+          .where(whereClause),
+      ]);
+
+      return {
+        deliveries,
+        total: countResult[0]?.count || 0,
+        hasMore: (input.offset + input.limit) < (countResult[0]?.count || 0),
+      };
+    }),
+
+  /**
+   * Get delivery stats summary.
+   */
+  getDeliveryStats: adminProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const [stats] = await db.select({
+        total: sql<number>`count(*)`,
+        sent: sql<number>`sum(case when status = 'sent' then 1 else 0 end)`,
+        failed: sql<number>`sum(case when status = 'failed' then 1 else 0 end)`,
+        uniqueChannels: sql<number>`count(distinct channelId)`,
+        uniqueReports: sql<number>`count(distinct shareCode)`,
+      })
+      .from(slackReportDeliveries);
+
+      return {
+        total: stats?.total || 0,
+        sent: stats?.sent || 0,
+        failed: stats?.failed || 0,
+        uniqueChannels: stats?.uniqueChannels || 0,
+        uniqueReports: stats?.uniqueReports || 0,
       };
     }),
 });

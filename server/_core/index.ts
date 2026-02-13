@@ -680,21 +680,35 @@ async function startServer() {
   // ============================================
   // SLACK INTEGRATION WEBHOOK
   // ============================================
-  // Accepts property analysis requests from Slack Workflow Builder.
-  // Returns 200 immediately, processes async, posts results back via webhook.
+  // Accepts property analysis requests from:
+  // 1. Slack Workflow Builder (JSON payload with text + response_url)
+  // 2. Slack Slash Commands (URL-encoded payload with text + response_url)
+  // Returns 200 immediately, processes async, posts results back to the originating channel.
+  
+  // Parse URL-encoded bodies for Slack slash commands
+  app.use('/api/slack', express.urlencoded({ extended: true }));
+  
   app.post('/api/slack/analyze', async (req: any, res: any) => {
     try {
-      const { text, channel_id, user_id, response_url } = req.body;
+      const { text, channel_id, user_id, response_url, command } = req.body;
       
       if (!text || typeof text !== 'string') {
         return res.status(400).json({ error: 'Missing required field: text' });
       }
 
-      // Respond immediately to avoid Slack timeout (3 second limit)
-      res.status(200).json({ 
-        ok: true, 
-        message: 'Analysis started. Results will be posted to Slack shortly.' 
-      });
+      // For slash commands, respond with a visible acknowledgment
+      if (command) {
+        res.status(200).json({
+          response_type: 'in_channel',
+          text: `Analyzing: ${text}\nResults will appear in this channel shortly...`
+        });
+      } else {
+        // For Workflow Builder, respond with JSON
+        res.status(200).json({ 
+          ok: true, 
+          message: 'Analysis started. Results will be posted to Slack shortly.' 
+        });
+      }
 
       // Process async - don't await
       const { handleSlackAnalyze } = await import('../slack-integration');
