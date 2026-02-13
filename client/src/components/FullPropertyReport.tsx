@@ -1055,7 +1055,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 Est. Annual Revenue
                 <InfoTip text="The total projected income this property could earn in one year on Airbnb/VRBO, based on comparable listings in the area, average nightly rate, and expected occupancy." />
               </p>
-              <p className="text-2xl font-serif font-bold text-[#C9A962]">{formatCurrency(revenue_estimate.annual)}</p>
+              <p className="text-2xl font-serif font-bold text-[#C9A962]">
+                {formatCurrency(revenue_estimate.annual)}
+                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[#C9A962]/15 text-[#C9A962] align-middle">/year</span>
+              </p>
               {revenue_estimate.range && (
                 <p className="text-xs text-[#94a3b8] mt-1">
                   {formatCurrency(revenue_estimate.range.low)} – {formatCurrency(revenue_estimate.range.high)}
@@ -1068,7 +1071,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 Avg. Nightly Rate
                 <InfoTip text="Also called ADR (Average Daily Rate). This is the average price per night guests would pay to stay at your property. It changes by season — higher in peak months, lower in slow months." />
               </p>
-              <p className="text-2xl font-serif font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.nightly)}</p>
+              <p className="text-2xl font-serif font-bold text-[#1e293b]">
+                {formatCurrency(revenue_estimate.nightly)}
+                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[#64748b]/10 text-[#64748b] align-middle">/night</span>
+              </p>
               <DataSourceBadge type="property" />
             </div>
             <div className="bg-white rounded-xl p-4 border border-[#e2e8f0]">
@@ -1084,7 +1090,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 Monthly Average
                 <InfoTip text="Your estimated annual revenue divided by 12. This is a simple average — actual monthly income will vary by season (some months higher, some lower)." />
               </p>
-              <p className="text-2xl font-serif font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.monthly)}</p>
+              <p className="text-2xl font-serif font-bold text-[#1e293b]">
+                {formatCurrency(revenue_estimate.monthly)}
+                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[#3b82f6]/10 text-[#3b82f6] align-middle">/month</span>
+              </p>
               <DataSourceBadge type="property" />
             </div>
           </div>
@@ -1221,20 +1230,57 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         <section id="section-revenue" className="scroll-mt-24 mb-16">
           <SectionHeader icon={DollarSign} title="Revenue Projections" subtitle="Estimated earnings based on market data and comparable properties" tooltip="These projections are based on real performance data from similar short-term rental listings in your area. They show what your property could realistically earn on platforms like Airbnb and VRBO." />
 
+          {/* Beginner FAQ */}
+          <details className="bg-blue-50/50 rounded-2xl border border-blue-200/50 mb-8 group">
+            <summary className="cursor-pointer p-5 flex items-center gap-3 text-sm font-semibold text-blue-700 hover:text-blue-800 transition-colors select-none">
+              <HelpCircle className="w-4 h-4 flex-shrink-0" />
+              <span>New to short-term rentals? What do these numbers mean?</span>
+              <ChevronDown className="w-4 h-4 ml-auto transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="px-5 pb-5 pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">Annual Revenue <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#C9A962]/15 text-[#C9A962] ml-1">/year</span></p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">The total money your property could earn in one year from Airbnb/VRBO bookings. Think of it as your "top line" income before any costs.</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">Monthly Average <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#3b82f6]/10 text-[#3b82f6] ml-1">/month</span></p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">Your annual revenue divided by 12. Some months will be higher (summer/holidays) and some lower (off-season). This is just the average.</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">Nightly Rate (ADR) <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#64748b]/10 text-[#64748b] ml-1">/night</span></p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">ADR = Average Daily Rate. This is the average price per night guests pay. Like hotel room rates, it goes up during busy seasons and down during slow ones.</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">Occupancy Rate</p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">The percentage of nights your property is booked. 70% means about 256 out of 365 nights have paying guests. Higher occupancy = more consistent income.</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">RevPAR <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#64748b]/10 text-[#64748b] ml-1">/night</span></p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">Revenue Per Available Room = Nightly Rate x Occupancy Rate. This one number tells you how well a property performs overall. Higher RevPAR = better.</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-blue-100">
+                  <p className="font-semibold text-[#1e293b] text-sm mb-1">Net Profit <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 ml-1">$$</span></p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">The money left over after subtracting all costs (rent/mortgage, cleaning, supplies, etc.) from your revenue. Green = you're making money. Red = you're losing money.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
           {/* Revenue Range */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
             <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Annual Revenue Estimate <InfoTip text="Three scenarios for your annual income: Conservative (worst case), Projected (most likely), and Optimistic (best case). The range gives you a realistic picture of what to expect. Most hosts should plan their finances around the Projected number." /></h3>
             <div className="grid grid-cols-3 gap-4 mb-6">
               <StatCard
                 label="Conservative"
-                value={formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)}
+                value={`${formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)}/yr`}
                 sublabel="Lower range"
                 icon={TrendingDown}
                 tooltip="The low end of the revenue range. Think of this as a worst-case scenario — what you might earn during a slow year or if you're just starting out with fewer reviews."
               />
               <StatCard
                 label="Projected"
-                value={formatCurrency(revenue_estimate.annual)}
+                value={`${formatCurrency(revenue_estimate.annual)}/yr`}
                 sublabel="Most likely"
                 icon={DollarSign}
                 highlight
@@ -1242,7 +1288,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               />
               <StatCard
                 label="Optimistic"
-                value={formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}
+                value={`${formatCurrency(revenue_estimate.range?.high || revenue_estimate.annual * 1.15)}/yr`}
                 sublabel="Upper range"
                 icon={TrendingUp}
                 tooltip="The high end of the revenue range. You could reach this with excellent reviews, professional photos, optimized pricing, and strong demand."
@@ -1250,10 +1296,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Monthly Average" value={formatCurrency(revenue_estimate.monthly)} icon={Calendar} tooltip="Annual revenue divided by 12. Actual monthly income varies by season — summer months are typically higher." />
-              <StatCard label="Nightly Rate (ADR)" value={formatCurrency(revenue_estimate.nightly)} icon={DollarSign} tooltip="Average Daily Rate — the average price per night a guest pays. This is calculated from comparable listings in your area with similar bedrooms and amenities." />
+              <StatCard label="Monthly Average" value={`${formatCurrency(revenue_estimate.monthly)}/mo`} icon={Calendar} tooltip="Annual revenue divided by 12. Actual monthly income varies by season — summer months are typically higher." />
+              <StatCard label="Nightly Rate (ADR)" value={`${formatCurrency(revenue_estimate.nightly)}/night`} icon={DollarSign} tooltip="Average Daily Rate — the average price per night a guest pays. This is calculated from comparable listings in your area with similar bedrooms and amenities." />
               <StatCard label="Occupancy Rate" value={formatPercent(revenue_estimate.occupancy)} icon={Percent} tooltip="The percentage of available nights that are booked. 70% occupancy means about 255 nights per year are booked. New listings typically start lower and build up over 3-6 months." />
-              <StatCard label="RevPAR" value={formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy))} icon={BarChart3} tooltip="Revenue Per Available Room — your nightly rate multiplied by your occupancy rate. This single number captures both pricing power and demand. Higher RevPAR = better overall performance." />
+              <StatCard label="RevPAR" value={`${formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy))}/night`} icon={BarChart3} tooltip="Revenue Per Available Room — your nightly rate multiplied by your occupancy rate. This single number captures both pricing power and demand. Higher RevPAR = better overall performance." />
             </div>
           </div>
 
@@ -1355,16 +1401,16 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
                 <p className="text-sm text-[#64748b] mb-1">Gross Annual Revenue <InfoTip text="Your total projected income before any expenses are subtracted. This is the 'top line' number." /></p>
-                <p className="text-2xl font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.annual)}</p>
+                <p className="text-2xl font-bold text-[#1e293b]">{formatCurrency(revenue_estimate.annual)}<span className="text-xs font-semibold ml-1 text-[#94a3b8]">/yr</span></p>
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
                 <p className="text-sm text-[#64748b] mb-1">Total Annual Expenses <InfoTip text="All operating costs added up for the year — cleaning, supplies, insurance, platform fees, maintenance, and more." /></p>
-                <p className="text-2xl font-bold text-red-600">- {formatCurrency(expenses.total_annual)}</p>
+                <p className="text-2xl font-bold text-red-600">- {formatCurrency(expenses.total_annual)}<span className="text-xs font-semibold ml-1 text-[#94a3b8]">/yr</span></p>
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 text-center">
                 <p className="text-sm text-[#64748b] mb-1">Net Annual Revenue <InfoTip text="What you actually keep after all operating expenses. This is your 'bottom line' — the real profit from the rental (before taxes and mortgage if applicable)." /></p>
                 <p className={`text-2xl font-bold ${expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(expenses.net_annual_revenue)}
+                  {formatCurrency(expenses.net_annual_revenue)}<span className="text-xs font-semibold ml-1 text-[#94a3b8]">/yr</span>
                 </p>
               </div>
             </div>
@@ -1392,9 +1438,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="Active Listings" value={market_data.listing_count.toLocaleString()} icon={Building} tooltip="The total number of short-term rental listings currently active on Airbnb and VRBO in this market. More listings means more competition, but also indicates strong traveler demand." />
-              <StatCard label="Market Avg. Monthly Revenue" value={formatCurrency(market_data.metrics.revenue)} icon={DollarSign} tooltip="The average monthly income across ALL listings in this market (all bedroom counts, all property types). Your property may earn more or less depending on its size and quality." />
+              <StatCard label="Market Avg. Monthly Revenue" value={`${formatCurrency(market_data.metrics.revenue)}/mo`} icon={DollarSign} tooltip="The average monthly income across ALL listings in this market (all bedroom counts, all property types). Your property may earn more or less depending on its size and quality." />
               <StatCard label="Market Avg. Occupancy" value={formatPercent(market_data.metrics.occupancy)} icon={Percent} tooltip="The average booking rate across all listings in this market. This includes studios, 1-bedrooms, and large homes — so your specific property type may differ." />
-              <StatCard label="Market Avg. ADR" value={formatCurrency(market_data.metrics.adr)} icon={DollarSign} tooltip="The average nightly price across all listings in this market. Larger properties with more bedrooms typically command higher nightly rates." />
+              <StatCard label="Market Avg. ADR" value={`${formatCurrency(market_data.metrics.adr)}/night`} icon={DollarSign} tooltip="The average nightly price across all listings in this market. Larger properties with more bedrooms typically command higher nightly rates." />
             </div>
             {market_data.metrics.market_score && (
               <div className="mt-4">
@@ -1894,13 +1940,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
                 label="Avg. Comp Revenue"
-                value={formatCurrency(filteredComps.reduce((s, c) => s + c.annual_revenue, 0) / filteredComps.length)}
+                value={`${formatCurrency(filteredComps.reduce((s, c) => s + c.annual_revenue, 0) / filteredComps.length)}/yr`}
                 icon={DollarSign}
                 tooltip="The average annual revenue across your SELECTED comparable listings. Deselect outliers to see how the average changes."
               />
               <StatCard
                 label="Highest Revenue"
-                value={formatCurrency(filteredComps[0]?.annual_revenue || 0)}
+                value={`${formatCurrency(filteredComps[0]?.annual_revenue || 0)}/yr`}
                 icon={TrendingUp}
                 tooltip="The top-earning listing among your selected comps. This represents the ceiling — what's possible with excellent management, reviews, and pricing."
               />
@@ -2264,11 +2310,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
               <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Monthly Cash Flow <InfoTip text="Your monthly income minus your monthly rent. This is the simplest view of whether this rental arbitrage deal makes money. Green = profit, Red = loss. Remember, this doesn't include operating expenses like cleaning and supplies." /></h3>
               <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
-                <DataRow label="Projected Monthly Revenue" value={formatCurrency(rentalCalcs.monthlyRevenue)} highlight tooltip="Your estimated monthly income from Airbnb/VRBO bookings after accounting for occupancy and nightly rate." />
-                <DataRow label="Monthly Rent" value={`- ${formatCurrency(rentalCalcs.rent)}`} tooltip="The monthly lease payment you'd pay to the landlord. This is your biggest fixed cost in a rental arbitrage model." />
+                <DataRow label="Projected Monthly Revenue" value={`${formatCurrency(rentalCalcs.monthlyRevenue)}/mo`} highlight tooltip="Your estimated monthly income from Airbnb/VRBO bookings after accounting for occupancy and nightly rate." />
+                <DataRow label="Monthly Rent" value={`- ${formatCurrency(rentalCalcs.rent)}/mo`} tooltip="The monthly lease payment you'd pay to the landlord. This is your biggest fixed cost in a rental arbitrage model." />
                 <DataRow label="Monthly Profit" value={
                   <span className={rentalCalcs.monthlyProfit >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                    {formatCurrency(rentalCalcs.monthlyProfit)}
+                    {formatCurrency(rentalCalcs.monthlyProfit)}/mo
                   </span>
                 } highlight tooltip="Revenue minus rent. Green means you're making money each month; red means you're losing money. This is a simplified view — operating expenses (cleaning, supplies, etc.) will further reduce this number." />
               </div>
@@ -2296,9 +2342,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   </div>
                   <div>
                     <p className="text-sm text-[#64748b] mb-1">Break-Even ADR <InfoTip text="The minimum nightly rate needed to cover your rent at projected occupancy. If the market rate is well above this, you have a good safety margin." /></p>
-                    <p className="text-xl font-bold text-[#1e293b]">{formatCurrency(rentalCalcs.breakEvenADR)}</p>
+                    <p className="text-xl font-bold text-[#1e293b]">{formatCurrency(rentalCalcs.breakEvenADR)}/night</p>
                     <p className="text-xs text-[#94a3b8]">
-                      Minimum nightly rate needed. Market projects {formatCurrency(revenue_estimate.nightly)}.
+                      Minimum nightly rate needed. Market projects {formatCurrency(revenue_estimate.nightly)}/night.
                     </p>
                   </div>
                   <div>
@@ -2319,7 +2365,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <div className="space-y-4">
                   <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
                     <DataRow label="Estimated Startup Costs" value={formatCurrency(rentalCalcs.startup)} tooltip="One-time costs to furnish and set up the rental — furniture, linens, kitchen supplies, decor, photography, and initial cleaning. Typically $3,000-$15,000 depending on property size." />
-                    <DataRow label="Annual Profit" value={formatCurrency(rentalCalcs.annualProfit)} highlight tooltip="Your total yearly profit after subtracting rent and operating expenses from short-term rental revenue. This is what you actually take home." />
+                    <DataRow label="Annual Profit" value={`${formatCurrency(rentalCalcs.annualProfit)}/yr`} highlight tooltip="Your total yearly profit after subtracting rent and operating expenses from short-term rental revenue. This is what you actually take home." />
                     <DataRow label="ROI (First Year)" value={`${rentalCalcs.roi.toFixed(0)}%`} highlight tooltip="Return on Investment — your annual profit divided by your startup costs. For example, 200% ROI means you earn 2x what you invested. Higher is better." />
                     <DataRow label="Months to Recoup Startup" value={
                       rentalCalcs.monthsToRecoup === Infinity ? 'N/A' : `${rentalCalcs.monthsToRecoup} months`
@@ -2385,7 +2431,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <StatCard label="Purchase Price" value={formatCurrency(purchaseCalcs.price)} icon={Home} tooltip="The estimated purchase price of the property based on comparable sales data or the value you provided." />
                 <StatCard label="Down Payment" value={formatCurrency(purchaseCalcs.downPayment)} sublabel={`${(purchaseCalcs.downPct * 100).toFixed(0)}%`} icon={Wallet} tooltip="The upfront cash you'd pay at closing. Investment properties typically require 20-25% down. A larger down payment means lower monthly mortgage payments." />
                 <StatCard label="Total Cash Needed" value={formatCurrency(purchaseCalcs.totalCashNeeded)} sublabel="Down + closing" icon={PiggyBank} tooltip="Your total out-of-pocket cost to close the deal — includes down payment plus closing costs (typically 2-5% of purchase price for inspections, title, appraisal, etc.)." />
-                <StatCard label="Monthly Mortgage" value={purchaseCalcs.monthlyMortgage > 0 ? formatCurrency(purchaseCalcs.monthlyMortgage) : 'Cash Purchase'} icon={Landmark} tooltip="Your monthly principal and interest payment on the mortgage loan. This is a fixed cost regardless of how many nights you book." />
+                <StatCard label="Monthly Mortgage" value={purchaseCalcs.monthlyMortgage > 0 ? `${formatCurrency(purchaseCalcs.monthlyMortgage)}/mo` : 'Cash Purchase'} icon={Landmark} tooltip="Your monthly principal and interest payment on the mortgage loan. This is a fixed cost regardless of how many nights you book." />
               </div>
             </div>
 
@@ -2394,7 +2440,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
                 <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Key Metrics <InfoTip text="The most important investment performance indicators. Cap Rate measures the property's earning power. Cash-on-Cash Return measures your return on the cash you invested. DSCR shows if the property can cover its debt. These are the numbers investors use to compare deals." /></h3>
                 <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
-                  <DataRow label="Net Operating Income (NOI)" value={formatCurrency(purchaseCalcs.noi)} highlight tooltip="Annual revenue minus all operating expenses (but NOT mortgage). This is the industry-standard measure of a property's earning power before financing costs." />
+                  <DataRow label="Net Operating Income (NOI)" value={`${formatCurrency(purchaseCalcs.noi)}/yr`} highlight tooltip="Annual revenue minus all operating expenses (but NOT mortgage). This is the industry-standard measure of a property's earning power before financing costs." />
                   <DataRow label="Cap Rate" value={`${purchaseCalcs.capRate.toFixed(1)}%`} highlight tooltip="Capitalization Rate — NOI divided by purchase price. Think of it as the property's yield if you paid all cash. 5-8% is typical for STR; 8%+ is strong." />
                   <DataRow label="Cash-on-Cash Return" value={`${purchaseCalcs.cashOnCash.toFixed(1)}%`} highlight tooltip="Your annual cash flow divided by the total cash you invested (down payment + closing). This is the return on YOUR money. 8-12% is considered good for STR investments." />
                   {purchaseCalcs.dscr !== Infinity && (
@@ -2407,21 +2453,21 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6">
                 <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Annual Cash Flow <InfoTip text="A step-by-step breakdown of your yearly income and expenses. Starts with gross revenue, subtracts operating expenses, property tax, insurance, and mortgage to show your final cash flow — the actual money in your pocket each year." /></h3>
                 <div className="divide-y divide-[#e2e8f0] rounded-xl border border-[#e2e8f0] overflow-hidden">
-                  <DataRow label="Gross Revenue" value={formatCurrency(revenue_estimate.annual)} highlight tooltip="Total projected annual income before any expenses are subtracted." />
-                  <DataRow label="Operating Expenses (35%)" value={`- ${formatCurrency(purchaseCalcs.operatingExpenses)}`} tooltip="Day-to-day costs of running the rental — cleaning, supplies, repairs, platform fees, utilities, etc. Estimated at 35% of gross revenue, which is typical for professionally managed STRs." />
-                  <DataRow label="Property Tax" value={`- ${formatCurrency(purchaseCalcs.propertyTax)}`} tooltip="Annual property taxes based on the purchase price and local tax rates. This is usually 1-2% of the property value per year." />
-                  <DataRow label="Insurance" value={`- ${formatCurrency(purchaseCalcs.insurance)}`} tooltip="Annual insurance premium for a short-term rental property. STR insurance costs more than standard homeowner's insurance because of the higher liability risk." />
+                  <DataRow label="Gross Revenue" value={`${formatCurrency(revenue_estimate.annual)}/yr`} highlight tooltip="Total projected annual income before any expenses are subtracted." />
+                  <DataRow label="Operating Expenses (35%)" value={`- ${formatCurrency(purchaseCalcs.operatingExpenses)}/yr`} tooltip="Day-to-day costs of running the rental — cleaning, supplies, repairs, platform fees, utilities, etc. Estimated at 35% of gross revenue, which is typical for professionally managed STRs." />
+                  <DataRow label="Property Tax" value={`- ${formatCurrency(purchaseCalcs.propertyTax)}/yr`} tooltip="Annual property taxes based on the purchase price and local tax rates. This is usually 1-2% of the property value per year." />
+                  <DataRow label="Insurance" value={`- ${formatCurrency(purchaseCalcs.insurance)}/yr`} tooltip="Annual insurance premium for a short-term rental property. STR insurance costs more than standard homeowner's insurance because of the higher liability risk." />
                   {purchaseCalcs.annualMortgage > 0 && (
-                    <DataRow label="Mortgage (Annual)" value={`- ${formatCurrency(purchaseCalcs.annualMortgage)}`} tooltip="Your total annual mortgage payments (principal + interest). This is a fixed cost you pay regardless of how many nights you book." />
+                    <DataRow label="Mortgage (Annual)" value={`- ${formatCurrency(purchaseCalcs.annualMortgage)}/yr`} tooltip="Your total annual mortgage payments (principal + interest). This is a fixed cost you pay regardless of how many nights you book." />
                   )}
                   <DataRow label="Annual Cash Flow" value={
                     <span className={purchaseCalcs.annualCashFlow >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                      {formatCurrency(purchaseCalcs.annualCashFlow)}
+                      {formatCurrency(purchaseCalcs.annualCashFlow)}/yr
                     </span>
                   } highlight tooltip="Your total yearly profit after ALL expenses including mortgage. Green means the property makes money; red means it costs you money each year. This is the bottom line." />
                   <DataRow label="Monthly Cash Flow" value={
                     <span className={purchaseCalcs.monthlyCashFlow >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                      {formatCurrency(purchaseCalcs.monthlyCashFlow)}
+                      {formatCurrency(purchaseCalcs.monthlyCashFlow)}/mo
                     </span>
                   } tooltip="Your annual cash flow divided by 12. This is roughly what you'd take home each month after all bills are paid. Keep in mind actual monthly income varies due to seasonality." />
                 </div>

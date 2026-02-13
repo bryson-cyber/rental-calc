@@ -10967,3 +10967,16 @@ Results:
 - [x] Add /month badge to Expenses display (amber badge)
 - [x] Add /year badge to Projected Annual Revenue hero number (gold badge)
 - [x] Net Profit already had /month and /year badges from previous fix
+
+## Full Property Report: Financial Labels + FAQ (Feb 12, 2026)
+- [x] Add /yr labels to Revenue Range StatCards (Conservative, Projected, Optimistic)
+- [x] Add /mo and /night labels to detail StatCards (Monthly Average, ADR, RevPAR)
+- [x] Add /yr labels to Net Revenue After Expenses cards (Gross, Expenses, Net)
+- [x] Add /mo labels to rental arbitrage cash flow DataRows
+- [x] Add /yr and /mo labels to purchase investment cash flow DataRows
+- [x] Add /mo label to Monthly Mortgage StatCard
+- [x] Add /yr labels to comp summary StatCards (Avg Revenue, Highest Revenue)
+- [x] Add /night label to Break-Even ADR
+- [x] Add /mo and /night labels to market data StatCards
+- [x] Add /yr label to Annual Profit DataRow
+- [x] Add expandable "What do these numbers mean?" FAQ with 6 beginner-friendly definitions (Annual Revenue, Monthly Average, ADR, Occupancy Rate, RevPAR, Net Profit)
