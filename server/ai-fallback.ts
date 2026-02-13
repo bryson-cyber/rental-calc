@@ -265,8 +265,15 @@ async function generateWithGeminiDirect(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 1.0, maxOutputTokens: 1024, thinkingConfig: { thinkingLevel: 'medium' } }
+        systemInstruction: {
+          parts: [{ text: 'You are a senior short-term rental investment analyst. Write a concise executive summary with specific numbers from the data. Be professional but accessible.' }]
+        },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 1.0,
+          maxOutputTokens: 1024,
+          thinkingConfig: { thinkingLevel: 'medium' }
+        }
       }),
       signal: controller.signal
     });
@@ -276,7 +283,12 @@ async function generateWithGeminiDirect(
     }
     
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Filter out thinking parts
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts
+      .filter((p: any) => p.text && !p.thought)
+      .map((p: any) => p.text)
+      .join('') || '';
     
     if (!text) {
       throw new Error('Empty response from Gemini');

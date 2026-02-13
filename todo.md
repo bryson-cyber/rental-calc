@@ -11028,3 +11028,21 @@ Results:
 ### Fix 7: Testing
 - [x] Run full test suite — all 1073 tests pass across 82 files
 - [x] Verify TypeScript compilation — zero errors
+
+## Gemini 3 Live Smoke Tests
+- [ ] Test property analysis (gemini.ts) with real address via dev server
+- [ ] Test AI Advisor chat streaming (gemini-streaming.ts) via dev server
+- [ ] Test regulation tracker with Google Search grounding
+- [ ] Test AI fallback path (ai-fallback.ts)
+
+## Gemini API Deep Audit & PTCF Prompt Optimization (Feb 12, 2026)
+- [x] Fetch official Gemini API docs for structured output, function calling, thinking
+- [x] Audit all files for proper structured output (responseMimeType + responseSchema vs manual JSON.parse)
+- [x] Audit all files for proper systemInstruction usage
+- [x] Audit all files for proper response handling (thinking parts filtering)
+- [x] Audit function calling patterns in ai-advisor.ts
+- [x] Audit all prompts against PTCF framework (Persona, Task, Context, Format)
+- [x] Fix API implementation gaps: added responseSchema to gemini-analyzer.ts (8 functions), systemInstruction to all files, thinking part filtering to all response handlers
+- [x] Fix prompts to follow PTCF: separated Persona into systemInstruction, kept Task+Context+Format in user prompt
+- [x] Fixed temperature to 1.0 for all thinking-enabled models (newsletter-content-generator, regulation-tracker, gemini.ts callGeminiMax)
+- [x] Run full test suite — 1073 tests pass, zero TypeScript errors

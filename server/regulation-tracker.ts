@@ -616,7 +616,7 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
       google_search: {}
     }],
     generationConfig: {
-      temperature: 0.3,
+      temperature: 1.0,
       maxOutputTokens: 8192,
       thinkingConfig: {
         thinkingLevel: 'medium'
@@ -658,8 +658,12 @@ async function callGeminiWithSearch(prompt: string, systemPrompt?: string): Prom
   }
   
   const content = candidates[0]?.content;
-  const parts = content?.parts;
-  const text = parts?.[0]?.text || "";
+  const parts = content?.parts || [];
+  // Filter out thinking parts - only extract text parts
+  const text = parts
+    .filter((p: any) => p.text && !p.thought)
+    .map((p: any) => p.text)
+    .join('') || '';
   
   // Extract sources from grounding metadata
   const sources: RegulationSource[] = [];

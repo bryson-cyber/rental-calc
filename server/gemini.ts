@@ -223,7 +223,12 @@ async function callGemini(prompt: string, options?: GeminiCallOptions): Promise<
     }
 
     const data: GeminiResponse = await response.json();
-    return data.candidates[0]?.content?.parts[0]?.text || '';
+    // Filter out thinking parts - only extract text parts
+    const parts = data.candidates[0]?.content?.parts || [];
+    return parts
+      .filter((p: any) => p.text && !p.thought)
+      .map((p: any) => p.text)
+      .join('') || '';
   } finally {
     clearTimeout(timeoutId);
   }
@@ -261,10 +266,11 @@ async function callGeminiMax(prompt: string, maxRetries: number = 3): Promise<st
             parts: [{ text: prompt }]
           }],
           generationConfig: {
-            // For comprehensive reports, use moderate temperature for consistency
-            // Note: Removed thinkingConfig as it was consuming all tokens and returning empty responses
-            temperature: 0.7,
-            maxOutputTokens: 16384, // Reduced from 65K for faster response while still comprehensive
+            temperature: 1.0,
+            maxOutputTokens: 16384,
+            thinkingConfig: {
+              thinkingLevel: 'medium'
+            }
           }
         }),
         signal: controller.signal
@@ -291,7 +297,12 @@ async function callGeminiMax(prompt: string, maxRetries: number = 3): Promise<st
       }
 
       const data: GeminiResponse = await response.json();
-      const result = data.candidates[0]?.content?.parts[0]?.text || '';
+      // Filter out thinking parts - only extract text parts
+      const resultParts = data.candidates[0]?.content?.parts || [];
+      const result = resultParts
+        .filter((p: any) => p.text && !p.thought)
+        .map((p: any) => p.text)
+        .join('') || '';
       
       if (result) {
         console.log(`[Gemini Max] Success on attempt ${attempt + 1}`);

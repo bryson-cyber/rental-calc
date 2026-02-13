@@ -107,7 +107,10 @@ async function callGeminiWithRetry(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          systemInstruction: {
+            parts: [{ text: 'You are an expert short-term rental investment analyst. Provide detailed, data-driven analysis with specific numbers. Write for someone who may be new to STR investing.' }]
+          },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 1.0,
             maxOutputTokens: maxTokens,
@@ -125,7 +128,12 @@ async function callGeminiWithRetry(
       }
 
       const data = await response.json();
-      const result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // Filter out thinking parts - only extract text parts
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const result = parts
+        .filter((p: any) => p.text && !p.thought)
+        .map((p: any) => p.text)
+        .join('') || '';
       
       if (!result) {
         throw new Error('Empty response from Gemini');
@@ -695,13 +703,14 @@ IMPORTANT:
   try {
     const response = await callGeminiWithRetry(prompt, 8192, 60000);
     
-    // Parse JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
+    // Parse JSON from response - clean markdown fences if present
+    let cleanedResponse = response.trim();
+    if (cleanedResponse.startsWith('```json')) cleanedResponse = cleanedResponse.slice(7);
+    if (cleanedResponse.startsWith('```')) cleanedResponse = cleanedResponse.slice(3);
+    if (cleanedResponse.endsWith('```')) cleanedResponse = cleanedResponse.slice(0, -3);
+    cleanedResponse = cleanedResponse.trim();
     
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(cleanedResponse);
     
     const result: EnhancedNarrativeReport = {
       executive_summary: parsed.executive_summary || 'Analysis in progress...',

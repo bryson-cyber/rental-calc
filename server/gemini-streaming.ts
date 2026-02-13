@@ -150,7 +150,7 @@ export async function streamGeminiChat(options: StreamingChatOptions): Promise<v
           try {
             const data = JSON.parse(jsonStr);
             const text = data.candidates?.[0]?.content?.parts
-              ?.filter((p: { text?: string }) => p.text)
+              ?.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought)
               ?.map((p: { text: string }) => p.text)
               ?.join('') || '';
             

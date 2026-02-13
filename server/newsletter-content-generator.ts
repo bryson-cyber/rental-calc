@@ -41,7 +41,7 @@ interface ContactInfo {
 async function callGeminiForJson<T>(
   systemPrompt: string,
   userPrompt: string,
-  temperature: number = 0.7
+  temperature: number = 1.0
 ): Promise<T> {
   const apiKey = ENV.geminiApiKey;
   if (!apiKey) {
@@ -73,7 +73,12 @@ async function callGeminiForJson<T>(
   }
 
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  // Filter out thinking parts - only extract text parts
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const text = parts
+    .filter((p: any) => p.text && !p.thought)
+    .map((p: any) => p.text)
+    .join('') || '';
   if (!text) {
     throw new Error('Empty response from Gemini');
   }

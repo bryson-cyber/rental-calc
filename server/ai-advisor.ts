@@ -2610,9 +2610,10 @@ After EVERY metric, add "What This Means:" explanation.
       const functionCalls = content.parts?.filter((p: { functionCall?: unknown }) => p.functionCall);
       
       if (!functionCalls || functionCalls.length === 0) {
-        // No more function calls - extract the text response
-        const textPart = content.parts?.find((p: { text?: string }) => p.text);
-        return textPart?.text || "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
+        // No more function calls - extract the text response, filtering out thinking parts
+        const textParts = content.parts?.filter((p: { text?: string; thought?: boolean }) => p.text && !p.thought) || [];
+        const responseText = textParts.map((p: { text: string }) => p.text).join('');
+        return responseText || "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
       }
       
       // Execute each function call and collect results

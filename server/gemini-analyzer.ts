@@ -238,12 +238,29 @@ function sleep(ms: number): Promise<void> {
  * @param timeoutMs - Timeout for each attempt in milliseconds
  * @param maxRetries - Maximum number of retry attempts (default: 3)
  */
+interface CallGeminiOptions {
+  prompt: string;
+  systemInstruction?: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+  maxRetries?: number;
+  responseSchema?: Record<string, unknown>;
+}
+
 async function callGemini(
-  prompt: string, 
+  promptOrOptions: string | CallGeminiOptions, 
   maxTokens: number = 4096, 
   timeoutMs: number = 45000,
   maxRetries: number = 2
 ): Promise<string> {
+  // Support both old signature and new options object
+  const opts: CallGeminiOptions = typeof promptOrOptions === 'string'
+    ? { prompt: promptOrOptions, maxTokens, timeoutMs, maxRetries }
+    : { maxTokens: 4096, timeoutMs: 45000, maxRetries: 2, ...promptOrOptions };
+  const prompt = opts.prompt;
+  maxTokens = opts.maxTokens!;
+  timeoutMs = opts.timeoutMs!;
+  maxRetries = opts.maxRetries!;
   let lastError: Error | null = null;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -259,19 +276,33 @@ async function callGemini(
         await sleep(backoffMs);
       }
       
+      // Build request body with optional systemInstruction and responseSchema
+      const requestBody: Record<string, unknown> = {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 1.0,
+          maxOutputTokens: maxTokens,
+          thinkingConfig: {
+            thinkingLevel: 'high'
+          },
+          ...(opts.responseSchema ? {
+            responseMimeType: 'application/json',
+            responseSchema: opts.responseSchema
+          } : {})
+        }
+      };
+
+      // Add systemInstruction if provided
+      if (opts.systemInstruction) {
+        requestBody.systemInstruction = {
+          parts: [{ text: opts.systemInstruction }]
+        };
+      }
+
       const response = await fetch(`${GEMINI_API_URL}?key=${ENV.geminiApiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: maxTokens,
-            thinkingConfig: {
-              thinkingLevel: 'high'
-            }
-          }
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
 
@@ -313,7 +344,12 @@ async function callGemini(
       }
       
       const data = await response.json();
-      const result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // Filter out thinking parts - only extract text parts (not thought parts)
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const result = parts
+        .filter((p: any) => p.text && !p.thought)
+        .map((p: any) => p.text)
+        .join('') || '';
       
       if (attempt > 0) {
         console.log(`[GeminiAnalyzer] Success on retry attempt ${attempt + 1}`);
@@ -372,7 +408,11 @@ async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: 'You are an expert Airbnb property analyst specializing in visual assessment of rental listings. Analyze images objectively, identifying design themes, amenities, and guest appeal factors.' }]
+      },
       contents: [{
+        role: 'user',
         parts: [
           { text: prompt },
           {
@@ -399,7 +439,9 @@ async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: 
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // Filter out thinking parts
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  return parts.filter((p: any) => p.text && !p.thought).map((p: any) => p.text).join('') || '';
 }
 
 // ============================================
@@ -508,16 +550,29 @@ CRITICAL REQUIREMENTS:
 - Compare to specific competitors by name when relevant
 - Include dollar amounts, percentages, and timeframes in actions
 
-Return ONLY the JSON array, no other text.`;
+Generate exactly 5 insights.`;
+
+  const insightsSchema = {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Brief title (5-7 words)' },
+        insight: { type: 'string', description: 'Specific insight with numbers from the data (2-3 sentences)' },
+        impact: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+        action: { type: 'string', description: 'Specific actionable step with target numbers' }
+      },
+      required: ['title', 'insight', 'impact', 'action']
+    }
+  };
 
   try {
-    const response = await callGemini(prompt);
-    // Extract JSON from response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse insights JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are an expert Airbnb arbitrage analyst. Generate unique, data-driven insights specific to each property. Every insight must include specific numbers from the provided data. Never give generic advice.',
+      responseSchema: insightsSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error synthesizing insights:', error);
     // Return default insights on error
@@ -612,17 +667,29 @@ JSON FORMAT:
   }
 ]
 
-CRITICAL: Every pattern MUST include specific numbers. No generic observations.
+CRITICAL: Every pattern MUST include specific numbers. No generic observations.`;
 
-Return ONLY the JSON array, no other text.`;
+  const patternsSchema = {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        pattern: { type: 'string', description: 'Specific pattern with data and numbers' },
+        frequency: { type: 'string', description: 'How many top performers exhibit this pattern' },
+        revenue_impact: { type: 'string', description: 'Quantified revenue impact' },
+        recommendation: { type: 'string', description: 'Specific action for subject property with target numbers' }
+      },
+      required: ['pattern', 'frequency', 'revenue_impact', 'recommendation']
+    }
+  };
 
   try {
-    const response = await callGemini(prompt);
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse patterns JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are an expert at analyzing Airbnb competition patterns. Identify quantified patterns from competitor data. Every pattern must include specific numbers from the data provided. Never give generic observations.',
+      responseSchema: patternsSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error analyzing patterns:', error);
     return [];
@@ -748,15 +815,31 @@ Based on composite score of ${compositeScore.toFixed(1)}/10:
   "key_opportunity": "Quantified opportunity (e.g., 'Reaching top 25% adds $X/year')"
 }
 
-Return ONLY the JSON object, no other text.`;
+Provide your verdict based on the composite score and data above.`;
+
+  const verdictSchema = {
+    type: 'object',
+    properties: {
+      rating: { type: 'string', enum: ['GO', 'CAUTION', 'PASS'] },
+      confidence: { type: 'integer', description: 'Confidence score 1-10 aligned with composite score' },
+      summary: { type: 'string', description: '2-3 sentences with specific numbers from the data' },
+      top_reasons: {
+        type: 'array',
+        items: { type: 'string', description: 'Reason with specific metric' }
+      },
+      key_risk: { type: 'string', description: 'Quantified risk with dollar amounts' },
+      key_opportunity: { type: 'string', description: 'Quantified opportunity with dollar amounts' }
+    },
+    required: ['rating', 'confidence', 'summary', 'top_reasons', 'key_risk', 'key_opportunity']
+  };
 
   try {
-    const response = await callGemini(prompt);
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse verdict JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are a senior real estate investment analyst. Provide quantified investment verdicts based strictly on the data provided. Every statement must include specific numbers. Align your rating with the composite score: 7+ = GO, 4-7 = CAUTION, below 4 = PASS.',
+      responseSchema: verdictSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error generating verdict:', error);
     // Return default verdict based on numbers
@@ -891,15 +974,29 @@ Generate pricing strategy:
   "pricing_rationale": "3-4 sentences: (1) positioning vs competitors, (2) expected revenue impact, (3) seasonal adjustments"
 }
 
-Return ONLY the JSON object, no other text.`;
+Generate the pricing strategy based on the data above.`;
+
+  const pricingSchema = {
+    type: 'object',
+    properties: {
+      base_rate: { type: 'integer', description: 'Recommended base nightly rate in dollars' },
+      peak_premium_percent: { type: 'integer', description: 'Percentage increase for peak season' },
+      slow_discount_percent: { type: 'integer', description: 'Percentage decrease for slow season' },
+      weekend_premium_percent: { type: 'integer', description: 'Percentage increase for Fri-Sat' },
+      minimum_stay_peak: { type: 'integer', description: 'Minimum nights in peak season' },
+      minimum_stay_slow: { type: 'integer', description: 'Minimum nights in slow season' },
+      pricing_rationale: { type: 'string', description: '3-4 sentences covering positioning vs competitors, expected revenue impact, and seasonal adjustments' }
+    },
+    required: ['base_rate', 'peak_premium_percent', 'slow_discount_percent', 'weekend_premium_percent', 'minimum_stay_peak', 'minimum_stay_slow', 'pricing_rationale']
+  };
 
   try {
-    const response = await callGemini(prompt);
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse pricing JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are a dynamic pricing expert for Airbnb short-term rentals. Create data-driven pricing strategies based strictly on the market data, competitor analysis, and seasonality patterns provided. All recommendations must be backed by specific numbers.',
+      responseSchema: pricingSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error generating pricing:', error);
     // Return calculated defaults
@@ -1139,17 +1236,50 @@ PROVIDE RISK ASSESSMENT:
   ]
 }
 
-INCLUDE 4 RISKS (one from each category) and 3 OPPORTUNITIES with specific dollar amounts.
+INCLUDE 4 RISKS (one from each category) and 3 OPPORTUNITIES with specific dollar amounts.`;
 
-Return ONLY the JSON object, no other text.`;
+  const riskSchema = {
+    type: 'object',
+    properties: {
+      overall_risk: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+      risks: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', enum: ['Market', 'Financial', 'Operational', 'Regulatory'] },
+            description: { type: 'string' },
+            severity: { type: 'string', enum: ['Low', 'Medium', 'High'] },
+            financial_impact: { type: 'string' },
+            mitigation: { type: 'string' }
+          },
+          required: ['category', 'description', 'severity', 'financial_impact', 'mitigation']
+        }
+      },
+      opportunities: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', enum: ['Market', 'Pricing', 'Differentiation', 'Timing'] },
+            description: { type: 'string' },
+            potential_impact: { type: 'string' },
+            action: { type: 'string' }
+          },
+          required: ['category', 'description', 'potential_impact', 'action']
+        }
+      }
+    },
+    required: ['overall_risk', 'risks', 'opportunities']
+  };
 
   try {
-    const response = await callGemini(prompt);
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse risk assessment JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are a senior real estate risk analyst specializing in short-term rental investments. Assess risks and opportunities using specific numbers from the data provided. Every risk and opportunity must include quantified financial impacts.',
+      responseSchema: riskSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error assessing risks:', error);
     return {
@@ -1281,15 +1411,31 @@ PHASE REQUIREMENTS:
    - Automation opportunities
    - Expansion criteria
 
-Return ONLY the JSON array, no other text.`;
+Generate the 5-phase roadmap based on the data above.`;
+
+  const roadmapSchema = {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        phase: { type: 'string', description: 'Phase name' },
+        timeline: { type: 'string', description: 'Timeline (e.g., Weeks 1-3)' },
+        tasks: { type: 'array', items: { type: 'string' }, description: 'Specific tasks with costs and details' },
+        estimated_cost: { type: 'string', description: 'Itemized cost estimate' },
+        expected_outcome: { type: 'string', description: 'Specific measurable outcome' },
+        kpis: { type: 'array', items: { type: 'string' }, description: 'KPIs to track' }
+      },
+      required: ['phase', 'timeline', 'tasks', 'expected_outcome']
+    }
+  };
 
   try {
-    const response = await callGemini(prompt);
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse action plan JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are an Airbnb launch strategist who creates actionable, phased roadmaps for new short-term rental properties. Each phase must include specific costs, timelines, and measurable outcomes based on the property and market data provided.',
+      responseSchema: roadmapSchema
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error generating action plan:', error);
     return [
@@ -1585,21 +1731,8 @@ export async function callGeminiStructured<T>(
     throw new Error('GEMINI_API_KEY not configured');
   }
 
-  const systemPrompt = `You are an expert short-term rental investment analyst. 
-You MUST respond with ONLY valid JSON that matches the provided schema exactly.
-Do not include any text before or after the JSON.
-Do not include markdown code blocks.
-Return ONLY the raw JSON object.`;
-
-  const fullPrompt = `${systemPrompt}
-
-REQUIRED OUTPUT SCHEMA:
-${JSON.stringify(schema, null, 2)}
-
-ANALYSIS REQUEST:
-${prompt}
-
-Return ONLY the JSON object matching the schema above. No other text.`;
+  // Use native systemInstruction instead of embedding in prompt
+  const systemPrompt = 'You are an expert short-term rental investment analyst. Analyze property data and market metrics to provide quantified, actionable investment analysis.';
 
   let lastError: Error | null = null;
   
@@ -1619,11 +1752,18 @@ Return ONLY the JSON object matching the schema above. No other text.`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.3, // Lower temperature for more consistent structured output
+            temperature: 1.0,
             maxOutputTokens: maxTokens,
-            responseMimeType: "application/json"
+            responseMimeType: 'application/json',
+            responseSchema: schema,
+            thinkingConfig: {
+              thinkingLevel: 'high'
+            }
           }
         }),
         signal: controller.signal
@@ -1662,26 +1802,18 @@ Return ONLY the JSON object matching the schema above. No other text.`;
       }
       
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      
-      // Clean up the response
-      let cleanedText = text.trim();
-      if (cleanedText.startsWith('```json')) {
-        cleanedText = cleanedText.slice(7);
-      }
-      if (cleanedText.startsWith('```')) {
-        cleanedText = cleanedText.slice(3);
-      }
-      if (cleanedText.endsWith('```')) {
-        cleanedText = cleanedText.slice(0, -3);
-      }
-      cleanedText = cleanedText.trim();
+      // Filter out thinking parts - only extract text parts
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const text = parts
+        .filter((p: any) => p.text && !p.thought)
+        .map((p: any) => p.text)
+        .join('') || '';
 
       if (attempt > 0) {
         console.log(`[GeminiAnalyzer] Structured success on retry attempt ${attempt + 1}`);
       }
 
-      return JSON.parse(cleanedText) as T;
+      return JSON.parse(text.trim()) as T;
     } catch (error: any) {
       if (error.name === 'AbortError') {
         lastError = new Error(`Gemini API timeout after ${timeoutMs / 1000} seconds`);
@@ -1961,15 +2093,36 @@ Return as JSON:
   "disclaimer": "This information may be outdated. Always verify with local authorities."
 }
 
-Return ONLY the JSON object.`;
+Provide the regulation information based on your knowledge.`;
+
+  const regulationSchema = {
+    type: 'object',
+    properties: {
+      city: { type: 'string' },
+      state: { type: 'string' },
+      str_allowed: { type: 'string', enum: ['yes', 'no', 'restricted', 'unknown'] },
+      permit_required: { type: 'boolean' },
+      permit_cost_estimate: { type: 'string' },
+      key_restrictions: { type: 'array', items: { type: 'string' } },
+      occupancy_limits: { type: 'string' },
+      minimum_stay_requirements: { type: 'string' },
+      tax_requirements: { type: 'array', items: { type: 'string' } },
+      enforcement_level: { type: 'string', enum: ['strict', 'moderate', 'minimal', 'unknown'] },
+      recent_changes: { type: 'string' },
+      recommendation: { type: 'string' },
+      disclaimer: { type: 'string' }
+    },
+    required: ['city', 'state', 'str_allowed', 'permit_required', 'permit_cost_estimate', 'key_restrictions', 'occupancy_limits', 'minimum_stay_requirements', 'tax_requirements', 'enforcement_level', 'recent_changes', 'recommendation', 'disclaimer']
+  };
 
   try {
-    const response = await callGemini(prompt, 2048);
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse regulation JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are a short-term rental regulatory specialist. Provide information about STR regulations based on your knowledge. Always include a disclaimer that information may be outdated and should be verified with local authorities.',
+      responseSchema: regulationSchema,
+      maxTokens: 2048
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error fetching regulations:', error);
     return {
@@ -1999,26 +2152,26 @@ export async function explainForBeginners(
   data: any,
   context: string
 ): Promise<string> {
-  const prompt = `You are explaining Airbnb investing to a complete beginner. 
-Write at a fifth-grade reading level. Use simple words. No jargon.
-
-TOPIC: ${topic}
+  const prompt = `Explain the following ${topic} data for someone thinking about starting an Airbnb business.
 
 DATA:
 ${JSON.stringify(data, null, 2)}
 
 CONTEXT: ${context}
 
-Explain what this means for someone thinking about starting an Airbnb business.
-- Use short sentences
-- Give real examples
-- Explain WHY it matters
-- Tell them what to DO with this information
-
-Keep it under 150 words.`;
+Requirements:
+- Use short sentences and simple words
+- Give a real-world example or analogy
+- Explain WHY this matters for their investment decision
+- End with one specific action they should take
+- Keep it under 150 words`;
 
   try {
-    return await callGemini(prompt, 512);
+    return await callGemini({
+      prompt,
+      systemInstruction: 'You are a friendly Airbnb investing mentor explaining concepts to a complete beginner. Write at a fifth-grade reading level. Never use jargon or technical terms without immediately explaining them. Use analogies to everyday situations.',
+      maxTokens: 512
+    });
   } catch (error) {
     console.error('[GeminiAnalyzer] Error explaining for beginners:', error);
     return `This data shows important information about ${topic}. It helps you understand if this investment makes sense for you.`;
@@ -2037,20 +2190,20 @@ export async function generateWhatThisMeans(
     market_name?: string;
   }
 ): Promise<string> {
-  const prompt = `Explain what this data point means for someone researching an Airbnb arbitrage investment.
+  const prompt = `Explain what "${dataPoint}: ${value}" means for this Airbnb investment.
+${context.property_rent ? `Monthly Rent: $${context.property_rent}` : ''}
+${context.bedrooms ? `Bedrooms: ${context.bedrooms}` : ''}
+${context.market_name ? `Market: ${context.market_name}` : ''}
 
-DATA POINT: ${dataPoint}
-VALUE: ${value}
-${context.property_rent ? `MONTHLY RENT: $${context.property_rent}` : ''}
-${context.bedrooms ? `BEDROOMS: ${context.bedrooms}` : ''}
-${context.market_name ? `MARKET: ${context.market_name}` : ''}
-
-Write 1-2 sentences at a fifth-grade reading level.
-Start with "This means..." or "This tells you..."
-Be specific about what action they should take or what this indicates about the investment.`;
+Write 1-2 sentences starting with "This means..." or "This tells you..."
+Be specific about what action they should take.`;
 
   try {
-    return await callGemini(prompt, 256);
+    return await callGemini({
+      prompt,
+      systemInstruction: 'You are a friendly Airbnb investing mentor. Write at a fifth-grade reading level. Be specific and actionable.',
+      maxTokens: 256
+    });
   } catch (error) {
     return `This is an important factor to consider for your investment decision.`;
   }
@@ -2085,15 +2238,27 @@ Return as JSON:
   ...
 }
 
-Return ONLY the JSON object.`;
+Explain each data point in 1-2 simple sentences.`;
+
+  // Build dynamic schema based on data points
+  const explanationProperties: Record<string, any> = {};
+  dataPoints.forEach(d => {
+    explanationProperties[d.name] = { type: 'string', description: `Explanation of ${d.name}` };
+  });
+  const explanationSchema = {
+    type: 'object',
+    properties: explanationProperties,
+    required: dataPoints.map(d => d.name)
+  };
 
   try {
-    const response = await callGemini(prompt, 2048);
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('Could not parse explanations JSON');
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are explaining Airbnb investment data to a complete beginner. Write at a fifth-grade reading level. Use simple words. No jargon. Start each explanation with "This means..." or "This tells you..."',
+      responseSchema: explanationSchema,
+      maxTokens: 2048
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error batch generating explanations:', error);
     const fallback: Record<string, string> = {};
@@ -2590,25 +2755,27 @@ Focus on:
 4. Signs of market saturation or continued opportunity
 5. Specific actionable insights for an investor considering this market`;
 
+  const historicalSchema = {
+    type: 'object',
+    properties: {
+      executive_summary: { type: 'string', description: '2-3 sentence summary of market performance and investor implications' },
+      market_trajectory: { type: 'string', enum: ['accelerating_growth', 'steady_growth', 'maturing', 'plateauing', 'declining'] },
+      key_findings: { type: 'array', items: { type: 'string' } },
+      investment_implications: { type: 'array', items: { type: 'string' } },
+      timing_recommendation: { type: 'string', description: '1-2 sentences on market entry timing' },
+      confidence_level: { type: 'string', enum: ['high', 'medium', 'low'] }
+    },
+    required: ['executive_summary', 'market_trajectory', 'key_findings', 'investment_implications', 'timing_recommendation', 'confidence_level']
+  };
+
   try {
-    const response = await callGemini(prompt, 1024);
-    
-    // Parse JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
-    
-    return {
-      executive_summary: parsed.executive_summary || 'Historical analysis unavailable.',
-      market_trajectory: parsed.market_trajectory || 'maturing',
-      key_findings: parsed.key_findings || [],
-      investment_implications: parsed.investment_implications || [],
-      timing_recommendation: parsed.timing_recommendation || 'Consider current market conditions carefully.',
-      confidence_level: parsed.confidence_level || 'medium'
-    };
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are an expert short-term rental market analyst. Analyze historical market data to identify trends, assess market health, and provide actionable investment insights. Every finding must reference specific numbers from the data.',
+      responseSchema: historicalSchema,
+      maxTokens: 1024
+    });
+    return JSON.parse(response);
   } catch (error) {
     console.error('[GeminiAnalyzer] Error analyzing historical trends:', error);
     
@@ -4168,16 +4335,46 @@ KEY REQUIREMENTS:
 6. DO NOT include any GO/CAUTION/PASS verdict language - let the reader draw their own conclusions
 7. When discussing market size, refer to the ${input.active_listings} direct competitors, not broader regional statistics`;
 
+  const reportSchema = {
+    type: 'object',
+    properties: {
+      executive_summary: { type: 'string' },
+      market_overview: { type: 'string' },
+      revenue_analysis: { type: 'string' },
+      competitive_landscape: { type: 'string' },
+      seasonal_strategy: { type: 'string' },
+      historical_context: { type: 'string' },
+      risk_assessment: { type: 'string' },
+      financial_outlook: { type: 'string' },
+      conclusion: { type: 'string' },
+      key_metrics: {
+        type: 'object',
+        properties: {
+          projected_annual_revenue: { type: 'number' },
+          projected_monthly_profit: { type: 'number' },
+          market_occupancy: { type: 'number' },
+          market_adr: { type: 'number' },
+          break_even_occupancy: { type: 'number' },
+          confidence_level: { type: 'string', enum: ['high', 'medium', 'low'] },
+          revenue_to_rent_ratio: { type: 'number' },
+          qualification_rate: { type: 'number' },
+          direct_competitor_count: { type: 'integer' }
+        },
+        required: ['projected_annual_revenue', 'projected_monthly_profit', 'market_occupancy', 'market_adr', 'confidence_level', 'revenue_to_rent_ratio']
+      },
+      quick_facts: { type: 'array', items: { type: 'string' } }
+    },
+    required: ['executive_summary', 'market_overview', 'revenue_analysis', 'competitive_landscape', 'seasonal_strategy', 'risk_assessment', 'financial_outlook', 'conclusion', 'key_metrics', 'quick_facts']
+  };
+
   try {
-    const response = await callGemini(prompt, 8192);
-    
-    // Parse JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
+    const response = await callGemini({
+      prompt,
+      systemInstruction: 'You are a senior short-term rental investment analyst writing a comprehensive property report. Write in flowing paragraphs, not bullet points. Every claim must reference specific numbers from the data. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor.',
+      responseSchema: reportSchema,
+      maxTokens: 8192
+    });
+    const parsed = JSON.parse(response);
     
     return {
       executive_summary: parsed.executive_summary || 'Analysis in progress...',
