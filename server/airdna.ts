@@ -1733,6 +1733,14 @@ export async function getMarketListings(
       console.log(`[getMarketListings] Expected bedroom: ${options.filters.bedrooms}, Matching: ${matchingCount}/${rawListings.length}`);
     }
     
+    // Debug: count how many listings have location data
+    const withLocation = rawListings.filter(r => r.location?.lat && r.location?.lng).length;
+    console.log(`[getMarketListings] Listings with location data: ${withLocation}/${rawListings.length}`);
+    if (rawListings.length > 0 && withLocation === 0) {
+      console.log(`[getMarketListings] SAMPLE raw listing keys:`, Object.keys(rawListings[0]));
+      console.log(`[getMarketListings] SAMPLE raw listing location:`, JSON.stringify(rawListings[0].location));
+    }
+    
     const listings: ListingData[] = rawListings.map((r) => ({
       id: r.property_id || '',
       title: r.title || 'Untitled Listing',

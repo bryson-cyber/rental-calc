@@ -60,7 +60,7 @@ import {
   ArrowUp,
   ArrowDown,
   Scale,
-  BedDouble
+  BedDouble,
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -724,6 +724,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   const displayComps: Comparable[] = (same_bedroom_comps && same_bedroom_comps.length > 0 ? same_bedroom_comps : comps)
     .sort((a: Comparable, b: Comparable) => b.annual_revenue - a.annual_revenue);
 
+  // Debug: log how many comps have coordinates for the map
+  const compsWithCoords = displayComps.filter(c => c.latitude && c.longitude);
+  console.log(`[FullPropertyReport] ${compsWithCoords.length}/${displayComps.length} comps have lat/lng coordinates for map markers`);
+  if (compsWithCoords.length === 0 && displayComps.length > 0) {
+    console.warn('[FullPropertyReport] No comps have coordinates! Map will show only subject property. Sample comp:', JSON.stringify(displayComps[0], null, 2));
+  }
+
   // Initialize comp selection: all comps selected by default
   // Uses a stable key: comp.id || comp.airbnb_listing_id || index-in-displayComps (revenue-sorted)
   // IMPORTANT: The index parameter MUST be the comp's position in displayComps (revenue-sorted),
@@ -1266,6 +1273,101 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
             </div>
           </details>
+
+          {/* Bottom Line Summary — TeslaDashboard-style */}
+          {(hasRental || hasPurchase || hasExpenses) && (() => {
+            const monthlyRev = revenue_estimate.monthly;
+            const annualRev = revenue_estimate.annual;
+            const fixedCostLabel = hasPurchase ? 'Mortgage Payment' : hasRental ? 'Monthly Rent' : null;
+            const fixedCostMonthly = hasPurchase && purchaseCalcs ? purchaseCalcs.monthlyMortgage : hasRental && rentalCalcs ? rentalCalcs.rent : 0;
+            const expenseMonthly = hasExpenses ? expenses.total_monthly : Math.round(annualRev * 0.35 / 12);
+            const netMonthly = monthlyRev - fixedCostMonthly - expenseMonthly;
+            const netAnnual = netMonthly * 12;
+            const isProfit = netMonthly >= 0;
+
+            return (
+              <div className="bg-gradient-to-br from-[#0F172A] to-[#1e293b] rounded-2xl shadow-lg p-6 mb-8 text-white">
+                <div className="flex items-center gap-2 mb-5">
+                  <DollarSign className="w-5 h-5 text-[#C9A962]" />
+                  <h3 className="text-lg font-serif font-semibold">The Bottom Line</h3>
+                  <InfoTip text="A simple breakdown showing how much this property earns, what it costs, and what you keep. This mirrors the Step 5 Validator view for quick understanding." />
+                </div>
+
+                {/* Flow: Revenue → Cost → Expenses → Profit */}
+                <div className="space-y-3">
+                  {/* Revenue */}
+                  <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#C9A962]/20 flex items-center justify-center">
+                        <TrendingUp className="w-4 h-4 text-[#C9A962]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white/90">Monthly Revenue</p>
+                        <p className="text-[10px] text-white/50">What this property earns from guests</p>
+                      </div>
+                    </div>
+                    <p className="text-lg font-bold text-[#C9A962]">{formatCurrency(monthlyRev)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-[#C9A962]/20 text-[#C9A962]">/mo</span></p>
+                  </div>
+
+                  {/* Fixed Cost (Rent or Mortgage) */}
+                  {fixedCostLabel && fixedCostMonthly > 0 && (
+                    <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                          <Home className="w-4 h-4 text-red-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white/90">{fixedCostLabel}</p>
+                          <p className="text-[10px] text-white/50">{hasPurchase ? 'Your monthly mortgage payment' : 'What you pay the landlord'}</p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-red-400">-{formatCurrency(fixedCostMonthly)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">/mo</span></p>
+                    </div>
+                  )}
+
+                  {/* Expenses */}
+                  <div className="flex items-center justify-between bg-white/10 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <Percent className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white/90">Operating Expenses</p>
+                        <p className="text-[10px] text-white/50">Cleaning, supplies, insurance, platform fees, etc.</p>
+                      </div>
+                    </div>
+                    <p className="text-lg font-bold text-amber-400">-{formatCurrency(expenseMonthly)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">/mo</span></p>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-dashed border-white/20 my-1" />
+
+                  {/* Net Profit */}
+                  <div className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-4 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isProfit ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                        {isProfit ? <TrendingUp className="w-5 h-5 text-green-400" /> : <TrendingDown className="w-5 h-5 text-red-400" />}
+                      </div>
+                      <div>
+                        <p className="text-base font-semibold text-white">Net Profit</p>
+                        <p className="text-[10px] text-white/50">What you keep after all costs</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-2xl font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                        {isProfit ? '+' : ''}{formatCurrency(netMonthly)}
+                        <span className={`text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>/mo</span>
+                      </p>
+                      <p className={`text-sm font-semibold mt-1 ${isProfit ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                        {isProfit ? '+' : ''}{formatCurrency(netAnnual)}
+                        <span className={`text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>/yr</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Revenue Range */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
@@ -2827,19 +2929,60 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               })()}
             </div>
 
-            {/* Key Tax Strategies */}
+            {/* Key Tax Strategies - Mode-Aware */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
-              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">Key Tax Strategies for STR Owners <InfoTip text="Advanced tax strategies that can significantly reduce your tax bill. These include cost segregation (accelerating depreciation), the STR tax loophole (offsetting W-2 income), 1031 exchanges (deferring capital gains), and the Augusta Rule (renting your own home tax-free for 14 days). Consult a tax professional before implementing." /></h3>
+              <h3 className="text-lg font-serif font-semibold text-[#1e293b] mb-4">
+                {hasPurchase ? 'Key Tax Strategies for Property Owners' : 'Key Tax Strategies for Rental Arbitrage Operators'}
+                {' '}<InfoTip text={hasPurchase ? 'Advanced tax strategies for property owners that can significantly reduce your tax bill. These include cost segregation (accelerating depreciation), bonus depreciation, the 14-day rule, and filing strategies. Consult a tax professional before implementing.' : 'Tax strategies specific to rental arbitrage operators. Since you lease (not own) the property, strategies like depreciation and cost segregation do not apply. Instead, focus on business expense deductions, home office deductions, and proper filing classification.'} />
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
-                      <Building className="w-4 h-4 text-[#C9A962]" />
+                {/* Purchase-only strategies */}
+                {hasPurchase && (
+                  <>
+                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                          <Building className="w-4 h-4 text-[#C9A962]" />
+                        </div>
+                        <h4 className="font-semibold text-[#1e293b] text-sm">Cost Segregation Study</h4>
+                      </div>
+                      <p className="text-xs text-[#64748b]">Reclassify components (appliances, fixtures, landscaping) to 5-15 year schedules for accelerated depreciation. Can front-load significant deductions in years 1-5.</p>
                     </div>
-                    <h4 className="font-semibold text-[#1e293b] text-sm">Cost Segregation Study</h4>
-                  </div>
-                  <p className="text-xs text-[#64748b]">Reclassify components (appliances, fixtures, landscaping) to 5-15 year schedules for accelerated depreciation. Can front-load significant deductions in years 1-5.</p>
-                </div>
+                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                          <DollarSign className="w-4 h-4 text-[#C9A962]" />
+                        </div>
+                        <h4 className="font-semibold text-[#1e293b] text-sm">Bonus Depreciation (100%)</h4>
+                      </div>
+                      <p className="text-xs text-[#64748b]">Under the One Big Beautiful Bill Act, qualifying property placed in service after Jan 19, 2025 is eligible for 100% first-year bonus depreciation on furniture, appliances, and equipment.</p>
+                    </div>
+                  </>
+                )}
+                {/* Arbitrage-only strategies */}
+                {hasRental && !hasPurchase && (
+                  <>
+                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                          <Building className="w-4 h-4 text-[#C9A962]" />
+                        </div>
+                        <h4 className="font-semibold text-[#1e293b] text-sm">Furniture & Furnishing Deductions</h4>
+                      </div>
+                      <p className="text-xs text-[#64748b]">As an arbitrage operator, you furnish the rental yourself. Furniture, decor, linens, kitchen supplies, and electronics are all deductible business expenses — either fully in year one or depreciated over time.</p>
+                    </div>
+                    <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
+                          <Home className="w-4 h-4 text-[#C9A962]" />
+                        </div>
+                        <h4 className="font-semibold text-[#1e293b] text-sm">Home Office Deduction</h4>
+                      </div>
+                      <p className="text-xs text-[#64748b]">If you manage your arbitrage business from home, you may deduct a portion of your home expenses (rent, utilities, internet) proportional to the space used exclusively for business.</p>
+                    </div>
+                  </>
+                )}
+                {/* Shared strategies (both modes) */}
                 <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
@@ -2848,15 +2991,6 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     <h4 className="font-semibold text-[#1e293b] text-sm">14-Day Rule</h4>
                   </div>
                   <p className="text-xs text-[#64748b]">If you rent your property for 14 days or fewer per year, the rental income is completely tax-free. Useful for properties in high-demand event areas.</p>
-                </div>
-                <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#C9A962]/15 flex items-center justify-center">
-                      <DollarSign className="w-4 h-4 text-[#C9A962]" />
-                    </div>
-                    <h4 className="font-semibold text-[#1e293b] text-sm">Bonus Depreciation (100%)</h4>
-                  </div>
-                  <p className="text-xs text-[#64748b]">Under the One Big Beautiful Bill Act, qualifying property placed in service after Jan 19, 2025 is eligible for 100% first-year bonus depreciation on furniture, appliances, and equipment.</p>
                 </div>
                 <div className="bg-[#f8fafc] rounded-xl p-4 border border-[#e2e8f0]">
                   <div className="flex items-center gap-2 mb-2">

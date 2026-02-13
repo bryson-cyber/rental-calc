@@ -10980,3 +10980,8 @@ Results:
 - [x] Add /mo and /night labels to market data StatCards
 - [x] Add /yr label to Annual Profit DataRow
 - [x] Add expandable "What do these numbers mean?" FAQ with 6 beginner-friendly definitions (Annual Revenue, Monthly Average, ADR, Occupancy Rate, RevPAR, Net Profit)
+
+## Full Property Report Fixes (Feb 12, 2026)
+- [x] Tax section shows purchase-only terms (cost segregation, bonus depreciation) in arbitrage/rent mode — make mode-aware
+- [ ] Add TeslaDashboard-style straightforward revenue presentation to the report (how much does this property make)
+- [x] Fix comp map markers not rendering — root cause: Comparable interface in LeadMagnet.tsx did NOT include latitude/longitude fields, causing coordinates to be dropped when building shareable reports. Fixed by adding lat/lng to Comparable interface, server→LeadMagnet mapping, and TeslaDashboard→shareable report mapping.

@@ -155,6 +155,8 @@ interface Comparable {
   images?: string[];  // All images for carousel
   airbnbUrl?: string;
   distanceMeters?: number;
+  latitude?: number;
+  longitude?: number;
   monthlyMetrics?: CompMonthlyMetric[];
 }
 
@@ -1375,6 +1377,8 @@ export default function LeadMagnet() {
           images: c.images || [],
           airbnbUrl: c.airbnb_url,
           distanceMeters: c.distance_meters,
+          latitude: c.latitude,
+          longitude: c.longitude,
         })),
         // Market insights for professional management and superhost stats
         marketInsights: data.insights ? {
@@ -3231,6 +3235,8 @@ export default function LeadMagnet() {
                   rating: c.rating,
                   reviews: c.reviews,
                   distanceMeters: c.distanceMeters,
+                  latitude: c.latitude,
+                  longitude: c.longitude,
                 }))}
                 marketInsights={{
                   professionallyManagedPct: result.marketInsights?.professionallyManagedPct || 0,

@@ -73,6 +73,8 @@ interface Comparable {
   images?: string[];  // All images for carousel
   airbnbUrl?: string;
   distanceMeters?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface AnalysisResult {
@@ -2280,6 +2282,8 @@ function AIPropertyAdvisor({
           rating: c.rating || 0,
           reviews: c.reviews,
           distanceMeters: c.distanceMeters,
+          latitude: c.latitude,
+          longitude: c.longitude,
           isSuperhost: false, // TODO: Add to comparables data
           isProfessionallyManaged: false, // TODO: Add to comparables data
         })),
