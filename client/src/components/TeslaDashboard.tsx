@@ -261,6 +261,7 @@ function HeroRevenueCard({
             <span className="text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
               {formatCurrency(annualRevenue)}
             </span>
+            <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
             {yearlyChange !== undefined && (
               <span className={`flex items-center gap-1 text-sm font-medium ${
                 yearlyChange >= 0 ? 'text-emerald-600' : 'text-red-600'
@@ -287,7 +288,10 @@ function HeroRevenueCard({
                 <p className="text-sm">What you'll earn each month from Airbnb bookings before any expenses</p>
               </TooltipContent>
             </Tooltip>
-            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRevenue)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRevenue)}</p>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">/month</span>
+            </div>
           </div>
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
             <Tooltip>
@@ -298,7 +302,10 @@ function HeroRevenueCard({
                 <p className="text-sm">{mode === 'purchase' ? 'Your monthly mortgage payment — your biggest fixed cost as a property owner' : 'The monthly rent you pay to your landlord — your biggest fixed cost'}</p>
               </TooltipContent>
             </Tooltip>
-            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(fixedCost)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(fixedCost)}</p>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">/month</span>
+            </div>
           </div>
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
             <Tooltip>
@@ -309,7 +316,10 @@ function HeroRevenueCard({
                 <p className="text-sm">Operating costs: cleaning, supplies, utilities, Airbnb fees, repairs. Industry standard is 20-30% of revenue.</p>
               </TooltipContent>
             </Tooltip>
-            <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses)}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-lg md:text-xl font-bold text-amber-600">{formatCurrency(monthlyExpenses)}</p>
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">/month</span>
+            </div>
           </div>
           <div className={`rounded-xl p-4 border ${
             isProfitable ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'

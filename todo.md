@@ -10960,3 +10960,10 @@ Results:
 ## Monthly vs Yearly Profit Clarity (Feb 12, 2026)
 - [x] Fix net profit display in HeroRevenueCard to clearly distinguish monthly vs yearly profit
 - [x] Added /MONTH and /YEAR badges next to profit numbers with clear visual separation
+
+## Label All Financial Metrics with /month or /year (Feb 12, 2026)
+- [x] Add /month badge to Monthly Revenue display in HeroRevenueCard (blue badge)
+- [x] Add /month badge to Your Rent / Mortgage Payment display (slate badge)
+- [x] Add /month badge to Expenses display (amber badge)
+- [x] Add /year badge to Projected Annual Revenue hero number (gold badge)
+- [x] Net Profit already had /month and /year badges from previous fix
