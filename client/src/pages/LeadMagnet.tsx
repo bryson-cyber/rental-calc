@@ -1325,6 +1325,11 @@ export default function LeadMagnet() {
       console.log('[Validate Deal] Annual revenue:', annualRevenue);
       const monthlyRevenue = annualRevenue / 12;
       
+      // In purchase mode, rent is NOT an expense (you own the property).
+      // The monthly cost is the mortgage payment, which is calculated separately in TeslaDashboard.
+      // In rent/arbitrage mode, rent IS the expense subtracted from revenue.
+      const effectiveRent = globalMode === 'purchase' ? 0 : rent;
+      
       // Transform API response to our result format
       setResult({
         revenue: {
@@ -1342,8 +1347,8 @@ export default function LeadMagnet() {
         },
         cashFlow: {
           monthlyRevenue,
-          monthlyRent: rent,
-          monthlyProfit: monthlyRevenue - rent,
+          monthlyRent: effectiveRent,
+          monthlyProfit: monthlyRevenue - effectiveRent,
         },
         forecast: (data.property?.monthly_forecast || []).map((m: any) => ({
           month: m.month,
@@ -2501,20 +2506,41 @@ export default function LeadMagnet() {
                   })()}
                 </div>
                 {/* Share Button - appears on all tools except ebook */}
+                {/* When validate tab has results, use UniversalShareButton for cached /share/ links.
+                    Otherwise fall back to ShareToolButton deep-links (which require login to re-run). */}
                 {activeTab !== 'ebook' && (
-                  <ShareToolButton
-                    step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : 1}
-                    city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
-                    state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
-                    zipCode={myProperty?.zipCode}
-                    address={address || myProperty?.address}
-                    bedrooms={myProperty?.bedrooms || (bedrooms ? parseInt(bedrooms) : undefined)}
-                    bathrooms={myProperty?.bathrooms || (bathrooms ? parseFloat(bathrooms) : undefined)}
-                    rent={myProperty?.monthlyRent || (monthlyRent ? parseInt(monthlyRent) : undefined)}
-                    variant="outline"
-                    size="sm"
-                    showLabel={true}
-                  />
+                  activeTab === 'validate' && result ? (
+                    <UniversalShareButton
+                      reportType="validator"
+                      reportData={{ ...result, _rentometerData: rentometerData || undefined, _expensePercent: expensePercent, _furnitureCost: parseFloat(furnitureCost) || 0, _mode: globalMode, _purchasePrice: myProperty?.purchasePrice, _loanType: myProperty?.loanType, _downPaymentPercent: myProperty?.downPaymentPercent, _interestRate: myProperty?.interestRate }}
+                      address={address}
+                      bedrooms={parseInt(bedrooms)}
+                      bathrooms={parseFloat(bathrooms)}
+                      monthlyRent={parseFloat(monthlyRent) || undefined}
+                      annualRevenue={(result as any)?.revenue_estimate?.annual || (result as any)?.revenue?.projected || (result as any)?.estimates?.annual_revenue}
+                      occupancyRate={(result as any)?.revenue_estimate?.occupancy || (result as any)?.metrics?.occupancy || (result as any)?.estimates?.occupancy_rate}
+                      averageDailyRate={(result as any)?.revenue_estimate?.nightly || (result as any)?.metrics?.adr || (result as any)?.estimates?.average_daily_rate}
+                      verdict={(result as any)?.verdict}
+                      title={`Property Validation - ${address}`}
+                      summary={`$${((result as any)?.revenue?.projected || (result as any)?.revenue_estimate?.annual || 0).toLocaleString()}/year`}
+                      variant="outline"
+                      size="sm"
+                    />
+                  ) : (
+                    <ShareToolButton
+                      step={activeTab === 'regulations' ? 1 : activeTab === 'opportunity' ? 2 : activeTab === 'prove' ? 3 : activeTab === 'find' ? 4 : activeTab === 'validate' ? 5 : activeTab === 'compare' ? 6 : activeTab === 'map' ? 7 : activeTab === 'market' ? 8 : activeTab === 'advisor' ? 9 : 1}
+                      city={myProperty?.city || exploreAddress?.split(',')[0]?.trim()}
+                      state={myProperty?.state || exploreAddress?.split(',')[1]?.trim()}
+                      zipCode={myProperty?.zipCode}
+                      address={address || myProperty?.address}
+                      bedrooms={myProperty?.bedrooms || (bedrooms ? parseInt(bedrooms) : undefined)}
+                      bathrooms={myProperty?.bathrooms || (bathrooms ? parseFloat(bathrooms) : undefined)}
+                      rent={myProperty?.monthlyRent || (monthlyRent ? parseInt(monthlyRent) : undefined)}
+                      variant="outline"
+                      size="sm"
+                      showLabel={true}
+                    />
+                  )
                 )}
               </div>
               <p className="text-gold font-medium text-sm sm:text-base md:text-lg mt-3 sm:mt-4 md:mt-5">
@@ -5644,14 +5670,14 @@ export default function LeadMagnet() {
               </div>
               <UniversalShareButton
                 reportType="validator"
-                reportData={{ ...result, _rentometerData: rentometerData || undefined, _expensePercent: expensePercent, _furnitureCost: parseFloat(furnitureCost) || 0, _mode: globalMode }}
+                reportData={{ ...result, _rentometerData: rentometerData || undefined, _expensePercent: expensePercent, _furnitureCost: parseFloat(furnitureCost) || 0, _mode: globalMode, _purchasePrice: myProperty?.purchasePrice, _loanType: myProperty?.loanType, _downPaymentPercent: myProperty?.downPaymentPercent, _interestRate: myProperty?.interestRate }}
                 address={address}
                 bedrooms={parseInt(bedrooms)}
                 bathrooms={parseFloat(bathrooms)}
                 monthlyRent={parseFloat(monthlyRent) || undefined}
-                annualRevenue={(result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue}
-                occupancyRate={(result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate}
-                averageDailyRate={(result as any)?.revenue_estimate?.nightly || (result as any)?.estimates?.average_daily_rate}
+                annualRevenue={(result as any)?.revenue_estimate?.annual || (result as any)?.revenue?.projected || (result as any)?.estimates?.annual_revenue}
+                occupancyRate={(result as any)?.revenue_estimate?.occupancy || (result as any)?.metrics?.occupancy || (result as any)?.estimates?.occupancy_rate}
+                averageDailyRate={(result as any)?.revenue_estimate?.nightly || (result as any)?.metrics?.adr || (result as any)?.estimates?.average_daily_rate}
                 verdict={(result as any)?.verdict}
                 title={`Property Validation - ${address}`}
                 summary={`$${((result as any)?.revenue_estimate?.annual || (result as any)?.estimates?.annual_revenue || 0).toLocaleString()}/year • ${Math.round(((result as any)?.revenue_estimate?.occupancy || (result as any)?.estimates?.occupancy_rate || 0) * 100)}% occupancy`}

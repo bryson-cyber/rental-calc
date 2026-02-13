@@ -562,6 +562,11 @@ export default function ShareableReportViewer() {
     const storedExpensePercent = reportData?._expensePercent ?? 20;
     const storedFurnitureCost = reportData?._furnitureCost ?? 0;
     const storedMode = reportData?._mode || 'rent';
+    // Purchase mode props stored alongside the report
+    const storedPurchasePrice = reportData?._purchasePrice || undefined;
+    const storedLoanType = reportData?._loanType || undefined;
+    const storedDownPaymentPercent = reportData?._downPaymentPercent || undefined;
+    const storedInterestRate = reportData?._interestRate || undefined;
 
     return (
       <>
@@ -613,6 +618,10 @@ export default function ShareableReportViewer() {
                 expensePercent={storedExpensePercent}
                 furnitureCost={storedFurnitureCost}
                 mode={storedMode}
+                purchasePrice={storedPurchasePrice}
+                loanType={storedLoanType}
+                downPaymentPercent={storedDownPaymentPercent}
+                interestRate={storedInterestRate}
               />
             </div>
           </section>

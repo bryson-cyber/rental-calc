@@ -192,21 +192,27 @@ function HeroRevenueCard({
   monthlyProfit, 
   monthlyRent,
   yearlyChange,
-  expensePercent = 20
+  expensePercent = 20,
+  mode = 'rent',
+  monthlyMortgage = 0
 }: { 
   annualRevenue: number;
   monthlyProfit: number;
   monthlyRent: number;
   yearlyChange?: number;
   expensePercent?: number;
+  mode?: 'rent' | 'purchase';
+  monthlyMortgage?: number;
 }) {
   // Calculate monthly values
   const monthlyRevenue = annualRevenue / 12;
   const monthlyExpenses = monthlyRevenue * (expensePercent / 100);
-  const trueMonthlyProfit = monthlyRevenue - monthlyRent - monthlyExpenses;
+  // In purchase mode, the fixed cost is the mortgage payment, not rent
+  const fixedCost = mode === 'purchase' ? monthlyMortgage : monthlyRent;
+  const trueMonthlyProfit = monthlyRevenue - fixedCost - monthlyExpenses;
   
   const isProfitable = trueMonthlyProfit > 0;
-  const profitMargin = monthlyRent > 0 ? ((trueMonthlyProfit / monthlyRent) * 100) : 0;
+  const profitMargin = fixedCost > 0 ? ((trueMonthlyProfit / fixedCost) * 100) : 0;
   
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.98_0.01_265)] to-white border border-[oklch(0.90_0.01_265)] p-6 md:p-8 shadow-sm">
@@ -286,13 +292,13 @@ function HeroRevenueCard({
           <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Your Rent</p>
+                <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">{mode === 'purchase' ? 'Mortgage Payment' : 'Your Rent'}</p>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
-                <p className="text-sm">The monthly rent you pay to your landlord — your biggest fixed cost</p>
+                <p className="text-sm">{mode === 'purchase' ? 'Your monthly mortgage payment — your biggest fixed cost as a property owner' : 'The monthly rent you pay to your landlord — your biggest fixed cost'}</p>
               </TooltipContent>
             </Tooltip>
-            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(monthlyRent)}</p>
+            <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(fixedCost)}</p>
           </div>
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
             <Tooltip>
@@ -323,12 +329,12 @@ function HeroRevenueCard({
         </div>
         
         {/* Profit Insight */}
-        {monthlyRent > 0 && (
+        {fixedCost > 0 && (
           <p className="text-[oklch(0.50_0_0)] text-sm mt-4">
             {isProfitable ? (
-              <>After {expensePercent}% expenses, you keep <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit)}/month</span> — that's <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit * 12)}/year</span> profit</>
+              <>After {mode === 'purchase' ? 'mortgage' : 'rent'} + {expensePercent}% expenses, you keep <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit)}/month</span> — that's <span className="text-emerald-600 font-medium">{formatCurrency(trueMonthlyProfit * 12)}/year</span> profit</>
             ) : (
-              <>After {expensePercent}% expenses, you'd lose <span className="text-red-600 font-medium">{formatCurrency(Math.abs(trueMonthlyProfit))}/month</span> — consider negotiating rent or increasing rates</>
+              <>After {mode === 'purchase' ? 'mortgage' : 'rent'} + {expensePercent}% expenses, you'd lose <span className="text-red-600 font-medium">{formatCurrency(Math.abs(trueMonthlyProfit))}/month</span> — {mode === 'purchase' ? 'consider a lower offer price or different loan terms' : 'consider negotiating rent or increasing rates'}</>
             )}
           </p>
         )}
@@ -2696,8 +2702,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         </div>
       </div>
       
-      {/* SECTION 1: Rent Validation - "Is my rent assumption valid?" */}
-      {rentometerData && (
+      {/* SECTION 1: Rent Validation - "Is my rent assumption valid?" (hidden in purchase mode - no landlord rent to validate) */}
+      {mode !== 'purchase' && rentometerData && (
         <RentValidationSection rentometerData={rentometerData} monthlyRent={result.cashFlow.monthlyRent} />
       )}
       
@@ -2708,6 +2714,8 @@ export function TeslaDashboard({ result, address, bedrooms, bathrooms, accommoda
         monthlyRent={result.cashFlow.monthlyRent}
         yearlyChange={yearlyChange}
         expensePercent={expensePercent}
+        mode={mode}
+        monthlyMortgage={purchaseCalcs?.monthlyMortgage || 0}
       />
       
       {/* SECTION 3: Key Metrics - ADR, Occupancy, Revenue Range */}

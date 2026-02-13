@@ -10929,3 +10929,22 @@ Results:
 - [x] Added image persistence from submarket listings to property_images cache (zero extra API calls)
 - [x] enrichListingsWithImages now cross-references cached images from market/submarket listings
 - [x] All 1039 tests pass across 79 test files
+
+## BUG: Halliard Dr Report Not Loading + Rent vs Purchase Price Logic
+- [ ] Investigate why report doesn't load for 1622 Halliard Dr (rate limiter still blocking?)
+- [ ] Fix: Admin should never be blocked by rate limiter
+- [x] Investigate rent field logic: when buying a property ($350K), rent comparison doesn't make sense
+- [x] Fix: In purchase mode, rent is now $0 (effectiveRent = 0 in LeadMagnet.tsx)
+- [x] HeroRevenueCard now shows "Mortgage Payment" instead of "Your Rent" in purchase mode
+- [x] HeroRevenueCard uses mortgage amount from purchaseCalcs as the fixed cost in purchase mode
+- [x] RentValidationSection is hidden in purchase mode (no landlord rent to validate)
+- [x] Profit insight text references mortgage instead of rent in purchase mode
+- [x] Purchase props (purchasePrice, loanType, downPaymentPercent, interestRate) stored in shared reports
+- [x] ShareableReportViewer passes purchase props to TeslaDashboard for shared report rendering
+## BUG: Shared Report Link Not Working
+- [x] Diagnosed: ShareToolButton generates deep-links (/?step=5&...&autoAnalyze=true) that require login
+- [x] Fix: When validate tab has results, share button now uses UniversalShareButton (cached /share/:shareCode links)
+- [x] UniversalShareButton creates proper cached reports that work without login
+- [x] ShareToolButton still used as fallback when no results are available
+- [x] All purchase mode props included in shared report data for full fidelity
+- [x] Tests written and passing (server/purchase-mode.test.ts)
