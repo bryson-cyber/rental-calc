@@ -9718,14 +9718,14 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Unified Admin Dashboard (Feb 4, 2026)
-- [ ] Consolidate all admin features into one dashboard with tabs
-- [ ] Add User Management tab
-- [ ] Add API Usage tab
-- [ ] Add HubSpot tab
-- [ ] Add Notifications tab
-- [ ] Add Newsletter tab
-- [ ] Add admin button to main UI header for easy access
-- [ ] Only show admin button to users with admin role
+- [x] Consolidate all admin features into one dashboard with tabs (done - see COMPLETE section below)
+- [x] Add User Management tab (done)
+- [x] Add API Usage tab (done)
+- [x] Add HubSpot tab (done)
+- [x] Add Notifications tab (done)
+- [x] Add Newsletter tab (done)
+- [x] Add admin button to main UI header for easy access (done)
+- [x] Only show admin button to users with admin role (done)
 
 
 ## Unified Admin Dashboard (Feb 4, 2026) - COMPLETE
@@ -9750,11 +9750,11 @@ This makes the grading more optimistic - properties now get better grades at low
 ## Admin Dashboard Branding Update (Feb 4, 2026)
 
 ### Redesign to Match Site Branding
-- [ ] Update admin dashboard with dark navy (#0F172A) background
-- [ ] Add gold (#C9A962) accent colors for highlights
-- [ ] Use consistent typography (Playfair Display serif + DM Sans)
-- [ ] Match card styling with rounded corners and subtle shadows
-- [ ] Update tab styling to match site aesthetic
+- [x] Update admin dashboard with dark navy (#0F172A) background (already implemented)
+- [x] Add gold (#C9A962) accent colors for highlights (already implemented)
+- [x] Use consistent typography (Playfair Display serif + DM Sans) (uses system font-sans for admin tool)
+- [x] Match card styling with rounded corners and subtle shadows (already implemented)
+- [x] Update tab styling to match site aesthetic (already implemented with gold active state)
 
 ### Remove AirDNA Mentions
 - [x] Replace "AirDNA API" references with "Market Data API" or similar (updated notification titles and error messages)
@@ -11258,3 +11258,19 @@ Results:
 - [x] Mark stale share link domain items as done (already uses window.location.origin)
 - [x] Write vitest test for emoji removal verification (12 tests)
 - [x] All 1,142 tests pass across 86 test files, 0 TypeScript errors
+
+## Admin Dashboard Light Theme Redesign (Feb 14, 2026)
+- [x] Remove all dark navy (#0F172A) backgrounds from admin dashboard
+- [x] Implement light theme with warm, professional palette (uses app semantic tokens)
+- [x] Apply interface-design skill principles (intent-driven, no defaults)
+- [x] Redesign tabs, cards, and data displays with subtle layering
+- [x] Ensure all text is readable against light backgrounds
+- [x] Use consistent spacing system and typography hierarchy
+
+## Admin User Activity Feed (Feb 14, 2026)
+- [x] Add tRPC endpoint to fetch user activity with name/email joined (getActivityFeed)
+- [x] Show activity feed in admin dashboard: who ran what property, which actions, when
+- [x] Display user name and email for each activity entry
+- [x] Add filtering by user, action type, and date range
+- [x] Paginate activity feed for performance
+- [x] Write vitest tests for activity feed (16 tests passing)

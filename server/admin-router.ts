@@ -619,6 +619,96 @@ export const adminRouter = router({
       }
     }),
 
+  // Get activity feed with user name/email joined
+  getActivityFeed: adminProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        actionCategory: z.string().optional(),
+        action: z.string().optional(),
+        limit: z.number().int().min(1).max(200).default(50),
+        offset: z.number().int().min(0).default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
+
+        const conditions = [];
+
+        if (input.actionCategory) {
+          conditions.push(eq(activityLogs.actionCategory, input.actionCategory));
+        }
+        if (input.action) {
+          conditions.push(eq(activityLogs.action, input.action));
+        }
+        if (input.search) {
+          conditions.push(
+            or(
+              like(users.name, `%${input.search}%`),
+              like(users.email, `%${input.search}%`)
+            )
+          );
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const feed = await db
+          .select({
+            id: activityLogs.id,
+            action: activityLogs.action,
+            actionCategory: activityLogs.actionCategory,
+            details: activityLogs.details,
+            pagePath: activityLogs.pagePath,
+            createdAt: activityLogs.createdAt,
+            userId: activityLogs.userId,
+            sessionId: activityLogs.sessionId,
+            userName: users.name,
+            userEmail: users.email,
+          })
+          .from(activityLogs)
+          .leftJoin(users, eq(activityLogs.userId, users.id))
+          .where(whereClause)
+          .orderBy(desc(activityLogs.createdAt))
+          .limit(input.limit)
+          .offset(input.offset);
+
+        const [totalResult] = await db
+          .select({ count: count() })
+          .from(activityLogs)
+          .leftJoin(users, eq(activityLogs.userId, users.id))
+          .where(whereClause);
+
+        // Get distinct action types for filter dropdown
+        const actionTypes = await db
+          .select({ action: activityLogs.action, count: count() })
+          .from(activityLogs)
+          .groupBy(activityLogs.action)
+          .orderBy(desc(count()))
+          .limit(30);
+
+        return {
+          feed,
+          total: totalResult?.count || 0,
+          actionTypes: actionTypes.map(a => ({ action: a.action, count: a.count })),
+          limit: input.limit,
+          offset: input.offset,
+        };
+      } catch (error) {
+        console.error("[Admin] Error getting activity feed:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get activity feed",
+        });
+      }
+    }),
+
   // Get today's API call count
   getTodayApiCount: adminProcedure
     .input(
