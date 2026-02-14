@@ -395,18 +395,18 @@ export function RegulationTrackerStep() {
   // Queries
   const isRegulationSavedQuery = trpc.regulationTracker.isRegulationSaved.useQuery(
     { city: result?.city || '', state: result?.state || '' },
-    { enabled: !!result && isAuthenticated }
+    { enabled: !!result && isAuthenticated, staleTime: 1000 * 60 * 5, refetchOnWindowFocus: false }
   );
   
   const commentsQuery = trpc.regulationTracker.getComments.useQuery(
     { city: result?.city || '', state: result?.state || '' },
-    { enabled: !!result }
+    { enabled: !!result, staleTime: 1000 * 60 * 5, refetchOnWindowFocus: false }
   );
   
   const commentIds = (commentsQuery.data?.data || []).map((c: Comment) => c.id);
   const userVotesQuery = trpc.regulationTracker.getUserVotes.useQuery(
     { commentIds },
-    { enabled: commentIds.length > 0 && isAuthenticated }
+    { enabled: commentIds.length > 0 && isAuthenticated, staleTime: 1000 * 60 * 5, refetchOnWindowFocus: false }
   );
   
   const handlePlaceSelect = (place: { name: string; placeId: string; lat?: number; lng?: number }) => {

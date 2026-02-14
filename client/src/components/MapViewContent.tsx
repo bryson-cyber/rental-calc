@@ -301,7 +301,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
   // Location quality data
   const locationQualityQuery = trpc.rental.getLocationQuality.useQuery(
     { lat: myPropertyLocation?.lat || 0, lng: myPropertyLocation?.lng || 0 },
-    { enabled: !!myPropertyLocation }
+    { enabled: !!myPropertyLocation, staleTime: 1000 * 60 * 10, refetchOnWindowFocus: false }
   );
   
   // Reset auto-populated state when property changes

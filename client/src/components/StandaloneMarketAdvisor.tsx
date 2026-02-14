@@ -130,7 +130,7 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
 
   const searchMarketsMutation = trpc.rental.searchMarkets.useQuery(
     { searchTerm: searchQuery, limit: 10 },
-    { enabled: searchQuery.length >= 2 }
+    { enabled: searchQuery.length >= 2, staleTime: 1000 * 60 * 30, refetchOnWindowFocus: false }
   );
 
   const standaloneMarketAdvisorMutation = trpc.advanced.standaloneMarketAdvisor.useMutation();

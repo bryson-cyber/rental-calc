@@ -36,6 +36,9 @@ export function HistoricalCharts({
   const { data, isLoading, error } = trpc.compData.getHistoricalData.useQuery({
     marketId,
     numMonths: timeRange,
+  }, {
+    staleTime: 1000 * 60 * 10, // 10 minutes — historical data doesn't change often
+    refetchOnWindowFocus: false,
   });
 
   const historicalData = data?.data || {

@@ -93,7 +93,10 @@ function TrendIndicator({ value, suffix = '%' }: { value: number; suffix?: strin
 export function MultiYearTrends({ marketId }: MultiYearTrendsProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>(24);
   const [expanded, setExpanded] = useState(false);
-  const { data, isLoading, error } = trpc.compData.getHistoricalData.useQuery({ marketId, numMonths: timeRange });
+  const { data, isLoading, error } = trpc.compData.getHistoricalData.useQuery({ marketId, numMonths: timeRange }, {
+    staleTime: 1000 * 60 * 10, // 10 minutes — historical data doesn't change often
+    refetchOnWindowFocus: false,
+  });
 
   const metrics = useMemo(() => {
     if (!data?.success || !data.data) return null;
