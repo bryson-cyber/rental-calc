@@ -2,7 +2,10 @@
  * Translation Context
  * 
  * Provides app-wide translation state and utilities.
- * Uses Gemini API via tRPC for on-demand translation.
+ * Uses a two-tier caching strategy:
+ *   1. Server-side persistent cache (DB) — pre-translated UI strings loaded on language change
+ *   2. Client-side in-memory cache — avoids redundant tRPC calls within a session
+ * Falls back to Gemini API via tRPC only for cache misses.
  * Persists language preference in localStorage.
  */
 
@@ -28,13 +31,17 @@ interface TranslationContextType {
   supportedLanguages: Array<{ code: string; name: string }>;
   /** Whether translation is available (non-English language selected) */
   isTranslationActive: boolean;
+  /** Whether the server cache has been loaded for the current language */
+  isCacheReady: boolean;
 }
 
 const TranslationContext = createContext<TranslationContextType | null>(null);
 
 const STORAGE_KEY = 'rental-calc-language';
 
-// Client-side translation cache to avoid redundant tRPC calls
+// Client-side translation cache to avoid redundant tRPC calls.
+// This is populated from the server cache on language change, then
+// augmented with Gemini translations for cache misses.
 const clientCache = new Map<string, string>();
 
 function getClientCacheKey(text: string, lang: string): string {
@@ -50,7 +57,9 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     return 'en';
   });
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isCacheReady, setIsCacheReady] = useState(false);
   const activeRequests = useRef(0);
+  const cacheLoadedForLang = useRef<string>('');
 
   // Fetch supported languages
   const { data: languagesData } = trpc.translation.getSupportedLanguages.useQuery(undefined, {
@@ -64,20 +73,57 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   const translateTextMutation = trpc.translation.translateText.useMutation();
   const translateBatchMutation = trpc.translation.translateBatch.useMutation();
   const translateReportMutation = trpc.translation.translateReport.useMutation();
+  const getFullCacheMutation = trpc.translation.getFullCache.useQuery(
+    { targetLang: currentLanguage },
+    {
+      enabled: currentLanguage !== 'en',
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+
+  // Pre-load server cache into client cache when language changes
+  useEffect(() => {
+    if (currentLanguage === 'en') {
+      setIsCacheReady(true);
+      return;
+    }
+
+    if (getFullCacheMutation.data && cacheLoadedForLang.current !== currentLanguage) {
+      const { translations, count } = getFullCacheMutation.data;
+      console.log(`[TranslationCache] Loaded ${count} cached translations for ${currentLanguage}`);
+      
+      // Populate client cache with server cache entries
+      for (const [sourceText, translatedText] of Object.entries(translations)) {
+        const key = getClientCacheKey(sourceText, currentLanguage);
+        clientCache.set(key, translatedText);
+      }
+      
+      cacheLoadedForLang.current = currentLanguage;
+      setIsCacheReady(true);
+    } else if (getFullCacheMutation.isLoading) {
+      setIsCacheReady(false);
+    } else if (getFullCacheMutation.isError) {
+      // If cache load fails, still allow translation to proceed via Gemini
+      console.warn('[TranslationCache] Failed to load server cache, falling back to Gemini');
+      setIsCacheReady(true);
+    }
+  }, [currentLanguage, getFullCacheMutation.data, getFullCacheMutation.isLoading, getFullCacheMutation.isError]);
 
   const setLanguage = useCallback((langCode: string) => {
     setCurrentLanguage(langCode);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, langCode);
     }
-    // Clear client cache when language changes
+    // Clear client cache when language changes (server cache will repopulate it)
     clientCache.clear();
+    cacheLoadedForLang.current = '';
+    setIsCacheReady(false);
   }, []);
 
   const translate = useCallback(async (text: string, context?: string): Promise<string> => {
     if (currentLanguage === 'en' || !text || text.trim().length === 0) return text;
 
-    // Check client cache
+    // Check client cache (includes server cache entries)
     const cacheKey = getClientCacheKey(text, currentLanguage);
     const cached = clientCache.get(cacheKey);
     if (cached) return cached;
@@ -111,7 +157,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
   ): Promise<Record<string, string>> => {
     if (currentLanguage === 'en') return texts;
 
-    // Check client cache for each, collect uncached
+    // Check client cache for each (includes server cache entries), collect uncached
     const result: Record<string, string> = {};
     const uncached: Record<string, string> = {};
 
@@ -194,6 +240,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     isTranslating,
     supportedLanguages,
     isTranslationActive: currentLanguage !== 'en',
+    isCacheReady,
   };
 
   return (

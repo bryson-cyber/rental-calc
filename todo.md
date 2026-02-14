@@ -11324,3 +11324,15 @@ Results:
 - [x] Translate all form labels (e.g., "Purchase Price", "Loan Type", "Property Address")
 - [x] Ensure translation works on Investment Calculator page (dark theme)
 - [x] Ensure translation works on all tool pages with forms
+
+## Server-Side Translation Cache (Feb 14, 2026)
+- [x] Design translation cache database schema (source_text, language, translated_text, hash)
+- [x] Create translation_cache table in drizzle schema and push migration
+- [x] Build tRPC endpoints for batch cache lookup and cache miss handling (bulkCacheLookup, getFullCache, getCacheStats)
+- [x] Collect all common UI strings from across the site (459 strings)
+- [x] Pre-translate common strings for Spanish, French, and Arabic via Gemini (1,377 total)
+- [x] Seed the database with pre-translated strings (459 × 3 languages)
+- [x] Update GlobalAutoTranslator to check server cache before calling Gemini API (isCacheReady gate)
+- [x] Add cache hit/miss metrics to track effectiveness (hitCount in DB, getCacheStats endpoint)
+- [x] Write vitest tests for the translation cache system (13 tests)
+- [x] Verify instant translation on repeat visits with cached languages (browser tested)

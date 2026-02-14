@@ -167,7 +167,7 @@ function batchItems<T>(items: T[], getText: (item: T) => string, maxItems = 40, 
 // ── Component ──
 
 export default function GlobalAutoTranslator() {
-  const { currentLanguage, isTranslationActive, translateBatch } = useTranslation();
+  const { currentLanguage, isTranslationActive, translateBatch, isCacheReady } = useTranslation();
   const [status, setStatus] = useState<'idle' | 'translating' | 'done'>('idle');
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const observerRef = useRef<MutationObserver | null>(null);
@@ -496,30 +496,34 @@ export default function GlobalAutoTranslator() {
   }, [isTranslationActive, processPendingMutations]);
 
   // ── React to language changes ──
+  // Wait for server cache to be loaded before starting translation.
+  // This ensures pre-translated strings are available in the client cache
+  // so they resolve instantly without hitting Gemini API.
   useEffect(() => {
-    if (prevLang.current === currentLanguage) return;
-    prevLang.current = currentLanguage;
+    if (prevLang.current === currentLanguage && !isCacheReady) return;
+    if (prevLang.current !== currentLanguage) {
+      prevLang.current = currentLanguage;
+      // Revert first
+      revertAll();
+    }
 
-    // Revert first
-    revertAll();
-
-    if (currentLanguage !== 'en') {
+    if (currentLanguage !== 'en' && isCacheReady) {
       // Delay to let React finish rendering after revert
       setTimeout(() => {
         translatePage(currentLanguage, translateBatch);
-      }, 500);
+      }, 300);
     }
-  }, [currentLanguage, revertAll, translatePage, translateBatch]);
+  }, [currentLanguage, isCacheReady, revertAll, translatePage, translateBatch]);
 
   // ── Initial translation on mount (if non-English already selected) ──
   useEffect(() => {
-    if (isTranslationActive && currentLanguage !== 'en') {
+    if (isTranslationActive && currentLanguage !== 'en' && isCacheReady) {
       const timer = setTimeout(() => {
         translatePage(currentLanguage, translateBatch);
-      }, 1000);
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isCacheReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Floating indicator ──
   if (status === 'idle') return null;

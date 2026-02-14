@@ -2166,3 +2166,42 @@ export const slackReportDeliveries = mysqlTable("slack_report_deliveries", {
 ]);
 export type SlackReportDelivery = typeof slackReportDeliveries.$inferSelect;
 export type InsertSlackReportDelivery = typeof slackReportDeliveries.$inferInsert;
+
+
+/**
+ * Translation cache table for persisting pre-translated UI strings.
+ * Stores source English text → translated text for each target language.
+ * Uses a hash of the source text for fast lookups.
+ */
+export const translationCache = mysqlTable("translation_cache", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  /** MD5-like hash of the source text for fast lookups */
+  sourceHash: varchar("sourceHash", { length: 64 }).notNull(),
+  
+  /** Original English text */
+  sourceText: text("sourceText").notNull(),
+  
+  /** Target language code (e.g., 'es', 'fr', 'ar') */
+  targetLang: varchar("targetLang", { length: 10 }).notNull(),
+  
+  /** Translated text */
+  translatedText: text("translatedText").notNull(),
+  
+  /** Context hint for the translation (e.g., 'button label', 'form placeholder') */
+  context: varchar("context", { length: 255 }),
+  
+  /** Number of times this translation has been served from cache */
+  hitCount: int("hitCount").default(0).notNull(),
+  
+  /** Timestamps */
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("tc_hash_lang_idx").on(table.sourceHash, table.targetLang),
+  index("tc_target_lang_idx").on(table.targetLang),
+  index("tc_hit_count_idx").on(table.hitCount),
+]);
+
+export type TranslationCacheEntry = typeof translationCache.$inferSelect;
+export type InsertTranslationCacheEntry = typeof translationCache.$inferInsert;
