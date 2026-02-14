@@ -11158,3 +11158,15 @@ Results:
 
 ## Theme Fix (Feb 14, 2026)
 - [x] Change ThemeProvider defaultTheme from "dark" to "light" - app does not use dark theme
+
+## Browser Debug Session (Feb 14, 2026)
+- [x] Debug Deal Alert Agent: tested full flow in browser (create alert → scan → 5 matches found → view matches → navigate to properties). No bugs found.
+- [x] Debug One-Click Market Evaluation: tested full flow in browser (enter city → select options → evaluate → view results with market score 69/100, AI memo, revenue breakdown). No bugs found.
+
+## Deal Alert Agent Overhaul (Feb 14, 2026)
+- [ ] BUG: Matches show market-level estimates, not actual property listings — need real Zillow/rental listings
+- [ ] BUG: Wrong zip codes in matches — showing user's zip code instead of target city zip codes
+- [ ] BUG: Action buttons (Revenue Estimate, etc.) don't work / are broken
+- [ ] BUG: Match cards are hard to read and not intuitive
+- [ ] FEATURE: One-click property analysis from match card — user should be able to analyze a specific property directly
+- [ ] FEATURE: Show actual Zillow/Redfin listing links in matches so users can see the real deal
