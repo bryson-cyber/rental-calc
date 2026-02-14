@@ -126,9 +126,9 @@ function generateEmailHTML(params: {
   const { type, recipientName, subject, mainContent, ctaUrl, ctaText, secondaryCtaUrl, secondaryCtaText, city, additionalContent } = params;
   
   const headerTitle = {
-    weekly: '📊 Your Weekly Market Update',
-    deal: '🏠 New Investment Opportunity',
-    monthly: '📈 Your Monthly Market Report'
+    weekly: 'Your Weekly Market Update',
+    deal: 'New Investment Opportunity',
+    monthly: 'Your Monthly Market Report'
   };
   
   const headerSubtitle = {
@@ -972,7 +972,7 @@ export async function sendDealAlertEmail(params: {
   // Property image or placeholder
   const propertyImageHtml = deal.imageUrl 
     ? `<img src="${deal.imageUrl}" alt="Property" class="property-image" />`
-    : `<div class="property-image-placeholder"><span>🏠</span></div>`;
+    : `<div class="property-image-placeholder"><span style="font-size:24px;color:#C9A962;">&#9632;</span></div>`;
   
   // Property type badge
   const propertyTypeBadge = deal.propertyType 
@@ -1027,8 +1027,8 @@ export async function sendDealAlertEmail(params: {
   // Property links
   const propertyLinksHtml = `
     <div class="property-links">
-      <a href="${propertyAnalysisUrl}" class="property-link">📊 Full Analysis</a>
-      ${deal.zillowUrl ? `<a href="${deal.zillowUrl}" class="property-link">🏠 View on Zillow</a>` : ''}
+      <a href="${propertyAnalysisUrl}" class="property-link">Full Analysis</a>
+      ${deal.zillowUrl ? `<a href="${deal.zillowUrl}" class="property-link">View on Zillow</a>` : ''}
     </div>
   `;
   
@@ -1177,10 +1177,10 @@ export async function sendMonthlyReportEmail(params: {
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
   const formatTrend = (n: number) => n >= 0 ? `+${n.toFixed(1)}%` : `${n.toFixed(1)}%`;
   
-  const trendEmoji = {
-    growing: '📈',
-    stable: '➡️',
-    declining: '📉'
+  const trendLabel = {
+    growing: '(Growing)',
+    stable: '(Stable)',
+    declining: '(Declining)'
   };
   
   const trendNarrative = {
@@ -1196,7 +1196,7 @@ export async function sendMonthlyReportEmail(params: {
     
     <div class="property-card">
       <span class="badge badge-gold">${monthYear} Report</span>
-      <h2 style="margin-top: 12px;">${trendEmoji[reportData.marketTrend]} ${city}, ${state}</h2>
+      <h2 style="margin-top: 12px;">${city}, ${state} ${trendLabel[reportData.marketTrend]}</h2>
       <p class="address">Market trend: ${reportData.marketTrend.charAt(0).toUpperCase() + reportData.marketTrend.slice(1)}</p>
       
       <div class="stat-grid">

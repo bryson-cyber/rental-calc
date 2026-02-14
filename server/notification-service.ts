@@ -61,36 +61,35 @@ export async function notifyOwnerPropertyReport(data: PropertyReportNotification
   const db = await getDb();
   
   // Build notification title
-  const title = `🏠 New Property Report: ${data.address}`;
+  const title = `New Property Report: ${data.address}`;
   
   // Build notification content with key metrics
   const lines: string[] = [
-    `📍 Property: ${data.address}`,
+    `Property: ${data.address}`,
   ];
   
   if (data.city && data.state) {
-    lines.push(`📌 Location: ${data.city}, ${data.state}`);
+    lines.push(`Location: ${data.city}, ${data.state}`);
   }
   
   if (data.bedrooms !== undefined && data.bathrooms !== undefined) {
-    lines.push(`🛏️ Size: ${data.bedrooms} BR / ${data.bathrooms} BA`);
+    lines.push(`Size: ${data.bedrooms} BR / ${data.bathrooms} BA`);
   }
   
   if (data.annualRevenue !== undefined) {
-    lines.push(`💰 Est. Annual Revenue: ${formatCurrency(data.annualRevenue)}`);
+    lines.push(`Est. Annual Revenue: ${formatCurrency(data.annualRevenue)}`);
   }
   
   if (data.occupancyRate !== undefined) {
-    lines.push(`📊 Occupancy Rate: ${formatPercent(data.occupancyRate)}`);
+    lines.push(`Occupancy Rate: ${formatPercent(data.occupancyRate)}`);
   }
   
   if (data.verdict) {
-    const verdictEmoji = data.verdict === 'GO' ? '✅' : data.verdict === 'CAUTION' ? '⚠️' : '❌';
-    lines.push(`${verdictEmoji} Verdict: ${data.verdict}`);
+    lines.push(`Verdict: ${data.verdict}`);
   }
   
   lines.push('');
-  lines.push(`⏰ Generated: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT`);
+  lines.push(`Generated: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT`);
   
   const content = lines.join('\n');
   
@@ -150,31 +149,31 @@ export async function notifyOwnerMarketReport(data: MarketReportNotification): P
   const db = await getDb();
   
   // Build notification title
-  const title = `📊 New Market Report: ${data.marketName}${data.state ? `, ${data.state}` : ''}`;
+  const title = `New Market Report: ${data.marketName}${data.state ? `, ${data.state}` : ''}`;
   
   // Build notification content with key metrics
   const lines: string[] = [
-    `🗺️ Market: ${data.marketName}${data.state ? `, ${data.state}` : ''}`,
+    `Market: ${data.marketName}${data.state ? `, ${data.state}` : ''}`,
   ];
   
   if (data.bedrooms !== undefined) {
-    lines.push(`🛏️ Bedroom Filter: ${data.bedrooms} BR`);
+    lines.push(`Bedroom Filter: ${data.bedrooms} BR`);
   }
   
   if (data.averageRevenue !== undefined) {
-    lines.push(`💰 Avg. Annual Revenue: ${formatCurrency(data.averageRevenue)}`);
+    lines.push(`Avg. Annual Revenue: ${formatCurrency(data.averageRevenue)}`);
   }
   
   if (data.averageOccupancy !== undefined) {
-    lines.push(`📊 Avg. Occupancy: ${formatPercent(data.averageOccupancy)}`);
+    lines.push(`Avg. Occupancy: ${formatPercent(data.averageOccupancy)}`);
   }
   
   if (data.listingCount !== undefined) {
-    lines.push(`🏠 Active Listings: ${data.listingCount.toLocaleString()}`);
+    lines.push(`Active Listings: ${data.listingCount.toLocaleString()}`);
   }
   
   lines.push('');
-  lines.push(`⏰ Generated: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT`);
+  lines.push(`Generated: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT`);
   
   const content = lines.join('\n');
   

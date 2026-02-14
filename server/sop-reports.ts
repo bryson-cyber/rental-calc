@@ -817,7 +817,7 @@ ${competitors.map((c, idx) => {
   const cleanName = c.name.replace(/[\|\[\]]/g, '').substring(0, 40);
   const displayName = cleanName.length > 35 ? cleanName.substring(0, 35) + '...' : cleanName;
   const occPercent = c.occupancy < 1 ? Math.round(c.occupancy * 100) : Math.round(c.occupancy);
-  const ratingDisplay = c.rating ? c.rating.toFixed(1) + '⭐' : 'N/A';
+  const ratingDisplay = c.rating ? c.rating.toFixed(1) + '/5' : 'N/A';
   return `| ${idx + 1} | [${displayName}](${c.airbnb_url}) | $${c.annual_revenue.toLocaleString()} | ${occPercent}% | $${Math.round(c.adr)} | ${ratingDisplay} | ${c.reviews} | ${c.key_success_factor} |`;
 }).join('\n')}
 
@@ -3995,7 +3995,7 @@ Understanding when demand is high vs. low helps you price strategically and plan
 | Month | Revenue | Occupancy | ADR | Season |
 | :--- | ---: | ---: | ---: | :---: |
 ${seasonality.map(s => 
-  `| ${s.month_name || s.month} | $${s.revenue.toLocaleString()} | ${s.occupancy}% | $${s.adr} | ${s.season_type === 'peak' ? '🔥 Peak' : s.season_type === 'off' ? '❄️ Slow' : '➡️ Shoulder'} |`
+  `| ${s.month_name || s.month} | $${s.revenue.toLocaleString()} | ${s.occupancy}% | $${s.adr} | ${s.season_type === 'peak' ? 'Peak' : s.season_type === 'off' ? 'Slow' : 'Shoulder'} |`
 ).join('\n')}
 
 ### What This Means for You

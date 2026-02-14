@@ -62,6 +62,7 @@ import {
   Scale,
   BedDouble,
   Send,
+  Lightbulb,
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -2080,7 +2081,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <div className="bg-gradient-to-r from-[oklch(0.97_0.01_255)] to-[oklch(0.92_0.03_255)] rounded-2xl border border-[oklch(0.55_0.18_255)]/20 p-5 mb-6">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-[oklch(0.55_0.18_255)]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm">💡</span>
+                <Lightbulb className="w-4 h-4 text-[oklch(0.55_0.18_255)]" />
               </div>
               <div>
                 <p className="font-semibold text-[oklch(0.40_0.18_255)] text-sm mb-1">How to Read This Section</p>
@@ -2378,7 +2379,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <div className="bg-gradient-to-r from-[oklch(0.99_0.02_95)] to-[oklch(0.96_0.04_95)] rounded-2xl border border-[oklch(0.70_0.16_75)]/20 p-5 mb-6">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-[oklch(0.70_0.16_75)]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-sm">💡</span>
+                  <Lightbulb className="w-4 h-4 text-[oklch(0.55_0.18_255)]" />
                 </div>
                 <div>
                   <p className="font-semibold text-[oklch(0.35_0.10_50)] text-sm mb-1">How to Read This Section</p>

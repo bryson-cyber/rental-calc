@@ -835,7 +835,7 @@ export function MapViewContent({ embedded = false, className = '' }: MapViewCont
                 </div>
                 <div style="background: #faf5ff; padding: 8px; border-radius: 6px;">
                   <div style="color: #7c3aed; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Rating</div>
-                  <div style="font-weight: 700; color: #7c3aed; font-size: 14px;">${listing.rating ? `${listing.rating} ⭐` : 'N/A'}</div>
+                  <div style="font-weight: 700; color: #7c3aed; font-size: 14px;">${listing.rating ? `${listing.rating}/5` : 'N/A'}</div>
                 </div>
               </div>
               <div style="margin-top: 10px; font-size: 11px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">

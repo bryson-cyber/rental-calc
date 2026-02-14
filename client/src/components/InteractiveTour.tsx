@@ -184,7 +184,7 @@ export function InteractiveTour({
     // Step 14: Completion
     {
       id: 'complete',
-      title: 'You\'re Ready to Go! 🎉',
+      title: 'You\'re Ready to Go!',
       description: 'You now know how to use all the tools. Start by validating a property you\'re interested in, or explore markets to find opportunities. Good luck!',
       position: 'center',
       action: () => onNavigateToTab('validate'),

@@ -148,7 +148,7 @@ export async function sendDealAlertSMS(params: DealAlertSMSParams): Promise<Send
   const monthlyProfit = hasRentData ? deal.monthlyRevenue - deal.monthlyRent! : 0;
   
   // Build message based on available data
-  let message = `🏠 ${recipient.firstName}, new ${city} opportunity!\n\n`;
+  let message = `${recipient.firstName}, new ${city} opportunity!\n\n`;
   
   // Show profit if available, otherwise revenue
   if (hasRentData && monthlyProfit > 0) {
@@ -161,7 +161,7 @@ export async function sendDealAlertSMS(params: DealAlertSMSParams): Promise<Send
   
   // Add comps data if available - this is the proof
   if (compsCount && avgCompRevenue) {
-    message += `✓ ${compsCount} similar properties nearby averaging ${formatCurrency(avgCompRevenue)}/mo\n\n`;
+    message += `${compsCount} similar properties nearby averaging ${formatCurrency(avgCompRevenue)}/mo\n\n`;
   }
   
   // Single CTA: Book a call
@@ -183,14 +183,14 @@ export async function sendWeeklyMarketSMS(params: MarketUpdateSMSParams): Promis
   
   const formatCurrency = (n: number) => `$${n.toLocaleString()}`;
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
-  const trendEmoji = trend === 'up' ? '📈' : trend === 'down' ? '📉' : '➡️';
+  const trendText = trend === 'up' ? '(Up)' : trend === 'down' ? '(Down)' : '(Stable)';
   
-  let message = `${trendEmoji} ${city} Market Update\n\n`;
+  let message = `${city} Market Update ${trendText}\n\n`;
   message += `Avg Revenue: ${formatCurrency(avgRevenue)}/mo\n`;
   message += `Occupancy: ${formatPercent(occupancy)}\n`;
   
   if (dealsFound && dealsFound > 0) {
-    message += `\n🔥 ${dealsFound} opportunities found this week\n`;
+    message += `\n${dealsFound} opportunities found this week\n`;
   }
   
   // Single CTA: Book a call
@@ -219,7 +219,7 @@ export async function sendWelcomeSMS(params: {
   const formatCurrency = (n: number) => `$${n.toLocaleString()}`;
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
   
-  let message = `Hey ${recipient.firstName}! 👋\n\n`;
+  let message = `Hey ${recipient.firstName}!\n\n`;
   message += `Thanks for checking out ${city} rentals.\n\n`;
   
   if (avgRevenue && occupancy) {

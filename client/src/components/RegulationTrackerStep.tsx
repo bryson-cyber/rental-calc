@@ -956,7 +956,7 @@ export function RegulationTrackerStep() {
                                     <p className={`text-sm capitalize ${
                                       source.type === 'official' ? 'text-emerald-600 font-medium' : 'text-gray-500'
                                     }`}>
-                                      {source.type === 'official' ? '✓ Official Government Source' : `${source.type} source`}
+                                      {source.type === 'official' ? 'Official Government Source' : `${source.type} source`}
                                     </p>
                                   </div>
                                 </div>

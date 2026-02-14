@@ -830,7 +830,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                       const isHighest = br.bedrooms === bestBedroom?.bedrooms;
                       return [
                         <span key={br.bedrooms} className={isHighest ? 'font-bold text-[oklch(0.55_0.14_75)]' : ''}>
-                          {br.bedrooms} Bedrooms {isHighest && '⭐'}
+                          {br.bedrooms} Bedrooms {isHighest && ' (Best)'}
                         </span>,
                         <span key={`${br.bedrooms}-occ`} className={isHighest ? 'font-bold text-green-600' : ''}>
                           {formatPercent(br.avg_occupancy)}

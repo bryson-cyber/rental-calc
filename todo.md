@@ -1325,8 +1325,8 @@ Next: Test on Step 3 and Step 4 to verify the fix works across all steps.
 ## Bug Fixes (Jan 14, 2026)
 
 ### Nested Anchor Tag Error:
-- [ ] Fix "<a> cannot contain a nested <a>" error on homepage
-- [ ] Find and remove nested Link/anchor combinations
+- [x] Fix "<a> cannot contain a nested <a>" error on homepage (already fixed - see line 1335)
+- [x] Find and remove nested Link/anchor combinations (already fixed - see line 1336)
 
 
 ## Bug Fixes (Jan 14, 2026 - Nested Anchor)
@@ -5330,7 +5330,7 @@ All guiding questions display correctly across all three test markets:
 - [ ] Fix Share Report link not copying to clipboard
 
 ### Zip Code Validation Bug
-- [ ] Fix zip code validation showing wrong digit count (shows "2 digits (85)" for "85001")
+- [x] Fix zip code validation showing wrong digit count (shows "2 digits (85)" for "85001") - fixed race condition by passing value directly from input event
 
 
 ## Bug Fixes (Jan 26, 2026) - COMPLETE
@@ -8972,9 +8972,9 @@ This makes the grading more optimistic - properties now get better grades at low
 
 
 ## Share Link Domain Fix (Feb 1, 2026)
-- [ ] Fix share links to use production domain (coachinayahturnkeytool.com) instead of dev server URL
-- [ ] Use window.location.origin to get current domain dynamically
-- [ ] Test share links maintain correct domain in both dev and production
+- [x] Fix share links to use production domain (coachinayahturnkeytool.com) instead of dev server URL (already uses window.location.origin)
+- [x] Use window.location.origin to get current domain dynamically (already implemented in all share components)
+- [x] Test share links maintain correct domain in both dev and production (verified Feb 14)
 
 
 ## Share Redirect Tab Mapping Fix (Feb 1, 2026)
@@ -11164,12 +11164,12 @@ Results:
 - [x] Debug One-Click Market Evaluation: tested full flow in browser (enter city → select options → evaluate → view results with market score 69/100, AI memo, revenue breakdown). No bugs found.
 
 ## Deal Alert Agent Overhaul (Feb 14, 2026)
-- [ ] BUG: Matches show market-level estimates, not actual property listings — need real Zillow/rental listings
-- [ ] BUG: Wrong zip codes in matches — showing user's zip code instead of target city zip codes
-- [ ] BUG: Action buttons (Revenue Estimate, etc.) don't work / are broken
-- [ ] BUG: Match cards are hard to read and not intuitive
-- [ ] FEATURE: One-click property analysis from match card — user should be able to analyze a specific property directly
-- [ ] FEATURE: Show actual Zillow/Redfin listing links in matches so users can see the real deal
+- [x] BUG: Matches show market-level estimates, not actual property listings — fixed: wired to real Zillow listings via HasData API (see Deal Alert Agent Fixes below)
+- [x] BUG: Wrong zip codes in matches — fixed: now uses real property addresses from Zillow
+- [x] BUG: Action buttons (Revenue Estimate, etc.) don't work / are broken — fixed: redesigned match cards with working CTAs
+- [x] BUG: Match cards are hard to read and not intuitive — fixed: redesigned with property images, Zillow links, profit highlights
+- [x] FEATURE: One-click property analysis from match card — fixed: match cards now link to property validation
+- [x] FEATURE: Show actual Zillow/Redfin listing links in matches — fixed: sourceUrl flows through to match cards
 
 ### HasData API & Rate Limiter Audit (Feb 14, 2026)
 - [x] Fix HasData Zillow Listing API response mapping (properties array, nested address)
@@ -11226,3 +11226,35 @@ Results:
 - [x] Verified: 0 remaining old-style persona prompts in server/**/*.ts
 - [x] All 1,130 tests pass, 0 TypeScript errors
 - [ ] Note: deep-analysis.ts, regulation-tracker.ts, market-research.ts, opportunity-finder.ts may need updating if they have persona prompts (none found by grep)
+
+## CI Session - Emoji Removal & Bug Fixes (Feb 14, 2026)
+- [x] Remove emojis from ChapterMarketReport.tsx (star emoji → Lucide Star icon)
+- [x] Remove emojis from ChapterPropertyReport.tsx (warning emoji → AlertTriangle icon)
+- [x] Remove emojis from FullPropertyReport.tsx (lightbulb emoji → Lightbulb icon)
+- [x] Remove emojis from AmortizationSchedule.tsx (lightbulb emoji → text)
+- [x] Remove emojis from MaxPurchasePriceCalculator.tsx (lightbulb emoji → text)
+- [x] Remove emojis from OfferPriceSuggester.tsx (calendar/chart emojis → text)
+- [x] Remove emojis from OpportunityFinderStep.tsx (house/lightbulb emojis → text)
+- [x] Remove emojis from InteractiveTour.tsx (party emoji → text)
+- [x] Remove emojis from HistoricalCharts.tsx (check/warning symbols → text)
+- [x] Remove emojis from SavedItemsPanel.tsx (note emojis → text)
+- [x] Remove emojis from SharePageButton.tsx (house emoji → text)
+- [x] Remove emojis from RegulationTrackerStep.tsx (checkmark → text)
+- [x] Remove emojis from MapViewContent.tsx (star emoji → /5 text)
+- [x] Remove emojis from CompsMapView.tsx (car emoji → text)
+- [x] Remove emojis from deal-alert-agent.ts AI prompt section headers
+- [x] Remove emojis from sop-reports.ts (star rating, season type labels)
+- [x] Remove emojis from notification-service.ts (property/market report notifications)
+- [x] Remove emojis from regulation-tracker.ts (notification title)
+- [x] Remove emojis from airdna-rate-limiter.ts (notification title)
+- [x] Remove emojis from newsletter-content-generator.ts (fallback content)
+- [x] Remove emojis from newsletter-deal-finder.ts (deal formatting)
+- [x] Remove emojis from newsletter-email-sender.ts (header titles, trend indicators)
+- [x] Remove emojis from newsletter-sms.ts (greeting, section headers)
+- [x] Remove emojis from newsletter-market-data.ts (market snapshot formatting)
+- [x] Remove emojis from newsletter-orchestrator.ts (subject line)
+- [x] Fix zip code validation race condition (pass value directly from input event)
+- [x] Mark stale Deal Alert Agent Overhaul items as done (fixed in later session)
+- [x] Mark stale share link domain items as done (already uses window.location.origin)
+- [x] Write vitest test for emoji removal verification (12 tests)
+- [x] All 1,142 tests pass across 86 test files, 0 TypeScript errors

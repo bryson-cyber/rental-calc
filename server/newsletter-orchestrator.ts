@@ -619,7 +619,7 @@ export async function runMonthlyReportJob(): Promise<NewsletterJobResult> {
               city,
               state,
               newsletterType: 'monthly_report',
-              subject: `📈 ${monthYear} Market Report - ${city}, ${state}`,
+              subject: `${monthYear} Market Report - ${city}, ${state}`,
               success: sendResult.success,
               errorMessage: sendResult.error,
               hubspotSendId: sendResult.sendId

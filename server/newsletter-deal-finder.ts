@@ -309,31 +309,23 @@ export function formatDealForEmail(deal: RentalDeal): string {
   const formatCurrency = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
   
-  const gradeEmoji = {
-    'A': '🌟',
-    'B': '✅',
-    'C': '⚡',
-    'D': '⚠️',
-    'F': '❌'
-  };
-  
   return `
-${gradeEmoji[deal.dealGrade]} DEAL ALERT: ${deal.city}, ${deal.state}
+[Grade ${deal.dealGrade}] DEAL ALERT: ${deal.city}, ${deal.state}
 
-📍 ${deal.address}
-🏠 ${deal.bedrooms} BR / ${deal.bathrooms} BA
+${deal.address}
+${deal.bedrooms} BR / ${deal.bathrooms} BA
 
-💰 Monthly Rent: ${formatCurrency(deal.monthlyRent)}
-📈 Projected Revenue: ${formatCurrency(deal.projectedMonthlyRevenue)}/mo
-✨ Projected Profit: ${formatCurrency(deal.monthlyProfit)}/mo
+Monthly Rent: ${formatCurrency(deal.monthlyRent)}
+Projected Revenue: ${formatCurrency(deal.projectedMonthlyRevenue)}/mo
+Projected Profit: ${formatCurrency(deal.monthlyProfit)}/mo
 
-📊 Key Metrics:
-• Occupancy: ${formatPercent(deal.projectedOccupancy)}
-• ADR: ${formatCurrency(deal.projectedAdr)}
-• Profit Margin: ${formatPercent(deal.profitMargin)}
-• Deal Score: ${deal.dealScore}/100 (Grade ${deal.dealGrade})
+Key Metrics:
+- Occupancy: ${formatPercent(deal.projectedOccupancy)}
+- ADR: ${formatCurrency(deal.projectedAdr)}
+- Profit Margin: ${formatPercent(deal.profitMargin)}
+- Deal Score: ${deal.dealScore}/100 (Grade ${deal.dealGrade})
 
-${deal.sourceUrl ? `🔗 View Listing: ${deal.sourceUrl}` : ''}
+${deal.sourceUrl ? `View Listing: ${deal.sourceUrl}` : ''}
   `.trim();
 }
 

@@ -2256,7 +2256,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                           </div>
                                           <div className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.97 0 0)' }}>
                                             <div className="flex items-center gap-2">
-                                              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: 'oklch(0.55 0.14 75)', color: 'white' }}>🏠</div>
+                                              <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style={{ backgroundColor: 'oklch(0.55 0.14 75)', color: 'white' }}>R</div>
                                               <span style={{ color: 'oklch(0.45 0 0)' }}>Rental Property (8%/yr)</span>
                                             </div>
                                             <span className="font-semibold" style={{ color: 'oklch(0.35 0 0)' }}>
@@ -2268,7 +2268,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                         {/* The Kicker - Honest comparison */}
                                         <div className="mt-3 p-2 rounded-lg" style={{ backgroundColor: 'oklch(0.55 0.15 145 / 0.1)', border: '1px solid oklch(0.55 0.15 145 / 0.2)' }}>
                                           <p className="text-xs font-medium" style={{ color: 'oklch(0.35 0.10 145)' }}>
-                                            💡 STR startup: ~{formatCurrency(property.price * 3 + (property.bedrooms || 1) * 5000)} (deposit + furniture). Still far less than {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} for the same monthly return.
+                                            STR startup: ~{formatCurrency(property.price * 3 + (property.bedrooms || 1) * 5000)} (deposit + furniture). Still far less than {formatCurrency(Math.round(validation.projection.monthlyProfit * 12 / 0.10))} for the same monthly return.
                                           </p>
                                         </div>
                                       </div>

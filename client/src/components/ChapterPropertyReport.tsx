@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Building,
@@ -762,7 +763,7 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             {!hasViableComps && (
               <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mb-8">
                 <h4 className="font-bold text-red-700 mb-2 flex items-center gap-2 text-lg">
-                  ⚠️ RED FLAG: Potential Viability Concern
+                  <AlertTriangle className="w-5 h-5" /> RED FLAG: Potential Viability Concern
                 </h4>
                 <p className="text-red-700 mb-3">
                   No {property.bedrooms}-bedroom competitors in this area are earning above the {formatCurrency(minRevenueThreshold)} threshold.

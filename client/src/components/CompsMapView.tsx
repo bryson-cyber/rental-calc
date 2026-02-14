@@ -532,7 +532,7 @@ export function CompsMapView({ comps, subjectProperty, className, onCompSelect, 
                 <span style="font-size:11px;color:#64748B;">${comp.bedrooms || '?'}BR</span>
                 ${comp.rating ? `<span style="font-size:11px;color:#D97706;">★ ${comp.rating.toFixed(1)}</span>` : ''}
               </div>
-              ${distText ? `<div style="font-size:11px;color:#3B82F6;font-weight:500;">🚗 ${distText}</div>` : ''}
+              ${distText ? `<div style="font-size:11px;color:#3B82F6;font-weight:500;">${distText}</div>` : ''}
             </div>
           `;
           hoverInfoWindowRef.current?.setContent(hoverContent);

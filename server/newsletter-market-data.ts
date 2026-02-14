@@ -301,12 +301,12 @@ export function formatMarketSnapshotForEmail(snapshot: MarketSnapshot): string {
   const formatPercent = (n: number) => `${Math.round(n * 100)}%`;
   
   return `
-📍 ${snapshot.city}, ${snapshot.state}
+${snapshot.city}, ${snapshot.state}
 
-💰 Average Annual Revenue: ${formatCurrency(snapshot.metrics.averageRevenue)}
-📊 Average Daily Rate: ${formatCurrency(snapshot.metrics.averageDailyRate)}
-🏠 Occupancy Rate: ${formatPercent(snapshot.metrics.occupancyRate)}
-⭐ Market Score: ${snapshot.metrics.marketScore}/100
+Average Annual Revenue: ${formatCurrency(snapshot.metrics.averageRevenue)}
+Average Daily Rate: ${formatCurrency(snapshot.metrics.averageDailyRate)}
+Occupancy Rate: ${formatPercent(snapshot.metrics.occupancyRate)}
+Market Score: ${snapshot.metrics.marketScore}/100
 
 ${snapshot.insights.recommendation}
   `.trim();

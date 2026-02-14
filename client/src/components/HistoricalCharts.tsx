@@ -78,9 +78,9 @@ export function HistoricalCharts({
       tooltip: 'How often properties are booked throughout the year. 60%+ is healthy. If this number is going UP, demand is growing!',
       tooltipFormatter: (value: number) => `Booking Rate: ${Math.round(value)}%`,
       tooltipAfter: (value: number) => {
-        if (value >= 70) return '✓ Excellent booking rate';
-        if (value >= 55) return '✓ Good booking rate';
-        return '⚠ Below average';
+        if (value >= 70) return 'Excellent booking rate';
+        if (value >= 55) return 'Good booking rate';
+        return 'Below average';
       },
     },
     revenue: {

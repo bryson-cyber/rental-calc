@@ -283,7 +283,7 @@ export default function AmortizationSchedule({
             {/* Key Insight */}
             <div className="bg-[#C9A962]/10 rounded-lg p-4 border border-[#C9A962]/20">
               <p className="text-sm text-[#0F172A]/70">
-                <strong className="text-[#C9A962]">💡 Key Insight:</strong> In the first 5 years, 
+                <strong className="text-[#C9A962]">Key Insight:</strong> In the first 5 years, 
                 you'll pay {formatCurrency(schedule.milestones[0]?.interestPaid || 0)} in interest but only build 
                 {' '}{formatCurrency(schedule.milestones[0]?.principalPaid || 0)} in equity. 
                 Consider making extra principal payments to accelerate equity buildup.

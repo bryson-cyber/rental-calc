@@ -245,7 +245,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                     }}
                   >
                     <p className="text-xs text-[oklch(0.50_0_0)] italic truncate">
-                      📝 {market.notes}
+                      {market.notes}
                     </p>
                   </div>
                 )}
@@ -427,7 +427,7 @@ export const SavedItemsPanel: React.FC<SavedItemsPanelProps> = ({
                     }}
                   >
                     <p className="text-xs text-[oklch(0.50_0_0)] italic truncate">
-                      📝 {property.notes}
+                      {property.notes}
                     </p>
                   </div>
                 )}

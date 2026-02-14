@@ -980,7 +980,7 @@ function createSimplifiedSummary(data: any, city: string, state: string): string
   
   // Primary residence - CRITICAL restriction, mention prominently
   if (data.primaryResidenceOnly) {
-    parts.push(`⚠️ Primary residence required - you must live in the property.`);
+    parts.push(`IMPORTANT: Primary residence required - you must live in the property.`);
   }
   
   // Fees - actionable info

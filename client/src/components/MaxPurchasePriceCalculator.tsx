@@ -263,7 +263,7 @@ export default function MaxPurchasePriceCalculator({
             {/* Context Note */}
             <div className="bg-[#C9A962]/10 rounded-lg p-4 border border-[#C9A962]/20">
               <p className="text-sm text-[#0F172A]/70">
-                <strong className="text-[#C9A962]">💡 How to use this:</strong> If you find a property listed above this price, 
+                <strong className="text-[#C9A962]">How to use this:</strong> If you find a property listed above this price, 
                 you'll need to negotiate down or accept a lower return. Properties below this price could exceed your target return.
               </p>
             </div>

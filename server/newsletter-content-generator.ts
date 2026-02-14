@@ -145,13 +145,13 @@ Output as JSON with these fields:
 
     // Fallback content
     return {
-      subject: `📊 ${contact.city} Market Update - Your Weekly Airbnb Intel`,
+      subject: `${contact.city} Market Update - Your Weekly Airbnb Intel`,
       preheader: `See what's happening in ${contact.city}...`,
       greeting: `Hey ${contact.firstName}!`,
       mainContent: `Here's your weekly market snapshot for ${contact.city}, ${marketSnapshot.state}:\n\n` +
-        `💰 Average Revenue: $${marketSnapshot.metrics.averageRevenue.toLocaleString()}/year\n` +
-        `📊 Occupancy: ${Math.round(marketSnapshot.metrics.occupancyRate * 100)}%\n` +
-        `🏠 Active Listings: ${marketSnapshot.metrics.activeListings.toLocaleString()}\n\n` +
+        `Average Revenue: $${marketSnapshot.metrics.averageRevenue.toLocaleString()}/year\n` +
+        `Occupancy: ${Math.round(marketSnapshot.metrics.occupancyRate * 100)}%\n` +
+        `Active Listings: ${marketSnapshot.metrics.activeListings.toLocaleString()}\n\n` +
         `${marketSnapshot.insights.recommendation}`,
       callToAction: `Explore ${contact.city} in detail: ${toolUrl}`,
       footer: `To your success,\nCoach Inayah's Team`
@@ -230,15 +230,15 @@ Output as JSON:
 
     // Fallback content
     return {
-      subject: `🔥 Hot Deal Alert: $${topDeal.monthlyProfit.toLocaleString()}/mo profit potential in ${contact.city}!`,
+      subject: `Hot Deal Alert: $${topDeal.monthlyProfit.toLocaleString()}/mo profit potential in ${contact.city}!`,
       preheader: `New arbitrage opportunity found...`,
       greeting: `${contact.firstName}, check this out!`,
       mainContent: `We just found a promising deal in ${contact.city}:\n\n` +
-        `📍 ${topDeal.address}\n` +
-        `🏠 ${topDeal.bedrooms}BR/${topDeal.bathrooms}BA\n` +
-        `💰 Monthly Rent: $${topDeal.monthlyRent.toLocaleString()}\n` +
-        `📈 Projected Revenue: $${topDeal.projectedMonthlyRevenue.toLocaleString()}/mo\n` +
-        `✨ Potential Profit: $${topDeal.monthlyProfit.toLocaleString()}/mo\n\n` +
+        `${topDeal.address}\n` +
+        `${topDeal.bedrooms}BR/${topDeal.bathrooms}BA\n` +
+        `Monthly Rent: $${topDeal.monthlyRent.toLocaleString()}\n` +
+        `Projected Revenue: $${topDeal.projectedMonthlyRevenue.toLocaleString()}/mo\n` +
+        `Potential Profit: $${topDeal.monthlyProfit.toLocaleString()}/mo\n\n` +
         `Deal Score: ${topDeal.dealScore}/100 (Grade ${topDeal.dealGrade})\n\n` +
         `Deals like this don't last long - analyze it now!`,
       callToAction: `Analyze this deal: ${toolUrl}`,
@@ -316,15 +316,15 @@ Output as JSON with these fields:
 
     // Fallback content
     return {
-      subject: `📈 Your ${contact.city} Monthly Market Report`,
+      subject: `Your ${contact.city} Monthly Market Report`,
       preheader: `See how your market performed...`,
       greeting: `Hi ${contact.firstName},`,
       mainContent: `Here's your monthly market report for ${contact.city}, ${marketSnapshot.state}:\n\n` +
-        `📊 MARKET SNAPSHOT\n` +
+        `MARKET SNAPSHOT\n` +
         `• Market Score: ${marketSnapshot.metrics.marketScore}/100\n` +
         `• Average Revenue: $${marketSnapshot.metrics.averageRevenue.toLocaleString()}/year\n` +
         `• Occupancy: ${Math.round(marketSnapshot.metrics.occupancyRate * 100)}%\n\n` +
-        `📍 THIS MONTH\n` +
+        `THIS MONTH\n` +
         `• Deals Found: ${dealsFoundThisMonth}\n\n` +
         `${marketSnapshot.insights.recommendation}`,
       callToAction: `Explore ${contact.city} market: ${toolUrl}`,

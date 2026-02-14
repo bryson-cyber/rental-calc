@@ -72,7 +72,7 @@ function getSocialShareUrls(shareUrl: string, description: string) {
   const encodedTitle = encodeURIComponent(title);
   
   // Create compelling share messages for each platform
-  const twitterText = encodeURIComponent(`🏠 ${description}\n\nFree rental revenue calculator and market analysis tools by @CoachInayah\n\n`);
+  const twitterText = encodeURIComponent(`${description}\n\nFree rental revenue calculator and market analysis tools by @CoachInayah\n\n`);
   const linkedInSummary = encodeURIComponent(`I found this amazing free tool for analyzing rental property investments. ${description}`);
   const emailSubject = encodeURIComponent(`Check out this rental analysis tool - ${description}`);
   const emailBody = encodeURIComponent(`Hey!\n\nI thought you might find this useful - it's a free rental revenue calculator and market analysis tool.\n\n${description}\n\nCheck it out here: ${shareUrl}\n\nBest,`);

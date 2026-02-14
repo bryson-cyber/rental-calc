@@ -323,10 +323,10 @@ export default function OfferPriceSuggester({
             </div>
             <div className="flex gap-4 mt-3 text-xs text-slate-500">
               {daysOnMarket !== undefined && (
-                <span>📅 {daysOnMarket} days on market</span>
+                <span>{daysOnMarket} days on market</span>
               )}
               {priceReduced && (
-                <span>📉 Price reduced</span>
+                <span>Price reduced</span>
               )}
             </div>
           </div>

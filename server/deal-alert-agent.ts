@@ -1032,26 +1032,26 @@ Structure the memo EXACTLY as follows:
 ### The Bottom Line
 (2-3 punchy sentences. Would YOU put your money here? Why or why not? Be direct.)
 
-### 💰 Revenue Breakdown
+### Revenue Breakdown
 (Use a table format showing each bedroom count with monthly revenue, annual revenue, ADR, and occupancy. Bold the "sweet spot" bedroom count — the one with the best revenue-to-effort ratio. Explain WHY that's the sweet spot in 1-2 sentences after the table.)
 
-### 📊 Market Health Check
+### Market Health Check
 (Cover these in short paragraphs with bold headers:
 - **Competition**: How crowded is this market? Total listings, what that means for a newcomer
 - **Demand Trends**: Is revenue growing or shrinking? Use the historical data
 - **Seasonality**: When's the money season vs. the slow season? How big is the gap?
 - **Pricing Power**: What's the ADR telling us about guest willingness to pay?)
 
-### 🏆 What Winners Do Differently
+### What Winners Do Differently
 (Based on top performer data — 3 specific, actionable things that separate the top earners from the average. Use actual numbers from the top performers vs. market averages.)
 
-### ⚠️ Watch Out For
+### Watch Out For
 (2-3 honest risk factors. Be specific — don't just say "regulations." Say what kind of regulations and how they'd affect a new host.)
 
-### ✅ My Recommendation
+### My Recommendation
 (One clear sentence: GO, CONDITIONAL GO, or PASS. Then 2-3 sentences explaining the conditions or reasoning.)
 
-### 🎯 Your Next 3 Steps
+### Your Next 3 Steps
 (Exactly 3 numbered, specific action items. Not vague like "do more research" — specific like "Search for 2BR properties under $X/month rent in [specific area] and run the numbers through the calculator.")
 
 Keep it under 900 words. Every claim must reference actual data. Write like you're talking to a friend who's about to invest their savings.`

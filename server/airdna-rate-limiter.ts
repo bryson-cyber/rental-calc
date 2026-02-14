@@ -246,7 +246,7 @@ export async function rateLimitedAirDNARequest<T>(
         if (!dailyLimitNotified) {
           dailyLimitNotified = true;
           notifyOwner({
-            title: '🚨 Daily API Limit REACHED - Non-Admin Requests Blocked',
+            title: 'ALERT: Daily API Limit REACHED - Non-Admin Requests Blocked',
             content: `AirDNA API has hit the hard limit of ${DAILY_HARD_LIMIT} calls today (actual: ${dailyCallCount}). Non-admin API requests are being blocked. Admin requests still go through. Cached data is still being served. The limit resets at midnight.`,
           }).catch(() => {});
         }
@@ -275,7 +275,7 @@ export async function rateLimitedAirDNARequest<T>(
       if (!warnNotified) {
         warnNotified = true;
         notifyOwner({
-          title: '⚠️ API Usage Warning',
+          title: 'API Usage Warning',
           content: `AirDNA API is at ${dailyCallCount}/${DAILY_HARD_LIMIT} calls today (${((dailyCallCount / DAILY_HARD_LIMIT) * 100).toFixed(1)}%). Non-admin requests will be paused at ${NON_ADMIN_SOFT_LIMIT}. Admin requests are never blocked.`,
         }).catch(() => {});
       }

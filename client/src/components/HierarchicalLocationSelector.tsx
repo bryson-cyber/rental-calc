@@ -1302,7 +1302,12 @@ export function HierarchicalLocationSelector({
                 // Filter to only digits and limit to 5 characters
                 setDirectZipSearch(e.target.value.replace(/\D/g, '').slice(0, 5));
               }}
-              onKeyDown={(e) => e.key === 'Enter' && handleDirectZipSearch()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const currentValue = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 5);
+                  handleDirectZipSearch(currentValue);
+                }
+              }}
               onBlur={() => {
                 // Delay hiding results to allow click to register
                 setTimeout(() => setShowZipResults(false), 200);
