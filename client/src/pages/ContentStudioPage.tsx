@@ -40,6 +40,10 @@ import {
   BarChart3,
   RefreshCw,
   AlertCircle,
+  Video,
+  Play,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -60,6 +64,8 @@ function ContentStudioCore() {
   const [formatFilter, setFormatFilter] = useState<string>('any');
   const [showDataPreview, setShowDataPreview] = useState(false);
   const [expandedScript, setExpandedScript] = useState<number | null>(null);
+  const [generatingVideoForScript, setGeneratingVideoForScript] = useState<number | null>(null);
+  const [latestVideoUrl, setLatestVideoUrl] = useState<string | null>(null);
 
   // ── tRPC hooks ──────────────────────────────────────────────────────────
 
@@ -100,11 +106,61 @@ function ContentStudioCore() {
     },
   });
 
+  const generateVideoMutation = trpc.contentStudio.generateVideo.useMutation({
+    onSuccess: (data) => {
+      setGeneratingVideoForScript(null);
+      setLatestVideoUrl(data.videoUrl);
+      toast({
+        title: 'Video generated!',
+        description: `"${data.title}" is ready to download.`,
+      });
+    },
+    onError: (err) => {
+      setGeneratingVideoForScript(null);
+      toast({
+        title: 'Video generation failed',
+        description: err.message,
+        variant: 'error',
+      });
+    },
+  });
+
+  const quickVideoMutation = trpc.contentStudio.quickGenerateVideo.useMutation({
+    onSuccess: (data) => {
+      setLatestVideoUrl(data.videoUrl);
+      scriptsList.refetch();
+      toast({
+        title: 'Script + Video generated!',
+        description: `"${data.title}" is ready to download.`,
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: 'Generation failed',
+        description: err.message,
+        variant: 'error',
+      });
+    },
+  });
+
   // ── Handlers ────────────────────────────────────────────────────────────
 
   const handleGenerate = (format?: string) => {
     autoGenerate.mutate(format && format !== 'any' ? { format: format as 'reel' | 'short' | 'lesson' | 'deep_dive' } : undefined);
   };
+
+  const handleGenerateVideo = (scriptId: number) => {
+    setGeneratingVideoForScript(scriptId);
+    setLatestVideoUrl(null);
+    generateVideoMutation.mutate({ scriptId });
+  };
+
+  const handleQuickVideo = () => {
+    setLatestVideoUrl(null);
+    quickVideoMutation.mutate(undefined);
+  };
+
+  const isAnyVideoGenerating = generateVideoMutation.isPending || quickVideoMutation.isPending;
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -136,29 +192,50 @@ function ContentStudioCore() {
               </h2>
               <p className="text-white/60 text-sm md:text-base max-w-lg">
                 AI pulls your real platform data, picks the best topic angle, and generates a complete
-                ready-to-film narration script in Coach Inayah's voice. Zero effort required.
+                ready-to-film narration script — or a full whiteboard video — in Coach Inayah's voice.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 w-full md:w-auto">
-              <Button
-                size="lg"
-                onClick={() => handleGenerate()}
-                disabled={autoGenerate.isPending}
-                className="bg-[#C9A962] hover:bg-[#b8963f] text-[#0F172A] font-semibold text-base px-8 py-6 shadow-lg shadow-[#C9A962]/20"
-              >
-                {autoGenerate.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-5 h-5 mr-2" />
-                    Generate Script
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="lg"
+                  onClick={() => handleGenerate()}
+                  disabled={autoGenerate.isPending || isAnyVideoGenerating}
+                  className="bg-[#C9A962] hover:bg-[#b8963f] text-[#0F172A] font-semibold text-base px-6 py-6 shadow-lg shadow-[#C9A962]/20"
+                >
+                  {autoGenerate.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Script...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5 mr-2" />
+                      Generate Script
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  size="lg"
+                  onClick={handleQuickVideo}
+                  disabled={autoGenerate.isPending || isAnyVideoGenerating}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold text-base px-6 py-6 shadow-lg shadow-purple-600/20"
+                >
+                  {quickVideoMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Creating Video...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-5 h-5 mr-2" />
+                      Generate Video
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <div className="flex gap-2">
                 {Object.entries(FORMAT_META).map(([key, meta]) => (
@@ -167,7 +244,7 @@ function ContentStudioCore() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleGenerate(key)}
-                    disabled={autoGenerate.isPending}
+                    disabled={autoGenerate.isPending || isAnyVideoGenerating}
                     className="border-white/20 text-white/70 hover:text-white hover:border-[#C9A962]/50 text-xs flex-1"
                   >
                     <span className="mr-1">{meta.icon}</span>
@@ -182,6 +259,16 @@ function ContentStudioCore() {
             <div className="mt-6 flex items-center gap-3 text-white/60 text-sm bg-white/5 rounded-lg p-3">
               <Loader2 className="w-4 h-4 animate-spin text-[#C9A962]" />
               <span>Pulling platform data... analyzing trends... crafting narrative...</span>
+            </div>
+          )}
+
+          {quickVideoMutation.isPending && (
+            <div className="mt-6 flex items-center gap-3 text-white/60 text-sm bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+              <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+              <div>
+                <span className="font-medium text-purple-300">Creating Video</span>
+                <span className="ml-2">Generating script... building whiteboard animation... adding voiceover... This takes 2-5 minutes.</span>
+              </div>
             </div>
           )}
         </CardContent>
@@ -274,6 +361,41 @@ function ContentStudioCore() {
               <p className="text-emerald-800 font-medium">{latestScript.cta}</p>
             </div>
 
+            {/* Generate Video from this script */}
+            {latestScript.id && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-800 flex items-center gap-2">
+                      <Video className="w-4 h-4" />
+                      Turn this script into a video
+                    </p>
+                    <p className="text-xs text-purple-600/70 mt-0.5">
+                      Whiteboard animation with AI voiceover in Coach Inayah's voice
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateVideo(latestScript.id!)}
+                    disabled={isAnyVideoGenerating}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {generatingVideoForScript === latestScript.id ? (
+                      <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Creating...</>
+                    ) : (
+                      <><Play className="w-4 h-4 mr-1" /> Make Video</>
+                    )}
+                  </Button>
+                </div>
+                {generatingVideoForScript === latestScript.id && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-purple-600">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Building whiteboard animation... adding voiceover... This takes 2-5 minutes.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Metadata row */}
             <div className="flex flex-wrap gap-3 pt-2">
               {latestScript.targetAudience && (
@@ -311,6 +433,61 @@ function ContentStudioCore() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Video Result ─────────────────────────────────────────────── */}
+      {latestVideoUrl && (
+        <Card className="border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center shrink-0">
+                <Video className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-purple-900 mb-1">Video Ready!</h3>
+                <p className="text-sm text-purple-700/70 mb-4">
+                  Your whiteboard explainer video has been generated with Coach Inayah's voiceover.
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    size="sm"
+                    onClick={() => window.open(latestVideoUrl, '_blank')}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Play className="w-4 h-4 mr-1" />
+                    Watch Video
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = latestVideoUrl;
+                      a.download = 'coach-inayah-video.mp4';
+                      a.click();
+                    }}
+                    className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Download MP4
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(latestVideoUrl);
+                      toast({ title: 'Video URL copied' });
+                    }}
+                    className="text-purple-600"
+                  >
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy URL
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -579,6 +756,33 @@ function ContentStudioCore() {
                             ))}
                           </div>
                         )}
+
+                        {/* Video generation for library scripts */}
+                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-3 mt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-purple-700 flex items-center gap-1">
+                              <Video className="w-3 h-3" />
+                              Generate video from this script
+                            </span>
+                            <Button
+                              size="sm"
+                              className="h-7 bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                              onClick={() => handleGenerateVideo(script.id)}
+                              disabled={isAnyVideoGenerating}
+                            >
+                              {generatingVideoForScript === script.id ? (
+                                <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Creating...</>
+                              ) : (
+                                <><Play className="w-3 h-3 mr-1" /> Make Video</>
+                              )}
+                            </Button>
+                          </div>
+                          {generatingVideoForScript === script.id && (
+                            <p className="text-[10px] text-purple-500 mt-1">
+                              Building animation + voiceover... 2-5 min
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>

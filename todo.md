@@ -11381,3 +11381,18 @@ Results:
 - [x] Real data woven into scripts: property addresses, revenue numbers, occupancy rates, verdicts
 - [x] All 24 vitest tests passing
 - [x] Verified admin tab renders correctly with new autonomous UI
+
+## Content Studio v3 - Golpo AI Video Generation (Feb 14, 2026)
+- [x] Research video generation APIs — selected Golpo AI per user direction
+- [x] Read Golpo AI API docs (https://video.golpoai.com/api-docs)
+- [x] Install @golpoai/sdk and configure GOLPO_API_KEY in env
+- [x] Build video-generation.ts service with Coach Inayah voice/personality config
+- [x] Add generateVideo endpoint (from existing script) to content-studio router
+- [x] Add quickGenerateVideo endpoint (one-click script + video) to content-studio router
+- [x] Add "Generate Video" button (purple gradient) to Content Studio hero section
+- [x] Add "Make Video" button to each script in the library (expanded view)
+- [x] Add video result card with Watch/Download/Copy URL actions
+- [x] Add loading states for video generation (2-5 min progress indicator)
+- [x] Write 23 vitest tests for video generation service
+- [x] 24 content-studio tests still passing
+- [x] Verify Content Studio tab renders correctly in admin portal with both buttons

@@ -27,6 +27,11 @@ import {
   gatherContentData,
   formatDataForPrompt,
 } from '../content-data-pipeline';
+import {
+  generateVideo,
+  quickGenerateVideo,
+  type VideoGenerationOptions,
+} from '../video-generation';
 
 // ── Input schemas ────────────────────────────────────────────────────────────
 
@@ -55,6 +60,23 @@ const getScriptInput = z.object({
 const deleteScriptInput = z.object({
   id: z.number(),
 });
+
+const generateVideoInput = z.object({
+  scriptId: z.number(),
+  videoType: z.enum(['short', 'long']).optional(),
+  bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
+  useColor: z.boolean().optional(),
+  includeWatermark: z.boolean().optional(),
+  timing: z.enum(['1', '2']).optional(),
+});
+
+const quickGenerateVideoInput = z.object({
+  videoType: z.enum(['short', 'long']).optional(),
+  bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
+  useColor: z.boolean().optional(),
+  includeWatermark: z.boolean().optional(),
+  timing: z.enum(['1', '2']).optional(),
+}).optional();
 
 // ── Router ───────────────────────────────────────────────────────────────────
 
@@ -312,4 +334,43 @@ export const contentStudioRouter = router({
       pillars: CONTENT_PILLARS,
     };
   }),
+
+  // ── Video Generation Endpoints ──────────────────────────────────────────
+
+  /**
+   * Generate a video from an existing script.
+   * Takes a script ID and video options, returns the video URL.
+   */
+  generateVideo: publicProcedure
+    .input(generateVideoInput)
+    .mutation(async ({ input }) => {
+      console.log(`[Content Studio] Generating video for script #${input.scriptId}`);
+      const result = await generateVideo(input);
+      return {
+        videoUrl: result.videoUrl,
+        script: result.script,
+        scriptId: result.scriptId,
+        format: result.format,
+        title: result.title,
+      };
+    }),
+
+  /**
+   * ONE-CLICK: Generate script + video in a single call.
+   * Pulls data → generates script → generates video. True zero-effort.
+   */
+  quickGenerateVideo: publicProcedure
+    .input(quickGenerateVideoInput)
+    .mutation(async ({ input }) => {
+      console.log('[Content Studio] Quick generate: script + video in one call');
+      const result = await quickGenerateVideo(input ?? {});
+      return {
+        videoUrl: result.videoUrl,
+        script: result.script,
+        scriptId: result.scriptId,
+        savedScriptId: result.savedScriptId,
+        format: result.format,
+        title: result.title,
+      };
+    }),
 });
