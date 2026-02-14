@@ -751,7 +751,7 @@ export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps
         <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-1.5">{label}</p>
         <div className="inline-block bg-[oklch(0.95_0_0)] text-[oklch(0.45_0.01_265)] text-[10px] font-medium px-1.5 py-0.5 rounded mb-2">MARKET DATA</div>
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.warmGray }} />
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.gold }} />
           <span className="text-[oklch(0.45_0.01_265)]">Avg Revenue:</span>
           <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.revenue)}</span>
         </div>
@@ -807,16 +807,16 @@ export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps
             height={36}
             wrapperStyle={{ paddingBottom: 8 }}
             payload={[
-              { value: 'Market Avg Revenue', type: 'square' as const, color: BRAND.warmGray },
+              { value: 'Market Avg Revenue', type: 'square' as const, color: BRAND.gold },
               { value: 'Avg Occupancy', type: 'line' as const, color: BRAND.navy },
             ]}
           />
           <ReferenceLine
             yAxisId="revenue"
             y={avgRevenue}
-            stroke={BRAND.warmGray}
+            stroke={BRAND.goldMuted}
             strokeDasharray="4 4"
-            strokeOpacity={0.5}
+            strokeOpacity={0.6}
           />
           <Bar
             yAxisId="revenue"
@@ -827,7 +827,7 @@ export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.revenue >= avgRevenue ? BRAND.warmGray : BRAND.warmGrayLt}
+                fill={entry.revenue >= avgRevenue ? BRAND.gold : BRAND.goldMuted}
               />
             ))}
           </Bar>

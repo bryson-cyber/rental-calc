@@ -11205,3 +11205,7 @@ Results:
 - [x] Fix: Card padding → p-4 sm:p-6 across all sections
 - [x] Fix: Added overflow-x-hidden to outermost container
 - [x] Test: Verified in 375px iframe — hero cards 1-col, text wraps, no overflow
+
+## Chart Color Fix (Feb 14, 2026)
+- [x] BUG: Market Revenue & Occupancy Trends chart bars are grey instead of brand gold
+- [x] Fix: Changed bar fill from BRAND.warmGray to BRAND.gold/goldMuted, updated legend and tooltip colors, changed reference line to goldMuted
