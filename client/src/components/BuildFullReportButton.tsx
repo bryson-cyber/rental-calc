@@ -28,8 +28,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { FileText, Loader2, Copy, Check, ExternalLink, DollarSign, Shield } from 'lucide-react';
+import { FileText, Loader2, Copy, Check, ExternalLink, DollarSign, Shield, Send } from 'lucide-react';
 import type { FullReportData } from './FullPropertyReport';
+import { lazy, Suspense } from 'react';
+import { useAuth } from '@/_core/hooks/useAuth';
+
+const SendToSlackModal = lazy(() => import('./SendToSlackModal'));
 
 interface BuildFullReportButtonProps {
   // Core property data
@@ -135,7 +139,11 @@ export function BuildFullReportButton({
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showSlackModal, setShowSlackModal] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
   
   // Optional fields for the dialog
   const [clientName, setClientName] = useState('');
@@ -291,6 +299,7 @@ export function BuildFullReportButton({
       if (result.success && result.shareId) {
         const url = `${window.location.origin}/report/${result.shareId}`;
         setShareUrl(url);
+        setShareId(result.shareId);
         toast.success('Full report created! Share the link with your client.');
       } else {
         toast.error('Failed to create report. Please try again.');
@@ -312,6 +321,7 @@ export function BuildFullReportButton({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setShareUrl(null); setCopied(false); } }}>
       <DialogTrigger asChild>
         <Button variant={variant} size={size} className={`gap-2 ${className || ''}`}>
@@ -528,10 +538,44 @@ export function BuildFullReportButton({
                   {copied ? 'Copied!' : 'Copy Link'}
                 </Button>
               </div>
+              
+              {/* Send to Slack — admin only */}
+              {isAdmin && shareId && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 mt-2 border-[#4A154B] text-[#4A154B] hover:bg-[#4A154B]/5"
+                  onClick={() => setShowSlackModal(true)}
+                >
+                  <Send className="w-4 h-4" />
+                  Send to Slack Channel
+                </Button>
+              )}
             </div>
           </>
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* Send to Slack Modal */}
+    {isAdmin && shareId && (
+      <Suspense fallback={null}>
+        <SendToSlackModal
+          open={showSlackModal}
+          onOpenChange={setShowSlackModal}
+          shareCode={shareId}
+          reportSource="shared"
+          address={address}
+          reportData={{
+            bedrooms,
+            bathrooms,
+            annualRevenue,
+            occupancyRate,
+            averageDailyRate: nightlyRate,
+            reportType: 'property',
+          }}
+        />
+      </Suspense>
+    )}
+    </>
   );
 }

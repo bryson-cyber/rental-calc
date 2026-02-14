@@ -11098,3 +11098,9 @@ Results:
 - [x] Button visible to admin users only (gated by isAdmin && shareId && !isSharedView)
 - [x] Auto-populate report data (address, revenue, link) from the current report
 - [x] All 1126 tests pass, 0 TS errors
+
+## Send to Slack on All Report Views (Feb 13, 2026)
+- [x] Add Send to Slack button to Step 5 via BuildFullReportButton dialog (after report is generated)
+- [x] Add Send to Slack button to shared report viewer (FullPropertyReport) for admin users
+- [x] Verify button appears on Full Property Report, BuildFullReportButton dialog, and shared viewer
+- [x] Test and save checkpoint (1126 tests passing, 0 TS errors)
