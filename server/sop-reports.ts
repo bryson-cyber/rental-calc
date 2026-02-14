@@ -113,6 +113,10 @@ export interface PropertyInput {
   property_type?: string;
   attractive_features?: string[];
   zillow_url?: string;
+  latitude?: number;
+  longitude?: number;
+  accommodates?: number;
+  sqft?: number;
 }
 
 export interface MarketPercentiles {
@@ -1339,12 +1343,20 @@ export async function generateFullArbitrageAnalysis(
   
   // Filter to same bedroom count for apples-to-apples comparison
   const sameBedroomListings = listings.filter(l => l.bedrooms === actualBedrooms);
-  console.log(`[ArbitrageAnalysis] Same bedroom (${actualBedrooms}BR) listings: ${sameBedroomListings.length}`);
+  // Also get ±1 bedroom as secondary pool
+  const nearBedroomListings = listings.filter(l => Math.abs((l.bedrooms || 0) - actualBedrooms) <= 1);
+  console.log(`[ArbitrageAnalysis] Same bedroom (${actualBedrooms}BR) listings: ${sameBedroomListings.length}, ±1BR: ${nearBedroomListings.length}`);
   
-  // Use same-bedroom listings if we have enough, otherwise use all
-  if (sameBedroomListings.length >= 5) {
+  // Use same-bedroom listings if we have enough, then ±1BR, then all
+  let usedBedroomFilter = 'all';
+  if (sameBedroomListings.length >= 3) {
     listings = sameBedroomListings;
+    usedBedroomFilter = 'exact';
+  } else if (nearBedroomListings.length >= 5) {
+    listings = nearBedroomListings;
+    usedBedroomFilter = 'near';
   }
+  console.log(`[ArbitrageAnalysis] Using ${usedBedroomFilter} bedroom filter, ${listings.length} listings`);
   
   // Step 3: Calculate percentiles
   if (sessionId) progressTracker.completeStep(sessionId, 'market', `Found ${listings.length} listings`);
@@ -1401,22 +1413,45 @@ export async function generateFullArbitrageAnalysis(
     bedrooms: actualBedrooms,
     bathrooms: actualBathrooms,
     zillow_url,
-    attractive_features
+    attractive_features,
+    latitude: property_estimate?.property?.latitude,
+    longitude: property_estimate?.property?.longitude,
+    accommodates: property_estimate?.property?.accommodates || actualBedrooms * 2,
   };
   
   // Create a default market data structure if we don't have one
+  // Extract city/state from address for better market naming
+  const extractCityState = (addr: string): { city: string; state: string; marketName: string } => {
+    const parts = addr.split(',').map(p => p.trim());
+    if (parts.length >= 3) {
+      // Format: "1234 Main St, City, ST 75082" or "1234 Main St, City, ST"
+      const city = parts[parts.length - 2];
+      const stateZip = parts[parts.length - 1];
+      const state = stateZip.replace(/\d+/g, '').trim();
+      return { city, state, marketName: `${city}, ${state}` };
+    } else if (parts.length === 2) {
+      // Format: "City, ST 75082" or "City, ST"
+      const city = parts[0];
+      const state = parts[1].replace(/\d+/g, '').trim();
+      return { city, state, marketName: `${city}, ${state}` };
+    }
+    return { city: addr, state: '', marketName: addr };
+  };
+  
+  const addressInfo = extractCityState(address);
+  
   const defaultMarketData: ComprehensiveMarketReport = marketData || {
     market: {
       id: 'unknown',
-      name: zipcode ? `ZIP ${zipcode}` : 'Local Market',
-      listing_count: listings.length,
-      location_name: typeof address === 'string' ? address.split(',').slice(-2).join(',').trim() : 'Local Market',
+      name: addressInfo.marketName || (zipcode ? `ZIP ${zipcode}` : address),
+      listing_count: Math.max(listings.length, property_estimate?.comps?.length || 0, 50),
+      location_name: addressInfo.marketName || address,
       metrics: {
         occupancy: property_estimate?.estimates.occupancy_rate || 65,
         adr: property_estimate?.estimates.average_daily_rate || 200,
         revenue: property_estimate?.estimates.annual_revenue || percentiles.average,
-        revpar: 0,
-        active_listings: listings.length
+        revpar: Math.round((property_estimate?.estimates.average_daily_rate || 200) * ((property_estimate?.estimates.occupancy_rate || 65) / 100)),
+        active_listings: Math.max(listings.length, property_estimate?.comps?.length || 0, 50)
       }
     },
     submarkets: [],
@@ -2255,16 +2290,16 @@ export async function generateFullArbitrageAnalysis(
     try {
       console.log(`[ArbitrageAnalysis] Fetching property type analysis...`);
       
-      // Fetch entire home listings
-      const entireHomeListings = await getFilteredMarketListings(marketId, {
-        listing_type: 'entire_home',
-        bedrooms: actualBedrooms
-      }, 'revenue', 50);
-      
-      // Fetch private room listings
-      const privateRoomListings = await getFilteredMarketListings(marketId, {
-        listing_type: 'private_room'
-      }, 'revenue', 50);
+      // Fetch entire home and private room listings in parallel
+      const [entireHomeListings, privateRoomListings] = await Promise.all([
+        getFilteredMarketListings(marketId, {
+          listing_type: 'entire_home',
+          bedrooms: actualBedrooms
+        }, 'revenue', 50),
+        getFilteredMarketListings(marketId, {
+          listing_type: 'private_room'
+        }, 'revenue', 50)
+      ]);
       
       const calcStats = (listings: ListingData[]) => {
         if (listings.length === 0) return { count: 0, avg_revenue: 0, avg_adr: 0, avg_occupancy: 0, superhost_percentage: 0 };
@@ -2617,37 +2652,32 @@ export async function generateFullArbitrageAnalysis(
       
       if (submarkets.length > 0) {
         // Fetch metrics for each submarket (limit to top 15 to avoid too many API calls)
-        const submarketWithMetrics: Array<{
-          id: string;
-          name: string;
-          listing_count: number;
-          metrics: { occupancy: number; adr: number; revenue: number; revpar: number } | null;
-        }> = [];
-        
-        for (const submarket of submarkets.slice(0, 15)) {
-          try {
-            const metrics = await getSubmarketMetrics(submarket.id);
-            submarketWithMetrics.push({
-              id: submarket.id,
-              name: submarket.name,
-              listing_count: submarket.listing_count,
-              metrics: metrics ? {
-                occupancy: metrics.occupancy,
-                adr: metrics.adr,
-                revenue: metrics.revenue,
-                revpar: metrics.revpar
-              } : null
-            });
-          } catch (error) {
-            // Add without metrics if fetch fails
-            submarketWithMetrics.push({
-              id: submarket.id,
-              name: submarket.name,
-              listing_count: submarket.listing_count,
-              metrics: null
-            });
-          }
-        }
+        // Fetch metrics for all submarkets in parallel
+        const submarketWithMetrics = await Promise.all(
+          submarkets.slice(0, 15).map(async (submarket) => {
+            try {
+              const metrics = await getSubmarketMetrics(submarket.id);
+              return {
+                id: submarket.id,
+                name: submarket.name,
+                listing_count: submarket.listing_count,
+                metrics: metrics ? {
+                  occupancy: metrics.occupancy,
+                  adr: metrics.adr,
+                  revenue: metrics.revenue,
+                  revpar: metrics.revpar
+                } : null
+              };
+            } catch (error) {
+              return {
+                id: submarket.id,
+                name: submarket.name,
+                listing_count: submarket.listing_count,
+                metrics: null
+              };
+            }
+          })
+        );
         
         // Sort by revenue (highest first) for ranking
         submarketWithMetrics.sort((a, b) => (b.metrics?.revenue || 0) - (a.metrics?.revenue || 0));
@@ -3149,8 +3179,8 @@ export async function generateFullArbitrageAnalysis(
   if (!SKIP_HISTORICAL_ANALYSIS && five_year_summary && five_year_summary.years_of_data >= 2) {
     try {
       const marketName = property_estimate?.property?.market_id 
-        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
-        : 'Local Market';
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || addressInfo.marketName
+        : addressInfo.marketName;
       
       console.log('[ArbitrageAnalysis] Generating Gemini historical analysis...');
       historical_analysis = await analyzeHistoricalMarketTrends(
@@ -3189,8 +3219,8 @@ export async function generateFullArbitrageAnalysis(
     const marketName = submarket_details?.parent_market_name 
       || submarket_exploration?.market_name
       || (property_estimate?.property?.market_id 
-        ? (await getMarketDetails(property_estimate.property.market_id))?.name || 'Local Market'
-        : 'Local Market');
+        ? (await getMarketDetails(property_estimate.property.market_id))?.name || addressInfo.marketName
+        : addressInfo.marketName);
     
     narrative_report = await generateNarrativeReport({
       address,
@@ -3553,7 +3583,7 @@ export async function generateFullArbitrageAnalysis(
       marketNameForEnhanced = addressParts[1];
       console.log(`[ArbitrageAnalysis] Extracted market name from address: ${marketNameForEnhanced}`);
     } else {
-      marketNameForEnhanced = 'Local Market';
+      marketNameForEnhanced = addressInfo.marketName || 'Local Market';
     }
   }
   

@@ -15,15 +15,15 @@
  *   4. Find the Best Deal (Compare Many) - compares options
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useActionTracking } from '@/components/PageTracker';
 import { EbookViewer } from '@/components/EbookViewer';
 import { HelpSection } from '@/components/HelpSection';
 import { InlineEbook } from '@/components/InlineEbook';
-import { AIAdvisorStep } from '@/components/AIAdvisorStep';
-import { RegulationTrackerStep } from '@/components/RegulationTrackerStep';
+const AIAdvisorStep = lazy(() => import('@/components/AIAdvisorStep').then(m => ({ default: m.AIAdvisorStep })));
+const RegulationTrackerStep = lazy(() => import('@/components/RegulationTrackerStep').then(m => ({ default: m.RegulationTrackerStep })));
 import PropertyCard from '@/components/PropertyCard';
 import { CompDataTable } from '@/components/CompDataTable';
 import { HistoricalCharts } from '@/components/HistoricalCharts';
@@ -88,8 +88,8 @@ import {
   Brain
 } from 'lucide-react';
 import { MapView } from '@/components/Map';
-import { MapViewContent } from '@/components/MapViewContent';
-import { MapFirstLayoutV2 } from '@/components/MapFirstLayoutV2';
+const MapViewContent = lazy(() => import('@/components/MapViewContent').then(m => ({ default: m.MapViewContent })));
+const MapFirstLayoutV2 = lazy(() => import('@/components/MapFirstLayoutV2').then(m => ({ default: m.MapFirstLayoutV2 })));
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -101,14 +101,14 @@ import { useSavedItems } from '@/hooks/useSavedItems';
 import { SavedItemsPanel } from '@/components/SavedItemsPanel';
 import { StartWithProperty } from '@/components/StartWithProperty';
 import { useProperty } from '@/contexts/PropertyContext';
-import { TeslaDashboard } from '@/components/TeslaDashboard';
-import { StandaloneMarketAdvisor } from '@/components/StandaloneMarketAdvisor';
-import OpportunityFinderStep from '@/components/OpportunityFinderStep';
+const TeslaDashboard = lazy(() => import('@/components/TeslaDashboard').then(m => ({ default: m.TeslaDashboard })));
+const StandaloneMarketAdvisor = lazy(() => import('@/components/StandaloneMarketAdvisor').then(m => ({ default: m.StandaloneMarketAdvisor })));
+const OpportunityFinderStep = lazy(() => import('@/components/OpportunityFinderStep'));
 import { NotificationBell } from '@/components/NotificationBell';
 import { DataScopeIndicator, DataScopeBadge } from '@/components/DataScopeIndicator';
 import { SaveLoginPrompt, useSaveWithPrompt } from '@/components/SaveLoginPrompt';
 import { AuthButton } from '@/components/AuthButton';
-import { CompareFavoritesSection } from '@/components/CompareFavoritesSection';
+const CompareFavoritesSection = lazy(() => import('@/components/CompareFavoritesSection').then(m => ({ default: m.CompareFavoritesSection })));
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
@@ -116,8 +116,9 @@ import { SEOHead, createWebPageSchema } from '@/components/SEOHead';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
-import { InteractiveTour, useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTour';
-import { ContextualAIChat } from '@/components/ContextualAIChat';
+import { useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTour';
+const InteractiveTour = lazy(() => import('@/components/InteractiveTour').then(m => ({ default: m.InteractiveTour })));
+const ContextualAIChat = lazy(() => import('@/components/ContextualAIChat').then(m => ({ default: m.ContextualAIChat })));
 import { LoginGate } from '@/components/LoginGate';
 import { BuildFullReportButton } from '@/components/BuildFullReportButton';
 import StepErrorBoundary from '@/components/StepErrorBoundary';
@@ -2584,7 +2585,9 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'regulations' && (
               <div data-tool-panel="regulations">
+                <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
                 <RegulationTrackerStep />
+                </Suspense>
               </div>
             )}
             
@@ -3196,9 +3199,11 @@ export default function LeadMagnet() {
                   onToggle={() => setShowHelp(showHelp === 'compare' ? null : 'compare')}
                 />
                 
+                <Suspense fallback={null}>
                 <CompareFavoritesSection 
                   onNavigateToMap={() => setActiveTab('map')}
                 />
+                </Suspense>
               </div>
             )}
             
@@ -3207,6 +3212,7 @@ export default function LeadMagnet() {
             {/* ============================================ */}
             {activeTab === 'advisor' && result && (
               <StepErrorBoundary stepName="AI Advisor">
+              <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
               <AIAdvisorStep
                 property={{
                   address: address,
@@ -3340,6 +3346,7 @@ export default function LeadMagnet() {
                   } : undefined,
                 }))}
               />
+              </Suspense>
               </StepErrorBoundary>
             )}
 
@@ -3461,11 +3468,14 @@ export default function LeadMagnet() {
               </div>
             )}
 
+
             {/* ============================================ */}
-            {/* MARKET ADVISOR TAB */}
+            {/* STEP 4: MARKET ADVISOR */}
             {/* ============================================ */}
             <div className={activeTab === 'market' ? '' : 'hidden'} data-tool-panel="market">
+              <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
               <StandaloneMarketAdvisor key="market-advisor-stable" myProperty={myProperty || undefined} />
+              </Suspense>
             </div>
 
             {/* ============================================ */}
@@ -3614,6 +3624,7 @@ export default function LeadMagnet() {
                   isOpen={showHelp === 'opportunity'}
                   onToggle={() => setShowHelp(showHelp === 'opportunity' ? null : 'opportunity')}
                 />
+                <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
                 <OpportunityFinderStep
                   initialLocation={exploreAddress} // Pass location from URL params (HubSpot emails)
                   onSelectProperty={(property) => {
@@ -3627,6 +3638,7 @@ export default function LeadMagnet() {
                     // setActiveTab('validate');
                   }}
                 />
+                </Suspense>
               </div>
             )}
           </div>
@@ -3638,11 +3650,13 @@ export default function LeadMagnet() {
       {/* ============================================ */}
       {activeTab === 'map' && (
         <section className="bg-slate-50" data-tool-panel="map" data-tour="map-container">
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
           <MapFirstLayoutV2 
             key={`map-${myProperty?.address || 'no-property'}`}
             embedded={false} 
             className="min-h-[600px]" 
           />
+          </Suspense>
         </section>
       )}
 
@@ -5701,6 +5715,7 @@ export default function LeadMagnet() {
               />
             </div>
             <StepErrorBoundary stepName="Revenue Dashboard">
+              <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>}>
               <TeslaDashboard
                 result={result}
                 address={address}
@@ -5717,6 +5732,7 @@ export default function LeadMagnet() {
                 downPaymentPercent={myProperty?.downPaymentPercent}
                 interestRate={myProperty?.interestRate}
               />
+              </Suspense>
             </StepErrorBoundary>
             
             {/* Build Full Report + Next Step CTA */}
@@ -6689,6 +6705,7 @@ export default function LeadMagnet() {
       <div className="sm:hidden h-20" />
       
       {/* Interactive Tour - guides users through actual tools */}
+      <Suspense fallback={null}>
       <InteractiveTour
         isOpen={showTour}
         onClose={closeTour}
@@ -6700,8 +6717,10 @@ export default function LeadMagnet() {
         onFillSampleData={handleFillSampleData}
         currentTab={activeTab}
       />
+      </Suspense>
       
       {/* Contextual AI Chat Assistant */}
+      <Suspense fallback={null}>
       <ContextualAIChat
         pageContext={{
           currentTool: activeTab,
@@ -6783,6 +6802,7 @@ export default function LeadMagnet() {
           } : undefined,
         }}
       />
+      </Suspense>
     </div>
     </LoginGate>
   );

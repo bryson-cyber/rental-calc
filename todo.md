@@ -11135,3 +11135,23 @@ Results:
 - [x] Generate copy-paste-ready Manus prompts in Slack messages for immediate bug fixing
 - [x] Include affected file paths, error context, severity, and fix approach in Slack triage message
 - [x] Add dedicated Slack channel posting for bug reports (#bug-triage C0AFD8WV2KB)
+
+## Report Page Data Fixes (Feb 14, 2026)
+- [x] Fix report: Location shows "TX 75082, TX 75082" — fixed extractCityState to parse address correctly
+- [x] Fix report: Market shows "Local Market" — now extracts city/state from address for market name
+- [x] Fix report: Active Listings — shows N/A when 0, hides row when no data
+- [x] Fix report: "Your Property vs Market Average" — no longer echoes property values; shows fallback message when no real market data
+- [x] Fix report: Map — now passes latitude/longitude from property_estimate to the report
+- [x] Fix report: Chart X-axis — improved parseMonthDate to handle all date formats (year-only, quarterly, etc.)
+- [x] Fix report: Competition table — lowered same-BR threshold from 5 to 3, added note when using mixed bedrooms
+- [x] Fix report: Executive Summary — conditionally shows real market data or graceful fallback message
+
+## Admin Rate Limiter (Feb 14, 2026)
+- [x] Verified: Admin rate limiter bypass already working — runWithRequestContext wired in tRPC middleware, admin gets 2x per-minute limit, never blocked at daily hard limit
+
+## Performance Optimizations (Feb 14)
+- [x] Lazy-load 10 heavy components in LeadMagnet (OpportunityFinder, TeslaDashboard, MapFirstLayout, InteractiveTour, ContextualAIChat, RegulationTracker, AIAdvisor, StandaloneMarketAdvisor, RevenueEstimator, DealAlerts)
+- [x] Parallelize entireHome + privateRoom listing fetches in sop-reports.ts
+- [x] Parallelize submarket metrics loop (15 sequential → Promise.all) in sop-reports.ts
+- [x] Parallelize bedroom revenue estimate fetches in deal-alert-agent.ts
+- [x] Parallelize match notification DB updates in deal-alert-agent.ts

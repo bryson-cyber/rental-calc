@@ -93,19 +93,45 @@ const CustomTooltip = ({ active, payload, label, type = 'revenue' }: { active?: 
 // Parse a date string like "2025-05" into { monthIdx, year, shortLabel }
 function parseMonthDate(dateStr: string) {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  if (!dateStr) return { monthIdx: 0, year: '', shortLabel: 'N/A' };
+  
+  // Handle "2025-05" or "2025-05-15" format
   const dashParts = dateStr.split('-');
-  if (dashParts.length >= 2) {
+  if (dashParts.length >= 2 && dashParts[0].length === 4) {
     const year = dashParts[0];
     const monthIdx = parseInt(dashParts[1]) - 1;
     const shortYear = year.slice(2);
-    const shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : dateStr.slice(0, 3);
-    return { monthIdx, year, shortLabel: `${shortMonth} '${shortYear}` };
+    const shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : `M${dashParts[1]}`;
+    return { monthIdx: Math.max(0, monthIdx), year, shortLabel: `${shortMonth} '${shortYear}` };
   }
+  
+  // Handle "May 2025" or "May '25" format
   if (dateStr.includes(' ')) {
     const parts = dateStr.split(' ');
-    return { monthIdx: 0, year: parts[1] || '', shortLabel: parts[0]?.slice(0, 3) || dateStr.slice(0, 3) };
+    const monthStr = parts[0] || '';
+    const yearStr = parts[1] || '';
+    // Try to match month name
+    const monthMatch = monthNames.findIndex(m => monthStr.toLowerCase().startsWith(m.toLowerCase()));
+    if (monthMatch >= 0) {
+      const shortYear = yearStr.length === 4 ? yearStr.slice(2) : yearStr.replace("'", '');
+      return { monthIdx: monthMatch, year: yearStr, shortLabel: `${monthNames[monthMatch]} '${shortYear}` };
+    }
+    return { monthIdx: 0, year: yearStr, shortLabel: `${monthStr.slice(0, 3)} ${yearStr}`.trim() };
   }
-  return { monthIdx: 0, year: '', shortLabel: dateStr.length > 3 ? dateStr.slice(0, 3) : dateStr };
+  
+  // Handle just a year like "2024" — don't truncate to "202"
+  if (/^\d{4}$/.test(dateStr)) {
+    return { monthIdx: 0, year: dateStr, shortLabel: dateStr };
+  }
+  
+  // Handle month name only like "January" or "Jan"
+  const monthMatch = monthNames.findIndex(m => dateStr.toLowerCase().startsWith(m.toLowerCase()));
+  if (monthMatch >= 0) {
+    return { monthIdx: monthMatch, year: '', shortLabel: monthNames[monthMatch] };
+  }
+  
+  // Fallback: return the full string (don't truncate)
+  return { monthIdx: 0, year: '', shortLabel: dateStr.length > 7 ? dateStr.slice(0, 7) : dateStr };
 }
 
 // Monthly Forecast Bar Chart — property-specific forecast only
@@ -392,7 +418,7 @@ export function HistoricalTrendChart({
   const chartData = useMemo(() => {
     return data.slice(-12).map(item => ({
       ...item,
-      shortDate: item.date.split('-').slice(1).join('/') || item.date.slice(0, 7),
+      shortDate: parseMonthDate(item.date).shortLabel,
       displayValue: valueType === 'percent' && item.value <= 1 ? item.value * 100 : item.value,
     }));
   }, [data, valueType]);

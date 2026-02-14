@@ -485,17 +485,17 @@ export async function scanForCriteria(criteriaId: number): Promise<ScanResult> {
           .set({ totalAlertsSent: sql`${dealAlertCriteria.totalAlertsSent} + 1` })
           .where(eq(dealAlertCriteria.id, criteriaId));
         
-        // Mark matches as notified
-        for (const match of newMatches) {
-          await db.update(dealAlertMatches)
+        // Mark all new matches as notified in parallel
+        await Promise.all(newMatches.map(match =>
+          db.update(dealAlertMatches)
             .set({ status: 'notified', notifiedAt: new Date() })
             .where(
               and(
                 eq(dealAlertMatches.criteriaId, criteriaId),
                 eq(dealAlertMatches.status, 'new')
               )
-            );
-        }
+            )
+        ));
         
       } catch (err) {
         result.errors.push(`Error sending notification: ${err}`);
@@ -721,33 +721,39 @@ export async function runMarketEvaluation(params: {
     const bedroomCounts = [Math.max(1, targetBR - 1), targetBR, Math.min(8, targetBR + 1)];
     const revenueData: any[] = [];
     
-    for (const br of bedroomCounts) {
-      try {
-        const estimate = await getRentalizerEstimate({
-          address: `${params.city}, ${params.state}`,
-          bedrooms: br,
-          bathrooms: Math.max(1, Math.ceil(br * 0.75)),
-          accommodates: br * 2 + 2,
-        });
-        
-        if (estimate) {
-          revenueData.push({
+    // Fetch revenue estimates for all bedroom counts in parallel
+    const revenueResults = await Promise.all(
+      bedroomCounts.map(async (br) => {
+        try {
+          const estimate = await getRentalizerEstimate({
+            address: `${params.city}, ${params.state}`,
             bedrooms: br,
-            annualRevenue: estimate.estimates.annual_revenue,
-            monthlyRevenue: Math.round(estimate.estimates.annual_revenue / 12),
-            adr: estimate.estimates.average_daily_rate,
-            occupancy: estimate.estimates.occupancy_rate,
-            revenueRange: {
-              low: estimate.estimates.annual_revenue_low,
-              high: estimate.estimates.annual_revenue_high,
-            },
-            monthlyForecast: estimate.monthly_forecast || [],
+            bathrooms: Math.max(1, Math.ceil(br * 0.75)),
+            accommodates: br * 2 + 2,
           });
+          
+          if (estimate) {
+            return {
+              bedrooms: br,
+              annualRevenue: estimate.estimates.annual_revenue,
+              monthlyRevenue: Math.round(estimate.estimates.annual_revenue / 12),
+              adr: estimate.estimates.average_daily_rate,
+              occupancy: estimate.estimates.occupancy_rate,
+              revenueRange: {
+                low: estimate.estimates.annual_revenue_low,
+                high: estimate.estimates.annual_revenue_high,
+              },
+              monthlyForecast: estimate.monthly_forecast || [],
+            };
+          }
+          return null;
+        } catch (err) {
+          console.error(`[MarketEval] Error getting estimate for ${br}BR:`, err);
+          return null;
         }
-      } catch (err) {
-        console.error(`[MarketEval] Error getting estimate for ${br}BR:`, err);
-      }
-    }
+      })
+    );
+    revenueData.push(...revenueResults.filter(Boolean));
     
     await db.update(marketEvaluations)
       .set({ revenueData, progress: 30 })

@@ -673,14 +673,16 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   } as PurchaseScenario : undefined;
 
   // Defensive fallback for market_data (older reports may not have it)
+  // IMPORTANT: Do NOT copy revenue_estimate values into market_data — that causes "Your Property vs Market" to show identical numbers
+  const hasRealMarketData = rawMarketData && rawMarketData.listing_count > 0;
   const market_data = rawMarketData || {
-    name: 'Local Market',
+    name: 'Market Data Unavailable',
     listing_count: 0,
     metrics: {
-      occupancy: revenue_estimate?.occupancy || 0,
-      adr: revenue_estimate?.nightly || 0,
-      revenue: revenue_estimate?.annual || 0,
-      revpar: (revenue_estimate?.nightly || 0) * ((revenue_estimate?.occupancy || 0) > 1 ? (revenue_estimate?.occupancy || 0) / 100 : (revenue_estimate?.occupancy || 0)),
+      occupancy: 0,
+      adr: 0,
+      revenue: 0,
+      revpar: 0,
       active_listings: 0,
     },
   };
@@ -1164,7 +1166,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <DataRow label="Accommodates" value={`${property.accommodates} guests`} />
                 {property.sqft && <DataRow label="Size" value={`${property.sqft.toLocaleString()} sqft`} />}
                 <DataRow label="Market" value={market_data.name} />
-                <DataRow label="Active Listings in Market" value={market_data.listing_count.toLocaleString()} />
+                {market_data.listing_count > 0 && <DataRow label="Active Listings in Market" value={market_data.listing_count.toLocaleString()} />}
               </div>
             </div>
 
@@ -1557,7 +1559,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <DataSourceBadge type="market" />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Active Listings" value={market_data.listing_count.toLocaleString()} icon={Building} tooltip="The total number of short-term rental listings currently active on Airbnb and VRBO in this market. More listings means more competition, but also indicates strong traveler demand." />
+              <StatCard label="Active Listings" value={market_data.listing_count > 0 ? market_data.listing_count.toLocaleString() : 'N/A'} icon={Building} tooltip="The total number of short-term rental listings currently active on Airbnb and VRBO in this market. More listings means more competition, but also indicates strong traveler demand." />
               <StatCard label="Market Avg. Monthly Revenue" value={`${formatCurrency(market_data.metrics.revenue)}/mo`} icon={DollarSign} tooltip="The average monthly income across ALL listings in this market (all bedroom counts, all property types). Your property may earn more or less depending on its size and quality." />
               <StatCard label="Market Avg. Occupancy" value={formatPercent(market_data.metrics.occupancy)} icon={Percent} tooltip="The average booking rate across all listings in this market. This includes studios, 1-bedrooms, and large homes — so your specific property type may differ." />
               <StatCard label="Market Avg. ADR" value={`${formatCurrency(market_data.metrics.adr)}/night`} icon={DollarSign} tooltip="The average nightly price across all listings in this market. Larger properties with more bedrooms typically command higher nightly rates." />
@@ -1572,6 +1574,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           </div>
 
           {/* Your Property vs Market — uses bedroom-specific benchmarks when available */}
+          {(hasRealMarketData || bedroomBenchmark) ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h3 className="text-lg font-sans font-semibold text-[#1e293b]">
@@ -1635,6 +1638,12 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               ))}
             </div>
           </div>
+          ) : (
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-6 mb-8">
+            <h3 className="text-lg font-sans font-semibold text-[#1e293b] mb-2">Your Property vs. Market Average</h3>
+            <p className="text-sm text-[#64748b]">Market comparison data is not available for this location. The property estimate above is based on comparable listings in the area.</p>
+          </div>
+          )}
 
           {/* Bedroom Performance */}
           {bedroom_performance.length > 0 && (
@@ -3061,12 +3070,18 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 <div>
                   <h3 className="text-lg font-sans font-semibold text-[#1e293b] mb-3">Market Context</h3>
                   <p className="text-[#64748b] leading-relaxed">
-                    The <strong className="text-[#1e293b]">{market_data.name}</strong> market has <strong className="text-[#1e293b]">{market_data.listing_count.toLocaleString()}</strong> active
-                    short-term rental listings. The market average annual revenue is {formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)} with
-                    an average occupancy of {formatPercent(market_data.metrics.occupancy)} and ADR of {formatCurrency(market_data.metrics.adr)}.
-                    {revenue_estimate.annual > (market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)
-                      ? ' This property is projected to perform above the market average.'
-                      : ' This property is projected to perform near the market average.'}
+                    {hasRealMarketData ? (
+                      <>
+                        The <strong className="text-[#1e293b]">{market_data.name}</strong> market has <strong className="text-[#1e293b]">{market_data.listing_count.toLocaleString()}</strong> active
+                        short-term rental listings. The market average annual revenue is {formatCurrency(market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)} with
+                        an average occupancy of {formatPercent(market_data.metrics.occupancy)} and ADR of {formatCurrency(market_data.metrics.adr)}.
+                        {revenue_estimate.annual > (market_data.metrics.revenue < 50000 ? market_data.metrics.revenue * 12 : market_data.metrics.revenue)
+                          ? ' This property is projected to perform above the market average.'
+                          : ' This property is projected to perform near the market average.'}
+                      </>
+                    ) : (
+                      <>This property's revenue projections are based on comparable listings in the area. Detailed market-level statistics were not available for this specific location, but the revenue estimate above reflects actual performance data from nearby short-term rentals.</>
+                    )}
                   </p>
                 </div>
 
