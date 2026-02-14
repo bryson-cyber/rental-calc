@@ -36,24 +36,6 @@ export const FORMAT_SPECS: Record<
     defaultDuration: number;
   }
 > = {
-  reel: {
-    name: 'Instagram Reel / TikTok',
-    durationRange: '30-60 seconds',
-    wordCount: '80-160 words',
-    structure: 'Hook (3s) → One key insight with example → CTA (8s)',
-    style:
-      'Punchy, fast-paced, conversational. One idea only. Every sentence must earn its place. No filler.',
-    defaultDuration: 45,
-  },
-  short: {
-    name: 'YouTube Short',
-    durationRange: '45-60 seconds',
-    wordCount: '110-160 words',
-    structure: 'Hook (3s) → Quick lesson with one data point → CTA (10s)',
-    style:
-      'Energetic but informative. Slightly more depth than a reel. Still one core idea.',
-    defaultDuration: 55,
-  },
   lesson: {
     name: 'YouTube Lesson',
     durationRange: '2-5 minutes',
@@ -245,7 +227,7 @@ function buildAutonomousPrompt(
 
   const formatInstruction = overrideFormat
     ? `Use the "${overrideFormat}" format (${FORMAT_SPECS[overrideFormat]?.name}).`
-    : 'Pick the BEST format for the topic you choose. Choose from: reel (30-60s), short (45-60s), lesson (2-5min), deep_dive (5-10min).';
+    : 'Pick the BEST format for the topic you choose. Choose from: lesson (2-5min) or deep_dive (5-10min). Only YouTube-style long-form content.';
 
   const formatSpecs = Object.entries(FORMAT_SPECS)
     .map(([key, spec]) => `  ${key}: ${spec.name} | ${spec.durationRange} | ${spec.wordCount} | Structure: ${spec.structure}`)
@@ -276,8 +258,8 @@ ${previousTopicsList}
 ## OUTPUT FORMAT
 Return a JSON object with these fields:
 - "topic": The topic/angle you chose (one sentence)
-- "format": The format key you chose (reel, short, lesson, or deep_dive)
-- "title": A compelling video title (what appears on YouTube/Instagram — make it click-worthy)
+- "format": The format key you chose (lesson or deep_dive)
+- "title": A compelling YouTube video title (make it click-worthy)
 - "hook": The opening hook line (first 3 seconds — must stop the scroll)
 - "script": The COMPLETE narration script including the hook and CTA. This is the FULL thing the speaker reads aloud. Must be a complete narrative — NOT bullet points, NOT an outline.
 - "cta": The closing call-to-action line

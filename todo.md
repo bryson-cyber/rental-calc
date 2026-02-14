@@ -11396,3 +11396,19 @@ Results:
 - [x] Write 23 vitest tests for video generation service
 - [x] 24 content-studio tests still passing
 - [x] Verify Content Studio tab renders correctly in admin portal with both buttons
+
+## Content Studio UI Redesign + YT-Only + Async Video (Feb 14, 2026)
+- [x] Remove Reel and Short formats from FORMAT_SPECS (backend)
+- [x] Remove Reel/Short format buttons from frontend — only Lesson and Deep Dive
+- [x] Update Gemini prompt system to only reference lesson and deep_dive
+- [x] Redesign Content Studio UI to use site semantic tokens (bg-card, text-foreground, border-border)
+- [x] Replace hardcoded hex colors and purple gradients with site design language
+- [x] Implement async fire-and-forget video generation to avoid 504 gateway timeout
+- [x] Add server-side in-memory job tracking with polling endpoint
+- [x] Add frontend polling (every 5s) for video generation status
+- [x] Show "Creating Video" progress card with timer during generation
+- [x] Show "Video Ready" card with Watch/Download/Copy URL actions on completion
+- [x] Toast notification when video completes
+- [x] End-to-end test: "Is Florida Still Profitable for Airbnb?" video generated successfully
+- [x] All 43 tests passing (24 content-studio + 19 video-generation)
+- [x] Zero TypeScript errors

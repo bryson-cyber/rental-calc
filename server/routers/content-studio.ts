@@ -1,14 +1,16 @@
 /**
- * Content Studio v2 tRPC Router — Autonomous Generation
+ * Content Studio tRPC Router — Autonomous Generation + Async Video
  *
  * Endpoints:
- *   - autoGenerate: One-click autonomous script generation (pulls data + picks topic + generates)
+ *   - autoGenerate: One-click autonomous script generation
  *   - generateScript: Manual generation (user picks topic/format)
- *   - previewData: Preview what data the AI will use (no generation)
- *   - listScripts: List saved scripts with filters
- *   - getScript: Get a single script by ID
- *   - deleteScript: Delete a script by ID
- *   - getFormats: Get available formats and content pillars
+ *   - previewData: Preview what data the AI will use
+ *   - listScripts / getScript / deleteScript: Script CRUD
+ *   - getFormats: Available formats (YT Lesson + Deep Dive only)
+ *   - startVideo: Start async video generation from script
+ *   - quickStartVideo: Script + video in one call (async)
+ *   - videoStatus: Poll video generation status
+ *   - listVideoJobs: List recent video jobs
  */
 
 import { z } from 'zod';
@@ -28,26 +30,28 @@ import {
   formatDataForPrompt,
 } from '../content-data-pipeline';
 import {
-  generateVideo,
-  quickGenerateVideo,
-  type VideoGenerationOptions,
+  startVideoGeneration,
+  quickStartVideoGeneration,
+  getVideoStatus,
+  listVideoJobs,
 } from '../video-generation';
+
+// Note: old sync exports (generateVideo, quickGenerateVideo, VideoGenerationOptions) removed
 
 // ── Input schemas ────────────────────────────────────────────────────────────
 
 const autoGenerateInput = z.object({
-  /** Optional: force a specific format instead of letting AI choose */
-  format: z.enum(['reel', 'short', 'lesson', 'deep_dive']).optional(),
+  format: z.enum(['lesson', 'deep_dive']).optional(),
 }).optional();
 
 const generateScriptInput = z.object({
-  format: z.enum(['reel', 'short', 'lesson', 'deep_dive']),
+  format: z.enum(['lesson', 'deep_dive']),
   topic: z.string().min(3, 'Topic must be at least 3 characters').max(500),
   marketData: z.string().optional(),
 });
 
 const listScriptsInput = z.object({
-  format: z.enum(['reel', 'short', 'lesson', 'deep_dive']).optional(),
+  format: z.enum(['lesson', 'deep_dive']).optional(),
   search: z.string().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
@@ -61,29 +65,24 @@ const deleteScriptInput = z.object({
   id: z.number(),
 });
 
-const generateVideoInput = z.object({
+const startVideoInput = z.object({
   scriptId: z.number(),
-  videoType: z.enum(['short', 'long']).optional(),
-  bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
-  useColor: z.boolean().optional(),
-  includeWatermark: z.boolean().optional(),
-  timing: z.enum(['1', '2']).optional(),
 });
 
-const quickGenerateVideoInput = z.object({
-  videoType: z.enum(['short', 'long']).optional(),
-  bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
-  useColor: z.boolean().optional(),
-  includeWatermark: z.boolean().optional(),
-  timing: z.enum(['1', '2']).optional(),
+const quickStartVideoInput = z.object({
+  format: z.enum(['lesson', 'deep_dive']).optional(),
 }).optional();
+
+const videoStatusInput = z.object({
+  jobId: z.string(),
+});
 
 // ── Router ───────────────────────────────────────────────────────────────────
 
 export const contentStudioRouter = router({
   /**
    * ONE-CLICK autonomous generation.
-   * Pulls real data → AI picks topic + format → generates complete script.
+   * Pulls real data → AI picks topic → generates complete script.
    */
   autoGenerate: publicProcedure
     .input(autoGenerateInput)
@@ -94,7 +93,6 @@ export const contentStudioRouter = router({
         input?.format,
       );
 
-      // Persist to database
       const db = await getDb();
       let savedId: number | null = null;
 
@@ -148,7 +146,7 @@ export const contentStudioRouter = router({
     }),
 
   /**
-   * Preview what data the AI will use — no generation, just data inspection.
+   * Preview what data the AI will use — no generation.
    */
   previewData: publicProcedure.query(async () => {
     const dataBundle = await gatherContentData();
@@ -281,10 +279,7 @@ export const contentStudioRouter = router({
         .where(eq(contentScripts.id, input.id))
         .limit(1);
 
-      if (!script) {
-        throw new Error('Script not found');
-      }
-
+      if (!script) throw new Error('Script not found');
       return script;
     }),
 
@@ -298,79 +293,81 @@ export const contentStudioRouter = router({
       if (!db) throw new Error('Database not available');
 
       const userId = ctx.user?.id;
-
       const [script] = await db
         .select()
         .from(contentScripts)
         .where(eq(contentScripts.id, input.id))
         .limit(1);
 
-      if (!script) {
-        throw new Error('Script not found');
-      }
-
+      if (!script) throw new Error('Script not found');
       if (ctx.user?.role !== 'admin' && script.userId !== userId) {
         throw new Error('You can only delete your own scripts');
       }
 
       await db.delete(contentScripts).where(eq(contentScripts.id, input.id));
-
       return { success: true, deletedId: input.id };
     }),
 
   /**
-   * Get available formats and content pillars for the UI.
+   * Get available formats and content pillars.
+   * Only YT-style long-form: Lesson and Deep Dive.
    */
   getFormats: publicProcedure.query(() => {
+    const ytFormats = ['lesson', 'deep_dive'];
     return {
-      formats: Object.entries(FORMAT_SPECS).map(([key, spec]) => ({
-        id: key,
-        name: spec.name,
-        durationRange: spec.durationRange,
-        wordCount: spec.wordCount,
-        structure: spec.structure,
-        style: spec.style,
-      })),
+      formats: Object.entries(FORMAT_SPECS)
+        .filter(([key]) => ytFormats.includes(key))
+        .map(([key, spec]) => ({
+          id: key,
+          name: spec.name,
+          durationRange: spec.durationRange,
+          wordCount: spec.wordCount,
+          structure: spec.structure,
+          style: spec.style,
+        })),
       pillars: CONTENT_PILLARS,
     };
   }),
 
-  // ── Video Generation Endpoints ──────────────────────────────────────────
+  // ── Async Video Generation Endpoints ───────────────────────────────────
 
   /**
-   * Generate a video from an existing script.
-   * Takes a script ID and video options, returns the video URL.
+   * Start video generation from an existing script.
+   * Returns immediately with a jobId — client polls videoStatus.
    */
-  generateVideo: publicProcedure
-    .input(generateVideoInput)
+  startVideo: publicProcedure
+    .input(startVideoInput)
     .mutation(async ({ input }) => {
-      console.log(`[Content Studio] Generating video for script #${input.scriptId}`);
-      const result = await generateVideo(input);
-      return {
-        videoUrl: result.videoUrl,
-        script: result.script,
-        scriptId: result.scriptId,
-        format: result.format,
-        title: result.title,
-      };
+      console.log(`[Content Studio] Starting video for script #${input.scriptId}`);
+      const result = await startVideoGeneration(input.scriptId);
+      return result;
     }),
 
   /**
-   * ONE-CLICK: Generate script + video in a single call.
-   * Pulls data → generates script → generates video. True zero-effort.
+   * ONE-CLICK: Generate script + start video in one call.
+   * Returns immediately with jobId — client polls videoStatus.
    */
-  quickGenerateVideo: publicProcedure
-    .input(quickGenerateVideoInput)
+  quickStartVideo: publicProcedure
+    .input(quickStartVideoInput)
     .mutation(async ({ input }) => {
-      console.log('[Content Studio] Quick generate: script + video in one call');
-      const result = await quickGenerateVideo(input ?? {});
-      return {
-        videoUrl: result.videoUrl,
-        script: result.script,
-        scriptId: result.scriptId,
-        savedScriptId: result.savedScriptId,
-        format: result.format,
-        title: result.title,
-      };
+      console.log('[Content Studio] Quick start: script + video');
+      const result = await quickStartVideoGeneration(input?.format);
+      return result;
     }),
+
+  /**
+   * Poll video generation status.
+   */
+  videoStatus: publicProcedure
+    .input(videoStatusInput)
+    .query(({ input }) => {
+      return getVideoStatus(input.jobId);
+    }),
+
+  /**
+   * List recent video jobs.
+   */
+  listVideoJobs: publicProcedure.query(() => {
+    return listVideoJobs();
+  }),
 });

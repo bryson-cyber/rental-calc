@@ -1,11 +1,11 @@
 /**
- * Content Studio v2 — Unit Tests
+ * Content Studio v3 — Unit Tests
  *
  * Tests for:
- *   - FORMAT_SPECS and CONTENT_PILLARS exports
+ *   - FORMAT_SPECS (YT-only: lesson + deep_dive)
+ *   - CONTENT_PILLARS exports
  *   - Data pipeline formatting (formatDataForPrompt)
  *   - Gemini API call structure and error handling
- *   - Manual generation flow
  *   - Content data bundle types
  */
 
@@ -14,12 +14,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // ── Test FORMAT_SPECS and CONTENT_PILLARS ────────────────────────────────────
 
 describe('Content Studio — Exports', () => {
-  it('FORMAT_SPECS has all four formats', async () => {
+  it('FORMAT_SPECS has only YouTube-style formats (lesson + deep_dive)', async () => {
     const { FORMAT_SPECS } = await import('./content-studio');
     expect(Object.keys(FORMAT_SPECS)).toEqual(
-      expect.arrayContaining(['reel', 'short', 'lesson', 'deep_dive']),
+      expect.arrayContaining(['lesson', 'deep_dive']),
     );
-    expect(Object.keys(FORMAT_SPECS)).toHaveLength(4);
+    expect(Object.keys(FORMAT_SPECS)).toHaveLength(2);
+    // Reel and Short should NOT exist
+    expect(FORMAT_SPECS).not.toHaveProperty('reel');
+    expect(FORMAT_SPECS).not.toHaveProperty('short');
   });
 
   it('each FORMAT_SPEC has required fields', async () => {
@@ -48,10 +51,11 @@ describe('Content Studio — Exports', () => {
     }
   });
 
-  it('reel format has short duration (30-60s)', async () => {
+  it('lesson format is 2-5 minutes', async () => {
     const { FORMAT_SPECS } = await import('./content-studio');
-    expect(FORMAT_SPECS.reel.defaultDuration).toBeLessThanOrEqual(60);
-    expect(FORMAT_SPECS.reel.durationRange).toContain('30-60');
+    expect(FORMAT_SPECS.lesson.defaultDuration).toBeGreaterThanOrEqual(120);
+    expect(FORMAT_SPECS.lesson.defaultDuration).toBeLessThanOrEqual(300);
+    expect(FORMAT_SPECS.lesson.durationRange).toContain('2-5');
   });
 
   it('deep_dive format has long duration (5-10min)', async () => {
@@ -223,7 +227,7 @@ describe('Content Studio — Gemini API', () => {
     try {
       const { generateContentScript } = await import('./content-studio');
       await expect(
-        generateContentScript('test topic', 'reel'),
+        generateContentScript('test topic', 'lesson'),
       ).rejects.toThrow(/GEMINI_API_KEY/i);
     } finally {
       (ENV as any).geminiApiKey = original;
@@ -249,7 +253,7 @@ describe('Content Studio — Gemini API', () => {
                   hook: 'Test hook line',
                   script: 'Full test script content',
                   cta: 'Go to the tool now',
-                  estimated_duration_seconds: 45,
+                  estimated_duration_seconds: 210,
                   key_data_points: ['$5,000/month', '73% occupancy'],
                   target_audience: 'New Airbnb hosts',
                   narrative_angle: 'Test angle',
@@ -268,7 +272,7 @@ describe('Content Studio — Gemini API', () => {
     });
 
     const { generateContentScript } = await import('./content-studio');
-    const result = await generateContentScript('How to start Airbnb', 'reel');
+    const result = await generateContentScript('How to start Airbnb', 'lesson');
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     const [url, options] = (globalThis.fetch as any).mock.calls[0];
@@ -297,7 +301,7 @@ describe('Content Studio — Gemini API', () => {
               {
                 text: JSON.stringify({
                   title: 'T', hook: 'H', script: 'S', cta: 'C',
-                  estimated_duration_seconds: 45, key_data_points: [],
+                  estimated_duration_seconds: 210, key_data_points: [],
                   target_audience: '', narrative_angle: '', data_sources_used: [],
                 }),
               },
@@ -313,7 +317,7 @@ describe('Content Studio — Gemini API', () => {
     });
 
     const { generateContentScript } = await import('./content-studio');
-    await generateContentScript('test', 'reel');
+    await generateContentScript('test', 'lesson');
 
     const [, options] = (globalThis.fetch as any).mock.calls[0];
     const body = JSON.parse(options.body);
@@ -334,7 +338,7 @@ describe('Content Studio — Gemini API', () => {
               {
                 text: JSON.stringify({
                   title: 'T', hook: 'H', script: 'S', cta: 'C',
-                  estimated_duration_seconds: 55, key_data_points: [],
+                  estimated_duration_seconds: 210, key_data_points: [],
                   target_audience: '', narrative_angle: '', data_sources_used: [],
                 }),
               },
@@ -352,7 +356,7 @@ describe('Content Studio — Gemini API', () => {
     const { generateContentScript } = await import('./content-studio');
     await generateContentScript(
       'Denver market analysis',
-      'short',
+      'lesson',
       'Denver CO: Average revenue $128K, ADR $480, Occupancy 73%',
     );
 
@@ -373,7 +377,7 @@ describe('Content Studio — Gemini API', () => {
 
     const { generateContentScript } = await import('./content-studio');
     await expect(
-      generateContentScript('test', 'reel'),
+      generateContentScript('test', 'lesson'),
     ).rejects.toThrow(/Gemini API error \(429\)/);
   });
 
@@ -385,7 +389,7 @@ describe('Content Studio — Gemini API', () => {
 
     const { generateContentScript } = await import('./content-studio');
     await expect(
-      generateContentScript('test', 'reel'),
+      generateContentScript('test', 'lesson'),
     ).rejects.toThrow(/empty response/i);
   });
 
@@ -402,7 +406,7 @@ describe('Content Studio — Gemini API', () => {
 
     const { generateContentScript } = await import('./content-studio');
     await expect(
-      generateContentScript('test', 'reel'),
+      generateContentScript('test', 'lesson'),
     ).rejects.toThrow(/Failed to parse/);
   });
 
@@ -412,7 +416,7 @@ describe('Content Studio — Gemini API', () => {
       hook: 'Fenced hook',
       script: 'Fenced script',
       cta: 'Fenced CTA',
-      estimated_duration_seconds: 30,
+      estimated_duration_seconds: 210,
       key_data_points: [],
       target_audience: 'Everyone',
       narrative_angle: '',
@@ -434,7 +438,7 @@ describe('Content Studio — Gemini API', () => {
     });
 
     const { generateContentScript } = await import('./content-studio');
-    const result = await generateContentScript('test', 'reel');
+    const result = await generateContentScript('test', 'lesson');
     expect(result.title).toBe('Fenced Title');
   });
 
@@ -447,7 +451,7 @@ describe('Content Studio — Gemini API', () => {
             {
               content: {
                 parts: [
-                  { text: JSON.stringify({ topic: 'test', format: 'reel' }) },
+                  { text: JSON.stringify({ topic: 'test', format: 'lesson' }) },
                 ],
               },
             },
@@ -456,7 +460,7 @@ describe('Content Studio — Gemini API', () => {
     });
 
     const { generateContentScript } = await import('./content-studio');
-    await expect(generateContentScript('test', 'reel')).rejects.toThrow(
+    await expect(generateContentScript('test', 'lesson')).rejects.toThrow(
       /missing required fields/,
     );
   });
@@ -486,10 +490,10 @@ describe('Content Studio — Gemini API', () => {
     });
 
     const { generateContentScript } = await import('./content-studio');
-    const result = await generateContentScript('test', 'reel');
+    const result = await generateContentScript('test', 'lesson');
 
     expect(result.title).toBe('Minimal');
-    expect(result.estimated_duration_seconds).toBe(45); // Falls back to format default
+    expect(result.estimated_duration_seconds).toBe(210); // Falls back to lesson default
     expect(result.key_data_points).toEqual([]);
     expect(result.target_audience).toBe('');
   });

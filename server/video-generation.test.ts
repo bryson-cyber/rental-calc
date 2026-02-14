@@ -1,20 +1,17 @@
 /**
- * Video Generation Service Tests
- * 
+ * Video Generation Service Tests (v3 — Async Pattern)
+ *
  * Tests the Golpo AI video generation integration including:
- * - buildNarrationScript composition
- * - getVideoSettings format-based defaults
- * - generateVideo error handling
- * - quickGenerateVideo pipeline
+ * - Module exports (startVideoGeneration, getVideoStatus, etc.)
+ * - VideoJobResult and VideoStatusResult types
+ * - Narration script building logic
+ * - Video settings by format
+ * - Router schema validation
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Test the internal logic by importing the module ──────────────────────────
-
-// We'll test the exported functions and their behavior
-// Since buildNarrationScript and getVideoSettings are internal,
-// we test them indirectly through generateVideo
+// ── Module Exports ──────────────────────────────────────────────────────────
 
 describe('Video Generation Service', () => {
   beforeEach(() => {
@@ -22,175 +19,155 @@ describe('Video Generation Service', () => {
   });
 
   describe('Module exports', () => {
-    it('exports generateVideo function', async () => {
+    it('exports startVideoGeneration function', async () => {
       const mod = await import('./video-generation');
-      expect(typeof mod.generateVideo).toBe('function');
+      expect(typeof mod.startVideoGeneration).toBe('function');
     });
 
-    it('exports quickGenerateVideo function', async () => {
+    it('exports getVideoStatus function', async () => {
       const mod = await import('./video-generation');
-      expect(typeof mod.quickGenerateVideo).toBe('function');
+      expect(typeof mod.getVideoStatus).toBe('function');
+    });
+
+    it('exports listVideoJobs function', async () => {
+      const mod = await import('./video-generation');
+      expect(typeof mod.listVideoJobs).toBe('function');
+    });
+
+    it('exports quickStartVideoGeneration function', async () => {
+      const mod = await import('./video-generation');
+      expect(typeof mod.quickStartVideoGeneration).toBe('function');
     });
   });
 
-  describe('generateVideo error paths', () => {
-    it('function signature accepts VideoGenerationOptions', async () => {
-      const mod = await import('./video-generation');
-      // Verify the function exists and accepts the right shape
-      expect(mod.generateVideo).toBeDefined();
-      expect(mod.generateVideo.length).toBeGreaterThanOrEqual(1);
+  describe('getVideoStatus error handling', () => {
+    it('throws for unknown jobId', async () => {
+      const { getVideoStatus } = await import('./video-generation');
+      expect(() => getVideoStatus('non-existent-job-id')).toThrow(/not found/);
     });
+  });
 
-    it('VideoGenerationOptions interface has correct shape', () => {
-      // Type-level test: this compiles if the interface is correct
-      const options: import('./video-generation').VideoGenerationOptions = {
+  describe('listVideoJobs', () => {
+    it('returns an array', async () => {
+      const { listVideoJobs } = await import('./video-generation');
+      const jobs = listVideoJobs();
+      expect(Array.isArray(jobs)).toBe(true);
+    });
+  });
+
+  describe('Type shapes', () => {
+    it('VideoJobResult has correct shape', () => {
+      const result: import('./video-generation').VideoJobResult = {
+        jobId: 'test-uuid',
         scriptId: 1,
-        videoType: 'short',
-        bgMusic: 'engaging',
-        useColor: true,
-        includeWatermark: false,
-        voiceInstructions: 'Speak warmly',
-        timing: '1',
+        title: 'Test Video',
+        status: 'generating',
       };
-      expect(options.scriptId).toBe(1);
-      expect(options.videoType).toBe('short');
+      expect(result.jobId).toBe('test-uuid');
+      expect(result.status).toBe('generating');
     });
 
-    it('VideoGenerationResult interface has correct shape', () => {
-      const result: import('./video-generation').VideoGenerationResult = {
-        videoUrl: 'https://example.com/video.mp4',
-        script: 'Test script',
+    it('VideoStatusResult has correct shape', () => {
+      const result: import('./video-generation').VideoStatusResult = {
+        jobId: 'test-uuid',
         scriptId: 1,
-        format: 'reel',
-        title: 'Test',
+        title: 'Test Video',
+        status: 'completed',
+        videoUrl: 'https://example.com/video.mp4',
+        error: null,
+        startedAt: Date.now(),
+        completedAt: Date.now(),
       };
       expect(result.videoUrl).toContain('http');
-    });
-  });
-
-  describe('VideoGenerationOptions types', () => {
-    it('accepts valid bgMusic values', () => {
-      const validOptions: Array<{ bgMusic: 'engaging' | 'lofi' | 'none' }> = [
-        { bgMusic: 'engaging' },
-        { bgMusic: 'lofi' },
-        { bgMusic: 'none' },
-      ];
-      // Type check passes if this compiles
-      expect(validOptions).toHaveLength(3);
+      expect(result.error).toBeNull();
     });
 
-    it('accepts valid videoType values', () => {
-      const validOptions: Array<{ videoType: 'short' | 'long' }> = [
-        { videoType: 'short' },
-        { videoType: 'long' },
-      ];
-      expect(validOptions).toHaveLength(2);
-    });
-
-    it('accepts valid timing values', () => {
-      const validOptions: Array<{ timing: '1' | '2' }> = [
-        { timing: '1' },
-        { timing: '2' },
-      ];
-      expect(validOptions).toHaveLength(2);
-    });
-  });
-
-  describe('VideoGenerationResult shape', () => {
-    it('has expected fields', () => {
-      const result = {
-        videoUrl: 'https://example.com/video.mp4',
-        script: 'Generated script text',
+    it('VideoStatusResult supports failed status with error', () => {
+      const result: import('./video-generation').VideoStatusResult = {
+        jobId: 'test-uuid',
         scriptId: 1,
-        format: 'reel',
         title: 'Test Video',
+        status: 'failed',
+        videoUrl: null,
+        error: 'Golpo API timeout',
+        startedAt: Date.now(),
+        completedAt: Date.now(),
       };
-      
-      expect(result).toHaveProperty('videoUrl');
-      expect(result).toHaveProperty('script');
-      expect(result).toHaveProperty('scriptId');
-      expect(result).toHaveProperty('format');
-      expect(result).toHaveProperty('title');
+      expect(result.status).toBe('failed');
+      expect(result.error).toContain('timeout');
+      expect(result.videoUrl).toBeNull();
     });
   });
 });
+
+// ── Router Schema Validation ────────────────────────────────────────────────
 
 describe('Video Generation Router Schemas', () => {
-  it('generateVideoInput accepts valid input', async () => {
+  it('startVideoInput accepts valid scriptId', async () => {
     const { z } = await import('zod');
-    
-    const generateVideoInput = z.object({
-      scriptId: z.number(),
-      videoType: z.enum(['short', 'long']).optional(),
-      bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
-      useColor: z.boolean().optional(),
-      includeWatermark: z.boolean().optional(),
-      timing: z.enum(['1', '2']).optional(),
-    });
 
-    const valid = generateVideoInput.parse({
-      scriptId: 1,
-      videoType: 'short',
-      bgMusic: 'engaging',
-    });
-    expect(valid.scriptId).toBe(1);
-    expect(valid.videoType).toBe('short');
-  });
-
-  it('generateVideoInput rejects invalid bgMusic', async () => {
-    const { z } = await import('zod');
-    
-    const generateVideoInput = z.object({
-      scriptId: z.number(),
-      bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
-    });
-
-    expect(() => generateVideoInput.parse({
-      scriptId: 1,
-      bgMusic: 'jazz', // not supported by Golpo
-    })).toThrow();
-  });
-
-  it('generateVideoInput requires scriptId', async () => {
-    const { z } = await import('zod');
-    
-    const generateVideoInput = z.object({
+    const startVideoInput = z.object({
       scriptId: z.number(),
     });
 
-    expect(() => generateVideoInput.parse({})).toThrow();
+    const valid = startVideoInput.parse({ scriptId: 42 });
+    expect(valid.scriptId).toBe(42);
   });
 
-  it('quickGenerateVideoInput accepts empty input', async () => {
+  it('startVideoInput rejects missing scriptId', async () => {
     const { z } = await import('zod');
-    
-    const quickGenerateVideoInput = z.object({
-      videoType: z.enum(['short', 'long']).optional(),
-      bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
+
+    const startVideoInput = z.object({
+      scriptId: z.number(),
+    });
+
+    expect(() => startVideoInput.parse({})).toThrow();
+  });
+
+  it('getVideoStatusInput accepts valid jobId', async () => {
+    const { z } = await import('zod');
+
+    const getVideoStatusInput = z.object({
+      jobId: z.string(),
+    });
+
+    const valid = getVideoStatusInput.parse({ jobId: 'abc-123' });
+    expect(valid.jobId).toBe('abc-123');
+  });
+
+  it('quickStartVideoInput accepts optional format', async () => {
+    const { z } = await import('zod');
+
+    const quickStartInput = z.object({
+      format: z.enum(['lesson', 'deep_dive']).optional(),
     }).optional();
 
-    const result = quickGenerateVideoInput.parse(undefined);
-    expect(result).toBeUndefined();
+    // No input
+    const result1 = quickStartInput.parse(undefined);
+    expect(result1).toBeUndefined();
+
+    // With format
+    const result2 = quickStartInput.parse({ format: 'deep_dive' });
+    expect(result2?.format).toBe('deep_dive');
   });
 
-  it('quickGenerateVideoInput accepts partial options', async () => {
+  it('quickStartVideoInput rejects invalid formats', async () => {
     const { z } = await import('zod');
-    
-    const quickGenerateVideoInput = z.object({
-      videoType: z.enum(['short', 'long']).optional(),
-      bgMusic: z.enum(['engaging', 'lofi', 'none']).optional(),
-      timing: z.enum(['1', '2']).optional(),
-    }).optional();
 
-    const result = quickGenerateVideoInput.parse({ videoType: 'long', bgMusic: 'lofi' });
-    expect(result?.videoType).toBe('long');
-    expect(result?.bgMusic).toBe('lofi');
+    const quickStartInput = z.object({
+      format: z.enum(['lesson', 'deep_dive']).optional(),
+    });
+
+    // reel and short should be rejected
+    expect(() => quickStartInput.parse({ format: 'reel' })).toThrow();
+    expect(() => quickStartInput.parse({ format: 'short' })).toThrow();
   });
 });
+
+// ── Narration Script Building ───────────────────────────────────────────────
 
 describe('Narration Script Building (integration)', () => {
   it('combines hook + script + cta into a flowing narration', () => {
-    // Simulate what buildNarrationScript does
     const script = {
       hook: 'Stop scrolling if you want to know the best Airbnb market right now.',
       fullScript: 'Let me show you what the data says about Denver, Colorado. Properties here are pulling in $3,200 a month on average.',
@@ -214,81 +191,55 @@ describe('Narration Script Building (integration)', () => {
     expect(result).toContain(script.hook);
     expect(result).toContain(script.fullScript);
     expect(result).toContain(script.cta);
-    // Should have blank lines between sections
     expect(result).toContain('\n\n');
   });
 
   it('handles missing hook gracefully', () => {
     const parts: string[] = [];
     const script = { hook: '', fullScript: 'Body text', cta: 'CTA text' };
-    
+
     if (script.hook) parts.push(script.hook, '');
     if (script.fullScript) parts.push(script.fullScript, '');
     if (script.cta) parts.push(script.cta);
-    
+
     const result = parts.join('\n');
-    expect(result).not.toContain('\n\n\n'); // no triple newlines
+    expect(result).not.toContain('\n\n\n');
     expect(result).toContain('Body text');
     expect(result).toContain('CTA text');
   });
 });
 
+// ── Video Settings by Format ────────────────────────────────────────────────
+
 describe('Video Settings by Format', () => {
-  // Test the logic that maps format to video settings
-  const getVideoSettings = (format: string, options: { videoType?: 'short' | 'long'; bgMusic?: string; timing?: '1' | '2' }) => {
-    const rawBgMusic = options.bgMusic ?? 'engaging';
-    const bgMusic: 'engaging' | 'lofi' | null = 
-      rawBgMusic === 'none' ? null : 
-      (rawBgMusic === 'engaging' || rawBgMusic === 'lofi') ? rawBgMusic : 'engaging';
-    
-    switch (format) {
-      case 'reel':
-      case 'short':
-        return { videoType: options.videoType ?? 'short', bgMusic, timing: options.timing ?? '1' };
-      case 'lesson':
-      case 'deep_dive':
-        return { videoType: options.videoType ?? 'long', bgMusic, timing: options.timing ?? '2' };
-      default:
-        return { videoType: options.videoType ?? 'long', bgMusic, timing: options.timing ?? '1' };
-    }
+  // Replicate the logic from video-generation.ts for testing
+  const getVideoSettings = (format: string) => {
+    const isDeepDive = format === 'deep_dive';
+    return {
+      videoType: 'long' as const,
+      bgMusic: 'engaging' as const,
+      timing: isDeepDive ? '2' as const : '1' as const,
+    };
   };
 
-  it('reel format defaults to short video with timing 1', () => {
-    const settings = getVideoSettings('reel', {});
-    expect(settings.videoType).toBe('short');
+  it('lesson format uses long video with timing 1', () => {
+    const settings = getVideoSettings('lesson');
+    expect(settings.videoType).toBe('long');
     expect(settings.timing).toBe('1');
     expect(settings.bgMusic).toBe('engaging');
   });
 
-  it('lesson format defaults to long video with timing 2', () => {
-    const settings = getVideoSettings('lesson', {});
+  it('deep_dive format uses long video with timing 2', () => {
+    const settings = getVideoSettings('deep_dive');
     expect(settings.videoType).toBe('long');
     expect(settings.timing).toBe('2');
-  });
-
-  it('deep_dive format defaults to long video with timing 2', () => {
-    const settings = getVideoSettings('deep_dive', {});
-    expect(settings.videoType).toBe('long');
-    expect(settings.timing).toBe('2');
-  });
-
-  it('respects explicit videoType override', () => {
-    const settings = getVideoSettings('reel', { videoType: 'long' });
-    expect(settings.videoType).toBe('long');
-  });
-
-  it('maps none bgMusic to null for Golpo API', () => {
-    const settings = getVideoSettings('reel', { bgMusic: 'none' });
-    expect(settings.bgMusic).toBeNull();
-  });
-
-  it('maps unsupported bgMusic to engaging fallback', () => {
-    const settings = getVideoSettings('reel', { bgMusic: 'jazz' });
     expect(settings.bgMusic).toBe('engaging');
   });
 
-  it('passes lofi bgMusic through', () => {
-    const settings = getVideoSettings('reel', { bgMusic: 'lofi' });
-    expect(settings.bgMusic).toBe('lofi');
+  it('all formats use long videoType (YT-only)', () => {
+    for (const format of ['lesson', 'deep_dive']) {
+      const settings = getVideoSettings(format);
+      expect(settings.videoType).toBe('long');
+    }
   });
 });
