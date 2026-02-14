@@ -31,6 +31,7 @@ import { ShareReportButton } from '@/components/ShareReportButton';
 import { ShareToolButton } from '@/components/ShareToolButton';
 import { UniversalShareButton } from '@/components/UniversalShareButton';
 import { BugReportButton } from '@/components/BugReportButton';
+import { VoiceBugReportButton } from '@/components/VoiceBugReportButton';
 import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
 import { 
@@ -2129,6 +2130,16 @@ export default function LeadMagnet() {
       </div>
       
       {/* Fixed Header Actions */}
+      <div className="fixed top-4 left-4 z-50">
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all min-h-[44px]"
+          title="Back to top"
+        >
+          <Home className="w-5 h-5 text-amber-600" />
+          <span className="hidden sm:inline text-sm font-semibold text-slate-800">Coach Inayah</span>
+        </button>
+      </div>
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
         <AuthButton />
         <NotificationBell />
@@ -6617,8 +6628,14 @@ export default function LeadMagnet() {
         itemName={pendingSave?.name || ''}
       />
       
-      {/* Bug Report Button */}
+      {/* Bug Report Buttons */}
       <BugReportButton
+        toolName={activeTab ? `Step ${activeTab}` : undefined}
+        propertyAddress={address || undefined}
+        city={researchMarket?.split(',')[0]?.trim()}
+        state={researchMarket?.split(',')[1]?.trim()}
+      />
+      <VoiceBugReportButton
         toolName={activeTab ? `Step ${activeTab}` : undefined}
         propertyAddress={address || undefined}
         city={researchMarket?.split(',')[0]?.trim()}

@@ -700,6 +700,16 @@ export default function DealAlertsPage() {
               </Card>
             ) : (
               <div className="space-y-3">
+                {/* Info banner explaining market estimates */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm text-blue-200">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium">These are market-level estimates</span> based on average STR performance for each bedroom count in this city. Use "Find Real Properties" to browse actual Zillow listings and run property-specific analysis.
+                    </div>
+                  </div>
+                </div>
+                
                 {matchesQuery.data.map((match) => (
                   <Card 
                     key={match.id} 
@@ -728,13 +738,13 @@ export default function DealAlertsPage() {
                           </div>
                           
                           <h3 className="font-semibold">
-                            {match.city}, {match.state}
+                            {match.bedrooms} BR {match.propertyType ? <span className="capitalize">{match.propertyType}</span> : 'Property'} in {match.city}, {match.state}
                             {match.zipCode ? ` ${match.zipCode}` : ''}
                           </h3>
                           
                           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                             <span>{match.bedrooms} BR / {match.bathrooms} BA</span>
-                            {match.propertyType && <span className="capitalize">{match.propertyType}</span>}
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">Market Estimate</span>
                           </div>
                         </div>
                         
@@ -761,21 +771,21 @@ export default function DealAlertsPage() {
                       
                       {/* Financial details */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-3 border-t">
-                        {match.monthlyRent && (
+                        {match.monthlyRent != null && (
                           <div>
-                            <div className="text-xs text-muted-foreground">Monthly Rent</div>
+                            <div className="text-xs text-muted-foreground">Est. Monthly Rent</div>
                             <div className="font-semibold">{formatCurrency(match.monthlyRent)}</div>
                           </div>
                         )}
-                        {match.projectedRevenue && (
+                        {match.projectedRevenue != null && (
                           <div>
-                            <div className="text-xs text-muted-foreground">Projected Revenue</div>
+                            <div className="text-xs text-muted-foreground">Projected STR Revenue</div>
                             <div className="font-semibold text-green-700">{formatCurrency(Math.round(match.projectedRevenue / 12))}/mo</div>
                           </div>
                         )}
-                        {match.projectedMonthlyProfit && (
+                        {match.projectedMonthlyProfit != null && (
                           <div>
-                            <div className="text-xs text-muted-foreground">Monthly Profit</div>
+                            <div className="text-xs text-muted-foreground">Est. Monthly Profit</div>
                             <div className={`font-semibold ${match.projectedMonthlyProfit > 0 ? 'text-green-700' : 'text-red-600'}`}>
                               {formatCurrency(match.projectedMonthlyProfit)}
                             </div>
@@ -783,27 +793,37 @@ export default function DealAlertsPage() {
                         )}
                         {match.projectedOccupancy && (
                           <div>
-                            <div className="text-xs text-muted-foreground">Occupancy</div>
+                            <div className="text-xs text-muted-foreground">Avg. Occupancy</div>
                             <div className="font-semibold">{formatPercent(parseFloat(match.projectedOccupancy))}</div>
                           </div>
                         )}
                       </div>
                       
-                      {/* CTAs */}
-                      <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
+                      {/* CTAs - Primary action is Find Real Properties */}
+                      <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
                         <Link 
                           href={`/?tab=opportunity&city=${encodeURIComponent(match.city)}&state=${encodeURIComponent(match.state)}${match.zipCode ? `&zip=${encodeURIComponent(match.zipCode)}` : ''}&bedrooms=${match.bedrooms}`}
-                          className="text-sm text-primary hover:underline font-medium inline-flex items-center gap-1"
                         >
-                          <Search className="w-3.5 h-3.5" />
-                          Find properties in {match.city} →
+                          <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 gap-1.5">
+                            <Search className="w-3.5 h-3.5" />
+                            Find Real Properties
+                          </Button>
                         </Link>
                         <Link 
-                          href={`/?tab=prove&address=${encodeURIComponent(match.address)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
-                          className="text-sm text-muted-foreground hover:text-foreground hover:underline font-medium inline-flex items-center gap-1"
+                          href={`/?tab=validate&address=${encodeURIComponent(match.city + ', ' + match.state)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
                         >
-                          <BarChart3 className="w-3.5 h-3.5" />
-                          See revenue estimate
+                          <Button variant="outline" size="sm" className="gap-1.5">
+                            <Target className="w-3.5 h-3.5" />
+                            Validate the Deal
+                          </Button>
+                        </Link>
+                        <Link 
+                          href={`/?tab=prove&address=${encodeURIComponent(match.city + ', ' + match.state)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
+                        >
+                          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                            <BarChart3 className="w-3.5 h-3.5" />
+                            Revenue Estimate
+                          </Button>
                         </Link>
                       </div>
                     </CardContent>

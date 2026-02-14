@@ -98,8 +98,8 @@ describe("opportunityFinder.batchValidateProperties", () => {
     ).rejects.toThrow();
   });
 
-  it("validates the input schema rejects more than 20 properties", async () => {
-    const tooMany = Array.from({ length: 21 }, (_, i) => ({
+  it("validates the input schema rejects more than 50 properties", async () => {
+    const tooMany = Array.from({ length: 51 }, (_, i) => ({
       id: `prop-${i}`,
       address: `${i} Main St`,
       rent: 1500,

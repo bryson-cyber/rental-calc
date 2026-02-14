@@ -45,6 +45,7 @@ import {
   dealAlertsRouter,
   behaviorEngineRouter,
   myReportsRouter,
+  voiceBugReportRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -133,6 +134,7 @@ export const appRouter = router({
   webhook: webhookRouter,
   emailOptin: emailOptinRouter,
   bugReports: bugReportsRouter,
+  voiceBugReport: voiceBugReportRouter,
 });
 
 export type AppRouter = typeof appRouter;

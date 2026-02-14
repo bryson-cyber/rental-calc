@@ -869,7 +869,7 @@ export const opportunityFinderRouter = router({
         city: z.string().optional(),
         state: z.string().optional(),
         zipCode: z.string().optional(),
-      })).min(1).max(20),
+      })).min(1).max(50),
       minProfitThreshold: z.number().min(0).default(500),
     }))
     .mutation(async ({ input }) => {

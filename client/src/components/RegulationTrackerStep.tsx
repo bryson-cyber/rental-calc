@@ -575,10 +575,10 @@ export function RegulationTrackerStep() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-6 md:p-8"
+          className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-6 md:p-8 relative z-20"
         >
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+            <div className="flex-1 relative z-30">
               <label className="block text-sm font-medium text-gray-500 mb-3 uppercase tracking-wider">
                 City, Address, or Property URL
               </label>
@@ -651,7 +651,7 @@ export function RegulationTrackerStep() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
               transition={{ duration: 0.4 }}
-              className="space-y-6"
+              className="space-y-6 relative z-10"
             >
               {/* Status Hero Card */}
               <div className={`relative bg-gradient-to-br ${status?.bgGlow} to-white/50 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl overflow-hidden`}>

@@ -11112,3 +11112,14 @@ Results:
 - [x] Remove webhook-related tests from server/__tests__/slack-integration.test.ts
 - [x] Update docs to reflect simplified Slack integration (admin Send to Slack only)
 - [x] Verify all remaining tests pass (1100 tests passing)
+
+## Bug Fixes & Features Round 2 (Feb 13, 2026)
+- [x] Remove AirDNA branding from Step 2 "Find the Property" — verified: no user-visible AirDNA text in frontend UI (all refs are server-side code comments)
+- [x] Fix Deal Alert View button: improved match cards with market estimate labels, better CTAs (Find Real Properties primary), info banner, and rent passthrough to validate
+- [x] Fix "Show 100 properties" — increased batch analyze cap from 20 to 50 (server + client)
+- [x] Make minimum profit threshold adjustable in the property analysis pipeline
+- [ ] Regulations tab: Fix cutoff/barrier issue when searching southern cities after loading one tab
+- [x] Add home button to navigation: added Coach Inayah logo/home button in fixed top-left header
+- [x] Scope developer voice-type bug reporting tool: built VoiceBugReportButton with mic recording, S3 upload, Whisper transcription, AI parsing into structured fields
+- [x] Fix batch analysis top deals arrow: now scrolls to property card with highlight flash instead of opening Zillow
+- [x] Fix Regulations autocomplete dropdown cutoff: added z-index layering so search card (z-20/z-30) sits above results (z-10)

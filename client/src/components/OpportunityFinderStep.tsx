@@ -83,7 +83,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Bookmark
+  Bookmark,
+  ArrowDownToLine
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
@@ -726,7 +727,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
     }, 500);
     
     try {
-      const propsToAnalyze = displayedProperties.slice(0, 20).map(p => ({
+      const propsToAnalyze = displayedProperties.slice(0, 50).map(p => ({
         id: p.id,
         address: p.address,
         rent: p.price,
@@ -1530,7 +1531,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     whileTap={{ scale: 0.99 }}
                   >
                     <Zap className="w-5 h-5" />
-                    <span>Analyze All {Math.min(displayedProperties.length, 20)} Properties</span>
+                    <span>Analyze All {Math.min(displayedProperties.length, 50)} Properties</span>
                     <span className="text-sm opacity-80">— Show deals above ${profitThreshold.toLocaleString()}/mo</span>
                   </motion.button>
                 </div>
@@ -1550,7 +1551,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                     </div>
                     <div>
                       <p className="font-semibold" style={{ color: 'oklch(0.15 0 0)' }}>Analyzing Properties...</p>
-                      <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>Running AirDNA Rentalizer on {Math.min(displayedProperties.length, 20)} properties</p>
+                      <p className="text-sm" style={{ color: 'oklch(0.45 0 0)' }}>Running revenue analysis on {Math.min(displayedProperties.length, 20)} properties</p>
                     </div>
                   </div>
                   <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'oklch(0.90 0.03 145)' }}>
@@ -1641,10 +1642,19 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: idx * 0.1 }}
-                              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:shadow-md"
+                              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:shadow-md cursor-pointer"
                               style={{ 
                                 backgroundColor: 'white',
                                 border: idx === 0 ? '2px solid oklch(0.55 0.14 75)' : '1px solid oklch(0.92 0 0)',
+                              }}
+                              onClick={() => {
+                                const el = document.querySelector(`[data-property-id="${deal.id}"]`);
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  // Flash highlight effect
+                                  el.classList.add('ring-4', 'ring-yellow-400');
+                                  setTimeout(() => el.classList.remove('ring-4', 'ring-yellow-400'), 2000);
+                                }
                               }}
                             >
                               {/* Rank Badge */}
@@ -1696,19 +1706,14 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                                 </div>
                               </div>
                               
-                              {/* Link */}
-                              {deal.zillowUrl && (
-                                <a
-                                  href={deal.zillowUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-2 rounded-lg transition-colors flex-shrink-0"
-                                  style={{ backgroundColor: 'oklch(0.96 0 0)' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <ExternalLink className="w-4 h-4" style={{ color: 'oklch(0.45 0 0)' }} />
-                                </a>
-                              )}
+                              {/* Scroll to property card */}
+                              <div
+                                className="p-2 rounded-lg transition-colors flex-shrink-0"
+                                style={{ backgroundColor: 'oklch(0.96 0 0)' }}
+                                title="Scroll to property analysis"
+                              >
+                                <ArrowDownToLine className="w-4 h-4" style={{ color: 'oklch(0.45 0 0)' }} />
+                              </div>
                             </motion.div>
                           ))}
                         </div>
@@ -1807,6 +1812,7 @@ export default function OpportunityFinderStep({ onSelectProperty, initialLocatio
                   return (
                     <motion.div
                       key={`${property.id}-${index}`}
+                      data-property-id={property.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
