@@ -1,38 +1,27 @@
 /**
- * Voice Bug Report Button Component
+ * Voice Bug Report Button Component (Streamlined)
  * 
- * A floating button that allows the developer to record a voice message
- * describing a bug. The audio is transcribed and parsed into structured
- * bug report fields using AI.
- * 
- * Flow:
- * 1. Tap the mic button to start recording
+ * Effortless bug reporting for the admin/developer:
+ * 1. Tap the mic button
  * 2. Speak naturally about the bug
- * 3. Tap stop to end recording
- * 4. Audio is uploaded, transcribed, and parsed by AI
- * 5. Review/edit the parsed fields
- * 6. Submit the bug report
+ * 3. Tap stop — AI auto-transcribes, parses, and submits
+ * 4. Quick confirmation with option to add notes
+ * 
+ * Auto-captures: current page, active tab, property/market context,
+ * recent navigation trail, screen size, browser info.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   Mic, 
-  MicOff, 
   Square, 
-  Send, 
   Loader2, 
   CheckCircle, 
-  Copy, 
-  X, 
-  Bug,
   Wand2,
-  Edit3,
-  Volume2,
+  RotateCcw,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -42,37 +31,125 @@ import {
 } from '@/components/ui/dialog';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { useAuth } from '@/_core/hooks/useAuth';
 
-interface VoiceBugReportButtonProps {
-  toolName?: string;
-  propertyAddress?: string;
-  city?: string;
-  state?: string;
+// Navigation trail tracker — records last 10 page/tab changes
+const NAV_TRAIL_KEY = '__bug_report_nav_trail';
+const MAX_TRAIL_LENGTH = 10;
+
+function getNavTrail(): string[] {
+  try {
+    const raw = sessionStorage.getItem(NAV_TRAIL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
-type ReportStep = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'review' | 'submitting' | 'done';
+function pushNavTrail(entry: string) {
+  const trail = getNavTrail();
+  const last = trail[trail.length - 1];
+  if (last === entry) return; // skip duplicates
+  trail.push(entry);
+  if (trail.length > MAX_TRAIL_LENGTH) trail.shift();
+  try {
+    sessionStorage.setItem(NAV_TRAIL_KEY, JSON.stringify(trail));
+  } catch { /* ignore */ }
+}
 
-export function VoiceBugReportButton({
-  toolName,
-  propertyAddress,
-  city,
-  state,
-}: VoiceBugReportButtonProps) {
+// Auto-track navigation on every URL change
+if (typeof window !== 'undefined') {
+  const trackNav = () => {
+    const path = window.location.pathname + window.location.search;
+    pushNavTrail(`${new Date().toLocaleTimeString()} → ${path}`);
+  };
+  // Track initial load
+  trackNav();
+  // Track pushState/replaceState
+  const origPush = history.pushState;
+  const origReplace = history.replaceState;
+  history.pushState = function (...args) {
+    origPush.apply(this, args);
+    trackNav();
+  };
+  history.replaceState = function (...args) {
+    origReplace.apply(this, args);
+    trackNav();
+  };
+  window.addEventListener('popstate', trackNav);
+}
+
+/** Gather all auto-captured context from the page */
+function captureContext() {
+  const pagePath = window.location.pathname + window.location.search;
+  const browserInfo = navigator.userAgent;
+  const screenSize = `${window.innerWidth}x${window.innerHeight}`;
+  const navTrail = getNavTrail();
+  
+  // Try to detect the active tab from the URL or DOM
+  const urlParams = new URLSearchParams(window.location.search);
+  const activeTab = urlParams.get('tab') || urlParams.get('step') || '';
+  
+  // Try to detect property/market context from the page
+  let propertyAddress = '';
+  let city = '';
+  let state = '';
+  let toolName = '';
+  
+  // Check for data attributes on the page that components might set
+  const contextEl = document.querySelector('[data-bug-context]');
+  if (contextEl) {
+    propertyAddress = contextEl.getAttribute('data-property-address') || '';
+    city = contextEl.getAttribute('data-city') || '';
+    state = contextEl.getAttribute('data-state') || '';
+    toolName = contextEl.getAttribute('data-tool-name') || '';
+  }
+  
+  // Detect tool from URL path
+  if (!toolName) {
+    if (pagePath.includes('deal-alert')) toolName = 'Deal Alerts';
+    else if (pagePath.includes('tab=validate') || pagePath.includes('step=1')) toolName = 'Deal Validator (Step 1)';
+    else if (pagePath.includes('tab=find') || pagePath.includes('step=2')) toolName = 'Opportunity Finder (Step 2)';
+    else if (pagePath.includes('tab=estimate') || pagePath.includes('step=3')) toolName = 'Revenue Estimator (Step 3)';
+    else if (pagePath.includes('tab=compare') || pagePath.includes('step=4')) toolName = 'Market Comparison (Step 4)';
+    else if (pagePath.includes('tab=regulations') || pagePath.includes('step=5')) toolName = 'Regulations Tracker (Step 5)';
+    else if (pagePath.includes('report')) toolName = 'Property Report';
+    else if (pagePath.includes('admin')) toolName = 'Admin Dashboard';
+    else toolName = 'Main App';
+  }
+  
+  // Try to grab visible property/address from the page
+  if (!propertyAddress) {
+    const addressEl = document.querySelector('[data-address]');
+    if (addressEl) {
+      propertyAddress = addressEl.getAttribute('data-address') || '';
+    }
+  }
+  
+  return {
+    pagePath,
+    browserInfo,
+    screenSize,
+    navTrail,
+    activeTab,
+    propertyAddress,
+    city,
+    state,
+    toolName,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+type ReportStep = 'idle' | 'recording' | 'processing' | 'done' | 'error';
+
+export function VoiceBugReportButton() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<ReportStep>('idle');
   const [recordingTime, setRecordingTime] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [audioUrl, setAudioUrl] = useState('');
-  const [shareUrl, setShareUrl] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [parsedSummary, setParsedSummary] = useState<{ title: string; severity: string; feature: string } | null>(null);
   const [error, setError] = useState('');
-  
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    stepsToReproduce: '',
-    expectedBehavior: '',
-    actualBehavior: '',
-  });
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -120,86 +197,25 @@ export function VoiceBugReportButton({
       };
       
       mediaRecorder.onstop = async () => {
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
-        
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         
-        // Check size
         const sizeMB = audioBlob.size / (1024 * 1024);
         if (sizeMB > 16) {
           setError('Recording too long (max 16MB). Try a shorter recording.');
-          setStep('idle');
+          setStep('error');
           return;
         }
         
-        // Convert to base64 for upload
-        setStep('uploading');
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = (reader.result as string).split(',')[1];
-          
-          try {
-            // Upload audio
-            const uploadResult = await uploadAudio.mutateAsync({
-              audioBase64: base64,
-              mimeType: 'audio/webm',
-              fileName: `bug-report-${Date.now()}.webm`,
-            });
-            
-            if (!uploadResult.success || !uploadResult.audioUrl) {
-              setError(uploadResult.error || 'Failed to upload audio');
-              setStep('idle');
-              return;
-            }
-            
-            setAudioUrl(uploadResult.audioUrl);
-            
-            // Transcribe and parse
-            setStep('transcribing');
-            const parseResult = await transcribeAndParse.mutateAsync({
-              audioUrl: uploadResult.audioUrl,
-              toolName,
-              pagePath: window.location.pathname,
-              propertyAddress,
-              city,
-              state,
-            });
-            
-            if (!parseResult.success) {
-              setError(parseResult.error || 'Failed to transcribe audio');
-              setStep('idle');
-              return;
-            }
-            
-            setTranscript(parseResult.transcript || '');
-            
-            if (parseResult.parsed) {
-              setFormData({
-                title: parseResult.parsed.title || '',
-                description: parseResult.parsed.description || '',
-                stepsToReproduce: parseResult.parsed.stepsToReproduce || '',
-                expectedBehavior: parseResult.parsed.expectedBehavior || '',
-                actualBehavior: parseResult.parsed.actualBehavior || '',
-              });
-            }
-            
-            setStep('review');
-          } catch (err) {
-            console.error('[VoiceBugReport] Error:', err);
-            setError('Failed to process recording. Please try again.');
-            setStep('idle');
-          }
-        };
-        reader.readAsDataURL(audioBlob);
+        // Auto-process: upload → transcribe → parse → submit
+        await processAndSubmit(audioBlob);
       };
       
       mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setStep('recording');
       setRecordingTime(0);
       
-      // Start timer
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
@@ -207,9 +223,9 @@ export function VoiceBugReportButton({
     } catch (err) {
       console.error('[VoiceBugReport] Microphone error:', err);
       setError('Could not access microphone. Please check permissions.');
-      setStep('idle');
+      setStep('error');
     }
-  }, [toolName, propertyAddress, city, state, uploadAudio, transcribeAndParse]);
+  }, []);
   
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -221,57 +237,101 @@ export function VoiceBugReportButton({
     }
   }, []);
   
-  const handleSubmit = async () => {
-    if (!formData.title.trim()) {
-      toast.error('Please enter a title for the bug report');
-      return;
-    }
-    
-    setStep('submitting');
+  /** Full auto-pipeline: upload → transcribe → parse → submit */
+  const processAndSubmit = async (audioBlob: Blob) => {
+    setStep('processing');
+    const context = captureContext();
     
     try {
+      // Step 1: Upload
+      setStatusMessage('Uploading recording...');
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
+      
+      const uploadResult = await uploadAudio.mutateAsync({
+        audioBase64: base64,
+        mimeType: 'audio/webm',
+        fileName: `bug-report-${Date.now()}.webm`,
+      });
+      
+      if (!uploadResult.success || !uploadResult.audioUrl) {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+      
+      // Step 2: Transcribe + AI Parse
+      setStatusMessage('Transcribing & analyzing...');
+      const parseResult = await transcribeAndParse.mutateAsync({
+        audioUrl: uploadResult.audioUrl,
+        toolName: context.toolName,
+        pagePath: context.pagePath,
+        propertyAddress: context.propertyAddress,
+        city: context.city,
+        state: context.state,
+      });
+      
+      if (!parseResult.success) {
+        throw new Error(parseResult.error || 'Transcription failed');
+      }
+      
+      const parsed = parseResult.parsed;
+      const transcript = parseResult.transcript || '';
+      
+      if (!parsed || !parsed.title) {
+        throw new Error('Could not parse voice into a bug report. Try again with more detail.');
+      }
+      
+      // Step 3: Auto-submit with all context
+      setStatusMessage('Submitting report...');
       const result = await submitReport.mutateAsync({
-        ...formData,
-        toolName,
-        pagePath: window.location.pathname + window.location.search,
-        propertyAddress,
-        city,
-        state,
-        browserInfo: navigator.userAgent,
-        screenSize: `${window.innerWidth}x${window.innerHeight}`,
-        audioUrl,
+        title: parsed.title,
+        description: parsed.description || '',
+        stepsToReproduce: parsed.stepsToReproduce 
+          ? `${parsed.stepsToReproduce}\n\n--- Auto-captured Navigation Trail ---\n${context.navTrail.join('\n')}`
+          : `Navigation Trail:\n${context.navTrail.join('\n')}`,
+        expectedBehavior: parsed.expectedBehavior || '',
+        actualBehavior: parsed.actualBehavior || '',
+        toolName: context.toolName,
+        pagePath: context.pagePath,
+        propertyAddress: context.propertyAddress,
+        city: context.city,
+        state: context.state,
+        browserInfo: context.browserInfo,
+        screenSize: context.screenSize,
+        audioUrl: uploadResult.audioUrl,
         transcript,
+        severity: parsed.severity || 'medium',
         sessionId: localStorage.getItem('sessionId') || undefined,
       });
       
-      if (result.success && result.shareUrl) {
-        setShareUrl(result.shareUrl);
+      if (result.success) {
+        setParsedSummary({
+          title: parsed.title,
+          severity: parsed.severity || 'medium',
+          feature: parsed.affectedFeature || context.toolName,
+        });
         setStep('done');
-        toast.success('Voice bug report submitted!');
+        toast.success('Bug report sent!');
       } else {
-        setError('Failed to submit report');
-        setStep('review');
+        throw new Error('Failed to submit');
       }
-    } catch (err) {
-      setError('Failed to submit report');
-      setStep('review');
+      
+    } catch (err: any) {
+      console.error('[VoiceBugReport] Pipeline error:', err);
+      setError(err.message || 'Something went wrong. Try again.');
+      setStep('error');
     }
   };
   
   const resetAll = () => {
     setStep('idle');
     setRecordingTime(0);
-    setTranscript('');
-    setAudioUrl('');
-    setShareUrl('');
+    setStatusMessage('');
+    setParsedSummary(null);
     setError('');
-    setFormData({
-      title: '',
-      description: '',
-      stepsToReproduce: '',
-      expectedBehavior: '',
-      actualBehavior: '',
-    });
   };
   
   const formatTime = (seconds: number) => {
@@ -280,19 +340,35 @@ export function VoiceBugReportButton({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
+  const severityColor = (s: string) => {
+    switch (s) {
+      case 'critical': return 'text-red-600 bg-red-50';
+      case 'high': return 'text-orange-600 bg-orange-50';
+      case 'medium': return 'text-amber-600 bg-amber-50';
+      case 'low': return 'text-green-600 bg-green-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+  
+  // Only show for admin users
+  if (!user || user.role !== 'admin') return null;
+
   return (
     <>
       {/* Floating Voice Bug Report Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-20 z-50 bg-white shadow-lg hover:bg-amber-50 border-amber-300 text-amber-700 gap-2"
-        title="Voice Bug Report"
+      <button
+        onClick={() => {
+          setOpen(true);
+          // Auto-start recording when opening
+          if (step === 'idle') {
+            setTimeout(() => startRecording(), 300);
+          }
+        }}
+        className="fixed bottom-36 sm:bottom-28 right-4 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+        title="Voice Bug Report (Admin Only)"
       >
-        <Mic className="w-4 h-4" />
-        <span className="hidden sm:inline">Voice Report</span>
-      </Button>
+        <Mic className="w-5 h-5" />
+      </button>
       
       <Dialog open={open} onOpenChange={(isOpen) => {
         if (!isOpen && step === 'recording') {
@@ -301,96 +377,68 @@ export function VoiceBugReportButton({
         setOpen(isOpen);
         if (!isOpen) resetAll();
       }}>
-        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
               {step === 'done' ? (
                 <CheckCircle className="w-5 h-5 text-green-500" />
               ) : (
                 <Mic className="w-5 h-5 text-amber-600" />
               )}
-              {step === 'done' ? 'Report Submitted!' : 'Voice Bug Report'}
+              {step === 'done' ? 'Report Sent' : 'Voice Bug Report'}
             </DialogTitle>
-            <DialogDescription>
-              {step === 'idle' && 'Tap the microphone to describe the bug with your voice.'}
-              {step === 'recording' && 'Speak naturally about what went wrong...'}
-              {step === 'uploading' && 'Uploading your recording...'}
-              {step === 'transcribing' && 'AI is transcribing and parsing your report...'}
-              {step === 'review' && 'Review and edit the parsed bug report before submitting.'}
-              {step === 'submitting' && 'Submitting your bug report...'}
-              {step === 'done' && 'Your voice bug report has been saved.'}
+            <DialogDescription className="text-xs">
+              {step === 'idle' && 'Tap to start — just describe the bug.'}
+              {step === 'recording' && 'Listening... tap stop when done.'}
+              {step === 'processing' && statusMessage}
+              {step === 'done' && 'Your report has been submitted and the team has been notified.'}
+              {step === 'error' && 'Something went wrong.'}
             </DialogDescription>
           </DialogHeader>
           
-          {/* Error Display */}
-          {error && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              <X className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-          
-          {/* IDLE STATE - Show mic button */}
+          {/* IDLE STATE — Big mic button */}
           {step === 'idle' && (
-            <div className="flex flex-col items-center gap-6 py-8">
+            <div className="flex flex-col items-center gap-4 py-6">
               <button
                 onClick={startRecording}
-                className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
               >
-                <Mic className="w-10 h-10" />
+                <Mic className="w-9 h-9" />
               </button>
-              <p className="text-sm text-gray-500 text-center max-w-xs">
-                Tap to start recording. Describe the bug — what you did, what happened, and what should have happened.
+              <p className="text-sm text-gray-500 text-center">
+                Just describe what's broken. Context is captured automatically.
               </p>
-              
-              {/* Context info */}
-              {(toolName || propertyAddress || city) && (
-                <div className="w-full p-3 bg-gray-50 rounded-lg text-sm">
-                  <p className="font-medium text-gray-700 mb-1">Auto-captured context:</p>
-                  <ul className="space-y-0.5 text-gray-500">
-                    {toolName && <li>Tool: {toolName}</li>}
-                    {propertyAddress && <li>Property: {propertyAddress}</li>}
-                    {city && state && <li>Location: {city}, {state}</li>}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
           
-          {/* RECORDING STATE - Show waveform and stop button */}
+          {/* RECORDING STATE */}
           {step === 'recording' && (
-            <div className="flex flex-col items-center gap-6 py-8">
-              {/* Pulsing recording indicator */}
+            <div className="flex flex-col items-center gap-4 py-6">
               <div className="relative">
-                <div className="absolute inset-0 w-24 h-24 rounded-full bg-red-400 animate-ping opacity-20" />
+                <div className="absolute inset-0 w-20 h-20 rounded-full bg-red-400 animate-ping opacity-20" />
                 <button
                   onClick={stopRecording}
-                  className="relative w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+                  className="relative w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-lg"
                 >
-                  <Square className="w-8 h-8" />
+                  <Square className="w-7 h-7" />
                 </button>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-2xl font-mono font-semibold text-gray-800">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xl font-mono font-semibold text-gray-800">
                   {formatTime(recordingTime)}
                 </span>
               </div>
               
-              <p className="text-sm text-gray-500 text-center">
-                Recording... Tap the stop button when you're done.
-              </p>
-              
-              {/* Audio level visualization */}
-              <div className="flex items-end gap-1 h-8">
-                {Array.from({ length: 20 }).map((_, i) => (
+              {/* Simple waveform */}
+              <div className="flex items-end gap-0.5 h-6">
+                {Array.from({ length: 24 }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-1.5 bg-amber-400 rounded-full transition-all duration-150"
+                    className="w-1 bg-red-400 rounded-full transition-all duration-150"
                     style={{
                       height: `${Math.random() * 100}%`,
-                      animationDelay: `${i * 50}ms`,
                     }}
                   />
                 ))}
@@ -398,163 +446,57 @@ export function VoiceBugReportButton({
             </div>
           )}
           
-          {/* UPLOADING / TRANSCRIBING STATE */}
-          {(step === 'uploading' || step === 'transcribing') && (
-            <div className="flex flex-col items-center gap-6 py-8">
-              <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center">
-                {step === 'uploading' ? (
-                  <Loader2 className="w-10 h-10 text-amber-600 animate-spin" />
-                ) : (
-                  <Wand2 className="w-10 h-10 text-amber-600 animate-pulse" />
-                )}
+          {/* PROCESSING STATE — auto pipeline */}
+          {step === 'processing' && (
+            <div className="flex flex-col items-center gap-4 py-6">
+              <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center">
+                <Wand2 className="w-8 h-8 text-amber-600 animate-pulse" />
               </div>
               <div className="text-center">
-                <p className="text-lg font-medium text-gray-800">
-                  {step === 'uploading' ? 'Uploading audio...' : 'AI is analyzing your report...'}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {step === 'uploading' 
-                    ? 'Sending your recording to the server' 
-                    : 'Transcribing speech and extracting bug details'}
-                </p>
+                <p className="text-sm font-medium text-gray-800">{statusMessage}</p>
+                <p className="text-xs text-gray-400 mt-1">This takes a few seconds</p>
               </div>
+              <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
             </div>
           )}
           
-          {/* REVIEW STATE - Show parsed fields */}
-          {step === 'review' && (
-            <div className="space-y-4 py-2">
-              {/* Transcript preview */}
-              {transcript && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Volume2 className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs font-medium text-amber-700 uppercase tracking-wider">Voice Transcript</span>
-                  </div>
-                  <p className="text-sm text-amber-900 italic">"{transcript}"</p>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Edit3 className="w-4 h-4" />
-                <span>Review and edit the AI-parsed fields below:</span>
-              </div>
-              
-              {/* Title */}
-              <div className="space-y-1.5">
-                <Label htmlFor="v-title" className="text-sm font-medium">Bug Title *</Label>
-                <Input
-                  id="v-title"
-                  placeholder="Brief description of the issue"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                />
-              </div>
-              
-              {/* Description */}
-              <div className="space-y-1.5">
-                <Label htmlFor="v-desc" className="text-sm font-medium">Description</Label>
-                <Textarea
-                  id="v-desc"
-                  placeholder="What happened?"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              
-              {/* Steps to Reproduce */}
-              <div className="space-y-1.5">
-                <Label htmlFor="v-steps" className="text-sm font-medium">Steps to Reproduce</Label>
-                <Textarea
-                  id="v-steps"
-                  placeholder="1. Go to...&#10;2. Click on...&#10;3. See error"
-                  value={formData.stepsToReproduce}
-                  onChange={(e) => setFormData({ ...formData, stepsToReproduce: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              
-              {/* Expected vs Actual */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="v-expected" className="text-sm font-medium">Expected</Label>
-                  <Textarea
-                    id="v-expected"
-                    placeholder="What should happen?"
-                    value={formData.expectedBehavior}
-                    onChange={(e) => setFormData({ ...formData, expectedBehavior: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="v-actual" className="text-sm font-medium">Actual</Label>
-                  <Textarea
-                    id="v-actual"
-                    placeholder="What actually happened?"
-                    value={formData.actualBehavior}
-                    onChange={(e) => setFormData({ ...formData, actualBehavior: e.target.value })}
-                    rows={2}
-                  />
+          {/* DONE STATE — Quick confirmation */}
+          {step === 'done' && parsedSummary && (
+            <div className="space-y-3 py-3">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-medium text-green-800">{parsedSummary.title}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${severityColor(parsedSummary.severity)}`}>
+                    {parsedSummary.severity}
+                  </span>
+                  {parsedSummary.feature && (
+                    <span className="text-xs text-gray-500">{parsedSummary.feature}</span>
+                  )}
                 </div>
               </div>
               
-              {/* Submit */}
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={resetAll} className="flex-1">
-                  Start Over
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Submit Report
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          {/* SUBMITTING STATE */}
-          {step === 'submitting' && (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <Loader2 className="w-10 h-10 text-amber-600 animate-spin" />
-              <p className="text-gray-600">Submitting your bug report...</p>
-            </div>
-          )}
-          
-          {/* DONE STATE */}
-          {step === 'done' && (
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="w-12 h-12 text-green-500" />
-              </div>
-              {shareUrl && (
-                <div className="space-y-2">
-                  <Label>Shareable Bug Report Link</Label>
-                  <div className="flex gap-2">
-                    <Input value={shareUrl} readOnly className="font-mono text-sm" />
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => {
-                        navigator.clipboard.writeText(shareUrl);
-                        toast.success('Link copied!');
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={resetAll} className="flex-1">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={resetAll} className="flex-1 gap-1">
+                  <RotateCcw className="w-3.5 h-3.5" />
                   Report Another
                 </Button>
-                <Button onClick={() => setOpen(false)} className="flex-1 bg-gray-900 hover:bg-gray-800 text-white">
+                <Button size="sm" onClick={() => setOpen(false)} className="flex-1 bg-gray-900 hover:bg-gray-800 text-white">
                   Done
                 </Button>
               </div>
+            </div>
+          )}
+          
+          {/* ERROR STATE */}
+          {step === 'error' && (
+            <div className="space-y-3 py-3">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+              <Button variant="outline" onClick={resetAll} className="w-full gap-1">
+                <RotateCcw className="w-3.5 h-3.5" />
+                Try Again
+              </Button>
             </div>
           )}
         </DialogContent>

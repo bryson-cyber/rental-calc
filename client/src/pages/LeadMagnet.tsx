@@ -6635,12 +6635,7 @@ export default function LeadMagnet() {
         city={researchMarket?.split(',')[0]?.trim()}
         state={researchMarket?.split(',')[1]?.trim()}
       />
-      <VoiceBugReportButton
-        toolName={activeTab ? `Step ${activeTab}` : undefined}
-        propertyAddress={address || undefined}
-        city={researchMarket?.split(',')[0]?.trim()}
-        state={researchMarket?.split(',')[1]?.trim()}
-      />
+      <VoiceBugReportButton />
       
       {/* Scroll to Top Button - Mobile only, positioned above bottom nav */}
       <div className="sm:hidden">

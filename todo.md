@@ -11123,3 +11123,11 @@ Results:
 - [x] Scope developer voice-type bug reporting tool: built VoiceBugReportButton with mic recording, S3 upload, Whisper transcription, AI parsing into structured fields
 - [x] Fix batch analysis top deals arrow: now scrolls to property card with highlight flash instead of opening Zillow
 - [x] Fix Regulations autocomplete dropdown cutoff: added z-index layering so search card (z-20/z-30) sits above results (z-10)
+- [x] Fix Voice Bug Report button not visible on the page: moved to right-32 to avoid overlap with Report Bug and AI Chat buttons
+- [x] Route voice bug reports to Slack channel: added notifyOwner() call on submit with bug title, description, severity, transcript
+- [ ] Integrate Deal Alerts with real property listings (Zillow/Redfin) instead of city-level estimates
+- [x] Make bug report buttons (Report Bug + Voice Report) admin-only — hide for regular users
+- [x] Fix bug report button positioning: stacked vertically above AI chat bubble (Voice Report at bottom-36, Report Bug at bottom-24)
+- [x] Rebuild VoiceBugReportButton: remove all manual form fields, voice-only flow
+- [x] Auto-capture user context: current page/tab, property/market, nav trail tracked via sessionStorage
+- [x] One-tap submit after AI parses voice transcript — auto-pipeline: record → upload → transcribe → parse → submit

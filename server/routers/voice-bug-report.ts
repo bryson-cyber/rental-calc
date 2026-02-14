@@ -14,6 +14,7 @@ import { invokeLLM } from "../_core/llm";
 import { storagePut } from "../storage";
 import { getDb } from "../db";
 import { bugReports } from "../../drizzle/schema";
+import { notifyOwner } from "../_core/notification";
 
 export const voiceBugReportRouter = router({
   // Upload audio and get a storage URL back
@@ -239,6 +240,23 @@ ${contextInfo ? `Current context:\n${contextInfo}` : ''}`,
         });
         
         console.log('[VoiceBugReport] Report created:', shareCode, input.title);
+        
+        // Send notification to owner
+        try {
+          await notifyOwner({
+            title: `🎙️ Voice Bug Report: ${input.title}`,
+            content: [
+              `**Bug:** ${input.title}`,
+              input.description ? `**Description:** ${input.description}` : '',
+              input.toolName ? `**Tool:** ${input.toolName}` : '',
+              input.severity ? `**Severity:** ${input.severity}` : '',
+              input.transcript ? `**Voice Transcript:** "${input.transcript.substring(0, 200)}${input.transcript.length > 200 ? '...' : ''}"` : '',
+              `**Share Link:** https://coachinayahturnkeytool.com/bug/${shareCode}`,
+            ].filter(Boolean).join('\n'),
+          });
+        } catch (notifyErr) {
+          console.error('[VoiceBugReport] Failed to notify owner:', notifyErr);
+        }
         
         return {
           success: true,

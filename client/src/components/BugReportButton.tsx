@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 interface BugReportButtonProps {
   // Optional context to pre-fill
@@ -40,6 +41,7 @@ export function BugReportButton({
   marketId,
   errorMessage,
 }: BugReportButtonProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
@@ -122,6 +124,9 @@ export function BugReportButton({
     setShareUrl('');
   };
 
+  // Only show for admin users
+  if (!user || user.role !== 'admin') return null;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
       setOpen(isOpen);
@@ -133,7 +138,7 @@ export function BugReportButton({
         <Button
           variant="outline"
           size="sm"
-          className="fixed bottom-4 right-4 z-50 bg-white shadow-lg hover:bg-gray-50 border-gray-200"
+          className="fixed bottom-24 sm:bottom-20 right-4 z-50 bg-white shadow-lg hover:bg-gray-50 border-gray-200"
         >
           <Bug className="w-4 h-4 mr-2" />
           Report Bug
