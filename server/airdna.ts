@@ -2842,8 +2842,23 @@ export async function getComprehensivePropertyReport(
       console.log(`[Market ID Fix] getSubmarketDetails failed for ${marketId}. Trying searchMarketsAPI fallback...`);
       try {
         // Extract city name from the address for search
-        const cityForSearch = address.match(/,\s*([^,]+),\s*[A-Z]{2}/)?.[1]?.trim()
-          || propertyEstimate.property.address_lookup?.split(',')[0]?.trim();
+        // address_lookup can be full address ("1622 HALLIARD DR, LAWRENCEVILLE, GA 30043")
+        // or short ("Lawrenceville, GA"), so use the second-to-last comma part for city
+        const cityFromAddress = address.match(/,\s*([^,]+),\s*[A-Z]{2}/)?.[1]?.trim();
+        let cityFromLookup: string | undefined;
+        if (propertyEstimate.property.address_lookup) {
+          const lookupParts = propertyEstimate.property.address_lookup.split(',').map((p: string) => p.trim());
+          if (lookupParts.length >= 3) {
+            // Full address format: take second-to-last part as city
+            cityFromLookup = lookupParts[lookupParts.length - 2];
+          } else if (lookupParts.length === 2) {
+            // Short format: "City, ST" — take first part
+            cityFromLookup = lookupParts[0];
+          }
+          // Strip zip code if present
+          if (cityFromLookup) cityFromLookup = cityFromLookup.replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
+        }
+        const cityForSearch = cityFromAddress || cityFromLookup;
         if (cityForSearch) {
           const searchResults = await searchMarketsAPI(cityForSearch, 25);
           // Check if any result matches our market_id and has a parent_market

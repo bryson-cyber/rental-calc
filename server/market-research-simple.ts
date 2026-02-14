@@ -435,7 +435,20 @@ export const marketResearchSimpleRouter = router({
       
       // Get the first valid estimate for location info
       const primaryEstimate = validEstimates[0]!;
-      const locationName = primaryEstimate?.property?.address_lookup?.split(',').slice(1, 3).join(',').trim() || location;
+      // address_lookup can be full address ("1622 HALLIARD DR, LAWRENCEVILLE, GA 30043")
+      // or short ("Lawrenceville, GA"), so extract city+state from the last parts
+      let locationName = location;
+      if (primaryEstimate?.property?.address_lookup) {
+        const lookupParts = primaryEstimate.property.address_lookup.split(',').map((p: string) => p.trim());
+        if (lookupParts.length >= 3) {
+          // Full address: take last 2 parts (city, state+zip), strip zip
+          const city = lookupParts[lookupParts.length - 2];
+          const state = lookupParts[lookupParts.length - 1].replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
+          locationName = `${city}, ${state}`;
+        } else if (lookupParts.length === 2) {
+          locationName = primaryEstimate.property.address_lookup;
+        }
+      }
       
       // Collect all comps from all estimates
       const allComps: any[] = [];

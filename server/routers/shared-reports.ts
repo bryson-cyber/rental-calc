@@ -9,6 +9,36 @@ import { getRegulationInfo } from "../regulation-tracker";
 import { searchZillowListings } from "../hasdata";
 import { checkReportRateLimit, incrementReportCount } from "../rate-limiter";
 
+/**
+ * Extract city and state from an address or address_lookup string.
+ * Handles multiple formats:
+ *   - "City, ST"                          → city=City, state=ST
+ *   - "City, ST 12345"                    → city=City, state=ST
+ *   - "1234 Main St, City, ST 12345"      → city=City, state=ST
+ *   - "1234 Main St, City, ST 12345, USA" → city=City, state=ST
+ *   - "1622 HALLIARD DR, LAWRENCEVILLE, GA 30043" → city=LAWRENCEVILLE, state=GA
+ */
+function extractCityStateFromAddress(addr: string | undefined | null): { city: string; state: string } {
+  if (!addr) return { city: '', state: '' };
+  const parts = addr.split(',').map(p => p.trim());
+  if (parts.length >= 3) {
+    // Format: "Street, City, ST 12345" or "Street, City, ST 12345, USA"
+    // City is the second-to-last part (ignoring optional country suffix)
+    const hasCountry = /^(USA|US|United States)$/i.test(parts[parts.length - 1]);
+    const cityIdx = hasCountry ? parts.length - 3 : parts.length - 2;
+    const stateIdx = hasCountry ? parts.length - 2 : parts.length - 1;
+    const city = parts[cityIdx] || '';
+    const state = (parts[stateIdx] || '').replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
+    return { city, state };
+  } else if (parts.length === 2) {
+    // Format: "City, ST" or "City, ST 12345"
+    const city = parts[0];
+    const state = parts[1].replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim();
+    return { city, state };
+  }
+  return { city: addr, state: '' };
+}
+
 export const sharedReportsRouter = router({
     // Create a new shared report
     create: publicProcedure
@@ -530,8 +560,8 @@ export const sharedReportsRouter = router({
           let newReportData: any = {
             property: {
               address: address,
-              city: prop?.property?._geocoded_city || prop?.property?.address_lookup?.split(',')[0]?.trim() || market?.name || '',
-              state: prop?.property?._geocoded_state || prop?.property?.address_lookup?.split(',')[1]?.trim() || '',
+              city: prop?.property?._geocoded_city || extractCityStateFromAddress(prop?.property?.address_lookup || address).city || market?.name || '',
+              state: prop?.property?._geocoded_state || extractCityStateFromAddress(prop?.property?.address_lookup || address).state || '',
               zipCode: prop?.property?.zipcode || '',
               bedrooms: bedrooms,
               bathrooms: bathrooms,
@@ -920,8 +950,8 @@ export const sharedReportsRouter = router({
           let reportData: any = {
             property: {
               address: address,
-              city: prop?.property?._geocoded_city || prop?.property?.address_lookup?.split(',')[0]?.trim() || market?.name || '',
-              state: prop?.property?._geocoded_state || prop?.property?.address_lookup?.split(',')[1]?.trim() || '',
+              city: prop?.property?._geocoded_city || extractCityStateFromAddress(prop?.property?.address_lookup || address).city || market?.name || '',
+              state: prop?.property?._geocoded_state || extractCityStateFromAddress(prop?.property?.address_lookup || address).state || '',
               zipCode: prop?.property?.zipcode || '',
               bedrooms: bedrooms,
               bathrooms: bathrooms,

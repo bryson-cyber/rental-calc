@@ -10409,7 +10409,7 @@ Results:
 - [x] Dev server: Running correctly
 
 ### Remaining Opportunities (Future)
-- [ ] Split LeadMagnet chunk (2.5MB) — lazy-load sub-components or code-split ebook content
+- [x] Split LeadMagnet chunk — lazy-loaded 14 heavy components (HierarchicalLocationSelector 80KB, StartWithProperty 61KB, InlineEbook 48KB, CompDataTable 31KB, etc.) — reduced from 915KB → 560KB (39% reduction, gzip 141KB → 84KB)
 - [x] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport (done in previous CI batch)
 - [x] Fix: 8 sequential await-in-loop patterns should use Promise.all (parallelized adjacent BR search, 6+ BR market/submarket aggregation with Promise.all)
 - [ ] Consider removing opportunitySearches table if feature is deprecated
@@ -10931,7 +10931,7 @@ Results:
 - [x] All 1039 tests pass across 79 test files
 
 ## BUG: Halliard Dr Report Not Loading + Rent vs Purchase Price Logic
-- [ ] Investigate why report doesn't load for 1622 Halliard Dr (rate limiter still blocking?)
+- [x] Investigate why report doesn't load for 1622 Halliard Dr — root cause: address_lookup.split(',')[0] returned street address as city when AirDNA returns full address format. Fixed extractCityStateFromAddress helper, patched 17 existing reports in DB.
 - [x] Fix: Admin should never be blocked by rate limiter (admin now completely exempt from per-minute limit, only logs warnings for daily limit)
 - [x] Investigate rent field logic: when buying a property ($350K), rent comparison doesn't make sense
 - [x] Fix: In purchase mode, rent is now $0 (effectiveRent = 0 in LeadMagnet.tsx)
@@ -10983,7 +10983,7 @@ Results:
 
 ## Full Property Report Fixes (Feb 12, 2026)
 - [x] Tax section shows purchase-only terms (cost segregation, bonus depreciation) in arbitrage/rent mode — make mode-aware
-- [ ] Add TeslaDashboard-style straightforward revenue presentation to the report (how much does this property make)
+- [x] Add TeslaDashboard-style straightforward revenue presentation to the report — added Revenue Hero Card at top of revenue section with big annual number, verdict badge, YoY change, key metrics grid (monthly revenue, ADR, occupancy, RevPAR), and plain-English summary
 - [x] Fix comp map markers not rendering — root cause: Comparable interface in LeadMagnet.tsx did NOT include latitude/longitude fields, causing coordinates to be dropped when building shareable reports. Fixed by adding lat/lng to Comparable interface, server→LeadMagnet mapping, and TeslaDashboard→shareable report mapping.
 
 ## Gemini API Compliance Audit (Feb 12, 2026)
@@ -11118,7 +11118,7 @@ Results:
 - [x] Fix Deal Alert View button: improved match cards with market estimate labels, better CTAs (Find Real Properties primary), info banner, and rent passthrough to validate
 - [x] Fix "Show 100 properties" — increased batch analyze cap from 20 to 50 (server + client)
 - [x] Make minimum profit threshold adjustable in the property analysis pipeline
-- [ ] Regulations tab: Fix cutoff/barrier issue when searching southern cities after loading one tab
+- [x] Regulations tab: Fix cutoff/barrier issue when searching southern cities after loading one tab (removed overflow-hidden from Status Hero Card, clip only decorative orb, added state reset on new search)
 - [x] Add home button to navigation: added Coach Inayah logo/home button in fixed top-left header
 - [x] Scope developer voice-type bug reporting tool: built VoiceBugReportButton with mic recording, S3 upload, Whisper transcription, AI parsing into structured fields
 - [x] Fix batch analysis top deals arrow: now scrolls to property card with highlight flash instead of opening Zillow

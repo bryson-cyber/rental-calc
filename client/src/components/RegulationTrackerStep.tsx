@@ -416,6 +416,14 @@ export function RegulationTrackerStep() {
   const handleSearch = () => {
     if (!selectedPlace) return;
     
+    // Reset previous results and tab state for clean new search
+    setResult(null);
+    setActiveTab('summary');
+    setShowSharePanel(false);
+    setShareCode(null);
+    setShowComments(false);
+    setAutoNotificationSent(false);
+    
     const input = selectedPlace.name;
     
     // Check if it's a URL
@@ -654,9 +662,11 @@ export function RegulationTrackerStep() {
               className="space-y-6 relative z-10"
             >
               {/* Status Hero Card */}
-              <div className={`relative bg-gradient-to-br ${status?.bgGlow} to-white/50 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl overflow-hidden`}>
-                {/* Decorative gradient orb */}
-                <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${status?.gradient} opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`}></div>
+              <div className={`relative bg-gradient-to-br ${status?.bgGlow} to-white/50 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl`}>
+                {/* Decorative gradient orb - clipped separately to avoid clipping tab content */}
+                <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+                  <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${status?.gradient} opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`}></div>
+                </div>
                 
                 <div className="relative p-8 md:p-10">
                   {/* Header with Status Badge */}

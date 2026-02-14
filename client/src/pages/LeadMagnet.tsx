@@ -19,19 +19,19 @@ import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { useLocation, useSearch } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useActionTracking } from '@/components/PageTracker';
-import { EbookViewer } from '@/components/EbookViewer';
+// EbookViewer removed - unused import
 import { HelpSection } from '@/components/HelpSection';
-import { InlineEbook } from '@/components/InlineEbook';
+const InlineEbook = lazy(() => import('@/components/InlineEbook').then(m => ({ default: m.InlineEbook })));
 const AIAdvisorStep = lazy(() => import('@/components/AIAdvisorStep').then(m => ({ default: m.AIAdvisorStep })));
 const RegulationTrackerStep = lazy(() => import('@/components/RegulationTrackerStep').then(m => ({ default: m.RegulationTrackerStep })));
-import PropertyCard from '@/components/PropertyCard';
-import { CompDataTable } from '@/components/CompDataTable';
-import { HistoricalCharts } from '@/components/HistoricalCharts';
-import { ShareReportButton } from '@/components/ShareReportButton';
+const PropertyCard = lazy(() => import('@/components/PropertyCard'));
+const CompDataTable = lazy(() => import('@/components/CompDataTable').then(m => ({ default: m.CompDataTable })));
+const HistoricalCharts = lazy(() => import('@/components/HistoricalCharts').then(m => ({ default: m.HistoricalCharts })));
+const ShareReportButton = lazy(() => import('@/components/ShareReportButton').then(m => ({ default: m.ShareReportButton })));
 import { ShareToolButton } from '@/components/ShareToolButton';
 import { UniversalShareButton } from '@/components/UniversalShareButton';
-import { BugReportButton } from '@/components/BugReportButton';
-import { VoiceBugReportButton } from '@/components/VoiceBugReportButton';
+const BugReportButton = lazy(() => import('@/components/BugReportButton').then(m => ({ default: m.BugReportButton })));
+const VoiceBugReportButton = lazy(() => import('@/components/VoiceBugReportButton').then(m => ({ default: m.VoiceBugReportButton })));
 import { InfoTooltip, MetricLabel } from '@/components/InfoTooltip';
 
 import { 
@@ -87,19 +87,21 @@ import {
   Bell,
   Brain
 } from 'lucide-react';
-import { MapView } from '@/components/Map';
+const MapView = lazy(() => import('@/components/Map').then(m => ({ default: m.MapView })));
 const MapViewContent = lazy(() => import('@/components/MapViewContent').then(m => ({ default: m.MapViewContent })));
 const MapFirstLayoutV2 = lazy(() => import('@/components/MapFirstLayoutV2').then(m => ({ default: m.MapFirstLayoutV2 })));
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
-import { SmartAddressInput, isZillowUrl, type PropertyDetails } from '@/components/SmartAddressInput';
+import { type PropertyDetails } from '@/components/SmartAddressInput';
+const SmartAddressInput = lazy(() => import('@/components/SmartAddressInput').then(m => ({ default: m.SmartAddressInput })));
 import { MarketAutocomplete } from '@/components/MarketAutocomplete';
-import { HierarchicalLocationSelector, type LocationSelection } from '@/components/HierarchicalLocationSelector';
+import { type LocationSelection } from '@/components/HierarchicalLocationSelector';
+const HierarchicalLocationSelector = lazy(() => import('@/components/HierarchicalLocationSelector').then(m => ({ default: m.HierarchicalLocationSelector })));
 import { toast } from 'sonner';
 import { useSavedItems } from '@/hooks/useSavedItems';
-import { SavedItemsPanel } from '@/components/SavedItemsPanel';
-import { StartWithProperty } from '@/components/StartWithProperty';
+const SavedItemsPanel = lazy(() => import('@/components/SavedItemsPanel').then(m => ({ default: m.SavedItemsPanel })));
+const StartWithProperty = lazy(() => import('@/components/StartWithProperty').then(m => ({ default: m.StartWithProperty })));
 import { useProperty } from '@/contexts/PropertyContext';
 const TeslaDashboard = lazy(() => import('@/components/TeslaDashboard').then(m => ({ default: m.TeslaDashboard })));
 const StandaloneMarketAdvisor = lazy(() => import('@/components/StandaloneMarketAdvisor').then(m => ({ default: m.StandaloneMarketAdvisor })));
@@ -120,7 +122,7 @@ import { useInteractiveTour, TOUR_SAMPLE_DATA } from '@/components/InteractiveTo
 const InteractiveTour = lazy(() => import('@/components/InteractiveTour').then(m => ({ default: m.InteractiveTour })));
 const ContextualAIChat = lazy(() => import('@/components/ContextualAIChat').then(m => ({ default: m.ContextualAIChat })));
 import { LoginGate } from '@/components/LoginGate';
-import { BuildFullReportButton } from '@/components/BuildFullReportButton';
+const BuildFullReportButton = lazy(() => import('@/components/BuildFullReportButton').then(m => ({ default: m.BuildFullReportButton })));
 import StepErrorBoundary from '@/components/StepErrorBoundary';
 
 // ============================================

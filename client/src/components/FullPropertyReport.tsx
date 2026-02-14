@@ -1268,6 +1268,140 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         <section id="section-revenue" className="scroll-mt-24 mb-16">
           <SectionHeader icon={DollarSign} title="Revenue Projections" subtitle="Estimated earnings based on market data and comparable properties" tooltip="These projections are based on real performance data from similar short-term rental listings in your area. They show what your property could realistically earn on platforms like Airbnb and VRBO." />
 
+          {/* Revenue Hero Card — TeslaDashboard-style "how much does this property make" */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.98_0.01_265)] to-white border border-[oklch(0.90_0.01_265)] p-6 md:p-8 shadow-sm mb-8">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[oklch(0.55_0.14_75)]/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
+            
+            <div className="relative">
+              {/* Section Headline */}
+              <p className="text-sm text-[oklch(0.50_0_0)] mb-3 font-medium">
+                How much can this property earn on Airbnb?
+              </p>
+              
+              {/* Verdict Badge */}
+              {(() => {
+                const occ = revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy;
+                const isStrong = occ >= 0.60 && revenue_estimate.annual >= 30000;
+                return (
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${
+                    isStrong 
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                  }`}>
+                    {isStrong ? (
+                      <><CheckCircle2 className="w-4 h-4" /> Strong Revenue Potential</>
+                    ) : (
+                      <><AlertTriangle className="w-4 h-4" /> Moderate Revenue Potential</>
+                    )}
+                  </div>
+                );
+              })()}
+              
+              {/* Hero Number */}
+              <div className="mb-6">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-[oklch(0.50_0_0)] text-sm font-medium mb-1 inline-flex items-center gap-1 cursor-help hover:text-[oklch(0.40_0_0)] transition-colors">
+                      Projected Annual Revenue
+                      <Info className="w-3.5 h-3.5" />
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-center p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                    <p className="text-sm leading-relaxed">Estimated annual revenue based on similar properties in your area. This is an average projection — your actual results depend on your listing quality, pricing strategy, and guest reviews.</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <span className="text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
+                    {formatCurrency(revenue_estimate.annual)}
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
+                  {historical_data?.summary && (() => {
+                    const change = historical_data.summary.yoy_revenue_change ?? historical_data.summary.yearly_pct_change ?? 0;
+                    if (change === 0) return null;
+                    return (
+                      <span className={`flex items-center gap-1 text-sm font-medium ${change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                        {Math.abs(change).toFixed(1)}% vs last year
+                      </span>
+                    );
+                  })()}
+                </div>
+                {revenue_estimate.range && (
+                  <p className="text-sm text-[oklch(0.50_0_0)] mt-2">
+                    Range: {formatCurrency(revenue_estimate.range.low)} – {formatCurrency(revenue_estimate.range.high)} per year
+                  </p>
+                )}
+              </div>
+              
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Monthly Revenue</p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                      <p className="text-sm">What you'll earn each month from Airbnb bookings before any expenses</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.monthly)}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">/month</span>
+                  </div>
+                </div>
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Nightly Rate (ADR)</p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                      <p className="text-sm">Average Daily Rate — the average price per night guests pay. Higher in peak season, lower in off-season.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.nightly)}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)]">/night</span>
+                  </div>
+                </div>
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Occupancy Rate</p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                      <p className="text-sm">How often the property is booked. {formatPercent(revenue_estimate.occupancy)} means about {Math.round((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 365)} out of 365 nights have paying guests.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatPercent(revenue_estimate.occupancy)}</p>
+                  </div>
+                </div>
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">RevPAR</p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
+                      <p className="text-sm">Revenue Per Available Room — combines nightly rate and occupancy into one number. Higher RevPAR = better overall performance.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">
+                      {formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy))}
+                    </p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)]">/night</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Simple explanation */}
+              <p className="text-[oklch(0.50_0_0)] text-sm mt-4">
+                Based on comparable properties in {property.city || 'this area'}, this {property.bedrooms}BR property could earn approximately <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(revenue_estimate.monthly)}/month</span> at a <span className="text-[oklch(0.25_0_0)] font-semibold">{formatCurrency(revenue_estimate.nightly)}/night</span> rate with <span className="text-[oklch(0.25_0_0)] font-semibold">{formatPercent(revenue_estimate.occupancy)}</span> occupancy.
+              </p>
+            </div>
+          </div>
+
           {/* Beginner FAQ */}
           <details className="bg-blue-50/50 rounded-2xl border border-blue-200/50 mb-8 group">
             <summary className="cursor-pointer p-5 flex items-center gap-3 text-sm font-semibold text-blue-700 hover:text-blue-800 transition-colors select-none">
