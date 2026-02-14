@@ -47,6 +47,7 @@ import {
   Star,
   BarChart3,
   Shield,
+  ExternalLink,
 } from 'lucide-react';
 import { Link, useSearch } from 'wouter';
 import { toast } from 'sonner';
@@ -700,135 +701,199 @@ export default function DealAlertsPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {/* Info banner explaining market estimates */}
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-sm text-blue-200">
+                {/* Info banner — fixed text color for dark theme */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm text-foreground/80">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
                     <div>
-                      <span className="font-medium">These are market-level estimates</span> based on average STR performance for each bedroom count in this city. Use "Find Real Properties" to browse actual Zillow listings and run property-specific analysis.
+                      <span className="font-medium text-foreground">Deal matches from real Zillow listings.</span>{' '}
+                      Revenue projections are powered by AirDNA Rentalizer. Click any property to view on Zillow or run a deeper analysis.
                     </div>
                   </div>
                 </div>
                 
-                {matchesQuery.data.map((match) => (
-                  <Card 
-                    key={match.id} 
-                    className={`transition-all hover:shadow-md ${
-                      match.status === 'new' ? 'border-primary/30 bg-primary/[0.02]' : ''
-                    }`}
-                  >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            {match.status === 'new' && (
-                              <Badge className="bg-primary text-white text-xs">New</Badge>
-                            )}
-                            {match.dealGrade && (
-                              <Badge variant={
-                                match.dealGrade === 'A' ? 'default' : 
-                                match.dealGrade === 'B' ? 'secondary' : 'outline'
-                              } className="text-xs">
-                                Grade {match.dealGrade}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              Score: {match.dealScore}/100
-                            </span>
-                          </div>
+                {matchesQuery.data.map((match) => {
+                  const hasRealAddress = match.sourceUrl && match.sourceUrl.includes('zillow.com');
+                  const hasImage = !!match.imageUrl;
+                  
+                  return (
+                    <Card 
+                      key={match.id} 
+                      className={`transition-all hover:shadow-md ${
+                        match.status === 'new' ? 'border-primary/30 bg-primary/[0.02]' : ''
+                      }`}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex gap-4">
+                          {/* Property image thumbnail */}
+                          {hasImage && (
+                            <div className="hidden sm:block flex-shrink-0">
+                              <a href={match.sourceUrl || '#'} target="_blank" rel="noopener noreferrer">
+                                <img 
+                                  src={match.imageUrl!} 
+                                  alt={match.address}
+                                  className="w-28 h-20 object-cover rounded-lg border border-border/50"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              </a>
+                            </div>
+                          )}
                           
-                          <h3 className="font-semibold">
-                            {match.bedrooms} BR {match.propertyType ? <span className="capitalize">{match.propertyType}</span> : 'Property'} in {match.city}, {match.state}
-                            {match.zipCode ? ` ${match.zipCode}` : ''}
-                          </h3>
-                          
-                          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                            <span>{match.bedrooms} BR / {match.bathrooms} BA</span>
-                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">Market Estimate</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateMatchMutation.mutate({ matchId: match.id, status: 'saved' })}
-                            title="Save"
-                          >
-                            <Bookmark className={`w-4 h-4 ${match.status === 'saved' ? 'fill-primary text-primary' : ''}`} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateMatchMutation.mutate({ matchId: match.id, status: 'dismissed' })}
-                            title="Dismiss"
-                            className="text-muted-foreground"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Financial details */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-3 border-t">
-                        {match.monthlyRent != null && (
-                          <div>
-                            <div className="text-xs text-muted-foreground">Est. Monthly Rent</div>
-                            <div className="font-semibold">{formatCurrency(match.monthlyRent)}</div>
-                          </div>
-                        )}
-                        {match.projectedRevenue != null && (
-                          <div>
-                            <div className="text-xs text-muted-foreground">Projected STR Revenue</div>
-                            <div className="font-semibold text-green-700">{formatCurrency(Math.round(match.projectedRevenue / 12))}/mo</div>
-                          </div>
-                        )}
-                        {match.projectedMonthlyProfit != null && (
-                          <div>
-                            <div className="text-xs text-muted-foreground">Est. Monthly Profit</div>
-                            <div className={`font-semibold ${match.projectedMonthlyProfit > 0 ? 'text-green-700' : 'text-red-600'}`}>
-                              {formatCurrency(match.projectedMonthlyProfit)}
+                          <div className="flex-1 min-w-0">
+                            {/* Header row: badges + actions */}
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  {match.status === 'new' && (
+                                    <Badge className="bg-primary text-white text-xs">New</Badge>
+                                  )}
+                                  {match.dealGrade && (
+                                    <Badge variant={
+                                      match.dealGrade === 'A' ? 'default' : 
+                                      match.dealGrade === 'B' ? 'secondary' : 'outline'
+                                    } className="text-xs">
+                                      Grade {match.dealGrade}
+                                    </Badge>
+                                  )}
+                                  {hasRealAddress ? (
+                                    <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-400">
+                                      <ExternalLink className="w-3 h-3 mr-1" />
+                                      Zillow
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs">
+                                      Market Estimate
+                                    </Badge>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    Score: {match.dealScore}/100
+                                  </span>
+                                </div>
+                                
+                                {/* Address — real or generic */}
+                                <h3 className="font-semibold text-sm sm:text-base leading-snug">
+                                  {hasRealAddress ? (
+                                    <a 
+                                      href={match.sourceUrl!} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="hover:text-primary transition-colors"
+                                    >
+                                      {match.address}
+                                    </a>
+                                  ) : (
+                                    <span>
+                                      {match.bedrooms} BR {match.propertyType ? <span className="capitalize">{match.propertyType}</span> : 'Property'} in {match.city}, {match.state}
+                                      {match.zipCode ? ` ${match.zipCode}` : ''}
+                                    </span>
+                                  )}
+                                </h3>
+                                
+                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                  <span>{match.bedrooms} BR / {match.bathrooms} BA</span>
+                                  {match.propertyType && (
+                                    <span className="capitalize">{match.propertyType}</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => updateMatchMutation.mutate({ matchId: match.id, status: 'saved' })}
+                                  title="Save"
+                                >
+                                  <Bookmark className={`w-4 h-4 ${match.status === 'saved' ? 'fill-primary text-primary' : ''}`} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => updateMatchMutation.mutate({ matchId: match.id, status: 'dismissed' })}
+                                  title="Dismiss"
+                                  className="text-muted-foreground"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Profit highlight */}
+                            {match.projectedMonthlyProfit != null && (
+                              <div className={`mt-3 px-3 py-2 rounded-lg inline-flex items-center gap-2 ${
+                                match.projectedMonthlyProfit > 0 
+                                  ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                                  : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                              }`}>
+                                <DollarSign className="w-4 h-4" />
+                                <span className="font-bold text-lg">
+                                  {formatCurrency(match.projectedMonthlyProfit)}/mo
+                                </span>
+                                <span className="text-xs opacity-75">projected profit</span>
+                              </div>
+                            )}
+                            
+                            {/* Financial details grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 pt-3 border-t">
+                              {match.monthlyRent != null && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Monthly Rent</div>
+                                  <div className="font-semibold">{formatCurrency(match.monthlyRent)}</div>
+                                </div>
+                              )}
+                              {match.projectedRevenue != null && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">STR Revenue</div>
+                                  <div className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(Math.round(match.projectedRevenue / 12))}/mo</div>
+                                </div>
+                              )}
+                              {match.projectedAdr != null && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Avg. Daily Rate</div>
+                                  <div className="font-semibold">{formatCurrency(match.projectedAdr)}</div>
+                                </div>
+                              )}
+                              {match.projectedOccupancy && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Occupancy</div>
+                                  <div className="font-semibold">{formatPercent(parseFloat(match.projectedOccupancy))}</div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* CTAs */}
+                            <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+                              {hasRealAddress && (
+                                <a href={match.sourceUrl!} target="_blank" rel="noopener noreferrer">
+                                  <Button size="sm" variant="outline" className="gap-1.5">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    View on Zillow
+                                  </Button>
+                                </a>
+                              )}
+                              <Link 
+                                href={`/?tab=validate&address=${encodeURIComponent(match.address)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
+                              >
+                                <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 gap-1.5">
+                                  <Target className="w-3.5 h-3.5" />
+                                  Run Full Analysis
+                                </Button>
+                              </Link>
+                              <Link 
+                                href={`/?tab=prove&address=${encodeURIComponent(match.address)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
+                              >
+                                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                                  <BarChart3 className="w-3.5 h-3.5" />
+                                  Revenue Estimate
+                                </Button>
+                              </Link>
                             </div>
                           </div>
-                        )}
-                        {match.projectedOccupancy && (
-                          <div>
-                            <div className="text-xs text-muted-foreground">Avg. Occupancy</div>
-                            <div className="font-semibold">{formatPercent(parseFloat(match.projectedOccupancy))}</div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* CTAs - Primary action is Find Real Properties */}
-                      <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
-                        <Link 
-                          href={`/?tab=opportunity&city=${encodeURIComponent(match.city)}&state=${encodeURIComponent(match.state)}${match.zipCode ? `&zip=${encodeURIComponent(match.zipCode)}` : ''}&bedrooms=${match.bedrooms}`}
-                        >
-                          <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 gap-1.5">
-                            <Search className="w-3.5 h-3.5" />
-                            Find Real Properties
-                          </Button>
-                        </Link>
-                        <Link 
-                          href={`/?tab=validate&address=${encodeURIComponent(match.city + ', ' + match.state)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
-                        >
-                          <Button variant="outline" size="sm" className="gap-1.5">
-                            <Target className="w-3.5 h-3.5" />
-                            Validate the Deal
-                          </Button>
-                        </Link>
-                        <Link 
-                          href={`/?tab=prove&address=${encodeURIComponent(match.city + ', ' + match.state)}&bedrooms=${match.bedrooms}&bathrooms=${match.bathrooms}&rent=${match.monthlyRent || ''}`}
-                        >
-                          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                            <BarChart3 className="w-3.5 h-3.5" />
-                            Revenue Estimate
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>

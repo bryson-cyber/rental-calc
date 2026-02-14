@@ -11179,3 +11179,11 @@ Results:
 - [x] Filter out listings without price data before AirDNA analysis
 - [x] Update tests for simplified pattern (21 tests pass, 1130 total pass)
 - [x] Note: scanCityForDeals in hasdata-zillow.ts is dead code (never imported anywhere)
+
+## Deal Alert Agent Fixes (Feb 14, 2026)
+- [x] BUG: Deal Alert Agent not returning real addresses — replaced generateSampleProperties with findRealListings using HasData searchZillowRentals
+- [x] BUG: Deal Alert Agent UI — fixed invisible blue text, redesigned match cards with property images, Zillow links, profit highlights
+- [x] Fix: Wire Deal Alert Agent to use real Zillow listings from HasData API instead of generateSampleProperties
+- [x] Fix: Redesign match cards for better readability and usability
+- [x] Verified: sourceUrl, imageUrl, real address all flow through analyzePropertyForArbitrage into DB
+- [ ] Note: Existing DB matches are from old synthetic scans — next scan will produce real addresses

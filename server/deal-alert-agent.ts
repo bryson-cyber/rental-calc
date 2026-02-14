@@ -18,6 +18,7 @@ import { analyzePropertyForArbitrage, type RentalDeal } from './newsletter-deal-
 import { sendDealAlertEmail } from './newsletter-email-sender';
 import { getRentalizerEstimate, searchMarketsAPI, getMarketDetails, getMarketHistoricalData, getMarketSeasonality, getTopPerformers, getMarketListings, calculateMarketInsights } from './airdna';
 import { invokeLLM } from './_core/llm';
+import { searchZillowRentals, type ZillowListing } from './hasdata-zillow';
 
 // ============================================================
 // Types
@@ -243,47 +244,88 @@ export async function deleteDealAlertCriteria(criteriaId: number) {
 // ============================================================
 
 /**
- * Generate sample property configurations for a market
- * Uses AirDNA rentalizer to estimate revenue for typical properties
- * at various rent price points in the target city
+ * Find real rental listings from Zillow via HasData API.
+ * Falls back to synthetic samples if HasData is unavailable or returns no results.
+ *
+ * Cost: 5 credits per HasData Listing API call (returns up to 40 listings).
  */
-async function generateSampleProperties(criteria: typeof dealAlertCriteria.$inferSelect): Promise<Array<{
+async function findRealListings(criteria: typeof dealAlertCriteria.$inferSelect): Promise<Array<{
   address: string;
+  streetAddress: string;
   bedrooms: number;
   bathrooms: number;
   monthlyRent: number;
   propertyType: string;
+  sourceUrl: string;
+  sourcePlatform: 'zillow' | 'manual';
+  imageUrl: string;
+  zpid: string;
 }>> {
+  try {
+    const searchResult = await searchZillowRentals({
+      city: criteria.city,
+      state: criteria.state,
+      minBeds: criteria.minBedrooms ?? 1,
+      maxBeds: criteria.maxBedrooms ?? 5,
+      maxPrice: criteria.maxRent ?? undefined,
+    });
+
+    if (searchResult.success && searchResult.listings.length > 0) {
+      // Filter to listings with price and bedrooms
+      const valid = searchResult.listings.filter(l => l.price > 0 && l.bedrooms > 0);
+      console.log(`[DealAlertAgent] HasData returned ${searchResult.listings.length} listings, ${valid.length} with price+beds`);
+
+      // Cap at 15 listings to control AirDNA API usage
+      return valid.slice(0, 15).map(l => ({
+        address: l.address || `${l.streetAddress}, ${l.city}, ${l.state} ${l.zipcode}`,
+        streetAddress: l.streetAddress || l.address,
+        bedrooms: l.bedrooms,
+        bathrooms: l.bathrooms || Math.max(1, Math.ceil(l.bedrooms * 0.75)),
+        monthlyRent: l.price,
+        propertyType: l.homeType || (l.bedrooms <= 2 ? 'apartment' : 'house'),
+        sourceUrl: l.detailUrl || `https://www.zillow.com/homedetails/${l.zpid}_zpid/`,
+        sourcePlatform: 'zillow' as const,
+        imageUrl: l.imgSrc || '',
+        zpid: l.zpid,
+      }));
+    }
+  } catch (err) {
+    console.warn('[DealAlertAgent] HasData search failed, falling back to synthetic samples:', err);
+  }
+
+  // Fallback: generate synthetic samples (same as old generateSampleProperties)
+  console.log('[DealAlertAgent] Using synthetic samples (HasData unavailable)');
   const samples: Array<{
     address: string;
+    streetAddress: string;
     bedrooms: number;
     bathrooms: number;
     monthlyRent: number;
     propertyType: string;
+    sourceUrl: string;
+    sourcePlatform: 'zillow' | 'manual';
+    imageUrl: string;
+    zpid: string;
   }> = [];
-  
-  // Generate sample addresses for the city center and surrounding areas
-  const bedroomRange = [];
+
   for (let br = (criteria.minBedrooms ?? 1); br <= (criteria.maxBedrooms ?? 5); br++) {
-    bedroomRange.push(br);
-  }
-  
-  // For each bedroom count, create a sample at the city center
-  for (const bedrooms of bedroomRange) {
-    const bathrooms = Math.max(1, Math.ceil(bedrooms * 0.75));
-    const baseRent = criteria.maxRent 
-      ? Math.round(criteria.maxRent * 0.8) // Use 80% of max rent as sample
-      : bedrooms * 600 + 400; // Estimate: $1000 for 1BR, $1600 for 2BR, etc.
-    
+    const bathrooms = Math.max(1, Math.ceil(br * 0.75));
+    const baseRent = criteria.maxRent
+      ? Math.round(criteria.maxRent * 0.8)
+      : br * 600 + 400;
     samples.push({
       address: `${criteria.city}, ${criteria.state}${criteria.zipCode ? ' ' + criteria.zipCode : ''}`,
-      bedrooms,
+      streetAddress: '',
+      bedrooms: br,
       bathrooms,
       monthlyRent: baseRent,
-      propertyType: bedrooms <= 2 ? 'apartment' : 'house',
+      propertyType: br <= 2 ? 'apartment' : 'house',
+      sourceUrl: '',
+      sourcePlatform: 'manual',
+      imageUrl: '',
+      zpid: '',
     });
   }
-  
   return samples;
 }
 
@@ -349,24 +391,28 @@ export async function scanForCriteria(criteriaId: number): Promise<ScanResult> {
     
     console.log(`[DealAlertAgent] Scanning for criteria #${criteriaId}: ${criteria.city}, ${criteria.state} (${criteria.analysisType})`);
     
-    // Generate sample properties to analyze
-    const samples = await generateSampleProperties(criteria);
-    result.propertiesScanned = samples.length;
+    // Find real Zillow listings (falls back to synthetic if HasData unavailable)
+    const listings = await findRealListings(criteria);
+    result.propertiesScanned = listings.length;
+    console.log(`[DealAlertAgent] Analyzing ${listings.length} listings for criteria #${criteriaId}`);
     
     const newMatches: Array<typeof dealAlertMatches.$inferInsert> = [];
     
-    // Analyze each sample
-    for (const sample of samples) {
+    // Analyze each listing through AirDNA
+    for (const listing of listings) {
       try {
         const deal = await analyzePropertyForArbitrage({
-          address: sample.address,
+          address: listing.address,
           city: criteria.city,
           state: criteria.state,
           zipCode: criteria.zipCode || undefined,
-          bedrooms: sample.bedrooms,
-          bathrooms: sample.bathrooms,
-          monthlyRent: sample.monthlyRent,
-          propertyType: sample.propertyType,
+          bedrooms: listing.bedrooms,
+          bathrooms: listing.bathrooms,
+          monthlyRent: listing.monthlyRent,
+          propertyType: listing.propertyType,
+          sourceUrl: listing.sourceUrl,
+          sourcePlatform: listing.sourcePlatform,
+          imageUrl: listing.imageUrl,
         });
         
         if (!deal) continue;
@@ -374,16 +420,19 @@ export async function scanForCriteria(criteriaId: number): Promise<ScanResult> {
         // Check if deal matches criteria
         if (!dealMatchesCriteria(deal, criteria)) continue;
         
-        // Check for duplicate matches (same address + bedrooms)
+        // Check for duplicate matches by sourceUrl (Zillow URL) or address+bedrooms
         const existingMatch = await db
           .select()
           .from(dealAlertMatches)
           .where(
             and(
               eq(dealAlertMatches.criteriaId, criteriaId),
-              eq(dealAlertMatches.city, criteria.city),
-              eq(dealAlertMatches.state, criteria.state),
-              eq(dealAlertMatches.bedrooms, sample.bedrooms)
+              listing.sourceUrl
+                ? eq(dealAlertMatches.sourceUrl, listing.sourceUrl)
+                : and(
+                    eq(dealAlertMatches.address, listing.address),
+                    eq(dealAlertMatches.bedrooms, listing.bedrooms)
+                  )
             )
           )
           .limit(1);
@@ -400,23 +449,28 @@ export async function scanForCriteria(criteriaId: number): Promise<ScanResult> {
               profitMargin: deal.profitMargin.toString(),
               dealScore: deal.dealScore,
               dealGrade: deal.dealGrade,
-              monthlyRent: sample.monthlyRent,
+              monthlyRent: listing.monthlyRent,
+              imageUrl: listing.imageUrl || existingMatch[0].imageUrl,
+              sourceUrl: listing.sourceUrl || existingMatch[0].sourceUrl,
             })
             .where(eq(dealAlertMatches.id, existingMatch[0].id));
           continue;
         }
         
-        // Store new match
+        // Store new match with real property data
         const matchData: typeof dealAlertMatches.$inferInsert = {
           criteriaId,
           address: deal.address,
           city: criteria.city,
           state: criteria.state,
           zipCode: deal.zipCode || criteria.zipCode || undefined,
-          bedrooms: sample.bedrooms,
-          bathrooms: sample.bathrooms.toString(),
-          monthlyRent: sample.monthlyRent,
-          propertyType: sample.propertyType,
+          bedrooms: listing.bedrooms,
+          bathrooms: listing.bathrooms.toString(),
+          monthlyRent: listing.monthlyRent,
+          propertyType: listing.propertyType,
+          sourceUrl: listing.sourceUrl || deal.sourceUrl || undefined,
+          sourcePlatform: listing.sourcePlatform,
+          imageUrl: listing.imageUrl || deal.imageUrl || undefined,
           projectedRevenue: Math.round(deal.projectedMonthlyRevenue * 12),
           projectedAdr: Math.round(deal.projectedAdr),
           projectedOccupancy: deal.projectedOccupancy.toString(),
@@ -431,11 +485,11 @@ export async function scanForCriteria(criteriaId: number): Promise<ScanResult> {
         newMatches.push(matchData);
         result.matchesFound++;
         
-        // Rate limiting
+        // Rate limiting between AirDNA calls
         await new Promise(resolve => setTimeout(resolve, 500));
         
       } catch (err) {
-        result.errors.push(`Error analyzing sample: ${err}`);
+        result.errors.push(`Error analyzing listing ${listing.address}: ${err}`);
       }
     }
     

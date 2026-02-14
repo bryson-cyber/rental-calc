@@ -1,0 +1,31 @@
+{
+  "query": "SELECT COUNT(*) as total FROM deal_alert_matches; SELECT id, address, city, state, bedrooms, sourceUrl, imageUrl, dealGrade, dealScore, projectedMonthlyProfit FROM deal_alert_matches LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT COUNT(*) as total FROM deal_alert_matches; SELECT id, address, city, state, bedrooms, sourceUrl, imageUrl, dealGrade, dealScore, projectedMonthlyProfit FROM deal_alert_matches LIMIT 5;",
+  "rows": [
+    {
+      "total": "15"
+    },
+    {
+      "total": "id\taddress\tcity\tstate\tbedrooms\tsourceUrl\timageUrl\tdealGrade\tdealScore\tprojectedMonthlyProfit"
+    },
+    {
+      "total": "1\tDenver, CO\tDenver\tCO\t1\tNULL\tNULL\tA\t94\t2565"
+    },
+    {
+      "total": "2\tDenver, CO\tDenver\tCO\t2\tNULL\tNULL\tA\t93\t1912"
+    },
+    {
+      "total": "3\tDenver, CO\tDenver\tCO\t3\tNULL\tNULL\tB\t73\t1099"
+    },
+    {
+      "total": "4\tDenver, CO\tDenver\tCO\t4\tNULL\tNULL\tA\t89\t2663"
+    },
+    {
+      "total": "5\tDenver, CO\tDenver\tCO\t5\tNULL\tNULL\tA\t84\t2059"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n15\nid\taddress\tcity\tstate\tbedrooms\tsourceUrl\timageUrl\tdealGrade\tdealScore\tprojectedMonthlyProfit\n1\tDenver, CO\tDenver\tCO\t1\tNULL\tNULL\tA\t94\t2565\n2\tDenver, CO\tDenver\tCO\t2\tNULL\tNULL\tA\t93\t1912\n3\tDenver, CO\tDenver\tCO\t3\tNULL\tNULL\tB\t73\t1099\n4\tDenver, CO\tDenver\tCO\t4\tNULL\tNULL\tA\t89\t2663\n5\tDenver, CO\tDenver\tCO\t5\tNULL\tNULL\tA\t84\t2059\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}
