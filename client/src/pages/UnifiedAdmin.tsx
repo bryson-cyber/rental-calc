@@ -8,8 +8,10 @@
  * - Activity feed showing all user actions with name/email
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
+
+const ContentStudioTabLazy = lazy(() => import('./ContentStudioPage').then(m => ({ default: m.ContentStudioTab })));
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +48,7 @@ import {
   Loader2,
   Zap,
   Database,
+  PenLine,
   DollarSign,
   Calendar,
   Mail,
@@ -197,6 +200,17 @@ export default function UnifiedAdmin() {
   });
 
   // ============================================
+  // USER DRILL-DOWN STATE (must be before early returns)
+  // ============================================
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [drillDownPage, setDrillDownPage] = useState(1);
+
+  const userPropertiesQuery = trpc.admin.getUserProperties.useQuery(
+    { userId: selectedUserId!, page: drillDownPage, pageSize: 20 },
+    { enabled: !!selectedUserId && isAuthenticated && user?.role === 'admin' }
+  );
+
+  // ============================================
   // LOADING & AUTH STATES
   // ============================================
   if (authLoading) {
@@ -316,17 +330,6 @@ export default function UnifiedAdmin() {
 
   const totalUserPages = Math.ceil((usersQuery.data?.total || 0) / userLimit);
 
-  // ============================================
-  // USER DRILL-DOWN STATE
-  // ============================================
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [drillDownPage, setDrillDownPage] = useState(1);
-
-  const userPropertiesQuery = trpc.admin.getUserProperties.useQuery(
-    { userId: selectedUserId!, page: drillDownPage, pageSize: 20 },
-    { enabled: !!selectedUserId && isAuthenticated && user?.role === 'admin' }
-  );
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -411,6 +414,10 @@ export default function UnifiedAdmin() {
             <TabsTrigger value="cache" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Database className="w-4 h-4 mr-2" />
               Cache
+            </TabsTrigger>
+            <TabsTrigger value="content-studio" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <PenLine className="w-4 h-4 mr-2" />
+              Content Studio
             </TabsTrigger>
           </TabsList>
 
@@ -1474,6 +1481,15 @@ export default function UnifiedAdmin() {
           {/* ============================================ */}
           <TabsContent value="cache" className="space-y-6">
             <CacheTab />
+          </TabsContent>
+
+          {/* ============================================ */}
+          {/* CONTENT STUDIO TAB */}
+          {/* ============================================ */}
+          <TabsContent value="content-studio" className="space-y-6">
+            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+              <ContentStudioTabLazy />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </main>

@@ -143,7 +143,7 @@ function Router() {
         <Route path="/evaluate-market" component={MarketEvaluationPage} />
         
         {/* Content Studio - Script Generator */}
-        <Route path="/content-studio" component={ContentStudioPage} />
+        {/* Content Studio is now in admin portal at /admin/dashboard?tab=content-studio */}
         
         {/* Legacy/admin routes */}
         <Route path={"/full-analysis"} component={PropertyAnalyzer} />

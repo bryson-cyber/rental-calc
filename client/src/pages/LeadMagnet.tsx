@@ -85,8 +85,7 @@ import {
   Share2,
   FileText,
   Bell,
-  Brain,
-  PenLine
+  Brain
 } from 'lucide-react';
 const MapView = lazy(() => import('@/components/Map').then(m => ({ default: m.MapView })));
 const MapViewContent = lazy(() => import('@/components/MapViewContent').then(m => ({ default: m.MapViewContent })));
@@ -6563,39 +6562,7 @@ export default function LeadMagnet() {
                 <ArrowRight className="w-4 h-4" />
               </div>
             </button>
-             {/* Content Studio Card */}
-            <button
-              onClick={() => window.location.href = '/content-studio'}
-              className="group text-left apple-card p-6 md:p-8 hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-purple-500/20 md:col-span-2"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <PenLine className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)] mb-1 group-hover:text-purple-600 transition-colors">
-                    Content Studio
-                  </h3>
-                  <p className="text-sm text-[oklch(0.50_0_0)]">
-                    AI-powered video scripts for your STR content
-                  </p>
-                </div>
-              </div>
-              <p className="text-[oklch(0.40_0_0)] text-sm leading-relaxed mb-5">
-                Generate ready-to-film narration scripts for Reels, YouTube Shorts, lessons, and deep dives.
-                Powered by Coach Inayah's voice and real market data from your analyses.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-5">
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Reels</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">YouTube Shorts</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Lessons</span>
-                <span className="px-2.5 py-1 bg-[oklch(0.95_0_0)] rounded-full text-xs text-[oklch(0.40_0_0)] font-medium">Deep Dives</span>
-              </div>
-              <div className="flex items-center gap-2 text-purple-600 font-medium text-sm group-hover:gap-3 transition-all">
-                Create Content
-                <ArrowRight className="w-4 h-4" />
-              </div>
-            </button>
+
           </div>
         </div>
       </section>

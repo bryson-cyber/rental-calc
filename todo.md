@@ -11363,3 +11363,11 @@ Results:
 - [x] Add copy-to-clipboard for scripts
 - [x] Register Content Studio route in App.tsx
 - [x] Write vitest tests for script generation (20 tests passing)
+
+## Move Content Studio to Admin Portal (Feb 14, 2026)
+- [x] Move Content Studio page into admin portal as tab in UnifiedAdmin.tsx (lazy-loaded with Suspense)
+- [x] Remove standalone /content-studio route from App.tsx
+- [x] Remove Content Studio card from main page Power Tools section
+- [x] Verify admin portal renders Content Studio correctly
+- [x] Fix React hooks ordering bug (useState/useQuery after early returns)
+- [x] All 20 Content Studio tests still passing
