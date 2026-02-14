@@ -1,837 +1,610 @@
 /**
- * Content Studio
+ * Content Studio v2 — Fully Autonomous Script Generator
  *
- * Video narration script generator using Coach Inayah's persona.
- * Supports 4 formats: Reel, Short, Lesson, Deep Dive.
- * Uses Gemini API via the user's own API key.
+ * One-click generates complete ready-to-film narration scripts.
+ * The AI pulls real platform data, picks the best topic, and generates
+ * a narrative script with real numbers woven in.
  *
  * Exports:
- *  - ContentStudioTab  (embeddable in admin portal)
- *  - default           (standalone page with header — kept for backward compat)
+ *   - ContentStudioPage: Standalone page (unused now, kept for direct access)
+ *   - ContentStudioTab: Embeddable component for the admin dashboard
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ArrowLeft,
-  Video,
-  Film,
-  BookOpen,
-  Microscope,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Sparkles,
   Loader2,
   Copy,
   Check,
   Clock,
   Users,
-  Sparkles,
-  Trash2,
+  TrendingUp,
+  Database,
   ChevronDown,
   ChevronUp,
-  Search,
-  Lightbulb,
+  Trash2,
+  Eye,
+  Film,
+  Zap,
   BarChart3,
   RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
-import { Link } from 'wouter';
-import { toast } from 'sonner';
+import { useToast } from '@/contexts/ToastContext';
 
-// ── Format metadata ──────────────────────────────────────────────────────────
+// ── Format metadata ─────────────────────────────────────────────────────────
 
-const FORMAT_ICONS: Record<string, React.ReactNode> = {
-  reel: <Video className="w-5 h-5" />,
-  short: <Film className="w-5 h-5" />,
-  lesson: <BookOpen className="w-5 h-5" />,
-  deep_dive: <Microscope className="w-5 h-5" />,
+const FORMAT_META: Record<string, { icon: string; color: string; label: string }> = {
+  reel: { icon: '📱', color: 'bg-pink-500/10 text-pink-600 border-pink-500/20', label: 'Reel' },
+  short: { icon: '⚡', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20', label: 'Short' },
+  lesson: { icon: '📚', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', label: 'Lesson' },
+  deep_dive: { icon: '🎓', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20', label: 'Deep Dive' },
 };
 
-const FORMAT_COLORS: Record<string, string> = {
-  reel: 'bg-pink-100 text-pink-700 border-pink-200',
-  short: 'bg-blue-100 text-blue-700 border-blue-200',
-  lesson: 'bg-amber-100 text-amber-700 border-amber-200',
-  deep_dive: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-};
+// ── Main Content Studio Component ───────────────────────────────────────────
 
-const FORMAT_LABELS: Record<string, string> = {
-  reel: 'Instagram Reel / TikTok',
-  short: 'YouTube Short',
-  lesson: 'YouTube Lesson',
-  deep_dive: 'YouTube Deep Dive',
-};
-
-const FORMAT_DURATIONS: Record<string, string> = {
-  reel: '30-60 sec',
-  short: '45-60 sec',
-  lesson: '2-5 min',
-  deep_dive: '5-10 min',
-};
-
-const FORMAT_DESCRIPTIONS: Record<string, string> = {
-  reel: 'Punchy, one-idea scripts that stop the scroll. Perfect for Instagram Reels and TikTok.',
-  short: 'Energetic quick lessons with one data point. Ideal for YouTube Shorts.',
-  lesson: 'Educational deep-teaching with 2-3 key points and real examples. Great for YouTube.',
-  deep_dive: 'Comprehensive masterclass with full breakdowns and case studies.',
-};
-
-// ── Embeddable Content Studio (no header/wrapper) ───────────────────────────
-
-export function ContentStudioTab() {
-  const [activeTab, setActiveTab] = useState<'create' | 'library'>('create');
-  const [selectedFormat, setSelectedFormat] = useState<string>('reel');
-  const [topic, setTopic] = useState('');
-  const [marketData, setMarketData] = useState('');
-  const [useMarketData, setUseMarketData] = useState(false);
+function ContentStudioCore() {
+  const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [formatFilter, setFormatFilter] = useState<string>('any');
+  const [showDataPreview, setShowDataPreview] = useState(false);
   const [expandedScript, setExpandedScript] = useState<number | null>(null);
-  const [librarySearch, setLibrarySearch] = useState('');
-  const [libraryFormat, setLibraryFormat] = useState<string | undefined>(undefined);
 
-  // ── tRPC hooks ───────────────────────────────────────────────────────────
-  const formatsQuery = trpc.contentStudio.getFormats.useQuery();
-  const generateMutation = trpc.contentStudio.generateScript.useMutation({
+  // ── tRPC hooks ──────────────────────────────────────────────────────────
+
+  const autoGenerate = trpc.contentStudio.autoGenerate.useMutation({
     onSuccess: () => {
-      toast.success('Script generated successfully!');
-      scriptsQuery.refetch();
+      scriptsList.refetch();
+      toast({
+        title: 'Script generated!',
+        description: 'Your ready-to-film script is below.',
+      });
     },
     onError: (err) => {
-      toast.error(err.message || 'Failed to generate script');
+      toast({
+        title: 'Generation failed',
+        description: err.message,
+        variant: 'error',
+      });
     },
   });
 
-  const scriptsQuery = trpc.contentStudio.listScripts.useQuery({
-    format: libraryFormat as 'reel' | 'short' | 'lesson' | 'deep_dive' | undefined,
-    search: librarySearch || undefined,
-    limit: 50,
-    offset: 0,
+  const dataPreview = trpc.contentStudio.previewData.useQuery(undefined, {
+    enabled: showDataPreview,
+    staleTime: 60_000,
   });
 
-  const deleteMutation = trpc.contentStudio.deleteScript.useMutation({
+  const scriptsList = trpc.contentStudio.listScripts.useQuery(
+    {
+      limit: 50,
+      format: formatFilter !== 'any' ? (formatFilter as 'reel' | 'short' | 'lesson' | 'deep_dive') : undefined,
+    },
+    { staleTime: 30_000 },
+  );
+
+  const deleteScript = trpc.contentStudio.deleteScript.useMutation({
     onSuccess: () => {
-      toast.success('Script deleted');
-      scriptsQuery.refetch();
-    },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to delete script');
+      scriptsList.refetch();
+      toast({ title: 'Script deleted' });
     },
   });
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────────────────
 
-  const handleGenerate = () => {
-    if (!topic.trim()) {
-      toast.error('Please enter a topic for the script');
-      return;
-    }
-    generateMutation.mutate({
-      format: selectedFormat as 'reel' | 'short' | 'lesson' | 'deep_dive',
-      topic: topic.trim(),
-      marketData: useMarketData && marketData.trim() ? marketData.trim() : undefined,
-    });
+  const handleGenerate = (format?: string) => {
+    autoGenerate.mutate(format && format !== 'any' ? { format: format as 'reel' | 'short' | 'lesson' | 'deep_dive' } : undefined);
   };
 
-  const handleCopy = async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      toast.success('Copied to clipboard');
-      setTimeout(() => setCopiedField(null), 2000);
-    } catch {
-      toast.error('Failed to copy');
-    }
+  const copyToClipboard = async (text: string, field: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+    toast({ title: 'Copied to clipboard' });
   };
 
-  const handleTopicSuggestion = (suggestion: string) => {
-    setTopic(suggestion);
-  };
+  // ── Computed ────────────────────────────────────────────────────────────
 
-  // ── Content pillars for suggestions ──────────────────────────────────────
-  const pillars = formatsQuery.data?.pillars ?? {};
-
-  // ── Generated result ─────────────────────────────────────────────────────
-  const result = generateMutation.data;
+  const latestScript = autoGenerate.data;
 
   return (
     <div className="space-y-6">
-      {/* Description */}
-      <div>
-        <p className="text-sm text-muted-foreground">
-          Generate video narration scripts using Coach Inayah's voice. Create
-          scroll-stopping content for Instagram Reels, YouTube Shorts, lessons,
-          and deep dives — all backed by real STR data.
-        </p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'create' | 'library')}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="create" className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            Create Script
-          </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2">
-            <BookOpen className="w-4 h-4" />
-            Script Library
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ── CREATE TAB ─────────────────────────────────────────────── */}
-        <TabsContent value="create">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left column: Format + Topic */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Format Selector */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Video Format</CardTitle>
-                  <CardDescription>Choose the type of content to create</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {['reel', 'short', 'lesson', 'deep_dive'].map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={() => setSelectedFormat(fmt)}
-                      className={`w-full text-left p-3 rounded-lg border-2 transition-all duration-200 ${
-                        selectedFormat === fmt
-                          ? 'border-[#C9A962] bg-[#C9A962]/5 shadow-sm'
-                          : 'border-transparent bg-gray-50 hover:bg-gray-100'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-1.5 rounded-md ${FORMAT_COLORS[fmt]}`}>
-                          {FORMAT_ICONS[fmt]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-[#0F172A]">
-                            {FORMAT_LABELS[fmt]}
-                          </div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-                            <Clock className="w-3 h-3" />
-                            {FORMAT_DURATIONS[fmt]}
-                          </div>
-                        </div>
-                        {selectedFormat === fmt && (
-                          <Check className="w-4 h-4 text-[#C9A962]" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Topic Input */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Topic</CardTitle>
-                  <CardDescription>What should the script be about?</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="e.g., The #1 metric that tells you if an Airbnb market is worth it"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    className="min-h-[80px] resize-none"
-                  />
-
-                  {/* Market Data Toggle */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={useMarketData}
-                        onChange={(e) => setUseMarketData(e.target.checked)}
-                        className="rounded border-gray-300 text-[#C9A962] focus:ring-[#C9A962]"
-                      />
-                      <span className="text-sm text-gray-600 flex items-center gap-1.5">
-                        <BarChart3 className="w-3.5 h-3.5" />
-                        Inject market data
-                      </span>
-                    </label>
-                    {useMarketData && (
-                      <Textarea
-                        placeholder="Paste market data here (e.g., city stats, revenue numbers, occupancy rates). The AI will weave these real numbers into the script."
-                        value={marketData}
-                        onChange={(e) => setMarketData(e.target.value)}
-                        className="min-h-[100px] resize-none text-xs"
-                      />
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={!topic.trim() || generateMutation.isPending}
-                    className="w-full bg-[#C9A962] hover:bg-[#b8993f] text-white font-semibold"
-                  >
-                    {generateMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating Script...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Generate Script
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Topic Suggestions */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-[#C9A962]" />
-                    Topic Ideas
-                  </CardTitle>
-                  <CardDescription>Click any topic to use it</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(pillars).map(([pillar, topics]) => (
-                      <div key={pillar}>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                          {pillar}
-                        </h4>
-                        <div className="space-y-1">
-                          {(topics as string[]).map((t) => (
-                            <button
-                              key={t}
-                              onClick={() => handleTopicSuggestion(t)}
-                              className="w-full text-left text-sm text-gray-700 hover:text-[#C9A962] hover:bg-[#C9A962]/5 rounded px-2 py-1.5 transition-colors"
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right column: Generated Script Output */}
-            <div className="lg:col-span-2">
-              {generateMutation.isPending ? (
-                <Card className="h-full flex items-center justify-center min-h-[400px]">
-                  <div className="text-center space-y-4">
-                    <div className="w-16 h-16 mx-auto rounded-full bg-[#C9A962]/10 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[#0F172A]">Generating your script...</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Coach Inayah is crafting a {FORMAT_LABELS[selectedFormat]} script about your topic.
-                        This usually takes 10-20 seconds.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              ) : result ? (
-                <ScriptDisplay
-                  result={result}
-                  format={selectedFormat}
-                  onCopy={handleCopy}
-                  copiedField={copiedField}
-                  onRegenerate={handleGenerate}
-                  isRegenerating={generateMutation.isPending}
-                />
-              ) : (
-                <Card className="h-full flex items-center justify-center min-h-[400px]">
-                  <div className="text-center space-y-4 max-w-md px-6">
-                    <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center">
-                      <Sparkles className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[#0F172A]">Ready to create</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Choose a format, enter a topic, and click Generate.
-                        Your narration script will appear here — ready to record.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* ── LIBRARY TAB ────────────────────────────────────────────── */}
-        <TabsContent value="library">
-          <div className="space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search scripts by topic..."
-                  value={librarySearch}
-                  onChange={(e) => setLibrarySearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={!libraryFormat ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setLibraryFormat(undefined)}
-                >
-                  All
-                </Button>
-                {['reel', 'short', 'lesson', 'deep_dive'].map((fmt) => (
-                  <Button
-                    key={fmt}
-                    variant={libraryFormat === fmt ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setLibraryFormat(fmt)}
-                    className="gap-1.5"
-                  >
-                    {FORMAT_ICONS[fmt]}
-                    <span className="hidden sm:inline">{fmt === 'deep_dive' ? 'Deep Dive' : fmt.charAt(0).toUpperCase() + fmt.slice(1)}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Script count */}
-            <div className="text-sm text-gray-500">
-              {scriptsQuery.data?.total ?? 0} script{(scriptsQuery.data?.total ?? 0) !== 1 ? 's' : ''} saved
-            </div>
-
-            {/* Script list */}
-            {scriptsQuery.isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-[#C9A962]" />
-              </div>
-            ) : !scriptsQuery.data?.scripts.length ? (
-              <Card className="py-12">
-                <div className="text-center space-y-3">
-                  <BookOpen className="w-10 h-10 mx-auto text-gray-300" />
-                  <p className="text-gray-500">No scripts yet. Create your first one!</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveTab('create')}
-                  >
-                    <Sparkles className="w-4 h-4 mr-1.5" />
-                    Create Script
-                  </Button>
-                </div>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {scriptsQuery.data.scripts.map((script) => (
-                  <Card key={script.id} className="overflow-hidden">
-                    <div
-                      className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
-                      onClick={() =>
-                        setExpandedScript(expandedScript === script.id ? null : script.id)
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge
-                              variant="outline"
-                              className={`text-xs ${FORMAT_COLORS[script.format]}`}
-                            >
-                              {FORMAT_LABELS[script.format] || script.format}
-                            </Badge>
-                            {script.estimatedDurationSeconds && (
-                              <span className="text-xs text-gray-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {script.estimatedDurationSeconds}s
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="font-semibold text-[#0F172A] truncate">
-                            {script.title}
-                          </h3>
-                          <p className="text-sm text-gray-500 truncate mt-0.5">
-                            {script.topic}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-xs text-gray-400">
-                            {new Date(script.createdAt).toLocaleDateString()}
-                          </span>
-                          {expandedScript === script.id ? (
-                            <ChevronUp className="w-4 h-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {expandedScript === script.id && (
-                      <div className="border-t px-4 pb-4 pt-3 space-y-4 bg-gray-50/30">
-                        {/* Hook */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                              Hook
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(script.hook, `hook-${script.id}`);
-                              }}
-                            >
-                              {copiedField === `hook-${script.id}` ? (
-                                <Check className="w-3 h-3 mr-1" />
-                              ) : (
-                                <Copy className="w-3 h-3 mr-1" />
-                              )}
-                              Copy
-                            </Button>
-                          </div>
-                          <p className="text-sm font-medium text-[#0F172A] italic">
-                            "{script.hook}"
-                          </p>
-                        </div>
-
-                        {/* Full Script */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                              Full Script
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(script.script, `script-${script.id}`);
-                              }}
-                            >
-                              {copiedField === `script-${script.id}` ? (
-                                <Check className="w-3 h-3 mr-1" />
-                              ) : (
-                                <Copy className="w-3 h-3 mr-1" />
-                              )}
-                              Copy
-                            </Button>
-                          </div>
-                          <div className="text-sm text-gray-700 whitespace-pre-wrap bg-white rounded-lg p-3 border">
-                            {script.script}
-                          </div>
-                        </div>
-
-                        {/* CTA */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                              Call to Action
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(script.cta, `cta-${script.id}`);
-                              }}
-                            >
-                              {copiedField === `cta-${script.id}` ? (
-                                <Check className="w-3 h-3 mr-1" />
-                              ) : (
-                                <Copy className="w-3 h-3 mr-1" />
-                              )}
-                              Copy
-                            </Button>
-                          </div>
-                          <p className="text-sm text-[#C9A962] font-medium">
-                            {script.cta}
-                          </p>
-                        </div>
-
-                        {/* Metadata */}
-                        <div className="flex flex-wrap gap-2 pt-2 border-t">
-                          {script.targetAudience && (
-                            <Badge variant="outline" className="text-xs gap-1">
-                              <Users className="w-3 h-3" />
-                              {script.targetAudience}
-                            </Badge>
-                          )}
-                          {(script.keyDataPoints as string[] | null)?.map((dp, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              {dp}
-                            </Badge>
-                          ))}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex justify-end gap-2 pt-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Delete this script?')) {
-                                deleteMutation.mutate({ id: script.id });
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ── Standalone page (default export — redirects to admin) ───────────────────
-
-export default function ContentStudioPage() {
-  return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#0F172A] to-[#1e293b] text-white">
-        <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Link href="/">
-              <button className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm">
-                <ArrowLeft className="w-4 h-4" />
-                Back to Tools
-              </button>
-            </Link>
-          </div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#C9A962]/20 flex items-center justify-center border border-[#C9A962]/30">
-              <Sparkles className="w-5 h-5 text-[#C9A962]" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-semibold tracking-tight">
-              Content Studio
-            </h1>
-          </div>
-          <p className="text-white/60 text-sm sm:text-base max-w-2xl">
-            Generate video narration scripts using Coach Inayah's voice. Create
-            scroll-stopping content for Instagram Reels, YouTube Shorts, lessons,
-            and deep dives — all backed by real STR data.
-          </p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <ContentStudioTab />
-      </div>
-    </div>
-  );
-}
-
-// ── Script Display Component ─────────────────────────────────────────────────
-
-function ScriptDisplay({
-  result,
-  format,
-  onCopy,
-  copiedField,
-  onRegenerate,
-  isRegenerating,
-}: {
-  result: {
-    title: string;
-    hook: string;
-    script: string;
-    cta: string;
-    estimatedDurationSeconds: number | null;
-    keyDataPoints: string[] | null;
-    targetAudience: string | null;
-  };
-  format: string;
-  onCopy: (text: string, field: string) => void;
-  copiedField: string | null;
-  onRegenerate: () => void;
-  isRegenerating: boolean;
-}) {
-  return (
-    <div className="space-y-4">
-      {/* Title Card */}
-      <Card className="border-l-4 border-l-[#C9A962]">
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-start justify-between gap-3">
+      {/* ── Hero: One-Click Generate ─────────────────────────────────── */}
+      <Card className="border-[#C9A962]/30 bg-gradient-to-br from-[#0F172A] to-[#1e293b] text-white overflow-hidden relative">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNDOUE5NjIiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTMwVjBoLTJ2NEgyNFYwaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+        <CardContent className="relative p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className={`text-xs ${FORMAT_COLORS[format]}`}>
-                  {FORMAT_LABELS[format]}
-                </Badge>
-                {result.estimatedDurationSeconds && (
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <Clock className="w-3 h-3" />
-                    ~{result.estimatedDurationSeconds}s
+                <Sparkles className="w-5 h-5 text-[#C9A962]" />
+                <span className="text-[#C9A962] font-medium text-sm uppercase tracking-wider">
+                  Content Studio
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-serif font-semibold mb-2">
+                One-Click Script Generator
+              </h2>
+              <p className="text-white/60 text-sm md:text-base max-w-lg">
+                AI pulls your real platform data, picks the best topic angle, and generates a complete
+                ready-to-film narration script in Coach Inayah's voice. Zero effort required.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full md:w-auto">
+              <Button
+                size="lg"
+                onClick={() => handleGenerate()}
+                disabled={autoGenerate.isPending}
+                className="bg-[#C9A962] hover:bg-[#b8963f] text-[#0F172A] font-semibold text-base px-8 py-6 shadow-lg shadow-[#C9A962]/20"
+              >
+                {autoGenerate.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5 mr-2" />
+                    Generate Script
+                  </>
+                )}
+              </Button>
+
+              <div className="flex gap-2">
+                {Object.entries(FORMAT_META).map(([key, meta]) => (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleGenerate(key)}
+                    disabled={autoGenerate.isPending}
+                    className="border-white/20 text-white/70 hover:text-white hover:border-[#C9A962]/50 text-xs flex-1"
+                  >
+                    <span className="mr-1">{meta.icon}</span>
+                    {meta.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {autoGenerate.isPending && (
+            <div className="mt-6 flex items-center gap-3 text-white/60 text-sm bg-white/5 rounded-lg p-3">
+              <Loader2 className="w-4 h-4 animate-spin text-[#C9A962]" />
+              <span>Pulling platform data... analyzing trends... crafting narrative...</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Generated Script Result ──────────────────────────────────── */}
+      {latestScript && (
+        <Card className="border-[#C9A962]/30 bg-white shadow-lg">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge className={FORMAT_META[latestScript.format]?.color || 'bg-gray-100'}>
+                    {FORMAT_META[latestScript.format]?.icon} {FORMAT_META[latestScript.format]?.label || latestScript.format}
                   </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="w-3 h-3 mr-1" />
+                    ~{latestScript.estimatedDurationSeconds}s
+                  </Badge>
+                </div>
+                <CardTitle className="text-xl font-serif text-[#0F172A]">
+                  {latestScript.title}
+                </CardTitle>
+                {latestScript.narrativeAngle && (
+                  <p className="text-sm text-[#0F172A]/50 mt-1 italic">
+                    Angle: {latestScript.narrativeAngle}
+                  </p>
                 )}
               </div>
-              <h2 className="text-xl font-serif font-semibold text-[#0F172A]">
-                {result.title}
-              </h2>
-              {result.targetAudience && (
-                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" />
-                  {result.targetAudience}
-                </p>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(latestScript.script, 'full-script')}
+                className="shrink-0"
+              >
+                {copiedField === 'full-script' ? (
+                  <><Check className="w-4 h-4 mr-1" /> Copied</>
+                ) : (
+                  <><Copy className="w-4 h-4 mr-1" /> Copy Script</>
+                )}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRegenerate}
-              disabled={isRegenerating}
-              className="flex-shrink-0"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRegenerating ? 'animate-spin' : ''}`} />
-              Regenerate
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Hook */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Hook (First 3 Seconds)
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(result.hook, 'result-hook')}
-            >
-              {copiedField === 'result-hook' ? (
-                <Check className="w-3 h-3 mr-1 text-green-500" />
-              ) : (
-                <Copy className="w-3 h-3 mr-1" />
-              )}
-              Copy
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-lg font-medium text-[#0F172A] italic leading-relaxed">
-            "{result.hook}"
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Full Script */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Full Narration Script
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(result.script, 'result-script')}
-            >
-              {copiedField === 'result-script' ? (
-                <Check className="w-3 h-3 mr-1 text-green-500" />
-              ) : (
-                <Copy className="w-3 h-3 mr-1" />
-              )}
-              Copy Script
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-[#0F172A] text-white rounded-xl p-5 sm:p-6 font-sans text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-            {result.script}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* CTA */}
-      <Card className="border-l-4 border-l-[#C9A962]">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Call to Action
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onCopy(result.cta, 'result-cta')}
-            >
-              {copiedField === 'result-cta' ? (
-                <Check className="w-3 h-3 mr-1 text-green-500" />
-              ) : (
-                <Copy className="w-3 h-3 mr-1" />
-              )}
-              Copy
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-base font-medium text-[#C9A962]">{result.cta}</p>
-        </CardContent>
-      </Card>
-
-      {/* Key Data Points */}
-      {result.keyDataPoints && result.keyDataPoints.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              Key Data Points Used
-            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {result.keyDataPoints.map((dp, i) => (
-                <Badge key={i} variant="outline" className="text-sm py-1 px-3">
-                  <BarChart3 className="w-3 h-3 mr-1.5 text-[#C9A962]" />
-                  {dp}
-                </Badge>
-              ))}
+          <CardContent className="space-y-4">
+            {/* Hook */}
+            <div className="bg-[#C9A962]/5 border border-[#C9A962]/20 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#C9A962]">
+                  Hook (first 3 seconds)
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => copyToClipboard(latestScript.hook, 'hook')}
+                >
+                  {copiedField === 'hook' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+              </div>
+              <p className="text-[#0F172A] font-medium">{latestScript.hook}</p>
             </div>
+
+            {/* Full Script */}
+            <div className="bg-[#0F172A]/[0.02] border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#0F172A]/50">
+                  Full Narration Script
+                </span>
+              </div>
+              <div className="text-[#0F172A]/80 whitespace-pre-wrap leading-relaxed font-sans text-sm">
+                {latestScript.script}
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+                  Call to Action
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => copyToClipboard(latestScript.cta, 'cta')}
+                >
+                  {copiedField === 'cta' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+              </div>
+              <p className="text-emerald-800 font-medium">{latestScript.cta}</p>
+            </div>
+
+            {/* Metadata row */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              {latestScript.targetAudience && (
+                <div className="flex items-center gap-1 text-xs text-[#0F172A]/50">
+                  <Users className="w-3 h-3" />
+                  {latestScript.targetAudience}
+                </div>
+              )}
+              {latestScript.keyDataPoints && latestScript.keyDataPoints.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-[#0F172A]/50">
+                  <BarChart3 className="w-3 h-3" />
+                  {latestScript.keyDataPoints.length} data points used
+                </div>
+              )}
+              {latestScript.dataPreview && (
+                <div className="flex items-center gap-1 text-xs text-[#0F172A]/50">
+                  <Database className="w-3 h-3" />
+                  {latestScript.dataPreview.propertiesUsed} properties, {latestScript.dataPreview.marketsUsed} markets
+                </div>
+              )}
+            </div>
+
+            {/* Data points used */}
+            {latestScript.keyDataPoints && latestScript.keyDataPoints.length > 0 && (
+              <div className="border-t pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#0F172A]/40 mb-2">
+                  Real Data Points Used
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {latestScript.keyDataPoints.map((dp: string, i: number) => (
+                    <Badge key={i} variant="outline" className="text-xs font-normal">
+                      {dp}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Copy All */}
-      <div className="flex justify-center pt-2">
-        <Button
-          variant="outline"
-          size="lg"
-          className="gap-2"
-          onClick={() =>
-            onCopy(
-              `TITLE: ${result.title}\n\nHOOK: ${result.hook}\n\nSCRIPT:\n${result.script}\n\nCTA: ${result.cta}`,
-              'result-all',
-            )
-          }
-        >
-          {copiedField === 'result-all' ? (
-            <Check className="w-4 h-4 text-green-500" />
-          ) : (
-            <Copy className="w-4 h-4" />
+      {/* ── Data Preview Toggle ──────────────────────────────────────── */}
+      <Card className="border-dashed">
+        <CardContent className="p-4">
+          <button
+            onClick={() => setShowDataPreview(!showDataPreview)}
+            className="flex items-center gap-2 w-full text-left text-sm font-medium text-[#0F172A]/60 hover:text-[#0F172A] transition-colors"
+          >
+            <Database className="w-4 h-4" />
+            <span>Data the AI will use</span>
+            {showDataPreview ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+          </button>
+
+          {showDataPreview && dataPreview.data && (
+            <div className="mt-4 space-y-4">
+              {/* Platform Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-[#0F172A]/[0.03] rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-[#0F172A]">
+                    {dataPreview.data.platformStats.totalReports.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#0F172A]/50">Total Reports</p>
+                </div>
+                <div className="bg-[#0F172A]/[0.03] rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-[#0F172A]">
+                    {dataPreview.data.platformStats.totalLeads.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-[#0F172A]/50">Total Leads</p>
+                </div>
+                <div className="bg-[#0F172A]/[0.03] rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-[#0F172A]">
+                    {dataPreview.data.recentProperties.length}
+                  </p>
+                  <p className="text-xs text-[#0F172A]/50">Recent Properties</p>
+                </div>
+                <div className="bg-[#0F172A]/[0.03] rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-[#0F172A]">
+                    {dataPreview.data.marketSnapshots.length}
+                  </p>
+                  <p className="text-xs text-[#0F172A]/50">Markets</p>
+                </div>
+              </div>
+
+              {/* Recent Properties */}
+              {dataPreview.data.recentProperties.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0F172A]/40 mb-2">
+                    Recent Property Data
+                  </p>
+                  <div className="space-y-1">
+                    {dataPreview.data.recentProperties.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-[#0F172A]/60 bg-[#0F172A]/[0.02] rounded px-3 py-1.5">
+                        <span className="font-medium">{p.city}, {p.state}</span>
+                        <span>·</span>
+                        <span>{p.bedrooms}BR</span>
+                        <span>·</span>
+                        <span>${Math.round(p.annualRevenue / 12).toLocaleString()}/mo</span>
+                        <span>·</span>
+                        <Badge variant="outline" className={`text-[10px] ${p.verdict === 'GO' ? 'border-emerald-500 text-emerald-600' : p.verdict === 'CAUTION' ? 'border-amber-500 text-amber-600' : 'border-red-500 text-red-600'}`}>
+                          {p.verdict}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top Markets */}
+              {dataPreview.data.platformStats.topMarkets.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0F172A]/40 mb-2">
+                    Top Markets
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dataPreview.data.platformStats.topMarkets.map((m, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {m.market} ({m.count})
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Previous Topics */}
+              {dataPreview.data.previousTopics.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0F172A]/40 mb-2">
+                    Previous Topics (AI avoids repeats)
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {dataPreview.data.previousTopics.map((t, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px] font-normal">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dataPreview.data.recentProperties.length === 0 && dataPreview.data.platformStats.totalReports === 0 && (
+                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded-lg p-3">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>No platform data yet. The AI will use its knowledge base and sample data to generate scripts. Run some property analyses first for real data.</span>
+                </div>
+              )}
+            </div>
           )}
-          Copy Entire Script
-        </Button>
+
+          {showDataPreview && dataPreview.isLoading && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-[#0F172A]/50">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading platform data...
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Script Library ───────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Film className="w-5 h-5 text-[#0F172A]/40" />
+            <h3 className="text-lg font-semibold text-[#0F172A]">Script Library</h3>
+            {scriptsList.data && (
+              <Badge variant="secondary" className="text-xs">
+                {scriptsList.data.total} scripts
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={formatFilter} onValueChange={setFormatFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue placeholder="All formats" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">All formats</SelectItem>
+                <SelectItem value="reel">📱 Reels</SelectItem>
+                <SelectItem value="short">⚡ Shorts</SelectItem>
+                <SelectItem value="lesson">📚 Lessons</SelectItem>
+                <SelectItem value="deep_dive">🎓 Deep Dives</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => scriptsList.refetch()}
+              className="h-8 w-8 p-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${scriptsList.isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
+
+        {scriptsList.isLoading && (
+          <div className="flex items-center justify-center py-12 text-[#0F172A]/40">
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            Loading scripts...
+          </div>
+        )}
+
+        {scriptsList.data && scriptsList.data.scripts.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Sparkles className="w-10 h-10 text-[#C9A962]/40 mb-3" />
+              <p className="text-[#0F172A]/60 font-medium mb-1">No scripts yet</p>
+              <p className="text-[#0F172A]/40 text-sm">
+                Click "Generate Script" above to create your first one.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {scriptsList.data && scriptsList.data.scripts.length > 0 && (
+          <div className="space-y-3">
+            {scriptsList.data.scripts.map((script) => {
+              const isExpanded = expandedScript === script.id;
+              const meta = FORMAT_META[script.format] || FORMAT_META.lesson;
+
+              return (
+                <Card key={script.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    {/* Header row */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className={`${meta.color} text-[10px]`}>
+                            {meta.icon} {meta.label}
+                          </Badge>
+                          <span className="text-[10px] text-[#0F172A]/40">
+                            {new Date(script.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-[#0F172A] text-sm truncate">
+                          {script.title}
+                        </h4>
+                        <p className="text-xs text-[#0F172A]/50 mt-0.5 truncate">
+                          {script.topic}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => copyToClipboard(script.script, `script-${script.id}`)}
+                        >
+                          {copiedField === `script-${script.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => setExpandedScript(isExpanded ? null : script.id)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                          onClick={() => {
+                            if (confirm('Delete this script?')) {
+                              deleteScript.mutate({ id: script.id });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Expanded view */}
+                    {isExpanded && (
+                      <div className="mt-4 space-y-3 border-t pt-4">
+                        <div className="bg-[#C9A962]/5 border border-[#C9A962]/20 rounded-lg p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#C9A962] mb-1">Hook</p>
+                          <p className="text-sm text-[#0F172A]">{script.hook}</p>
+                        </div>
+                        <div className="bg-[#0F172A]/[0.02] rounded-lg p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A]/40 mb-1">Full Script</p>
+                          <p className="text-sm text-[#0F172A]/80 whitespace-pre-wrap leading-relaxed">
+                            {script.script}
+                          </p>
+                        </div>
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-1">CTA</p>
+                          <p className="text-sm text-emerald-800">{script.cta}</p>
+                        </div>
+                        {script.keyDataPoints && (script.keyDataPoints as string[]).length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {(script.keyDataPoints as string[]).map((dp, i) => (
+                              <Badge key={i} variant="outline" className="text-[10px]">{dp}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Exported components ─────────────────────────────────────────────────────
+
+/** Embeddable tab for the admin dashboard */
+export function ContentStudioTab() {
+  return <ContentStudioCore />;
+}
+
+/** Standalone page (for direct URL access) */
+export default function ContentStudioPage() {
+  return (
+    <div className="min-h-screen bg-[#FAFAF8]">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <ContentStudioCore />
       </div>
     </div>
   );

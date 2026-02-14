@@ -1,18 +1,24 @@
 /**
- * Content Studio — Script Generation Service
+ * Content Studio v2 — Fully Autonomous Script Generation
  *
- * Generates video narration scripts using Coach Inayah's persona via the
- * Gemini API (user's own key). Implements the PTCF (Persona, Task, Context,
- * Format) prompting framework from the STR Content Creator skill.
+ * One-click generates complete ready-to-film narration scripts using
+ * Coach Inayah's persona via the Gemini API (user's own key).
  *
- * Supports 4 video formats:
- *   reel      — Instagram Reel / TikTok (30-60 s)
- *   short     — YouTube Short (45-60 s)
- *   lesson    — YouTube Lesson (2-5 min)
- *   deep_dive — YouTube Deep Dive (5-10 min)
+ * The AI autonomously:
+ *   1. Pulls real platform data (recent analyses, trending markets, stats)
+ *   2. Picks the best topic angle based on data + avoids recent repeats
+ *   3. Selects the optimal video format
+ *   4. Generates a complete narrative script with real numbers woven in
+ *
+ * Zero user effort required — just press "Generate."
  */
 
 import { ENV } from './_core/env';
+import {
+  gatherContentData,
+  formatDataForPrompt,
+  type ContentDataBundle,
+} from './content-data-pipeline';
 
 // ── Gemini REST endpoint ─────────────────────────────────────────────────────
 const GEMINI_API_URL =
@@ -70,7 +76,7 @@ export const FORMAT_SPECS: Record<
   },
 };
 
-// ── Content pillars for the topic suggestion engine ──────────────────────────
+// ── Content pillars ─────────────────────────────────────────────────────────
 export const CONTENT_PILLARS = {
   'Arbitrage Fundamentals': [
     'What is Airbnb arbitrage and how does it actually work?',
@@ -79,14 +85,14 @@ export const CONTENT_PILLARS = {
     'Rent-to-revenue ratio: the one number that predicts profit',
   ],
   'Market Analysis': [
-    'Top 5 Airbnb markets in 2026 (backed by data)',
+    'Top 5 Airbnb markets right now (backed by data)',
     'How to evaluate any Airbnb market in 60 seconds',
     'Seasonality: why your Airbnb revenue changes every month',
     'This free tool shows you exactly what any property could earn',
   ],
   Regulations: [
     'Is Airbnb legal in your city? How to check in 2 minutes',
-    'STR regulation changes in 2026 — what you need to know',
+    'STR regulation changes — what you need to know',
     'The cities that just banned Airbnb (and where to go instead)',
     'Permits, licenses, and taxes: the legal checklist for new hosts',
   ],
@@ -110,7 +116,7 @@ export const CONTENT_PILLARS = {
   ],
 };
 
-// ── Embedded reference context (condensed from skill files) ──────────────────
+// ── Embedded reference context ──────────────────────────────────────────────
 
 const TOOL_CONTEXT = `Coach Inayah's Turnkey Tool (coachinayahturnkeytool.com) is a free 9-step STR research suite:
 1. Regulation Checker — checks if STR is legal in a city
@@ -164,7 +170,7 @@ NEVER mention "AirDNA" — always say "Coach Inayah market data" or "the tool."`
 
 // ── System prompt builder ────────────────────────────────────────────────────
 
-function buildSystemPrompt(marketData?: string): string {
+function buildSystemPrompt(liveData?: string): string {
   let prompt = `## PERSONA
 You are Coach Inayah — a confident, data-driven short-term rental educator and entrepreneur. You speak directly and conversationally (never corporate or stiff). You back every claim with real data. You make complex topics feel simple and accessible for complete beginners. You build trust through transparency — "I'm showing you the real numbers, not the highlight reel."
 
@@ -179,8 +185,8 @@ ${DOMAIN_KNOWLEDGE}
 ## CONTEXT — DATA CAPABILITIES
 ${AIRDNA_CONTEXT}`;
 
-  if (marketData) {
-    prompt += `\n\n## CONTEXT — LIVE MARKET DATA\nThe following real market/property data was pulled from the tool. Use these EXACT numbers in the script:\n${marketData}`;
+  if (liveData) {
+    prompt += `\n\n## CONTEXT — LIVE PLATFORM DATA\n${liveData}`;
   }
 
   prompt += `
@@ -191,9 +197,11 @@ ${AIRDNA_CONTEXT}`;
 3. Use real numbers, percentages, and dollar amounts — never vague language.
 4. Reference the tool's capabilities naturally (not as an ad — as proof of expertise).
 5. Never mention "AirDNA" — always say "Coach Inayah market data" or "the tool."
-6. Include at least one specific city/market example with real-ish data points.
+6. Include at least one specific city/market example with real data points from the LIVE PLATFORM DATA when available.
 7. Do NOT include stage directions, camera notes, or production instructions.
 8. Output ONLY the narration script — what the speaker actually says out loud.
+9. The script must tell a STORY — it should have a narrative arc, not just be a list of facts.
+10. Weave data points into the story naturally — the viewer should feel like they're learning through a conversation, not reading a spreadsheet.
 
 ## CRITICAL — THIRD-GRADE UNDERSTANDING RULE
 The audience understands concepts at a THIRD-GRADE level. This does NOT mean third-grade language — you still sound smart, confident, and authoritative. It means every concept must be explained so simply that anyone can follow it on the first listen, without ever having heard the term before.
@@ -224,29 +232,60 @@ MANDATORY LANGUAGE RULES:
   return prompt;
 }
 
-// ── User prompt builder ──────────────────────────────────────────────────────
+// ── Autonomous topic + format selection prompt ──────────────────────────────
 
-function buildUserPrompt(topic: string, format: string, duration: number): string {
-  const spec = FORMAT_SPECS[format];
-  if (!spec) throw new Error(`Unknown format: ${format}`);
+function buildAutonomousPrompt(
+  dataBundle: ContentDataBundle,
+  formattedData: string,
+  overrideFormat?: string,
+): string {
+  const previousTopicsList = dataBundle.previousTopics.length > 0
+    ? `\n\nPREVIOUSLY GENERATED TOPICS (do NOT repeat these):\n${dataBundle.previousTopics.map((t) => `- ${t}`).join('\n')}`
+    : '';
 
-  return `## TASK
-Write a narration script for a ${spec.name} video.
+  const formatInstruction = overrideFormat
+    ? `Use the "${overrideFormat}" format (${FORMAT_SPECS[overrideFormat]?.name}).`
+    : 'Pick the BEST format for the topic you choose. Choose from: reel (30-60s), short (45-60s), lesson (2-5min), deep_dive (5-10min).';
 
-**Topic:** ${topic}
-**Target Duration:** ${duration} seconds (~${spec.wordCount})
-**Structure:** ${spec.structure}
-**Style:** ${spec.style}
+  const formatSpecs = Object.entries(FORMAT_SPECS)
+    .map(([key, spec]) => `  ${key}: ${spec.name} | ${spec.durationRange} | ${spec.wordCount} | Structure: ${spec.structure}`)
+    .join('\n');
 
-## FORMAT
+  return `## TASK — AUTONOMOUS CONTENT GENERATION
+
+You are generating a COMPLETE, ready-to-film narration script. You must:
+
+1. ANALYZE the live platform data below and pick the most compelling topic angle.
+   - Prioritize topics that use REAL data from the platform (specific properties, markets, numbers).
+   - Pick angles that would make someone stop scrolling.
+   - If there are GO-rated properties, consider a "I just found a property that makes $X/month" angle.
+   - If there are trending markets, consider a "This city is blowing up for Airbnb" angle.
+   - If there are interesting comparisons, consider a "I compared 3 properties — here's the winner" angle.
+   - Be creative — don't just list facts. Tell a STORY.
+
+2. ${formatInstruction}
+
+AVAILABLE FORMATS:
+${formatSpecs}
+
+3. Generate the COMPLETE narration script with real data woven throughout.
+
+${formattedData}
+${previousTopicsList}
+
+## OUTPUT FORMAT
 Return a JSON object with these fields:
-- "title": A compelling title for the video (what appears on YouTube/Instagram)
+- "topic": The topic/angle you chose (one sentence)
+- "format": The format key you chose (reel, short, lesson, or deep_dive)
+- "title": A compelling video title (what appears on YouTube/Instagram — make it click-worthy)
 - "hook": The opening hook line (first 3 seconds — must stop the scroll)
-- "script": The complete narration script including the hook and CTA
+- "script": The COMPLETE narration script including the hook and CTA. This is the FULL thing the speaker reads aloud. Must be a complete narrative — NOT bullet points, NOT an outline.
 - "cta": The closing call-to-action line
-- "estimated_duration_seconds": Your estimate of how long this takes to read aloud
-- "key_data_points": Array of 2-4 specific data points or statistics used in the script
+- "estimated_duration_seconds": Your estimate of spoken duration
+- "key_data_points": Array of 2-6 specific real data points or statistics used in the script
 - "target_audience": One-sentence description of who this video is for
+- "narrative_angle": One sentence explaining WHY you chose this angle (what makes it compelling)
+- "data_sources_used": Array of which platform data you referenced (e.g., "Denver 3BR analysis", "trending market: Austin")
 
 Return ONLY valid JSON. No markdown code fences. No extra text.`;
 }
@@ -254,6 +293,8 @@ Return ONLY valid JSON. No markdown code fences. No extra text.`;
 // ── Script result type ───────────────────────────────────────────────────────
 
 export interface GeneratedScript {
+  topic: string;
+  format: string;
   title: string;
   hook: string;
   script: string;
@@ -261,29 +302,36 @@ export interface GeneratedScript {
   estimated_duration_seconds: number;
   key_data_points: string[];
   target_audience: string;
+  narrative_angle: string;
+  data_sources_used: string[];
 }
 
-// ── Main generation function ─────────────────────────────────────────────────
+// ── Main autonomous generation function ─────────────────────────────────────
 
-export async function generateContentScript(
-  topic: string,
-  format: string,
-  marketData?: string,
-): Promise<GeneratedScript> {
+export async function generateAutonomousScript(
+  overrideFormat?: string,
+): Promise<{ script: GeneratedScript; dataBundle: ContentDataBundle }> {
   const apiKey = ENV.geminiApiKey;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured. Please add your Gemini API key in Settings → Secrets.');
   }
 
-  const spec = FORMAT_SPECS[format];
-  if (!spec) {
-    throw new Error(`Invalid format "${format}". Must be one of: reel, short, lesson, deep_dive`);
-  }
+  // 1. Gather real data from the platform
+  console.log('[Content Studio] Gathering platform data...');
+  const dataBundle = await gatherContentData();
+  const formattedData = formatDataForPrompt(dataBundle);
+  console.log('[Content Studio] Data gathered:', {
+    properties: dataBundle.recentProperties.length,
+    markets: dataBundle.marketSnapshots.length,
+    totalReports: dataBundle.platformStats.totalReports,
+    previousTopics: dataBundle.previousTopics.length,
+  });
 
-  const duration = spec.defaultDuration;
-  const systemPrompt = buildSystemPrompt(marketData);
-  const userPrompt = buildUserPrompt(topic, format, duration);
+  // 2. Build the autonomous prompt
+  const systemPrompt = buildSystemPrompt(formattedData);
+  const userPrompt = buildAutonomousPrompt(dataBundle, formattedData, overrideFormat);
 
+  // 3. Call Gemini
   const body = {
     contents: [
       { role: 'user', parts: [{ text: userPrompt }] },
@@ -292,8 +340,8 @@ export async function generateContentScript(
       parts: [{ text: systemPrompt }],
     },
     generationConfig: {
-      temperature: 0.9,
-      maxOutputTokens: 4096,
+      temperature: 0.95,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
     },
     safetySettings: [
@@ -304,6 +352,7 @@ export async function generateContentScript(
     ],
   };
 
+  console.log('[Content Studio] Calling Gemini API...');
   const response = await fetch(
     `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
     {
@@ -346,7 +395,127 @@ export async function generateContentScript(
     throw new Error('Generated script is missing required fields. Please try again.');
   }
 
+  const result: GeneratedScript = {
+    topic: parsed.topic || 'Auto-generated topic',
+    format: parsed.format || overrideFormat || 'lesson',
+    title: parsed.title,
+    hook: parsed.hook,
+    script: parsed.script,
+    cta: parsed.cta,
+    estimated_duration_seconds: parsed.estimated_duration_seconds || 120,
+    key_data_points: parsed.key_data_points || [],
+    target_audience: parsed.target_audience || '',
+    narrative_angle: parsed.narrative_angle || '',
+    data_sources_used: parsed.data_sources_used || [],
+  };
+
+  return { script: result, dataBundle };
+}
+
+// ── Legacy manual generation (kept for backward compatibility) ──────────────
+
+export async function generateContentScript(
+  topic: string,
+  format: string,
+  marketData?: string,
+): Promise<GeneratedScript> {
+  const apiKey = ENV.geminiApiKey;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured.');
+  }
+
+  const spec = FORMAT_SPECS[format];
+  if (!spec) {
+    throw new Error(`Invalid format "${format}".`);
+  }
+
+  const duration = spec.defaultDuration;
+  const systemPrompt = buildSystemPrompt(marketData);
+  const userPrompt = `## TASK
+Write a narration script for a ${spec.name} video.
+
+**Topic:** ${topic}
+**Target Duration:** ${duration} seconds (~${spec.wordCount})
+**Structure:** ${spec.structure}
+**Style:** ${spec.style}
+
+## FORMAT
+Return a JSON object with these fields:
+- "topic": "${topic}"
+- "format": "${format}"
+- "title": A compelling title for the video
+- "hook": The opening hook line (first 3 seconds)
+- "script": The complete narration script including the hook and CTA
+- "cta": The closing call-to-action line
+- "estimated_duration_seconds": Your estimate of how long this takes to read aloud
+- "key_data_points": Array of 2-4 specific data points used
+- "target_audience": One-sentence description of who this video is for
+- "narrative_angle": Why this angle is compelling
+- "data_sources_used": Array of data sources referenced
+
+Return ONLY valid JSON. No markdown code fences. No extra text.`;
+
+  const body = {
+    contents: [
+      { role: 'user', parts: [{ text: userPrompt }] },
+    ],
+    systemInstruction: {
+      parts: [{ text: systemPrompt }],
+    },
+    generationConfig: {
+      temperature: 0.9,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
+    },
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    ],
+  };
+
+  const response = await fetch(
+    `${GEMINI_API_URL}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error (${response.status}): ${errorText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!rawText) {
+    throw new Error('Gemini returned an empty response.');
+  }
+
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.split('\n').slice(1).join('\n');
+    cleaned = cleaned.replace(/```\s*$/, '');
+  }
+
+  let parsed: GeneratedScript;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error('Failed to parse the generated script.');
+  }
+
+  if (!parsed.title || !parsed.hook || !parsed.script || !parsed.cta) {
+    throw new Error('Generated script is missing required fields.');
+  }
+
   return {
+    topic: parsed.topic || topic,
+    format: parsed.format || format,
     title: parsed.title,
     hook: parsed.hook,
     script: parsed.script,
@@ -354,5 +523,7 @@ export async function generateContentScript(
     estimated_duration_seconds: parsed.estimated_duration_seconds || duration,
     key_data_points: parsed.key_data_points || [],
     target_audience: parsed.target_audience || '',
+    narrative_angle: parsed.narrative_angle || '',
+    data_sources_used: parsed.data_sources_used || [],
   };
 }

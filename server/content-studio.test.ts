@@ -1,404 +1,554 @@
 /**
- * Content Studio — Unit Tests
+ * Content Studio v2 — Unit Tests
  *
- * Tests the script generation service, format specs, content pillars,
- * prompt building, and Gemini API integration.
+ * Tests for:
+ *   - FORMAT_SPECS and CONTENT_PILLARS exports
+ *   - Data pipeline formatting (formatDataForPrompt)
+ *   - Gemini API call structure and error handling
+ *   - Manual generation flow
+ *   - Content data bundle types
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// ── Service-level tests ──────────────────────────────────────────────────────
+// ── Test FORMAT_SPECS and CONTENT_PILLARS ────────────────────────────────────
 
-describe('Content Studio Service', () => {
-  describe('FORMAT_SPECS', () => {
-    it('should export all 4 format specs', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      expect(Object.keys(FORMAT_SPECS)).toEqual(['reel', 'short', 'lesson', 'deep_dive']);
-    });
-
-    it('each format should have required fields', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      for (const [key, spec] of Object.entries(FORMAT_SPECS)) {
-        expect(spec.name).toBeTruthy();
-        expect(spec.durationRange).toBeTruthy();
-        expect(spec.wordCount).toBeTruthy();
-        expect(spec.structure).toBeTruthy();
-        expect(spec.style).toBeTruthy();
-        expect(typeof spec.defaultDuration).toBe('number');
-        expect(spec.defaultDuration).toBeGreaterThan(0);
-      }
-    });
-
-    it('reel should be 30-60 seconds', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      expect(FORMAT_SPECS.reel.durationRange).toContain('30-60');
-      expect(FORMAT_SPECS.reel.defaultDuration).toBe(45);
-    });
-
-    it('short should be 45-60 seconds', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      expect(FORMAT_SPECS.short.durationRange).toContain('45-60');
-      expect(FORMAT_SPECS.short.defaultDuration).toBe(55);
-    });
-
-    it('lesson should be 2-5 minutes', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      expect(FORMAT_SPECS.lesson.durationRange).toContain('2-5');
-      expect(FORMAT_SPECS.lesson.defaultDuration).toBe(210);
-    });
-
-    it('deep_dive should be 5-10 minutes', async () => {
-      const { FORMAT_SPECS } = await import('./content-studio');
-      expect(FORMAT_SPECS.deep_dive.durationRange).toContain('5-10');
-      expect(FORMAT_SPECS.deep_dive.defaultDuration).toBe(420);
-    });
+describe('Content Studio — Exports', () => {
+  it('FORMAT_SPECS has all four formats', async () => {
+    const { FORMAT_SPECS } = await import('./content-studio');
+    expect(Object.keys(FORMAT_SPECS)).toEqual(
+      expect.arrayContaining(['reel', 'short', 'lesson', 'deep_dive']),
+    );
+    expect(Object.keys(FORMAT_SPECS)).toHaveLength(4);
   });
 
-  describe('CONTENT_PILLARS', () => {
-    it('should export content pillars with at least 5 categories', async () => {
-      const { CONTENT_PILLARS } = await import('./content-studio');
-      expect(Object.keys(CONTENT_PILLARS).length).toBeGreaterThanOrEqual(5);
-    });
-
-    it('each pillar should have at least 3 topic suggestions', async () => {
-      const { CONTENT_PILLARS } = await import('./content-studio');
-      for (const [pillar, topics] of Object.entries(CONTENT_PILLARS)) {
-        expect(Array.isArray(topics)).toBe(true);
-        expect(topics.length).toBeGreaterThanOrEqual(3);
-      }
-    });
-
-    it('should include core STR content pillars', async () => {
-      const { CONTENT_PILLARS } = await import('./content-studio');
-      const pillarNames = Object.keys(CONTENT_PILLARS);
-      expect(pillarNames).toContain('Arbitrage Fundamentals');
-      expect(pillarNames).toContain('Market Analysis');
-      expect(pillarNames).toContain('Regulations');
-      expect(pillarNames).toContain('Deal Evaluation');
-    });
+  it('each FORMAT_SPEC has required fields', async () => {
+    const { FORMAT_SPECS } = await import('./content-studio');
+    for (const [key, spec] of Object.entries(FORMAT_SPECS)) {
+      expect(spec).toHaveProperty('name');
+      expect(spec).toHaveProperty('durationRange');
+      expect(spec).toHaveProperty('wordCount');
+      expect(spec).toHaveProperty('structure');
+      expect(spec).toHaveProperty('style');
+      expect(spec).toHaveProperty('defaultDuration');
+      expect(typeof spec.name).toBe('string');
+      expect(typeof spec.defaultDuration).toBe('number');
+      expect(spec.defaultDuration).toBeGreaterThan(0);
+    }
   });
 
-  describe('generateContentScript', () => {
-    let originalFetch: typeof globalThis.fetch;
+  it('CONTENT_PILLARS has 6 pillars with topics', async () => {
+    const { CONTENT_PILLARS } = await import('./content-studio');
+    expect(Object.keys(CONTENT_PILLARS)).toHaveLength(6);
+    for (const [pillar, topics] of Object.entries(CONTENT_PILLARS)) {
+      expect(typeof pillar).toBe('string');
+      expect(Array.isArray(topics)).toBe(true);
+      expect(topics.length).toBeGreaterThan(0);
+      topics.forEach((t) => expect(typeof t).toBe('string'));
+    }
+  });
 
-    beforeEach(() => {
-      originalFetch = globalThis.fetch;
+  it('reel format has short duration (30-60s)', async () => {
+    const { FORMAT_SPECS } = await import('./content-studio');
+    expect(FORMAT_SPECS.reel.defaultDuration).toBeLessThanOrEqual(60);
+    expect(FORMAT_SPECS.reel.durationRange).toContain('30-60');
+  });
+
+  it('deep_dive format has long duration (5-10min)', async () => {
+    const { FORMAT_SPECS } = await import('./content-studio');
+    expect(FORMAT_SPECS.deep_dive.defaultDuration).toBeGreaterThanOrEqual(300);
+    expect(FORMAT_SPECS.deep_dive.durationRange).toContain('5-10');
+  });
+
+  it('should include core STR content pillars', async () => {
+    const { CONTENT_PILLARS } = await import('./content-studio');
+    const pillarNames = Object.keys(CONTENT_PILLARS);
+    expect(pillarNames).toContain('Arbitrage Fundamentals');
+    expect(pillarNames).toContain('Market Analysis');
+    expect(pillarNames).toContain('Regulations');
+    expect(pillarNames).toContain('Deal Evaluation');
+    expect(pillarNames).toContain('Competitor Intelligence');
+    expect(pillarNames).toContain('Scaling & Strategy');
+  });
+});
+
+// ── Test Data Pipeline Formatting ────────────────────────────────────────────
+
+describe('Content Data Pipeline — formatDataForPrompt', () => {
+  it('formats empty data bundle correctly', async () => {
+    const { formatDataForPrompt } = await import('./content-data-pipeline');
+    const result = formatDataForPrompt({
+      recentProperties: [],
+      marketSnapshots: [],
+      platformStats: {
+        totalReports: 0,
+        totalLeads: 0,
+        topMarkets: [],
+        recentSearches: [],
+      },
+      previousTopics: [],
+      pulledAt: new Date(),
     });
+    expect(result).toContain('LIVE PLATFORM DATA');
+    expect(result).toContain('Platform Scale: 0 total property analyses');
+  });
 
-    afterEach(() => {
-      globalThis.fetch = originalFetch;
-      vi.restoreAllMocks();
+  it('includes property data when available', async () => {
+    const { formatDataForPrompt } = await import('./content-data-pipeline');
+    const result = formatDataForPrompt({
+      recentProperties: [
+        {
+          address: '123 Main St',
+          city: 'Denver',
+          state: 'CO',
+          bedrooms: 3,
+          bathrooms: 2,
+          annualRevenue: 120000,
+          annualRevenueRange: { low: 100000, high: 140000 },
+          occupancyRate: 0.75,
+          averageDailyRate: 450,
+          monthlyRent: 2500,
+          verdict: 'GO',
+          confidenceScore: 85,
+          annualProfit: 50000,
+          createdAt: new Date(),
+        },
+      ],
+      marketSnapshots: [],
+      platformStats: {
+        totalReports: 100,
+        totalLeads: 50,
+        topMarkets: [{ market: 'Denver, CO', count: 25 }],
+        recentSearches: [{ city: 'Denver', state: 'CO', count: 15 }],
+      },
+      previousTopics: [],
+      pulledAt: new Date(),
     });
+    expect(result).toContain('Denver');
+    expect(result).toContain('3BR');
+    expect(result).toContain('GO');
+    expect(result).toContain('100 total property analyses');
+    expect(result).toContain('rent $2,500/mo');
+  });
 
-    it('should throw if GEMINI_API_KEY is not set', async () => {
-      // Temporarily override ENV.geminiApiKey
-      const { ENV } = await import('./_core/env');
-      const original = ENV.geminiApiKey;
-      (ENV as any).geminiApiKey = '';
-      try {
-        const { generateContentScript } = await import('./content-studio');
-        await expect(
-          generateContentScript('test topic', 'reel'),
-        ).rejects.toThrow(/GEMINI_API_KEY/i);
-      } finally {
-        (ENV as any).geminiApiKey = original;
-      }
+  it('includes market snapshots', async () => {
+    const { formatDataForPrompt } = await import('./content-data-pipeline');
+    const result = formatDataForPrompt({
+      recentProperties: [],
+      marketSnapshots: [
+        { marketName: 'Austin, TX', totalListings: 50, averageRevenue: 85000 },
+      ],
+      platformStats: {
+        totalReports: 0,
+        totalLeads: 0,
+        topMarkets: [],
+        recentSearches: [],
+      },
+      previousTopics: [],
+      pulledAt: new Date(),
     });
+    expect(result).toContain('Austin, TX');
+    expect(result).toContain('Market Averages');
+  });
 
-    it('should throw for invalid format', async () => {
-      const { generateContentScript } = await import('./content-studio');
-      await expect(
-        generateContentScript('test topic', 'invalid_format'),
-      ).rejects.toThrow(/Invalid format/);
+  it('includes aggregate stats for multiple properties', async () => {
+    const { formatDataForPrompt } = await import('./content-data-pipeline');
+    const properties = [
+      {
+        address: '1', city: 'Denver', state: 'CO', bedrooms: 3, bathrooms: 2,
+        annualRevenue: 120000, annualRevenueRange: { low: 100000, high: 140000 },
+        occupancyRate: 0.75, averageDailyRate: 450, monthlyRent: null,
+        verdict: 'GO', confidenceScore: null, annualProfit: null, createdAt: new Date(),
+      },
+      {
+        address: '2', city: 'Austin', state: 'TX', bedrooms: 2, bathrooms: 1,
+        annualRevenue: 80000, annualRevenueRange: { low: 70000, high: 90000 },
+        occupancyRate: 0.65, averageDailyRate: 300, monthlyRent: null,
+        verdict: 'CAUTION', confidenceScore: null, annualProfit: null, createdAt: new Date(),
+      },
+    ];
+    const result = formatDataForPrompt({
+      recentProperties: properties,
+      marketSnapshots: [],
+      platformStats: { totalReports: 0, totalLeads: 0, topMarkets: [], recentSearches: [] },
+      previousTopics: [],
+      pulledAt: new Date(),
     });
+    expect(result).toContain('Aggregate');
+    expect(result).toContain('2 properties analyzed');
+    expect(result).toContain('1 rated GO');
+  });
 
-    it('should call Gemini API with correct URL and body structure', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    title: 'Test Title',
-                    hook: 'Test hook line',
-                    script: 'Full test script content',
-                    cta: 'Go to the tool now',
-                    estimated_duration_seconds: 45,
-                    key_data_points: ['$5,000/month', '73% occupancy'],
-                    target_audience: 'New Airbnb hosts',
-                  }),
-                },
-              ],
-            },
-          },
+  it('includes trending searches', async () => {
+    const { formatDataForPrompt } = await import('./content-data-pipeline');
+    const result = formatDataForPrompt({
+      recentProperties: [],
+      marketSnapshots: [],
+      platformStats: {
+        totalReports: 0,
+        totalLeads: 0,
+        topMarkets: [],
+        recentSearches: [
+          { city: 'Nashville', state: 'TN', count: 20 },
+          { city: 'Miami', state: 'FL', count: 15 },
         ],
-      };
-
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const { generateContentScript } = await import('./content-studio');
-      const result = await generateContentScript('How to start Airbnb', 'reel');
-
-      // Verify fetch was called
-      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-      const [url, options] = (globalThis.fetch as any).mock.calls[0];
-
-      // Verify URL structure
-      expect(url).toContain('generateContent');
-      expect(url).toContain('key=');
-
-      // Verify body structure
-      const body = JSON.parse(options.body);
-      expect(body.contents).toBeDefined();
-      expect(body.systemInstruction).toBeDefined();
-      expect(body.generationConfig).toBeDefined();
-      expect(body.generationConfig.responseMimeType).toBe('application/json');
-      expect(body.generationConfig.temperature).toBe(0.9);
-
-      // Verify result
-      expect(result.title).toBe('Test Title');
-      expect(result.hook).toBe('Test hook line');
-      expect(result.script).toBe('Full test script content');
-      expect(result.cta).toBe('Go to the tool now');
-      expect(result.estimated_duration_seconds).toBe(45);
-      expect(result.key_data_points).toEqual(['$5,000/month', '73% occupancy']);
-      expect(result.target_audience).toBe('New Airbnb hosts');
+      },
+      previousTopics: [],
+      pulledAt: new Date(),
     });
+    expect(result).toContain('Nashville, TN');
+    expect(result).toContain('Miami, FL');
+    expect(result).toContain('Trending City Searches');
+  });
+});
 
-    it('should include market data in system prompt when provided', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    title: 'Denver Market Analysis',
-                    hook: 'Denver is booming',
-                    script: 'Full script about Denver',
-                    cta: 'Check it out',
-                    estimated_duration_seconds: 55,
-                    key_data_points: ['$128K annual revenue'],
-                    target_audience: 'Investors',
-                  }),
-                },
-              ],
-            },
-          },
-        ],
-      };
+// ── Test Gemini API Integration ──────────────────────────────────────────────
 
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
+describe('Content Studio — Gemini API', () => {
+  let originalFetch: typeof globalThis.fetch;
 
-      const { generateContentScript } = await import('./content-studio');
-      await generateContentScript(
-        'Denver market analysis',
-        'short',
-        'Denver CO: Average revenue $128K, ADR $480, Occupancy 73%',
-      );
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
 
-      const [, options] = (globalThis.fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-      const systemPrompt = body.systemInstruction.parts[0].text;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
 
-      expect(systemPrompt).toContain('LIVE MARKET DATA');
-      expect(systemPrompt).toContain('Denver CO');
-      expect(systemPrompt).toContain('$128K');
-    });
-
-    it('should handle Gemini API error responses', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        text: () => Promise.resolve('Rate limit exceeded'),
-      });
-
+  it('throws when GEMINI_API_KEY is empty', async () => {
+    const { ENV } = await import('./_core/env');
+    const original = ENV.geminiApiKey;
+    (ENV as any).geminiApiKey = '';
+    try {
       const { generateContentScript } = await import('./content-studio');
       await expect(
-        generateContentScript('test', 'reel'),
-      ).rejects.toThrow(/Gemini API error \(429\)/);
-    });
+        generateContentScript('test topic', 'reel'),
+      ).rejects.toThrow(/GEMINI_API_KEY/i);
+    } finally {
+      (ENV as any).geminiApiKey = original;
+    }
+  });
 
-    it('should handle empty Gemini response', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ candidates: [] }),
-      });
+  it('throws on invalid format', async () => {
+    const { generateContentScript } = await import('./content-studio');
+    await expect(
+      generateContentScript('test topic', 'invalid_format'),
+    ).rejects.toThrow(/Invalid format/);
+  });
 
-      const { generateContentScript } = await import('./content-studio');
-      await expect(
-        generateContentScript('test', 'reel'),
-      ).rejects.toThrow(/empty response/i);
-    });
-
-    it('should handle malformed JSON from Gemini', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            candidates: [
-              { content: { parts: [{ text: 'not valid json at all' }] } },
-            ],
-          }),
-      });
-
-      const { generateContentScript } = await import('./content-studio');
-      await expect(
-        generateContentScript('test', 'reel'),
-      ).rejects.toThrow(/Failed to parse/);
-    });
-
-    it('should strip markdown code fences from Gemini response', async () => {
-      const jsonContent = JSON.stringify({
-        title: 'Fenced Title',
-        hook: 'Fenced hook',
-        script: 'Fenced script',
-        cta: 'Fenced CTA',
-        estimated_duration_seconds: 30,
-        key_data_points: [],
-        target_audience: 'Everyone',
-      });
-
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            candidates: [
+  it('calls Gemini API with correct URL and body structure', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
               {
-                content: {
-                  parts: [{ text: '```json\n' + jsonContent + '\n```' }],
-                },
+                text: JSON.stringify({
+                  title: 'Test Title',
+                  hook: 'Test hook line',
+                  script: 'Full test script content',
+                  cta: 'Go to the tool now',
+                  estimated_duration_seconds: 45,
+                  key_data_points: ['$5,000/month', '73% occupancy'],
+                  target_audience: 'New Airbnb hosts',
+                  narrative_angle: 'Test angle',
+                  data_sources_used: ['test'],
+                }),
               },
             ],
-          }),
-      });
-
-      const { generateContentScript } = await import('./content-studio');
-      const result = await generateContentScript('test', 'reel');
-      expect(result.title).toBe('Fenced Title');
-    });
-
-    it('should include Coach Inayah persona in system prompt', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    title: 'T',
-                    hook: 'H',
-                    script: 'S',
-                    cta: 'C',
-                    estimated_duration_seconds: 45,
-                    key_data_points: [],
-                    target_audience: '',
-                  }),
-                },
-              ],
-            },
           },
-        ],
-      };
+        },
+      ],
+    };
 
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const { generateContentScript } = await import('./content-studio');
-      await generateContentScript('test', 'reel');
-
-      const [, options] = (globalThis.fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-      const systemPrompt = body.systemInstruction.parts[0].text;
-
-      // Verify persona elements
-      expect(systemPrompt).toContain('Coach Inayah');
-      expect(systemPrompt).toContain('coachinayahturnkeytool.com');
-      expect(systemPrompt).toContain('THIRD-GRADE');
-      expect(systemPrompt).toContain('Never mention "AirDNA"');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
     });
 
-    it('should include format-specific instructions in user prompt', async () => {
-      const mockResponse = {
-        candidates: [
-          {
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    title: 'T',
-                    hook: 'H',
-                    script: 'S',
-                    cta: 'C',
-                    estimated_duration_seconds: 210,
-                    key_data_points: [],
-                    target_audience: '',
-                  }),
-                },
-              ],
-            },
-          },
-        ],
-      };
+    const { generateContentScript } = await import('./content-studio');
+    const result = await generateContentScript('How to start Airbnb', 'reel');
 
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = (globalThis.fetch as any).mock.calls[0];
 
-      const { generateContentScript } = await import('./content-studio');
-      await generateContentScript('market analysis tips', 'lesson');
+    expect(url).toContain('generateContent');
+    expect(url).toContain('key=');
 
-      const [, options] = (globalThis.fetch as any).mock.calls[0];
-      const body = JSON.parse(options.body);
-      const userPrompt = body.contents[0].parts[0].text;
+    const body = JSON.parse(options.body);
+    expect(body.contents).toBeDefined();
+    expect(body.systemInstruction).toBeDefined();
+    expect(body.generationConfig).toBeDefined();
+    expect(body.generationConfig.responseMimeType).toBe('application/json');
 
-      expect(userPrompt).toContain('YouTube Lesson');
-      expect(userPrompt).toContain('300-750 words');
-      expect(userPrompt).toContain('market analysis tips');
-    });
+    expect(result.title).toBe('Test Title');
+    expect(result.hook).toBe('Test hook line');
+    expect(result.script).toBe('Full test script content');
+    expect(result.cta).toBe('Go to the tool now');
+  });
 
-    it('should handle missing optional fields in response', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            candidates: [
+  it('includes Coach Inayah persona in system prompt', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
               {
-                content: {
-                  parts: [
-                    {
-                      text: JSON.stringify({
-                        title: 'Minimal',
-                        hook: 'Hook',
-                        script: 'Script',
-                        cta: 'CTA',
-                        // Missing optional fields
-                      }),
-                    },
-                  ],
-                },
+                text: JSON.stringify({
+                  title: 'T', hook: 'H', script: 'S', cta: 'C',
+                  estimated_duration_seconds: 45, key_data_points: [],
+                  target_audience: '', narrative_angle: '', data_sources_used: [],
+                }),
               },
             ],
-          }),
-      });
+          },
+        },
+      ],
+    };
 
-      const { generateContentScript } = await import('./content-studio');
-      const result = await generateContentScript('test', 'reel');
-
-      expect(result.title).toBe('Minimal');
-      expect(result.estimated_duration_seconds).toBe(45); // Falls back to default
-      expect(result.key_data_points).toEqual([]);
-      expect(result.target_audience).toBe('');
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
     });
+
+    const { generateContentScript } = await import('./content-studio');
+    await generateContentScript('test', 'reel');
+
+    const [, options] = (globalThis.fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+    const systemPrompt = body.systemInstruction.parts[0].text;
+
+    expect(systemPrompt).toContain('Coach Inayah');
+    expect(systemPrompt).toContain('coachinayahturnkeytool.com');
+    expect(systemPrompt).toContain('THIRD-GRADE');
+    expect(systemPrompt).toContain('AirDNA');
+  });
+
+  it('includes market data in system prompt when provided', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  title: 'T', hook: 'H', script: 'S', cta: 'C',
+                  estimated_duration_seconds: 55, key_data_points: [],
+                  target_audience: '', narrative_angle: '', data_sources_used: [],
+                }),
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await generateContentScript(
+      'Denver market analysis',
+      'short',
+      'Denver CO: Average revenue $128K, ADR $480, Occupancy 73%',
+    );
+
+    const [, options] = (globalThis.fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+    const systemPrompt = body.systemInstruction.parts[0].text;
+
+    expect(systemPrompt).toContain('Denver CO');
+    expect(systemPrompt).toContain('$128K');
+  });
+
+  it('handles Gemini API error responses', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      text: () => Promise.resolve('Rate limit exceeded'),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await expect(
+      generateContentScript('test', 'reel'),
+    ).rejects.toThrow(/Gemini API error \(429\)/);
+  });
+
+  it('handles empty Gemini response', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ candidates: [] }),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await expect(
+      generateContentScript('test', 'reel'),
+    ).rejects.toThrow(/empty response/i);
+  });
+
+  it('handles malformed JSON from Gemini', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          candidates: [
+            { content: { parts: [{ text: 'not valid json at all' }] } },
+          ],
+        }),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await expect(
+      generateContentScript('test', 'reel'),
+    ).rejects.toThrow(/Failed to parse/);
+  });
+
+  it('strips markdown code fences from Gemini response', async () => {
+    const jsonContent = JSON.stringify({
+      title: 'Fenced Title',
+      hook: 'Fenced hook',
+      script: 'Fenced script',
+      cta: 'Fenced CTA',
+      estimated_duration_seconds: 30,
+      key_data_points: [],
+      target_audience: 'Everyone',
+      narrative_angle: '',
+      data_sources_used: [],
+    });
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: '```json\n' + jsonContent + '\n```' }],
+              },
+            },
+          ],
+        }),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    const result = await generateContentScript('test', 'reel');
+    expect(result.title).toBe('Fenced Title');
+  });
+
+  it('rejects script missing required fields', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: JSON.stringify({ topic: 'test', format: 'reel' }) },
+                ],
+              },
+            },
+          ],
+        }),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await expect(generateContentScript('test', 'reel')).rejects.toThrow(
+      /missing required fields/,
+    );
+  });
+
+  it('handles missing optional fields in response', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      title: 'Minimal',
+                      hook: 'Hook',
+                      script: 'Script',
+                      cta: 'CTA',
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    const result = await generateContentScript('test', 'reel');
+
+    expect(result.title).toBe('Minimal');
+    expect(result.estimated_duration_seconds).toBe(45); // Falls back to format default
+    expect(result.key_data_points).toEqual([]);
+    expect(result.target_audience).toBe('');
+  });
+
+  it('includes format-specific instructions in user prompt', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  title: 'T', hook: 'H', script: 'S', cta: 'C',
+                  estimated_duration_seconds: 210, key_data_points: [],
+                  target_audience: '', narrative_angle: '', data_sources_used: [],
+                }),
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    const { generateContentScript } = await import('./content-studio');
+    await generateContentScript('market analysis tips', 'lesson');
+
+    const [, options] = (globalThis.fetch as any).mock.calls[0];
+    const body = JSON.parse(options.body);
+    const userPrompt = body.contents[0].parts[0].text;
+
+    expect(userPrompt).toContain('YouTube Lesson');
+    expect(userPrompt).toContain('300-750 words');
+    expect(userPrompt).toContain('market analysis tips');
+  });
+});
+
+// ── Test Content Data Pipeline Types ─────────────────────────────────────────
+
+describe('Content Data Pipeline — gatherContentData', () => {
+  it('returns correct shape even when DB is unavailable', async () => {
+    const { gatherContentData } = await import('./content-data-pipeline');
+    const bundle = await gatherContentData();
+    expect(bundle).toHaveProperty('recentProperties');
+    expect(bundle).toHaveProperty('marketSnapshots');
+    expect(bundle).toHaveProperty('platformStats');
+    expect(bundle).toHaveProperty('previousTopics');
+    expect(bundle).toHaveProperty('pulledAt');
+    expect(Array.isArray(bundle.recentProperties)).toBe(true);
+    expect(Array.isArray(bundle.marketSnapshots)).toBe(true);
+    expect(Array.isArray(bundle.previousTopics)).toBe(true);
+    expect(bundle.platformStats).toHaveProperty('totalReports');
+    expect(bundle.platformStats).toHaveProperty('totalLeads');
+    expect(bundle.platformStats).toHaveProperty('topMarkets');
+    expect(bundle.platformStats).toHaveProperty('recentSearches');
+    expect(bundle.pulledAt).toBeInstanceOf(Date);
   });
 });

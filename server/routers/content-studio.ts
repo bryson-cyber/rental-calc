@@ -1,8 +1,14 @@
 /**
- * Content Studio tRPC Router
+ * Content Studio v2 tRPC Router — Autonomous Generation
  *
- * Endpoints for generating, listing, retrieving, and deleting
- * video narration scripts using Coach Inayah's persona.
+ * Endpoints:
+ *   - autoGenerate: One-click autonomous script generation (pulls data + picks topic + generates)
+ *   - generateScript: Manual generation (user picks topic/format)
+ *   - previewData: Preview what data the AI will use (no generation)
+ *   - listScripts: List saved scripts with filters
+ *   - getScript: Get a single script by ID
+ *   - deleteScript: Delete a script by ID
+ *   - getFormats: Get available formats and content pillars
  */
 
 import { z } from 'zod';
@@ -11,13 +17,23 @@ import { publicProcedure, router } from '../_core/trpc';
 import { getDb } from '../db';
 import { contentScripts } from '../../drizzle/schema';
 import {
+  generateAutonomousScript,
   generateContentScript,
   FORMAT_SPECS,
   CONTENT_PILLARS,
   type GeneratedScript,
 } from '../content-studio';
+import {
+  gatherContentData,
+  formatDataForPrompt,
+} from '../content-data-pipeline';
 
 // ── Input schemas ────────────────────────────────────────────────────────────
+
+const autoGenerateInput = z.object({
+  /** Optional: force a specific format instead of letting AI choose */
+  format: z.enum(['reel', 'short', 'lesson', 'deep_dive']).optional(),
+}).optional();
 
 const generateScriptInput = z.object({
   format: z.enum(['reel', 'short', 'lesson', 'deep_dive']),
@@ -44,22 +60,111 @@ const deleteScriptInput = z.object({
 
 export const contentStudioRouter = router({
   /**
-   * Generate a new narration script via Gemini API.
-   * Saves the result to the database and returns it.
+   * ONE-CLICK autonomous generation.
+   * Pulls real data → AI picks topic + format → generates complete script.
+   */
+  autoGenerate: publicProcedure
+    .input(autoGenerateInput)
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user?.id ?? null;
+
+      const { script: result, dataBundle } = await generateAutonomousScript(
+        input?.format,
+      );
+
+      // Persist to database
+      const db = await getDb();
+      let savedId: number | null = null;
+
+      if (db) {
+        const [inserted] = await db.insert(contentScripts).values({
+          userId,
+          format: result.format,
+          topic: result.topic,
+          title: result.title,
+          hook: result.hook,
+          script: result.script,
+          cta: result.cta,
+          estimatedDurationSeconds: result.estimated_duration_seconds,
+          keyDataPoints: result.key_data_points,
+          targetAudience: result.target_audience,
+          marketDataContext: {
+            narrativeAngle: result.narrative_angle,
+            dataSourcesUsed: result.data_sources_used,
+            platformStats: {
+              totalReports: dataBundle.platformStats.totalReports,
+              totalLeads: dataBundle.platformStats.totalLeads,
+              propertiesUsed: dataBundle.recentProperties.length,
+              marketsUsed: dataBundle.marketSnapshots.length,
+            },
+          },
+        });
+        savedId = inserted.insertId;
+      }
+
+      return {
+        id: savedId,
+        format: result.format,
+        topic: result.topic,
+        title: result.title,
+        hook: result.hook,
+        script: result.script,
+        cta: result.cta,
+        estimatedDurationSeconds: result.estimated_duration_seconds,
+        keyDataPoints: result.key_data_points,
+        targetAudience: result.target_audience,
+        narrativeAngle: result.narrative_angle,
+        dataSourcesUsed: result.data_sources_used,
+        dataPreview: {
+          propertiesUsed: dataBundle.recentProperties.length,
+          marketsUsed: dataBundle.marketSnapshots.length,
+          totalReports: dataBundle.platformStats.totalReports,
+          topMarkets: dataBundle.platformStats.topMarkets.slice(0, 3),
+        },
+        createdAt: new Date(),
+      };
+    }),
+
+  /**
+   * Preview what data the AI will use — no generation, just data inspection.
+   */
+  previewData: publicProcedure.query(async () => {
+    const dataBundle = await gatherContentData();
+    const formattedPromptData = formatDataForPrompt(dataBundle);
+
+    return {
+      recentProperties: dataBundle.recentProperties.slice(0, 10).map((p) => ({
+        city: p.city,
+        state: p.state,
+        bedrooms: p.bedrooms,
+        annualRevenue: p.annualRevenue,
+        occupancyRate: p.occupancyRate,
+        averageDailyRate: p.averageDailyRate,
+        verdict: p.verdict,
+        monthlyRent: p.monthlyRent,
+      })),
+      marketSnapshots: dataBundle.marketSnapshots,
+      platformStats: dataBundle.platformStats,
+      previousTopics: dataBundle.previousTopics.slice(0, 10),
+      promptPreview: formattedPromptData,
+      pulledAt: dataBundle.pulledAt,
+    };
+  }),
+
+  /**
+   * Manual generation — user picks topic and format.
    */
   generateScript: publicProcedure
     .input(generateScriptInput)
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.user?.id ?? null;
 
-      // Call Gemini to generate the script
       const result: GeneratedScript = await generateContentScript(
         input.topic,
         input.format,
         input.marketData,
       );
 
-      // Persist to database
       const db = await getDb();
       let savedId: number | null = null;
 
@@ -93,6 +198,8 @@ export const contentStudioRouter = router({
         estimatedDurationSeconds: result.estimated_duration_seconds,
         keyDataPoints: result.key_data_points,
         targetAudience: result.target_audience,
+        narrativeAngle: result.narrative_angle || '',
+        dataSourcesUsed: result.data_sources_used || [],
         createdAt: new Date(),
       };
     }),
@@ -102,16 +209,11 @@ export const contentStudioRouter = router({
    */
   listScripts: publicProcedure
     .input(listScriptsInput)
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return { scripts: [], total: 0, hasMore: false };
 
-      const userId = ctx.user?.id;
-
       const conditions = [];
-      if (userId) {
-        conditions.push(eq(contentScripts.userId, userId));
-      }
       if (input.format) {
         conditions.push(eq(contentScripts.format, input.format));
       }
@@ -165,7 +267,7 @@ export const contentStudioRouter = router({
     }),
 
   /**
-   * Delete a script by ID (owner only).
+   * Delete a script by ID.
    */
   deleteScript: publicProcedure
     .input(deleteScriptInput)
@@ -175,7 +277,6 @@ export const contentStudioRouter = router({
 
       const userId = ctx.user?.id;
 
-      // Verify ownership
       const [script] = await db
         .select()
         .from(contentScripts)
@@ -186,7 +287,6 @@ export const contentStudioRouter = router({
         throw new Error('Script not found');
       }
 
-      // Allow admin or owner to delete
       if (ctx.user?.role !== 'admin' && script.userId !== userId) {
         throw new Error('You can only delete your own scripts');
       }
