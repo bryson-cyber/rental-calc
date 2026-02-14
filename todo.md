@@ -11131,3 +11131,7 @@ Results:
 - [x] Rebuild VoiceBugReportButton: remove all manual form fields, voice-only flow
 - [x] Auto-capture user context: current page/tab, property/market, nav trail tracked via sessionStorage
 - [x] One-tap submit after AI parses voice transcript — auto-pipeline: record → upload → transcribe → parse → submit
+- [x] Build Slack bug triage pipeline: AI-analyze bug reports and post to #bug-triage Slack channel
+- [x] Generate copy-paste-ready Manus prompts in Slack messages for immediate bug fixing
+- [x] Include affected file paths, error context, severity, and fix approach in Slack triage message
+- [x] Add dedicated Slack channel posting for bug reports (#bug-triage C0AFD8WV2KB)
