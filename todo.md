@@ -9852,17 +9852,17 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Report Page Bugs (Feb 9, 2026) - Client Report l6984fncmlf7nhnx
 - [x] Fix Location showing "TX 75082, TX 75082" instead of proper city/state (extract city/state from API response in handleAnalyze + improved address parsing fallback in BuildFullReportButton)
-- [ ] Fix Market showing "Local Market" placeholder instead of actual market name
-- [ ] Fix Active Listings showing "0" - market data not being stored/fetched
-- [ ] Fix "Your Property vs Market Average" showing identical values (copies property data)
+- [x] Fix Market showing "Local Market" placeholder instead of actual market name (replaced with city/state fallback, graceful UI for missing data)
+- [x] Fix Active Listings showing "0" - market data not being stored/fetched (conditional rendering: shows N/A or hides when no real market data)
+- [x] Fix "Your Property vs Market Average" showing identical values (conditional rendering based on hasRealMarketData)
 - [x] Fix Map showing "Map not available" on report page (added lat/lng fallback from report-level fields to reportData.property in SharedReportPage)
 - [x] Fix chart X-axis labels truncated to "202" instead of full month names (removed dangerous slice(0,3) fallback, added YYYYMM format handler)
-- [ ] Fix Competition table showing 4BR comps for 5BR property
-- [ ] Fix Executive Summary echoing bad data ("Local Market", "0 listings")
+- [x] Fix Competition table showing 4BR comps for 5BR property (tagged adjacent-BR comps with 'Similar' label, updated section header)
+- [x] Fix Executive Summary echoing bad data ("Local Market", "0 listings") (replaced all 'Local Market' fallbacks with 'Your Market' across codebase)
 - [x] Fix UI inconsistency: report page white theme vs app dark navy theme (migrated 6 report components from hex colors to oklch palette, changed warm cream bg to white)
-- [ ] Fix competition table missing property images/thumbnails
+- [x] Fix competition table missing property images/thumbnails (added thumbnail + Building icon fallback to comp table rows)
 - [x] Fix chart colors to match app palette (gold/navy/teal) (updated BRAND palette in RevenueCharts + HistoricalCharts to oklch)
-- [ ] Fix footer branding icons unclear
+- [x] Fix footer branding icons unclear (replaced generic Home icon with branded Sparkles gradient icon across all 3 report components)
 
 ## Report Data & UI Fixes (Feb 9, 2026)
 

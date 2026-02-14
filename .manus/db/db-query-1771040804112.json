@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, shareId, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.market_data.name')) as market_name, JSON_EXTRACT(reportData, '$.market_data.listing_count') as listing_count FROM shared_reports WHERE reportType='full' ORDER BY createdAt DESC LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT id, shareId, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.market_data.name')) as market_name, JSON_EXTRACT(reportData, '$.market_data.listing_count') as listing_count FROM shared_reports WHERE reportType='full' ORDER BY createdAt DESC LIMIT 10",
+  "rows": [
+    {
+      "id": "390001",
+      "shareId": "agkjpq6tmlkybe6l",
+      "market_name": "Austin",
+      "listing_count": "14108"
+    },
+    {
+      "id": "360002",
+      "shareId": "ind58rd8mlk8bcab",
+      "market_name": "St. Louis",
+      "listing_count": "3515"
+    },
+    {
+      "id": "360001",
+      "shareId": "khun4jh6mlk6z56t",
+      "market_name": "Atlanta",
+      "listing_count": "14140"
+    },
+    {
+      "id": "330001",
+      "shareId": "hvo61bznmlj8w32g",
+      "market_name": "Albuquerque",
+      "listing_count": "2374"
+    },
+    {
+      "id": "300003",
+      "shareId": "wzc458h9mliwcc74",
+      "market_name": "Cape San Blas/St. George Island",
+      "listing_count": "2174"
+    },
+    {
+      "id": "300002",
+      "shareId": "cczsv06omlivxnku",
+      "market_name": "Dallas",
+      "listing_count": "11731"
+    },
+    {
+      "id": "300001",
+      "shareId": "lmwg07v4mlivx4m1",
+      "market_name": "Dallas",
+      "listing_count": "11731"
+    },
+    {
+      "id": "270001",
+      "shareId": "jx83sd79mliqita1",
+      "market_name": "Houston",
+      "listing_count": "14473"
+    },
+    {
+      "id": "240007",
+      "shareId": "jvkub6xfmlilyld1",
+      "market_name": "Dallas",
+      "listing_count": "11731"
+    },
+    {
+      "id": "240006",
+      "shareId": "55f2qvkcmlikgf7f",
+      "market_name": "Houston",
+      "listing_count": "14473"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tshareId\tmarket_name\tlisting_count\n390001\tagkjpq6tmlkybe6l\tAustin\t14108\n360002\tind58rd8mlk8bcab\tSt. Louis\t3515\n360001\tkhun4jh6mlk6z56t\tAtlanta\t14140\n330001\thvo61bznmlj8w32g\tAlbuquerque\t2374\n300003\twzc458h9mliwcc74\tCape San Blas/St. George Island\t2174\n300002\tcczsv06omlivxnku\tDallas\t11731\n300001\tlmwg07v4mlivx4m1\tDallas\t11731\n270001\tjx83sd79mliqita1\tHouston\t14473\n240007\tjvkub6xfmlilyld1\tDallas\t11731\n240006\t55f2qvkcmlikgf7f\tHouston\t14473\n",
+  "stderr": "",
+  "execution_time_ms": 79
+}

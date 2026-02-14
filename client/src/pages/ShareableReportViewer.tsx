@@ -130,7 +130,7 @@ function transformValidatorToFullReportData(
   if (reportData.rawMarketData) {
     const raw = reportData.rawMarketData;
     market_data = {
-      name: raw.name || 'Local Market',
+      name: raw.name || 'Your Market',
       metrics: {
         occupancy: raw.metrics?.occupancy || 0,
         adr: raw.metrics?.adr || 0,
@@ -267,7 +267,7 @@ function transformRevenueToFullReportData(
   if (reportData.market) {
     const mkt = reportData.market;
     market_data = {
-      name: mkt.name || 'Local Market',
+      name: mkt.name || 'Your Market',
       metrics: {
         occupancy: mkt.metrics?.occupancy || 0,
         adr: mkt.metrics?.adr || 0,

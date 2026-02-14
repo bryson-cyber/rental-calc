@@ -1532,8 +1532,14 @@ export default function ChapterPropertyReport({ data, onBack, clientName, market
             </div>
 
             {/* Footer */}
-            <div className="mt-12 pt-8 border-t border-[oklch(0.15_0_0)]/10 text-center">
-              <p className="text-sm text-[oklch(0.15_0_0)]/50 italic">
+            <div className="mt-12 pt-8 border-t border-[oklch(0.15_0_0)]/10">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center">
+                  <Sparkles className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
+              </div>
+              <p className="text-xs text-[oklch(0.15_0_0)]/50 italic text-center">
                 Powered by Coach Inayah Market Data | Data from Airbnb & Vrbo listings.
                 All data is for the trailing 12-month period. Actual results may vary based on property condition,
                 management quality, and market conditions.

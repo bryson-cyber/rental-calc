@@ -830,7 +830,7 @@ export default function PropertyAnalyzer() {
           },
           
           market: {
-            name: data.submarket_details?.parent_market_name || data.submarket_exploration?.market_name || (data.property_estimate?.property as any)?.market_name || 'Local Market',
+            name: data.submarket_details?.parent_market_name || data.submarket_exploration?.market_name || (data.property_estimate?.property as any)?.market_name || 'Your Market',
             occupancy: data.property_estimate?.estimates?.occupancy_rate || 65,
             adr: data.property_estimate?.estimates?.average_daily_rate || 150,
             active_listings: data.competitors?.length || 0

@@ -1475,7 +1475,7 @@ export default function LeadMagnet() {
         })(),
         // Raw market data for full report (actual market averages, not property metrics)
         rawMarketData: data.market ? {
-          name: data.market.name || 'Local Market',
+          name: data.market.name || myProperty?.city || 'Your Market',
           metrics: {
             occupancy: data.market.metrics?.occupancy || 0,
             adr: data.market.metrics?.adr || 0,
@@ -5791,7 +5791,7 @@ export default function LeadMagnet() {
                       const beforeComma = parts[0]?.trim() || '';
                       const words = beforeComma.split(/\s+/);
                       // Last word before comma is usually the city (after street name)
-                      return words.length > 3 ? words.slice(-1)[0] : 'Local Market';
+                      return words.length > 3 ? words.slice(-1)[0] : (myProperty?.state ? `${myProperty.state} Market` : 'Your Market');
                     })(),
                     metrics: {
                       occupancy: result.metrics.occupancy / 100,

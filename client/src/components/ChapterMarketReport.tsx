@@ -31,7 +31,8 @@ import {
   Snowflake,
   Sun,
   Leaf,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
 
@@ -1133,8 +1134,14 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
 
             {/* Footer */}
-            <div className="mt-12 pt-8 border-t border-[oklch(0.15_0.02_265)]/10 text-center">
-              <p className="text-sm text-[oklch(0.15_0.02_265)]/50 italic">
+            <div className="mt-12 pt-8 border-t border-[oklch(0.15_0.02_265)]/10">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center">
+                  <Sparkles className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
+              </div>
+              <p className="text-xs text-[oklch(0.15_0.02_265)]/50 italic text-center">
                 This report was generated based on data from the Coach Inayah market analysis tool.
                 All data is for the trailing 12-month period ending {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
               </p>

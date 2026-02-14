@@ -74,7 +74,7 @@ export const sharedReportsRouter = router({
               },
               monthlyForecast: reportData.monthly_forecast,
               marketData: reportData.market_data ? {
-                name: reportData.market_data.name || 'Local Market',
+                name: reportData.market_data.name || 'Your Market',
                 occupancy: reportData.market_data.metrics?.occupancy || 0,
                 adr: reportData.market_data.metrics?.adr || 0,
                 revenue: reportData.market_data.metrics?.revenue || 0,
@@ -551,7 +551,7 @@ export const sharedReportsRouter = router({
             },
             monthly_forecast: prop?.monthly_forecast || existingData.monthly_forecast || [],
             market_data: market ? {
-              name: market.name || 'Local Market',
+              name: market.name || 'Your Market',
               listing_count: market.listing_count || market.metrics?.active_listings || 0,
               metrics: {
                 occupancy: market.metrics?.occupancy || occRate,
@@ -568,7 +568,7 @@ export const sharedReportsRouter = router({
                   const stateZip = parts[2]?.split(' ')[0];
                   return stateZip ? `${city}, ${stateZip}` : city;
                 }
-                return 'Local Market';
+                return 'Your Market';
               })(),
               listing_count: 0,
               metrics: {
@@ -941,7 +941,7 @@ export const sharedReportsRouter = router({
             },
             monthly_forecast: prop?.monthly_forecast || [],
             market_data: market ? {
-              name: market.name || 'Local Market',
+              name: market.name || 'Your Market',
               listing_count: market.listing_count || market.metrics?.active_listings || 0,
               metrics: {
                 occupancy: market.metrics?.occupancy || occRate,
@@ -959,7 +959,7 @@ export const sharedReportsRouter = router({
                   const stateZip = parts[2]?.split(' ')[0]; // e.g. "TX"
                   return stateZip ? `${city}, ${stateZip}` : city;
                 }
-                return 'Local Market';
+                return 'Your Market';
               })(),
               listing_count: 0,
               metrics: {

@@ -1037,7 +1037,7 @@ export default function RentalEstimator() {
       comps: comps as any,
       same_bedroom_comps: same_bedroom_comps as any,
       market_data: {
-        name: market?.name || 'Local Market',
+        name: market?.name || 'Your Market',
         metrics: market?.metrics || {
           occupancy: estimates.occupancy_rate,
           adr: estimates.average_daily_rate,

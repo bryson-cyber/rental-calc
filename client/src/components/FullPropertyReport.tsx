@@ -681,8 +681,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   // Defensive fallback for market_data (older reports may not have it)
   // IMPORTANT: Do NOT copy revenue_estimate values into market_data — that causes "Your Property vs Market" to show identical numbers
   const hasRealMarketData = rawMarketData && rawMarketData.listing_count > 0;
-  const market_data = rawMarketData || {
-    name: 'Market Data Unavailable',
+  // Build a sensible market name from property location when market_data is missing
+  const fallbackMarketName = [property.city, property.state].filter(Boolean).join(', ') || 'Market Data Unavailable';
+  const market_data = rawMarketData && (rawMarketData.listing_count > 0 || (rawMarketData.metrics?.revenue > 0)) ? rawMarketData : (rawMarketData ? {
+    ...rawMarketData,
+    name: rawMarketData.name === 'Local Market' ? fallbackMarketName : (rawMarketData.name || fallbackMarketName),
+  } : {
+    name: fallbackMarketName,
     listing_count: 0,
     metrics: {
       occupancy: 0,
@@ -691,7 +696,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       revpar: 0,
       active_listings: 0,
     },
-  };
+  });
 
   // Compute bedroom-specific benchmarks from bedroom_performance data
   const bedroomBenchmark = useMemo(() => {
@@ -1053,11 +1058,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Branding */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-[oklch(0.55_0.14_75)]/15 flex items-center justify-center">
-              <Home className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center shadow-sm">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-sm font-medium text-[oklch(0.55_0.14_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
+              <span className="text-sm font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
               <span className="text-[oklch(0.55_0_0)] text-sm ml-3">Full Property Report</span>
             </div>
           </div>
@@ -1564,12 +1569,18 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">{market_data.name} Market Overview <InfoTip text="A snapshot of the overall short-term rental market in your area. These numbers represent averages across ALL listing types and sizes — your specific property may perform differently based on its size, location, and quality." /></h3>
               <DataSourceBadge type="market" />
             </div>
+            {hasRealMarketData ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="Active Listings" value={market_data.listing_count > 0 ? market_data.listing_count.toLocaleString() : 'N/A'} icon={Building} tooltip="The total number of short-term rental listings currently active on Airbnb and VRBO in this market. More listings means more competition, but also indicates strong traveler demand." />
               <StatCard label="Market Avg. Monthly Revenue" value={`${formatCurrency(market_data.metrics.revenue)}/mo`} icon={DollarSign} tooltip="The average monthly income across ALL listings in this market (all bedroom counts, all property types). Your property may earn more or less depending on its size and quality." />
               <StatCard label="Market Avg. Occupancy" value={formatPercent(market_data.metrics.occupancy)} icon={Percent} tooltip="The average booking rate across all listings in this market. This includes studios, 1-bedrooms, and large homes — so your specific property type may differ." />
               <StatCard label="Market Avg. ADR" value={`${formatCurrency(market_data.metrics.adr)}/night`} icon={DollarSign} tooltip="The average nightly price across all listings in this market. Larger properties with more bedrooms typically command higher nightly rates." />
             </div>
+            ) : (
+            <div className="text-center py-6 text-[oklch(0.55_0_0)]">
+              <p className="font-sans">Market-wide statistics are not available for this report. Property-specific data and comparable properties are shown below.</p>
+            </div>
+            )}
             {market_data.metrics.market_score && (
               <div className="mt-4">
                 <InsightBox type="info">
@@ -3166,10 +3177,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         <div className="mt-12 pt-8 border-t border-[oklch(0.90_0_0)]">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[oklch(0.55_0.14_75)]/15 flex items-center justify-center">
-                <Home className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center shadow-sm">
+                <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium text-[oklch(0.45_0.01_265)]">Coach Inayah's Turnkey Tool</span>
+              <span className="text-sm font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
             </div>
             <Button
               variant="outline"
