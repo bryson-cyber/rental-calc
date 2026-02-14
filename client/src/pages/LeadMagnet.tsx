@@ -1509,6 +1509,22 @@ export default function LeadMagnet() {
       toast.success('Property validated! See your results below.');
       console.log('[handleAnalyze] Result set successfully:', { hasResult: true, activeTab });
       
+      // Update myProperty with city/state/lat/lng from API response if not already set
+      const apiLocation = (data.property as any)?.location;
+      if (apiLocation && (!myProperty?.city || !myProperty?.state)) {
+        setMyProperty({
+          ...myProperty,
+          address: myProperty?.address || address,
+          bedrooms: myProperty?.bedrooms || parseInt(bedrooms),
+          bathrooms: myProperty?.bathrooms || parseFloat(bathrooms),
+          city: myProperty?.city || apiLocation.city || undefined,
+          state: myProperty?.state || apiLocation.state || undefined,
+          zipCode: myProperty?.zipCode || apiLocation.zipcode || undefined,
+          latitude: myProperty?.latitude || apiLocation.latitude || undefined,
+          longitude: myProperty?.longitude || apiLocation.longitude || undefined,
+        });
+      }
+      
       // Track successful estimate
       trackAction('estimate_viewed', {
         address,

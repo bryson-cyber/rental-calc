@@ -425,7 +425,7 @@ From AirDNA Rentalizer endpoint:
 
 ### Phase 3: Step 3 (Validate the Deal) Enhancements
 - [ ] Add monthly forecast chart showing revenue trends
-- [ ] Add comparable properties with images
+- [x] Add comparable properties with images (added thumbnail + Building icon fallback to comp table rows in FullPropertyReport)
 - [ ] Add comparable property ratings
 - [ ] Add RevPAR metric (Revenue Per Available Room)
 - [ ] Add amenities list
@@ -9851,12 +9851,12 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Fix and verify end-to-end (initialized monthlyRent to '2000', full results load for Denver)
 
 ### Report Page Bugs (Feb 9, 2026) - Client Report l6984fncmlf7nhnx
-- [ ] Fix Location showing "TX 75082, TX 75082" instead of proper city/state
+- [x] Fix Location showing "TX 75082, TX 75082" instead of proper city/state (extract city/state from API response in handleAnalyze + improved address parsing fallback in BuildFullReportButton)
 - [ ] Fix Market showing "Local Market" placeholder instead of actual market name
 - [ ] Fix Active Listings showing "0" - market data not being stored/fetched
 - [ ] Fix "Your Property vs Market Average" showing identical values (copies property data)
 - [x] Fix Map showing "Map not available" on report page (added lat/lng fallback from report-level fields to reportData.property in SharedReportPage)
-- [ ] Fix chart X-axis labels truncated to "202" instead of full month names
+- [x] Fix chart X-axis labels truncated to "202" instead of full month names (removed dangerous slice(0,3) fallback, added YYYYMM format handler)
 - [ ] Fix Competition table showing 4BR comps for 5BR property
 - [ ] Fix Executive Summary echoing bad data ("Local Market", "0 listings")
 - [x] Fix UI inconsistency: report page white theme vs app dark navy theme (migrated 6 report components from hex colors to oklch palette, changed warm cream bg to white)

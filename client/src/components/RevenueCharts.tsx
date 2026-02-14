@@ -130,8 +130,17 @@ function parseMonthDate(dateStr: string) {
     return { monthIdx: monthMatch, year: '', shortLabel: monthNames[monthMatch] };
   }
   
+  // Handle YYYYMM format (no dashes) like "202602"
+  if (/^\d{6}$/.test(dateStr)) {
+    const year = dateStr.slice(0, 4);
+    const monthIdx = parseInt(dateStr.slice(4, 6)) - 1;
+    const shortYear = year.slice(2);
+    const shortMonth = monthIdx >= 0 && monthIdx < 12 ? monthNames[monthIdx] : dateStr;
+    return { monthIdx: Math.max(0, monthIdx), year, shortLabel: `${shortMonth} '${shortYear}` };
+  }
+
   // Fallback: return the full string (don't truncate)
-  return { monthIdx: 0, year: '', shortLabel: dateStr.length > 7 ? dateStr.slice(0, 7) : dateStr };
+  return { monthIdx: 0, year: '', shortLabel: dateStr };
 }
 
 // Monthly Forecast Bar Chart — property-specific forecast only

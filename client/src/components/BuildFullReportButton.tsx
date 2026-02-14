@@ -172,21 +172,35 @@ export function BuildFullReportButton({
         property: {
           address,
           city: city || (() => {
-            // Handle addresses like "123 Main St Richardson, TX 75082" (single comma)
-            const parts = address.split(',');
-            if (parts.length >= 3) return parts[1]?.trim();
-            // Single comma: the state part is after comma, city is the last word before comma
-            const beforeComma = parts[0]?.trim() || '';
-            const words = beforeComma.split(/\s+/);
-            // For "2680 Carnation Dr Richardson" -> "Richardson"
-            return words.length > 2 ? words[words.length - 1] : 'Unknown';
+            // Parse city from formatted address like:
+            // "2680 Carnation Dr, Richardson, TX 75082" (3+ parts)
+            // "2680 Carnation Dr Richardson, TX 75082" (2 parts)
+            const parts = address.split(',').map(p => p.trim());
+            if (parts.length >= 3) return parts[parts.length - 2];
+            if (parts.length === 2) {
+              // "2680 Carnation Dr Richardson, TX 75082" -> extract city from before comma
+              const beforeComma = parts[0];
+              // Try to find the city: it's typically the last capitalized word(s) before the comma
+              // Remove the street number and street name prefix
+              const words = beforeComma.split(/\s+/);
+              // Look for the transition from street to city (e.g., "Dr" -> "Richardson")
+              const streetSuffixes = ['st', 'ave', 'blvd', 'dr', 'rd', 'ln', 'ct', 'pl', 'way', 'cir', 'pkwy', 'hwy', 'ter', 'trl'];
+              for (let i = words.length - 1; i >= 1; i--) {
+                if (streetSuffixes.includes(words[i - 1].toLowerCase().replace(/\.$/, ''))) {
+                  return words.slice(i).join(' ');
+                }
+              }
+              // Fallback: last word before comma
+              return words.length > 2 ? words[words.length - 1] : '';
+            }
+            return '';
           })(),
           state: state || (() => {
-            const parts = address.split(',');
-            const lastPart = parts[parts.length - 1]?.trim() || '';
+            const parts = address.split(',').map(p => p.trim());
+            const lastPart = parts[parts.length - 1] || '';
             // Extract state abbreviation (2 uppercase letters)
             const stateMatch = lastPart.match(/\b([A-Z]{2})\b/);
-            return stateMatch ? stateMatch[1] : lastPart.split(' ')[0] || '';
+            return stateMatch ? stateMatch[1] : '';
           })(),
           zipCode: zipCode || address.match(/\d{5}/)?.[0] || '',
           bedrooms,

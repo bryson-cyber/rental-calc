@@ -130,6 +130,7 @@ interface Comparable {
   latitude?: number;
   longitude?: number;
   airbnb_listing_id?: string;
+  is_adjacent_br?: boolean;
 }
 
 interface BedroomPerformance {
@@ -321,13 +322,18 @@ const formatPercent = (value: number) => {
 
 const formatMonth = (dateStr: string) => {
   if (!dateStr) return '';
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Handle YYYY-MM or YYYY-MM-DD format
   const parts = dateStr.split(/[-/]/);
-  if (parts.length >= 2) {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  if (parts.length >= 2 && parts[0].length === 4) {
     const monthIdx = parseInt(parts[1]) - 1;
     return monthNames[monthIdx] || dateStr;
   }
-  return dateStr.slice(0, 3);
+  // Handle month name strings like "January" or "Jan"
+  const monthMatch = monthNames.findIndex(m => dateStr.toLowerCase().startsWith(m.toLowerCase()));
+  if (monthMatch >= 0) return monthNames[monthMatch];
+  // Fallback: return full string (never truncate numeric strings)
+  return dateStr;
 };
 
 /** Calculate straight-line distance between two coordinates in meters (Haversine formula) */
@@ -1854,7 +1860,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
         {/* SECTION 4: COMPETITION ANALYSIS */}
         {/* ---------------------------------------------------------- */}
         <section id="section-competition" className="scroll-mt-24 mb-16">
-          <SectionHeader icon={Target} title="Competition Analysis" subtitle={`${displayComps.length} comparable ${property.bedrooms}-bedroom properties ranked by revenue`} tooltip="These are real Airbnb/VRBO listings near your property with the same number of bedrooms. They show what your direct competitors are earning, charging, and how guests rate them. Use this to see where you'd stack up." />
+          <SectionHeader icon={Target} title="Competition Analysis" subtitle={`${displayComps.length} comparable properties ranked by revenue${displayComps.some(c => c.is_adjacent_br || c.bedrooms !== property.bedrooms) ? ` (includes similar ${property.bedrooms - 1}-${property.bedrooms + 1} BR)` : ` (${property.bedrooms}-bedroom)`}`} tooltip="These are real Airbnb/VRBO listings near your property. Same-bedroom comps are prioritized, but when fewer than 10 are available, similar properties with adjacent bedroom counts are included and labeled 'Similar'." />
 
           {/* Comp Selection Controls */}
           {displayComps.length > 0 && (
@@ -1995,12 +2001,27 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       <td className={`p-4 font-medium ${isHighlighted ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.55_0_0)]'}`}>{revenueRank}</td>
                       <td className="p-4">
                         <div className="flex items-start gap-3">
+                          {comp.image_url ? (
+                            <img
+                              src={comp.image_url}
+                              alt={comp.title}
+                              className="w-14 h-10 rounded-lg object-cover flex-shrink-0 bg-[oklch(0.95_0_0)]"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div className="w-14 h-10 rounded-lg bg-[oklch(0.95_0_0)] flex items-center justify-center flex-shrink-0">
+                              <Building className="w-5 h-4 text-[oklch(0.7_0_0)]" />
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="font-medium text-[oklch(0.15_0_0)] truncate max-w-[200px]">
                               {comp.title}
                             </p>
                             <p className="text-xs text-[oklch(0.55_0_0)] mt-0.5">
                               {comp.bedrooms}BR / {comp.bathrooms}BA
+                              {comp.is_adjacent_br || comp.bedrooms !== property.bedrooms ? (
+                                <span className="ml-1 px-1.5 py-0.5 bg-[oklch(0.85_0.05_250)] text-[oklch(0.4_0.1_250)] rounded text-[10px] font-medium">Similar</span>
+                              ) : null}
                               {(() => {
                                 const d = getCompDistanceMiles(comp, property?.latitude || 0, property?.longitude || 0);
                                 return d !== null ? ` · ${d.toFixed(1)} mi away` : '';

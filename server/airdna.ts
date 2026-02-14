@@ -207,6 +207,7 @@ export interface ListingData {
   days_available?: number;
   days_reserved?: number;
   distance_meters?: number;
+  is_adjacent_br?: boolean; // True if this comp is from an adjacent bedroom count (BR-1 or BR+1)
 }
 
 export interface MarketInsights {
@@ -3392,7 +3393,7 @@ export async function getComprehensivePropertyReport(
   // Combine same-BR radius comps with adjacent-BR comps (tagged)
   const allRadiusComps = [
     ...radiusComps,
-    ...adjacentBrComps.map(c => ({ ...c, title: c.title })), // Keep adjacent BR comps identifiable
+    ...adjacentBrComps.map(c => ({ ...c, is_adjacent_br: true })), // Tag adjacent BR comps so UI can label them
   ];
   
   const additionalRadiusComps = allRadiusComps.filter(c => {
