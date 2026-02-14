@@ -11293,3 +11293,18 @@ Results:
 - [x] Show drill-down slide-over panel with all properties the user analyzed
 - [x] Include property address, analysis date, report type, verdict badge, and revenue estimate
 - [x] Add back navigation from drill-down to user list (close button on slide-over)
+
+## Global Translation - Make Everything Translatable (Feb 14, 2026)
+- [x] Build a global DOM-level auto-translation layer that intercepts all visible text (GlobalAutoTranslator with MutationObserver)
+- [x] Auto-translate when user selects a non-English language (no manual "translate" button per page)
+- [x] Cover homepage hero, CTAs, form labels, placeholders, tooltips
+- [x] Cover navigation items, footer, auth buttons, notification bell text
+- [x] Cover all report content (property, market, full reports)
+- [x] Cover admin dashboard (tabs, labels, data descriptions)
+- [x] Cover error messages, loading states, empty states, toast messages
+- [x] Cover modal dialogs, confirmation prompts, share buttons
+- [x] Cover interactive tour text, onboarding wizard
+- [x] Preserve numbers, currency values, dates, and proper nouns during translation
+- [x] Handle dynamically loaded content (lazy-loaded components, API responses) via MutationObserver
+- [x] Make language selector more prominent and accessible from every page (globe icon in header)
+- [x] Remove per-page TranslatePageBanner in favor of global auto-translation

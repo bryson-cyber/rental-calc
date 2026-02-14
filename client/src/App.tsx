@@ -7,6 +7,7 @@ import { PropertyProvider } from "./contexts/PropertyContext";
 import { TrustBanner } from "./components/TrustBanner";
 import { MockModeBadge } from "./components/MockModeBadge";
 import { PageTracker } from "./components/PageTracker";
+import GlobalAutoTranslator from "./components/GlobalAutoTranslator";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -170,6 +171,7 @@ function App() {
             <PageTracker />
             <TrustBanner />
             <MockModeBadge />
+            <GlobalAutoTranslator />
           </TooltipProvider>
         </PropertyProvider>
       </ThemeProvider>

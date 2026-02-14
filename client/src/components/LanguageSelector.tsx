@@ -64,7 +64,7 @@ export default function LanguageSelector() {
   };
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative" data-language-selector="true">
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
