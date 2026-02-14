@@ -11104,3 +11104,11 @@ Results:
 - [x] Add Send to Slack button to shared report viewer (FullPropertyReport) for admin users
 - [x] Verify button appears on Full Property Report, BuildFullReportButton dialog, and shared viewer
 - [x] Test and save checkpoint (1126 tests passing, 0 TS errors)
+
+## Remove Slack Slash Command (Feb 13, 2026)
+- [x] Remove /api/slack/analyze endpoint from server/_core/index.ts
+- [x] Remove server/slack-integration.ts (webhook handler, parseSlackInput, postToSlack)
+- [x] Remove SLACK_WEBHOOK_URL from env.ts
+- [x] Remove webhook-related tests from server/__tests__/slack-integration.test.ts
+- [x] Update docs to reflect simplified Slack integration (admin Send to Slack only)
+- [x] Verify all remaining tests pass (1100 tests passing)

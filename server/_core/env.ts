@@ -16,5 +16,4 @@ export const ENV = {
   simpletextingApiKey: process.env.SIMPLETEXTING_API_KEY ?? "",
   zapierWebhookUrl: process.env.ZAPIER_WEBHOOK_URL ?? "",
   devMockApi: process.env.DEV_MOCK_API === "true",
-  slackWebhookUrl: process.env.SLACK_WEBHOOK_URL ?? "",
 };
