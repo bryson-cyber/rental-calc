@@ -206,7 +206,7 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis 
             dataKey="shortMonth" 
@@ -297,7 +297,7 @@ export function RevenuePercentileChart({ data, yourRevenue, height = 200 }: Reve
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} horizontal={false} />
           <XAxis 
             type="number"
@@ -353,7 +353,7 @@ export function BedroomPerformanceChart({ data, highlightBedroom, height = 250 }
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis 
             dataKey="name" 
@@ -776,7 +776,7 @@ export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+        <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={BRAND.gridLine} />
           <XAxis
             dataKey="shortMonth"

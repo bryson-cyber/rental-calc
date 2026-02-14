@@ -11187,3 +11187,21 @@ Results:
 - [x] Fix: Redesign match cards for better readability and usability
 - [x] Verified: sourceUrl, imageUrl, real address all flow through analyzePropertyForArbitrage into DB
 - [ ] Note: Existing DB matches are from old synthetic scans — next scan will produce real addresses
+
+## Report Page Mobile Responsiveness Fixes (Feb 14, 2026)
+- [x] BUG: Report page fonts/text overflowing off screen on mobile
+- [x] BUG: Report page charts overflowing off screen on mobile
+- [x] Fix: Hero stat cards → grid-cols-1 base, min-[420px]:grid-cols-2, md:grid-cols-4
+- [x] Fix: Title text → text-xl sm:text-2xl md:text-3xl lg:text-4xl
+- [x] Fix: Section headers → text-lg sm:text-xl
+- [x] Fix: StatCard values → text-base sm:text-2xl with break-words
+- [x] Fix: DataRow → responsive padding and text sizes
+- [x] Fix: Revenue key metrics → responsive padding p-3 sm:p-4
+- [x] Fix: Competition table → reduced cell padding p-2 sm:p-4
+- [x] Fix: Stress test table → reduced cell padding p-1.5 sm:p-3
+- [x] Fix: Chart margins → reduced left/right margins in RevenueCharts
+- [x] Fix: Section nav → smaller text/padding on mobile, icons hidden
+- [x] Fix: Main content padding → px-3 sm:px-4
+- [x] Fix: Card padding → p-4 sm:p-6 across all sections
+- [x] Fix: Added overflow-x-hidden to outermost container
+- [x] Test: Verified in 375px iframe — hero cards 1-col, text wraps, no overflow

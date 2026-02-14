@@ -452,7 +452,7 @@ function SectionHeader({ icon: Icon, title, subtitle, tooltip }: { icon: React.E
         <div className="w-10 h-10 rounded-xl bg-[oklch(0.55_0.14_75)]/15 flex items-center justify-center">
           <Icon className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-sans font-bold text-[oklch(0.15_0_0)]">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-sans font-bold text-[oklch(0.15_0_0)]">
           {title}
           {tooltip && <InfoTip text={tooltip} />}
         </h2>
@@ -466,10 +466,10 @@ function StatCard({ label, value, sublabel, icon: Icon, highlight, tooltip }: {
   label: string; value: string; sublabel?: string; icon?: React.ElementType; highlight?: boolean; tooltip?: string;
 }) {
   return (
-    <div className={`rounded-xl p-5 ${highlight ? 'bg-[oklch(0.55_0.14_75)]/10 border border-[oklch(0.55_0.14_75)]/30' : 'bg-white border border-[oklch(0.90_0_0)]'}`}>
-      {Icon && <Icon className={`w-5 h-5 mb-2 ${highlight ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.55_0_0)]'}`} />}
-      <p className={`text-2xl font-sans font-bold ${highlight ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.15_0_0)]'}`}>{value}</p>
-      <p className="text-sm text-[oklch(0.45_0.01_265)] mt-1">
+    <div className={`rounded-xl p-3 sm:p-5 ${highlight ? 'bg-[oklch(0.55_0.14_75)]/10 border border-[oklch(0.55_0.14_75)]/30' : 'bg-white border border-[oklch(0.90_0_0)]'}`}>
+      {Icon && <Icon className={`w-4 sm:w-5 h-4 sm:h-5 mb-2 ${highlight ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.55_0_0)]'}`} />}
+      <p className={`text-base sm:text-2xl font-sans font-bold break-words ${highlight ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.15_0_0)]'}`}>{value}</p>
+      <p className="text-xs sm:text-sm text-[oklch(0.45_0.01_265)] mt-1">
         {label}
         {tooltip && <InfoTip text={tooltip} />}
       </p>
@@ -480,12 +480,12 @@ function StatCard({ label, value, sublabel, icon: Icon, highlight, tooltip }: {
 
 function DataRow({ label, value, highlight, tooltip }: { label: string; value: string | React.ReactNode; highlight?: boolean; tooltip?: string }) {
   return (
-    <div className={`flex justify-between items-center py-3 px-4 ${highlight ? 'bg-[oklch(0.55_0.14_75)]/5' : ''} border-b border-[oklch(0.90_0_0)] last:border-0`}>
-      <span className="text-[oklch(0.45_0.01_265)] text-sm">
+    <div className={`flex justify-between items-center py-2.5 sm:py-3 px-3 sm:px-4 gap-2 ${highlight ? 'bg-[oklch(0.55_0.14_75)]/5' : ''} border-b border-[oklch(0.90_0_0)] last:border-0`}>
+      <span className="text-[oklch(0.45_0.01_265)] text-xs sm:text-sm flex-shrink-0">
         {label}
         {tooltip && <InfoTip text={tooltip} />}
       </span>
-      <span className={`font-medium ${highlight ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.15_0_0)]'}`}>{value}</span>
+      <span className={`font-medium text-right text-xs sm:text-sm ${highlight ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.15_0_0)]'}`}>{value}</span>
     </div>
   );
 }
@@ -547,20 +547,20 @@ function SectionNav({ activeSection, onSectionClick, hasRental, hasPurchase, has
   });
 
   return (
-    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[oklch(0.90_0_0)] py-3">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[oklch(0.90_0_0)] py-2 sm:py-3">
+      <div className="max-w-5xl mx-auto px-2 sm:px-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {visibleSections.map((section) => (
             <button
               key={section.id}
               onClick={() => onSectionClick(section.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 ${
                 activeSection === section.id
                   ? 'bg-[oklch(0.55_0.14_75)] text-white shadow-sm'
                   : 'bg-[oklch(0.95_0_0)] text-[oklch(0.45_0.01_265)] hover:bg-[oklch(0.90_0_0)] hover:text-[oklch(0.15_0_0)]'
               }`}
             >
-              <section.icon className="w-4 h-4" />
+              <section.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 hidden sm:block" />
               {section.label}
             </button>
           ))}
@@ -1001,22 +1001,22 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
   }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {/* ============================================================ */}
       {/* HEADER / TITLE PAGE — LIGHT THEME */}
       {/* ============================================================ */}
       <div className="bg-white border-b border-[oklch(0.90_0_0)]">
-        <div className="max-w-5xl mx-auto px-4 py-12">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
           {/* Top Bar */}
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-6 sm:mb-10 gap-2">
             {onBack && (
-              <button onClick={onBack} className="inline-flex items-center gap-2 text-[oklch(0.45_0.01_265)] hover:text-[oklch(0.15_0_0)] transition-colors text-sm">
+              <button onClick={onBack} className="inline-flex items-center gap-2 text-[oklch(0.45_0.01_265)] hover:text-[oklch(0.15_0_0)] transition-colors text-sm flex-shrink-0">
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                <span className="hidden sm:inline">Back</span>
               </button>
             )}
             {!onBack && <div />}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
               {isAdmin && shareId && !isSharedView && (
                 <>
                   <Button
@@ -1057,24 +1057,24 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           </div>
 
           {/* Branding */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center shadow-sm">
-              <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-gradient-to-br from-[oklch(0.55_0.14_75)] to-[oklch(0.45_0.12_75)] flex items-center justify-center shadow-sm flex-shrink-0">
+              <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
             </div>
-            <div>
-              <span className="text-sm font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
-              <span className="text-[oklch(0.55_0_0)] text-sm ml-3">Full Property Report</span>
+            <div className="min-w-0">
+              <span className="text-xs sm:text-sm font-semibold text-[oklch(0.35_0.08_75)] uppercase tracking-wider">Coach Inayah's Turnkey Tool</span>
+              <span className="text-[oklch(0.55_0_0)] text-xs sm:text-sm ml-2 sm:ml-3">Full Property Report</span>
             </div>
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-sans font-bold text-[oklch(0.15_0_0)] mb-4 leading-tight">
+          <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-sans font-bold text-[oklch(0.15_0_0)] mb-3 sm:mb-4 leading-tight">
             Comprehensive Investment Analysis
           </h1>
-          <p className="text-[oklch(0.45_0.01_265)] text-lg mb-2">
+          <p className="text-[oklch(0.45_0.01_265)] text-sm sm:text-lg mb-2 break-words">
             {property.address}
           </p>
-          <div className="flex flex-wrap gap-4 text-sm text-[oklch(0.55_0_0)] mb-8">
+          <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-[oklch(0.55_0_0)] mb-8">
             <span>{property.bedrooms} BR / {property.bathrooms} BA / Sleeps {property.accommodates}</span>
             <span>·</span>
             <span>Report generated {reportDate}</span>
@@ -1087,50 +1087,50 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           </div>
 
           {/* Hero Stats — light cards with gold accent */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-[oklch(0.55_0.14_75)]/8 rounded-xl p-4 border border-[oklch(0.55_0.14_75)]/20">
-              <p className="text-[oklch(0.55_0_0)] text-xs uppercase tracking-wider mb-1">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="bg-[oklch(0.55_0.14_75)]/8 rounded-xl p-2.5 sm:p-4 border border-[oklch(0.55_0.14_75)]/20 min-w-0">
+              <p className="text-[oklch(0.55_0_0)] text-[10px] sm:text-xs uppercase tracking-wider mb-1 leading-tight">
                 Est. Annual Revenue
                 <InfoTip text="The total projected income this property could earn in one year on Airbnb/VRBO, based on comparable listings in the area, average nightly rate, and expected occupancy." />
               </p>
-              <p className="text-2xl font-sans font-bold text-[oklch(0.55_0.14_75)]">
+              <p className="text-sm sm:text-2xl font-sans font-bold text-[oklch(0.55_0.14_75)] break-words">
                 {formatCurrency(revenue_estimate.annual)}
-                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)] align-middle">/year</span>
+                <span className="text-[8px] sm:text-[10px] font-sans font-semibold uppercase tracking-wide ml-0.5 sm:ml-1.5 px-1 sm:px-1.5 py-0.5 rounded bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)] align-middle">/year</span>
               </p>
               {revenue_estimate.range && (
-                <p className="text-xs text-[oklch(0.55_0_0)] mt-1">
+                <p className="text-[10px] sm:text-xs text-[oklch(0.55_0_0)] mt-1">
                   {formatCurrency(revenue_estimate.range.low)} – {formatCurrency(revenue_estimate.range.high)}
                 </p>
               )}
               <DataSourceBadge type="property" />
             </div>
-            <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0_0)]">
-              <p className="text-[oklch(0.55_0_0)] text-xs uppercase tracking-wider mb-1">
+            <div className="bg-white rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0_0)] min-w-0">
+              <p className="text-[oklch(0.55_0_0)] text-[10px] sm:text-xs uppercase tracking-wider mb-1 leading-tight">
                 Avg. Nightly Rate
                 <InfoTip text="Also called ADR (Average Daily Rate). This is the average price per night guests would pay to stay at your property. It changes by season — higher in peak months, lower in slow months." />
               </p>
-              <p className="text-2xl font-sans font-bold text-[oklch(0.15_0_0)]">
+              <p className="text-sm sm:text-2xl font-sans font-bold text-[oklch(0.15_0_0)] break-words">
                 {formatCurrency(revenue_estimate.nightly)}
-                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)] align-middle">/night</span>
+                <span className="text-[8px] sm:text-[10px] font-sans font-semibold uppercase tracking-wide ml-0.5 sm:ml-1.5 px-1 sm:px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)] align-middle">/night</span>
               </p>
               <DataSourceBadge type="property" />
             </div>
-            <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0_0)]">
-              <p className="text-[oklch(0.55_0_0)] text-xs uppercase tracking-wider mb-1">
+            <div className="bg-white rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0_0)] min-w-0">
+              <p className="text-[oklch(0.55_0_0)] text-[10px] sm:text-xs uppercase tracking-wider mb-1 leading-tight">
                 Occupancy Rate
                 <InfoTip text="The percentage of nights per year the property is expected to be booked. For example, 65% means roughly 237 out of 365 nights are booked. Higher occupancy = more consistent income." />
               </p>
-              <p className="text-2xl font-sans font-bold text-[oklch(0.15_0_0)]">{formatPercent(revenue_estimate.occupancy)}</p>
+              <p className="text-sm sm:text-2xl font-sans font-bold text-[oklch(0.15_0_0)]">{formatPercent(revenue_estimate.occupancy)}</p>
               <DataSourceBadge type="property" />
             </div>
-            <div className="bg-white rounded-xl p-4 border border-[oklch(0.90_0_0)]">
-              <p className="text-[oklch(0.55_0_0)] text-xs uppercase tracking-wider mb-1">
+            <div className="bg-white rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0_0)] min-w-0">
+              <p className="text-[oklch(0.55_0_0)] text-[10px] sm:text-xs uppercase tracking-wider mb-1 leading-tight">
                 Monthly Average
                 <InfoTip text="Your estimated annual revenue divided by 12. This is a simple average — actual monthly income will vary by season (some months higher, some lower)." />
               </p>
-              <p className="text-2xl font-sans font-bold text-[oklch(0.15_0_0)]">
+              <p className="text-sm sm:text-2xl font-sans font-bold text-[oklch(0.15_0_0)] break-words">
                 {formatCurrency(revenue_estimate.monthly)}
-                <span className="text-[10px] font-sans font-semibold uppercase tracking-wide ml-1.5 px-1.5 py-0.5 rounded bg-[oklch(0.55_0.18_255)]/10 text-[oklch(0.55_0.18_255)] align-middle">/month</span>
+                <span className="text-[8px] sm:text-[10px] font-sans font-semibold uppercase tracking-wide ml-0.5 sm:ml-1.5 px-1 sm:px-1.5 py-0.5 rounded bg-[oklch(0.55_0.18_255)]/10 text-[oklch(0.55_0.18_255)] align-middle">/month</span>
               </p>
               <DataSourceBadge type="property" />
             </div>
@@ -1154,7 +1154,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
       {/* ============================================================ */}
       {/* MAIN CONTENT */}
       {/* ============================================================ */}
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
 
         {/* ---------------------------------------------------------- */}
         {/* SECTION 1: PROPERTY OVERVIEW */}
@@ -1312,7 +1312,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   </TooltipContent>
                 </Tooltip>
                 <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
+                  <span className="text-2xl sm:text-4xl md:text-5xl font-bold text-[oklch(0.25_0_0)] tracking-tight">
                     {formatCurrency(revenue_estimate.annual)}
                   </span>
                   <span className="text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded bg-[oklch(0.55_0.14_75)]/10 text-[oklch(0.45_0.14_75)]">/year</span>
@@ -1335,59 +1335,59 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
               
               {/* Key Metrics Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0.01_265)] min-w-0 overflow-hidden">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Monthly Revenue</p>
+                      <p className="text-[oklch(0.50_0_0)] text-[10px] sm:text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Monthly Revenue</p>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
                       <p className="text-sm">What you'll earn each month from Airbnb bookings before any expenses</p>
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.monthly)}</p>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">/month</span>
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.monthly)}</p>
+                    <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide px-1 sm:px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">/month</span>
                   </div>
                 </div>
-                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0.01_265)] min-w-0 overflow-hidden">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Nightly Rate (ADR)</p>
+                      <p className="text-[oklch(0.50_0_0)] text-[10px] sm:text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Nightly Rate (ADR)</p>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
                       <p className="text-sm">Average Daily Rate — the average price per night guests pay. Higher in peak season, lower in off-season.</p>
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.nightly)}</p>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)]">/night</span>
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatCurrency(revenue_estimate.nightly)}</p>
+                    <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide px-1 sm:px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)]">/night</span>
                   </div>
                 </div>
-                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0.01_265)] min-w-0 overflow-hidden">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Occupancy Rate</p>
+                      <p className="text-[oklch(0.50_0_0)] text-[10px] sm:text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">Occupancy Rate</p>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
                       <p className="text-sm">How often the property is booked. {formatPercent(revenue_estimate.occupancy)} means about {Math.round((revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy) * 365)} out of 365 nights have paying guests.</p>
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatPercent(revenue_estimate.occupancy)}</p>
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">{formatPercent(revenue_estimate.occupancy)}</p>
                   </div>
                 </div>
-                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-4 border border-[oklch(0.90_0.01_265)]">
+                <div className="bg-[oklch(0.95_0.01_265)] rounded-xl p-2.5 sm:p-4 border border-[oklch(0.90_0.01_265)] min-w-0 overflow-hidden">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <p className="text-[oklch(0.50_0_0)] text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">RevPAR</p>
+                      <p className="text-[oklch(0.50_0_0)] text-[10px] sm:text-xs font-medium mb-1 cursor-help border-b border-dotted border-[oklch(0.60_0_0)] inline-block">RevPAR</p>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs p-3 bg-white text-[oklch(0.30_0_0)] shadow-lg border border-[oklch(0.90_0_0)]">
                       <p className="text-sm">Revenue Per Available Room — combines nightly rate and occupancy into one number. Higher RevPAR = better overall performance.</p>
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex items-baseline gap-2">
-                    <p className="text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">
+                    <p className="text-base sm:text-lg md:text-xl font-bold text-[oklch(0.25_0_0)]">
                       {formatCurrency(revenue_estimate.nightly * (revenue_estimate.occupancy > 1 ? revenue_estimate.occupancy / 100 : revenue_estimate.occupancy))}
                     </p>
                     <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[oklch(0.45_0.01_265)]/10 text-[oklch(0.45_0.01_265)]">/night</span>
@@ -1451,7 +1451,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             const isProfit = netMonthly >= 0;
 
             return (
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
                 <div className="flex items-center gap-2 mb-5">
                   <DollarSign className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
                   <h3 className="text-lg font-semibold text-[oklch(0.15_0_0)]">The Bottom Line</h3>
@@ -1461,71 +1461,71 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 {/* Flow: Revenue → Cost → Expenses → Profit */}
                 <div className="space-y-3">
                   {/* Revenue */}
-                  <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-4 py-3 border border-[oklch(0.90_0_0)]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[oklch(0.55_0.14_75)]/15 flex items-center justify-center">
+                  <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-3 sm:px-4 py-3 border border-[oklch(0.90_0_0)] gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-[oklch(0.55_0.14_75)]/15 flex items-center justify-center flex-shrink-0">
                         <TrendingUp className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-[oklch(0.15_0_0)]">Monthly Revenue</p>
-                        <p className="text-[10px] text-[oklch(0.45_0.01_265)]">What this property earns from guests</p>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-[oklch(0.15_0_0)] truncate">Monthly Revenue</p>
+                        <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">What this property earns from guests</p>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-[oklch(0.55_0.14_75)]">{formatCurrency(monthlyRev)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)]">/mo</span></p>
+                    <p className="text-base sm:text-lg font-bold text-[oklch(0.55_0.14_75)] flex-shrink-0">{formatCurrency(monthlyRev)}<span className="text-[9px] sm:text-[10px] font-semibold ml-1 px-1 sm:px-1.5 py-0.5 rounded bg-[oklch(0.55_0.14_75)]/15 text-[oklch(0.55_0.14_75)]">/mo</span></p>
                   </div>
 
                   {/* Fixed Cost (Rent or Mortgage) */}
                   {fixedCostLabel && fixedCostMonthly > 0 && (
-                    <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-4 py-3 border border-[oklch(0.90_0_0)]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                    <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-3 sm:px-4 py-3 border border-[oklch(0.90_0_0)] gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
                           <Home className="w-4 h-4 text-red-500" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-[oklch(0.15_0_0)]">{fixedCostLabel}</p>
-                          <p className="text-[10px] text-[oklch(0.45_0.01_265)]">{hasPurchase ? 'Your monthly mortgage payment' : 'What you pay the landlord'}</p>
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-[oklch(0.15_0_0)] truncate">{fixedCostLabel}</p>
+                          <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">{hasPurchase ? 'Your monthly mortgage payment' : 'What you pay the landlord'}</p>
                         </div>
                       </div>
-                      <p className="text-lg font-bold text-red-500">-{formatCurrency(fixedCostMonthly)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-red-50 text-red-500">/mo</span></p>
+                      <p className="text-base sm:text-lg font-bold text-red-500 flex-shrink-0">-{formatCurrency(fixedCostMonthly)}<span className="text-[9px] sm:text-[10px] font-semibold ml-1 px-1 sm:px-1.5 py-0.5 rounded bg-red-50 text-red-500">/mo</span></p>
                     </div>
                   )}
 
                   {/* Expenses */}
-                  <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-4 py-3 border border-[oklch(0.90_0_0)]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <div className="flex items-center justify-between bg-[oklch(0.97_0_0)] rounded-xl px-3 sm:px-4 py-3 border border-[oklch(0.90_0_0)] gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
                         <Percent className="w-4 h-4 text-amber-600" />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-[oklch(0.15_0_0)]">Operating Expenses</p>
-                        <p className="text-[10px] text-[oklch(0.45_0.01_265)]">Cleaning, supplies, insurance, platform fees, etc.</p>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-[oklch(0.15_0_0)] truncate">Operating Expenses</p>
+                        <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">Cleaning, supplies, insurance, platform fees, etc.</p>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-amber-600">-{formatCurrency(expenseMonthly)}<span className="text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">/mo</span></p>
+                    <p className="text-base sm:text-lg font-bold text-amber-600 flex-shrink-0">-{formatCurrency(expenseMonthly)}<span className="text-[9px] sm:text-[10px] font-semibold ml-1 px-1 sm:px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">/mo</span></p>
                   </div>
 
                   {/* Divider */}
                   <div className="border-t border-dashed border-[oklch(0.90_0_0)] my-1" />
 
                   {/* Net Profit */}
-                  <div className={`flex items-center justify-between rounded-xl px-4 py-4 border ${isProfit ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isProfit ? 'bg-green-100' : 'bg-red-100'}`}>
-                        {isProfit ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
+                  <div className={`flex items-center justify-between rounded-xl px-3 sm:px-4 py-3 sm:py-4 border gap-2 ${isProfit ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className={`w-8 sm:w-10 h-8 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isProfit ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {isProfit ? <TrendingUp className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" /> : <TrendingDown className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />}
                       </div>
-                      <div>
-                        <p className="text-base font-semibold text-[oklch(0.15_0_0)]">Net Profit</p>
-                        <p className="text-[10px] text-[oklch(0.45_0.01_265)]">What you keep after all costs</p>
+                      <div className="min-w-0">
+                        <p className="text-sm sm:text-base font-semibold text-[oklch(0.15_0_0)]">Net Profit</p>
+                        <p className="text-[10px] text-[oklch(0.45_0.01_265)] hidden sm:block">What you keep after all costs</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-2xl font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-lg sm:text-2xl font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
                         {isProfit ? '+' : ''}{formatCurrency(netMonthly)}
-                        <span className={`text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>/mo</span>
+                        <span className={`text-[9px] sm:text-[10px] font-semibold ml-1 px-1 sm:px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>/mo</span>
                       </p>
-                      <p className={`text-sm font-semibold mt-1 ${isProfit ? 'text-green-600/70' : 'text-red-600/70'}`}>
+                      <p className={`text-xs sm:text-sm font-semibold mt-1 ${isProfit ? 'text-green-600/70' : 'text-red-600/70'}`}>
                         {isProfit ? '+' : ''}{formatCurrency(netAnnual)}
-                        <span className={`text-[10px] font-semibold ml-1 px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>/yr</span>
+                        <span className={`text-[9px] sm:text-[10px] font-semibold ml-1 px-1 sm:px-1.5 py-0.5 rounded ${isProfit ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>/yr</span>
                       </p>
                     </div>
                   </div>
@@ -1535,9 +1535,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           })()}
 
           {/* Revenue Range */}
-          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
             <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Annual Revenue Estimate <InfoTip text="Three scenarios for your annual income: Conservative (worst case), Projected (most likely), and Optimistic (best case). The range gives you a realistic picture of what to expect. Most hosts should plan their finances around the Projected number." /></h3>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               <StatCard
                 label="Conservative"
                 value={`${formatCurrency(revenue_estimate.range?.low || revenue_estimate.annual * 0.85)}/yr`}
@@ -1562,7 +1562,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               <StatCard label="Monthly Average" value={`${formatCurrency(revenue_estimate.monthly)}/mo`} icon={Calendar} tooltip="Annual revenue divided by 12. Actual monthly income varies by season — summer months are typically higher." />
               <StatCard label="Nightly Rate (ADR)" value={`${formatCurrency(revenue_estimate.nightly)}/night`} icon={DollarSign} tooltip="Average Daily Rate — the average price per night a guest pays. This is calculated from comparable listings in your area with similar bedrooms and amenities." />
               <StatCard label="Occupancy Rate" value={formatPercent(revenue_estimate.occupancy)} icon={Percent} tooltip="The percentage of available nights that are booked. 70% occupancy means about 255 nights per year are booked. New listings typically start lower and build up over 3-6 months." />
@@ -1572,7 +1572,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Monthly Forecast Chart */}
           {monthly_forecast.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Monthly Revenue Forecast <InfoTip text="A month-by-month breakdown of your property's projected rental income over the next 12 months. Taller bars mean higher revenue months. Use this to plan your cash flow and see which months are strongest." /></h3>
               <MonthlyForecastChart 
                 data={monthly_forecast.map(m => ({
@@ -1597,7 +1597,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Seasonality */}
           {monthly_forecast.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Seasonality Pattern <InfoTip text="Shows how your property's projected revenue and occupancy change throughout the year. Most markets have a 'high season' (summer or holidays) and a 'low season.' Understanding this pattern helps you set realistic expectations and adjust your pricing strategy." /></h3>
               <SeasonalityChart 
                 data={monthly_forecast.map(m => ({
@@ -1611,7 +1611,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Historical Trends */}
           {historical_data && historical_data.summary && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Year-over-Year Trend <InfoTip text="Compares this year's market performance to last year. A positive percentage means the market is growing (more revenue than last year). A negative percentage means the market is shrinking. This helps you understand if it's a good time to enter the market." /></h3>
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -1639,7 +1639,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <section id="section-expenses" className="scroll-mt-24 mb-16">
             <SectionHeader icon={Wallet} title="Expense Breakdown" subtitle="Itemized operating costs based on property size and market data" tooltip="These are the estimated monthly costs of running a short-term rental — things like cleaning, supplies, insurance, and platform fees. Subtract these from your revenue to see your actual profit." />
 
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Monthly Operating Expenses <InfoTip text="A line-by-line breakdown of what it costs to run a short-term rental each month. These include cleaning between guests, supplies, insurance, platform fees, and maintenance. The percentage shows how much of your revenue each expense consumes." /></h3>
               <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
                 {expenses.items.map((item: any, i: number) => (
@@ -1666,17 +1666,17 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Net Revenue After Expenses */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 text-center">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 text-center">
                 <p className="text-sm text-[oklch(0.45_0.01_265)] mb-1">Gross Annual Revenue <InfoTip text="Your total projected income before any expenses are subtracted. This is the 'top line' number." /></p>
-                <p className="text-2xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(revenue_estimate.annual)}<span className="text-xs font-semibold ml-1 text-[oklch(0.55_0_0)]">/yr</span></p>
+                <p className="text-lg sm:text-2xl font-bold text-[oklch(0.15_0_0)]">{formatCurrency(revenue_estimate.annual)}<span className="text-xs font-semibold ml-1 text-[oklch(0.55_0_0)]">/yr</span></p>
               </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 text-center">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 text-center">
                 <p className="text-sm text-[oklch(0.45_0.01_265)] mb-1">Total Annual Expenses <InfoTip text="All operating costs added up for the year — cleaning, supplies, insurance, platform fees, maintenance, and more." /></p>
-                <p className="text-2xl font-bold text-red-600">- {formatCurrency(expenses.total_annual)}<span className="text-xs font-semibold ml-1 text-[oklch(0.55_0_0)]">/yr</span></p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600">- {formatCurrency(expenses.total_annual)}<span className="text-xs font-semibold ml-1 text-[oklch(0.55_0_0)]">/yr</span></p>
               </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 text-center">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 text-center">
                 <p className="text-sm text-[oklch(0.45_0.01_265)] mb-1">Net Annual Revenue <InfoTip text="What you actually keep after all operating expenses. This is your 'bottom line' — the real profit from the rental (before taxes and mortgage if applicable)." /></p>
-                <p className={`text-2xl font-bold ${expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-lg sm:text-2xl font-bold ${expenses.net_annual_revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(expenses.net_annual_revenue)}<span className="text-xs font-semibold ml-1 text-[oklch(0.55_0_0)]">/yr</span>
                 </p>
               </div>
@@ -1698,13 +1698,13 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <SectionHeader icon={BarChart3} title="Market Analysis" subtitle="Overall market health, performance by bedroom count, and competitive landscape" tooltip="This section shows how the entire short-term rental market in your area is performing. Use this to understand the bigger picture — how many listings exist, what they earn on average, and how your property compares." />
 
           {/* Market Overview */}
-          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">{market_data.name} Market Overview <InfoTip text="A snapshot of the overall short-term rental market in your area. These numbers represent averages across ALL listing types and sizes — your specific property may perform differently based on its size, location, and quality." /></h3>
               <DataSourceBadge type="market" />
             </div>
             {hasRealMarketData ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               <StatCard label="Active Listings" value={market_data.listing_count > 0 ? market_data.listing_count.toLocaleString() : 'N/A'} icon={Building} tooltip="The total number of short-term rental listings currently active on Airbnb and VRBO in this market. More listings means more competition, but also indicates strong traveler demand." />
               <StatCard label="Market Avg. Monthly Revenue" value={`${formatCurrency(market_data.metrics.revenue)}/mo`} icon={DollarSign} tooltip="The average monthly income across ALL listings in this market (all bedroom counts, all property types). Your property may earn more or less depending on its size and quality." />
               <StatCard label="Market Avg. Occupancy" value={formatPercent(market_data.metrics.occupancy)} icon={Percent} tooltip="The average booking rate across all listings in this market. This includes studios, 1-bedrooms, and large homes — so your specific property type may differ." />
@@ -1726,7 +1726,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Your Property vs Market — uses bedroom-specific benchmarks when available */}
           {(hasRealMarketData || bedroomBenchmark) ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">
                 Your Property vs. {bedroomBenchmark ? `${property.bedrooms}-Bedroom Average` : 'Market Average'}
@@ -1743,11 +1743,11 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </p>
               </div>
             )}
-            <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
-              <div className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} bg-[oklch(0.55_0.14_75)] text-white text-sm font-medium`}>
-                <div className="p-3">Metric</div>
-                <div className="p-3 text-center flex items-center justify-center gap-1"><Home className="w-3 h-3" /> Your Property</div>
-                <div className="p-3 text-center flex items-center justify-center gap-1"><BedDouble className="w-3 h-3" /> {property.bedrooms}-BR Avg</div>
+            <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden overflow-x-auto">
+              <div className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} bg-[oklch(0.55_0.14_75)] text-white text-xs sm:text-sm font-medium min-w-[320px]`}>
+                <div className="p-2 sm:p-3">Metric</div>
+                <div className="p-2 sm:p-3 text-center flex items-center justify-center gap-1"><Home className="w-3 h-3 hidden sm:block" /> Your Property</div>
+                <div className="p-2 sm:p-3 text-center flex items-center justify-center gap-1"><BedDouble className="w-3 h-3 hidden sm:block" /> {property.bedrooms}-BR Avg</div>
                 {bedroomBenchmark && (
                   <div className="p-3 text-center flex items-center justify-center gap-1 opacity-70"><BarChart3 className="w-3 h-3" /> All-Market Avg</div>
                 )}
@@ -1778,10 +1778,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                   market: formatCurrency(market_data.metrics.revpar ?? (market_data.metrics.adr * (market_data.metrics.occupancy > 1 ? market_data.metrics.occupancy / 100 : market_data.metrics.occupancy))),
                 },
               ].map((row, i) => (
-                <div key={i} className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} text-sm`}>
-                  <div className="p-3 text-[oklch(0.45_0.01_265)]">{row.label}</div>
-                  <div className="p-3 text-center font-semibold text-[oklch(0.15_0_0)]">{row.yours}</div>
-                  <div className="p-3 text-center text-[oklch(0.45_0.01_265)] font-medium">{row.bedroom}</div>
+                <div key={i} className={`grid ${bedroomBenchmark ? 'grid-cols-4' : 'grid-cols-3'} text-xs sm:text-sm min-w-[320px]`}>
+                  <div className="p-2 sm:p-3 text-[oklch(0.45_0.01_265)]">{row.label}</div>
+                  <div className="p-2 sm:p-3 text-center font-semibold text-[oklch(0.15_0_0)]">{row.yours}</div>
+                  <div className="p-2 sm:p-3 text-center text-[oklch(0.45_0.01_265)] font-medium">{row.bedroom}</div>
                   {bedroomBenchmark && (
                     <div className="p-3 text-center text-[oklch(0.55_0_0)]">{row.market}</div>
                   )}
@@ -1790,7 +1790,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
           </div>
           ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
             <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Your Property vs. Market Average</h3>
             <p className="text-sm text-[oklch(0.45_0.01_265)]">Market comparison data is not available for this location. The property estimate above is based on comparable listings in the area.</p>
           </div>
@@ -1798,7 +1798,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Bedroom Performance */}
           {bedroom_performance.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Performance by Bedroom Count</h3>
                 <DataSourceBadge type="market" />
@@ -1820,7 +1820,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Revenue Percentiles */}
           {revenue_percentiles && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Revenue Distribution</h3>
                 <DataSourceBadge type="market" />
@@ -1848,7 +1848,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Supply Trend Chart */}
           {supply_trend && supply_trend.length > 2 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Supply Trend</h3>
                 <DataSourceBadge type="market" />
@@ -1866,7 +1866,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 return (
                   <div>
                     {/* Summary stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                       <div className="bg-[oklch(0.97_0_0)] rounded-xl p-3 text-center">
                         <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1">Current Listings</p>
                         <p className="text-lg font-bold text-[oklch(0.15_0_0)]">{last.value.toLocaleString()}</p>
@@ -1899,7 +1899,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Market Revenue & Occupancy Trends (24-month historical) */}
           {historical_data && historical_data.months && historical_data.months.length > 2 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Market Revenue & Occupancy Trends</h3>
                 <DataSourceBadge type="market" />
@@ -1916,7 +1916,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* If no months data, try monthly field */}
           {historical_data && !historical_data.months && historical_data.monthly && historical_data.monthly.length > 2 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Market Revenue & Occupancy Trends</h3>
                 <DataSourceBadge type="market" />
@@ -1933,7 +1933,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Submarket Comparison */}
           {submarkets && submarkets.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Submarket Comparison <InfoTip text="A side-by-side comparison of different neighborhoods and sub-areas within your market. Each submarket has its own average revenue, occupancy, and nightly rate. This helps you see if your specific neighborhood is a top performer or if nearby areas might be stronger." /></h3>
               <p className="text-sm text-[oklch(0.45_0.01_265)] mb-4">How nearby neighborhoods and submarkets compare in key performance metrics</p>
               <div className="overflow-x-auto">
@@ -2101,15 +2101,15 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[oklch(0.55_0.14_75)] text-white">
-                    <th className="text-left p-4 font-medium w-10">
+                    <th className="text-left p-2 sm:p-4 font-medium w-10">
                       <Checkbox
                         checked={selectedCompIds.size === displayComps.length}
                         onCheckedChange={toggleAllComps}
                         className="border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-[oklch(0.55_0.14_75)]"
                       />
                     </th>
-                    <th className="text-left p-4 font-medium">#</th>
-                    <th className="text-left p-4 font-medium">Property</th>
+                    <th className="text-left p-2 sm:p-4 font-medium">#</th>
+                    <th className="text-left p-2 sm:p-4 font-medium">Property</th>
                     <SortableHeader label="Revenue" field="revenue" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Annual revenue this listing earned in the last 12 months from Airbnb/VRBO bookings. Click to sort." />
                     <SortableHeader label="ADR" field="adr" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="Average Daily Rate — the average price per night this listing charges. Click to sort." />
                     <SortableHeader label="Occupancy" field="occupancy" activeField={compSortField} direction={compSortDir} onSort={handleCompSort} tooltip="What percentage of available nights this listing was booked over the last 12 months. Click to sort." />
@@ -2136,16 +2136,16 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                             : 'opacity-40 hover:opacity-60 bg-[oklch(0.97_0_0)]'
                       }`}
                     >
-                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                      <td className="p-2 sm:p-4" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedCompIds.has(stableKey)}
                           onCheckedChange={() => toggleComp(stableKey)}
                           className="data-[state=checked]:bg-[oklch(0.55_0.14_75)] data-[state=checked]:border-[oklch(0.55_0.14_75)]"
                         />
                       </td>
-                      <td className={`p-4 font-medium ${isHighlighted ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.55_0_0)]'}`}>{revenueRank}</td>
-                      <td className="p-4">
-                        <div className="flex items-start gap-3">
+                      <td className={`p-2 sm:p-4 font-medium ${isHighlighted ? 'text-[oklch(0.55_0.14_75)]' : 'text-[oklch(0.55_0_0)]'}`}>{revenueRank}</td>
+                      <td className="p-2 sm:p-4">
+                        <div className="flex items-start gap-2 sm:gap-3">
                           {comp.image_url ? (
                             <img
                               src={comp.image_url}
@@ -2186,10 +2186,10 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-right font-semibold text-[oklch(0.15_0_0)]">{formatCurrency(comp.annual_revenue)}</td>
-                      <td className="p-4 text-right text-[oklch(0.45_0.01_265)]">{formatCurrency(comp.adr)}</td>
-                      <td className="p-4 text-right text-[oklch(0.45_0.01_265)]">{formatPercent(comp.occupancy)}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-2 sm:p-4 text-right font-semibold text-[oklch(0.15_0_0)] whitespace-nowrap">{formatCurrency(comp.annual_revenue)}</td>
+                      <td className="p-2 sm:p-4 text-right text-[oklch(0.45_0.01_265)] whitespace-nowrap">{formatCurrency(comp.adr)}</td>
+                      <td className="p-2 sm:p-4 text-right text-[oklch(0.45_0.01_265)] whitespace-nowrap">{formatPercent(comp.occupancy)}</td>
+                      <td className="p-2 sm:p-4 text-right">
                         {comp.rating ? (
                           <span className="inline-flex items-center gap-1">
                             <Star className="w-3 h-3 text-[oklch(0.55_0.14_75)] fill-[oklch(0.55_0.14_75)]" />
@@ -2197,8 +2197,8 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="p-4 text-right text-[oklch(0.45_0.01_265)]">{comp.reviews || '—'}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-2 sm:p-4 text-right text-[oklch(0.45_0.01_265)]">{comp.reviews || '—'}</td>
+                      <td className="p-2 sm:p-4 text-right">
                         {(() => {
                           const distMiles = getCompDistanceMiles(comp, property?.latitude || 0, property?.longitude || 0);
                           if (distMiles !== null) {
@@ -2232,7 +2232,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
           {/* Comp Summary Stats — based on SELECTED comps only */}
           {filteredComps.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               <StatCard
                 label="Avg. Comp Revenue"
                 value={`${formatCurrency(filteredComps.reduce((s, c) => s + c.annual_revenue, 0) / filteredComps.length)}/yr`}
@@ -2272,7 +2272,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <SectionHeader icon={BookOpen} title="Regulatory Status" subtitle="Short-term rental regulations for this location" tooltip="Local laws and rules about short-term rentals in your area. Some cities require permits, limit the number of nights you can rent, or have specific zoning restrictions. Always verify with your local government before listing." />
 
             {/* Status Badge */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center gap-4 mb-6">
                 <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider ${
                   regulation.status === 'allowed' ? 'bg-green-100 text-green-800' :
@@ -2310,7 +2310,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               )}
 
               {/* Quick Facts */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <div className="bg-[oklch(0.97_0_0)] rounded-xl p-3 text-center">
                   <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1">Permit Required <InfoTip text="Whether you need a government permit or license before listing your property on Airbnb/VRBO. If yes, apply before you start hosting to avoid fines." /></p>
                   <p className={`text-sm font-bold ${regulation.permit_required ? 'text-orange-600' : 'text-green-600'}`}>
@@ -2351,7 +2351,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Sources */}
             {regulation.sources?.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                 <h3 className="text-sm font-semibold text-[oklch(0.45_0.01_265)] mb-3 uppercase tracking-wider">Sources</h3>
                 <div className="space-y-2">
                   {regulation.sources.map((src, i) => (
@@ -2393,7 +2393,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)]">Monthly Profit Scenarios <InfoTip text="Each cell shows your estimated monthly profit at that combination of occupancy and nightly rate. The highlighted cell is your projected baseline — surrounding cells show what happens if conditions change." /></h3>
               </div>
@@ -2430,16 +2430,16 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 }
 
                 return (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                  <div className="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+                    <table className="w-full text-xs sm:text-sm">
                       <thead>
                         <tr>
-                          <th className="p-3 text-left bg-[oklch(0.97_0_0)] rounded-tl-lg">
+                          <th className="p-1.5 sm:p-3 text-left bg-[oklch(0.97_0_0)] rounded-tl-lg">
                             <div className="text-[10px] text-[oklch(0.55_0_0)] uppercase tracking-wider">Occupancy ↓</div>
                             <div className="text-[10px] text-[oklch(0.55_0_0)] uppercase tracking-wider">Nightly Rate →</div>
                           </th>
                           {adrs.map((adr, adrIdx) => (
-                            <th key={`adr-${adrIdx}-${adr}`} className={`p-3 text-center bg-[oklch(0.97_0_0)] ${adr === stress_test.base_adr ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.45_0.01_265)] font-medium'}`}>
+                            <th key={`adr-${adrIdx}-${adr}`} className={`p-1.5 sm:p-3 text-center bg-[oklch(0.97_0_0)] ${adr === stress_test.base_adr ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.45_0.01_265)] font-medium'}`}>
                               {formatCurrency(adr)}/night
                               {adr === stress_test.base_adr && <div className="text-[10px] font-bold">⬆ YOUR RATE</div>}
                             </th>
@@ -2449,7 +2449,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                       <tbody>
                         {occupancies.map((occ, occIdx) => (
                           <tr key={`occ-${occIdx}-${occ}`}>
-                            <td className={`p-3 font-medium border-t border-[oklch(0.90_0_0)] ${occ === stress_test.base_occupancy ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.45_0.01_265)]'}`}>
+                            <td className={`p-1.5 sm:p-3 font-medium border-t border-[oklch(0.90_0_0)] ${occ === stress_test.base_occupancy ? 'text-[oklch(0.55_0.14_75)] font-bold' : 'text-[oklch(0.45_0.01_265)]'}`}>
                               {Math.round(occ * 100)}% booked
                               {occ === stress_test.base_occupancy && <div className="text-[10px] font-bold">⬅ YOUR OCC.</div>}
                             </td>
@@ -2464,7 +2464,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                                   ? `bg-green-${intensity > 0.6 ? '100' : '50'}`
                                   : `bg-red-${intensity > 0.6 ? '100' : '50'}`;
                               return (
-                                <td key={`cell-${occIdx}-${adrIdx}`} className={`p-3 text-center font-semibold border-t border-[oklch(0.90_0_0)] rounded-sm ${
+                                <td key={`cell-${occIdx}-${adrIdx}`} className={`p-1.5 sm:p-3 text-center font-semibold border-t border-[oklch(0.90_0_0)] rounded-sm ${
                                   isBase ? 'bg-[oklch(0.55_0.14_75)]/15 ring-2 ring-[oklch(0.55_0.14_75)] ring-inset text-[oklch(0.15_0_0)]' :
                                   profit >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
                                 }`}>
@@ -2490,22 +2490,22 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               const positivePercent = Math.round((breakEvenScenarios.length / totalScenarios) * 100);
 
               return (
-                <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                   <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">What This Means</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div className={`rounded-xl p-4 text-center ${positivePercent >= 75 ? 'bg-green-50 border border-green-200' : positivePercent >= 50 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1 uppercase tracking-wider">Profitable Scenarios</p>
-                      <p className={`text-2xl font-bold ${positivePercent >= 75 ? 'text-green-700' : positivePercent >= 50 ? 'text-amber-700' : 'text-red-600'}`}>{breakEvenScenarios.length} of {totalScenarios}</p>
+                      <p className={`text-lg sm:text-2xl font-bold ${positivePercent >= 75 ? 'text-green-700' : positivePercent >= 50 ? 'text-amber-700' : 'text-red-600'}`}>{breakEvenScenarios.length} of {totalScenarios}</p>
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mt-1">{positivePercent}% of scenarios make money</p>
                     </div>
                     <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1 uppercase tracking-wider">Best Case</p>
-                      <p className="text-2xl font-bold text-green-700">{formatCurrency(bestCase.monthly_profit ?? bestCase.monthly_revenue)}/mo</p>
+                      <p className="text-lg sm:text-2xl font-bold text-green-700">{formatCurrency(bestCase.monthly_profit ?? bestCase.monthly_revenue)}/mo</p>
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mt-1">{Math.round(bestCase.occupancy_pct * 100)}% occ. at {formatCurrency(bestCase.adr)}/night</p>
                     </div>
                     <div className={`rounded-xl p-4 text-center ${(worstCase.monthly_profit ?? worstCase.monthly_revenue) >= 0 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1 uppercase tracking-wider">Worst Case</p>
-                      <p className={`text-2xl font-bold ${(worstCase.monthly_profit ?? worstCase.monthly_revenue) >= 0 ? 'text-amber-700' : 'text-red-600'}`}>{formatCurrency(worstCase.monthly_profit ?? worstCase.monthly_revenue)}/mo</p>
+                      <p className={`text-lg sm:text-2xl font-bold ${(worstCase.monthly_profit ?? worstCase.monthly_revenue) >= 0 ? 'text-amber-700' : 'text-red-600'}`}>{formatCurrency(worstCase.monthly_profit ?? worstCase.monthly_revenue)}/mo</p>
                       <p className="text-xs text-[oklch(0.45_0.01_265)] mt-1">{Math.round(worstCase.occupancy_pct * 100)}% occ. at {formatCurrency(worstCase.adr)}/night</p>
                     </div>
                   </div>
@@ -2569,7 +2569,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Summary Stats */}
             {comparable_sales.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <StatCard
                   label="Median Sale Price"
                   value={formatCurrency(comparable_sales.map(s => s.price).sort((a, b) => a - b)[Math.floor(comparable_sales.length / 2)])}
@@ -2602,7 +2602,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           <section id="section-rental" className="scroll-mt-24 mb-16">
             <SectionHeader icon={Building} title="Rental Arbitrage Analysis" subtitle="Financial projections based on renting the property and subletting on Airbnb" tooltip="Rental arbitrage means renting a property with a traditional lease and then subletting it on Airbnb/VRBO. This section shows whether the short-term rental income would cover the rent and still leave you a profit. You need landlord permission to do this." />
 
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Monthly Cash Flow <InfoTip text="Your monthly income minus your monthly rent. This is the simplest view of whether this rental arbitrage deal makes money. Green = profit, Red = loss. Remember, this doesn't include operating expenses like cleaning and supplies." /></h3>
               <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
                 <DataRow label="Projected Monthly Revenue" value={`${formatCurrency(rentalCalcs.monthlyRevenue)}/mo`} highlight tooltip="Your estimated monthly income from Airbnb/VRBO bookings after accounting for occupancy and nightly rate." />
@@ -2617,7 +2617,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               {/* Break-Even Analysis */}
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Break-Even Analysis <InfoTip text="Shows the minimum performance needed just to cover your rent. If your projected numbers are well above these minimums, the deal has a good safety margin. If they're close, even a small dip in bookings could put you in the red." /></h3>
                 <div className="space-y-4">
                   <div>
@@ -2655,7 +2655,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
 
               {/* Investment Returns */}
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Investment Returns <InfoTip text="How much money you make relative to what you invested. Startup costs include furniture, linens, and setup. ROI tells you how quickly your investment pays for itself. A higher ROI and shorter payback period = a better deal." /></h3>
                 <div className="space-y-4">
                   <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
@@ -2671,7 +2671,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
 
             {/* Scenario Analysis */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Scenario Analysis <InfoTip text="Three different 'what if' scenarios showing your profit at different occupancy levels. Conservative = what if bookings are 30% lower than expected. Projected = the most likely outcome. Optimistic = what if bookings are 20% higher. This helps you plan for best and worst cases." /></h3>
               <div className="grid grid-cols-3 gap-4">
                 {[
@@ -2720,9 +2720,9 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <SectionHeader icon={Landmark} title="Purchase Investment Analysis" subtitle="Financial projections based on purchasing the property" tooltip="This section shows what your returns would look like if you BUY the property and use it as a short-term rental. It includes mortgage payments, down payment, and key investment metrics like cap rate and cash-on-cash return." />
 
             {/* Purchase Overview */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Investment Summary <InfoTip text="The key numbers for buying this property as an investment. Shows the purchase price, how much cash you need upfront (down payment + closing costs), and your monthly mortgage payment. This is your starting point for evaluating the deal." /></h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6">
                 <StatCard label="Purchase Price" value={formatCurrency(purchaseCalcs.price)} icon={Home} tooltip="The estimated purchase price of the property based on comparable sales data or the value you provided." />
                 <StatCard label="Down Payment" value={formatCurrency(purchaseCalcs.downPayment)} sublabel={`${(purchaseCalcs.downPct * 100).toFixed(0)}%`} icon={Wallet} tooltip="The upfront cash you'd pay at closing. Investment properties typically require 20-25% down. A larger down payment means lower monthly mortgage payments." />
                 <StatCard label="Total Cash Needed" value={formatCurrency(purchaseCalcs.totalCashNeeded)} sublabel="Down + closing" icon={PiggyBank} tooltip="Your total out-of-pocket cost to close the deal — includes down payment plus closing costs (typically 2-5% of purchase price for inspections, title, appraisal, etc.)." />
@@ -2732,7 +2732,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
             {/* Key Investment Metrics */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Key Metrics <InfoTip text="The most important investment performance indicators. Cap Rate measures the property's earning power. Cash-on-Cash Return measures your return on the cash you invested. DSCR shows if the property can cover its debt. These are the numbers investors use to compare deals." /></h3>
                 <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
                   <DataRow label="Net Operating Income (NOI)" value={`${formatCurrency(purchaseCalcs.noi)}/yr`} highlight tooltip="Annual revenue minus all operating expenses (but NOT mortgage). This is the industry-standard measure of a property's earning power before financing costs." />
@@ -2745,7 +2745,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Annual Cash Flow <InfoTip text="A step-by-step breakdown of your yearly income and expenses. Starts with gross revenue, subtracts operating expenses, property tax, insurance, and mortgage to show your final cash flow — the actual money in your pocket each year." /></h3>
                 <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
                   <DataRow label="Gross Revenue" value={`${formatCurrency(revenue_estimate.annual)}/yr`} highlight tooltip="Total projected annual income before any expenses are subtracted." />
@@ -2839,28 +2839,28 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               <SectionHeader icon={Scale} title="Total Return Picture" subtitle="Combining cash flow with estimated tax benefits for the complete investment view" tooltip="This section brings together your pre-tax cash flow and estimated tax savings into one view. Many STR investments that look negative on a cash flow basis become positive when you factor in tax deductions like depreciation, mortgage interest, and operating expenses. This is the number sophisticated investors actually look at." />
 
               {/* The Big Number */}
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-2">Annual Net Benefit (After Tax Savings) <InfoTip text="Your actual annual benefit when you combine cash flow with tax savings. Even if cash flow is negative, tax deductions can turn the overall picture positive. This uses the 24% federal tax bracket as the middle estimate — your actual savings depend on your tax situation." /></h3>
                 <p className="text-sm text-[oklch(0.45_0.01_265)] mb-6">What you actually keep when combining rental income with tax deductions</p>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                   <div className="bg-[oklch(0.97_0_0)] rounded-xl p-5 text-center border border-[oklch(0.90_0_0)]">
                     <p className="text-xs text-[oklch(0.55_0_0)] mb-1 uppercase tracking-wider">Pre-Tax Cash Flow</p>
-                    <p className={`text-2xl font-bold ${preTaxCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-lg sm:text-2xl font-bold ${preTaxCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(preTaxCashFlow)}
                     </p>
                     <p className="text-xs text-[oklch(0.55_0_0)] mt-1">{formatCurrency(preTaxCashFlow / 12)}/mo</p>
                   </div>
                   <div className="bg-[oklch(0.97_0_0)] rounded-xl p-5 text-center border border-[oklch(0.90_0_0)]">
                     <p className="text-xs text-[oklch(0.55_0_0)] mb-1 uppercase tracking-wider">Est. Tax Savings</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-lg sm:text-2xl font-bold text-green-600">
                       +{formatCurrency(taxSavingsMid)}
                     </p>
                     <p className="text-xs text-[oklch(0.55_0_0)] mt-1">at 24% bracket</p>
                   </div>
                   <div className={`rounded-xl p-5 text-center border-2 ${netBenefitMid >= 0 ? 'border-green-500 bg-green-50' : 'border-red-400 bg-red-50'}`}>
                     <p className="text-xs text-[oklch(0.55_0_0)] mb-1 uppercase tracking-wider font-semibold">Net Annual Benefit</p>
-                    <p className={`text-2xl font-bold ${netBenefitMid >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-lg sm:text-2xl font-bold ${netBenefitMid >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(netBenefitMid)}
                     </p>
                     <p className="text-xs text-[oklch(0.55_0_0)] mt-1">{formatCurrency(netBenefitMid / 12)}/mo</p>
@@ -2891,7 +2891,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
               </div>
 
               {/* Waterfall breakdown */}
-              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
                 <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">How We Got Here <InfoTip text="A step-by-step waterfall showing how gross revenue flows down to your net benefit. Each line subtracts a cost or adds a benefit, so you can see exactly where the money goes." /></h3>
                 <div className="divide-y divide-[oklch(0.90_0_0)] rounded-xl border border-[oklch(0.90_0_0)] overflow-hidden">
                   <DataRow label="Gross Annual Revenue" value={<span className="font-bold text-[oklch(0.15_0_0)]">{formatCurrency(annualRev)}</span>} highlight tooltip="Total projected rental income before any expenses." />
@@ -2965,7 +2965,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             <SectionHeader icon={Calculator} title="Tax Implications" subtitle="Estimated tax deductions and benefits for this short-term rental investment" tooltip="Short-term rentals come with tax deductions that can significantly reduce your taxable income — things like depreciation, mortgage interest, repairs, and operating expenses. Always consult a tax professional for your specific situation." />
 
             {/* Tax Deductions Breakdown */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">Estimated Annual Tax Deductions <InfoTip text="A list of expenses you may be able to deduct from your taxable income as a short-term rental operator. These deductions reduce the amount of tax you owe. The more deductions you have, the less tax you pay. Always confirm with a CPA for your specific situation." /></h3>
               <p className="text-sm text-[oklch(0.45_0.01_265)] mb-6">Based on your projected revenue and property details, here are the estimated tax-deductible expenses you may be able to claim. Consult a tax professional for personalized advice.</p>
 
@@ -3074,7 +3074,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
                     </div>
 
                     {/* Taxable Income Summary */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
                       <div className="bg-[oklch(0.97_0_0)] rounded-xl p-4 text-center">
                         <p className="text-xs text-[oklch(0.45_0.01_265)] mb-1">Gross Revenue</p>
                         <p className="text-lg font-bold text-[oklch(0.15_0_0)]">{formatCurrency(annualRev)}</p>
@@ -3123,7 +3123,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             </div>
 
             {/* Key Tax Strategies - Mode-Aware */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-[oklch(0.90_0_0)] p-4 sm:p-6 mb-8">
               <h3 className="text-lg font-sans font-semibold text-[oklch(0.15_0_0)] mb-4">
                 {hasPurchase ? 'Key Tax Strategies for Property Owners' : 'Key Tax Strategies for Rental Arbitrage Operators'}
                 {' '}<InfoTip text={hasPurchase ? 'Advanced tax strategies for property owners that can significantly reduce your tax bill. These include cost segregation (accelerating depreciation), bonus depreciation, the 14-day rule, and filing strategies. Consult a tax professional before implementing.' : 'Tax strategies specific to rental arbitrage operators. Since you lease (not own) the property, strategies like depreciation and cost segregation do not apply. Instead, focus on business expense deductions, home office deductions, and proper filing classification.'} />
