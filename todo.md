@@ -11412,3 +11412,29 @@ Results:
 - [x] End-to-end test: "Is Florida Still Profitable for Airbnb?" video generated successfully
 - [x] All 43 tests passing (24 content-studio + 19 video-generation)
 - [x] Zero TypeScript errors
+
+## Content Studio Video Fixes (Feb 14, 2026)
+- [x] Fix background color: white_bg=true, use_color=false sent to Golpo API
+- [x] Fix audio: tts_model=accurate, style=solo-female, voice_instructions configured
+- [x] Fix duration: timing=10, Gemini prompt targets 1500-2000+ word scripts
+- [x] Update Gemini prompt to generate 1500-2000+ word detailed coaching scripts
+- [x] Update Golpo API parameters for white background and voice
+- [ ] Test end-to-end: verify 5+ min video with white bg and audio (Golpo jobs still processing)
+
+## Video Generation DB Persistence & Polling Resilience (Feb 14, 2026)
+- [x] Add video_jobs table to drizzle schema (jobId, golpoJobId, scriptId, title, status, videoUrl, error, timestamps)
+- [x] Migrate video generation service from in-memory Map to database persistence
+- [x] Jobs now survive server restarts — no more lost progress
+- [x] Add resumeIncompleteJobs() function — auto-resumes polling on server startup
+- [x] Add 30-minute timeout for stale jobs on resume
+- [x] Add activePollers Set to prevent duplicate polling
+- [x] Update getVideoStatus to read from DB instead of in-memory Map
+- [x] Add listVideoJobs endpoint — returns recent 20 jobs from DB
+- [x] Add Video History UI component showing all past video jobs with status badges
+- [x] Video History shows completed (Watch/Copy URL), generating (Track), failed (error message)
+- [x] Frontend polling improved: 10s interval, retry on error, handles server restarts gracefully
+- [x] Updated progress text from "3-8 minutes" to "10-15 minutes" (per Golpo API docs)
+- [x] Updated vitest tests for DB-persisted video generation (module exports, types, resume logic)
+- [x] All 1276 tests passing (1 pre-existing timeout in admin-router.test.ts — unrelated)
+- [ ] Verify Golpo API produces white background videos with audio (jobs still processing)
+- [ ] Verify minimum 5-minute video duration from Golpo

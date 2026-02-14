@@ -51,17 +51,17 @@ describe('Content Studio — Exports', () => {
     }
   });
 
-  it('lesson format is 2-5 minutes', async () => {
+  it('lesson format is 5-8 minutes', async () => {
     const { FORMAT_SPECS } = await import('./content-studio');
-    expect(FORMAT_SPECS.lesson.defaultDuration).toBeGreaterThanOrEqual(120);
-    expect(FORMAT_SPECS.lesson.defaultDuration).toBeLessThanOrEqual(300);
-    expect(FORMAT_SPECS.lesson.durationRange).toContain('2-5');
+    expect(FORMAT_SPECS.lesson.defaultDuration).toBeGreaterThanOrEqual(300);
+    expect(FORMAT_SPECS.lesson.defaultDuration).toBeLessThanOrEqual(600);
+    expect(FORMAT_SPECS.lesson.durationRange).toContain('5-8');
   });
 
-  it('deep_dive format has long duration (5-10min)', async () => {
+  it('deep_dive format has long duration (8-12min)', async () => {
     const { FORMAT_SPECS } = await import('./content-studio');
-    expect(FORMAT_SPECS.deep_dive.defaultDuration).toBeGreaterThanOrEqual(300);
-    expect(FORMAT_SPECS.deep_dive.durationRange).toContain('5-10');
+    expect(FORMAT_SPECS.deep_dive.defaultDuration).toBeGreaterThanOrEqual(480);
+    expect(FORMAT_SPECS.deep_dive.durationRange).toContain('8-12');
   });
 
   it('should include core STR content pillars', async () => {
@@ -493,7 +493,7 @@ describe('Content Studio — Gemini API', () => {
     const result = await generateContentScript('test', 'lesson');
 
     expect(result.title).toBe('Minimal');
-    expect(result.estimated_duration_seconds).toBe(210); // Falls back to lesson default
+    expect(result.estimated_duration_seconds).toBe(420); // Falls back to lesson default (5-8 min)
     expect(result.key_data_points).toEqual([]);
     expect(result.target_audience).toBe('');
   });
@@ -529,8 +529,8 @@ describe('Content Studio — Gemini API', () => {
     const body = JSON.parse(options.body);
     const userPrompt = body.contents[0].parts[0].text;
 
-    expect(userPrompt).toContain('YouTube Lesson');
-    expect(userPrompt).toContain('300-750 words');
+    expect(userPrompt).toContain('YouTube Coaching Lesson');
+    expect(userPrompt).toContain('1500-2000 words');
     expect(userPrompt).toContain('market analysis tips');
   });
 });

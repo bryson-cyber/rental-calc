@@ -160,7 +160,9 @@ function ContentStudioCore() {
     { jobId: activeVideoJobId! },
     {
       enabled: !!activeVideoJobId,
-      refetchInterval: activeVideoJobId ? 5000 : false,
+      refetchInterval: activeVideoJobId ? 10000 : false, // Poll every 10s (videos take 10-15 min)
+      retry: 3, // Retry on network errors
+      retryDelay: 5000,
     },
   );
 
@@ -185,6 +187,14 @@ function ContentStudioCore() {
       });
     }
   }, [videoStatusQuery.data]);
+
+  // Handle polling errors gracefully (don't clear the job on transient errors)
+  useEffect(() => {
+    if (videoStatusQuery.error && activeVideoJobId) {
+      console.warn('[Content Studio] Video status poll error:', videoStatusQuery.error.message);
+      // Don't clear activeVideoJobId — the query will retry automatically
+    }
+  }, [videoStatusQuery.error, activeVideoJobId]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -344,7 +354,7 @@ function ContentStudioCore() {
                 />
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">
-                Typically takes 3-8 minutes. You can leave this tab open.
+                Typically takes 10-15 minutes. You can leave this page open — progress is saved.
               </p>
             </div>
           )}
@@ -401,6 +411,14 @@ function ContentStudioCore() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Video History (from DB) ──────────────────────────────── */}
+      <VideoJobsHistory
+        onResumePolling={(jobId) => {
+          setActiveVideoJobId(jobId);
+          setVideoResult(null);
+        }}
+      />
 
       {/* ── Generated Script Result ──────────────────────────────────── */}
       {latestScript && (
@@ -841,6 +859,120 @@ function ContentStudioCore() {
         )}
       </div>
     </div>
+  );
+}
+
+// ── Video Jobs History Component ────────────────────────────────────────────
+
+function VideoJobsHistory({ onResumePolling }: { onResumePolling: (jobId: string) => void }) {
+  const { toast } = useToast();
+  const videoJobsList = trpc.contentStudio.listVideoJobs.useQuery(undefined, {
+    staleTime: 15_000,
+    refetchInterval: 30_000, // Refresh list every 30s
+  });
+
+  const jobs = videoJobsList.data || [];
+  if (jobs.length === 0) return null;
+
+  return (
+    <Card className="border-border bg-card shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-muted-foreground" />
+            <CardTitle className="text-base">Video History</CardTitle>
+            <Badge variant="secondary" className="text-xs">{jobs.length}</Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => videoJobsList.refetch()}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${videoJobsList.isFetching ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {jobs.map((job) => (
+          <div
+            key={job.jobId}
+            className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {job.status === 'generating' && (
+                  <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating...
+                  </Badge>
+                )}
+                {job.status === 'completed' && (
+                  <Badge variant="outline" className="text-[10px] border-green-500 text-green-600">
+                    <Check className="w-3 h-3 mr-1" /> Completed
+                  </Badge>
+                )}
+                {job.status === 'failed' && (
+                  <Badge variant="outline" className="text-[10px] border-red-500 text-red-600">
+                    <AlertCircle className="w-3 h-3 mr-1" /> Failed
+                  </Badge>
+                )}
+                {job.status === 'pending' && (
+                  <Badge variant="outline" className="text-[10px]">
+                    <Clock className="w-3 h-3 mr-1" /> Pending
+                  </Badge>
+                )}
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(job.startedAt).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {job.status === 'completed' && job.videoUrl && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => window.open(job.videoUrl!, '_blank')}
+                  >
+                    <Play className="w-3 h-3 mr-1" /> Watch
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(job.videoUrl!);
+                      toast({ title: 'Video URL copied' });
+                    }}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </>
+              )}
+              {job.status === 'generating' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-primary"
+                  onClick={() => onResumePolling(job.jobId)}
+                >
+                  <Eye className="w-3 h-3 mr-1" /> Track
+                </Button>
+              )}
+              {job.status === 'failed' && job.error && (
+                <span className="text-[10px] text-red-500 max-w-[200px] truncate" title={job.error}>
+                  {job.error}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

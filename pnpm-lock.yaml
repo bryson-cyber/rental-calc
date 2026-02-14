@@ -121,6 +121,9 @@ importers:
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
+      form-data:
+        specifier: ^4.0.5
+        version: 4.0.5
       framer-motion:
         specifier: ^12.23.22
         version: 12.23.22(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -203,6 +206,9 @@ importers:
       '@types/file-saver':
         specifier: ^2.0.7
         version: 2.0.7
+      '@types/form-data':
+        specifier: ^2.5.2
+        version: 2.5.2
       '@types/google.maps':
         specifier: ^3.58.1
         version: 3.58.1
@@ -2638,8 +2644,8 @@ packages:
       debug:
         optional: true
 
-  form-data@4.0.4:
-    resolution: {integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==}
+  form-data@4.0.5:
+    resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
     engines: {node: '>= 6'}
 
   forwarded@0.2.0:
@@ -4622,7 +4628,7 @@ snapshots:
       '@types/form-data': 2.5.2
       axios: 1.12.2
       dotenv: 17.2.3
-      form-data: 4.0.4
+      form-data: 4.0.5
       mime-types: 2.1.35
       p-limit: 4.0.0
     transitivePeerDependencies:
@@ -5442,7 +5448,7 @@ snapshots:
 
   '@types/form-data@2.5.2':
     dependencies:
-      form-data: 4.0.4
+      form-data: 4.0.5
 
   '@types/geojson@7946.0.16': {}
 
@@ -5656,7 +5662,7 @@ snapshots:
   axios@1.12.2:
     dependencies:
       follow-redirects: 1.15.11
-      form-data: 4.0.4
+      form-data: 4.0.5
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
@@ -6396,7 +6402,7 @@ snapshots:
 
   follow-redirects@1.15.11: {}
 
-  form-data@4.0.4:
+  form-data@4.0.5:
     dependencies:
       asynckit: 0.4.0
       combined-stream: 1.0.8

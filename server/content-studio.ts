@@ -37,24 +37,24 @@ export const FORMAT_SPECS: Record<
   }
 > = {
   lesson: {
-    name: 'YouTube Lesson',
-    durationRange: '2-5 minutes',
-    wordCount: '300-750 words',
+    name: 'YouTube Coaching Lesson',
+    durationRange: '5-8 minutes',
+    wordCount: '1500-2000 words',
     structure:
-      'Hook (5s) → Context/problem → Teaching (2-3 key points) → Real example with numbers → CTA (15s)',
+      'Hook (10s) → Set the scene / why this matters (30s) → Teaching point 1 with real data and analogy (90s) → Teaching point 2 with real data and story (90s) → Teaching point 3 with real data and example (90s) → Recap what they learned (30s) → CTA driving to coachinayahturnkeytool.com (20s)',
     style:
-      'Educational and authoritative. Explain concepts clearly for beginners. Use specific numbers and examples. Build trust through data transparency.',
-    defaultDuration: 210,
+      'Coaching and educational — like a mentor sitting across from you at a coffee shop. Explain every concept thoroughly with real examples. Use specific numbers and walk through them step by step. Build trust through data transparency. Take your time — this is a teaching moment, not a highlight reel.',
+    defaultDuration: 420,
   },
   deep_dive: {
-    name: 'YouTube Deep Dive',
-    durationRange: '5-10 minutes',
-    wordCount: '750-1500 words',
+    name: 'YouTube Deep Dive Masterclass',
+    durationRange: '8-12 minutes',
+    wordCount: '2000-3000 words',
     structure:
-      'Hook (5s) → Overview → Deep breakdown (5+ points) → Case study with real data → Actionable takeaways → CTA (15s)',
+      'Hook (10s) → Big picture overview / why this topic is critical right now (45s) → Deep breakdown point 1 with full data walkthrough (120s) → Deep breakdown point 2 with case study (120s) → Deep breakdown point 3 with comparison or analysis (120s) → Deep breakdown point 4 with actionable steps (90s) → Key takeaways summary (45s) → CTA driving to coachinayahturnkeytool.com (30s)',
     style:
-      'Comprehensive and analytical. Full market breakdowns, detailed case studies, multi-factor analysis. The viewer should feel like they got a masterclass.',
-    defaultDuration: 420,
+      'Comprehensive masterclass — the viewer should feel like they just got a private coaching session. Full market breakdowns, detailed case studies with real numbers, multi-factor analysis explained in plain language. Walk through every number and explain what it means. This is the deep content that builds real authority.',
+    defaultDuration: 600,
   },
 };
 
@@ -227,7 +227,7 @@ function buildAutonomousPrompt(
 
   const formatInstruction = overrideFormat
     ? `Use the "${overrideFormat}" format (${FORMAT_SPECS[overrideFormat]?.name}).`
-    : 'Pick the BEST format for the topic you choose. Choose from: lesson (2-5min) or deep_dive (5-10min). Only YouTube-style long-form content.';
+    : 'Pick the BEST format for the topic you choose. Choose from: lesson (5-8min coaching lesson) or deep_dive (8-12min masterclass). ONLY YouTube-style long-form coaching content. MINIMUM 5 minutes.';
 
   const formatSpecs = Object.entries(FORMAT_SPECS)
     .map(([key, spec]) => `  ${key}: ${spec.name} | ${spec.durationRange} | ${spec.wordCount} | Structure: ${spec.structure}`)
@@ -252,6 +252,17 @@ ${formatSpecs}
 
 3. Generate the COMPLETE narration script with real data woven throughout.
 
+## CRITICAL LENGTH REQUIREMENTS
+- MINIMUM 1,500 words for a lesson. MINIMUM 2,000 words for a deep_dive.
+- The script MUST be long enough to fill 5-10 minutes of spoken narration.
+- At ~150 words per minute of natural speech, a 5-minute video needs AT LEAST 750 words, and a 10-minute video needs AT LEAST 1,500 words.
+- But we want COACHING-STYLE content that takes its time — aim for 1,500-2,000 words for lessons and 2,000-3,000 words for deep dives.
+- DO NOT write a summary or outline. Write the FULL, COMPLETE, word-for-word narration.
+- Every teaching point should be THOROUGHLY explained with examples, analogies, and real data.
+- Walk through every number step by step — don't just state it, explain what it MEANS.
+- Include transitions between sections ("Now here's where it gets interesting..." / "But wait, there's more to this story...")
+- The script should feel like a 5-10 minute conversation, not a 60-second highlight reel.
+
 ${formattedData}
 ${previousTopicsList}
 
@@ -261,7 +272,7 @@ Return a JSON object with these fields:
 - "format": The format key you chose (lesson or deep_dive)
 - "title": A compelling YouTube video title (make it click-worthy)
 - "hook": The opening hook line (first 3 seconds — must stop the scroll)
-- "script": The COMPLETE narration script including the hook and CTA. This is the FULL thing the speaker reads aloud. Must be a complete narrative — NOT bullet points, NOT an outline.
+- "script": The COMPLETE narration script including the hook and CTA. This is the FULL thing the speaker reads aloud. MUST be 1,500-3,000 words. Must be a complete narrative — NOT bullet points, NOT an outline. NOT a summary. The FULL word-for-word narration that fills 5-10 minutes of speaking time.
 - "cta": The closing call-to-action line
 - "estimated_duration_seconds": Your estimate of spoken duration
 - "key_data_points": Array of 2-6 specific real data points or statistics used in the script
@@ -323,7 +334,7 @@ export async function generateAutonomousScript(
     },
     generationConfig: {
       temperature: 0.95,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,
       responseMimeType: 'application/json',
     },
     safetySettings: [

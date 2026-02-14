@@ -360,14 +360,14 @@ export const contentStudioRouter = router({
    */
   videoStatus: publicProcedure
     .input(videoStatusInput)
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       return getVideoStatus(input.jobId);
     }),
 
   /**
    * List recent video jobs.
    */
-  listVideoJobs: publicProcedure.query(() => {
+  listVideoJobs: publicProcedure.query(async () => {
     return listVideoJobs();
   }),
 });

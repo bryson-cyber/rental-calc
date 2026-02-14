@@ -2216,3 +2216,50 @@ export const contentScripts = mysqlTable("content_scripts", {
 ]);
 export type ContentScript = typeof contentScripts.$inferSelect;
 export type InsertContentScript = typeof contentScripts.$inferInsert;
+
+
+/**
+ * Video generation jobs table — persists Golpo AI video generation jobs
+ * so they survive server restarts and can be polled/resumed.
+ */
+export const videoJobs = mysqlTable("video_jobs", {
+  id: int("id").autoincrement().primaryKey(),
+
+  /** Internal job UUID (used for client-side polling) */
+  jobId: varchar("jobId", { length: 64 }).notNull().unique(),
+
+  /** Golpo AI job ID (returned from /generate endpoint) */
+  golpoJobId: varchar("golpoJobId", { length: 128 }),
+
+  /** Reference to the content_scripts table */
+  scriptId: int("scriptId").notNull(),
+
+  /** Video title (copied from script for quick display) */
+  title: varchar("title", { length: 500 }).notNull(),
+
+  /** Job status */
+  status: mysqlEnum("status", ["pending", "generating", "completed", "failed"]).default("pending").notNull(),
+
+  /** Final video URL from Golpo */
+  videoUrl: text("videoUrl"),
+
+  /** Golpo-generated script (may differ from input) */
+  videoScript: text("videoScript"),
+
+  /** Error message if failed */
+  error: text("error"),
+
+  /** Timestamps */
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("vj_job_id_idx").on(table.jobId),
+  index("vj_golpo_job_id_idx").on(table.golpoJobId),
+  index("vj_script_id_idx").on(table.scriptId),
+  index("vj_status_idx").on(table.status),
+  index("vj_created_idx").on(table.createdAt),
+]);
+export type VideoJob = typeof videoJobs.$inferSelect;
+export type InsertVideoJob = typeof videoJobs.$inferInsert;

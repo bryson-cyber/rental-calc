@@ -702,6 +702,13 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // Resume any incomplete video generation jobs from before restart
+    import('../video-generation').then(({ resumeIncompleteJobs }) => {
+      resumeIncompleteJobs().catch((err) =>
+        console.error('[Video Gen] Failed to resume incomplete jobs:', err),
+      );
+    }).catch(() => { /* video-generation module not critical */ });
   });
 }
 
