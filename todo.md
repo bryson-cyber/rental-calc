@@ -11091,3 +11091,10 @@ Results:
 - [x] Build batch send to multiple channels feature with per-channel results
 - [x] Write tests for all new features (1126 tests passing)
 - [x] Save checkpoint
+
+## Send to Slack Button on Report Page (Feb 13, 2026)
+- [x] Add "Send to Slack" button directly on the property report page (next to Regenerate + Copy Link)
+- [x] Build SendToSlackModal component: channel search, AI deal summary, send button
+- [x] Button visible to admin users only (gated by isAdmin && shareId && !isSharedView)
+- [x] Auto-populate report data (address, revenue, link) from the current report
+- [x] All 1126 tests pass, 0 TS errors

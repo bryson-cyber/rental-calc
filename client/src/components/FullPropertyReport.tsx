@@ -61,6 +61,7 @@ import {
   ArrowDown,
   Scale,
   BedDouble,
+  Send,
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,9 @@ import { toast } from 'sonner';
 import { LightMarkdown } from '@/components/LightMarkdown';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
+import { lazy, Suspense } from 'react';
+
+const SendToSlackModal = lazy(() => import('./SendToSlackModal'));
 
 // ============================================================
 // TYPES
@@ -580,6 +584,7 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
 
   const { user, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && user?.role === 'admin';
+  const [showSlackModal, setShowSlackModal] = useState(false);
 
   const regenerateMutation = trpc.sharedReports.regenerate.useMutation({
     onSuccess: (result) => {
@@ -1000,20 +1005,31 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
             {!onBack && <div />}
             <div className="flex items-center gap-2">
               {isAdmin && shareId && !isSharedView && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRegenerate}
-                  disabled={isRegenerating}
-                  className="gap-2 border-[#1e293b]/20 text-[#1e293b] hover:bg-[#1e293b]/5"
-                >
-                  {isRegenerating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  {isRegenerating ? 'Regenerating...' : 'Regenerate'}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSlackModal(true)}
+                    className="gap-2 border-[#C9A962]/40 text-[#C9A962] hover:bg-[#C9A962]/10"
+                  >
+                    <Send className="w-4 h-4" />
+                    Send to Slack
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerate}
+                    disabled={isRegenerating}
+                    className="gap-2 border-[#1e293b]/20 text-[#1e293b] hover:bg-[#1e293b]/5"
+                  >
+                    {isRegenerating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                  </Button>
+                </>
               )}
               <Button
                 variant="outline"
@@ -3137,6 +3153,28 @@ export default function FullPropertyReport({ data, onBack, shareId, isSharedView
           </p>
         </div>
       </div>
+
+      {/* Send to Slack Modal — admin only */}
+      {isAdmin && shareId && !isSharedView && (
+        <Suspense fallback={null}>
+          <SendToSlackModal
+            open={showSlackModal}
+            onOpenChange={setShowSlackModal}
+            shareCode={shareId}
+            reportSource="shared"
+            address={data.property.address}
+            reportData={{
+              bedrooms: data.property.bedrooms,
+              bathrooms: data.property.bathrooms,
+              annualRevenue: data.revenue_estimate?.annual_revenue,
+              occupancyRate: data.revenue_estimate?.occupancy_rate,
+              averageDailyRate: data.revenue_estimate?.average_daily_rate,
+              verdict: data.ai_summary ? 'See full report' : undefined,
+              reportType: 'property',
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
