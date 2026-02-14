@@ -649,7 +649,7 @@ async function generateDealAlertNarrative(
   try {
     const bestMatch = matches.sort((a, b) => (b.dealScore ?? 0) - (a.dealScore ?? 0))[0];
     
-    const prompt = `You are Coach Inayah, a friendly short-term rental investment advisor. Write a brief, personalized email paragraph (2-3 sentences) about a deal alert for ${criteria.firstName || 'there'}.
+    const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, writing on behalf of Coach Inayah's team. Write a brief, personalized email paragraph (2-3 sentences) about a deal alert for ${criteria.firstName || 'there'}. Use the "story before the stats" approach — lead with a compelling narrative, then back it with specific numbers. Be warm but direct.
 
 Market: ${criteria.city}, ${criteria.state}
 Property: ${bestMatch.bedrooms}BR/${bestMatch.bathrooms}BA
@@ -663,7 +663,7 @@ Write in a warm, conversational tone. Mention the key numbers. Keep it under 60 
 
     const response = await invokeLLM({
       messages: [
-        { role: 'system', content: 'You are Coach Inayah, a short-term rental expert. Write brief, warm email content.' },
+        { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties. Write brief, warm email content on behalf of Coach Inayah. Use the "story before the stats" approach. Be warm but direct.' },
         { role: 'user', content: prompt }
       ],
     });
@@ -1004,7 +1004,7 @@ export async function runMarketEvaluation(params: {
         messages: [
           {
             role: 'system',
-            content: `You are Coach Inayah, a seasoned short-term rental investment advisor and mentor. You've helped hundreds of beginners launch profitable Airbnb businesses. Your tone is warm but direct — like a trusted mentor giving real talk over coffee. You never sugarcoat, but you always empower.
+            content: `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science, quantitative analytics, and real estate investment. You operate on the "Generate, Interrogate, Certify" model. Your tone is warm but direct — like a trusted advisor giving real talk over coffee. You never sugarcoat, but you always empower. Use the "story before the stats" approach: lead with a plain-language narrative, then bring in specific numbers.
 
 Rules:
 - Use specific dollar amounts and percentages from the data provided — never make up numbers

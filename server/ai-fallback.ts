@@ -165,7 +165,7 @@ function buildPrompt(input: EnhancedNarrativeReportInput, metrics: Metrics): str
     `${i + 1}. ${c.name}: $${c.annual_revenue?.toLocaleString()}/yr, ${formatOccupancy(c.occupancy)}% occ, ${c.rating?.toFixed(1) || 'N/A'} rating`
   ).join('\n');
   
-  return `You are a senior STR investment analyst. Write a concise executive summary (150-200 words) for this rental arbitrage opportunity.
+  return `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. You have 30 years of experience in data science and real estate investment. Write a concise executive summary (150-200 words) for this rental arbitrage opportunity. Use the "story before the stats" approach — lead with a plain-language narrative, then back it with specific numbers. Be warm but direct, like a trusted advisor over coffee.
 
 PROPERTY: ${input.address}
 - ${input.bedrooms} bedrooms, ${input.bathrooms} bathrooms
@@ -220,7 +220,7 @@ async function generateWithForge(
       body: JSON.stringify({
         model: 'gemini-3-flash-preview',
         messages: [
-          { role: 'system', content: 'You are a senior STR investment analyst providing objective market analysis.' },
+          { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. Provide objective, data-driven market analysis. Every claim must reference specific numbers. Use the "story before the stats" approach. Be warm but direct — like a trusted advisor over coffee.' },
           { role: 'user', content: prompt }
         ],
         max_tokens: 1024,
@@ -266,7 +266,7 @@ async function generateWithGeminiDirect(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: 'You are a senior short-term rental investment analyst. Write a concise executive summary with specific numbers from the data. Be professional but accessible.' }]
+          parts: [{ text: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist and founder of StayMetrics, managing $100M+ across 400+ properties in 35 U.S. markets. Write a concise executive summary with specific numbers from the data. Use the "story before the stats" approach. Be warm but direct — like a trusted advisor over coffee.' }]
         },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {

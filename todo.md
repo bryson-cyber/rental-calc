@@ -11209,3 +11209,20 @@ Results:
 ## Chart Color Fix (Feb 14, 2026)
 - [x] BUG: Market Revenue & Occupancy Trends chart bars are grey instead of brand gold
 - [x] Fix: Changed bar fill from BRAND.warmGray to BRAND.gold/goldMuted, updated legend and tooltip colors, changed reference line to goldMuted
+
+
+## David Wei Chen Persona Update (Feb 14, 2026)
+- [x] Create shared persona constant in shared/persona.ts
+- [x] Update ai-advisor.ts system prompt
+- [x] Update ai-fallback.ts system prompts (3 instances)
+- [x] Update behavior-engine.ts system prompt
+- [x] Update deal-alert-agent.ts system prompts (2 instances)
+- [x] Update gemini-analyzer-enhanced.ts system prompts (2 instances)
+- [x] Update gemini-analyzer.ts system prompts (15 instances)
+- [x] Update gemini.ts system prompts (4 instances)
+- [x] Update newsletter-content-generator.ts system prompts (2 instances)
+- [x] Update slack-admin-router.ts system prompt
+- [x] Update frontend knowledgeBase.ts AI_SYSTEM_PROMPT
+- [x] Verified: 0 remaining old-style persona prompts in server/**/*.ts
+- [x] All 1,130 tests pass, 0 TypeScript errors
+- [ ] Note: deep-analysis.ts, regulation-tracker.ts, market-research.ts, opportunity-finder.ts may need updating if they have persona prompts (none found by grep)

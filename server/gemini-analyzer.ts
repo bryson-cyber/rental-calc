@@ -409,7 +409,7 @@ async function callGeminiWithImage(prompt: string, imageUrl: string, maxTokens: 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: {
-        parts: [{ text: 'You are an expert Airbnb property analyst specializing in visual assessment of rental listings. Analyze images objectively, identifying design themes, amenities, and guest appeal factors.' }]
+        parts: [{ text: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You specialize in visual assessment of rental listings. Analyze images objectively, identifying design themes, amenities, and guest appeal factors.' }]
       },
       contents: [{
         role: 'user',
@@ -480,7 +480,7 @@ export async function synthesizePropertyInsights(
   const avgCompetitorReviews = competitors.reduce((sum, c) => sum + c.reviews, 0) / Math.max(1, competitors.length);
   const avgCompetitorADR = competitors.reduce((sum, c) => sum + c.adr, 0) / Math.max(1, competitors.length);
 
-  const prompt = `You are an expert Airbnb arbitrage analyst. Generate 5 UNIQUE, DATA-DRIVEN insights specific to THIS property.
+  const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Generate 5 UNIQUE, DATA-DRIVEN insights specific to THIS property.
 
 PROPERTY FUNDAMENTALS:
 - Address: ${property.address}
@@ -569,7 +569,7 @@ Generate exactly 5 insights.`;
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are an expert Airbnb arbitrage analyst. Generate unique, data-driven insights specific to each property. Every insight must include specific numbers from the provided data. Never give generic advice.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Generate unique, data-driven insights specific to each property. Every insight must include specific numbers from the provided data. Use the story-before-the-stats approach. Never give generic advice.',
       responseSchema: insightsSchema
     });
     return JSON.parse(response);
@@ -616,7 +616,7 @@ export async function analyzeCompetitorPatterns(
   const top3AvgADR = top3.reduce((sum, c) => sum + c.adr, 0) / 3;
   const top3AvgOcc = top3.reduce((sum, c) => sum + normalizeOccupancy(c.occupancy), 0) / 3;
 
-  const prompt = `You are an expert at analyzing Airbnb competition patterns. Identify QUANTIFIED PATTERNS from this data.
+  const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Identify QUANTIFIED PATTERNS from this competition data.
 
 COMPETITOR DATA (${competitors.length} listings, sorted by revenue):
 ${competitors.map((c, i) => `
@@ -686,7 +686,7 @@ CRITICAL: Every pattern MUST include specific numbers. No generic observations.`
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are an expert at analyzing Airbnb competition patterns. Identify quantified patterns from competitor data. Every pattern must include specific numbers from the data provided. Never give generic observations.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Identify quantified patterns from competitor data. Every pattern must include specific numbers from the data provided. Use analogy over jargon. Never give generic observations.',
       responseSchema: patternsSchema
     });
     return JSON.parse(response);
@@ -739,7 +739,7 @@ export async function generateInvestmentVerdict(
   const revenueAtLowerOcc = market.adr * 365 * (occupancyDrop20 / 100);
   const monthlyLossAt20Drop = (monthlyExpenses * 12) - revenueAtLowerOcc;
   
-  const prompt = `You are a senior real estate investment analyst. Provide a QUANTIFIED investment verdict.
+  const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Provide a QUANTIFIED investment verdict.
 
 PROPERTY FUNDAMENTALS:
 - Address: ${property.address}
@@ -836,7 +836,7 @@ Provide your verdict based on the composite score and data above.`;
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are a senior real estate investment analyst. Provide quantified investment verdicts based strictly on the data provided. Every statement must include specific numbers. Align your rating with the composite score: 7+ = GO, 4-7 = CAUTION, below 4 = PASS.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Provide quantified investment verdicts based strictly on the data provided. Every statement must include specific numbers. Use the story-before-the-stats approach. Align your rating with the composite score: 7+ = GO, 4-7 = CAUTION, below 4 = PASS.',
       responseSchema: verdictSchema
     });
     return JSON.parse(response);
@@ -1023,7 +1023,7 @@ Generate the pricing strategy based on the data above.`;
 export async function analyzeListingPhoto(imageUrl: string, listingName: string): Promise<PhotoAnalysis> {
   const { invokeLLM } = await import('./_core/llm');
   
-  const prompt = `You are an expert Airbnb listing photographer and interior designer. Analyze this listing photo and provide insights.
+  const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze this listing photo and provide insights.
 
 This photo is from the listing: "${listingName}"
 
@@ -1050,7 +1050,7 @@ Return ONLY the JSON object, no other text.`;
     console.log(`[GeminiAnalyzer] Analyzing photo via AI: ${listingName}`);
     const response = await invokeLLM({
       messages: [
-        { role: 'system', content: 'You are an expert Airbnb listing photographer and interior designer. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.' },
+        { role: 'system', content: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You also have deep expertise in listing photography and interior design. Analyze listing photos and provide actionable insights. Always respond in valid JSON format.' },
         { role: 'user', content: [
           { type: 'text', text: prompt },
           { type: 'image_url', image_url: { url: imageUrl } }
@@ -1276,7 +1276,7 @@ INCLUDE 4 RISKS (one from each category) and 3 OPPORTUNITIES with specific dolla
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are a senior real estate risk analyst specializing in short-term rental investments. Assess risks and opportunities using specific numbers from the data provided. Every risk and opportunity must include quantified financial impacts.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Assess risks and opportunities using specific numbers from the data provided. Every risk and opportunity must include quantified financial impacts. Never sugarcoat risks but always empower.',
       responseSchema: riskSchema
     });
     return JSON.parse(response);
@@ -1732,7 +1732,7 @@ export async function callGeminiStructured<T>(
   }
 
   // Use native systemInstruction instead of embedding in prompt
-  const systemPrompt = 'You are an expert short-term rental investment analyst. Analyze property data and market metrics to provide quantified, actionable investment analysis.';
+  const systemPrompt = 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze property data and market metrics to provide quantified, actionable investment analysis. Use the story-before-the-stats approach and analogy over jargon.';
 
   let lastError: Error | null = null;
   
@@ -2118,7 +2118,7 @@ Provide the regulation information based on your knowledge.`;
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are a short-term rental regulatory specialist. Provide information about STR regulations based on your knowledge. Always include a disclaimer that information may be outdated and should be verified with local authorities.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You have deep knowledge of STR regulations across markets. Provide information about STR regulations based on your knowledge. Always include a disclaimer that information may be outdated and should be verified with local authorities.',
       responseSchema: regulationSchema,
       maxTokens: 2048
     });
@@ -2712,7 +2712,7 @@ export async function analyzeHistoricalMarketTrends(
     .map(y => `${y.year}: $${y.avg.toFixed(0)}/mo`)
     .join(', ');
 
-  const prompt = `You are an expert short-term rental market analyst. Analyze this ${fiveYearData.years_of_data}-year historical data for the ${marketName} market and provide investment insights.
+  const prompt = `You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze this ${fiveYearData.years_of_data}-year historical data for the ${marketName} market and provide investment insights.
 
 HISTORICAL DATA:
 - Years of data: ${fiveYearData.years_of_data}
@@ -2771,7 +2771,7 @@ Focus on:
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are an expert short-term rental market analyst. Analyze historical market data to identify trends, assess market health, and provide actionable investment insights. Every finding must reference specific numbers from the data.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. Analyze historical market data to identify trends, assess market health, and provide actionable investment insights. Every finding must reference specific numbers from the data. Use the story-before-the-stats approach.',
       responseSchema: historicalSchema,
       maxTokens: 1024
     });
@@ -4370,7 +4370,7 @@ KEY REQUIREMENTS:
   try {
     const response = await callGemini({
       prompt,
-      systemInstruction: 'You are a senior short-term rental investment analyst writing a comprehensive property report. Write in flowing paragraphs, not bullet points. Every claim must reference specific numbers from the data. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor.',
+      systemInstruction: 'You are David Wei Chen, a 54-year-old AI-first short-term rental investment strategist managing $100M+ across 400+ properties in 35 U.S. markets. You are writing a comprehensive property report. Write in flowing paragraphs, not bullet points. Every claim must reference specific numbers from the data. Use the story-before-the-stats approach. Write for someone who may be new to STR investing. Be professional but accessible, like a trusted advisor sharing insights over coffee. Never sugarcoat risks but always empower.',
       responseSchema: reportSchema,
       maxTokens: 8192
     });
