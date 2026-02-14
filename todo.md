@@ -11171,9 +11171,11 @@ Results:
 - [ ] FEATURE: One-click property analysis from match card — user should be able to analyze a specific property directly
 - [ ] FEATURE: Show actual Zillow/Redfin listing links in matches so users can see the real deal
 
-### HasData API & Rate Limiter Fixes (Feb 14, 2026)
+### HasData API & Rate Limiter Audit (Feb 14, 2026)
 - [x] Fix HasData Zillow Listing API response mapping (properties array, nested address)
-- [x] Add two-step enrichment: Listing API → Property API for price/beds/baths
-- [x] Fix admin rate limit bypass in deal alert scan context (verified: already working via tRPC middleware)
+- [x] Remove unnecessary two-step enrichment: Listing API already returns price/beds/baths directly (saves ~60 credits per scan)
+- [x] Align hasdata-zillow.ts with working hasdata.ts pattern (single API call, no Property API enrichment)
+- [x] Verify admin rate limit bypass works correctly via tRPC middleware + AsyncLocalStorage
 - [x] Filter out listings without price data before AirDNA analysis
-- [x] Add tests for HasData response mapping (17 tests pass)
+- [x] Update tests for simplified pattern (21 tests pass, 1130 total pass)
+- [x] Note: scanCityForDeals in hasdata-zillow.ts is dead code (never imported anywhere)

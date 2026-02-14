@@ -92,7 +92,7 @@ import { vi, beforeEach, afterEach } from 'vitest';
 // Mock fetch globally for the new tests
 const mockFetch = vi.fn();
 
-describe('HasData Listing API Response Mapping', () => {
+describe('HasData Listing API Response Mapping (Direct — No Enrichment)', () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
@@ -104,177 +104,236 @@ describe('HasData Listing API Response Mapping', () => {
     globalThis.fetch = originalFetch;
   });
 
-  it('reads properties from data.properties array (not listings or results)', async () => {
-    // Dynamically import to get fresh module with mocked fetch
+  it('reads properties from data.properties array with price/beds/baths directly', async () => {
     const { searchZillowRentals } = await import('./hasdata-zillow');
 
-    // Step 1: Listing API returns `properties`
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          properties: [
-            {
-              url: 'https://www.zillow.com/homedetails/123_zpid/',
-              address: { street: '123 Main St', city: 'Denver', state: 'CO', zipcode: '80202' },
-              image: 'https://photos.zillowstatic.com/123.jpg',
-              latitude: 39.75,
-              longitude: -104.99,
-              status: 'FOR_RENT',
-            },
-          ],
-          pagination: { totalCount: 1, currentPage: 1, totalPages: 1 },
-        }),
-      })
-      // Step 2: Property API enrichment
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          property: {
-            id: '123',
+    // Listing API returns price, bedrooms, bathrooms directly — no enrichment needed
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          {
+            zpid: '123',
+            detailUrl: 'https://www.zillow.com/homedetails/123_zpid/',
             address: { street: '123 Main St', city: 'Denver', state: 'CO', zipcode: '80202' },
             price: 2500,
             bedrooms: 3,
             bathrooms: 2,
             livingArea: 1800,
             homeType: 'SINGLE_FAMILY',
+            imgSrc: 'https://photos.zillowstatic.com/123.jpg',
             latitude: 39.75,
             longitude: -104.99,
-            image: 'https://photos.zillowstatic.com/123.jpg',
-            url: 'https://www.zillow.com/homedetails/123_zpid/',
+            homeStatus: 'FOR_RENT',
           },
-        }),
-      });
+        ],
+        searchInformation: { totalResults: 1 },
+        pagination: { currentPage: 1, totalPages: 1 },
+      }),
+    });
 
     const result = await searchZillowRentals({ city: 'Denver', state: 'CO' });
-
-    expect(result.success).toBe(true);
-    expect(result.listings.length).toBeGreaterThanOrEqual(1);
-
-    // Verify the Listing API was called with correct URL
-    const listingCall = mockFetch.mock.calls[0];
-    expect(listingCall[0]).toContain('api.hasdata.com/scrape/zillow/listing');
-    expect(listingCall[0]).toContain('keyword=Denver');
-  });
-
-  it('enriches listings with price/beds/baths from Property API', async () => {
-    const { searchZillowRentals } = await import('./hasdata-zillow');
-
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          properties: [
-            {
-              url: 'https://www.zillow.com/homedetails/456_zpid/',
-              address: { street: '456 Oak Ave', city: 'Austin', state: 'TX', zipcode: '78701' },
-              status: 'FOR_RENT',
-            },
-          ],
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          property: {
-            id: '456',
-            address: { street: '456 Oak Ave', city: 'Austin', state: 'TX', zipcode: '78701' },
-            price: 3200,
-            bedrooms: 4,
-            bathrooms: 3,
-            livingArea: 2200,
-            homeType: 'TOWNHOUSE',
-          },
-        }),
-      });
-
-    const result = await searchZillowRentals({ city: 'Austin', state: 'TX' });
 
     expect(result.success).toBe(true);
     expect(result.listings.length).toBe(1);
 
     const listing = result.listings[0];
-    expect(listing.price).toBe(3200);
-    expect(listing.bedrooms).toBe(4);
-    expect(listing.bathrooms).toBe(3);
-    expect(listing.livingArea).toBe(2200);
-    expect(listing.city).toBe('Austin');
-    expect(listing.state).toBe('TX');
+    expect(listing.zpid).toBe('123');
+    expect(listing.price).toBe(2500);
+    expect(listing.bedrooms).toBe(3);
+    expect(listing.bathrooms).toBe(2);
+    expect(listing.livingArea).toBe(1800);
+    expect(listing.city).toBe('Denver');
+    expect(listing.state).toBe('CO');
+    expect(listing.zipcode).toBe('80202');
+
+    // Only ONE fetch call — no Property API enrichment
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toContain('api.hasdata.com/scrape/zillow/listing');
   });
 
-  it('handles multi-unit buildings with listings sub-array', async () => {
+  it('maps address from nested object format', async () => {
     const { searchZillowRentals } = await import('./hasdata-zillow');
 
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          properties: [
-            {
-              url: 'https://www.zillow.com/homedetails/789_zpid/',
-              address: { street: '789 Elm Blvd', city: 'Chicago', state: 'IL', zipcode: '60601' },
-              status: 'FOR_RENT',
-            },
-          ],
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          property: {
-            id: '789',
-            address: { street: '789 Elm Blvd', city: 'Chicago', state: 'IL', zipcode: '60601' },
-            homeType: 'MULTI_FAMILY',
-            latitude: 41.88,
-            longitude: -87.63,
-            image: 'https://photos.zillowstatic.com/789.jpg',
-            listings: [
-              { id: '789a', price: 1800, beds: 2, baths: 1, area: 900, status: 'FOR_RENT', url: 'https://www.zillow.com/homedetails/789a_zpid/' },
-              { id: '789b', price: 2200, beds: 3, baths: 2, area: 1200, status: 'FOR_RENT', url: 'https://www.zillow.com/homedetails/789b_zpid/' },
-              { id: '789c', price: 0, beds: 1, baths: 1, area: 600, status: 'SOLD', url: 'https://www.zillow.com/homedetails/789c_zpid/' },
-            ],
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          {
+            zpid: '456',
+            url: 'https://www.zillow.com/homedetails/456_zpid/',
+            address: { street: '456 Oak Ave', city: 'Austin', state: 'TX', zipcode: '78701' },
+            price: 3200,
+            bedrooms: 4,
+            bathrooms: 3,
+            homeStatus: 'FOR_RENT',
           },
-        }),
-      });
+        ],
+      }),
+    });
+
+    const result = await searchZillowRentals({ city: 'Austin', state: 'TX' });
+
+    expect(result.success).toBe(true);
+    expect(result.listings.length).toBe(1);
+    expect(result.listings[0].address).toContain('456 Oak Ave');
+    expect(result.listings[0].address).toContain('Austin');
+    expect(result.listings[0].price).toBe(3200);
+    expect(result.listings[0].bedrooms).toBe(4);
+  });
+
+  it('maps address from flat string format', async () => {
+    const { searchZillowRentals } = await import('./hasdata-zillow');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          {
+            zpid: '789',
+            detailUrl: 'https://www.zillow.com/homedetails/789_zpid/',
+            streetAddress: '789 Elm Blvd, Chicago, IL 60601',
+            price: 1800,
+            beds: 2,
+            baths: 1,
+            homeStatus: 'FOR_RENT',
+          },
+        ],
+      }),
+    });
 
     const result = await searchZillowRentals({ city: 'Chicago', state: 'IL' });
 
     expect(result.success).toBe(true);
-    // Should only include FOR_RENT units (2 out of 3)
-    expect(result.listings.length).toBe(2);
+    expect(result.listings.length).toBe(1);
+    expect(result.listings[0].address).toContain('789 Elm Blvd');
     expect(result.listings[0].price).toBe(1800);
     expect(result.listings[0].bedrooms).toBe(2);
-    expect(result.listings[1].price).toBe(2200);
-    expect(result.listings[1].bedrooms).toBe(3);
+    expect(result.listings[0].bathrooms).toBe(1);
   });
 
-  it('creates fallback listing when Property API fails', async () => {
+  it('filters out non-rental properties', async () => {
     const { searchZillowRentals } = await import('./hasdata-zillow');
 
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          properties: [
-            {
-              url: 'https://www.zillow.com/homedetails/999_zpid/',
-              address: { street: '999 Fail St', city: 'Miami', state: 'FL', zipcode: '33101' },
-              image: 'https://photos.zillowstatic.com/999.jpg',
-              status: 'FOR_RENT',
-            },
-          ],
-        }),
-      })
-      .mockRejectedValueOnce(new Error('Network error'));
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          {
+            zpid: '100',
+            url: 'https://www.zillow.com/homedetails/100_zpid/',
+            price: 2000,
+            bedrooms: 2,
+            homeStatus: 'FOR_RENT',
+          },
+          {
+            zpid: '200',
+            url: 'https://www.zillow.com/homedetails/200_zpid/',
+            price: 350000,
+            bedrooms: 3,
+            homeStatus: 'FOR_SALE',
+          },
+          {
+            zpid: '300',
+            url: 'https://www.zillow.com/homedetails/300_zpid/',
+            price: 1500,
+            bedrooms: 1,
+            homeStatus: 'FOR_RENT',
+          },
+        ],
+      }),
+    });
 
     const result = await searchZillowRentals({ city: 'Miami', state: 'FL' });
 
     expect(result.success).toBe(true);
-    // Should still have a listing (fallback), but with price=0
+    // FOR_SALE property should be filtered out
+    expect(result.listings.length).toBe(2);
+    expect(result.listings.every(l => l.statusText !== 'FOR_SALE')).toBe(true);
+  });
+
+  it('uses fallback fields (beds/baths/unformattedPrice) when primary fields missing', async () => {
+    const { searchZillowRentals } = await import('./hasdata-zillow');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          {
+            zpid: '555',
+            detailUrl: 'https://www.zillow.com/homedetails/555_zpid/',
+            address: { street: '555 Maple Dr', city: 'Portland', state: 'OR', zipcode: '97201' },
+            unformattedPrice: 2800,
+            beds: 3,
+            baths: 2.5,
+            area: 1600,
+            status: 'FOR_RENT',
+          },
+        ],
+      }),
+    });
+
+    const result = await searchZillowRentals({ city: 'Portland', state: 'OR' });
+
+    expect(result.success).toBe(true);
     expect(result.listings.length).toBe(1);
-    expect(result.listings[0].price).toBe(0);
-    expect(result.listings[0].bedrooms).toBe(0);
-    expect(result.listings[0].city).toBe('Miami');
+    expect(result.listings[0].price).toBe(2800);
+    expect(result.listings[0].bedrooms).toBe(3);
+    expect(result.listings[0].bathrooms).toBe(2.5);
+  });
+
+  it('handles empty properties array gracefully', async () => {
+    const { searchZillowRentals } = await import('./hasdata-zillow');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [],
+      }),
+    });
+
+    const result = await searchZillowRentals({ city: 'Nowhere', state: 'XX' });
+
+    expect(result.success).toBe(false);
+    expect(result.listings.length).toBe(0);
+  });
+
+  it('handles API error gracefully', async () => {
+    const { searchZillowRentals } = await import('./hasdata-zillow');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      text: async () => 'Rate limited',
+    });
+
+    const result = await searchZillowRentals({ city: 'Denver', state: 'CO' });
+
+    expect(result.success).toBe(false);
+    expect(result.listings.length).toBe(0);
+  });
+
+  it('does NOT call Property API — only 1 fetch call per search', async () => {
+    const { searchZillowRentals } = await import('./hasdata-zillow');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        properties: [
+          { zpid: 'a', price: 1000, bedrooms: 1, homeStatus: 'FOR_RENT' },
+          { zpid: 'b', price: 2000, bedrooms: 2, homeStatus: 'FOR_RENT' },
+          { zpid: 'c', price: 3000, bedrooms: 3, homeStatus: 'FOR_RENT' },
+        ],
+      }),
+    });
+
+    const result = await searchZillowRentals({ city: 'Test', state: 'TS' });
+
+    expect(result.success).toBe(true);
+    expect(result.listings.length).toBe(3);
+
+    // CRITICAL: Only 1 API call (Listing API). No Property API enrichment calls.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 

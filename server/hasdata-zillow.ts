@@ -316,11 +316,14 @@ export interface ZillowListingResponse {
 /**
  * Search Zillow for rental listings in a city.
  *
- * Two-step approach because the Listing API does NOT return price/beds:
- *   1. Listing API  → `data.properties[]` with URLs + addresses (no price/beds)
- *   2. Property API → `property.listings[]` sub-array with price, beds, baths
+ * Uses the same pattern as the working `hasdata.ts` module:
+ *   - Listing API returns `data.properties[]` with price, beds, baths directly
+ *   - NO separate Property API enrichment needed (saves ~60 credits per scan)
+ *   - Only 5 credits per Listing API call
  *
- * Credit budget per scan: 5 (listing) + maxEnrich×5 (property) ≈ 65–85 credits.
+ * The Property API enrichment in `hasdata.ts` is only used as a fallback for
+ * "Contact for Price" listings — the Listing API already returns price/beds
+ * for most rental properties.
  */
 export async function searchZillowRentals(params: {
   city: string;
@@ -330,8 +333,6 @@ export async function searchZillowRentals(params: {
   minPrice?: number;
   maxPrice?: number;
   page?: number;
-  /** Max properties to enrich via Property API (default 12, 5 credits each) */
-  maxEnrich?: number;
 }): Promise<ZillowListingResponse> {
   const apiKey = ENV.hasdataApiKey;
 
@@ -352,7 +353,7 @@ export async function searchZillowRentals(params: {
   if (params.page) searchParams.append('page', params.page.toString());
 
   try {
-    console.log(`[HasData] Step 1: Listing API for ${params.city}, ${params.state}...`);
+    console.log(`[HasData] Searching rentals for ${params.city}, ${params.state}...`);
 
     const response = await fetch(
       `https://api.hasdata.com/scrape/zillow/listing?${searchParams}`,
@@ -371,184 +372,84 @@ export async function searchZillowRentals(params: {
 
     const data = await response.json();
 
-    // HasData returns `properties` (NOT `listings` or `results`)
-    const rawProperties: any[] = data.properties || data.listings || data.results || [];
+    // HasData returns `properties` array (same as hasdata.ts)
+    const rawProperties: any[] = data.properties || data.results || [];
 
     if (rawProperties.length === 0) {
       console.log('[HasData] No properties returned from Listing API');
       return { success: false, listings: [], totalCount: 0, currentPage: 1, totalPages: 0 };
     }
 
-    const maxEnrich = params.maxEnrich ?? 12;
-    const propertiesToEnrich = rawProperties
-      .filter((p: any) => p.url && (p.status === 'FOR_RENT' || !p.status))
-      .slice(0, maxEnrich);
+    console.log(`[HasData] Found ${rawProperties.length} properties from Listing API`);
 
+    // Map directly from Listing API response — same field mapping as hasdata.ts
+    const listings: ZillowListing[] = rawProperties
+      .filter((p: any) => {
+        const status = (p.homeStatus || p.status || '').toUpperCase();
+        return !status || status === 'FOR_RENT' || status.includes('RENT');
+      })
+      .map((prop: any) => {
+        // Handle address as object or string (same as hasdata.ts line 131-142)
+        const addressObj = typeof prop.address === 'object' ? prop.address : null;
+        const addressStr = typeof prop.address === 'string' ? prop.address : prop.addressRaw || '';
+
+        const street = addressObj?.street || prop.streetAddress || '';
+        const city = addressObj?.city || prop.city || params.city;
+        const state = addressObj?.state || prop.state || params.state;
+        const zipcode = addressObj?.zipcode || prop.zipcode || prop.zipCode || '';
+
+        const fullAddress = addressObj
+          ? `${street}, ${city}, ${state} ${zipcode}`.trim()
+          : (prop.streetAddress || addressStr || `${city}, ${state}`);
+
+        return {
+          zpid: prop.zpid || prop.id || String(Math.random()),
+          address: fullAddress,
+          streetAddress: street,
+          city,
+          state,
+          zipcode,
+          // Listing API returns price/beds/baths directly
+          price: prop.price || prop.unformattedPrice || prop.rentZestimate || prop.minPrice || 0,
+          bedrooms: prop.bedrooms || prop.beds || 0,
+          bathrooms: prop.bathrooms || prop.baths || 0,
+          livingArea: prop.livingArea || prop.area || prop.sqft || 0,
+          homeType: prop.homeType || prop.propertyType || '',
+          latitude: prop.latitude || prop.lat || 0,
+          longitude: prop.longitude || prop.lng || 0,
+          imgSrc: prop.imgSrc || prop.image || prop.thumbnail || '',
+          detailUrl: prop.detailUrl || prop.url || `https://www.zillow.com/homedetails/${prop.zpid}_zpid/`,
+          statusText: prop.homeStatus || prop.status || 'FOR_RENT',
+          daysOnZillow: prop.daysOnZillow || 0,
+        };
+      });
+
+    const withPrice = listings.filter((l) => l.price > 0);
     console.log(
-      `[HasData] Step 1 found ${rawProperties.length} properties. Enriching top ${propertiesToEnrich.length}...`
+      `[HasData] Mapped ${listings.length} listings, ${withPrice.length} with price (5 credits used)`
     );
 
-    // Step 2: Enrich each property with price/beds/baths via Property API
-    const allListings: ZillowListing[] = [];
-
-    for (const prop of propertiesToEnrich) {
-      try {
-        const enriched = await enrichPropertyWithDetails(
-          prop,
-          apiKey,
-          params.city,
-          params.state
-        );
-        allListings.push(...enriched);
-
-        // Small delay between Property API calls
-        if (propertiesToEnrich.indexOf(prop) < propertiesToEnrich.length - 1) {
-          await new Promise((r) => setTimeout(r, 300));
-        }
-      } catch (err) {
-        console.warn(`[HasData] Failed to enrich ${prop.url}:`, err);
-        // Fallback: create a basic listing from Listing API data
-        const addr = prop.address || {};
-        allListings.push({
-          zpid: prop.id || '',
-          address:
-            prop.addressRaw ||
-            `${addr.street || ''}, ${addr.city || params.city}, ${addr.state || params.state} ${addr.zipcode || ''}`,
-          streetAddress: addr.street || '',
-          city: addr.city || params.city,
-          state: addr.state || params.state,
-          zipcode: addr.zipcode || '',
-          price: 0,
-          bedrooms: 0,
-          bathrooms: 0,
-          livingArea: 0,
-          homeType: prop.homeType || '',
-          latitude: prop.latitude || 0,
-          longitude: prop.longitude || 0,
-          imgSrc: prop.image || '',
-          detailUrl: prop.url || '',
-          statusText: prop.status || 'FOR_RENT',
-          daysOnZillow: 0,
-        });
-      }
-    }
-
-    const withPrice = allListings.filter((l) => l.price > 0);
-    console.log(
-      `[HasData] Step 2 complete: ${allListings.length} listings total, ${withPrice.length} with price`
-    );
+    // Extract pagination info (same as hasdata.ts)
+    const totalResults = data.searchInformation?.totalResults ||
+                         data.totalResultCount ||
+                         data.totalResults ||
+                         rawProperties.length;
 
     const pagination = data.pagination || {};
 
     return {
       success: true,
-      listings: allListings,
-      totalCount: pagination.totalCount || data.totalCount || rawProperties.length,
+      listings,
+      totalCount: totalResults,
       currentPage: pagination.currentPage || params.page || 1,
       totalPages:
         pagination.totalPages ||
-        Math.ceil((pagination.totalCount || rawProperties.length) / 40),
+        Math.ceil(totalResults / 40),
     };
   } catch (error) {
     console.error('[HasData] Listing request failed:', error);
     return { success: false, listings: [], totalCount: 0, currentPage: 1, totalPages: 0 };
   }
-}
-
-/**
- * Enrich a single property from the Listing API with full details from the Property API.
- *
- * The Property API returns a `listings` sub-array for multi-unit buildings,
- * each with price, beds, baths, and area. We flatten these into ZillowListing objects.
- */
-async function enrichPropertyWithDetails(
-  prop: any,
-  apiKey: string,
-  fallbackCity: string,
-  fallbackState: string
-): Promise<ZillowListing[]> {
-  const propUrl = prop.url;
-  if (!propUrl) return [];
-
-  const response = await fetch(
-    `https://api.hasdata.com/scrape/zillow/property?url=${encodeURIComponent(propUrl)}`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    console.warn(`[HasData] Property API error for ${propUrl}: ${response.status}`);
-    return [];
-  }
-
-  const data = await response.json();
-  const property = data.property || data.data || data;
-  const addr = property.address || prop.address || {};
-  const city = addr.city || fallbackCity;
-  const state = addr.state || fallbackState;
-  const zipcode = addr.zipcode || '';
-  const streetBase = addr.street || '';
-  const parentImage = property.image || prop.image || '';
-
-  // Multi-unit buildings have a `listings` sub-array
-  const subListings: any[] = property.listings || [];
-  const forRentListings = subListings.filter((l: any) => l.status === 'FOR_RENT');
-
-  if (forRentListings.length > 0) {
-    return forRentListings.map((unit: any) => ({
-      zpid: unit.id || property.id || '',
-      address: `${streetBase}, ${city}, ${state} ${zipcode}`.trim(),
-      streetAddress: streetBase,
-      city,
-      state,
-      zipcode,
-      price: unit.price || 0,
-      bedrooms: unit.beds || 0,
-      bathrooms: unit.baths || 0,
-      livingArea: unit.area || 0,
-      homeType: property.homeType || '',
-      latitude: property.latitude || prop.latitude || 0,
-      longitude: property.longitude || prop.longitude || 0,
-      imgSrc: unit.image || parentImage,
-      detailUrl: unit.url || propUrl,
-      statusText: unit.status || 'FOR_RENT',
-      daysOnZillow: 0,
-    }));
-  }
-
-  // Single-unit property
-  const price = property.price || property.rentZestimate || 0;
-  const beds = property.bedrooms || property.beds || 0;
-  const baths = property.bathrooms || property.baths || 0;
-  const area = property.livingArea || property.area || 0;
-
-  return [
-    {
-      zpid: property.id || property.zpid || prop.id || '',
-      address:
-        property.addressRaw ||
-        `${streetBase}, ${city}, ${state} ${zipcode}`.trim(),
-      streetAddress: streetBase,
-      city,
-      state,
-      zipcode,
-      price,
-      bedrooms: beds,
-      bathrooms: baths,
-      livingArea: area,
-      homeType: property.homeType || '',
-      latitude: property.latitude || prop.latitude || 0,
-      longitude: property.longitude || prop.longitude || 0,
-      imgSrc: parentImage,
-      detailUrl: property.url || propUrl,
-      statusText: property.status || 'FOR_RENT',
-      daysOnZillow: 0,
-    },
-  ];
 }
 
 /**
