@@ -10,7 +10,7 @@ import { getDb } from './db';
 import { sql } from 'drizzle-orm';
 
 const SIMPLETEXTING_API_KEY = process.env.SIMPLETEXTING_API_KEY;
-const SIMPLETEXTING_API_BASE = 'https://api-app2.simpletexting.com/v2';
+const SIMPLETEXTING_API_BASE = 'https://api-app2.simpletexting.com/v2/api';
 
 // Brand URLs
 const BOOKING_URL = 'masterclass.coachinayah.com/the-turnkey-program';

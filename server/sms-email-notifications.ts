@@ -66,7 +66,7 @@ export async function sendSMSNotification(
       },
       body: JSON.stringify({
         contactPhone: formattedPhone,
-        mode: 'SINGLE_SMS',
+        mode: 'SINGLE_SMS_STRICTLY',
         text: message,
       }),
     });

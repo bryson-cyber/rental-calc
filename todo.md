@@ -11336,3 +11336,10 @@ Results:
 - [x] Add cache hit/miss metrics to track effectiveness (hitCount in DB, getCacheStats endpoint)
 - [x] Write vitest tests for the translation cache system (13 tests)
 - [x] Verify instant translation on repeat visits with cached languages (browser tested)
+
+## SMS Integration Fix (Feb 14, 2026)
+- [x] Audit current SMS integration code and SimpleTexting API setup
+- [x] Identify why SMS sending is failing (wrong mode value + wrong URL path)
+- [x] Fix the SMS integration to work end-to-end (SINGLE_SMS→SINGLE_SMS_STRICTLY, added /api/ to URL)
+- [x] Test SMS sending functionality (API auth ✓, message evaluation ✓)
+- [x] Write vitest tests for SMS integration (17 tests passing)
