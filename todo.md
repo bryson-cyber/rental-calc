@@ -11155,3 +11155,6 @@ Results:
 - [x] Parallelize submarket metrics loop (15 sequential → Promise.all) in sop-reports.ts
 - [x] Parallelize bedroom revenue estimate fetches in deal-alert-agent.ts
 - [x] Parallelize match notification DB updates in deal-alert-agent.ts
+
+## Theme Fix (Feb 14, 2026)
+- [x] Change ThemeProvider defaultTheme from "dark" to "light" - app does not use dark theme
