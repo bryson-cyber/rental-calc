@@ -472,7 +472,7 @@ export const sharedReportsRouter = router({
           );
           
           if (!freshReport) {
-            return { success: false, error: 'Failed to fetch fresh data from AirDNA' };
+            return { success: false, error: 'Failed to fetch fresh market data' };
           }
           
           const prop = freshReport.property as any;
@@ -863,7 +863,7 @@ export const sharedReportsRouter = router({
           );
           
           if (!freshReport) {
-            return { success: false as const, error: 'Failed to fetch data from AirDNA. Please check the address and try again.' };
+            return { success: false as const, error: 'Failed to fetch market data. Please check the address and try again.' };
           }
           
           const prop = freshReport.property as any;

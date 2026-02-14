@@ -579,7 +579,7 @@ async function startServer() {
       success: false, 
       error: 'DEPRECATED: This endpoint has been disabled to prevent API overuse.',
       message: 'Use the simplified CTA-focused email templates instead. See docs/nurture-email-templates-simplified.md',
-      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without AirDNA data pulls.'
+      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without external data pulls.'
     });
   });
 
@@ -589,7 +589,7 @@ async function startServer() {
       success: false, 
       error: 'DEPRECATED: This endpoint has been disabled to prevent API overuse.',
       message: 'Use the simplified CTA-focused email templates instead. See docs/nurture-email-templates-simplified.md',
-      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without AirDNA data pulls.'
+      alternative: 'Nurture emails now use HubSpot contact tokens (firstname, city, state) without external data pulls.'
     });
   });
   

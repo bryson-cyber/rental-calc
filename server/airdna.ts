@@ -3370,17 +3370,20 @@ export async function getComprehensivePropertyReport(
   if (propertyBedrooms >= 4 && radiusComps.length < 10) {
     // Search for BR-1 and BR+1 to supplement sparse results
     const adjacentBrs = [propertyBedrooms - 1, propertyBedrooms + 1].filter(br => br >= 1);
-    for (const adjBr of adjacentBrs) {
-      try {
-        const adjComps = await exploreListingsInRadius(address, compSearchRadius, {
-          bedrooms: adjBr,
-          minRevenue: 5000,
-        }, 15);
-        adjacentBrComps = [...adjacentBrComps, ...adjComps];
-      } catch (e) {
-        console.log(`[Comps] Adjacent BR search failed for ${adjBr}BR`);
-      }
-    }
+    const adjResults = await Promise.all(
+      adjacentBrs.map(async (adjBr) => {
+        try {
+          return await exploreListingsInRadius(address, compSearchRadius, {
+            bedrooms: adjBr,
+            minRevenue: 5000,
+          }, 15);
+        } catch (e) {
+          console.log(`[Comps] Adjacent BR search failed for ${adjBr}BR`);
+          return [];
+        }
+      })
+    );
+    adjacentBrComps = adjResults.flat();
     console.log(`[Comps] Found ${adjacentBrComps.length} adjacent BR comps to supplement ${radiusComps.length} same-BR comps`);
   }
   
@@ -8424,24 +8427,24 @@ export async function getBedroomCounts(
       try {
         // For 6+ bedrooms, we need to aggregate 6, 7, 8, 9, 10+ 
         if (bedrooms === 6) {
-          // Fetch 6, 7, 8, 9, 10 bedrooms and aggregate
+          // Fetch 6, 7, 8, 9, 10 bedrooms in parallel and aggregate
+          const brResults = await Promise.all(
+            [6, 7, 8, 9, 10].map(br =>
+              getMarketListings(marketId, {
+                limit: 10,
+                offset: 0,
+                orderBy: "revenue",
+                orderDirection: "desc",
+                filters: { bedrooms: br },
+              }).catch(() => ({ total_count: 0, listings: [] as ListingData[] }))
+            )
+          );
           let totalCount = 0;
           let totalRevenue = 0;
           let totalOccupancy = 0;
           let listingsWithData = 0;
-          
-          for (const br of [6, 7, 8, 9, 10]) {
-            const result = await getMarketListings(marketId, {
-              limit: 10, // Just need a few to get averages
-              offset: 0,
-              orderBy: "revenue",
-              orderDirection: "desc",
-              filters: { bedrooms: br },
-            });
-            
+          for (const result of brResults) {
             totalCount += result.total_count;
-            
-            // Calculate averages from the returned listings
             if (result.listings.length > 0) {
               const avgRev = result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length;
               const avgOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
@@ -8449,9 +8452,6 @@ export async function getBedroomCounts(
               totalOccupancy += avgOcc * result.listings.length;
               listingsWithData += result.listings.length;
             }
-            
-            // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 30));
           }
           
           return {
@@ -8543,22 +8543,24 @@ export async function getSubmarketBedroomCounts(
     bedroomTypes.map(async (bedrooms) => {
       try {
         if (bedrooms === 6) {
+          // Fetch 6, 7, 8, 9, 10 bedrooms in parallel and aggregate
+          const brResults = await Promise.all(
+            [6, 7, 8, 9, 10].map(br =>
+              getSubmarketListings(submarketId, {
+                limit: 10,
+                offset: 0,
+                orderBy: "revenue",
+                orderDirection: "desc",
+                filters: { bedrooms: br },
+              }).catch(() => ({ total_count: 0, listings: [] as ListingData[] }))
+            )
+          );
           let totalCount = 0;
           let totalRevenue = 0;
           let totalOccupancy = 0;
           let listingsWithData = 0;
-          
-          for (const br of [6, 7, 8, 9, 10]) {
-            const result = await getSubmarketListings(submarketId, {
-              limit: 10,
-              offset: 0,
-              orderBy: "revenue",
-              orderDirection: "desc",
-              filters: { bedrooms: br },
-            });
-            
+          for (const result of brResults) {
             totalCount += result.total_count;
-            
             if (result.listings.length > 0) {
               const avgRev = result.listings.reduce((sum, l) => sum + l.annual_revenue, 0) / result.listings.length;
               const avgOcc = result.listings.reduce((sum, l) => sum + l.occupancy, 0) / result.listings.length;
@@ -8566,8 +8568,6 @@ export async function getSubmarketBedroomCounts(
               totalOccupancy += avgOcc * result.listings.length;
               listingsWithData += result.listings.length;
             }
-            
-            await new Promise(resolve => setTimeout(resolve, 30));
           }
           
           return {

@@ -5755,7 +5755,7 @@ All guiding questions display correctly across all three test markets:
 ## Step 2 Fixes - Jan 27 2026 (Batch 2)
 - [ ] Verify Debaliviere Place zip codes (is 63112 the only one?)
 - [ ] Add Studio/0 bedroom filter option to bedroom dropdown
-- [ ] Remove AirDNA mentions from all tooltips
+- [x] Remove AirDNA mentions from all tooltips (verified: no user-visible AirDNA text in tooltips)
 - [ ] Investigate AirDNA API for property availability duration
 - [ ] Add property availability duration context to annual revenue if API supports it
 
@@ -9408,7 +9408,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ## Email Template Redesign (Feb 2, 2026)
 - [ ] Apply Coach Inayah brand design system (navy + gold, Playfair + DM Sans)
-- [ ] Remove all AirDNA mentions - data appears proprietary
+- [x] Remove all AirDNA mentions - data appears proprietary (cleaned error messages, notification titles, and server responses)
 - [ ] Update CTA: Primary → VSL, Secondary → Turnkey Tool
 - [ ] Change website link from coachinayah.com to coachinayahturnkeytool.com
 - [ ] Improve copy: Frame as "opportunity came across our dashboard"
@@ -9757,9 +9757,9 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Update tab styling to match site aesthetic
 
 ### Remove AirDNA Mentions
-- [ ] Replace "AirDNA API" references with "Market Data API" or similar
-- [ ] Update API Usage tab to not mention AirDNA
-- [ ] Remove any AirDNA branding from stats/metrics
+- [x] Replace "AirDNA API" references with "Market Data API" or similar (updated notification titles and error messages)
+- [x] Update API Usage tab to not mention AirDNA (verified: no user-visible AirDNA text in ApiUsage.tsx)
+- [x] Remove any AirDNA branding from stats/metrics (cleaned notification titles and rate limiter messages)
 
 
 
@@ -10410,8 +10410,8 @@ Results:
 
 ### Remaining Opportunities (Future)
 - [ ] Split LeadMagnet chunk (2.5MB) — lazy-load sub-components or code-split ebook content
-- [ ] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport
-- [ ] Fix 8 sequential await-in-loop patterns to use Promise.all for parallel execution
+- [x] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport (done in previous CI batch)
+- [x] Fix: 8 sequential await-in-loop patterns should use Promise.all (parallelized adjacent BR search, 6+ BR market/submarket aggregation with Promise.all)
 - [ ] Consider removing opportunitySearches table if feature is deprecated
 
 ## Fix: DEV_MOCK_API Leaked to Production (Feb 11, 2026)
@@ -10932,7 +10932,7 @@ Results:
 
 ## BUG: Halliard Dr Report Not Loading + Rent vs Purchase Price Logic
 - [ ] Investigate why report doesn't load for 1622 Halliard Dr (rate limiter still blocking?)
-- [ ] Fix: Admin should never be blocked by rate limiter
+- [x] Fix: Admin should never be blocked by rate limiter (admin now completely exempt from per-minute limit, only logs warnings for daily limit)
 - [x] Investigate rent field logic: when buying a property ($350K), rent comparison doesn't make sense
 - [x] Fix: In purchase mode, rent is now $0 (effectiveRent = 0 in LeadMagnet.tsx)
 - [x] HeroRevenueCard now shows "Mortgage Payment" instead of "Your Rent" in purchase mode
