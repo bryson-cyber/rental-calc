@@ -38,6 +38,7 @@ import { useMarketAdvisorFilters, useProperty } from '@/contexts/PropertyContext
 import { toast } from 'sonner';
 import { BackToPropertyButton } from '@/components/BackToPropertyButton';
 import { UniversalShareButton } from '@/components/UniversalShareButton';
+import { UsageLimitInline } from '@/components/UsageLimitBadge';
 
 interface MarketSearchResult {
   id: string;
@@ -456,6 +457,13 @@ export function StandaloneMarketAdvisor({ onMarketSelect, myProperty }: Standalo
                   </>
                 )}
               </Button>
+              
+              {/* Usage limit indicator */}
+              {!standaloneMarketAdvisorMutation.isPending && (
+                <div className="flex items-center justify-center">
+                  <UsageLimitInline type="market" />
+                </div>
+              )}
               
               {/* Progress Steps */}
               {standaloneMarketAdvisorMutation.isPending && (

@@ -38,6 +38,7 @@ import {
   Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { UsageLimitInline } from '@/components/UsageLimitBadge';
 
 // Loan type definitions
 type LoanType = 'conventional' | 'dscr' | 'fha' | 'cash';
@@ -957,6 +958,11 @@ export function StartWithProperty({
           )}
           <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
+        
+        {/* Usage limit indicator */}
+        <div className="flex items-center justify-center gap-2">
+          <UsageLimitInline type="property" />
+        </div>
         
         {/* Skip option */}
         <p className="text-center text-sm text-slate-500">

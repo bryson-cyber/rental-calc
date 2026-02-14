@@ -53,6 +53,7 @@ import {
   Circle,
 } from 'lucide-react';
 import { SmartAddressInput } from '@/components/SmartAddressInput';
+import { UsageLimitBadge } from '@/components/UsageLimitBadge';
 
 // Progress steps for the generation process
 const PROGRESS_STEPS = [
@@ -653,6 +654,13 @@ export default function FullReportGenerator() {
                   </div>
                 )}
               </Button>
+              
+              {/* Usage limit badge */}
+              {isAuthenticated && (
+                <div className="flex items-center justify-center mt-3">
+                  <UsageLimitBadge type="property" />
+                </div>
+              )}
               
               {/* Disclaimer */}
               <p className="text-center text-xs text-[#9CA3AF] mt-4 font-sans">

@@ -8608,7 +8608,7 @@ This makes the grading more optimistic - properties now get better grades at low
 
 ### Integration
 - [ ] Add all three to Step 5 (Validate the Deal) for purchase mode
-- [ ] Use Coach Inayah gold/navy branding
+- [x] Use Coach Inayah gold/navy branding (RevenueCharts + HistoricalCharts already use oklch brand palette)
 - [ ] Ensure beginner-friendly with clear explainers
 
 
@@ -9692,15 +9692,15 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Remove/disable data-heavy webhook endpoints
 - [x] Implement user usage limits (5 analyses/day, 3 markets/day)
 - [x] Add admin bypass for usage limits
-- [ ] Add "remaining analyses" display in UI (frontend integration pending)
+- [x] Add "remaining analyses" display in UI (integrated UsageLimitBadge into StartWithProperty, StandaloneMarketAdvisor, FullReportGenerator)
 
 
 ## Remaining Analyses UI Display (Feb 4, 2026)
-- [ ] Create tRPC endpoint to fetch user usage status
-- [ ] Build UsageLimitBadge UI component
-- [ ] Integrate into One Home tab
-- [ ] Integrate into Market Research tab
-- [ ] Test with different usage levels
+- [x] Create tRPC endpoint to fetch user usage status (usage.getStatus already exists)
+- [x] Build UsageLimitBadge UI component (UsageLimitBadge + UsageLimitInline)
+- [x] Integrate into One Home tab (StartWithProperty)
+- [x] Integrate into Market Research tab (StandaloneMarketAdvisor)
+- [x] Test with different usage levels (admin unlimited, normal user with color-coded remaining)
 
 
 ## Admin User Management Portal (Feb 4, 2026) - COMPLETE
@@ -9823,7 +9823,7 @@ This makes the grading more optimistic - properties now get better grades at low
 - [x] Deleted flaky AI tests that depended on Poe (edge-case, narrative-quality-check)
 - [x] Removed poeApiKey and browserUseApiKey from env.ts
 - [ ] Update AirDNA tests to use mocked cached data instead of live API
-- [ ] Add Property Cache viewer to admin dashboard (see all analyzed properties)
+- [x] Add Property Cache viewer to admin dashboard (see all analyzed properties) — added in CI loop
 
 ## Debug Sweep (Feb 9, 2026)
 
@@ -10412,7 +10412,7 @@ Results:
 - [x] Split LeadMagnet chunk — lazy-loaded 14 heavy components (HierarchicalLocationSelector 80KB, StartWithProperty 61KB, InlineEbook 48KB, CompDataTable 31KB, etc.) — reduced from 915KB → 560KB (39% reduction, gzip 141KB → 84KB)
 - [x] Split SharedReportPage chunk (684KB) — lazy-load FullPropertyReport/FullMarketReport (done in previous CI batch)
 - [x] Fix: 8 sequential await-in-loop patterns should use Promise.all (parallelized adjacent BR search, 6+ BR market/submarket aggregation with Promise.all)
-- [ ] Consider removing opportunitySearches table if feature is deprecated
+- [x] Consider removing opportunitySearches table if feature is deprecated — removed in CI loop
 
 ## Fix: DEV_MOCK_API Leaked to Production (Feb 11, 2026)
 - [x] Added NODE_ENV=production guard to installMockApi() — blocks mock API in production even if DEV_MOCK_API=true
