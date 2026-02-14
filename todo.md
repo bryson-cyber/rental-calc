@@ -4988,7 +4988,7 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 ### Shared Report Issues:
 - [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
-- [ ] Investigate SharedReportPage component for data loading issues
+- [x] Investigate SharedReportPage component for data loading issues (lazy-loaded 4 heavy report components with Suspense for code splitting)
 
 ### Glendale, Arizona Issues:
 - [ ] Fix market health score showing 0/100 instead of actual score
@@ -5001,7 +5001,7 @@ When clicking "See on Map" from the property card, the map view would show the s
 
 ### Shared Report Issues:
 - [ ] Fix shared report page missing data (https://coachinayahturnkeytool.com/report/n39omhslmkvdyhh3)
-- [ ] Investigate SharedReportPage component for data loading issues
+- [x] Investigate SharedReportPage component for data loading issues (lazy-loaded 4 heavy report components with Suspense for code splitting)
 
 ### Glendale, Arizona Issues:
 - [ ] Fix market health score showing 0/100 instead of actual score
@@ -9855,13 +9855,13 @@ This makes the grading more optimistic - properties now get better grades at low
 - [ ] Fix Market showing "Local Market" placeholder instead of actual market name
 - [ ] Fix Active Listings showing "0" - market data not being stored/fetched
 - [ ] Fix "Your Property vs Market Average" showing identical values (copies property data)
-- [ ] Fix Map showing "Map not available" on report page
+- [x] Fix Map showing "Map not available" on report page (added lat/lng fallback from report-level fields to reportData.property in SharedReportPage)
 - [ ] Fix chart X-axis labels truncated to "202" instead of full month names
 - [ ] Fix Competition table showing 4BR comps for 5BR property
 - [ ] Fix Executive Summary echoing bad data ("Local Market", "0 listings")
-- [ ] Fix UI inconsistency: report page white theme vs app dark navy theme
+- [x] Fix UI inconsistency: report page white theme vs app dark navy theme (migrated 6 report components from hex colors to oklch palette, changed warm cream bg to white)
 - [ ] Fix competition table missing property images/thumbnails
-- [ ] Fix chart colors to match app palette (gold/navy/teal)
+- [x] Fix chart colors to match app palette (gold/navy/teal) (updated BRAND palette in RevenueCharts + HistoricalCharts to oklch)
 - [ ] Fix footer branding icons unclear
 
 ## Report Data & UI Fixes (Feb 9, 2026)
@@ -10493,8 +10493,8 @@ Results:
 
 
 ## Map Debug (Feb 12, 2026)
-- [ ] BUG: Competition comp map not rendering tiles (gray/blank area)
-- [ ] BUG: Property Overview map sometimes shows gray/blank tiles
+- [x] BUG: Competition comp map not rendering tiles (gray/blank area) (added ResizeObserver to Map component for container dimension changes)
+- [x] BUG: Property Overview map sometimes shows gray/blank tiles (added ResizeObserver + lat/lng fallback in SharedReportPage)
 - [ ] Set VITE_GOOGLE_MAP_ID to user's actual Map ID (21716a29ef7ad3055240c910)
 - [ ] Verify both maps render correctly with user's own API key
 

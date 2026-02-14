@@ -72,7 +72,7 @@ export function HistoricalCharts({
     occupancy: {
       label: 'Booking Rate',
       icon: Percent,
-      color: '#3B82F6',
+      color: 'oklch(0.55 0.14 75)',  // Gold (brand primary)
       format: (v: number) => `${Math.round(v)}%`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'How often properties are booked throughout the year. 60%+ is healthy. If this number is going UP, demand is growing!',
@@ -86,7 +86,7 @@ export function HistoricalCharts({
     revenue: {
       label: 'Annual Income',
       icon: DollarSign,
-      color: '#10B981',
+      color: 'oklch(0.55 0.15 160)',  // Teal
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Average yearly income hosts earn in this market (before expenses). This is the "gross revenue" you can expect.',
@@ -99,7 +99,7 @@ export function HistoricalCharts({
     adr: {
       label: 'Nightly Rate',
       icon: BarChart3,
-      color: '#8B5CF6',
+      color: 'oklch(0.45 0.01 265)',  // Navy
       format: (v: number) => `$${Math.round(v).toLocaleString()}`,
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Average price per night guests pay. Higher = more premium market. This affects your revenue potential.',
@@ -109,7 +109,7 @@ export function HistoricalCharts({
     listings: {
       label: 'Competition',
       icon: Home,
-      color: '#F59E0B',
+      color: 'oklch(0.65 0.12 75)',  // Gold Light
       format: (v: number) => Math.round(v).toLocaleString(),
       yoyFormat: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
       tooltip: 'Total active short-term rentals in this market. More listings = more competition. Watch if this is growing faster than demand.',
@@ -131,7 +131,7 @@ export function HistoricalCharts({
     const afterText = metric.tooltipAfter(value);
 
     return (
-      <div className="bg-[#0F172A] text-white px-4 py-3 rounded-lg shadow-lg text-sm">
+      <div className="bg-[oklch(0.15_0.02_265)] text-white px-4 py-3 rounded-lg shadow-lg text-sm">
         <p className="font-bold mb-1">{label}</p>
         <p>{metric.tooltipFormatter(value)}</p>
         {afterText && <p className="mt-1 text-gray-300 text-xs">{afterText}</p>}
@@ -144,7 +144,7 @@ export function HistoricalCharts({
       <Card className="bg-white border border-gray-200 shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#C9A962]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[oklch(0.55_0.14_75)]" />
             <span className="ml-3 text-gray-600">Loading historical data...</span>
           </div>
         </CardContent>
@@ -200,7 +200,7 @@ export function HistoricalCharts({
                 key={key}
                 className={`p-4 rounded-lg border cursor-pointer transition-colors relative group ${
                   activeTab === key 
-                    ? 'border-[#C9A962] bg-[#C9A962]/5' 
+                    ? 'border-[oklch(0.55_0.14_75)] bg-[oklch(0.55_0.14_75)]/5' 
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
                 onClick={() => setActiveTab(key)}
@@ -264,10 +264,10 @@ export function HistoricalCharts({
                             <stop offset="95%" stopColor={metric.color} stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.95 0 0)" />
                         <XAxis 
                           dataKey="month" 
-                          tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                          tick={{ fontSize: 11, fill: 'oklch(0.55 0 0)' }}
                           tickLine={false}
                           axisLine={false}
                           angle={-45}
@@ -275,7 +275,7 @@ export function HistoricalCharts({
                           height={50}
                         />
                         <YAxis 
-                          tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                          tick={{ fontSize: 11, fill: 'oklch(0.55 0 0)' }}
                           tickLine={false}
                           axisLine={false}
                           width={60}

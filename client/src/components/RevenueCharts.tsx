@@ -25,30 +25,30 @@ import {
 
 // ── Brand Color Palette ──────────────────────────────────────
 const BRAND = {
-  gold:        '#C9A962',
-  goldLight:   '#D4BC82',
-  goldMuted:   '#E2D4B0',
-  goldPale:    '#F0E8D4',
-  navy:        '#1e293b',
-  navyLight:   '#334155',
-  warmGray:    '#94a3b8',
-  warmGrayLt:  '#cbd5e1',
-  gridLine:    '#e2e8f0',
-  axisText:    '#64748b',
-  labelDark:   '#0f172a',
+  gold:        'oklch(0.55 0.14 75)',
+  goldLight:   'oklch(0.65 0.12 75)',
+  goldMuted:   'oklch(0.78 0.08 75)',
+  goldPale:    'oklch(0.88 0.05 75)',
+  navy:        'oklch(0.20 0.02 265)',
+  navyLight:   'oklch(0.25 0.02 265)',
+  warmGray:    'oklch(0.55 0 0)',
+  warmGrayLt:  'oklch(0.75 0 0)',
+  gridLine:    'oklch(0.90 0 0)',
+  axisText:    'oklch(0.45 0.01 265)',
+  labelDark:   'oklch(0.15 0.02 265)',
   white:       '#ffffff',
   // Percentile gradient (gold scale)
-  pctBottom:   '#E8D5A8',
-  pctLow:      '#D4BC82',
-  pctMid:      '#C9A962',
-  pctHigh:     '#B89A4F',
-  pctTop:      '#A68A3C',
+  pctBottom:   'oklch(0.82 0.06 75)',
+  pctLow:      'oklch(0.72 0.10 75)',
+  pctMid:      'oklch(0.55 0.14 75)',
+  pctHigh:     'oklch(0.50 0.14 75)',
+  pctTop:      'oklch(0.45 0.14 75)',
   // Historical data colors
-  histBar:     '#94a3b8',  // muted gray for historical bars
-  histBarLight:'#cbd5e1',  // lighter gray for below-avg historical
+  histBar:     'oklch(0.55 0 0)',  // muted gray for historical bars
+  histBarLight:'oklch(0.75 0 0)',  // lighter gray for below-avg historical
   // Year-over-Year colors (distinct per year)
-  yoyColors: ['#94a3b8', '#C9A962', '#1e293b', '#6366f1'] as string[],
-  yoyColorNames: ['gray', 'gold', 'navy', 'indigo'] as string[],
+  yoyColors: ['oklch(0.55 0 0)', 'oklch(0.55 0.14 75)', 'oklch(0.20 0.02 265)', 'oklch(0.55 0.15 160)'] as string[],
+  yoyColorNames: ['gray', 'gold', 'navy', 'teal'] as string[],
 };
 
 // Format currency
@@ -169,25 +169,25 @@ export function MonthlyForecastChart({ data, height = 300 }: MonthlyForecastChar
     const entry = payload[0]?.payload;
     if (!entry) return null;
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
-        <p className="font-semibold text-[#0f172a] mb-1.5">{label}</p>
+      <div className="bg-white rounded-lg shadow-lg border border-[oklch(0.90_0_0)] p-3 text-xs">
+        <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-1.5">{label}</p>
         <div className="flex items-center gap-1.5 mb-1">
           <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.gold }} />
-          <span className="text-[#64748b]">Revenue:</span>
-          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+          <span className="text-[oklch(0.45_0.01_265)]">Revenue:</span>
+          <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.revenue)}</span>
         </div>
         {entry.occupancyPct > 0 && (
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
-            <span className="text-[#64748b]">Occupancy:</span>
-            <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
+            <span className="text-[oklch(0.45_0.01_265)]">Occupancy:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{entry.occupancyPct}%</span>
           </div>
         )}
         {entry.adr != null && (
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
-            <span className="text-[#64748b]">ADR:</span>
-            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+            <span className="text-[oklch(0.45_0.01_265)]">ADR:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.adr)}</span>
           </div>
         )}
       </div>
@@ -542,30 +542,30 @@ export function SeasonalityChart({ data, height = 280 }: SeasonalityChartProps) 
     if (!entry) return null;
     const seasonLabel = entry.season === 'peak' ? 'Peak Season' :
       entry.season === 'off' ? 'Off-Season' : 'Shoulder Season';
-    const seasonColor = entry.season === 'peak' ? '#166534' :
-      entry.season === 'off' ? '#991b1b' : '#92400e';
+    const seasonColor = entry.season === 'peak' ? 'oklch(0.35 0.15 155)' :
+      entry.season === 'off' ? 'oklch(0.35 0.15 25)' : 'oklch(0.35 0.10 50)';
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs min-w-[180px]">
-        <p className="font-semibold text-[#0f172a] mb-2">
+      <div className="bg-white rounded-lg shadow-lg border border-[oklch(0.90_0_0)] p-3 text-xs min-w-[180px]">
+        <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-2">
           {label} — <span style={{ color: seasonColor }}>{seasonLabel}</span>
         </p>
         <div className="flex items-center gap-1.5 mb-1">
           <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.gold }} />
-          <span className="text-[#64748b]">Revenue:</span>
-          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+          <span className="text-[oklch(0.45_0.01_265)]">Revenue:</span>
+          <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.revenue)}</span>
         </div>
         {entry.occupancy > 0 && (
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
-            <span className="text-[#64748b]">Occupancy:</span>
-            <span className="font-semibold text-[#1e293b]">{entry.occupancy}%</span>
+            <span className="text-[oklch(0.45_0.01_265)]">Occupancy:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{entry.occupancy}%</span>
           </div>
         )}
         {entry.adr > 0 && (
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldLight }} />
-            <span className="text-[#64748b]">ADR:</span>
-            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+            <span className="text-[oklch(0.45_0.01_265)]">ADR:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.adr)}</span>
           </div>
         )}
       </div>
@@ -738,26 +738,26 @@ export function MarketTrendsChart({ data, height = 320 }: MarketTrendsChartProps
     const entry = payload[0]?.payload;
     if (!entry) return null;
     return (
-      <div className="bg-white rounded-lg shadow-lg border border-[#e2e8f0] p-3 text-xs">
-        <p className="font-semibold text-[#0f172a] mb-1.5">{label}</p>
-        <div className="inline-block bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium px-1.5 py-0.5 rounded mb-2">MARKET DATA</div>
+      <div className="bg-white rounded-lg shadow-lg border border-[oklch(0.90_0_0)] p-3 text-xs">
+        <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-1.5">{label}</p>
+        <div className="inline-block bg-[oklch(0.95_0_0)] text-[oklch(0.45_0.01_265)] text-[10px] font-medium px-1.5 py-0.5 rounded mb-2">MARKET DATA</div>
         <div className="flex items-center gap-1.5 mb-1">
           <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.warmGray }} />
-          <span className="text-[#64748b]">Avg Revenue:</span>
-          <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.revenue)}</span>
+          <span className="text-[oklch(0.45_0.01_265)]">Avg Revenue:</span>
+          <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.revenue)}</span>
         </div>
         {entry.occupancyPct > 0 && (
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND.navy }} />
-            <span className="text-[#64748b]">Avg Occupancy:</span>
-            <span className="font-semibold text-[#1e293b]">{entry.occupancyPct}%</span>
+            <span className="text-[oklch(0.45_0.01_265)]">Avg Occupancy:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{entry.occupancyPct}%</span>
           </div>
         )}
         {entry.adr != null && (
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BRAND.goldMuted }} />
-            <span className="text-[#64748b]">Avg ADR:</span>
-            <span className="font-semibold text-[#1e293b]">{formatCurrency(entry.adr)}</span>
+            <span className="text-[oklch(0.45_0.01_265)]">Avg ADR:</span>
+            <span className="font-semibold text-[oklch(0.20_0.02_265)]">{formatCurrency(entry.adr)}</span>
           </div>
         )}
       </div>

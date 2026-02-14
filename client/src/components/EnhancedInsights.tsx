@@ -9,7 +9,7 @@
  * 
  * Uses a consistent light theme matching the main interface:
  * - White/cream backgrounds with gold accents
- * - Dark navy (#0F172A) text
+ * - Dark navy (oklch(0.15_0.02_265)) text
  * - System font stack (font-sans)
  */
 
@@ -130,7 +130,7 @@ function MarketTypeBadge({ type }: { type: MarketContext['type'] }) {
   };
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#C9A962]/20 text-[#8B7332] text-xs font-medium rounded-lg">
+    <span className="inline-flex items-center gap-1 px-2 py-1 bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.45_0.12_75)] text-xs font-medium rounded-lg">
       {icons[type]}
       {labels[type]}
     </span>
@@ -154,7 +154,7 @@ function LevelIndicator({ level, label }: { level: 'high' | 'moderate' | 'low'; 
   return (
     <div className="flex items-center gap-2">
       <span className={colors[level]}>{icons[level]}</span>
-      <span className="text-[#0F172A]/60 text-sm">{label}:</span>
+      <span className="text-[oklch(0.15_0.02_265)]/60 text-sm">{label}:</span>
       <span className={`font-medium capitalize ${colors[level]}`}>{level}</span>
     </div>
   );
@@ -171,7 +171,7 @@ function RatioIndicator({ ratio }: { ratio: number }) {
         : 'bg-red-50 border-red-200'
     }`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[#0F172A]/60 text-sm">Revenue-to-Rent Ratio</span>
+        <span className="text-[oklch(0.15_0.02_265)]/60 text-sm">Revenue-to-Rent Ratio</span>
         <span className={`text-2xl font-bold ${meetsRule ? 'text-green-600' : 'text-red-600'}`}>
           {ratio.toFixed(1)}x
         </span>
@@ -217,15 +217,15 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
       {/* Executive Summary */}
       {report.executive_summary && (
         <motion.div 
-          className="bg-gradient-to-br from-[#C9A962]/15 to-[#C9A962]/5 border border-[#C9A962]/30 rounded-xl p-6"
+          className="bg-gradient-to-br from-[oklch(0.55_0.14_75)]/15 to-[oklch(0.55_0.14_75)]/5 border border-[oklch(0.55_0.14_75)]/30 rounded-xl p-6"
           variants={itemVariants}
         >
           <div className="flex items-center gap-2 mb-4">
-            <Award className="w-6 h-6 text-[#C9A962]" />
-            <h3 className="text-xl font-semibold text-[#0F172A]">Executive Summary</h3>
+            <Award className="w-6 h-6 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="text-xl font-semibold text-[oklch(0.15_0.02_265)]">Executive Summary</h3>
           </div>
           <div className="prose max-w-none">
-            <p className="text-[#0F172A]/80 leading-relaxed whitespace-pre-line">
+            <p className="text-[oklch(0.15_0.02_265)]/80 leading-relaxed whitespace-pre-line">
               {report.executive_summary}
             </p>
           </div>
@@ -235,18 +235,18 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
       {/* Quick Facts Banner */}
       {report.quick_facts && report.quick_facts.length > 0 && (
         <motion.div 
-          className="bg-[#C9A962]/10 border border-[#C9A962]/30 rounded-xl p-4"
+          className="bg-[oklch(0.55_0.14_75)]/10 border border-[oklch(0.55_0.14_75)]/30 rounded-xl p-4"
           variants={itemVariants}
         >
           <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-[#0F172A]">Quick Facts</h3>
+            <Zap className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="font-semibold text-[oklch(0.15_0.02_265)]">Quick Facts</h3>
           </div>
           <div className="grid md:grid-cols-2 gap-2">
             {report.quick_facts.slice(0, 6).map((fact, idx) => (
               <div key={idx} className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#C9A962] flex-shrink-0 mt-0.5" />
-                <span className="text-[#0F172A]/70 text-sm">{fact}</span>
+                <CheckCircle2 className="w-4 h-4 text-[oklch(0.55_0.14_75)] flex-shrink-0 mt-0.5" />
+                <span className="text-[oklch(0.15_0.02_265)]/70 text-sm">{fact}</span>
               </div>
             ))}
           </div>
@@ -259,15 +259,15 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
         variants={itemVariants}
       >
         {/* Market Context */}
-        <div className="bg-white rounded-xl p-5 border border-[#0F172A]/10 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-[oklch(0.15_0.02_265)]/10 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <MapPin className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-[#0F172A]">Market Context</h3>
+            <MapPin className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="font-semibold text-[oklch(0.15_0.02_265)]">Market Context</h3>
           </div>
           
           <div className="space-y-3">
             <MarketTypeBadge type={report.market_context.type} />
-            <p className="text-[#0F172A]/60 text-sm leading-relaxed">
+            <p className="text-[oklch(0.15_0.02_265)]/60 text-sm leading-relaxed">
               {report.market_context.description}
             </p>
             <div className="pt-2 space-y-2">
@@ -278,21 +278,21 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
         </div>
 
         {/* Revenue-to-Rent Ratio */}
-        <div className="bg-white rounded-xl p-5 border border-[#0F172A]/10 shadow-sm">
+        <div className="bg-white rounded-xl p-5 border border-[oklch(0.15_0.02_265)]/10 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-5 h-5 text-[#C9A962]" />
-            <h3 className="font-semibold text-[#0F172A]">Investment Viability</h3>
+            <DollarSign className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
+            <h3 className="font-semibold text-[oklch(0.15_0.02_265)]">Investment Viability</h3>
           </div>
           
           <RatioIndicator ratio={report.key_metrics.revenue_to_rent_ratio} />
           
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="text-center p-2 bg-[#f8f7f4] rounded-lg">
-              <p className="text-[#0F172A]/50 text-xs">Break-even</p>
-              <p className="text-[#0F172A] font-semibold">{report.key_metrics.break_even_months} months</p>
+            <div className="text-center p-2 bg-[oklch(0.97_0_0)] rounded-lg">
+              <p className="text-[oklch(0.15_0.02_265)]/50 text-xs">Break-even</p>
+              <p className="text-[oklch(0.15_0.02_265)] font-semibold">{report.key_metrics.break_even_months} months</p>
             </div>
-            <div className="text-center p-2 bg-[#f8f7f4] rounded-lg">
-              <p className="text-[#0F172A]/50 text-xs">Confidence</p>
+            <div className="text-center p-2 bg-[oklch(0.97_0_0)] rounded-lg">
+              <p className="text-[oklch(0.15_0.02_265)]/50 text-xs">Confidence</p>
               <p className={`font-semibold capitalize ${
                 report.key_metrics.confidence_level === 'high' 
                   ? 'text-green-600' 
@@ -309,12 +309,12 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
 
       {/* What This Means For You */}
       <motion.div 
-        className="bg-white rounded-xl p-6 border border-[#C9A962]/30 shadow-sm"
+        className="bg-white rounded-xl p-6 border border-[oklch(0.55_0.14_75)]/30 shadow-sm"
         variants={itemVariants}
       >
         <div className="flex items-center gap-2 mb-6">
-          <Lightbulb className="w-6 h-6 text-[#C9A962]" />
-          <h3 className="text-xl font-sans font-semibold text-[#0F172A]">What This Means For You</h3>
+          <Lightbulb className="w-6 h-6 text-[oklch(0.55_0.14_75)]" />
+          <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)]">What This Means For You</h3>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -322,9 +322,9 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-green-600" />
-              <h4 className="font-medium text-[#0F172A]">Revenue Potential</h4>
+              <h4 className="font-medium text-[oklch(0.15_0.02_265)]">Revenue Potential</h4>
             </div>
-            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
+            <p className="text-[oklch(0.15_0.02_265)]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.revenue}
             </p>
           </div>
@@ -333,9 +333,9 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600" />
-              <h4 className="font-medium text-[#0F172A]">Competition</h4>
+              <h4 className="font-medium text-[oklch(0.15_0.02_265)]">Competition</h4>
             </div>
-            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
+            <p className="text-[oklch(0.15_0.02_265)]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.competition}
             </p>
           </div>
@@ -344,9 +344,9 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-purple-600" />
-              <h4 className="font-medium text-[#0F172A]">Seasonality</h4>
+              <h4 className="font-medium text-[oklch(0.15_0.02_265)]">Seasonality</h4>
             </div>
-            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
+            <p className="text-[oklch(0.15_0.02_265)]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.seasonality}
             </p>
           </div>
@@ -354,10 +354,10 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
           {/* Overall */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-[#C9A962]" />
-              <h4 className="font-medium text-[#0F172A]">Bottom Line</h4>
+              <Award className="w-4 h-4 text-[oklch(0.55_0.14_75)]" />
+              <h4 className="font-medium text-[oklch(0.15_0.02_265)]">Bottom Line</h4>
             </div>
-            <p className="text-[#0F172A]/60 text-sm leading-relaxed pl-6">
+            <p className="text-[oklch(0.15_0.02_265)]/60 text-sm leading-relaxed pl-6">
               {report.what_this_means.overall}
             </p>
           </div>
@@ -366,19 +366,19 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
 
       {/* Action Items */}
       <motion.div 
-        className="bg-white rounded-xl p-6 border border-[#0F172A]/10 shadow-sm"
+        className="bg-white rounded-xl p-6 border border-[oklch(0.15_0.02_265)]/10 shadow-sm"
         variants={itemVariants}
       >
         <div className="flex items-center gap-2 mb-6">
-          <Target className="w-6 h-6 text-[#C9A962]" />
-          <h3 className="text-xl font-sans font-semibold text-[#0F172A]">Recommended Actions</h3>
+          <Target className="w-6 h-6 text-[oklch(0.55_0.14_75)]" />
+          <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)]">Recommended Actions</h3>
         </div>
 
         <div className="space-y-4">
           {report.action_items.map((item, idx) => (
             <motion.div
               key={idx}
-              className="bg-[#f8f7f4] rounded-xl p-4 border border-[#0F172A]/10 hover:border-[#C9A962]/30 transition-colors"
+              className="bg-[oklch(0.97_0_0)] rounded-xl p-4 border border-[oklch(0.15_0.02_265)]/10 hover:border-[oklch(0.55_0.14_75)]/30 transition-colors"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
@@ -392,20 +392,20 @@ export default function EnhancedInsights({ report, monthlyRent }: EnhancedInsigh
                         ? 'bg-yellow-100'
                         : 'bg-green-100'
                   }`}>
-                    <span className="text-[#0F172A] font-bold text-sm">{idx + 1}</span>
+                    <span className="text-[oklch(0.15_0.02_265)] font-bold text-sm">{idx + 1}</span>
                   </div>
-                  <h4 className="font-medium text-[#0F172A]">{item.action}</h4>
+                  <h4 className="font-medium text-[oklch(0.15_0.02_265)]">{item.action}</h4>
                 </div>
                 <PriorityBadge priority={item.priority} />
               </div>
               
-              <p className="text-[#0F172A]/60 text-sm mb-3 pl-11">
+              <p className="text-[oklch(0.15_0.02_265)]/60 text-sm mb-3 pl-11">
                 {item.why}
               </p>
               
               <div className="flex items-center gap-2 pl-11">
-                <Clock className="w-4 h-4 text-[#0F172A]/40" />
-                <span className="text-[#0F172A]/50 text-xs">{item.timeline}</span>
+                <Clock className="w-4 h-4 text-[oklch(0.15_0.02_265)]/40" />
+                <span className="text-[oklch(0.15_0.02_265)]/50 text-xs">{item.timeline}</span>
               </div>
             </motion.div>
           ))}

@@ -1,0 +1,37 @@
+{
+  "query": "SELECT shareId, LEFT(address, 40) as addr, latitude, longitude, reportType, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.property.latitude')) as prop_lat, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.property.longitude')) as prop_lng FROM shared_reports WHERE reportType = 'full' LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 44gseCwqCkfULVd.6244da1cd5a6 --database DGUybt3jtP54yda4M9Ci8Y --execute SELECT shareId, LEFT(address, 40) as addr, latitude, longitude, reportType, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.property.latitude')) as prop_lat, JSON_UNQUOTE(JSON_EXTRACT(reportData, '$.property.longitude')) as prop_lng FROM shared_reports WHERE reportType = 'full' LIMIT 3;",
+  "rows": [
+    {
+      "shareId": "l6984fncmlf7nhnx",
+      "addr": "2680 Carnation Dr Richardson, TX 75082",
+      "latitude": "32.9864650",
+      "longitude": "-96.6708150",
+      "reportType": "full",
+      "prop_lat": "32.986465",
+      "prop_lng": "-96.670815"
+    },
+    {
+      "shareId": "6x7847e1mlfebp33",
+      "addr": "2680 Carnation Dr, Richardson, TX 75082",
+      "latitude": "32.9864650",
+      "longitude": "-96.6708150",
+      "reportType": "full",
+      "prop_lat": "32.986465",
+      "prop_lng": "-96.670815"
+    },
+    {
+      "shareId": "36j6515tmlfh3hhy",
+      "addr": "2680 Carnation Dr, Richardson, TX 75082",
+      "latitude": "NULL",
+      "longitude": "NULL",
+      "reportType": "full",
+      "prop_lat": "NULL",
+      "prop_lng": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "shareId\taddr\tlatitude\tlongitude\treportType\tprop_lat\tprop_lng\nl6984fncmlf7nhnx\t2680 Carnation Dr Richardson, TX 75082\t32.9864650\t-96.6708150\tfull\t32.986465\t-96.670815\n6x7847e1mlfebp33\t2680 Carnation Dr, Richardson, TX 75082\t32.9864650\t-96.6708150\tfull\t32.986465\t-96.670815\n36j6515tmlfh3hhy\t2680 Carnation Dr, Richardson, TX 75082\tNULL\tNULL\tfull\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

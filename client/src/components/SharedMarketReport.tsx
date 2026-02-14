@@ -144,7 +144,7 @@ export function SharedMarketReport({ data, onBack }: SharedMarketReportProps) {
   const totalListingsFromBreakdown = typesWithData.reduce((sum, t) => sum + t.count, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">

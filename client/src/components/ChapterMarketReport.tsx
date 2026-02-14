@@ -169,7 +169,7 @@ function ChapterNav({ chapters, activeChapter, onChapterClick }: {
   onChapterClick: (id: number) => void;
 }) {
   return (
-    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#0F172A]/10 py-4">
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[oklch(0.15_0.02_265)]/10 py-4">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {chapters.map((chapter) => (
@@ -178,8 +178,8 @@ function ChapterNav({ chapters, activeChapter, onChapterClick }: {
               onClick={() => onChapterClick(chapter.id)}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 activeChapter === chapter.id
-                  ? 'bg-[#C9A962] text-white'
-                  : 'bg-[#0F172A]/5 text-[#0F172A]/70 hover:bg-[#0F172A]/10'
+                  ? 'bg-[oklch(0.55_0.14_75)] text-white'
+                  : 'bg-[oklch(0.15_0.02_265)]/5 text-[oklch(0.15_0.02_265)]/70 hover:bg-[oklch(0.15_0.02_265)]/10'
               }`}
             >
               Ch. {chapter.id}: {chapter.title}
@@ -198,15 +198,15 @@ function ChapterSection({ id, title, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 py-12 border-b border-[#0F172A]/10 last:border-0">
+    <section id={id} className="scroll-mt-24 py-12 border-b border-[oklch(0.15_0.02_265)]/10 last:border-0">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl md:text-3xl font-sans font-bold text-[#0F172A] mb-8 flex items-center gap-3">
-          <BookOpen className="w-7 h-7 text-[#C9A962]" />
+        <h2 className="text-2xl md:text-3xl font-sans font-bold text-[oklch(0.15_0.02_265)] mb-8 flex items-center gap-3">
+          <BookOpen className="w-7 h-7 text-[oklch(0.55_0.14_75)]" />
           {title}
         </h2>
         {children}
@@ -224,16 +224,16 @@ function InfoCard({ title, value, subtitle, icon: Icon, trend }: {
   trend?: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-[#0F172A]/5">
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-[oklch(0.15_0.02_265)]/5">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-10 h-10 bg-[#C9A962]/10 rounded-lg flex items-center justify-center">
-          <Icon className="w-5 h-5 text-[#C9A962]" />
+        <div className="w-10 h-10 bg-[oklch(0.55_0.14_75)]/10 rounded-lg flex items-center justify-center">
+          <Icon className="w-5 h-5 text-[oklch(0.55_0.14_75)]" />
         </div>
-        <span className="text-sm font-medium text-[#0F172A]/60">{title}</span>
+        <span className="text-sm font-medium text-[oklch(0.15_0.02_265)]/60">{title}</span>
       </div>
-      <p className="text-3xl font-sans font-bold text-[#0F172A] mb-1">{value}</p>
+      <p className="text-3xl font-sans font-bold text-[oklch(0.15_0.02_265)] mb-1">{value}</p>
       {subtitle && (
-        <p className="text-sm text-[#0F172A]/50 flex items-center gap-1">
+        <p className="text-sm text-[oklch(0.15_0.02_265)]/50 flex items-center gap-1">
           {trend === 'up' && <TrendingUp className="w-4 h-4 text-green-600" />}
           {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
           {subtitle}
@@ -252,11 +252,11 @@ function DataTable({ headers, rows }: {
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b-2 border-[#C9A962]/30">
+          <tr className="border-b-2 border-[oklch(0.55_0.14_75)]/30">
             {headers.map((header, idx) => (
               <th
                 key={idx}
-                className={`py-3 px-4 text-sm font-semibold text-[#0F172A] ${
+                className={`py-3 px-4 text-sm font-semibold text-[oklch(0.15_0.02_265)] ${
                   idx === 0 ? 'text-left' : 'text-right'
                 }`}
               >
@@ -269,13 +269,13 @@ function DataTable({ headers, rows }: {
           {rows.map((row, rowIdx) => (
             <tr
               key={rowIdx}
-              className="border-b border-[#0F172A]/5 hover:bg-[#C9A962]/5 transition-colors"
+              className="border-b border-[oklch(0.15_0.02_265)]/5 hover:bg-[oklch(0.55_0.14_75)]/5 transition-colors"
             >
               {row.map((cell, cellIdx) => (
                 <td
                   key={cellIdx}
                   className={`py-4 px-4 ${
-                    cellIdx === 0 ? 'text-left font-medium text-[#0F172A]' : 'text-right text-[#0F172A]/70'
+                    cellIdx === 0 ? 'text-left font-medium text-[oklch(0.15_0.02_265)]' : 'text-right text-[oklch(0.15_0.02_265)]/70'
                   }`}
                 >
                   {cell}
@@ -296,7 +296,7 @@ function HighlightBox({ title, content, variant = 'default' }: {
   variant?: 'default' | 'success' | 'warning' | 'info';
 }) {
   const variants = {
-    default: 'bg-[#0F172A]/5 border-[#0F172A]',
+    default: 'bg-[oklch(0.15_0.02_265)]/5 border-[oklch(0.15_0.02_265)]',
     success: 'bg-green-50 border-green-600',
     warning: 'bg-amber-50 border-amber-600',
     info: 'bg-blue-50 border-blue-600'
@@ -304,8 +304,8 @@ function HighlightBox({ title, content, variant = 'default' }: {
 
   return (
     <div className={`p-4 rounded-lg border-l-4 ${variants[variant]}`}>
-      <p className="font-semibold text-[#0F172A] mb-1">{title}</p>
-      <p className="text-sm text-[#0F172A]/70">{content}</p>
+      <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-1">{title}</p>
+      <p className="text-sm text-[oklch(0.15_0.02_265)]/70">{content}</p>
     </div>
   );
 }
@@ -318,9 +318,9 @@ function TierCard({ tier, title, description, markets }: {
   markets: { name: string; reason: string }[];
 }) {
   const tierColors = {
-    1: 'from-[#C9A962] to-[#d4b876]',
-    2: 'from-[#64748b] to-[#94a3b8]',
-    3: 'from-[#78716c] to-[#a8a29e]'
+    1: 'from-[oklch(0.55_0.14_75)] to-[oklch(0.65_0.12_75)]',
+    2: 'from-[oklch(0.45_0.01_265)] to-[oklch(0.55_0_0)]',
+    3: 'from-[oklch(0.50_0.01_50)] to-[oklch(0.65_0.01_50)]'
   };
 
   return (
@@ -332,9 +332,9 @@ function TierCard({ tier, title, description, markets }: {
       </div>
       <div className="p-4 space-y-3">
         {markets.map((market, idx) => (
-          <div key={idx} className="p-3 bg-[#0F172A]/5 rounded-lg">
-            <p className="font-semibold text-[#0F172A]">{market.name}</p>
-            <p className="text-sm text-[#0F172A]/60">{market.reason}</p>
+          <div key={idx} className="p-3 bg-[oklch(0.15_0.02_265)]/5 rounded-lg">
+            <p className="font-semibold text-[oklch(0.15_0.02_265)]">{market.name}</p>
+            <p className="text-sm text-[oklch(0.15_0.02_265)]/60">{market.reason}</p>
           </div>
         ))}
       </div>
@@ -386,9 +386,9 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
   const profManagedPct = insights?.professionally_managed_pct || 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#faf9f7] to-[#f5f3f0]">
+    <div className="min-h-screen bg-white">
       {/* Title Page / Header */}
-      <div className="bg-[#0F172A] text-white">
+      <div className="bg-[oklch(0.15_0.02_265)] text-white">
         <div className="container mx-auto px-4 py-12">
           <button
             onClick={onBack}
@@ -401,11 +401,11 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
           <div className="max-w-3xl">
             <div className="flex items-center gap-3 mb-4">
               {isSubmarket ? (
-                <MapPin className="w-6 h-6 text-[#C9A962]" />
+                <MapPin className="w-6 h-6 text-[oklch(0.55_0.14_75)]" />
               ) : (
-                <Building className="w-6 h-6 text-[#C9A962]" />
+                <Building className="w-6 h-6 text-[oklch(0.55_0.14_75)]" />
               )}
-              <span className="text-sm font-medium text-[#C9A962] uppercase tracking-wider">
+              <span className="text-sm font-medium text-[oklch(0.55_0.14_75)] uppercase tracking-wider">
                 Short-Term Rental Market Guide
               </span>
             </div>
@@ -430,7 +430,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
           {marketInfo.metrics.market_score && (
             <div className="absolute top-12 right-8 text-right hidden lg:block">
               <p className="text-sm text-white/60 mb-1">Market Score</p>
-              <p className="text-5xl font-sans font-bold text-[#C9A962]">
+              <p className="text-5xl font-sans font-bold text-[oklch(0.55_0.14_75)]">
                 {Math.round(marketInfo.metrics.market_score)}
               </p>
               <p className="text-xs text-white/50">out of 100</p>
@@ -451,7 +451,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
         <div className="max-w-4xl mx-auto">
           {/* Chapter 1: The Big Picture */}
           <ChapterSection id="chapter-1" title="Chapter 1: The Big Picture">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               This report provides a deep dive into the short-term rental (STR) market in {marketInfo.name}.
               {isSubmarket
                 ? ` As a key neighborhood, ${marketInfo.name} presents unique investment opportunities with specific demand patterns and guest preferences.`
@@ -459,7 +459,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               } This guide will walk you through the essential data and insights needed to make an informed investment decision.
             </p>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Key Market Highlights</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Key Market Highlights</h3>
 
             <div className="grid md:grid-cols-2 gap-4 mb-8">
               <HighlightBox
@@ -495,7 +495,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
           {/* Chapter 2: Top Winners */}
           <ChapterSection id="chapter-2" title="Chapter 2: Meet the Top Winners">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               These are the highest-earning properties in {marketInfo.name}. Studying what makes them successful 
               gives us a blueprint for achieving top-performer status. Notice their pricing strategies, 
               property types, and occupancy rates.
@@ -504,22 +504,22 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             {data.top_listings && data.top_listings.length > 0 ? (
               <>
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-                  <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-4">
+                  <div className="bg-gradient-to-r from-[oklch(0.55_0.14_75)] to-[oklch(0.65_0.12_75)] p-4">
                     <div className="flex items-center gap-2">
                       <Award className="w-5 h-5 text-white" />
                       <p className="text-white font-semibold">Top Performers in {marketInfo.name}</p>
                     </div>
                   </div>
-                  <div className="divide-y divide-[#0F172A]/5">
+                  <div className="divide-y divide-[oklch(0.15_0.02_265)]/5">
                     {data.top_listings.slice(0, 5).map((listing, idx) => (
-                      <div key={listing.id} className="p-4 hover:bg-[#0F172A]/5 transition-colors">
+                      <div key={listing.id} className="p-4 hover:bg-[oklch(0.15_0.02_265)]/5 transition-colors">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                idx === 0 ? 'bg-[#C9A962] text-white' : 
+                                idx === 0 ? 'bg-[oklch(0.55_0.14_75)] text-white' : 
                                 idx === 1 ? 'bg-gray-400 text-white' : 
-                                idx === 2 ? 'bg-amber-600 text-white' : 'bg-[#0F172A]/10 text-[#0F172A]'
+                                idx === 2 ? 'bg-amber-600 text-white' : 'bg-[oklch(0.15_0.02_265)]/10 text-[oklch(0.15_0.02_265)]'
                               }`}>
                                 {idx + 1}
                               </span>
@@ -528,30 +528,30 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                                   href={listing.airbnb_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="font-semibold text-[#0F172A] hover:text-[#C9A962] transition-colors flex items-center gap-1"
+                                  className="font-semibold text-[oklch(0.15_0.02_265)] hover:text-[oklch(0.55_0.14_75)] transition-colors flex items-center gap-1"
                                 >
                                   {listing.title}
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
                               ) : (
-                                <span className="font-semibold text-[#0F172A]">{listing.title}</span>
+                                <span className="font-semibold text-[oklch(0.15_0.02_265)]">{listing.title}</span>
                               )}
                             </div>
-                            <p className="text-sm text-[#0F172A]/60 mb-2">
+                            <p className="text-sm text-[oklch(0.15_0.02_265)]/60 mb-2">
                               {listing.bedrooms} BR • {listing.property_type} • {formatPercent(listing.occupancy)} occupancy
                               {listing.rating && (
                                 <span className="ml-2 inline-flex items-center gap-1">
-                                  <Star className="w-3 h-3 fill-[#C9A962] text-[#C9A962]" />
+                                  <Star className="w-3 h-3 fill-[oklch(0.55_0.14_75)] text-[oklch(0.55_0.14_75)]" />
                                   {listing.rating.toFixed(1)}
                                 </span>
                               )}
                               {listing.superhost && (
-                                <span className="ml-2 text-xs bg-[#C9A962]/20 text-[#C9A962] px-2 py-0.5 rounded-full">
+                                <span className="ml-2 text-xs bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)] px-2 py-0.5 rounded-full">
                                   Superhost
                                 </span>
                               )}
                             </p>
-                            <p className="text-sm text-[#0F172A]/70">
+                            <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                               {listing.occupancy > 70
                                 ? 'High occupancy indicates strong demand and excellent guest experience.'
                                 : listing.rating && listing.rating >= 4.9
@@ -562,9 +562,9 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xl font-bold text-[#0F172A]">{formatCurrency(listing.annual_revenue)}</p>
-                            <p className="text-sm text-[#0F172A]/50">/year</p>
-                            <p className="text-sm text-[#0F172A]/60 mt-1">{formatCurrency(listing.adr)}/night</p>
+                            <p className="text-xl font-bold text-[oklch(0.15_0.02_265)]">{formatCurrency(listing.annual_revenue)}</p>
+                            <p className="text-sm text-[oklch(0.15_0.02_265)]/50">/year</p>
+                            <p className="text-sm text-[oklch(0.15_0.02_265)]/60 mt-1">{formatCurrency(listing.adr)}/night</p>
                           </div>
                         </div>
                       </div>
@@ -574,34 +574,34 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
                 <div className="grid md:grid-cols-3 gap-4 mb-8">
                   <div className="bg-white rounded-xl shadow-lg p-6">
-                    <p className="text-sm text-[#0F172A]/60 mb-1">Top Performer Revenue</p>
-                    <p className="text-2xl font-sans font-bold text-[#C9A962]">
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/60 mb-1">Top Performer Revenue</p>
+                    <p className="text-2xl font-sans font-bold text-[oklch(0.55_0.14_75)]">
                       {formatCurrency(data.top_listings[0]?.annual_revenue || 0)}
                     </p>
-                    <p className="text-xs text-[#0F172A]/50">per year</p>
+                    <p className="text-xs text-[oklch(0.15_0.02_265)]/50">per year</p>
                   </div>
                   <div className="bg-white rounded-xl shadow-lg p-6">
-                    <p className="text-sm text-[#0F172A]/60 mb-1">Avg. Top 5 Revenue</p>
-                    <p className="text-2xl font-sans font-bold text-[#0F172A]">
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/60 mb-1">Avg. Top 5 Revenue</p>
+                    <p className="text-2xl font-sans font-bold text-[oklch(0.15_0.02_265)]">
                       {formatCurrency(data.top_listings.slice(0, 5).reduce((sum, l) => sum + l.annual_revenue, 0) / Math.min(5, data.top_listings.length))}
                     </p>
-                    <p className="text-xs text-[#0F172A]/50">per year</p>
+                    <p className="text-xs text-[oklch(0.15_0.02_265)]/50">per year</p>
                   </div>
                   <div className="bg-white rounded-xl shadow-lg p-6">
-                    <p className="text-sm text-[#0F172A]/60 mb-1">vs. Market Average</p>
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/60 mb-1">vs. Market Average</p>
                     <p className="text-2xl font-sans font-bold text-green-600">
                       +{Math.round(((data.top_listings[0]?.annual_revenue || avgRevenue) / avgRevenue - 1) * 100)}%
                     </p>
-                    <p className="text-xs text-[#0F172A]/50">higher revenue</p>
+                    <p className="text-xs text-[oklch(0.15_0.02_265)]/50">higher revenue</p>
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+                <div className="p-4 bg-[oklch(0.55_0.14_75)]/10 rounded-xl border border-[oklch(0.55_0.14_75)]/30">
                   <div className="flex items-start gap-3">
-                    <Lightbulb className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-1" />
+                    <Lightbulb className="w-5 h-5 text-[oklch(0.55_0.14_75)] flex-shrink-0 mt-1" />
                     <div>
-                      <p className="font-semibold text-[#0F172A]">The Thought Process</p>
-                      <p className="text-sm text-[#0F172A]/70">
+                      <p className="font-semibold text-[oklch(0.15_0.02_265)]">The Thought Process</p>
+                      <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                         The top performers in {marketInfo.name} earn {Math.round(((data.top_listings[0]?.annual_revenue || avgRevenue) / avgRevenue - 1) * 100)}% more than the market average.
                         This shows what's possible when you combine the right property with professional management.
                         Our goal is to position your property to compete with these winners.
@@ -612,19 +612,19 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               </>
             ) : (
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <p className="text-[#0F172A]/60">Top performer data not available for this market.</p>
+                <p className="text-[oklch(0.15_0.02_265)]/60">Top performer data not available for this market.</p>
               </div>
             )}
           </ChapterSection>
 
           {/* Chapter 3: What Guests Want */}
           <ChapterSection id="chapter-3" title="Chapter 3: What Guests Want">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               Understanding guest preferences is crucial for maximizing bookings and revenue. In the {marketInfo.name} market,
               the data reveals clear trends in the amenities and property types that attract travelers.
             </p>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Top 5 Most Important Amenities</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Top 5 Most Important Amenities</h3>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
               <DataTable
@@ -639,7 +639,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               />
             </div>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Property Type Performance</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Property Type Performance</h3>
 
             {insights?.property_type_breakdown && insights.property_type_breakdown.length > 0 ? (
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -653,20 +653,20 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                       ? <span key={`${pt.type}-insight`} className="text-green-600">Dominant type - high demand</span>
                       : pt.avg_revenue > avgRevenue
                         ? <span key={`${pt.type}-insight`} className="text-blue-600">Premium revenue potential</span>
-                        : <span key={`${pt.type}-insight`} className="text-[#0F172A]/50">Standard performer</span>
+                        : <span key={`${pt.type}-insight`} className="text-[oklch(0.15_0.02_265)]/50">Standard performer</span>
                   ])}
                 />
               </div>
             ) : (
-              <p className="text-[#0F172A]/60">Property type data not available for this market.</p>
+              <p className="text-[oklch(0.15_0.02_265)]/60">Property type data not available for this market.</p>
             )}
 
-            <div className="mt-6 p-4 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+            <div className="mt-6 p-4 bg-[oklch(0.55_0.14_75)]/10 rounded-xl border border-[oklch(0.55_0.14_75)]/30">
               <div className="flex items-start gap-3">
-                <Lightbulb className="w-5 h-5 text-[#C9A962] flex-shrink-0 mt-1" />
+                <Lightbulb className="w-5 h-5 text-[oklch(0.55_0.14_75)] flex-shrink-0 mt-1" />
                 <div>
-                  <p className="font-semibold text-[#0F172A]">The Thought Process</p>
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="font-semibold text-[oklch(0.15_0.02_265)]">The Thought Process</p>
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     The dominant property type indicates what guests are primarily looking for.
                     {insights?.property_type_breakdown?.[0]?.type === 'house'
                       ? ' Houses suggest guests want space and privacy, reinforcing the trend of family and group travel.'
@@ -681,63 +681,63 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
           {/* Chapter 4: Understanding the Seasons */}
           <ChapterSection id="chapter-4" title="Chapter 4: Understanding the Seasons">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               Seasonality plays a role in any STR market. Understanding the high and low seasons in {marketInfo.name}
               helps you anticipate income fluctuations and adjust your pricing strategy.
             </p>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Peak vs. Off-Peak Months</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Peak vs. Off-Peak Months</h3>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Sun className="w-6 h-6 text-amber-500" />
-                  <span className="font-semibold text-[#0F172A]">Peak Season</span>
+                  <span className="font-semibold text-[oklch(0.15_0.02_265)]">Peak Season</span>
                 </div>
-                <p className="text-sm text-[#0F172A]/70 mb-2">May through August</p>
+                <p className="text-sm text-[oklch(0.15_0.02_265)]/70 mb-2">May through August</p>
                 <p className="text-2xl font-sans font-bold text-amber-600">55-65% occupancy</p>
-                <p className="text-xs text-[#0F172A]/50 mt-2">Higher rates, strong demand</p>
+                <p className="text-xs text-[oklch(0.15_0.02_265)]/50 mt-2">Higher rates, strong demand</p>
               </div>
 
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Leaf className="w-6 h-6 text-green-500" />
-                  <span className="font-semibold text-[#0F172A]">Shoulder Season</span>
+                  <span className="font-semibold text-[oklch(0.15_0.02_265)]">Shoulder Season</span>
                 </div>
-                <p className="text-sm text-[#0F172A]/70 mb-2">Mar-Apr & Sep-Nov</p>
+                <p className="text-sm text-[oklch(0.15_0.02_265)]/70 mb-2">Mar-Apr & Sep-Nov</p>
                 <p className="text-2xl font-sans font-bold text-green-600">50-55% occupancy</p>
-                <p className="text-xs text-[#0F172A]/50 mt-2">Solid, consistent bookings</p>
+                <p className="text-xs text-[oklch(0.15_0.02_265)]/50 mt-2">Solid, consistent bookings</p>
               </div>
 
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
                   <Snowflake className="w-6 h-6 text-blue-500" />
-                  <span className="font-semibold text-[#0F172A]">Off-Peak Season</span>
+                  <span className="font-semibold text-[oklch(0.15_0.02_265)]">Off-Peak Season</span>
                 </div>
-                <p className="text-sm text-[#0F172A]/70 mb-2">December through February</p>
+                <p className="text-sm text-[oklch(0.15_0.02_265)]/70 mb-2">December through February</p>
                 <p className="text-2xl font-sans font-bold text-blue-600">45-50% occupancy</p>
-                <p className="text-xs text-[#0F172A]/50 mt-2">Lower rates, less demand</p>
+                <p className="text-xs text-[oklch(0.15_0.02_265)]/50 mt-2">Lower rates, less demand</p>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h4 className="font-semibold text-[#0F172A] mb-4">Income Stability Tips</h4>
+              <h4 className="font-semibold text-[oklch(0.15_0.02_265)] mb-4">Income Stability Tips</h4>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     <strong>Use dynamic pricing</strong> — Adjust rates based on demand. Charge premium during peak, offer deals during slow periods.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     <strong>Target different guests</strong> — Business travelers in off-season, families during summer.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     <strong>Offer monthly discounts</strong> — Attract longer stays during slow months to maintain cash flow.
                   </p>
                 </div>
@@ -747,7 +747,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
           {/* Chapter 5: Best Neighborhoods */}
           <ChapterSection id="chapter-5" title="Chapter 5: The Best Neighborhoods to Invest In">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               Not all neighborhoods are created equal. {submarkets.length > 0
                 ? `We have categorized the ${submarkets.length} submarkets around ${marketInfo.name} into tiers based on their revenue potential.`
                 : `Understanding the competitive landscape helps you position your property for success.`}
@@ -785,8 +785,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
               </div>
             ) : (
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h4 className="font-semibold text-[#0F172A] mb-4">Competitive Landscape</h4>
-                <p className="text-[#0F172A]/70 mb-4">
+                <h4 className="font-semibold text-[oklch(0.15_0.02_265)] mb-4">Competitive Landscape</h4>
+                <p className="text-[oklch(0.15_0.02_265)]/70 mb-4">
                   With {totalListings.toLocaleString()} active listings in {marketInfo.name}, understanding your competition is key.
                 </p>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -813,12 +813,12 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
           {/* Chapter 6: Property Size Matters */}
           <ChapterSection id="chapter-6" title="Chapter 6: Property Size Matters">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               In {marketInfo.name}, the number of bedrooms in a property has a direct impact on its performance.
               The data shows clear preferences that can guide your investment decision.
             </p>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Performance by Property Size</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Performance by Property Size</h3>
 
             {data.bedroom_performance && data.bedroom_performance.length > 0 ? (
               <>
@@ -828,7 +828,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                     rows={data.bedroom_performance.map((br) => {
                       const isHighest = br.bedrooms === bestBedroom?.bedrooms;
                       return [
-                        <span key={br.bedrooms} className={isHighest ? 'font-bold text-[#C9A962]' : ''}>
+                        <span key={br.bedrooms} className={isHighest ? 'font-bold text-[oklch(0.55_0.14_75)]' : ''}>
                           {br.bedrooms} Bedrooms {isHighest && '⭐'}
                         </span>,
                         <span key={`${br.bedrooms}-occ`} className={isHighest ? 'font-bold text-green-600' : ''}>
@@ -847,12 +847,12 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   />
                 </div>
 
-                <div className="p-6 bg-[#C9A962]/10 rounded-xl border border-[#C9A962]/30">
+                <div className="p-6 bg-[oklch(0.55_0.14_75)]/10 rounded-xl border border-[oklch(0.55_0.14_75)]/30">
                   <div className="flex items-start gap-3">
-                    <Target className="w-6 h-6 text-[#C9A962] flex-shrink-0" />
+                    <Target className="w-6 h-6 text-[oklch(0.55_0.14_75)] flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-[#0F172A] text-lg">Key Takeaway</p>
-                      <p className="text-[#0F172A]/70">
+                      <p className="font-semibold text-[oklch(0.15_0.02_265)] text-lg">Key Takeaway</p>
+                      <p className="text-[oklch(0.15_0.02_265)]/70">
                         While all property sizes are viable in {marketInfo.name}, focusing on a{' '}
                         <strong>{bestBedroom?.bedrooms || 2}-bedroom property</strong> gives you the best chance to
                         maximize occupancy and align with the strongest segment of market demand.
@@ -862,59 +862,59 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                 </div>
               </>
             ) : (
-              <p className="text-[#0F172A]/60">Bedroom performance data not available for this market.</p>
+              <p className="text-[oklch(0.15_0.02_265)]/60">Bedroom performance data not available for this market.</p>
             )}
           </ChapterSection>
 
           {/* Chapter 7: Deeper Insights */}
           <ChapterSection id="chapter-7" title="Chapter 7: Deeper Insights from the Data">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               Beyond the basics, the data reveals several deeper trends that can inform your investment strategy.
             </p>
 
-            <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">The Professional Host Landscape</h3>
+            <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">The Professional Host Landscape</h3>
 
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <p className="text-[#0F172A]/70 mb-6">
+              <p className="text-[oklch(0.15_0.02_265)]/70 mb-6">
                 The percentage of listings managed by professional hosts (those with 21+ properties) is a key indicator of competition.
               </p>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-[#0F172A]">Professionally Managed</span>
-                    <span className="text-2xl font-bold text-[#0F172A]">{profManagedPct}%</span>
+                    <span className="font-medium text-[oklch(0.15_0.02_265)]">Professionally Managed</span>
+                    <span className="text-2xl font-bold text-[oklch(0.15_0.02_265)]">{profManagedPct}%</span>
                   </div>
-                  <div className="w-full bg-[#0F172A]/10 rounded-full h-3">
+                  <div className="w-full bg-[oklch(0.15_0.02_265)]/10 rounded-full h-3">
                     <div
-                      className="bg-[#C9A962] h-3 rounded-full transition-all duration-1000"
+                      className="bg-[oklch(0.55_0.14_75)] h-3 rounded-full transition-all duration-1000"
                       style={{ width: `${profManagedPct}%` }}
                     />
                   </div>
-                  <p className="text-sm text-[#0F172A]/50 mt-2">
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/50 mt-2">
                     {insights?.professionally_managed_count || 0} of {insights?.total_listings || totalListings} listings
                   </p>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-[#0F172A]">Superhosts</span>
-                    <span className="text-2xl font-bold text-[#0F172A]">{insights?.superhost_pct || 0}%</span>
+                    <span className="font-medium text-[oklch(0.15_0.02_265)]">Superhosts</span>
+                    <span className="text-2xl font-bold text-[oklch(0.15_0.02_265)]">{insights?.superhost_pct || 0}%</span>
                   </div>
-                  <div className="w-full bg-[#0F172A]/10 rounded-full h-3">
+                  <div className="w-full bg-[oklch(0.15_0.02_265)]/10 rounded-full h-3">
                     <div
                       className="bg-green-600 h-3 rounded-full transition-all duration-1000"
                       style={{ width: `${insights?.superhost_pct || 0}%` }}
                     />
                   </div>
-                  <p className="text-sm text-[#0F172A]/50 mt-2">
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/50 mt-2">
                     {insights?.superhost_count || 0} of {insights?.total_listings || totalListings} listings
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-[#0F172A]/5 rounded-lg">
-                <p className="text-sm text-[#0F172A]/70">
+              <div className="mt-6 p-4 bg-[oklch(0.15_0.02_265)]/5 rounded-lg">
+                <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                   <strong>What this means:</strong>{' '}
                   {profManagedPct < 15
                     ? 'This market has very low professional competition. Individual hosts have a significant advantage and can compete effectively with good service and marketing.'
@@ -928,9 +928,9 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             {/* Revenue Distribution */}
             {insights?.revenue_percentiles && (
               <>
-                <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6">Revenue Distribution</h3>
+                <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6">Revenue Distribution</h3>
                 <div className="bg-white rounded-xl shadow-lg p-6">
-                  <p className="text-[#0F172A]/70 mb-6">
+                  <p className="text-[oklch(0.15_0.02_265)]/70 mb-6">
                     Understanding where you can realistically land in the revenue spectrum helps set expectations.
                   </p>
 
@@ -938,7 +938,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                     {[
                       { label: 'Bottom 10%', value: insights.revenue_percentiles.p10, color: 'bg-red-100 text-red-700' },
                       { label: 'Bottom 25%', value: insights.revenue_percentiles.p25, color: 'bg-orange-100 text-orange-700' },
-                      { label: 'Median', value: insights.revenue_percentiles.p50, color: 'bg-[#C9A962]/20 text-[#C9A962]' },
+                      { label: 'Median', value: insights.revenue_percentiles.p50, color: 'bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)]' },
                       { label: 'Top 25%', value: insights.revenue_percentiles.p75, color: 'bg-green-100 text-green-700' },
                       { label: 'Top 10%', value: insights.revenue_percentiles.p90, color: 'bg-emerald-100 text-emerald-700' }
                     ].map((tier) => (
@@ -962,7 +962,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
           {/* Chapter 8: Your Action Plan */}
           <ChapterSection id="chapter-8" title="Chapter 8: Your Action Plan">
-            <p className="text-lg text-[#0F172A]/80 mb-8 leading-relaxed">
+            <p className="text-lg text-[oklch(0.15_0.02_265)]/80 mb-8 leading-relaxed">
               Based on this comprehensive analysis, here are tailored recommendations for different investor profiles.
             </p>
 
@@ -977,8 +977,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                     <li className="flex items-start gap-3">
                       <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Target Market</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Target Market</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           Focus on the core {marketInfo.name} area. Its {avgOccupancy > 55 ? 'high' : 'stable'} occupancy
                           and consistent demand make it a safer bet for beginners.
                         </p>
@@ -987,8 +987,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                     <li className="flex items-start gap-3">
                       <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Property Size</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Property Size</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           Look for a {bestBedroom?.bedrooms || 2}-bedroom property. This aligns with the strongest demand segment.
                         </p>
                       </div>
@@ -996,8 +996,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                     <li className="flex items-start gap-3">
                       <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Key Amenities</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Key Amenities</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           Ensure your property has Air Conditioning, Parking, and allows pets to maximize your appeal.
                         </p>
                       </div>
@@ -1008,34 +1008,34 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
               {/* Experienced Investor */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#C9A962] to-[#d4b876] p-4">
+                <div className="bg-gradient-to-r from-[oklch(0.55_0.14_75)] to-[oklch(0.65_0.12_75)] p-4">
                   <h3 className="text-xl font-sans font-bold text-white">For the Experienced Investor Seeking High Returns</h3>
                 </div>
                 <div className="p-6">
                   <ol className="space-y-4">
                     <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                      <span className="w-6 h-6 bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Target Market</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Target Market</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           Look for premium neighborhoods with high ADR potential. Top performers earn {formatCurrency(insights?.revenue_percentiles?.p90 || avgRevenue * 1.5)}+ annually.
                         </p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                      <span className="w-6 h-6 bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Property Size</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Property Size</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           A 3-4 bedroom property will allow you to command the highest daily rates and attract families/groups.
                         </p>
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <span className="w-6 h-6 bg-[#C9A962]/20 text-[#C9A962] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+                      <span className="w-6 h-6 bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)] rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
                       <div>
-                        <p className="font-semibold text-[#0F172A]">Strategy</p>
-                        <p className="text-sm text-[#0F172A]/70">
+                        <p className="font-semibold text-[oklch(0.15_0.02_265)]">Strategy</p>
+                        <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                           Focus on creating a premium experience. Professional photography and high-end furnishings are a must.
                         </p>
                       </div>
@@ -1047,7 +1047,7 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
 
             {/* Why You Need Professional Help Section */}
             <div className="mt-12 bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-sans font-semibold text-[#0F172A] mb-6 text-center">
+              <h3 className="text-xl font-sans font-semibold text-[oklch(0.15_0.02_265)] mb-6 text-center">
                 Why This Complexity Requires Expert Execution
               </h3>
               <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -1055,8 +1055,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <span className="text-2xl">1</span>
                   </div>
-                  <p className="font-semibold text-[#0F172A] mb-2">Market Timing</p>
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-2">Market Timing</p>
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     Seasonal pricing, competitor analysis, and demand forecasting require constant monitoring and adjustment.
                   </p>
                 </div>
@@ -1064,8 +1064,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <span className="text-2xl">2</span>
                   </div>
-                  <p className="font-semibold text-[#0F172A] mb-2">Property Setup</p>
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-2">Property Setup</p>
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     Professional photography, strategic furnishing, and amenity selection directly impact your revenue potential.
                   </p>
                 </div>
@@ -1073,51 +1073,51 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <span className="text-2xl">3</span>
                   </div>
-                  <p className="font-semibold text-[#0F172A] mb-2">Guest Management</p>
-                  <p className="text-sm text-[#0F172A]/70">
+                  <p className="font-semibold text-[oklch(0.15_0.02_265)] mb-2">Guest Management</p>
+                  <p className="text-sm text-[oklch(0.15_0.02_265)]/70">
                     24/7 communication, cleaning coordination, and review management are full-time responsibilities.
                   </p>
                 </div>
               </div>
-              <div className="bg-[#0F172A]/5 rounded-xl p-6">
-                <p className="text-center text-[#0F172A]/80">
+              <div className="bg-[oklch(0.15_0.02_265)]/5 rounded-xl p-6">
+                <p className="text-center text-[oklch(0.15_0.02_265)]/80">
                   <strong>The Bottom Line:</strong> The difference between average performers ({formatCurrency(avgRevenue)}/year) 
                   and top performers ({formatCurrency(insights?.revenue_percentiles?.p90 || avgRevenue * 1.5)}/year) is 
-                  <span className="text-[#C9A962] font-bold"> {formatCurrency((insights?.revenue_percentiles?.p90 || avgRevenue * 1.5) - avgRevenue)}</span> in annual revenue. 
+                  <span className="text-[oklch(0.55_0.14_75)] font-bold"> {formatCurrency((insights?.revenue_percentiles?.p90 || avgRevenue * 1.5) - avgRevenue)}</span> in annual revenue. 
                   That gap is closed through professional execution.
                 </p>
               </div>
             </div>
 
             {/* CTA Section */}
-            <div className="mt-8 bg-gradient-to-br from-[#C9A962]/15 to-[#C9A962]/5 rounded-2xl p-8 border border-[#C9A962]/30">
+            <div className="mt-8 bg-gradient-to-br from-[oklch(0.55_0.14_75)]/15 to-[oklch(0.55_0.14_75)]/5 rounded-2xl p-8 border border-[oklch(0.55_0.14_75)]/30">
               <div className="max-w-2xl mx-auto text-center">
-                <div className="inline-flex items-center gap-2 bg-[#C9A962]/20 text-[#C9A962] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 bg-[oklch(0.55_0.14_75)]/20 text-[oklch(0.55_0.14_75)] px-4 py-2 rounded-full text-sm font-medium mb-4">
                   <Award className="w-4 h-4" />
                   Done-For-You Solution
                 </div>
-                <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4 text-[#0F172A]">
+                <h3 className="text-2xl md:text-3xl font-sans font-bold mb-4 text-[oklch(0.15_0.02_265)]">
                   Ready to Turn This Data Into Profit?
                 </h3>
-                <p className="text-[#0F172A]/60 mb-6">
+                <p className="text-[oklch(0.15_0.02_265)]/60 mb-6">
                   You've seen the numbers. You understand the market. Now let our team handle the execution.
                 </p>
                 <div className="grid md:grid-cols-3 gap-4 mb-8 text-left">
-                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
-                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm text-[#0F172A]/70">Property sourcing & lease negotiation</p>
+                  <div className="bg-white rounded-lg p-4 border border-[oklch(0.15_0.02_265)]/10">
+                    <CheckCircle2 className="w-5 h-5 text-[oklch(0.55_0.14_75)] mb-2" />
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/70">Property sourcing & lease negotiation</p>
                   </div>
-                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
-                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm text-[#0F172A]/70">Professional design & furnishing</p>
+                  <div className="bg-white rounded-lg p-4 border border-[oklch(0.15_0.02_265)]/10">
+                    <CheckCircle2 className="w-5 h-5 text-[oklch(0.55_0.14_75)] mb-2" />
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/70">Professional design & furnishing</p>
                   </div>
-                  <div className="bg-white rounded-lg p-4 border border-[#0F172A]/10">
-                    <CheckCircle2 className="w-5 h-5 text-[#C9A962] mb-2" />
-                    <p className="text-sm text-[#0F172A]/70">Full-service guest management</p>
+                  <div className="bg-white rounded-lg p-4 border border-[oklch(0.15_0.02_265)]/10">
+                    <CheckCircle2 className="w-5 h-5 text-[oklch(0.55_0.14_75)] mb-2" />
+                    <p className="text-sm text-[oklch(0.15_0.02_265)]/70">Full-service guest management</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button className="bg-[#C9A962] text-[#0F172A] px-8 py-4 rounded-xl font-semibold hover:bg-[#d4b876] transition-colors flex items-center justify-center gap-2">
+                  <button className="bg-[oklch(0.55_0.14_75)] text-[oklch(0.15_0.02_265)] px-8 py-4 rounded-xl font-semibold hover:bg-[oklch(0.65_0.12_75)] transition-colors flex items-center justify-center gap-2">
                     Schedule Free Strategy Call
                     <ArrowRight className="w-5 h-5" />
                   </button>
@@ -1133,8 +1133,8 @@ export default function ChapterMarketReport({ data, reportType, onBack, clientNa
             </div>
 
             {/* Footer */}
-            <div className="mt-12 pt-8 border-t border-[#0F172A]/10 text-center">
-              <p className="text-sm text-[#0F172A]/50 italic">
+            <div className="mt-12 pt-8 border-t border-[oklch(0.15_0.02_265)]/10 text-center">
+              <p className="text-sm text-[oklch(0.15_0.02_265)]/50 italic">
                 This report was generated based on data from the Coach Inayah market analysis tool.
                 All data is for the trailing 12-month period ending {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
               </p>

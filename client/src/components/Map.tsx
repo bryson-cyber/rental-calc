@@ -428,12 +428,27 @@ export function MapView({
       visibilityObserver.observe(mapContainer.current);
     }
     
+    // ResizeObserver: trigger map resize when container dimensions change
+    // Fixes gray tiles when map is inside expandable/collapsible containers
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapContainer.current) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstance && !tilesLoaded) {
+          google.maps.event.trigger(mapInstance, 'resize');
+          const center = mapInstance.getCenter();
+          if (center) mapInstance.setCenter(center);
+        }
+      });
+      resizeObserver.observe(mapContainer.current);
+    }
+    
     cleanupRef.current = () => {
       clearInterval(resizeInterval);
       clearTimeout(immediateTimer);
       clearTimeout(delayedTimer);
       google.maps.event.removeListener(tilesLoadedListener);
       if (visibilityObserver) visibilityObserver.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
     };
     
     if (onMapReady) {
